@@ -12,6 +12,24 @@ In order to submit an issue please visit our [YouTrack](https://issues.hibernati
 - [RavenDB Clients](https://issues.hibernatingrhinos.com/issues/RDBC) - for Client API issues
 - [RavenDB Documentation](https://issues.hibernatingrhinos.com/issues/RDoc) - for Documentation issues
 
+## Setting up Development Environment
+
+Recommended dev environment is
+
+- VS 2022 updated to the latest version
+- .NET 6 SDKs
+- latest NodeJS LTS  
+
+1. Clone this repo, open it in VS 2022.  
+2. Install [NPM Task runner for VS](https://github.com/madskristensen/NpmTaskRunner)  
+3. Open Task Runner Explorer (View > Other Windows > Task Runner Explorer)
+    - run package.json > Defaults > install
+    - run package.json > Custom > restore_compile
+4. Set up src/Raven.Server as a Startup Project
+5. Run it with or without debugging, console with RavenDB Server will start
+6. Open http://127.0.0.1:8080/ in a browser to access Studio
+7. Register your development license in the OS environment as `RAVEN_License`
+
 ### Community
 
 Community Group is available via [GitHub Issues](https://github.com/ravendb/ravendb/issues) or [Google Groups](https://groups.google.com/forum/#!forum/ravendb). Do not hesitate to join and ask for help.
