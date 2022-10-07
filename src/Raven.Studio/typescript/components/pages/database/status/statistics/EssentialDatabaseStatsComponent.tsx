@@ -103,7 +103,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                                 <i className="icon-info text-info"></i>
                             </span>
                             <UncontrolledTooltip target="js-timeseries-segments">
-                                <ul className="margin-top margin-right">
+                                <ul className="margin-top margin-right text-left">
                                     <li>
                                         <small>
                                             <strong>Time series</strong> data is stored within <strong>segments</strong>

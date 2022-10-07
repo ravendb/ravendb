@@ -1,3 +1,4 @@
+@use "sass:color";
 //== Colors
 //
 $brand-ravendb: #b82e73;
@@ -119,4 +120,13 @@ $well-bg: $body-bg;
 
 $link-color: #e33572;
 
-$table-bg-scale: 70% !default;
+$table-bg-scale: 30% !default;
+
+@function background-color-mix($color, $weight) {
+    //@return if($weight > 0, shade-color($color, $weight), tint-color($color, -$weight));
+    //@return mix($color, $panel-bg-1, $weight);
+    //@return rgba(adjust_hue(saturate(darken($color, 30), 20), 0),.5);
+    //@return desaturate(color.scale($color, $lightness: -60%),20);
+    //@return rgba(color.scale(color.scale($color, $lightness: -60%), $saturation: 10%),.5);
+    @return mix(color.scale(color.scale($color, $lightness: -40%), $saturation: 30%), $panel-bg-1, $weight);
+}

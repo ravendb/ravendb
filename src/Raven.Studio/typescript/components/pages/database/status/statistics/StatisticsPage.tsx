@@ -45,30 +45,36 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
     };
 
     return (
-        <div>
-            <h2 className="on-base-background">
-                General Database Stats
-                <a target="_blank" href={rawJsonUrl} title="Show raw output">
-                    <i className="icon-link"></i>
-                </a>
-                <button
-                    onClick={() => setDbDetailsVisible((x) => !x)}
-                    type="button"
-                    className="btn btn-primary pull-right margin-left-xs"
-                    title="Click to load detailed statistics"
-                >
-                    <span>{dbDetailsVisible ? "Hide" : "Show"} details</span>
-                </button>
-                <button
-                    onClick={refreshStats}
-                    type="button"
-                    className="btn btn-primary pull-right"
-                    title="Click to refresh stats"
-                >
-                    <i className="icon-refresh"></i>
-                    <span>Refresh</span>
-                </button>
-            </h2>
+        <div className="stats">
+            <div className="row">
+                <div className="col">
+                    <h2 className="on-base-background">
+                        General Database Stats
+                        <a target="_blank" href={rawJsonUrl} title="Show raw output">
+                            <i className="icon-link"></i>
+                        </a>
+                    </h2>
+                </div>
+                <div className="col-auto">
+                    <button
+                        onClick={() => setDbDetailsVisible((x) => !x)}
+                        type="button"
+                        className="btn btn-primary pull-right margin-left-xs"
+                        title="Click to load detailed statistics"
+                    >
+                        <span>{dbDetailsVisible ? "Hide" : "Show"} details</span>
+                    </button>
+                    <button
+                        onClick={refreshStats}
+                        type="button"
+                        className="btn btn-primary pull-right margin-left-xs"
+                        title="Click to refresh stats"
+                    >
+                        <i className="icon-refresh"></i>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+            </div>
 
             <EssentialDatabaseStatsComponent stats={essentialStats} />
 
