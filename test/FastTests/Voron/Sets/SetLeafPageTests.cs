@@ -39,11 +39,12 @@ namespace Tryouts
             var list = new List<long>();
             var buf = new int[] {12, 18};
             var start = 24;
+            long entries = 0;
             for (int i = 0; i < size; i++)
             {
                 start += buf[i % buf.Length];
                 list.Add(start);
-                Assert.True(leaf.Add(_llt, start));
+                Assert.True(leaf.Add(_llt, start, ref entries));
             }
             Assert.Equal(list, leaf.GetDebugOutput(_llt));
         }
@@ -60,17 +61,18 @@ namespace Tryouts
             leaf.Init(0);
             var buf = new int[] {12, 18};
             var start = 24;
+            long entries = 0;
             for (int i = 0; i < size; i++)
             {
                 start += buf[i % buf.Length];
-                Assert.True(leaf.Add(_llt, start));
+                Assert.True(leaf.Add(_llt, start, ref entries));
             }
             
             start = 24;
             for (int i = 0; i < size; i++)
             {
                 start += buf[i % buf.Length];
-                Assert.True(leaf.Remove(_llt, start));
+                Assert.True(leaf.Remove(_llt, start, ref entries));
             }
             Assert.Empty(leaf.GetDebugOutput(_llt));
         }
@@ -89,13 +91,14 @@ namespace Tryouts
             var list = new List<long>();
             var buf = new int[] {12, 18};
             var start = 24;
+            long entries = 0;
             for (int i = 0; i < size; i++)
             {
                 list.Add(start);
-                Assert.True(leaf.Add(_llt, start));
+                Assert.True(leaf.Add(_llt, start, ref entries));
                 start += buf[i % buf.Length];
             }
-            Assert.True(leaf.Add(_llt, 24)); // should be no op
+            Assert.True(leaf.Add(_llt, 24, ref entries)); // should be no op
             Assert.Equal(list, leaf.GetDebugOutput(_llt));
         }
 

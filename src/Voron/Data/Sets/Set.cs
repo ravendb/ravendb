@@ -59,9 +59,8 @@ namespace Voron.Data.Sets
             if (leaf.IsValidValue(value) == false)
                 return; // value does not exists in tree
 
-            if (leaf.Remove(_llt, value)) // removed value properly
+            if (leaf.Remove(_llt, value, ref _state.NumberOfEntries)) // removed value properly
             {
-                _state.NumberOfEntries = Math.Max(0, _state.NumberOfEntries - 1);
                 if (_pos == 0)
                     return;  // this is the root page
 
@@ -110,7 +109,7 @@ namespace Voron.Data.Sets
             var it = sibling.GetIterator(_llt);
             while (it.MoveNext(out long v))
             {
-                if (leaf.Add(_llt, v) == false)
+                if (leaf.Add(_llt, v, ref _state.NumberOfEntries) == false)
                     throw new InvalidOperationException("Even though we have 25% spare capacity, we run out?! Should not happen ever");
             }
 
@@ -228,7 +227,7 @@ namespace Voron.Data.Sets
 
                 for (; index < values.Length && values[index] < limit; index++)
                 {
-                    if (leafPage.Remove(_llt, values[index]) == false)
+                    if (leafPage.Remove(_llt, values[index], ref _state.NumberOfEntries) == false)
                     {
                         // shouldn't really happen, but may because removing a value may change
                         // the compression rate. if we can't add the removal, we'll just remove
@@ -299,9 +298,8 @@ namespace Voron.Data.Sets
                         throw new InvalidOperationException("Values not sorted");
                     prev = values[index];
 #endif
-                    if (leafPage.Add(_llt, values[index]))
+                    if (leafPage.Add(_llt, values[index], ref _state.NumberOfEntries))
                     {
-                        _state.NumberOfEntries++;
                         continue; // successfully added
                     }
                     // we couldn't add to the page (but it fits, need to split)
@@ -333,7 +331,7 @@ namespace Voron.Data.Sets
 
         public void Add(long value)
         {
-            if (value < 0)
+            if (value <= 0)
                 throw new ArgumentOutOfRangeException(nameof(value), "Only positive values are allowed");
 
             FindPageFor(value);
@@ -348,9 +346,8 @@ namespace Voron.Data.Sets
 
             var leafPage = new SetLeafPage(state.Page);
             if (leafPage.IsValidValue(value) && // may have enough space, but too far out to fit 
-                leafPage.Add(_llt, value))
+                leafPage.Add(_llt, value, ref _state.NumberOfEntries))
             {
-                _state.NumberOfEntries++;
                 return; // successfully added
             }
         
@@ -363,7 +360,7 @@ namespace Voron.Data.Sets
                     // never had a write, the baseline is wrong, can update 
                     // this and move on
                     leafPage.Header->Baseline = value & ~int.MaxValue;
-                    if(leafPage.Add(_llt, value) == false)
+                    if(leafPage.Add(_llt, value, ref _state.NumberOfEntries) == false)
                         throw new InvalidOperationException("Adding value to empty page failed?!");
                     return;
                 }

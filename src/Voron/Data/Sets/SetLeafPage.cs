@@ -13,7 +13,7 @@ namespace Voron.Data.Sets
     public readonly unsafe struct SetLeafPage
     {
         private readonly Page _page;
-        private const int MaxNumberOfRawValues = 256;
+        public const int MaxNumberOfRawValues = 256;
         private const int MinNumberOfRawValues = 64;
         private const int MaxNumberOfCompressedEntries = 16;
         public SetLeafPageHeader* Header => (SetLeafPageHeader*)_page.Pointer;       
@@ -92,6 +92,7 @@ namespace Voron.Data.Sets
             private int _rawValuesIndex, _compressedEntryIndex;
             private PForDecoder.DecoderState _decoderState;
             private bool _hasDecoder;
+            public int NumberOfDuplicates;
 
             private fixed int _pforBuffer[PForEncoder.BufferLen];
             private fixed long _moveNextBuffer[MoveNextBufferSize];
@@ -130,6 +131,7 @@ namespace Voron.Data.Sets
                 _lastVal = long.MinValue;
                 _moveNextIndex = 0;
                 _moveNextLength = 0;
+                NumberOfDuplicates = 0;
 
                 if (_hasDecoder)
                     InitializeDecoder(0);
@@ -241,22 +243,26 @@ namespace Voron.Data.Sets
                         if (rawValueMasked <= compressedValue || hasCompressedValue == false)
                         {
                             rawValuesIndex--; // increase to the _next_ highest value, since we are sorted in descending order
-                            value = rawValue;
 
                             hasRawValue = false;
                             rawValueMasked = int.MaxValue;
 
-                            if (compressedValue == (value & int.MaxValue))
+                            bool compressedAndRawValueAreSame = compressedValue == (rawValue & int.MaxValue);
+                            bool previouslyHadCompressedValue = hasCompressedValue; 
+                            if (compressedAndRawValueAreSame)
                                 hasCompressedValue = false;
 
                             // This is a removed value, so we remove it. 
-                            if (value < 0)
+                            if (rawValue < 0)
                             {
                                 // It is a removal of an existing compressed value, then we signal that we have consumed the compressed value too. 
                                 continue;
                             }
 
-                            value &= int.MaxValue;
+                            if (compressedAndRawValueAreSame && previouslyHadCompressedValue)
+                                NumberOfDuplicates++;
+
+                            value = rawValue & int.MaxValue;
                         }
                         else // we have a raw value, but it is bigger than the current compressed value, therefore we need to read the compressed value
                         {
@@ -374,28 +380,32 @@ namespace Voron.Data.Sets
 
         public Iterator GetIterator(LowLevelTransaction llt) => new Iterator(this);
 
-        public bool Add(LowLevelTransaction tx, long value)
+        public bool Add(LowLevelTransaction tx, long value, ref long numberOfEntries)
         {
             if (IsValidValue(value) == false)
                 throw new InvalidOperationException($"The specified value {value} does not match the baseline: {Header->Baseline} for page {_page.PageNumber}");
-            return AddInternal(tx, (int)value & int.MaxValue);
+            return AddInternal(tx, (int)value & int.MaxValue, ref numberOfEntries);
         }
 
         public bool IsValidValue(long value)
         {
+            Debug.Assert(value != 0);
             return (value & ~int.MaxValue) == Header->Baseline;
         }
 
-        public bool Remove(LowLevelTransaction tx, long value)
+        public bool Remove(LowLevelTransaction tx, long value, ref long numberOfEntries)
         {
             if ((value & ~int.MaxValue) != Header->Baseline)
                 throw new InvalidOperationException(
                     $"Attempt to remove value ({value}) from set leaf page ({_page.PageNumber}) that doesn't share the same baseline {Header->Baseline}");
-            
-            return AddInternal(tx, int.MinValue | ((int)value & int.MaxValue));
+
+            long entriesRemoved = 0;
+            var result =  AddInternal(tx, int.MinValue | ((int)value & int.MaxValue), ref entriesRemoved);
+            numberOfEntries = Math.Max(0, numberOfEntries - entriesRemoved);
+            return result;
         }
 
-        private bool AddInternal(LowLevelTransaction tx, int value)
+        private bool AddInternal(LowLevelTransaction tx, int value, ref long numberOfEntries)
         {
             var oldRawValues = RawValues;
 
@@ -415,13 +425,13 @@ namespace Voron.Data.Sets
                 RunOutOfFreeSpace) // run into the compressed, cannot proceed
             {
                 using var cmp = new Compressor(this, tx);
-                if (cmp.TryCompressRawValues() == false)
+                if (cmp.TryCompressRawValues(ref numberOfEntries) == false)
                     return false;
 
                 // we didn't free enough space
                 if (Header->CompressedValuesCeiling > Constants.Storage.PageSize - MinNumberOfRawValues * sizeof(int))
                     return false;
-                return AddInternal(tx, value);
+                return AddInternal(tx, value, ref numberOfEntries);
             }
 
             Header->NumberOfRawValues++; // increase the size of the buffer _downward_
@@ -429,6 +439,7 @@ namespace Voron.Data.Sets
             index = ~index;
             oldRawValues.Slice(0, index).CopyTo(newRawValues);
             newRawValues[index] = value;
+            numberOfEntries++;
             return true;
         }
 
@@ -498,7 +509,7 @@ namespace Voron.Data.Sets
                 TempHeader.NumberOfRawValues = 0;
             }
 
-            public bool TryCompressRawValues()
+            public bool TryCompressRawValues(ref long numberOfEntries)
             {
                 int compressedEntryIndex = 0;
                 var it = _parent.GetIterator(_llt);
@@ -547,6 +558,9 @@ namespace Voron.Data.Sets
                 TempHeader.NumberOfCompressedPositions = (byte)compressedEntryIndex;
                 // successful, so can copy back
                 _tmpPage.AsSpan().CopyTo(_parent.Span);
+                
+                // RavenDB-19361 - we need to ensure that we fixup any additional accounting for duplicates
+                numberOfEntries -= it.NumberOfDuplicates;
                 return true;
             }
 
