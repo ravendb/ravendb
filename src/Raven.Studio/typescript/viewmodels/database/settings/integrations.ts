@@ -9,6 +9,8 @@ import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/databa
 import licenseModel from "models/auth/licenseModel";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database = require("models/resources/database");
+import shardedDatabase from "models/resources/shardedDatabase";
+import shard from "models/resources/shard";
 
 class integrations extends shardViewModelBase {
 
@@ -18,6 +20,8 @@ class integrations extends shardViewModelBase {
     
     editedPostgreSqlCredentials = ko.observable<postgreSqlCredentialsModel>(null);
 
+    canUseIntegrations: boolean;
+    
     //TODO
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     errorText: KnockoutComputed<string>;
@@ -32,6 +36,8 @@ class integrations extends shardViewModelBase {
 
     constructor(db: database) {
         super(db);
+
+        this.canUseIntegrations = !(db instanceof shardedDatabase) && !(db instanceof shard);
         
         this.bindToCurrentInstance("onConfirmDelete");
         this.initObservables();
@@ -49,6 +55,11 @@ class integrations extends shardViewModelBase {
 
     activate(args: any) {
         super.activate(args);
+
+        if (!this.canUseIntegrations) {
+            return;
+        }
+        
         const license = licenseModel.licenseStatus();
         
         if (!license.HasPostgreSqlIntegration && !license.HasPowerBI) {
