@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -39,7 +40,7 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
             }
         }
     }
-    
+
     protected class FacetValues
     {
         private static readonly FacetAggregationField Default = new FacetAggregationField();
@@ -95,6 +96,78 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
 
             foreach (var facetValue in _values)
                 facetValue.Value.Count += count;
+        }
+    }
+
+    protected static void UpdateFacetResults(Dictionary<string, FacetedQueryParser.FacetResult> results, IndexQueryServerSide query,
+        Dictionary<string, Dictionary<string, FacetValues>> facetsByName)
+    {
+        foreach (var result in results)
+        {
+            if (result.Value.Ranges != null && result.Value.Ranges.Count > 0)
+                continue;
+
+            var valuesCount = 0;
+            var valuesSumOfCounts = 0;
+            var values = new List<FacetValue>();
+            List<string> allTerms;
+            if (facetsByName?.TryGetValue(result.Key, out var groups) is null or false || groups == null)
+                continue;
+
+            switch (result.Value.Options.TermSortMode)
+            {
+                case FacetTermSortMode.ValueAsc:
+                    allTerms = new List<string>(groups.OrderBy(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
+                    break;
+                case FacetTermSortMode.ValueDesc:
+                    allTerms = new List<string>(groups.OrderByDescending(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
+                    break;
+                case FacetTermSortMode.CountAsc:
+                    allTerms = new List<string>(groups.OrderBy(x => x.Value.Count).ThenBy(x => x.Key).Select(x => x.Key));
+                    break;
+                case FacetTermSortMode.CountDesc:
+                    allTerms = new List<string>(groups.OrderByDescending(x => x.Value.Count).ThenBy(x => x.Key).Select(x => x.Key));
+                    break;
+                default:
+                    throw new ArgumentException($"Could not understand '{result.Value.Options.TermSortMode}'");
+            }
+
+            var start = result.Value.Options.Start;
+            var pageSize = Math.Min(allTerms.Count, result.Value.Options.PageSize);
+
+            foreach (var term in allTerms.Skip(start).TakeWhile(term => valuesCount < pageSize))
+            {
+                valuesCount++;
+
+                if (groups.TryGetValue(term, out var facetValues) == false || facetValues == null || facetValues.Any == false)
+                {
+                    values.Add(new FacetValue {Range = term});
+                    continue;
+                }
+
+                values.AddRange(facetValues.GetAll());
+
+                valuesSumOfCounts += facetValues.Count;
+            }
+
+            var previousHits = allTerms.Take(start).Sum(allTerm =>
+            {
+                if (groups.TryGetValue(allTerm, out var facetValues) == false || facetValues == null || facetValues.Any == false)
+                    return 0;
+
+                return facetValues.Count;
+            });
+
+            result.Value.Result = new FacetResult
+            {
+                Name = result.Key,
+                Values = values,
+                RemainingTermsCount = allTerms.Count - (start + valuesCount),
+                RemainingHits = groups.Values.Sum(x => x.Count) - (previousHits + valuesSumOfCounts)
+            };
+
+            if (result.Value.Options.IncludeRemainingTerms)
+                result.Value.Result.RemainingTerms = allTerms.Skip(start + valuesCount).ToList();
         }
     }
 

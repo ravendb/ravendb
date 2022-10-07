@@ -473,8 +473,7 @@ namespace Raven.Server.Documents.Queries.Facets
             
             public bool IsMatch(ReadOnlySpan<byte> value)
             {
-                var compareLow =
-                    LowValue == null
+                var compareLow = LowValue == null
                         ? -1
                         : value.SequenceCompareTo(LowValueAsBytes);
                 var compareHigh = HighValue == null 
