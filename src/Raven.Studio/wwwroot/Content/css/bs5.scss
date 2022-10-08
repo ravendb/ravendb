@@ -49,4 +49,10 @@
     @import "../../../node_modules/boostrap5/scss/helpers";
     // Utilities
     @import "../../../node_modules/boostrap5/scss/utilities/api";
+
+    // Custom Utilities
+    @import "../scss/layoutTools.scss";
+
+    // Pages
+    @import "../scss/pages/stats.scss";
 }

@@ -50,7 +50,7 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
                 <div className="col">
                     <h2 className="on-base-background">
                         General Database Stats
-                        <a target="_blank" href={rawJsonUrl} title="Show raw output">
+                        <a className="margin-left-xs" target="_blank" href={rawJsonUrl} title="Show raw output">
                             <i className="icon-link"></i>
                         </a>
                     </h2>
@@ -75,7 +75,6 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
                     </button>
                 </div>
             </div>
-
             <EssentialDatabaseStatsComponent stats={essentialStats} />
 
             {dbDetailsVisible && <DetailedDatabaseStats key="db-stats" database={database} />}

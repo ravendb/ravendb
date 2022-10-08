@@ -94,9 +94,10 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
     }, [loadDetailedStats]);
 
     return (
-        <div className="margin-top">
-            <h2>Detailed Database Stats</h2>
-
+        <>
+        <h2 className="on-base-background margin-top-lg">Detailed Database Stats</h2>
+        <div className="panel no-padding margin-top">
+            <div className="table-responsive">
             <table className="table table-bordered table-striped">
                 <thead>
                     <tr>
@@ -300,5 +301,7 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
                 </tbody>
             </table>
         </div>
+        </div>
+    </>
     );
 }

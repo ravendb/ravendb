@@ -99,7 +99,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                         <div className="name">
                             <i className="icon-timeseries-settings"></i>
                             <span>Time Series Segments Count</span>
-                            <span id="js-timeseries-segments" className="margin-left margin-left-sm has-info-icon">
+                            <span id="js-timeseries-segments" className="margin-left-sm">
                                 <i className="icon-info text-info"></i>
                             </span>
                             <UncontrolledTooltip target="js-timeseries-segments">

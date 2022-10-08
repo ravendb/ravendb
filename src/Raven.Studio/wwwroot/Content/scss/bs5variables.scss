@@ -1,3 +1,5 @@
+@use "sass:math";
+
 // Variables
 //
 // Variables should follow the `$component-state-property-size` formula for
@@ -417,7 +419,7 @@ $aspect-ratios: (
 
 // scss-docs-start font-variables
 // stylelint-disable value-keyword-case
-$font-family-sans-serif:      "BR Cobane", "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
+$font-family-sans-serif:      "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
 $font-family-monospace:       Menlo, Monaco, Consolas, "Courier New", monospace !default;
 // stylelint-enable value-keyword-case
 $font-family-base:            var(--#{$variable-prefix}font-sans-serif) !default;
@@ -442,11 +444,11 @@ $line-height-base:            $gutter-ratio !default;
 $line-height-sm:              1/$gutter-ratio !default;
 $line-height-lg:              $gutter-ratio * $gutter-ratio !default;
 
-$h1-font-size:                $font-size-base * 2.5 !default;
-$h2-font-size:                $font-size-base * 2 !default;
-$h3-font-size:                $font-size-base * 1.75 !default;
-$h4-font-size:                $font-size-base * 1.5 !default;
-$h5-font-size:                $font-size-base * 1.25 !default;
+$h1-font-size:                $font-size-base * math.pow($gutter-ratio, 2) !default;
+$h2-font-size:                $font-size-base * math.pow($gutter-ratio, 1.5) !default;
+$h3-font-size:                $font-size-base * math.pow($gutter-ratio, 1) !default;
+$h4-font-size:                $font-size-base * math.pow($gutter-ratio, .5) !default;
+$h5-font-size:                $font-size-base * math.pow($gutter-ratio, .1) !default;
 $h6-font-size:                $font-size-base !default;
 // scss-docs-end font-variables
 
@@ -554,7 +556,7 @@ $table-hover-bg:              rgba($black, $table-hover-bg-factor) !default;
 
 $table-border-factor:         .1 !default;
 $table-border-width:          $border-width !default;
-$table-border-color:          $border-color !default;
+$table-border-color:          $border-color-light !default;
 
 $table-striped-order:         odd !default;
 
