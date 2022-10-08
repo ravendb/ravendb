@@ -236,8 +236,8 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
 
     return (
         <section>
-            <h2 className="on-base-background margin-top margin-top-lg">Indexes Stats</h2>
-            <hr />
+            <h2 className="on-base-background margin-top-lg">Indexes Stats</h2>
+            
             {noData && (
                 <div className="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                     <i className="icon-xl icon-empty-set text-muted"></i>
@@ -247,10 +247,10 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
 
             {indexStats &&
                 indexStats.map((group) => (
-                    <div key={group.type}>
-                        <h3 className="on-base-background">{group.type} Indexes</h3>
-
-                        <div className="row row-sm flex-row">
+                    <div className="panel" key={group.type}>
+                        
+                        <h3>{group.type} Indexes</h3>
+                        <div>
                             {group.indexes.map((index) => {
                                 const showErrorCounts = index.details.some((x) => x && x.errorsCount > 0);
                                 const showMapErrors = index.details.some((x) => x && x.mapErrors > 0);
@@ -273,17 +273,14 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
                                 const showReduceErrors = index.details.some((x) => x && x.reduceErrors > 0);
 
                                 return (
+                                    <>
+                                    <h4 className="text-elipsis margin-top-md">
+                                        <a href={performanceUrl} title={index.name}>
+                                            {index.name}
+                                        </a>
+                                    </h4>
                                     <table className="table table-striped table-condensed" key={index.name}>
                                         <tbody>
-                                            <tr>
-                                                <td colSpan={locations.length + 1}>
-                                                    <h3 className="flex-grow text-elipsis">
-                                                        <a href={performanceUrl} title={index.name}>
-                                                            {index.name}
-                                                        </a>
-                                                    </h3>
-                                                </td>
-                                            </tr>
                                             <tr>
                                                 <td style={{ width: "200px" }}>Staleness</td>
                                                 <DetailsBlock index={index}>
@@ -446,6 +443,7 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
                                             )}
                                         </tbody>
                                     </table>
+                                </>
                                 );
                             })}
                         </div>
