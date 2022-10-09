@@ -6,6 +6,7 @@ using FastTests.Voron;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
 using Voron;
+using Voron.Data.Sets;
 using Voron.Debugging;
 using Xunit;
 using Xunit.Abstractions;
@@ -41,11 +42,14 @@ public class SetAddRemoval : StorageTest
         }
     }
 
-    [Fact]
-    public void AdditionsAndRemovalWork()
+    [Theory]
+    [InlineData(300)]
+    [InlineData(5000)]
+    [InlineData(int.MaxValue)]
+    public void AdditionsAndRemovalWork(int size)
     {
         var maxSize = 0;
-        List<long> items = ReadNumbersFromResource("Corax.Set.Adds.txt");
+        List<long> items = ReadNumbersFromResource("Corax.Set.Adds.txt").Take(size).ToList();
         items.Sort();
         
         maxSize = items.Count;

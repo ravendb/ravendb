@@ -64,9 +64,9 @@ namespace Voron.Data.Sets
             state.BufferSize = bufferLength;
         }
 
-        public static DecoderState Initialize(Span<byte> inputBuffer)
+        public static DecoderState Initialize(int length)
         {
-            return new DecoderState(inputBuffer.Length);
+            return new DecoderState(length);
         }
 
         private static ReadOnlySpan<byte> NumberOfValues => new byte[] { 1, 32, 64, 128 };
@@ -307,7 +307,7 @@ namespace Voron.Data.Sets
             Span<int> scratch = stackalloc int[128];
             
             var list = new List<int>();
-            var state = Initialize(buf);
+            var state = Initialize(buf.Length);
             while (true)
             {
                 var len = Decode(ref state, buf, scratch);

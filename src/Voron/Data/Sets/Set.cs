@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
@@ -19,6 +20,7 @@ namespace Voron.Data.Sets
         private UnmanagedSpan<SetCursorState> _stk;
         private int _pos = -1, _len;
         private readonly ByteStringContext<ByteStringMemoryCache>.InternalScope _scope;
+        private HashSet<long> _modifiedPages;
 
         public SetState State => _state;
         internal LowLevelTransaction Llt => _llt;
@@ -36,6 +38,7 @@ namespace Voron.Data.Sets
             // we will just discard the memory as reclaiming it may be even more costly.  
             _scope = llt.Allocator.Allocate(8 * sizeof(SetCursorState), out ByteString buffer);
             _stk = new UnmanagedSpan<SetCursorState>(buffer.Ptr, buffer.Size);
+            _modifiedPages = llt.Flags == TransactionFlags.ReadWrite ? new HashSet<long>() : null;
         }
 
         public static void Create(LowLevelTransaction tx, ref SetState state)
@@ -59,6 +62,7 @@ namespace Voron.Data.Sets
             if (leaf.IsValidValue(value) == false)
                 return; // value does not exists in tree
 
+            _modifiedPages.Add(leaf.Header->PageNumber);
             if (leaf.Remove(_llt, value, ref _state.NumberOfEntries)) // removed value properly
             {
                 if (_pos == 0)
@@ -131,7 +135,8 @@ namespace Voron.Data.Sets
                 _state.BranchPages--;
             else
                 _state.LeafPages--;
-            
+
+            _modifiedPages.Remove(siblingPageNum);
             _llt.FreePage(siblingPageNum);
             current.Remove(siblingKey);
             current.Remove(leafKey);
@@ -149,6 +154,7 @@ namespace Voron.Data.Sets
                     _state.Depth--; // replaced the root page
 
                 _state.BranchPages--;
+                _modifiedPages.Remove(leafPageNum);
                 _llt.FreePage(leafPageNum);
                 return;
             }
@@ -344,6 +350,7 @@ namespace Voron.Data.Sets
 
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
 
+            _modifiedPages.Add(state.Page.PageNumber);
             var leafPage = new SetLeafPage(state.Page);
             if (leafPage.IsValidValue(value) && // may have enough space, but too far out to fit 
                 leafPage.Add(_llt, value, ref _state.NumberOfEntries))
@@ -367,6 +374,7 @@ namespace Voron.Data.Sets
             }
 
             var (separator, newPage) = SplitLeafPage(value);
+            _modifiedPages.Add(newPage);
             AddToParentPage(separator, newPage);
             Add(value); // now add the value after the split
         }
@@ -509,6 +517,7 @@ namespace Voron.Data.Sets
             _state.Depth++;
             _state.BranchPages++;
             // we'll copy the current page and reuse it, to avoid changing the root page number
+            _modifiedPages.Remove(_state.RootPage);
             var page = _llt.AllocatePage(1);
             long cpy = page.PageNumber;
             ref var state = ref _stk[_pos];
@@ -519,12 +528,10 @@ namespace Voron.Data.Sets
             rootPage.Init();
             rootPage.TryAdd(_llt, long.MinValue, cpy);
 
-            InsertToStack(new SetCursorState
-            {
-                Page = page,
-                LastMatch = state.LastMatch,
-                LastSearchPosition = state.LastSearchPosition
-            });
+            SetCursorState newState = state with { Page = page };
+            if (newState.IsLeaf)
+                _modifiedPages.Add(page.PageNumber);
+            InsertToStack(newState);
             state.LastMatch = -1;
             state.LastSearchPosition = 0;
         }
@@ -808,6 +815,19 @@ namespace Voron.Data.Sets
         public void Dispose()
         {
             _scope.Dispose();
+        }
+
+        public void PrepareForCommit()
+        {
+            // RavenDB-19361 - we need to fixup the number of entries in the presence of duplicate
+            foreach (long page in _modifiedPages)
+            {
+                var leafPage = new SetLeafPage(_llt.GetPage(page));
+                if (leafPage.Header->SetFlags != ExtendedPageType.SetLeaf)
+                    throw new InvalidDataException("Expected to process leaf page " + page + ", but got something else!");
+
+                leafPage.RemoveDuplicates(ref _state.NumberOfEntries);
+            }
         }
     }
 }

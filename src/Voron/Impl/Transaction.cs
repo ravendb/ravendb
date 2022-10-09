@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -250,6 +250,7 @@ namespace Voron.Impl
             {
                 foreach (Set set in _sets.Values)
                 {
+                    set.PrepareForCommit();
                     using (_lowLevelTransaction.RootObjects.DirectAdd(set.Name, sizeof(SetState), out byte* ptr))
                     {
                         Span<byte> span = new Span<byte>(ptr, sizeof(SetState));

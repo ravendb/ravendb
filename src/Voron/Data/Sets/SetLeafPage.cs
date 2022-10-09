@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow;
 using Sparrow.Server;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -92,7 +93,7 @@ namespace Voron.Data.Sets
             private int _rawValuesIndex, _compressedEntryIndex;
             private PForDecoder.DecoderState _decoderState;
             private bool _hasDecoder;
-            public int NumberOfDuplicates;
+            public int Duplicates, SpuriousRemovals;
 
             private fixed int _pforBuffer[PForEncoder.BufferLen];
             private fixed long _moveNextBuffer[MoveNextBufferSize];
@@ -131,7 +132,9 @@ namespace Voron.Data.Sets
                 _lastVal = long.MinValue;
                 _moveNextIndex = 0;
                 _moveNextLength = 0;
-                NumberOfDuplicates = 0;
+                SpuriousRemovals = 0;
+                Duplicates = 0;
+                
 
                 if (_hasDecoder)
                     InitializeDecoder(0);
@@ -140,7 +143,7 @@ namespace Voron.Data.Sets
             private void InitializeDecoder(int index)
             {
                 _compressedEntry = _parent.Positions[index];
-                _decoderState = PForDecoder.Initialize(_parent.Span.Slice(_compressedEntry.Position, _compressedEntry.Length));
+                _decoderState = PForDecoder.Initialize(_compressedEntry.Length);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -224,7 +227,7 @@ namespace Voron.Data.Sets
                         {
                             if (compressIndex >= compressLength)
                             {
-                                TryReadMoreCompressedValues(ref _parent, ref _decoderState, ref _compressedEntry, ref compressIndex, ref compressLength,
+                                _parent.TryReadMoreCompressedValues(ref _decoderState, ref _compressedEntry, ref compressIndex, ref compressLength,
                                     ref _compressedEntryIndex, ref _hasDecoder, scratchPtr, PForEncoder.BufferLen);
                             }
 
@@ -245,9 +248,12 @@ namespace Voron.Data.Sets
                             rawValuesIndex--; // increase to the _next_ highest value, since we are sorted in descending order
 
                             hasRawValue = false;
+                            value = rawValueMasked;
+
+                            bool compressedAndRawValueAreSame = compressedValue == rawValueMasked;
+                            
                             rawValueMasked = int.MaxValue;
 
-                            bool compressedAndRawValueAreSame = compressedValue == (rawValue & int.MaxValue);
                             bool previouslyHadCompressedValue = hasCompressedValue; 
                             if (compressedAndRawValueAreSame)
                                 hasCompressedValue = false;
@@ -255,14 +261,14 @@ namespace Voron.Data.Sets
                             // This is a removed value, so we remove it. 
                             if (rawValue < 0)
                             {
+                                if (compressedAndRawValueAreSame == false)
+                                    SpuriousRemovals++;
                                 // It is a removal of an existing compressed value, then we signal that we have consumed the compressed value too. 
                                 continue;
                             }
 
                             if (compressedAndRawValueAreSame && previouslyHadCompressedValue)
-                                NumberOfDuplicates++;
-
-                            value = rawValue & int.MaxValue;
+                                Duplicates++;
                         }
                         else // we have a raw value, but it is bigger than the current compressed value, therefore we need to read the compressed value
                         {
@@ -291,40 +297,6 @@ namespace Voron.Data.Sets
                     _compressLength = compressLength;
                 }
             }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private static void TryReadMoreCompressedValues(ref SetLeafPage parent, 
-                ref PForDecoder.DecoderState decoderState, 
-                ref CompressedHeader compressedEntry, 
-                ref int compressIndex,
-                ref int compressLength,
-                ref int compressedEntryIndex,
-                ref bool hasDecoder,
-                int* scratch, 
-                int scratchSize)
-            {
-                var parentPtr = parent.Ptr;
-                var parentHeader = parent.Header;
-                var parentPositions = parent.PositionsPtr;
-
-                while (compressIndex == compressLength && hasDecoder)
-                {
-                    compressIndex = 0;
-                    compressLength = PForDecoder.Decode(ref decoderState, parentPtr + compressedEntry.Position, compressedEntry.Length, scratch, scratchSize);
-                    if (compressLength != 0)
-                        return;
-
-                    if (++compressedEntryIndex >= parentHeader->NumberOfCompressedPositions)
-                    {
-                        hasDecoder = false;
-                        return;
-                    }
-
-                    compressedEntry = parentPositions[compressedEntryIndex];
-                    PForDecoder.Reset(ref decoderState, compressedEntry.Length);                    
-                }
-            }
-
 
             public int CompressedEntryIndex => _compressedEntryIndex;
 
@@ -366,6 +338,42 @@ namespace Voron.Data.Sets
                 return _moveNextIndex - start;
             }
         }
+        
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TryReadMoreCompressedValues( 
+            ref PForDecoder.DecoderState decoderState, 
+            ref CompressedHeader compressedEntry, 
+            ref int compressIndex,
+            ref int compressLength,
+            ref int compressedEntryIndex,
+            ref bool hasDecoder,
+            int* scratch, 
+            int scratchSize)
+        {
+            var parentPtr = Ptr;
+            var parentHeader = Header;
+            var parentPositions = PositionsPtr;
+
+            while (compressIndex == compressLength && hasDecoder)
+            {
+                compressIndex = 0;
+                compressLength = PForDecoder.Decode(ref decoderState, parentPtr + compressedEntry.Position, compressedEntry.Length, scratch, scratchSize);
+                if (compressLength != 0)
+                    return;
+
+                if (++compressedEntryIndex >= parentHeader->NumberOfCompressedPositions)
+                {
+                    hasDecoder = false;
+                    return;
+                }
+
+                compressedEntry = parentPositions[compressedEntryIndex];
+                PForDecoder.Reset(ref decoderState, compressedEntry.Length);                    
+            }
+        }
+
+
 
         public List<long> GetDebugOutput(LowLevelTransaction llt)
         {
@@ -384,7 +392,7 @@ namespace Voron.Data.Sets
         {
             if (IsValidValue(value) == false)
                 throw new InvalidOperationException($"The specified value {value} does not match the baseline: {Header->Baseline} for page {_page.PageNumber}");
-            return AddInternal(tx, (int)value & int.MaxValue, ref numberOfEntries);
+            return AddInternal(tx, (int)value & int.MaxValue, ref numberOfEntries, 1);
         }
 
         public bool IsValidValue(long value)
@@ -399,13 +407,10 @@ namespace Voron.Data.Sets
                 throw new InvalidOperationException(
                     $"Attempt to remove value ({value}) from set leaf page ({_page.PageNumber}) that doesn't share the same baseline {Header->Baseline}");
 
-            long entriesRemoved = 0;
-            var result =  AddInternal(tx, int.MinValue | ((int)value & int.MaxValue), ref entriesRemoved);
-            numberOfEntries = Math.Max(0, numberOfEntries - entriesRemoved);
-            return result;
+            return AddInternal(tx, int.MinValue | ((int)value & int.MaxValue), ref numberOfEntries, -1);
         }
 
-        private bool AddInternal(LowLevelTransaction tx, int value, ref long numberOfEntries)
+        private bool AddInternal(LowLevelTransaction tx, int value, ref long numberOfEntries, int change)
         {
             var oldRawValues = RawValues;
 
@@ -416,6 +421,14 @@ namespace Voron.Data.Sets
             if (index >= 0)
             {
                 // overwrite it (maybe add on removed value).
+                if ((oldRawValues[index] & ~int.MaxValue) != 0 && 
+                    (value & ~int.MaxValue) != 0)
+                {
+                    // only update the number of entries *iff*
+                    // * moving from delete to value
+                    // * value to delete will be handled on compression / commit fixup
+                    numberOfEntries += change;
+                } 
                 oldRawValues[index] = value;
                 return true;
             }
@@ -427,11 +440,17 @@ namespace Voron.Data.Sets
                 using var cmp = new Compressor(this, tx);
                 if (cmp.TryCompressRawValues(ref numberOfEntries) == false)
                     return false;
-
+                
                 // we didn't free enough space
                 if (Header->CompressedValuesCeiling > Constants.Storage.PageSize - MinNumberOfRawValues * sizeof(int))
                     return false;
-                return AddInternal(tx, value, ref numberOfEntries);
+                return AddInternal(tx, value, ref numberOfEntries, change);
+            }
+
+            if ((value & ~int.MaxValue) != 0 && 
+                Header->NumberOfCompressedPositions == 0)
+            {
+                return true; // nothing to remove
             }
 
             Header->NumberOfRawValues++; // increase the size of the buffer _downward_
@@ -439,7 +458,7 @@ namespace Voron.Data.Sets
             index = ~index;
             oldRawValues.Slice(0, index).CopyTo(newRawValues);
             newRawValues[index] = value;
-            numberOfEntries++;
+            numberOfEntries += change;
             return true;
         }
 
@@ -532,7 +551,7 @@ namespace Voron.Data.Sets
 
                 var maxBits = _output.Length * 8 / 2; // we allocated 2KB, but we stopped at roughly the 1KB marker
                 var encoder = new PForEncoder(_output, _scratchEncoder);
-                while (it.MoveNext(out long lv) )
+                while (it.MoveNext(out long lv))
                 {
                     var v = (int)lv & int.MaxValue;
                     if (encoder.TryAdd(v) == false)
@@ -560,7 +579,8 @@ namespace Voron.Data.Sets
                 _tmpPage.AsSpan().CopyTo(_parent.Span);
                 
                 // RavenDB-19361 - we need to ensure that we fixup any additional accounting for duplicates
-                numberOfEntries -= it.NumberOfDuplicates;
+                numberOfEntries -= it.Duplicates;
+                numberOfEntries += it.SpuriousRemovals;
                 return true;
             }
 
@@ -639,7 +659,7 @@ namespace Voron.Data.Sets
                 pos = ref Positions[0];
                 Span<int> scratch = stackalloc int[PForEncoder.BufferLen];
                 var compressedEntryBuffer = Span.Slice(pos.Position, pos.Length);
-                var decoderState = PForDecoder.Initialize(compressedEntryBuffer);
+                var decoderState = PForDecoder.Initialize(compressedEntryBuffer.Length);
                 var decoded = PForDecoder.Decode(ref decoderState, compressedEntryBuffer, scratch);
                 Debug.Assert(decoded > 0);
                 first = scratch[0];
@@ -665,6 +685,111 @@ namespace Voron.Data.Sets
             Debug.Assert(last != null, nameof(last) + " != null");
             return (Header->Baseline | (long)first.Value, Header->Baseline | (long)last.Value);
         }
+
+        public void RemoveDuplicates(ref long numberOfEntries)
+        {
+            if (Header->NumberOfRawValues == 0 || Header->NumberOfCompressedPositions == 0)
+                return;
+
+            Span<int> rawValues = RawValues;
+            var firstRawValue = rawValues[^1] & int.MaxValue;
+            int compressedEntryIndex = 0;
+            for (; compressedEntryIndex < Header->NumberOfCompressedPositions; compressedEntryIndex++)
+            {
+                var compressedEnd = GetCompressRangeEnd(ref PositionsPtr[compressedEntryIndex]);
+                if (firstRawValue <= compressedEnd)
+                    break;
+            }
+
+            Span<int> reversedRawValues = stackalloc int[Header->NumberOfRawValues];
+            int acceptedRawValueIndex = 0;
+            int rawValueIndex = Header->NumberOfRawValues - 1;
+
+            if (compressedEntryIndex == Header->NumberOfCompressedPositions)
+            {
+                // all compressed values are smaller than smallest raw value, just need to filter spurious deletions
+                UpdateRawValuesFrom(rawValues, reversedRawValues, rawValueIndex, acceptedRawValueIndex, ref numberOfEntries);
+                return;
+            }
+
+            const int BufferSize = 256;
+            int* buffer = stackalloc int[BufferSize];
+            var compressedEntry = Positions[compressedEntryIndex];
+            var decoderState = PForDecoder.Initialize(compressedEntry.Length);
+            int compressIndex = 0;
+            int compressLength = 0;
+            bool hasDecoder = true;
+            
+            Debug.Assert(Header->NumberOfRawValues <= MaxNumberOfRawValues);
+           
+            TryReadMoreCompressedValues(ref decoderState, ref compressedEntry,
+                ref compressIndex, ref compressLength, ref compressedEntryIndex,
+                ref hasDecoder, buffer, BufferSize);
+            Debug.Assert(hasDecoder);
+            var compressedBuffer = new Span<int>(buffer, compressLength);
+
+
+            while (rawValueIndex >= 0 && hasDecoder)
+            {
+                var rawValue = rawValues[rawValueIndex] & int.MaxValue;
+
+                if (compressedBuffer.Length > 0 && rawValue > compressedBuffer[^1])
+                {
+                    // need to get more compressed values
+                    compressIndex = compressLength;
+                    TryReadMoreCompressedValues(ref decoderState, ref compressedEntry,
+                        ref compressIndex, ref compressLength, ref compressedEntryIndex,
+                        ref hasDecoder, buffer, BufferSize);
+                    compressedBuffer = new Span<int>(buffer, compressLength);
+                    continue;
+                }
+
+                var currentIndex = rawValueIndex;
+                rawValueIndex--;
+                int index = compressedBuffer.BinarySearch(rawValue);
+                bool isRemoval = (rawValues[currentIndex] & ~int.MaxValue) != 0;
+                if (index < 0)
+                {
+                    if (isRemoval)
+                    {
+                        // removal of item that isn't there, can add it back
+                        numberOfEntries++;
+                    }
+                    continue;
+                }
+
+                compressedBuffer = compressedBuffer[index..];
+                if(isRemoval)
+                    continue;
+                
+                numberOfEntries--; // duplicated
+                reversedRawValues[acceptedRawValueIndex++] = rawValues[currentIndex];
+            }
+
+            UpdateRawValuesFrom(rawValues, reversedRawValues, rawValueIndex, acceptedRawValueIndex, ref numberOfEntries);
+        }
+
+        private void UpdateRawValuesFrom(Span<int> rawValues, Span<int> reversedRawValues, int rawValueIndex, int acceptedRawValueIndex, ref long numberOfEntries)
+        {
+            for (; rawValueIndex >= 0; rawValueIndex--)
+            {
+                if ((rawValues[rawValueIndex] & ~int.MaxValue) == 0)
+                {
+                    reversedRawValues[acceptedRawValueIndex++] = rawValues[rawValueIndex];
+                }
+                else
+                {
+                    numberOfEntries++;
+                }
+            }
+
+            if (acceptedRawValueIndex == rawValues.Length)
+                return; // nothing was removed
+
+            reversedRawValues = reversedRawValues[..acceptedRawValueIndex];
+            reversedRawValues.Reverse();
+            reversedRawValues.CopyTo(RawValues);
+            Header->NumberOfRawValues = (ushort)acceptedRawValueIndex;
+        }
     }
-    
 }
