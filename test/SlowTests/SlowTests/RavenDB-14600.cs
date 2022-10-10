@@ -51,8 +51,8 @@ namespace SlowTests.SlowTests
                     select new
                     {
                         o.Employee,
-                     //   o.Company,
-                       // Total = o.Lines.Sum(x => x.Quantity * x.PricePerUnit),
+                        o.Company,
+                        Total = o.Lines.Sum(x => x.Quantity * x.PricePerUnit),
                         EmployeeByDay = new { o.Employee, o.OrderedAt.Date }
                     };
                 Index("EmployeeByDay", FieldIndexing.Exact);
@@ -60,14 +60,14 @@ namespace SlowTests.SlowTests
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax - complex items")]
         public void CanIncludeComplexFacetResult(Options options)
         {
             using var store = GetDocumentStore(options);
             store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents));
             new MyIndex().Execute(store);
             Indexes.WaitForIndexing(store);
-WaitForUserToContinueTheTest(store);
             using (var s = store.OpenSession())
             {
                 var facets = s.Query<Order, MyIndex>()

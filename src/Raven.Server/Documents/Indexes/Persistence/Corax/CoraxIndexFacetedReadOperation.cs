@@ -1,15 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
-using Nest;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
@@ -19,11 +16,9 @@ using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
-using Voron.Data.BTrees;
 using Voron.Impl;
 using IndexEntryReader = Corax.IndexEntryReader;
 using RangeType = Raven.Client.Documents.Indexes.RangeType;
-using Token = Corax.Pipeline.Token;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -50,8 +45,8 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         var results = FacetedQueryParser.Parse(context, facetQuery, SearchEngineType.Corax);
 
         var query = facetQuery.Query;
-        Dictionary<string, Dictionary<string, FacetValues>> facetsByName = null;
-        Dictionary<string, Dictionary<string, FacetValues>> facetsByRange = null;
+        Dictionary<string, Dictionary<string, FacetValues>> facetsByName = new();
+        Dictionary<string, Dictionary<string, FacetValues>> facetsByRange = new();
 
         var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, null, null, query, _index, query.QueryParameters, _queryBuilderFactories,
             _fieldMappings, null, null, -1, null);
@@ -73,27 +68,24 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
                     if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
                     {
-                        facetsByName ??= new Dictionary<string, Dictionary<string, FacetValues>>();
-
                         HandleFacetsPerDocument(ref entryReader, result, facetsByName, facetQuery.Legacy, facetTiming, analyzersScope, token);
                         continue;
                     }
 
                     // Cache facetByRange because we will fulfill data in batches instead of whole collection
-                    facetsByRange ??= new();
                     if (facetsByRange.TryGetValue(result.Key, out var facetValues) == false)
                     {
                         facetValues = new();
                         facetsByRange.Add(result.Key, facetValues);
                     }
 
-                    HandleRangeFacetsPerDocument(ref entryReader, result, facetQuery.Legacy, facetTiming, facetValues, token);
+                    HandleRangeFacetsPerDocument(ref entryReader, result.Key, result.Value, facetQuery.Legacy, facetTiming, facetValues, token);
                 }
             }
 
             token.ThrowIfCancellationRequested();
         }
-
+        
         UpdateRangeResults();
         
         UpdateFacetResults(results, query, facetsByName);
@@ -108,30 +100,34 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         {
             foreach (var result in results)
             {
-                if (facetsByRange != null)
-                    foreach (var kvp in facetsByRange)
+                foreach (var kvp in facetsByRange)
+                {
+                    if (result.Key == kvp.Key)
                     {
                         foreach (var inner in kvp.Value)
                         {
                             if (inner.Value.Any == false)
+                            {
                                 continue;
-
+                            }
                             result.Value.Result.Values.AddRange(inner.Value.GetAll());
+
                         }
                     }
+                }
             }
         }
     }
 
     private void HandleRangeFacetsPerDocument(ref IndexEntryReader indexEntry,
-        KeyValuePair<string, FacetedQueryParser.FacetResult> result,
+        string name, FacetedQueryParser.FacetResult result,
         bool legacy,
         QueryTimingsScope queryTimings,
         Dictionary<string, FacetValues> facetValues,
         CancellationToken token)
     {
-        var needToApplyAggregation = result.Value.Aggregations.Count > 0;
-        var ranges = result.Value.Ranges;
+        var needToApplyAggregation = result.Aggregations.Count > 0;
+        var ranges = result.Ranges;
         
         // Create map in first batch
         if (facetValues.Count == 0)
@@ -140,10 +136,9 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         }
 
 
-        foreach (var parsedRange in CollectionsMarshal.AsSpan(ranges))
+        foreach (var parsedRange in ranges)
         {
-            var range = parsedRange as FacetedQueryParser.CoraxParsedRange;
-            if (range is null)
+            if (parsedRange is not FacetedQueryParser.CoraxParsedRange range)
                 continue;
 
             GetFieldReader(ref indexEntry, in range.Field, out var fieldReader);
@@ -152,7 +147,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             if (fieldReader.Type == IndexEntryFieldType.Invalid)
                 continue;
 
-            var rangeType = result.Value.RangeType;
+            var rangeType = result.RangeType;
             bool isMatching = false;
             switch (fieldReader.Type)
             {
@@ -221,7 +216,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             {
                 collectionOfFacetValues.IncrementCount(1);
                 if (needToApplyAggregation)
-                    ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, ref indexEntry);
+                    ApplyAggregation(result.Aggregations, collectionOfFacetValues, ref indexEntry);
             }
 
             token.ThrowIfCancellationRequested();
@@ -241,7 +236,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                     collectionOfFacetValues.AddDefault(key);
                 else
                 {
-                    foreach (var aggregation in result.Value.Aggregations)
+                    foreach (var aggregation in result.Aggregations)
                         collectionOfFacetValues.Add(aggregation.Key, key);
                 }
 
