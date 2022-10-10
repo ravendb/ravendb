@@ -6,7 +6,14 @@
     </div>
 </div>
 <div class="form-group" data-bind="validationElement: factoryName">
-    <label class="control-label">Factory</label>
+    <label class="control-label">
+        Factory
+        <br />
+        <br />
+        <small id="js-sql-syntax" class="text-primary" data-bind="visible: factoryName">
+            Syntax <i class="icon-help"></i>
+        </small>
+    </label>
     <div class="flex-grow">
         <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
             <span data-bind="text: fullNameFor(factoryName()) || 'Select factory name'"></span> <span class="caret"></span>
