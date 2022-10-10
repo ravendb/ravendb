@@ -24,6 +24,7 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import testSqlReplicationCommand = require("commands/database/tasks/testSqlReplicationCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import popoverUtils = require("common/popoverUtils");
 import { highlight, languages } from "prismjs";
 
 class sqlTaskTestMode {
@@ -278,6 +279,12 @@ class editSqlEtlTask extends viewModelBase {
         super.compositionComplete();
 
         $('.edit-raven-sql-task [data-toggle="tooltip"]').tooltip();
+
+        popoverUtils.longWithHover($("#js-sql-syntax"), {
+            html: true,
+            content: () => this.newConnectionString()?.syntaxHtml() ?? "",
+            placement: "top"
+        });
     }
     
     /***************************************************/
