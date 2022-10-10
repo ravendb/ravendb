@@ -20,6 +20,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import generalUtils = require("common/generalUtils");
 import fileImporter = require("common/fileImporter");
+import sqlConnectionStringSyntax = require("common/helpers/database/sqlConnectionStringSyntax");
 
 interface exportDataDto {
     Schema: Raven.Server.SqlMigration.Schema.DatabaseSchema,
@@ -159,45 +160,25 @@ class importDatabaseFromSql extends viewModelBase {
 
         popoverUtils.longWithHover($("#js-mssql-syntax"), {
             html: true,
-            content: `Example: <code>Data Source=10.0.0.107;Database=SourceDB;User ID=sa;Password=secret;</code>
-                <br />
-                <small>
-                    More examples can be found in 
-                    <a href="https://ravendb.net/l/38S9OQ" target="_blank"><i class="icon-link"></i> full syntax reference</a>
-                </small>`,
+            content: sqlConnectionStringSyntax.mssqlSyntax,
             placement: "top"
         });
 
         popoverUtils.longWithHover($("#js-mysql-syntax"), {
             html: true,
-            content: `Example: <code>server=10.0.0.103;port=3306;userid=root;password=secret;</code>
-                <br />
-                <small>
-                    More examples can be found in 
-                    <a href="https://ravendb.net/l/BSS8YH" target="_blank"><i class="icon-link"></i> full syntax reference</a>
-                </small>`,
+            content: sqlConnectionStringSyntax.mysqlSyntax,
             placement: "top"
         });
 
         popoverUtils.longWithHover($("#js-npgsql-syntax"), {
             html: true,
-            content: `Example: <code>Host=10.0.0.105;Port=5432;Username=postgres;Password=secret</code>
-                <br />
-                <small>
-                    More examples can be found in 
-                    <a href="https://ravendb.net/l/FWEBWD" target="_blank"><i class="icon-link"></i> full syntax reference</a>
-                </small>`,
+            content: sqlConnectionStringSyntax.npgsqlSyntax,
             placement: "top"
         });
 
         popoverUtils.longWithHover($("#js-oracle-syntax"), {
             html: true,
-            content: `Example: <code>Data Source=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=10.0.0.101)(PORT=1521)))(CONNECT_DATA=(SID=ORCLCDB)));User Id=SYS;DBA Privilege=SYSDBA;password=secret;</code>
-                <br />
-                <small>
-                    More examples can be found in 
-                    <a href="https://ravendb.net/l/TG851N" target="_blank"><i class="icon-link"></i> full syntax reference</a>
-                </small>`,
+            content: sqlConnectionStringSyntax.oracleSyntax,
             placement: "top"
         });
     }
