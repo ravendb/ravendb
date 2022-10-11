@@ -104,7 +104,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface ICompareExchangeActions : INewCompareExchangeActions, IAsyncDisposable
     {
-        ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value);
+        ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, bool fromFullBackup);
 
         ValueTask WriteTombstoneKeyAsync(string key);
     }

@@ -584,7 +584,7 @@ namespace Raven.Server.Smuggler.Documents
                 _clusterTransactionCommandsSize = new Size(0, SizeUnit.Megabytes);
             }
 
-            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
+            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, bool fromFullBackup)
             {
                 if (_compareExchangeValuesSize >= _compareExchangeValuesBatchSize || _compareExchangeAddOrUpdateCommands.Count >= BatchSize)
                 {
@@ -611,7 +611,7 @@ namespace Raven.Server.Smuggler.Documents
                         Document = doc.Data,
                         Type = CommandType.PUT,
                         OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector),
-                        FromBackup = true
+                        FromFullBackup = fromFullBackup
                     });
 
                     _clusterTransactionCommandsSize.Add(doc.Data.Size, SizeUnit.Bytes);
