@@ -112,7 +112,7 @@ namespace SlowTests.Issues
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var firstNode2 = record.Topology.Members[0];
 
-                Assert.True(await WaitForValueAsync(async () =>
+                await WaitForValueAsync(async () =>
                 {
                     record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     var list = record.Topology.Members;
@@ -122,7 +122,7 @@ namespace SlowTests.Issues
                     record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     var firstNode3 = record.Topology.Members[0];
                     return firstNode3 != firstNode && firstNode3 != firstNode2;
-                }, true, interval: 333));
+                }, true, interval: 333);
 
                 await Task.Delay(1000);
 
