@@ -756,11 +756,12 @@ namespace SlowTests.Server.Replication
                 {
                     Assert.Equal(1, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("users/1").Count, 1, interval: 128));
                 }
+
+                Assert.True(WaitForDocument(storeB, "users/1"));
                 using (var session = storeB.OpenSession())
                 {
                     Assert.Equal(1, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("users/1").Count, 1, interval: 128));
                 }
-                Assert.True(WaitForDocument(storeB, "users/1"));
 
                 await SetupReplicationAsync(storeA, storeC);
                 await SetupReplicationAsync(storeB, storeC);
