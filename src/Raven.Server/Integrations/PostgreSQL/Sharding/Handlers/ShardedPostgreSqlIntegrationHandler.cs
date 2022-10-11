@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Integrations.PostgreSQL.Handlers.Processors;
-using Raven.Server.Integrations.PostgreSQL.Sharding.Handlers.Processors;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 
@@ -19,28 +19,28 @@ public class ShardedPostgreSqlIntegrationHandler : ShardedDatabaseRequestHandler
     [RavenShardedAction("/databases/*/admin/integrations/postgresql/users", "GET")]
     public async Task GetUsernamesList()
     {
-        using (var processor = new ShardedPostgreSqlIntegrationHandlerProcessorForGetUsernamesList(this))
+        using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support PostgreSQL."))
             await processor.ExecuteAsync();
     }
 
     [RavenShardedAction("/databases/*/admin/integrations/postgresql/user", "PUT")]
     public async Task AddUser()
     {
-        using (var processor = new ShardedPostgreSqlIntegrationHandlerProcessorForAddUser(this))
+        using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support PostgreSQL."))
             await processor.ExecuteAsync();
     }
 
     [RavenShardedAction("/databases/*/admin/integrations/postgresql/user", "DELETE")]
     public async Task DeleteUser()
     {
-        using (var processor = new ShardedPostgreSqlIntegrationHandlerProcessorForDeleteUser(this))
+        using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support PostgreSQL."))
             await processor.ExecuteAsync();
     }
 
     [RavenShardedAction("/databases/*/admin/integrations/postgresql/config", "POST")]
     public async Task PostPostgreSqlConfiguration()
     {
-        using (var processor = new ShardedPostgreSqlIntegrationHandlerProcessorForPostPostgreSqlConfiguration(this))
+        using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support PostgreSQL."))
             await processor.ExecuteAsync();
     }
 }
