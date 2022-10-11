@@ -628,16 +628,9 @@ namespace Raven.Server.Documents.Handlers
                                 case CommandType.PUT:
                                     if (current < count)
                                     {
-                                        NonPersistentDocumentFlags nonPersistentDocumentFlags = NonPersistentDocumentFlags.None;
-
-                                        if (cmd.FromBackup)
-                                        {
-                                            // if the document came from backup it must have the same collection
-                                            // the only thing that we update is the change vector
-                                            // in this case, we can skip revision creation
-                                            nonPersistentDocumentFlags = NonPersistentDocumentFlags.SkipRevisionCreation;
-                                        }
-                                        else
+                                        // if the document came from a full backup it must have the same collection
+                                        // the only thing that we update is the change vector
+                                        if (cmd.FromFullBackup == false)
                                         {
                                             // delete the document to avoid exception if we put new document in a different collection.
                                             // TODO: document this behavior
@@ -649,7 +642,7 @@ namespace Raven.Server.Documents.Handlers
                                         }
 
                                         var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector,
-                                            flags: DocumentFlags.FromClusterTransaction, nonPersistentFlags: nonPersistentDocumentFlags);
+                                            flags: DocumentFlags.FromClusterTransaction);
                                         context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                                         AddPutResult(putResult);
                                     }

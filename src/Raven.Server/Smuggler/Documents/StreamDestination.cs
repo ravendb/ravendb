@@ -1164,7 +1164,7 @@ namespace Raven.Server.Smuggler.Documents
             {
             }
 
-            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
+            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, bool fromFullBackup)
             {
                 using (value)
                 {

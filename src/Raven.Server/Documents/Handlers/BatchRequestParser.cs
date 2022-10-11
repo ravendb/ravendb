@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Handlers
             public bool IdPrefixed;
             public long Index;
             public bool FromEtl;
-            public bool FromBackup;
+            public bool FromFullBackup;
             public bool ReturnDocument;
 
             public bool SeenCounters;
@@ -670,7 +670,7 @@ namespace Raven.Server.Documents.Handlers
                         commandData.FromEtl = state.CurrentTokenType == JsonParserToken.True;
                         break;
 
-                    case CommandPropertyName.FromBackup:
+                    case CommandPropertyName.FromFullBackup:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
 
@@ -679,7 +679,7 @@ namespace Raven.Server.Documents.Handlers
                             ThrowUnexpectedToken(JsonParserToken.True, state);
                         }
 
-                        commandData.FromBackup = state.CurrentTokenType == JsonParserToken.True;
+                        commandData.FromFullBackup = state.CurrentTokenType == JsonParserToken.True;
                         break;
 
                     case CommandPropertyName.AttachmentType:
@@ -925,7 +925,7 @@ namespace Raven.Server.Documents.Handlers
             #endregion RavenData
 
             FromEtl,
-            FromBackup
+            FromFullBackup
 
             // other properties are ignore (for legacy support)
         }
@@ -985,10 +985,6 @@ namespace Raven.Server.Documents.Handlers
                         *(short*)(state.StringBuffer + sizeof(long)) == 29541)
                         return CommandPropertyName.TimeSeries;
 
-                    if (*(long*)state.StringBuffer == 7738135522684400198 &&
-                        *(short*)(state.StringBuffer + sizeof(long)) == 28789)
-                        return CommandPropertyName.FromBackup;
-
                     return CommandPropertyName.NoSuchProperty;
 
                 case 11:
@@ -1026,14 +1022,22 @@ namespace Raven.Server.Documents.Handlers
                         *(long*)(state.StringBuffer + sizeof(int)) == 7598543892411468136 &&
                         *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 26478)
                         return CommandPropertyName.PatchIfMissing;
+
                     if (*(int*)state.StringBuffer == 1970562386 &&
                         *(long*)(state.StringBuffer + sizeof(int)) == 7308626840221150834 &&
                         *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 29806)
                         return CommandPropertyName.ReturnDocument;
+
                     if (*(int*)state.StringBuffer == 1635021889 &&
                         *(long*)(state.StringBuffer + sizeof(int)) == 8742740794129868899 &&
                         *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 25968)
                         return CommandPropertyName.AttachmentType;
+
+                    if (*(int*)state.StringBuffer == 1836020294 &&
+                        *(long*)(state.StringBuffer + sizeof(int)) == 7738135522667427142 &&
+                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 28789)
+                        return CommandPropertyName.FromFullBackup;
+
                     return CommandPropertyName.NoSuchProperty;
 
                 case 15:

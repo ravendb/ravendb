@@ -36,6 +36,7 @@ using Sparrow.Utils;
 using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
+using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
@@ -844,7 +845,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     database.Time, options, result: restoreResult, onProgress: onProgress, token: _operationCancelToken.Token)
                 {
                     OnIndexAction = onIndexAction,
-                    OnDatabaseRecordAction = onDatabaseRecordAction
+                    OnDatabaseRecordAction = onDatabaseRecordAction,
+                    FromFullBackup = BackupUtils.IsFullBackup(Path.GetExtension(filePath))
                 };
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false, isLastFile);
             }

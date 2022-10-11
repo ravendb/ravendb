@@ -34,6 +34,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public Action<IndexDefinitionAndType> OnIndexAction;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
+        public bool FromFullBackup;
 
         public const string PreV4RevisionsDocumentId = "/revisions/";
 
@@ -857,7 +858,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
+                        await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value, FromFullBackup);
                         result.CompareExchange.LastEtag = kvp.Index;
                     }
                     catch (Exception e)
