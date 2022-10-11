@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers
 
             var returnFullResults = GetBoolValueQueryString("full", required: false) ?? false;
 
-            var result = new GetMultipleTimeSeriesRangesCommand.Result()
+            var result = new GetMultipleTimeSeriesRangesCommand.Response()
             {
                 Results = new List<TimeSeriesDetails>()
             };
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
                     {
-                        writer.WritePropertyName(nameof(GetMultipleTimeSeriesRangesCommand.Result.Results));
+                        writer.WritePropertyName(nameof(GetMultipleTimeSeriesRangesCommand.Response.Results));
                         writer.WriteStartArray();
                         {
                             var first = true;
