@@ -200,16 +200,15 @@ namespace Voron.Data.CompactTrees
             encodedKey = encodedKey.Slice(0, bytesLength + (remainder == 0 ? 0 : 1));
         }
 
-
-        public int GetMaxEncodingBytes(ReadOnlySpan<byte> key)
+        public int GetMaxEncodingBytes(int keyLength)
         {
             // The plus one is because we may be sending non null terminated strings and we have to account for it. 
-            return Math.Max(sizeof(long), _encoder.GetMaxEncodingBytes(key.Length + 1));
+            return Math.Max(sizeof(long), _encoder.GetMaxEncodingBytes(keyLength + 1));
         }
 
-        public int GetMaxDecodingBytes(ReadOnlySpan<byte> key)
+        public int GetMaxDecodingBytes(int keyLength)
         {
-            return _encoder.GetMaxDecodingBytes(key.Length);
+            return _encoder.GetMaxDecodingBytes(keyLength);
         }
     }
 }
