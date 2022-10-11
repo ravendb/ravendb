@@ -1454,7 +1454,7 @@ namespace Raven.Server.Documents.Revisions
             public Action<IOperationProgress> OnProgress;
         }
 
-        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token, string collection = null)
+        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token, List<string> collections = null)
         {
             var list = new List<Document>();
             var result = new RevertResult();
@@ -1478,7 +1478,7 @@ namespace Raven.Server.Documents.Revisions
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
                 {
-                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, token, collection);
+                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, token, collections);
                     await WriteRevertedRevisions(list, token);
                 }
             }
@@ -1496,22 +1496,28 @@ namespace Raven.Server.Documents.Revisions
             list.Clear();
         }
 
-        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, OperationCancelToken token, string collection = null)
+        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, OperationCancelToken token, List<string> collections = null)
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
             {
                 IEnumerable<Table.TableValueHolder> tvrs = null;
-                if (collection != null)
+                if (collections != null)
                 {
-                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
-                    if (collectionName == null)
+                    foreach(var collection in collections)
                     {
-                        throw new InvalidOperationException($"There's no such collection as '{collection}'");
+                        var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                        if (collectionName == null)
+                        {
+                            throw new InvalidOperationException($"There's no such collection as '{collection}'");
+                        }
+                        var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+                        var revisions = readCtx.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+                        if (tvrs == null)
+                            tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag);
+                        else
+                            tvrs = tvrs.Concat(revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag));
                     }
-                    var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
-                    var revisions = readCtx.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
-                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag);
                 }
                 else
                 {
