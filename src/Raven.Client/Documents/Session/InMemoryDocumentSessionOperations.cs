@@ -2156,7 +2156,9 @@ more responsive application.
         private object DeserializeFromTransformer(Type entityType, string id, BlittableJsonReaderObject document, bool trackEntity)
         {
             HandleInternalMetadata(document);
-            return JsonConverter.FromBlittable(entityType, ref document, id, trackEntity);
+            var entity = JsonConverter.FromBlittable(entityType, ref document, id, trackEntity);
+            OnAfterConversionToEntityInvoke(id, document, entity);
+            return entity;
         }
         
         internal bool CheckIfAllChangeVectorsAreAlreadyIncluded(IEnumerable<string> changeVectors)
