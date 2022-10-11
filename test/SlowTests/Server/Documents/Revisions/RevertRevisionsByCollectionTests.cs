@@ -155,8 +155,6 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal("Shahar", contactRevisions[0].FirstName);
                     Assert.Equal("User Name", contactRevisions[1].FirstName);
                 }
-
-                WaitForUserToContinueTheTest(store);
             }
         }
 
@@ -265,7 +263,7 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-                await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                var e = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 {
                     using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None)) 
                     { 
@@ -273,6 +271,7 @@ namespace SlowTests.Server.Documents.Revisions
                             token: token, collections: collections);
                     }
                 });
+                Assert.True(e.Message.Contains(@"There's no such collection as 'notExistingCollection'"));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -285,11 +284,10 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-
         [Fact]
-        public async Task RevertRevisionsEndPointCheck()
+        public async Task RevertByCollection_EndPointCheck()
         {
-            var collection = "companies";
+            var collections = new List<string>() { "companies" };
             var company = new Company { Name = "Company Name" };
             var user = new User { Name = "User Name" };
             using (var store = GetDocumentStore())
@@ -313,7 +311,7 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
 
-                var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collection));
+                var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections));
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
                 using (var session = store.OpenAsyncSession())
@@ -335,9 +333,140 @@ namespace SlowTests.Server.Documents.Revisions
         }
 
         [Fact]
-        public async Task RevertRevisionsEndPointCheckWrongCollection()
+        public async Task RevertByMultipleCollections_EndPointCheck()
         {
-            var collection = "companies1";
+            var collections = new List<string>() { "companies", "users" };
+            var company = new Company { Name = "Company Name" };
+            var user = new User { Name = "User Name" };
+            var contact = new Contact { FirstName = "User Name" };
+
+            using (var store = GetDocumentStore())
+            {
+                DateTime last = default;
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(user);
+                    await session.StoreAsync(contact);
+                    await session.SaveChangesAsync();
+                    last = DateTime.UtcNow;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    company.Name = "Hibernating Rhinos";
+                    user.Name = "Shahar";
+                    contact.FirstName = "Shahar";
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(user);
+                    await session.StoreAsync(contact);
+                    await session.SaveChangesAsync();
+                }
+
+                var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections));
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
+                    Assert.Equal(3, companiesRevisions.Count);
+
+                    Assert.Equal("Company Name", companiesRevisions[0].Name);
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+                    Assert.Equal("Company Name", companiesRevisions[2].Name);
+
+                    var usersRevisions = await session.Advanced.Revisions.GetForAsync<Company>(user.Id);
+                    Assert.Equal(3, usersRevisions.Count);
+
+                    Assert.Equal("User Name", usersRevisions[0].Name);
+                    Assert.Equal("Shahar", usersRevisions[1].Name);
+                    Assert.Equal("User Name", usersRevisions[2].Name);
+
+                    var contactRevisions = await session.Advanced.Revisions.GetForAsync<Contact>(contact.Id);
+                    Assert.Equal(2, contactRevisions.Count);
+
+                    Assert.Equal("Shahar", contactRevisions[0].FirstName);
+                    Assert.Equal("User Name", contactRevisions[1].FirstName);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RevertByMultipleExistingAndDeletedCollections_EndPointCheck()
+        {
+            var collections = new List<string>() { "companies", "users" };
+            var company = new Company { Name = "Company Name" };
+            var user = new User { Name = "User Name" };
+            var contact = new Contact { FirstName = "User Name" };
+
+            using (var store = GetDocumentStore())
+            {
+                DateTime last = default;
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(user);
+                    await session.StoreAsync(contact);
+                    await session.SaveChangesAsync();
+                    last = DateTime.UtcNow;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    company.Name = "Hibernating Rhinos";
+                    user.Name = "Shahar";
+                    contact.FirstName = "Shahar";
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(user);
+                    await session.StoreAsync(contact);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete(company.Id);
+                    session.SaveChanges();
+                }
+
+                var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections));
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
+                    Assert.Equal(4, companiesRevisions.Count);
+
+                    Assert.Equal("Company Name", companiesRevisions[0].Name);
+                    Assert.Equal(null, companiesRevisions[1].Name); // representing the delete (tombstone)
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[2].Name);
+                    Assert.Equal("Company Name", companiesRevisions[3].Name);
+
+                    var usersRevisions = await session.Advanced.Revisions.GetForAsync<Company>(user.Id);
+                    Assert.Equal(3, usersRevisions.Count);
+
+                    Assert.Equal("User Name", usersRevisions[0].Name);
+                    Assert.Equal("Shahar", usersRevisions[1].Name);
+                    Assert.Equal("User Name", usersRevisions[2].Name);
+
+                    var contactRevisions = await session.Advanced.Revisions.GetForAsync<Contact>(contact.Id);
+                    Assert.Equal(2, contactRevisions.Count);
+
+                    Assert.Equal("Shahar", contactRevisions[0].FirstName);
+                    Assert.Equal("User Name", contactRevisions[1].FirstName);
+                }
+            }
+        }
+
+        [Fact] //--
+        public async Task RevertByWrongCollectionShouldThrow_EndPointCheck()
+        {
+            var collections = new List<string>()
+            {
+                "companies",
+                "notExistingCollection" // not existing collection
+            };
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
@@ -357,11 +486,14 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
 
-                await Assert.ThrowsAsync<BadResponseException>(async () =>
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var e = await Assert.ThrowsAsync<RavenException>(async () =>
                 {
-                    var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collection));
+                    var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections));
                     var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
                 });
+                Assert.IsType<InvalidOperationException>(e.InnerException);
+                Assert.True(e.InnerException.Message.Contains(@"There's no such collection as 'notExistingCollection'"));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -374,15 +506,66 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
+        [Fact]
+        public async Task Revert_EndPointCheck()
+        {
+            var company = new Company { Name = "Company Name" };
+            var user = new User { Name = "User Name" };
+            using (var store = GetDocumentStore())
+            {
+                DateTime last = default;
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                    last = DateTime.UtcNow;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    company.Name = "Hibernating Rhinos";
+                    user.Name = "Shahar";
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                }
+
+                var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60));
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
+                    Assert.Equal(3, companiesRevisions.Count);
+
+                    Assert.Equal("Company Name", companiesRevisions[0].Name);
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+                    Assert.Equal("Company Name", companiesRevisions[2].Name);
+
+                    var usersRevisions = await session.Advanced.Revisions.GetForAsync<Company>(user.Id);
+                    Assert.Equal(3, usersRevisions.Count);
+
+                    Assert.Equal("User Name", usersRevisions[0].Name);
+                    Assert.Equal("Shahar", usersRevisions[1].Name);
+                    Assert.Equal("User Name", usersRevisions[2].Name);
+                }
+            }
+        }
+
         private class RevertRevisionsOperation : IMaintenanceOperation<OperationIdResult>
         {
             private readonly RevertRevisionsRequest _request;
-            private readonly string _collection;
 
-            public RevertRevisionsOperation(DateTime time, long window, string collection = null)
+            public RevertRevisionsOperation(DateTime time, long window, List<string> collections = null)
             {
-                _request = new RevertRevisionsRequest() { Time = time, WindowInSec = window };
-                _collection = collection;
+                _request = new RevertRevisionsRequest() { 
+                    Time = time, 
+                    WindowInSec = window,
+                    PerCollections = collections!=null,
+                    Collections = collections
+                };
             }
 
             public RevertRevisionsOperation(RevertRevisionsRequest request)
@@ -392,18 +575,16 @@ namespace SlowTests.Server.Documents.Revisions
 
             public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                return new RevertRevisionsCommand(_request, _collection);
+                return new RevertRevisionsCommand(_request);
             }
 
             private class RevertRevisionsCommand : RavenCommand<OperationIdResult>
             {
                 private readonly RevertRevisionsRequest _request;
-                private readonly string _collection;
 
                 public RevertRevisionsCommand(RevertRevisionsRequest request, string collection = null)
                 {
                     _request = request;
-                    _collection = collection;
                 }
 
                 public override bool IsReadRequest => false;
@@ -411,10 +592,6 @@ namespace SlowTests.Server.Documents.Revisions
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/databases/{node.Database}/revisions/revert";
-                    if (_collection != null)
-                    {
-                        url += $"?collection={_collection}";
-                    }
 
                     return new HttpRequestMessage
                     {
