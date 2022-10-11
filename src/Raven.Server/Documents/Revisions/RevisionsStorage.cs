@@ -1507,6 +1507,10 @@ namespace Raven.Server.Documents.Revisions
                 {
                     foreach(var collection in collections)
                     {
+                        if (collection == null)
+                        {
+                            throw new InvalidOperationException($"Collection name couldn't be null");
+                        }
                         var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
                         if (collectionName == null)
                         {

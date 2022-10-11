@@ -549,18 +549,6 @@ namespace Raven.Server.Web
             return values[0];
         }
 
-        protected string GetQueryOptionalStringValue(string name)
-        {
-            var values = HttpContext.Request.Query[name];
-            if (values.Count == 0)
-                return null;
-            if (string.IsNullOrWhiteSpace(values[0]))
-                InvalidEmptyValue(name);
-            if (values.Count > 1)
-                InvalidCountOfValues(name);
-            return values[0];
-        }
-
         private static void InvalidEmptyValue(string name)
         {
             throw new ArgumentException($"Query string value '{name}' must have a non empty value");
