@@ -401,7 +401,15 @@ namespace Raven.Server.Documents.Indexes
                 };
             }
 
-            var entriesCount = statsTree.Read(IndexSchema.EntriesCount)?.Reader.ReadLittleEndianInt64();
+            var entriesCountReader = statsTree.Read(IndexSchema.EntriesCount)?.Reader;
+            long? entriesCount = null;
+            if (entriesCountReader.HasValue)
+            {
+                var entriesCountSize = entriesCountReader.Value.Length;
+                entriesCount = entriesCountSize == sizeof(long) 
+                    ? entriesCountReader.Value.ReadLittleEndianInt64() 
+                    : entriesCountReader.Value.ReadLittleEndianInt32();
+            }
 
             if (entriesCount != null)
                 stats.EntriesCount = entriesCount.Value;
