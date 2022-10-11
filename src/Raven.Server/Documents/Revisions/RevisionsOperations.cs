@@ -1,5 +1,6 @@
 using System;
 using Raven.Client.Exceptions.Documents.Revisions;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 

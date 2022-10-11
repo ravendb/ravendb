@@ -9,6 +9,7 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

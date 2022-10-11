@@ -6,6 +6,7 @@
 
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Revisions;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

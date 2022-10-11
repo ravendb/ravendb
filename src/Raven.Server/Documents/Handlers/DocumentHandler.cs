@@ -27,6 +27,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Revisions;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -40,7 +41,7 @@ using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
 using Constants = Raven.Client.Constants;
-using DeleteDocumentCommand = Raven.Server.Documents.TransactionCommands.DeleteDocumentCommand;
+using DeleteDocumentCommand = Raven.Server.Documents.TransactionMerger.Commands.DeleteDocumentCommand;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Handlers

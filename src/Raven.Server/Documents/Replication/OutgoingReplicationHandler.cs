@@ -36,6 +36,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Raven.Server.Documents.TransactionMerger;
 
 namespace Raven.Server.Documents.Replication
 {
