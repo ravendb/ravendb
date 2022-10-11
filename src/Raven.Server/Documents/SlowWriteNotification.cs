@@ -4,7 +4,7 @@ namespace Raven.Server.Documents
 {
     public class SlowWriteNotification
     {
-        public static void Notify(CommitStats stats, DocumentDatabase database)
+        public static void Notify(CommitStats stats, NotificationCenter.NotificationCenter notificationCenter)
         {
             if (stats.NumberOf4KbsWrittenToDisk == 0 ||
                 // we don't want to raise the error too often
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents
 
             if (rateOfWritesInMbPerSec < 1)
             {
-                database.NotificationCenter.SlowWrites.Add(stats.JournalFilePath, writtenDataInMb, seconds);
+                notificationCenter.SlowWrites.Add(stats.JournalFilePath, writtenDataInMb, seconds);
             }
         }
     }

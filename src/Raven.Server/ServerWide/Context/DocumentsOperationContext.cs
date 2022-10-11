@@ -10,7 +10,7 @@ namespace Raven.Server.ServerWide.Context
 {
     public class DocumentsOperationContext : TransactionOperationContext<DocumentsTransaction>
     {
-        private readonly DocumentDatabase _documentDatabase;
+        private readonly DocumentDatabase _database;
 
         internal string LastDatabaseChangeVector
         {
@@ -71,17 +71,17 @@ namespace Raven.Server.ServerWide.Context
             return shortTermSingleUse;
         }
 
-        public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
-            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
+        public DocumentsOperationContext(DocumentDatabase database, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
+            : base(database.DocumentsStorage.Environment, initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
-            _documentDatabase = documentDatabase;
+            _database = database;
         }
 
         protected override DocumentsTransaction CloneReadTransaction(DocumentsTransaction previous)
         {
             var clonedTransaction = new DocumentsTransaction(this,
-                _documentDatabase.DocumentsStorage.Environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator),
-                _documentDatabase.Changes);
+                _database.DocumentsStorage.Environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator),
+                _database.Changes);
 
             previous.Dispose();
 
@@ -91,19 +91,19 @@ namespace Raven.Server.ServerWide.Context
         protected override DocumentsTransaction CreateReadTransaction()
         {
             return new DocumentsTransaction(this,
-                _documentDatabase.DocumentsStorage.Environment.ReadTransaction(PersistentContext, Allocator),
-                _documentDatabase.Changes);
+                _database.DocumentsStorage.Environment.ReadTransaction(PersistentContext, Allocator),
+                _database.Changes);
         }
 
         protected override DocumentsTransaction CreateWriteTransaction(TimeSpan? timeout = null)
         {
             var tx = new DocumentsTransaction(this,
-                _documentDatabase.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator, timeout),
-                _documentDatabase.Changes);
+                _database.DocumentsStorage.Environment.WriteTransaction(PersistentContext, Allocator, timeout),
+                _database.Changes);
 
             CurrentTxMarker = (short)tx.InnerTransaction.LowLevelTransaction.Id;
 
-            var options = _documentDatabase.DocumentsStorage.Environment.Options;
+            var options = _database.DocumentsStorage.Environment.Options;
 
             if ((options.TransactionsMode == TransactionsMode.Lazy || options.TransactionsMode == TransactionsMode.Danger) &&
                 options.NonSafeTransactionExpiration != null && options.NonSafeTransactionExpiration < DateTime.Now)
@@ -118,9 +118,7 @@ namespace Raven.Server.ServerWide.Context
             return tx;
         }
 
-        public StorageEnvironment Environment => _documentDatabase.DocumentsStorage.Environment;
-
-        public DocumentDatabase DocumentDatabase => _documentDatabase;
+        public DocumentDatabase DocumentDatabase => _database;
 
         public bool ShouldRenewTransactionsToAllowFlushing()
         {
@@ -129,7 +127,7 @@ namespace Raven.Server.ServerWide.Context
             // resources (scratch space, mostly) back to the system, let us continue with the current one.
 
             return Transaction?.InnerTransaction.LowLevelTransaction.Id !=
-                   _documentDatabase.DocumentsStorage.Environment.CurrentReadTransactionId;
+                   _database.DocumentsStorage.Environment.CurrentReadTransactionId;
         }
     }
 }

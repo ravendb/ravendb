@@ -10,13 +10,11 @@ namespace Raven.Server.ServerWide.Context
     public class ClusterOperationContext : TransactionOperationContext<ClusterTransaction>
     {
         private readonly ClusterChanges _changes;
-        public readonly StorageEnvironment Environment;
 
         public ClusterOperationContext(ClusterChanges changes, StorageEnvironment environment, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
-            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
+            : base(environment, initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             _changes = changes ?? throw new ArgumentNullException(nameof(changes));
-            Environment = environment ?? throw new ArgumentNullException(nameof(environment));
         }
 
         protected override ClusterTransaction CloneReadTransaction(ClusterTransaction previous)
