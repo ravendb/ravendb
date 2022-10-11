@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Handlers
                 Database,
                 $"Revert database '{Database.Name}' to {configuration.Time} UTC.",
                 Operations.Operations.OperationType.DatabaseRevert,
-                onProgress => Database.DocumentsStorage.RevisionsStorage.RevertRevisions(configuration.Time, TimeSpan.FromSeconds(configuration.WindowInSec), onProgress, token, collection),
+                onProgress => Database.DocumentsStorage.RevisionsStorage.RevertRevisions(configuration.Time, TimeSpan.FromSeconds(configuration.WindowInSec), onProgress, token, new List<string>(){ collection } ),
                 operationId,
                 token: token);
 

@@ -63,7 +63,7 @@ namespace SlowTests.Server.Documents.Revisions
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
                     result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
-                        token: token, collection: collection);
+                        token: token, collections: new List<string>() { collection });
                 }
 
                 Assert.Equal(2, result.ScannedRevisions);
@@ -89,9 +89,162 @@ namespace SlowTests.Server.Documents.Revisions
         }
 
         [Fact]
+        public async Task RevertByMultipleCollections()
+        {
+            var collections = new List<string>() { "companies", "users" };
+            var company = new Company { Name = "Company Name" };
+            var user = new User { Name = "User Name" };
+            var contact = new Contact { FirstName = "User Name" };
+
+            using (var store = GetDocumentStore())
+            {
+                DateTime last = default;
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(user);
+                    await session.StoreAsync(contact);
+                    await session.SaveChangesAsync();
+                    last = DateTime.UtcNow;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    company.Name = "Hibernating Rhinos";
+                    user.Name = "Shahar";
+                    contact.FirstName = "Shahar";
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(user);
+                    await session.StoreAsync(contact);
+                    await session.SaveChangesAsync();
+                }
+
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token, collections: collections);
+                }
+
+                Assert.Equal(4, result.ScannedRevisions);
+                Assert.Equal(2, result.ScannedDocuments);
+                Assert.Equal(2, result.RevertedDocuments);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
+                    Assert.Equal(3, companiesRevisions.Count);
+
+                    Assert.Equal("Company Name", companiesRevisions[0].Name);
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+                    Assert.Equal("Company Name", companiesRevisions[2].Name);
+
+                    var usersRevisions = await session.Advanced.Revisions.GetForAsync<Company>(user.Id);
+                    Assert.Equal(3, usersRevisions.Count);
+
+                    Assert.Equal("User Name", usersRevisions[0].Name);
+                    Assert.Equal("Shahar", usersRevisions[1].Name);
+                    Assert.Equal("User Name", usersRevisions[2].Name);
+
+                    var contactRevisions = await session.Advanced.Revisions.GetForAsync<Contact>(contact.Id);
+                    Assert.Equal(2, contactRevisions.Count);
+
+                    Assert.Equal("Shahar", contactRevisions[0].FirstName);
+                    Assert.Equal("User Name", contactRevisions[1].FirstName);
+                }
+
+                WaitForUserToContinueTheTest(store);
+            }
+        }
+
+        [Fact]
+        public async Task RevertByMultipleExistingAndDeletedCollections()
+        {
+            var collections = new List<string>() { "companies", "users" };
+            var company = new Company { Name = "Company Name" };
+            var user = new User { Name = "User Name" };
+            var contact = new Contact { FirstName = "User Name" };
+
+            using (var store = GetDocumentStore())
+            {
+                DateTime last = default;
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(user);
+                    await session.StoreAsync(contact);
+                    await session.SaveChangesAsync();
+                    last = DateTime.UtcNow;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    company.Name = "Hibernating Rhinos";
+                    user.Name = "Shahar";
+                    contact.FirstName = "Shahar";
+                    await session.StoreAsync(company);
+                    await session.StoreAsync(user);
+                    await session.StoreAsync(contact);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete(company.Id);
+                    session.SaveChanges();
+                }
+
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token, collections: collections);
+                }
+
+                Assert.Equal(5, result.ScannedRevisions);
+                Assert.Equal(2, result.ScannedDocuments);
+                Assert.Equal(2, result.RevertedDocuments);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
+                    Assert.Equal(4, companiesRevisions.Count);
+
+                    Assert.Equal("Company Name", companiesRevisions[0].Name);
+                    Assert.Equal(null, companiesRevisions[1].Name); // representing the delete (tombstone)
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[2].Name);
+                    Assert.Equal("Company Name", companiesRevisions[3].Name);
+
+                    var usersRevisions = await session.Advanced.Revisions.GetForAsync<Company>(user.Id);
+                    Assert.Equal(3, usersRevisions.Count);
+
+                    Assert.Equal("User Name", usersRevisions[0].Name);
+                    Assert.Equal("Shahar", usersRevisions[1].Name);
+                    Assert.Equal("User Name", usersRevisions[2].Name);
+
+                    var contactRevisions = await session.Advanced.Revisions.GetForAsync<Contact>(contact.Id);
+                    Assert.Equal(2, contactRevisions.Count);
+
+                    Assert.Equal("Shahar", contactRevisions[0].FirstName);
+                    Assert.Equal("User Name", contactRevisions[1].FirstName);
+                }
+            }
+        }
+
+        [Fact]
         public async Task RevertByWrongCollectionShouldThrow()
         {
-            var collection = "companies1";
+            var collections = new List<string>()
+            {
+                "companies", 
+                "notExistingCollection" // not existing collection
+            };
             var company = new Company { Name = "Company Name" };
             using (var store = GetDocumentStore())
             {
@@ -117,7 +270,7 @@ namespace SlowTests.Server.Documents.Revisions
                     using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None)) 
                     { 
                         var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
-                            token: token, collection: collection);
+                            token: token, collections: collections);
                     }
                 });
 
@@ -180,7 +333,6 @@ namespace SlowTests.Server.Documents.Revisions
                 }
             }
         }
-
 
         [Fact]
         public async Task RevertRevisionsEndPointCheckWrongCollection()
