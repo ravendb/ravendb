@@ -633,7 +633,6 @@ namespace Raven.Server.Documents.Handlers
                                         if (cmd.FromFullBackup == false)
                                         {
                                             // delete the document to avoid exception if we put new document in a different collection.
-                                            // TODO: document this behavior
                                             using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
                                             {
                                                 Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
