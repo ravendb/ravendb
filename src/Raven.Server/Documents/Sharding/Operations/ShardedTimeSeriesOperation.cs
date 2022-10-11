@@ -6,7 +6,7 @@ using Raven.Client.Http;
 
 namespace Raven.Server.Documents.Sharding.Operations;
 
-internal class ShardedTimeSeriesOperation : IShardedOperation<GetMultipleTimeSeriesRangesCommand.Result>
+internal class ShardedTimeSeriesOperation : IShardedOperation<GetMultipleTimeSeriesRangesCommand.Response>
 {
     public HttpContext HttpContext { get; }
 
@@ -20,9 +20,9 @@ internal class ShardedTimeSeriesOperation : IShardedOperation<GetMultipleTimeSer
 
     public HttpRequest HttpRequest { get; }
 
-    public GetMultipleTimeSeriesRangesCommand.Result Combine(Memory<GetMultipleTimeSeriesRangesCommand.Result> results)
+    public GetMultipleTimeSeriesRangesCommand.Response Combine(Memory<GetMultipleTimeSeriesRangesCommand.Response> results)
     {
-        GetMultipleTimeSeriesRangesCommand.Result result = new()
+        GetMultipleTimeSeriesRangesCommand.Response result = new()
         {
             Results = new List<TimeSeriesDetails>()
         };
@@ -35,7 +35,7 @@ internal class ShardedTimeSeriesOperation : IShardedOperation<GetMultipleTimeSer
         return result;
     }
 
-    RavenCommand<GetMultipleTimeSeriesRangesCommand.Result> IShardedOperation<GetMultipleTimeSeriesRangesCommand.Result, GetMultipleTimeSeriesRangesCommand.Result>.CreateCommandForShard(int shardNumber)
+    RavenCommand<GetMultipleTimeSeriesRangesCommand.Response> IShardedOperation<GetMultipleTimeSeriesRangesCommand.Response, GetMultipleTimeSeriesRangesCommand.Response>.CreateCommandForShard(int shardNumber)
     {
         return _commandsPerShard[shardNumber];
     }

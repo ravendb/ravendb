@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TimeSeries;
 
-internal class GetMultipleTimeSeriesRangesCommand : RavenCommand<GetMultipleTimeSeriesRangesCommand.Result>
+internal class GetMultipleTimeSeriesRangesCommand : RavenCommand<GetMultipleTimeSeriesRangesCommand.Response>
 {
     private readonly int _start;
     private readonly int _pageSize;
@@ -68,7 +68,7 @@ internal class GetMultipleTimeSeriesRangesCommand : RavenCommand<GetMultipleTime
         if (response == null)
             return;
 
-        base.Result = JsonDeserializationClient.TimeSeriesRangesResult(response);
+        base.Result = JsonDeserializationClient.TimeSeriesRangesResponse(response);
     }
 
     internal class RequestBody
@@ -76,7 +76,7 @@ internal class GetMultipleTimeSeriesRangesCommand : RavenCommand<GetMultipleTime
         public Dictionary<string, List<TimeSeriesRange>> RangesPerDocumentId { get; set; }
     }
 
-    internal class Result
+    internal class Response
     {
         public List<TimeSeriesDetails> Results { get; set; }
     }
