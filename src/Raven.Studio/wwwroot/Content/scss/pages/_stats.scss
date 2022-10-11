@@ -1,0 +1,64 @@
+.stats {
+
+    .identities {
+        .identities-header {
+            margin-bottom: $gutter-sm;
+            margin-left: $gutter-xs;
+        }
+    }
+
+    .stats-list {
+        padding: $gutter-sm;
+
+        .title {
+            margin-bottom: $gutter-sm;
+
+            h3 {
+                margin: 0;
+            }
+        }
+
+        .stats-item {
+            display: flex;
+            align-items: baseline;
+            margin-left: -$gutter-xs;
+            margin-right: -$gutter-xs;
+            padding-left: $gutter-xs;
+            padding-right: $gutter-xs;
+            padding-top: $gutter-xs;
+            padding-bottom: $gutter-xxs;
+            position: relative;
+            transition: background-color .1s ease;
+
+            &:hover {
+                background-color: $panel-bg-2;
+            }
+
+            .name {
+                flex-grow: 1;
+                font-size: 13px;
+            }
+
+            .value {
+                font-size: 18px;
+                color: $text-emphasis;
+                text-align: center;
+                width: 130px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+
+                &.long {
+                    width: auto;
+                }
+
+                &.true, .true {
+                    color: $success;
+                }
+
+                &.false, .false {
+                    color: $warning;
+                }
+            }
+        }
+    }
+}
