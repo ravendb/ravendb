@@ -39,6 +39,7 @@ namespace Voron.Data.CompactTrees
         private EncodedKey _internalKeyCache1;
         private EncodedKey _internalKeyCache2;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private EncodedKey AcquireKey()
         {
             if (_internalKeyCache1 == null && _internalKeyCache2 == null)
@@ -59,6 +60,7 @@ namespace Voron.Data.CompactTrees
             return current;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ReleaseKey(EncodedKey key)
         {
             if (_internalKeyCache1 != null && _internalKeyCache2 != null)
@@ -81,11 +83,13 @@ namespace Voron.Data.CompactTrees
         {
             public readonly EncodedKey Key;
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public EncodedKeyScope(CompactTree tree)
             {
                 Key = tree.AcquireKey();
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose()
             {
                 Key.Owner.ReleaseKey(Key);
@@ -182,7 +186,7 @@ namespace Voron.Data.CompactTrees
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private byte* EncodedWith(long dictionaryId, out int length)
+            public byte* EncodedWith(long dictionaryId, out int length)
             {
                 [SkipLocalsInit]
                 byte* EncodeFromDecodedForm()
@@ -200,21 +204,20 @@ namespace Voron.Data.CompactTrees
 
                     // We will grow the 
                     var dictionary = Owner.GetEncodingDictionary(dictionaryId);
-                    int maxSize = dictionary.GetMaxEncodingBytes(decodedKey) + 4;
+                    int maxSize = dictionary.GetMaxEncodingBytes(decodedKey.Length) + 4;
                     
                     int currentSize = (int)(_currentEndPtr - _currentPtr);
                     if (maxSize > currentSize)
                         UnlikelyGrowStorage(currentSize + maxSize);
 
                     var encodedStartPtr = _currentPtr;
-                    byte* tmpEncodedKeyPtr = stackalloc byte[maxSize];
-                    Span<byte> tmpEncodedKey = new(tmpEncodedKeyPtr, maxSize);
-                    dictionary.Encode(decodedKey, ref tmpEncodedKey);
-                    Debug.Assert(tmpEncodedKey[^1] == 0, "The encoded key is not null terminated.");
 
-                    _currentPtr += VariableSizeEncoding.Write<int>(_currentPtr, tmpEncodedKey.Length);
-                    Memory.Copy(_currentPtr, tmpEncodedKeyPtr, tmpEncodedKey.Length);
-                    _currentPtr += tmpEncodedKey.Length;
+                    var encodedKey = new Span<byte>(encodedStartPtr + sizeof(int), maxSize);
+                    dictionary.Encode(decodedKey, ref encodedKey);
+                    Debug.Assert(encodedKey[^1] == 0, "The encoded key is not null terminated.");
+
+                    *(int*)encodedStartPtr = encodedKey.Length;
+                    _currentPtr += encodedKey.Length + sizeof(int);
 
                     return encodedStartPtr;
                 }
@@ -236,8 +239,8 @@ namespace Voron.Data.CompactTrees
                 }
 
                 // IMPORTANT: Pointers are potentially invalidated by the grow storage call at EncodeFromDecodedForm, be careful here. 
-                length = VariableSizeEncoding.Read<int>(start, out var offset);
-                return start + offset; 
+                length = *(int*)start;
+                return start + sizeof(int); 
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -247,69 +250,83 @@ namespace Voron.Data.CompactTrees
                 return new ReadOnlySpan<byte>(key, length);
             }
 
+            [SkipLocalsInit]
+            private void DecodeFromEncodedForm()
+            {
+                Debug.Assert(IsValid, "At this stage we either created the key using an unencoded version OR we have already pushed 1 encoded key. Current dictionary cannot be invalid.");
+
+                long currentDictionary = Dictionary;
+                int currentKeyIdx = _currentKeyIdx;
+                if (currentKeyIdx == Invalid)
+                {
+                    foreach (var mapping in _keyMapping)
+                    {
+                        if (mapping.Dictionary != 0)
+                        {
+                            currentDictionary = mapping.Dictionary;
+                            currentKeyIdx = mapping.KeyIndex;
+                            break;
+                        }
+                    }
+                }
+
+                Debug.Assert(currentKeyIdx != Invalid);
+
+                var dictionary = Owner.GetEncodingDictionary(currentDictionary);
+
+                byte* encodedStartPtr = _storage.Ptr + currentKeyIdx;
+                int length = *(int*)encodedStartPtr;
+                Debug.Assert(encodedStartPtr[sizeof(int) + length - 1] == 0, "The encoded key is not null terminated.");
+
+                int maxSize = dictionary.GetMaxDecodingBytes(length) + sizeof(int);
+                int currentSize = (int)(_currentEndPtr - _currentPtr);
+                if (maxSize > currentSize)
+                {
+                    // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes. 
+                    UnlikelyGrowStorage(maxSize + currentSize);
+                    encodedStartPtr = _storage.Ptr + currentKeyIdx;
+                }
+
+                _decodedKeyIdx = (int)(_currentPtr - _storage.Ptr);
+
+                var decodedKey = new Span<byte>(_currentPtr + sizeof(int), maxSize);
+                dictionary.Decode(new ReadOnlySpan<byte>(encodedStartPtr + sizeof(int), length), ref decodedKey);
+                Debug.Assert(decodedKey[^1] == 0, "The decoded key is not null terminated.");
+
+                *(int*)_currentPtr = decodedKey.Length;
+                _currentPtr += decodedKey.Length + sizeof(int);
+            }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ReadOnlySpan<byte> Decoded()
             {
-                [SkipLocalsInit]
-                void DecodeFromEncodedForm()
-                {
-                    Debug.Assert(IsValid, "At this stage we either created the key using an unencoded version OR we have already pushed 1 encoded key. Current dictionary cannot be invalid.");
-
-                    long currentDictionary = Dictionary;
-                    int currentKeyIdx = _currentKeyIdx;
-                    if (currentKeyIdx == Invalid)
-                    {
-                        foreach (var mapping in _keyMapping)
-                        {
-                            if (mapping.Dictionary != 0)
-                            {
-                                currentDictionary = mapping.Dictionary;
-                                currentKeyIdx = mapping.KeyIndex;
-                                break;
-                            }
-                        }
-                    }
-
-                    Debug.Assert(currentKeyIdx != Invalid);
-
-                    var dictionary = Owner.GetEncodingDictionary(currentDictionary);
-
-                    byte* encodedStartPtr = _storage.Ptr + currentKeyIdx;
-                    var length = VariableSizeEncoding.Read<int>(encodedStartPtr, out var offset);
-                    Debug.Assert(encodedStartPtr[offset + length - 1] == 0, "The encoded key is not null terminated.");
-
-                    int maxSize = dictionary.GetMaxDecodingBytes(new ReadOnlySpan<byte>(encodedStartPtr + offset, length)) + 4;
-                    int currentSize = (int)(_currentEndPtr - _currentPtr);
-                    if (maxSize > currentSize)
-                    {
-                        // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes. 
-                        UnlikelyGrowStorage(maxSize + currentSize);
-                        encodedStartPtr = _storage.Ptr + currentKeyIdx;
-                    }
-
-                    byte* tmpDecodedKeyPtr = stackalloc byte[maxSize];
-                    Span<byte> tmpDecodedKey = new(tmpDecodedKeyPtr, maxSize);
-                    dictionary.Decode(new ReadOnlySpan<byte>(encodedStartPtr + offset, length), ref tmpDecodedKey);
-                    Debug.Assert(tmpDecodedKey[^1] == 0, "The decoded key is not null terminated.");
-
-                    _decodedKeyIdx = (int)(_currentPtr - _storage.Ptr);
-                    _currentPtr += VariableSizeEncoding.Write<int>(_currentPtr, tmpDecodedKey.Length);
-                    Memory.Copy(_currentPtr, tmpDecodedKeyPtr, tmpDecodedKey.Length);
-                    _currentPtr += tmpDecodedKey.Length;
-                }
-
                 if (_decodedKeyIdx == Invalid)
                 {
                     DecodeFromEncodedForm();
                 }
-                    
 
                 // IMPORTANT: Pointers are potentially invalidated by the grow storage call at DecodeFromEncodedForm, be careful here. 
                 byte* start = _storage.Ptr + _decodedKeyIdx;
-                var length = VariableSizeEncoding.Read<int>(start, out var offset);
+                int length = *((int*)start);
 
-                Debug.Assert(start[offset + length - 1] == 0, "The key is not null terminated.");
-                return new ReadOnlySpan<byte>(start + offset, length);
+                Debug.Assert(start[sizeof(int) + length - 1] == 0, "The key is not null terminated.");
+                return new ReadOnlySpan<byte>(start + sizeof(int), length);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public byte* DecodedPtr(out int length)
+            {
+                if (_decodedKeyIdx == Invalid)
+                {
+                    DecodeFromEncodedForm();
+                }
+
+                // IMPORTANT: Pointers are potentially invalidated by the grow storage call at DecodeFromEncodedForm, be careful here. 
+                byte* start = _storage.Ptr + _decodedKeyIdx;
+                length = *((int*)start);
+
+                Debug.Assert(start[sizeof(int) + length - 1] == 0, "The key is not null terminated.");
+                return start + sizeof(int);
             }
 
             private void UnlikelyGrowStorage(int maxSize)
@@ -356,23 +373,24 @@ namespace Voron.Data.CompactTrees
                 MemoryMarshal.AsBytes(_keyMapping.AsSpan()).Fill(0);
 
                 // Since the size is big enough to store the unencoded key, we don't check the remaining size here.
-                fixed (byte* keyPtr = key)
-                {
-                    _decodedKeyIdx = (int)(_currentPtr - (long)_storage.Ptr);
-                    _currentKeyIdx = Invalid;
-                    Dictionary = Invalid;
+                _decodedKeyIdx = (int)(_currentPtr - (long)_storage.Ptr);
+                _currentKeyIdx = Invalid;
+                Dictionary = Invalid;
 
-                    int keyLength = key.Length;
-                    int n = keyLength + (key[^1] != 0).ToInt32();
+                int keyLength = key.Length;
+                int n = keyLength + (key[^1] != 0).ToInt32();
 
-                    // We write the size and the key. 
-                    _currentPtr += VariableSizeEncoding.Write(_currentPtr, n);
-                    Memory.Copy(_currentPtr, keyPtr, keyLength);
-                    _currentPtr += n; // We update the new pointer. 
+                // We write the size and the key. 
+                *((int*)_currentPtr) = n;
+                _currentPtr += sizeof(int);
+                
+                // PERF: Between fixing the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
+                Unsafe.CopyBlock(ref Unsafe.AsRef<byte>(_currentPtr), ref Unsafe.AsRef<byte>(key[0]), (uint)keyLength );
+                
+                _currentPtr += n; // We update the new pointer. 
 
-                    // If it is null terminated we are overwriting it, but we avoid a branch misprediction.
-                    _currentPtr[-1] = 0;
-                }
+                // If it is null terminated we are overwriting it, but we avoid a branch misprediction.
+                _currentPtr[-1] = 0;
             }
 
             public void Set(ReadOnlySpan<byte> key, long dictionaryId)
@@ -397,7 +415,9 @@ namespace Voron.Data.CompactTrees
                     bucket.KeyIndex = _currentKeyIdx;
 
                     // We write the size and the key. 
-                    _currentPtr += VariableSizeEncoding.Write(_currentPtr, n);
+                    *(int*)_currentPtr = n;
+                    _currentPtr += sizeof(int);
+                    //_currentPtr += VariableSizeEncoding.Write(_currentPtr, n);
                     Memory.Copy(_currentPtr, keyPtr, keyLength);
                     _currentPtr += n; // We update the new pointer. 
 
@@ -466,6 +486,7 @@ namespace Voron.Data.CompactTrees
                 return ref bucket;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void ChangeDictionary(long dictionaryId)
             {
                 Debug.Assert( dictionaryId > 0, "The dictionary id must be valid to perform a change.");
@@ -488,10 +509,11 @@ namespace Voron.Data.CompactTrees
 
                 // This method allows us to compare the key in it's encoded form directly using the current dictionary. 
                 byte* encodedStartPtr = _storage.Ptr + _currentKeyIdx;
-                var length = VariableSizeEncoding.Read<int>(encodedStartPtr, out var offset);
-                Debug.Assert(encodedStartPtr[offset + length - 1] == 0, "The encoded key is not null terminated.");
+                int length = *((int*)encodedStartPtr);
+                //var length = VariableSizeEncoding.Read<int>(encodedStartPtr, out var offset);
+                Debug.Assert(encodedStartPtr[sizeof(int) + length - 1] == 0, "The encoded key is not null terminated.");
 
-                var result = Memory.CompareInline(encodedStartPtr + offset, nextEntryPtr, Math.Min(length, nextEntryLength));
+                var result = Memory.CompareInline(encodedStartPtr + sizeof(int), nextEntryPtr, Math.Min(length, nextEntryLength));
                 return result == 0 ? length - nextEntryLength : result;
             }
 
@@ -506,8 +528,9 @@ namespace Voron.Data.CompactTrees
                     Debug.Assert(_currentKeyIdx != Invalid, "The current key index is not set and it should be.");
                     
                     encodedStartPtr = _storage.Ptr + _currentKeyIdx;
-                    encodedLength = VariableSizeEncoding.Read<int>(encodedStartPtr, out var offset);
-                    encodedStartPtr += offset;
+                    //encodedLength = VariableSizeEncoding.Read<int>(encodedStartPtr, out var offset);
+                    encodedLength = *((int*)encodedStartPtr);
+                    encodedStartPtr += sizeof(int);
                 }
                 else
                 {
@@ -1951,12 +1974,12 @@ namespace Voron.Data.CompactTrees
 
             //EncodedKey encodedKey = EncodedKey.From(key, tree, ((CompactPageHeader*)page.Pointer)->DictionaryId);
 
-            var actualKey = scope.Key.Decoded();
-            tree.Llt.Allocator.Allocate(actualKey.Length, out var output);
-            actualKey.CopyTo(output.ToSpan());
+            var actualKeyPtr = scope.Key.DecodedPtr(out int length);
+            tree.Llt.Allocator.Allocate(length, out var output);
+            Memory.Copy(output.Ptr, actualKeyPtr, length);
             
             var outputSpan = output.ToSpan();
-            encodedKeyStream = outputSpan[^1] == 0 ? outputSpan[0..^1] : outputSpan;
+            encodedKeyStream = outputSpan[^1] == 0 ? outputSpan[..^1] : outputSpan;
             return true;
         }
 
@@ -1984,12 +2007,10 @@ namespace Voron.Data.CompactTrees
             var encodedKey = key.EncodedWithCurrent();
 
             // TODO: Improve this. 
-            // var encodedKeyLength = key.EncodedPtrWith(state.Header->DictionaryId, out byte* encodedKeyPtr);
             // var encodedKeyLength = key.EncodedPtrWithCurrent(out byte* encodedKeyPtr);
 
             ushort* @base = state.EntriesOffsetsPtr;
             int length = state.Header->NumberOfEntries;
-
             if (length == 0)
             {
                 state.LastMatch = -1;
@@ -1997,13 +2018,23 @@ namespace Voron.Data.CompactTrees
                 return;
             }
 
+            byte* keyPtr = key.EncodedWith(state.Header->DictionaryId, out int keyLength);
+
             int match;
             int bot = 0;
             int top = length;
+
+            byte* encodedKeyPtr;
+            int encodedKeyLength;
             while (top > 1)
             {
                 int mid = top / 2;
-                match = encodedKey.SequenceCompareTo(GetEncodedKey(state.Page, @base[bot + mid]));
+
+                encodedKeyLength = GetEncodedKeyPtr(state.Page, @base[bot + mid], out encodedKeyPtr);
+
+                match = Memory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
+                match = match == 0 ? keyLength - encodedKeyLength : match;
+                //match = key.CompareEncodedWithCurrent(encodedKey, encodedKeyLength);
 
                 if (match >= 0)
                     bot += mid;
@@ -2011,7 +2042,12 @@ namespace Voron.Data.CompactTrees
                 top -= mid;
             }
 
-            match = encodedKey.SequenceCompareTo(GetEncodedKey(state.Page, @base[bot]));
+            encodedKeyLength = GetEncodedKeyPtr(state.Page, @base[bot], out encodedKeyPtr);
+            
+            match = Memory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
+            match = match == 0 ? keyLength - encodedKeyLength : match;
+            //match = key.CompareEncodedWithCurrent(encodedKey, encodedKeyLength);
+
             if (match == 0)
             {
                 state.LastMatch = 0;
