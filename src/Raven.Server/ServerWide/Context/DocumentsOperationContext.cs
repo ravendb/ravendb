@@ -72,7 +72,7 @@ namespace Raven.Server.ServerWide.Context
         }
 
         public DocumentsOperationContext(DocumentDatabase database, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
-            : base(database.DocumentsStorage.Environment, initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
+            : base(database?.DocumentsStorage?.Environment, initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             _database = database;
         }
