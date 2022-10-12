@@ -406,6 +406,7 @@ namespace Raven.Server.Documents.Indexes
             if (entriesCountReader.HasValue)
             {
                 var entriesCountSize = entriesCountReader.Value.Length;
+                //backward compatibility https://github.com/ravendb/ravendb/commit/5c53b01ee2b4fad8f3ef410f3e4976144d72c023
                 entriesCount = entriesCountSize == sizeof(long) 
                     ? entriesCountReader.Value.ReadLittleEndianInt64() 
                     : entriesCountReader.Value.ReadLittleEndianInt32();
