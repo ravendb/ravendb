@@ -16,6 +16,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
@@ -112,7 +113,7 @@ namespace RachisTests.DatabaseCluster
                 var doc = new DatabaseRecord(databaseName);
                 databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
             }
-            
+
             Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
             foreach (var server in Servers)
             {
@@ -149,15 +150,15 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        
+
         [Fact]
         public async Task FailoverReplicationShouldFindEtagFromChangeVector()
         {
             var clusterSize = 3;
             var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
 
-            using (var source = GetDocumentStore(new Options {ReplicationFactor = clusterSize, Server = cluster.Leader}))
-            using (var dest = GetDocumentStore(new Options {ReplicationFactor = 1, Server = cluster.Leader}))
+            using (var source = GetDocumentStore(new Options { ReplicationFactor = clusterSize, Server = cluster.Leader }))
+            using (var dest = GetDocumentStore(new Options { ReplicationFactor = 1, Server = cluster.Leader }))
             {
                 await WaitAndAssertForValueAsync(() => GetMembersCount(source, source.Database), 3);
 
@@ -200,7 +201,8 @@ namespace RachisTests.DatabaseCluster
                 var otherNodeTag = otherNode.NodeTag;
                 var op = new UpdateExternalReplicationOperation(new ExternalReplication(dest.Database, $"ConnectionString-{dest.Identifier}")
                 {
-                    TaskId = exReplication.TaskId, MentorNode = otherNodeTag
+                    TaskId = exReplication.TaskId,
+                    MentorNode = otherNodeTag
                 });
 
                 var update = await source.Maintenance.SendAsync(op);
@@ -979,10 +981,10 @@ namespace RachisTests.DatabaseCluster
             var dstTopology = await ShardingCluster.CreateShardedDatabaseInCluster(dstDB, replicationFactor, (dstNodes, dstLeader), shards: 3);
 
             using (var srcStore = new DocumentStore()
-                   {
-                       Urls = new[] { srcLeader.WebUrl },
-                       Database = srcDB,
-                   }.Initialize())
+            {
+                Urls = new[] { srcLeader.WebUrl },
+                Database = srcDB,
+            }.Initialize())
             {
                 using (var session = srcStore.OpenSession())
                 {
@@ -1065,10 +1067,10 @@ namespace RachisTests.DatabaseCluster
             var dstTopology = await CreateDatabaseInCluster(dstDB, clusterSize, dstLeader.WebUrl);
 
             using (var srcStore = new DocumentStore()
-                   {
-                       Urls = srcTopology.Servers.Select(s => s.WebUrl).ToArray(),
-                       Database = srcDB,
-                   }.Initialize())
+            {
+                Urls = srcTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                Database = srcDB,
+            }.Initialize())
             {
                 using (var session = srcStore.OpenSession())
                 {
@@ -1458,6 +1460,98 @@ namespace RachisTests.DatabaseCluster
                     TimeSpan.FromSeconds(10)));
                 Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology { Members = new List<string> { "A", "B" } }, store.Database, "users/1", null,
                     TimeSpan.FromSeconds(10)));
+            }
+        }
+
+        [Fact]
+        public async Task ServerWideExternalReplicationShouldWork_NonShardedToSharded()
+        {
+            var clusterSize = 3;
+            var dbName = GetDatabaseName();
+
+            var (_, leader) = await CreateRaftCluster(clusterSize);
+            var (shardNodes, shardsLeader) = await CreateRaftCluster(clusterSize);
+
+            await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
+            await ShardingCluster.CreateShardedDatabaseInCluster(dbName, 3, (shardNodes, shardsLeader));
+
+            using (var store = new DocumentStore() { Urls = new[] { leader.WebUrl }, Database = dbName }.Initialize())
+            {
+                var putConfiguration = new ServerWideExternalReplication
+                {
+                    MentorNode = leader.ServerStore.NodeTag,
+                    TopologyDiscoveryUrls = shardNodes.Select(s => s.WebUrl).ToArray(),
+                    Name = dbName
+                };
+
+                var result = await store.Maintenance.Server.SendAsync(new PutServerWideExternalReplicationOperation(putConfiguration));
+                var serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideExternalReplicationOperation(result.Name));
+                Assert.NotNull(serverWideConfiguration);
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
+                Assert.Equal(1, record.ExternalReplications.Count);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    shardNodes,
+                    dbName,
+                    "users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(60)));
+            }
+        }
+
+        [Fact]
+        public async Task ServerWideExternalReplicationShouldWork_ShardedToNonSharded()
+        {
+            var clusterSize = 3;
+            var dbName = GetDatabaseName();
+
+            var (nodes, leader) = await CreateRaftCluster(clusterSize);
+            var (shardNodes, shardsLeader) = await CreateRaftCluster(clusterSize);
+
+            await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
+            await ShardingCluster.CreateShardedDatabaseInCluster(dbName, 3, (shardNodes, shardsLeader));
+
+            using (var store = new DocumentStore() { Urls = new[] { shardsLeader.WebUrl }, Database = dbName }.Initialize())
+            {
+                var putConfiguration = new ServerWideExternalReplication
+                {
+                    MentorNode = shardsLeader.ServerStore.NodeTag,
+                    TopologyDiscoveryUrls = nodes.Select(s => s.WebUrl).ToArray(),
+                    Name = dbName
+                };
+
+                var result = await store.Maintenance.Server.SendAsync(new PutServerWideExternalReplicationOperation(putConfiguration));
+                var serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideExternalReplicationOperation(result.Name));
+                Assert.NotNull(serverWideConfiguration);
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
+                Assert.Equal(1, record.ExternalReplications.Count);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    nodes,
+                    dbName,
+                    "users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(60)));
             }
         }
     }
