@@ -386,7 +386,7 @@ namespace Voron.Data.CompactTrees
                 *((int*)_currentPtr) = n;
                 _currentPtr += sizeof(int);
                 
-                // PERF: Between fixing the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
+                // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
                 Unsafe.CopyBlock(ref Unsafe.AsRef<byte>(_currentPtr), ref Unsafe.AsRef<byte>(key[0]), (uint)keyLength );
                 
                 _currentPtr += n; // We update the new pointer. 
@@ -421,7 +421,6 @@ namespace Voron.Data.CompactTrees
                     // We write the size and the key. 
                     *(int*)_currentPtr = n;
                     _currentPtr += sizeof(int);
-                    //_currentPtr += VariableSizeEncoding.Write(_currentPtr, n);
                     Memory.Copy(_currentPtr, keyPtr, keyLength);
                     _currentPtr += n; // We update the new pointer. 
 
@@ -514,7 +513,6 @@ namespace Voron.Data.CompactTrees
                 // This method allows us to compare the key in it's encoded form directly using the current dictionary. 
                 byte* encodedStartPtr = _storage.Ptr + _currentKeyIdx;
                 int length = *((int*)encodedStartPtr);
-                //var length = VariableSizeEncoding.Read<int>(encodedStartPtr, out var offset);
                 Debug.Assert(encodedStartPtr[sizeof(int) + length - 1] == 0, "The encoded key is not null terminated.");
 
                 var result = Memory.CompareInline(encodedStartPtr + sizeof(int), nextEntryPtr, Math.Min(length, nextEntryLength));
@@ -532,7 +530,6 @@ namespace Voron.Data.CompactTrees
                     Debug.Assert(_currentKeyIdx != Invalid, "The current key index is not set and it should be.");
                     
                     encodedStartPtr = _storage.Ptr + _currentKeyIdx;
-                    //encodedLength = VariableSizeEncoding.Read<int>(encodedStartPtr, out var offset);
                     encodedLength = *((int*)encodedStartPtr);
                     encodedStartPtr += sizeof(int);
                 }
@@ -817,7 +814,6 @@ namespace Voron.Data.CompactTrees
                 encodedKey.Set(key);
                 encodedKey.ChangeDictionary(state.Header->DictionaryId);
 
-                // encodedKey = EncodedKey.Get(key, this, state.Header->DictionaryId);
                 FindPageFor(ref _internalCursor, ref state, encodedKey);
                 state = ref _internalCursor._stk[_internalCursor._pos];
 
@@ -1080,7 +1076,6 @@ namespace Voron.Data.CompactTrees
             var newKey = scope.Key;
 
             newKey.Set(GetEncodedKey(sourcePage, sourceState.EntriesOffsets[0]), sourceHeader->DictionaryId);
-            //var newKey = EncodedKey.From(newEncodedKey, this, sourceHeader->DictionaryId);
 
             PopPage(ref _internalCursor);
             
@@ -1089,7 +1084,6 @@ namespace Voron.Data.CompactTrees
 
             // Ensure that we got the right key to search. 
             newKey.ChangeDictionary(_internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
-            //newKey = EncodedKey.Get(newKey, this, _internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
 
             SearchInCurrentPage(newKey, ref _internalCursor._stk[_internalCursor._pos]); // positions changed, re-search
             AddToPage(newKey, siblingPage);
@@ -1322,7 +1316,6 @@ namespace Voron.Data.CompactTrees
                         // Since the recompressing has changed the topology of the entire page, we need to reencode the key
                         // to move forward. 
                         key.ChangeDictionary(state.Header->DictionaryId);
-                        // key = EncodedKey.Get(key, this, state.Header->DictionaryId);
 
                         // We need to recompute this because it will change.
                         encodedKey = key.EncodedWithCurrent();
@@ -1436,7 +1429,6 @@ namespace Voron.Data.CompactTrees
             PopPage(ref _internalCursor); // add to parent
 
             splitKey.ChangeDictionary(_internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
-            // splitKey = EncodedKey.Get(splitKey, this, _internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
 
             SearchInCurrentPage(splitKey, ref _internalCursor._stk[_internalCursor._pos]);
             AddToPage(splitKey, page.PageNumber);
@@ -1518,8 +1510,6 @@ namespace Voron.Data.CompactTrees
 
             causeForSplit.Set(splitKey, ((CompactPageHeader*)page.Pointer)->DictionaryId);
             return causeForSplit;
-
-            //return EncodedKey.From(splitKey, this, ((CompactPageHeader*)page.Pointer)->DictionaryId);
         }
 
         private static int FindPositionToSplitPageInHalfBasedOfEntriesSize(ref CursorState state)
@@ -1559,8 +1549,6 @@ namespace Voron.Data.CompactTrees
                 throw new InvalidOperationException("The sizes do not match! FreeSpace: " + p.Header->FreeSpace + " but actually was space: " + actualFreeSpace);
             }
         }
-
-        
 
         [Conditional("DEBUG")]
         public void Render()
@@ -1754,7 +1742,6 @@ namespace Voron.Data.CompactTrees
             for (ushort i = 0; i < state.Header->NumberOfEntries; i++)
             {
                 GetEncodedEntry(page, state.EntriesOffsets[i], out var encodedKey, out var val);
-                //EncodedKey key = EncodedKey.From(encodedKey, this, state.Header->DictionaryId);
                 scope.Key.Set(encodedKey, state.Header->DictionaryId);
 
                 results.Add((Encoding.UTF8.GetString(scope.Key.Decoded()), val));
@@ -1802,7 +1789,6 @@ namespace Voron.Data.CompactTrees
 
             encodedKey.Set(key);
             encodedKey.ChangeDictionary(state.Header->DictionaryId);
-            //var encodedKey = EncodedKey.Get(key, this, state.Header->DictionaryId);
 
             FindPageFor(ref cstate, ref state, encodedKey);
         }
@@ -1834,7 +1820,6 @@ namespace Voron.Data.CompactTrees
             PushPage(nextPage, ref cstate);
 
             key.ChangeDictionary(cstate._stk[cstate._pos].Header->DictionaryId);
-            // return EncodedKey.Get(key, this, cstate._stk[cstate._pos].Header->DictionaryId);
         }
 
 
@@ -1976,8 +1961,6 @@ namespace Voron.Data.CompactTrees
             using var scope = new EncodedKeyScope(tree);
             scope.Key.Set(encodedKeyStream, ((CompactPageHeader*)page.Pointer)->DictionaryId);
 
-            //EncodedKey encodedKey = EncodedKey.From(key, tree, ((CompactPageHeader*)page.Pointer)->DictionaryId);
-
             var actualKeyPtr = scope.Key.DecodedPtr(out int length);
             tree.Llt.Allocator.Allocate(length, out var output);
             Memory.Copy(output.Ptr, actualKeyPtr, length);
@@ -2007,12 +1990,6 @@ namespace Voron.Data.CompactTrees
             // It is the responsibility of the caller to ensure that is the case. 
             Debug.Assert(key.Dictionary == state.Header->DictionaryId);
 
-            //var encodedKey = key.EncodedWith(state.Header->DictionaryId);
-            var encodedKey = key.EncodedWithCurrent();
-
-            // TODO: Improve this. 
-            // var encodedKeyLength = key.EncodedPtrWithCurrent(out byte* encodedKeyPtr);
-
             ushort* @base = state.EntriesOffsetsPtr;
             int length = state.Header->NumberOfEntries;
             if (length == 0)
@@ -2038,8 +2015,6 @@ namespace Voron.Data.CompactTrees
 
                 match = Memory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
                 match = match == 0 ? keyLength - encodedKeyLength : match;
-                //match = key.CompareEncodedWithCurrent(encodedKey, encodedKeyLength);
-
                 if (match >= 0)
                     bot += mid;
 
@@ -2050,8 +2025,6 @@ namespace Voron.Data.CompactTrees
             
             match = Memory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
             match = match == 0 ? keyLength - encodedKeyLength : match;
-            //match = key.CompareEncodedWithCurrent(encodedKey, encodedKeyLength);
-
             if (match == 0)
             {
                 state.LastMatch = 0;
@@ -2091,7 +2064,7 @@ namespace Voron.Data.CompactTrees
             {
                 if (s1[i] < s2[i])
                     return -1;
-                else if (s2[i] < s1[i])
+                if (s2[i] < s1[i])
                     return 1;
             }
 
@@ -2107,7 +2080,6 @@ namespace Voron.Data.CompactTrees
             // It is the responsibility of the caller to ensure that is the case. 
             Debug.Assert(key.Dictionary == state.Header->DictionaryId);
 
-            //var encodedKey = key.EncodedWith(state.Header->DictionaryId);
             var encodedKey = key.EncodedWithCurrent();
 
             int high = state.Header->NumberOfEntries - 1, low = 0;
@@ -2162,8 +2134,6 @@ namespace Voron.Data.CompactTrees
 
             // TODO: Most searches may only require transcoding only, not setting new values as we are looking for the key anyways. 
             key.ChangeDictionary(cstate._stk[cstate._pos].Header->DictionaryId);
-
-            //return EncodedKey.Get(key, this, cstate._stk[cstate._pos].Header->DictionaryId);
         }
 
         private void FuzzyFindPageFor(ReadOnlySpan<byte> key, ref IteratorCursorState cstate)
@@ -2181,7 +2151,6 @@ namespace Voron.Data.CompactTrees
             var encodedKey = scope.Key;
             encodedKey.Set(key);
             encodedKey.ChangeDictionary(state.Header->DictionaryId);
-            // var encodedKey = EncodedKey.Get(key, this, state.Header->DictionaryId);
 
             while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))
             {
