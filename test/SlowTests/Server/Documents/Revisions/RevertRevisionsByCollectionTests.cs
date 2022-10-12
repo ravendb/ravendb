@@ -236,7 +236,7 @@ namespace SlowTests.Server.Documents.Revisions
         }
 
         [Fact]
-        public async Task RevertByWrongCollectionShouldThrow()
+        public async Task RevertByWrongCollection()
         {
             var collections = new List<string>()
             {
@@ -261,25 +261,23 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.StoreAsync(company);
                     await session.SaveChangesAsync();
                 }
-
+                
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-                var e = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-                {
-                    using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None)) 
-                    { 
-                        var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
-                            token: token, collections: collections);
-                    }
-                });
-                Assert.True(e.Message.Contains(@"There's no such collection as 'notExistingCollection'"));
+
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None)) 
+                { 
+                    var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        token: token, collections: collections);
+                }
 
                 using (var session = store.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
-                    Assert.Equal(2, companiesRevisions.Count);
+                    Assert.Equal(3, companiesRevisions.Count);
 
-                    Assert.Equal("Hibernating Rhinos", companiesRevisions[0].Name);
-                    Assert.Equal("Company Name", companiesRevisions[1].Name);
+                    Assert.Equal("Company Name", companiesRevisions[0].Name);
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+                    Assert.Equal("Company Name", companiesRevisions[2].Name);
                 }
             }
         }
@@ -460,7 +458,7 @@ namespace SlowTests.Server.Documents.Revisions
         }
 
         [Fact] //--
-        public async Task RevertByWrongCollectionShouldThrow_EndPointCheck()
+        public async Task RevertByWrongCollection_EndPointCheck()
         {
             var collections = new List<string>()
             {
@@ -487,21 +485,18 @@ namespace SlowTests.Server.Documents.Revisions
                 }
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-                var e = await Assert.ThrowsAsync<RavenException>(async () =>
-                {
-                    var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections));
-                    var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-                });
-                Assert.IsType<InvalidOperationException>(e.InnerException);
-                Assert.True(e.InnerException.Message.Contains(@"There's no such collection as 'notExistingCollection'"));
+
+                var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections)); 
+                var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
 
                 using (var session = store.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
-                    Assert.Equal(2, companiesRevisions.Count);
+                    Assert.Equal(3, companiesRevisions.Count);
 
-                    Assert.Equal("Hibernating Rhinos", companiesRevisions[0].Name);
-                    Assert.Equal("Company Name", companiesRevisions[1].Name);
+                    Assert.Equal("Company Name", companiesRevisions[0].Name);
+                    Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
+                    Assert.Equal("Company Name", companiesRevisions[2].Name);
                 }
             }
         }
