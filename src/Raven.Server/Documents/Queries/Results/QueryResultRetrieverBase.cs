@@ -138,6 +138,8 @@ namespace Raven.Server.Documents.Queries.Results
                     using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                         doc = DirectGet(ref retrieverInput, lowerId, DocumentFields.All);
 
+                    FinishDocumentSetup(doc, retrieverInput.Score);
+                    
                     if (doc == null)
                     {
                         if (FieldsToFetch.Projection.MustExtractFromDocument)
