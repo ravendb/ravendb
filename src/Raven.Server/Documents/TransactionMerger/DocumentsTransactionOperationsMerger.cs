@@ -9,7 +9,7 @@ public class DocumentsTransactionOperationsMerger : AbstractTransactionOperation
     private readonly DocumentDatabase _database;
 
     public DocumentsTransactionOperationsMerger([NotNull] DocumentDatabase database)
-        : base(database.Name, database.DocumentsStorage.ContextPool, database.NotificationCenter, database.Configuration, database.Time, database.DatabaseShutdown)
+        : base(database.Name, database.Configuration, database.Time, database.DatabaseShutdown)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
         IsEncrypted = database.IsEncrypted;

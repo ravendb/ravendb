@@ -37,8 +37,8 @@ namespace Raven.Server.Documents.TransactionMerger
         where TTransaction : RavenTransaction
     {
         private readonly string _resourceName;
-        private readonly JsonContextPoolBase<TOperationContext> _contextPool;
-        private readonly NotificationCenter.NotificationCenter _notificationCenter;
+        private JsonContextPoolBase<TOperationContext> _contextPool;
+        private NotificationCenter.NotificationCenter _notificationCenter;
         private readonly RavenConfiguration _configuration;
         private readonly SystemTime _time;
         private readonly CancellationToken _shutdown;
@@ -56,18 +56,16 @@ namespace Raven.Server.Documents.TransactionMerger
         private readonly long _maxTxSizeInBytes;
         private readonly double _maxTimeToWaitForPreviousTxBeforeRejectingInMs;
 
+        private bool _initialized;
+
         protected AbstractTransactionOperationsMerger(
             [NotNull] string resourceName,
-            [NotNull] JsonContextPoolBase<TOperationContext> contextPool,
-            [NotNull] NotificationCenter.NotificationCenter notificationCenter,
             [NotNull] RavenConfiguration configuration,
             [NotNull] SystemTime time,
             CancellationToken shutdown)
         {
             _resourceName = resourceName ?? throw new ArgumentNullException(nameof(resourceName));
             _log = LoggingSource.Instance.GetLogger<AbstractTransactionOperationsMerger<TOperationContext, TTransaction>>(_resourceName);
-            _contextPool = contextPool ?? throw new ArgumentNullException(nameof(contextPool));
-            _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _time = time ?? throw new ArgumentNullException(nameof(time));
             _shutdown = shutdown;
@@ -77,6 +75,14 @@ namespace Raven.Server.Documents.TransactionMerger
             _maxTimeToWaitForPreviousTxBeforeRejectingInMs = configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
             _timeToCheckHighDirtyMemory = configuration.Memory.TemporaryDirtyMemoryChecksPeriod;
             _lastHighDirtyMemCheck = time.GetUtcNow();
+        }
+
+        public void Initialize([NotNull] JsonContextPoolBase<TOperationContext> contextPool, [NotNull] NotificationCenter.NotificationCenter notificationCenter)
+        {
+            _contextPool = contextPool ?? throw new ArgumentNullException(nameof(contextPool));
+            _notificationCenter = notificationCenter ?? throw new ArgumentNullException(nameof(notificationCenter));
+
+            _initialized = true;
         }
 
         protected abstract bool IsEncrypted { get; }
@@ -140,6 +146,9 @@ namespace Raven.Server.Documents.TransactionMerger
         /// </summary>
         public async Task Enqueue(MergedTransactionCommand<TOperationContext, TTransaction> cmd)
         {
+            if (_initialized == false)
+                throw new InvalidOperationException($"Tx Merger for '{_resourceName}' is not initialized.");
+
             _edi?.Throw();
             _operations.Enqueue(cmd);
             _waitHandle.Set();
