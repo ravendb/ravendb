@@ -1472,6 +1472,16 @@ namespace Raven.Server.Documents.Revisions
             // send initial progress
             parameters.OnProgress?.Invoke(result);
 
+            HashSet<string> collectionsHashSet = null;
+            if (collections != null)
+            {
+                collectionsHashSet = new HashSet<string>();
+                foreach (var col in collections)
+                {
+                    collectionsHashSet.Add(col.ToLower());
+                }
+            }
+
             var hasMore = true;
             while (hasMore)
             {
@@ -1479,7 +1489,7 @@ namespace Raven.Server.Documents.Revisions
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
                 {
-                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, token, collections);
+                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, token, collectionsHashSet);
                     await WriteRevertedRevisions(list, token);
                 }
             }
@@ -1497,7 +1507,7 @@ namespace Raven.Server.Documents.Revisions
             list.Clear();
         }
 
-        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, OperationCancelToken token, List<string> collections = null)
+        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, OperationCancelToken token, HashSet<string> collections = null)
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
