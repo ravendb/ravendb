@@ -370,7 +370,9 @@ namespace Voron.Data.CompactTrees
                 // This is the operation to set an unencoded key 
 
                 // Initialize the memory to zero (this ensures the mappings defaults are correct for operation). 
-                MemoryMarshal.AsBytes(_keyMapping.AsSpan()).Fill(0);
+                var keyMapping = _keyMapping;
+                for (int i = 0; i < keyMapping.Length; i++)
+                    keyMapping[i].Dictionary = 0;
 
                 // Since the size is big enough to store the unencoded key, we don't check the remaining size here.
                 _decodedKeyIdx = (int)(_currentPtr - (long)_storage.Ptr);
@@ -396,7 +398,9 @@ namespace Voron.Data.CompactTrees
             public void Set(ReadOnlySpan<byte> key, long dictionaryId)
             {
                 // Initialize the memory to zero (this ensures the mappings defaults are correct for operation). 
-                MemoryMarshal.AsBytes(_keyMapping.AsSpan()).Fill(0);
+                var keyMapping = _keyMapping;
+                for (int i = 0; i < keyMapping.Length; i++)
+                    keyMapping[i].Dictionary = 0;
 
                 // This is the operation to set an encoded key from a particular dictionary.
 
