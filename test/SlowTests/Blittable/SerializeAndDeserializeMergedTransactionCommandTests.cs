@@ -467,7 +467,7 @@ namespace SlowTests.Blittable
             return jsonSerializer;
         }
 
-        private class CustomComparer<T> : IEqualityComparer<T> where T : TransactionOperationsMerger.IRecordableCommand
+        private class CustomComparer<T> : IEqualityComparer<T> where T : IRecordableCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly IEnumerable<Type> _notCheckTypes;
             private readonly JsonOperationContext _context;

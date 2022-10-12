@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -592,10 +593,10 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        private class ThrowCommand : TransactionOperationsMerger.MergedTransactionCommand
+        private class ThrowCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             protected override long ExecuteCmd(DocumentsOperationContext context) => throw new Exception();
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context) 
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(JsonOperationContext context) 
                 => throw new NotImplementedException();
             
         }
