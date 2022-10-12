@@ -103,7 +103,10 @@ namespace Voron.Platform.Posix
         {
             if (path != null)
             {
-                var length = Path.GetPathRoot(path).Length;
+                var result = Path.GetPathRoot(path);
+                if (result == null) return path;
+
+                var length = result.Length;
                 if (length > 0)
                     path = "/" + path.Substring(length);
                 path = path.Replace('\\', '/');
