@@ -1519,12 +1519,16 @@ namespace Raven.Server.Documents.Revisions
                     {
                         if (collection == null)
                         {
-                            throw new InvalidOperationException($"Collection name couldn't be null");
+                            if(_logger.IsInfoEnabled)
+                                _logger.Info($"Tried to revert revisions in collection that is null");
+                            continue;
                         }
                         var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
                         if (collectionName == null)
                         {
-                            throw new InvalidOperationException($"There's no such collection as '{collection}'");
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info($"Tried to revert revisions in the collection '{collection}' which does not exist");
+                            continue;
                         }
                         var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
                         var revisions = readCtx.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
