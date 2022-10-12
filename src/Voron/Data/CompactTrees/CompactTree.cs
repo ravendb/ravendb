@@ -367,20 +367,31 @@ namespace Voron.Data.CompactTrees
 
                 // Copy the key mapping and content.
                 int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
-                while (elementIdx >= 0)
+                if (elementIdx > 0)
                 {
-                    _keyMappingDictionary[elementIdx] = key._keyMappingDictionary[elementIdx];
-                    _keyMappingIndex[elementIdx] = key._keyMappingIndex[elementIdx];
-                    elementIdx--;
+                    var srcDictionary = key._keyMappingDictionary;
+                    var destDictionary = _keyMappingDictionary;
+                    var srcIndex = key._keyMappingIndex;
+                    var destIndex = _keyMappingIndex;
+
+                    while (elementIdx >= 0)
+                    {
+                        destDictionary[elementIdx] = srcDictionary[elementIdx];
+                        destIndex[elementIdx] = srcIndex[elementIdx];
+                        elementIdx--;
+                    }
                 }
 
-                Memory.Copy(_storage.Ptr, key._storage.Ptr, originalSize);
-                _currentPtr = _storage.Ptr + originalSize;
+                // This is the operation to set an unencoded key, therefore we need to restart everything.
+                _currentPtr = _storage.Ptr;
+                Memory.Copy(_currentPtr, key._storage.Ptr, originalSize);
+                _currentPtr += originalSize;
             }
 
             public void Set(ReadOnlySpan<byte> key)
             {
-                // This is the operation to set an unencoded key 
+                // This is the operation to set an unencoded key, therefore we need to restart everything.
+                _currentPtr = _storage.Ptr;
 
                 // Initialize the memory to zero (this ensures the mappings defaults are correct for operation). 
                 int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
@@ -425,7 +436,8 @@ namespace Voron.Data.CompactTrees
 
                 _keyMappingCurrent = Invalid;
 
-                // This is the operation to set an encoded key from a particular dictionary.
+                // This is the operation to set an unencoded key, therefore we need to restart everything.
+                _currentPtr = _storage.Ptr;
 
                 // Since the size is big enough to store twice the unencoded key, we don't check the remaining size here.
                 fixed (byte* keyPtr = key)
