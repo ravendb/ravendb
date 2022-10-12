@@ -26,5 +26,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedStatsHandlerProcessorForGetDatabaseStatistics(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/healthcheck", "GET")]
+        public async Task DatabaseHealthCheck()
+        {
+            using (var processor = new ShardedStatsHandlerProcessorForDatabaseHealthCheck(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

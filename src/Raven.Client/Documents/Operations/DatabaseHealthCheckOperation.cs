@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations
             return new DatabaseHealthCheckCommand();
         }
 
-        private class DatabaseHealthCheckCommand : RavenCommand
+        internal class DatabaseHealthCheckCommand : RavenCommand
         {
             public DatabaseHealthCheckCommand()
             {
