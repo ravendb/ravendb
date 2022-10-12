@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -112,12 +113,6 @@ namespace Voron.Data.CompactTrees
             // dictionary and just decode it into the storage. 
             private int _decodedKeyIdx;
 
-            public enum CollisionMode
-            {
-                NoCollision = 0,
-                HasCollision = 1,
-            }
-
             // The mapping dictionary works like glorified cache but it is really more like a hash-table.
             // The base idea is to access directly the encoded key representation already stored in this
             // key auxiliary storage in order to reuse and avoid redundant work. 
@@ -129,15 +124,17 @@ namespace Voron.Data.CompactTrees
 
                 // If we have the encoded version of the key available already, the KeyIndex will be >0 and the Dictionary Valid. 
                 public int KeyIndex;
-
-                public CollisionMode CollisionStatus;
             }
 
             private int _currentKeyIdx;
 
             private const int MappingTableSize = 64;
             private const int MappingTableMask = MappingTableSize - 1;
-            private readonly KeyMapping[] _keyMapping = new KeyMapping[MappingTableSize];
+
+            private readonly long[] _keyMappingDictionary = new long[MappingTableSize];
+            private readonly int[] _keyMappingIndex = new int[MappingTableSize];
+
+            private int _keyMappingCurrent;
 
             public long Dictionary { get; private set; }
 
@@ -149,6 +146,7 @@ namespace Voron.Data.CompactTrees
                 Dictionary = Invalid;
                 _currentKeyIdx = Invalid;
                 _decodedKeyIdx = Invalid;
+                _keyMappingCurrent = Invalid;
 
                 _storageScope = Owner.Llt.Allocator.Allocate(Constants.CompactTree.MaximumKeySize * 2, out _storage);
                 _currentPtr = _storage.Ptr; 
@@ -165,6 +163,7 @@ namespace Voron.Data.CompactTrees
                 Dictionary = key.Dictionary;
                 _currentKeyIdx = key._currentKeyIdx;
                 _decodedKeyIdx = key._decodedKeyIdx;
+                _keyMappingCurrent = key._keyMappingCurrent;
 
                 _storageScope = Owner.Llt.Allocator.Allocate(key._storage.Size, out _storage);
                 _currentPtr = _storage.Ptr;
@@ -172,7 +171,8 @@ namespace Voron.Data.CompactTrees
                 _currentEndPtr = _currentPtr + size;
 
                 // Copy the key mapping and content.
-                key._keyMapping.CopyTo(_keyMapping.AsSpan());
+                key._keyMappingDictionary.CopyTo(_keyMappingDictionary.AsSpan());
+                key._keyMappingIndex.CopyTo(_keyMappingIndex.AsSpan());
                 Memory.Copy(_storage.Ptr, key._storage.Ptr, size);
             }
 
@@ -196,11 +196,12 @@ namespace Voron.Data.CompactTrees
                     // We acquire the decoded form. This will lazily evaluate if needed. 
                     ReadOnlySpan<byte> decodedKey = Decoded();
 
-                    // We look for an appropriate place to put this key
-                    ref var bucket = ref SelectHashBucketForWrite(dictionaryId);
+                    // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes.
 
-                    // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes. 
-                    bucket.KeyIndex = (int)(_currentPtr - _storage.Ptr);
+                    // We look for an appropriate place to put this key
+                    int buckedIdx = SelectHashBucketForWrite();
+                    _keyMappingDictionary[buckedIdx] = dictionaryId;
+                    _keyMappingIndex[buckedIdx] = (int)(_currentPtr - _storage.Ptr);
 
                     // We will grow the 
                     var dictionary = Owner.GetEncodingDictionary(dictionaryId);
@@ -230,15 +231,25 @@ namespace Voron.Data.CompactTrees
                 }
                 else
                 {
-                    ref var bucket = ref SelectHashBucketForRead(dictionaryId, out var success);
-                    start = success ? _storage.Ptr + bucket.KeyIndex : EncodeFromDecodedForm();
+                    int bucketIdx = SelectHashBucketForRead(dictionaryId);
+                    if (bucketIdx == Invalid)
+                    {
+                        start = EncodeFromDecodedForm();
+                        bucketIdx = _keyMappingCurrent;
+
+                        // IMPORTANT: Pointers are potentially invalidated by the grow storage call at EncodeFromDecodedForm, be careful here. 
+                    }
+                    else
+                    {
+                        start = _storage.Ptr + _keyMappingIndex[bucketIdx];
+                    }
 
                     // Because we are decoding for the current dictionary, we will update the lazy index to avoid searching again next time. 
                     if (Dictionary == dictionaryId)
-                        _currentKeyIdx = bucket.KeyIndex;
+                        _currentKeyIdx = _keyMappingIndex[bucketIdx];
                 }
 
-                // IMPORTANT: Pointers are potentially invalidated by the grow storage call at EncodeFromDecodedForm, be careful here. 
+
                 length = *(int*)start;
                 return start + sizeof(int); 
             }
@@ -257,17 +268,11 @@ namespace Voron.Data.CompactTrees
 
                 long currentDictionary = Dictionary;
                 int currentKeyIdx = _currentKeyIdx;
-                if (currentKeyIdx == Invalid)
+                if (currentKeyIdx == Invalid && _keyMappingDictionary[0] != 0)
                 {
-                    foreach (var mapping in _keyMapping)
-                    {
-                        if (mapping.Dictionary != 0)
-                        {
-                            currentDictionary = mapping.Dictionary;
-                            currentKeyIdx = mapping.KeyIndex;
-                            break;
-                        }
-                    }
+                    // We don't have any decoded version, so we pick the first one and do it. 
+                    currentDictionary = _keyMappingDictionary[0];
+                    currentKeyIdx = _keyMappingIndex[0];
                 }
 
                 Debug.Assert(currentKeyIdx != Invalid);
@@ -354,13 +359,21 @@ namespace Voron.Data.CompactTrees
                 Dictionary = key.Dictionary;
                 _currentKeyIdx = key._currentKeyIdx;
                 _decodedKeyIdx = key._decodedKeyIdx;
+                _keyMappingCurrent = key._keyMappingCurrent;
 
                 var originalSize = (int)(key._currentPtr - key._storage.Ptr);
                 if (originalSize > _storage.Length)
                     UnlikelyGrowStorage(originalSize);
 
                 // Copy the key mapping and content.
-                key._keyMapping.CopyTo(_keyMapping.AsSpan());
+                int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
+                while (elementIdx >= 0)
+                {
+                    _keyMappingDictionary[elementIdx] = key._keyMappingDictionary[elementIdx];
+                    _keyMappingIndex[elementIdx] = key._keyMappingIndex[elementIdx];
+                    elementIdx--;
+                }
+
                 Memory.Copy(_storage.Ptr, key._storage.Ptr, originalSize);
                 _currentPtr = _storage.Ptr + originalSize;
             }
@@ -370,9 +383,14 @@ namespace Voron.Data.CompactTrees
                 // This is the operation to set an unencoded key 
 
                 // Initialize the memory to zero (this ensures the mappings defaults are correct for operation). 
-                var keyMapping = _keyMapping;
-                for (int i = 0; i < keyMapping.Length; i++)
-                    keyMapping[i].Dictionary = 0;
+                int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
+                while (elementIdx >= 0)
+                {
+                    _keyMappingDictionary[elementIdx] = 0;
+                    elementIdx--;
+                }
+
+                _keyMappingCurrent = Invalid;
 
                 // Since the size is big enough to store the unencoded key, we don't check the remaining size here.
                 _decodedKeyIdx = (int)(_currentPtr - (long)_storage.Ptr);
@@ -398,9 +416,14 @@ namespace Voron.Data.CompactTrees
             public void Set(ReadOnlySpan<byte> key, long dictionaryId)
             {
                 // Initialize the memory to zero (this ensures the mappings defaults are correct for operation). 
-                var keyMapping = _keyMapping;
-                for (int i = 0; i < keyMapping.Length; i++)
-                    keyMapping[i].Dictionary = 0;
+                int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
+                while (elementIdx >= 0)
+                {
+                    _keyMappingDictionary[elementIdx] = 0;
+                    elementIdx--;
+                }
+
+                _keyMappingCurrent = Invalid;
 
                 // This is the operation to set an encoded key from a particular dictionary.
 
@@ -414,9 +437,9 @@ namespace Voron.Data.CompactTrees
 
                     int keyLength = key.Length;
                     int n = keyLength + (key[^1] != 0).ToInt32();
-                    ref KeyMapping bucket = ref SelectHashBucketForWrite(dictionaryId);
-                    bucket.Dictionary = dictionaryId;
-                    bucket.KeyIndex = _currentKeyIdx;
+                    int bucketIdx = SelectHashBucketForWrite();
+                    _keyMappingDictionary[bucketIdx] = dictionaryId;
+                    _keyMappingIndex[bucketIdx] = _currentKeyIdx;
 
                     // We write the size and the key. 
                     *(int*)_currentPtr = n;
@@ -430,63 +453,26 @@ namespace Voron.Data.CompactTrees
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private ref KeyMapping SelectHashBucketForRead(long dictionaryId, out bool success)
+            private int SelectHashBucketForRead(long dictionaryId)
             {
-                int hash = Hashing.Mix(dictionaryId) & MappingTableMask;
-                ref KeyMapping bucket = ref _keyMapping[hash];
-                while (bucket.Dictionary != dictionaryId)
+                int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
+                while (elementIdx >= 0)
                 {
-                    // A collision will taint the bucket until it is reset. We dont expect to have to 
-                    // move too much over the mapping table. The expected branch result is taken.
-                    if (bucket.CollisionStatus == CollisionMode.NoCollision)
-                    {
-                        success = false;
-                        return ref bucket;
-                    }
+                    long currentDictionary = _keyMappingDictionary[elementIdx];
+                    if (currentDictionary == dictionaryId)
+                        return elementIdx;
 
-                    // We are gonna try the next one, until we either don't find it OR we run out of tries. 
-                    hash++;
-                    bucket = ref _keyMapping[hash & MappingTableMask];
-
-                    if (hash <= 2 * MappingTableSize)
-                        continue;
-
-                    success = false;
-                    return ref bucket;
+                    elementIdx--;
                 }
 
-                success = true;
-                return ref bucket;
+                return Invalid;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private ref KeyMapping SelectHashBucketForWrite(long dictionaryId)
+            private int SelectHashBucketForWrite()
             {
-                int hash = Hashing.Mix(dictionaryId) & MappingTableMask;
-                ref KeyMapping bucket = ref _keyMapping[hash];
-                while (bucket.Dictionary > 0)
-                {
-                    // A collision will taint the bucket until it is reset. The expected case is to never
-                    // have more than a couple of sequence collisions under normal operation. 
-                    bucket.CollisionStatus = CollisionMode.HasCollision;
-
-                    // We are gonna try a new one. 
-                    hash++;
-                    bucket = ref _keyMapping[hash & MappingTableMask];
-
-                    if (hash > 2 * MappingTableSize)
-                    {
-                        // This is the most unlikely situation that can happen. It is expected this code to NEVER execute at all.
-                        // The aftereffect of this happening is that the storage requirement will go up to accomodate the lost keys.
-                        // However, we have to deal with the situation anyways. Under PGO this should be considered like a throw statement. 
-                        bucket = ref _keyMapping[Hashing.Mix(dictionaryId) & MappingTableMask];
-                        bucket.CollisionStatus = CollisionMode.HasCollision;
-                        break;
-                    }
-                }
-
-                bucket.Dictionary = dictionaryId;
-                return ref bucket;
+                _keyMappingCurrent++;
+                return _keyMappingCurrent & MappingTableMask;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
