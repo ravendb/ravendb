@@ -30,10 +30,10 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/healthcheck", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public Task DatabaseHealthCheck()
+        public async Task DatabaseHealthCheck()
         {
-            NoContentStatus();
-            return Task.CompletedTask;
+            using (var processor = new StatsHandlerProcessorForDatabaseHealthCheck(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/metrics", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
