@@ -15,7 +15,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -23,7 +23,6 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
@@ -1041,7 +1040,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public class ExecuteTimeSeriesBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly DocumentDatabase _database;
             private readonly string _documentId;
@@ -1158,7 +1157,7 @@ namespace Raven.Server.Documents.Handlers
                                                     "Cannot put TimeSeries on artificial documents.");
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(JsonOperationContext context)
             {
                 throw new System.NotImplementedException();
             }
@@ -1170,7 +1169,7 @@ namespace Raven.Server.Documents.Handlers
             FromSmuggler = true
         };
 
-        internal class SmugglerTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class SmugglerTimeSeriesBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly DocumentDatabase _database;
 
@@ -1226,7 +1225,7 @@ namespace Raven.Server.Documents.Handlers
                 itemsList.Add(item);
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(JsonOperationContext context)
             {
                 throw new System.NotImplementedException();
             }

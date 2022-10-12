@@ -20,7 +20,12 @@ public class DocumentsTransactionOperationsMerger : AbstractTransactionOperation
 
     protected override bool Is32Bits { get; }
 
-    protected override void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
+    internal override DocumentsTransaction BeginAsyncCommitAndStartNewTransaction(DocumentsTransaction previousTransaction, DocumentsOperationContext currentContext)
+    {
+        return previousTransaction.BeginAsyncCommitAndStartNewTransaction(currentContext);
+    }
+
+    internal override void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
     {
         if (string.IsNullOrEmpty(context.LastDatabaseChangeVector) == false)
         {

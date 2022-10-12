@@ -8,13 +8,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Exceptions;
-using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -384,7 +382,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public class MergedPutAttachmentCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public class MergedPutAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string DocumentId;
             public string Name;
@@ -401,7 +399,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(JsonOperationContext context)
             {
                 return new MergedPutAttachmentCommandDto
                 {
@@ -415,7 +413,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        internal class MergedDeleteAttachmentCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string DocumentId;
             public string Name;
@@ -428,7 +426,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(JsonOperationContext context)
             {
                 return new MergedDeleteAttachmentCommandDto
                 {
@@ -440,7 +438,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class MergedPutAttachmentCommandDto : TransactionOperationsMerger.IReplayableCommandDto<AttachmentHandler.MergedPutAttachmentCommand>
+    public class MergedPutAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedPutAttachmentCommand>
     {
         public string DocumentId;
         public string Name;
@@ -464,7 +462,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    internal class MergedDeleteAttachmentCommandDto : TransactionOperationsMerger.IReplayableCommandDto<AttachmentHandler.MergedDeleteAttachmentCommand>
+    internal class MergedDeleteAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedDeleteAttachmentCommand>
     {
         public string DocumentId;
         public string Name;

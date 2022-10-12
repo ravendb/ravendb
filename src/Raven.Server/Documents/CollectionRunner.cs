@@ -10,7 +10,6 @@ using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -52,7 +51,7 @@ namespace Raven.Server.Documents
         }
 
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, long start, long take, CollectionOperationOptions options, DocumentsOperationContext context,
-             Action<DeterminateProgress> onProgress, Func<string, TransactionOperationsMerger.MergedTransactionCommand> action, OperationCancelToken token)
+             Action<DeterminateProgress> onProgress, Func<string, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> action, OperationCancelToken token)
         {
             var progress = new DeterminateProgress();
             var cancellationToken = token.Token;

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -1387,7 +1387,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private class EnforceRevisionConfigurationCommand : TransactionOperationsMerger.MergedTransactionCommand
+        private class EnforceRevisionConfigurationCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly RevisionsStorage _revisionsStorage;
             private readonly List<string> _ids;
@@ -1420,12 +1420,12 @@ namespace Raven.Server.Documents.Revisions
                 return _ids.Count;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(JsonOperationContext context)
             {
                 return new EnforceRevisionConfigurationCommandDto(_revisionsStorage, _ids);
             }
 
-            private class EnforceRevisionConfigurationCommandDto : TransactionOperationsMerger.IReplayableCommandDto<EnforceRevisionConfigurationCommand>
+            private class EnforceRevisionConfigurationCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, EnforceRevisionConfigurationCommand>
             {
                 private readonly RevisionsStorage _revisionsStorage;
                 private readonly List<string> _ids;
@@ -1588,7 +1588,7 @@ namespace Raven.Server.Documents.Revisions
             list.Add(revision);
         }
 
-        internal class RevertDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class RevertDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly List<Document> _list;
             private readonly CancellationToken _token;
@@ -1660,13 +1660,13 @@ namespace Raven.Server.Documents.Revisions
                 return collectionName;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(JsonOperationContext context)
             {
                 return new RevertDocumentsCommandDto(_list);
             }
         }
 
-        internal class RevertDocumentsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<RevertDocumentsCommand>
+        internal class RevertDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RevertDocumentsCommand>
         {
             public readonly List<Document> List;
 

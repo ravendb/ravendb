@@ -83,6 +83,8 @@ namespace Raven.Server.Documents.TransactionMerger
 
         protected abstract bool Is32Bits { get; }
 
+        internal abstract TTransaction BeginAsyncCommitAndStartNewTransaction(TTransaction previousTransaction, TOperationContext currentContext);
+
         public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new(DatabasePerformanceMetrics.MetricType.GeneralWait, 256, 1);
         public DatabasePerformanceMetrics TransactionPerformanceMetrics = new(DatabasePerformanceMetrics.MetricType.Transaction, 256, 8);
 
@@ -444,7 +446,7 @@ namespace Raven.Server.Documents.TransactionMerger
             NotifyOnThreadPool(rejectedBuffer);
         }
 
-        protected abstract void UpdateGlobalReplicationInfoBeforeCommit(TOperationContext context);
+        internal abstract void UpdateGlobalReplicationInfoBeforeCommit(TOperationContext context);
 
         private void NotifyTransactionFailureAndRerunIndependently(List<MergedTransactionCommand<TOperationContext, TTransaction>> pendingOps, Exception e)
         {
@@ -483,7 +485,7 @@ namespace Raven.Server.Documents.TransactionMerger
                     {
                         previous.Transaction.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
                         _recording.State?.TryRecord(current, TxInstruction.BeginAsyncCommitAndStartNewTransaction);
-                        current.Transaction = previous.Transaction.BeginAsyncCommitAndStartNewTransaction(current);
+                        current.Transaction = BeginAsyncCommitAndStartNewTransaction(previous.Transaction, current);
                     }
                     catch (Exception e)
                     {

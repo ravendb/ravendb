@@ -2355,7 +2355,7 @@ namespace Raven.Server.Documents.Indexes
                             tx.InnerTransaction.LowLevelTransaction.OnDispose += _ => IndexPersistence.CleanWritersIfNeeded();
 
                             tx.Commit();
-                            SlowWriteNotification.Notify(commitStats, DocumentDatabase);
+                            SlowWriteNotification.Notify(commitStats, DocumentDatabase.NotificationCenter);
                             stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
                         }
                     }

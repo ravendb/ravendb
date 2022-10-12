@@ -19,11 +19,13 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -57,8 +59,8 @@ namespace Raven.Server.Documents.Replication
         public event Action<IncomingReplicationHandler, Exception> Failed;
 
         public event Action<IncomingReplicationHandler> DocumentsReceived;
-        
-        public event Action<IncomingReplicationHandler,int> AttachmentStreamsReceived;
+
+        public event Action<IncomingReplicationHandler, int> AttachmentStreamsReceived;
 
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
 
@@ -642,20 +644,20 @@ namespace Raven.Server.Documents.Replication
             {
                 if (_allowedPathsValidator != null)
                 {
-                if (_allowedPathsValidator.ShouldAllow(item) == false)
-                {
-                    throw new InvalidOperationException("Attempted to replicate " + _allowedPathsValidator.GetItemInformation(item) +
-                                                        ", which is not allowed, according to the allowed paths policy. Replication aborted");
-                }
+                    if (_allowedPathsValidator.ShouldAllow(item) == false)
+                    {
+                        throw new InvalidOperationException("Attempted to replicate " + _allowedPathsValidator.GetItemInformation(item) +
+                                                            ", which is not allowed, according to the allowed paths policy. Replication aborted");
+                    }
 
-                switch (item)
-                {
-                    case AttachmentReplicationItem a:
-                        expectedAttachmentStreams ??= new HashSet<Slice>(SliceComparer.Instance);
-                        expectedAttachmentStreams.Add(a.Key);
-                        break;
+                    switch (item)
+                    {
+                        case AttachmentReplicationItem a:
+                            expectedAttachmentStreams ??= new HashSet<Slice>(SliceComparer.Instance);
+                            expectedAttachmentStreams.Add(a.Key);
+                            break;
+                    }
                 }
-            }
 
                 if (_preventIncomingSinkDeletions)
                 {
@@ -999,7 +1001,7 @@ namespace Raven.Server.Documents.Replication
 
         protected void OnDocumentsReceived(IncomingReplicationHandler instance) => DocumentsReceived?.Invoke(instance);
 
-        internal class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedUpdateDatabaseChangeVectorCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly string _changeVector;
             private readonly long _lastDocumentEtag;
@@ -1052,7 +1054,7 @@ namespace Raven.Server.Documents.Replication
                 return operationsCount;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(JsonOperationContext context)
             {
                 return new MergedUpdateDatabaseChangeVectorCommandDto
                 {
@@ -1064,7 +1066,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedDocumentReplicationCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly long _lastEtag;
             private readonly PullReplicationMode _mode;
@@ -1238,7 +1240,7 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     var msg = $"Detected an item of type Incremental-TimeSeries : '{segment.Name}' on document '{docId}', " +
                                               $"while replication protocol version '{_replicationInfo.SupportedFeatures.ProtocolVersion}' does not support Incremental-TimeSeries feature.";
-                                    
+
                                     database.NotificationCenter.Add(AlertRaised.Create(
                                         database.Name,
                                         "Incoming Replication",
@@ -1256,7 +1258,7 @@ namespace Raven.Server.Documents.Replication
                                     context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
                                     continue;
                                 }
-                                
+
                                 var options = new TimeSeriesStorage.AppendOptions
                                 {
                                     VerifyName = false,
@@ -1592,7 +1594,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(JsonOperationContext context)
             {
                 var replicatedAttachmentStreams = _replicationInfo.ReplicatedAttachmentStreams?
                     .Select(kv => KeyValuePair.Create(kv.Key.ToString(), kv.Value.Stream))
@@ -1611,7 +1613,7 @@ namespace Raven.Server.Documents.Replication
         }
     }
 
-    internal class MergedUpdateDatabaseChangeVectorCommandDto : TransactionOperationsMerger.IReplayableCommandDto<IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand>
+    internal class MergedUpdateDatabaseChangeVectorCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand>
     {
         public string ChangeVector;
         public long LastDocumentEtag;
@@ -1626,7 +1628,7 @@ namespace Raven.Server.Documents.Replication
         }
     }
 
-    internal class MergedDocumentReplicationCommandDto : TransactionOperationsMerger.IReplayableCommandDto<IncomingReplicationHandler.MergedDocumentReplicationCommand>
+    internal class MergedDocumentReplicationCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, IncomingReplicationHandler.MergedDocumentReplicationCommand>
     {
         public ReplicationBatchItem[] ReplicatedItemDtos;
         public long LastEtag;

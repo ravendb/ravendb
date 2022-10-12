@@ -8,5 +8,5 @@ public interface IReplayableCommandDto<TOperationContext, TTransaction, out TCom
     where TOperationContext : TransactionOperationContext<TTransaction>
     where TTransaction : RavenTransaction
 {
-    TCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database);
+    TCommand ToCommand(TOperationContext context, DocumentDatabase database);
 }

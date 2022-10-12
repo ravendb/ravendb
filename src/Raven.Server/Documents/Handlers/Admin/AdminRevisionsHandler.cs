@@ -5,8 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Threading.Tasks;
-using Raven.Client.Exceptions.Documents.Revisions;
-using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -30,7 +29,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        internal class DeleteRevisionsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class DeleteRevisionsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly Microsoft.Extensions.Primitives.StringValues _ids;
             private readonly DocumentDatabase _database;
@@ -50,7 +49,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 return 1;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(JsonOperationContext context)
             {
                 return new DeleteRevisionsCommandDto
                 {
@@ -65,7 +64,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
     }
 
-    internal class DeleteRevisionsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<AdminRevisionsHandler.DeleteRevisionsCommand>
+    internal class DeleteRevisionsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AdminRevisionsHandler.DeleteRevisionsCommand>
     {
         public string[] Ids;
 

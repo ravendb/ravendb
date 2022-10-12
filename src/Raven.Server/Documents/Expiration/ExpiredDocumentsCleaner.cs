@@ -12,7 +12,7 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
-using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        internal class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class DeleteExpiredDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly Dictionary<Slice, List<(Slice LowerId, string Id)>> _expired;
             private readonly DocumentDatabase _database;
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Expiration
                 return DeletionCount;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(JsonOperationContext context)
             {
 
                 var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[_expired.Count];
@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.Expiration
         }
     }
 
-    internal class DeleteExpiredDocumentsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand>
+    internal class DeleteExpiredDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand>
     {
         public ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
