@@ -223,29 +223,21 @@ namespace Sparrow.Server.Collections.Persistent
         {
             Span<Node> nodes = Nodes;
 
-            ref Node u = ref nodes[0];
-
-            while (!u.HasValue)
+            int u = 0;
+            while (!nodes[u].HasValue)
             {
                 if (key.Length == 0)
                     break;
 
                 var current = key.Read();
-                if (current.IsSet)
-                {
-                    //Console.Write("R");
-                    u = ref nodes[u.RightChild];
-                }
-                else
-                {
-                    //Console.Write("L");
-                    u = ref nodes[u.LeftChild];
-                }
+
+                u = current.IsSet ? 
+                    nodes[u].RightChild :
+                    nodes[u].LeftChild;
             }
 
-            //Console.Write($",{u.Value}");
-            value = u.Value;
-            return u.HasValue;
+            value = nodes[u].Value;
+            return nodes[u].HasValue;
         }
     }
 }
