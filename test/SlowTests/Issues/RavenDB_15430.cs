@@ -112,17 +112,18 @@ namespace SlowTests.Issues
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var firstNode2 = record.Topology.Members[0];
 
-                await WaitForValueAsync(async () =>
+                var random = new Random();
+                Assert.True(await WaitForValueAsync(async () =>
                 {
                     record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     var list = record.Topology.Members;
-                    list.Reverse();
+                    Shuffle(list, random);
                     await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, list));
 
                     record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     var firstNode3 = record.Topology.Members[0];
                     return firstNode3 != firstNode && firstNode3 != firstNode2;
-                }, true, interval: 333);
+                }, true, interval: 333, timeout: 60_000));
 
                 await Task.Delay(1000);
 
@@ -170,6 +171,17 @@ namespace SlowTests.Issues
                 Assert.Equal(3, record.Topology.Members.Count);
                 firstNode2 = record.Topology.Members[0];
                 Assert.NotEqual(firstNode2, firstNode);
+            }
+        }
+
+        private void Shuffle(List<string> list, Random random)
+        {
+            int n = list.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = random.Next(n + 1);
+                (list[k], list[n]) = (list[n], list[k]);
             }
         }
 
