@@ -235,8 +235,8 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
     };
 
     return (
-        <section>
-            <h2 className="on-base-background margin-top-lg">Indexes Stats</h2>
+        <section className="margin-top-lg">
+            <h2 className="on-base-background">Indexes Stats</h2>
             
             {noData && (
                 <div className="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
@@ -247,7 +247,7 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
 
             {indexStats &&
                 indexStats.map((group) => (
-                    <div className="panel" key={group.type}>
+                    <div className="panel padding" key={group.type}>
                         
                         <h3>{group.type} Indexes</h3>
                         <div>

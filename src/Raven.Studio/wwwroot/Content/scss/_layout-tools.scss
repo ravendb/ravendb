@@ -96,19 +96,19 @@ $directions: ( 'top', 'right', 'bottom', 'left' );
 
 @each $direction in $directions {
     .margin-#{$direction} {
-        margin-#{$direction}: math.div($gutter, $gutter-ratio);
+        margin-#{$direction}: math.div($gutter, $gutter-ratio) !important;
 
         @media (min-width: $screen-sm) {
-            margin-#{$direction}: $gutter;
+            margin-#{$direction}: $gutter !important;
         }
     }
 
     @each $name, $value in $gutters {
         .margin-#{$direction}-#{$name} {
-            margin-#{$direction}: math.div($value, $gutter-ratio);
+            margin-#{$direction}: math.div($value, $gutter-ratio) !important;
 
             @media (min-width: $screen-sm) {
-                margin-#{$direction}: $value;
+                margin-#{$direction}: $value !important;
             }
         }
     }
@@ -119,16 +119,16 @@ $directions: ( 'top', 'right', 'bottom', 'left' );
         padding-#{$direction}: math.div($gutter, $gutter-ratio);
 
         @media (min-width: $screen-sm) {
-            padding-#{$direction}: $gutter;
+            padding-#{$direction}: $gutter !important;
         }
     }
 
     @each $name, $value in $gutters {
         .padding-#{$direction}-#{$name} {
-            padding-#{$direction}: math.div($value, $gutter-ratio);
+            padding-#{$direction}: math.div($value, $gutter-ratio) !important;
 
             @media (min-width: $screen-sm) {
-                padding-#{$direction}: $value;
+                padding-#{$direction}: $value !important;
             }
         }
     }

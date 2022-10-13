@@ -301,7 +301,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 <div className="btn-group properties-value">
                                     <button
                                         type="button"
-                                        className="btn btn-default"
+                                        className="btn btn-secondary"
                                         data-toggle="dropdown"
                                         data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
                                            enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
@@ -351,14 +351,14 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             )}
 
                             {!IndexUtils.hasAnyFaultyNode(index) && (
-                                <div className="btn-group" role="group">
-                                    <a className="btn btn-default" href={queryUrl}>
+                                <div className="btn-group margin-left-xxs" role="group">
+                                    <a className="btn btn-secondary" href={queryUrl}>
                                         <i className="icon-search" />
                                         <span>Query</span>
                                     </a>
                                     <button
                                         type="button"
-                                        className="btn btn-default dropdown-toggle"
+                                        className="btn btn-secondary dropdown-toggle"
                                         data-toggle="dropdown"
                                     >
                                         <span className="caret" />
@@ -374,14 +374,14 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 </div>
                             )}
 
-                            <div className="btn-group" role="group">
+                            <div className="btn-group margin-left-xxs" role="group">
                                 {!IndexUtils.isAutoIndex(index) && !canReadOnlyDatabase(database) && (
-                                    <a className="btn btn-default" href={editUrl} title="Edit index">
+                                    <a className="btn btn-secondary" href={editUrl} title="Edit index">
                                         <i className="icon-edit" />
                                     </a>
                                 )}
                                 {(IndexUtils.isAutoIndex(index) || canReadOnlyDatabase(database)) && (
-                                    <a className="btn btn-default" href={editUrl} title="View index">
+                                    <a className="btn btn-secondary" href={editUrl} title="View index">
                                         <i className="icon-preview" />
                                     </a>
                                 )}
@@ -398,7 +398,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             )}
 
                             {canReadWriteDatabase(database) && (
-                                <div className="btn-group" role="group">
+                                <div className="btn-group margin-left-xxs" role="group">
                                     <button
                                         className="btn btn-warning"
                                         type="button"

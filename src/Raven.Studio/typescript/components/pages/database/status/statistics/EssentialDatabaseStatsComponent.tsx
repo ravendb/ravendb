@@ -10,7 +10,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
     const { stats } = props;
 
     return (
-        <div className="stats-list panel">
+        <div className="stats-list panel padding">
             <div className="row">
                 <div className="col-sm-6 col-lg-4 col-xl-3">
                     <div className="stats-item">
@@ -99,7 +99,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                         <div className="name">
                             <i className="icon-timeseries-settings"></i>
                             <span>Time Series Segments Count</span>
-                            <span id="js-timeseries-segments" className="margin-left-sm">
+                            <span id="js-timeseries-segments" className="margin-left margin-left-sm has-info-icon">
                                 <i className="icon-info text-info"></i>
                             </span>
                             <UncontrolledTooltip target="js-timeseries-segments">
