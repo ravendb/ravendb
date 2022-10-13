@@ -39,71 +39,22 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/metrics", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Metrics()
         {
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(writer, Database.Metrics.ToJson());
-            }
+            using (var processor = new StatsHandlerProcessorForGetMetrics(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/metrics/puts", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PutsMetrics()
         {
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var empty = GetBoolValueQueryString("empty", required: false) ?? true;
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    [nameof(Database.Metrics.Docs)] = new DynamicJsonValue
-                    {
-                        [nameof(Database.Metrics.Docs.PutsPerSec)] = Database.Metrics.Docs.PutsPerSec.CreateMeterData(true, empty)
-                    },
-                    [nameof(Database.Metrics.Attachments)] = new DynamicJsonValue
-                    {
-                        [nameof(Database.Metrics.Attachments.PutsPerSec)] = Database.Metrics.Attachments.PutsPerSec.CreateMeterData(true, empty)
-                    },
-                    [nameof(Database.Metrics.Counters)] = new DynamicJsonValue
-                    {
-                        [nameof(Database.Metrics.Counters.PutsPerSec)] = Database.Metrics.Counters.PutsPerSec.CreateMeterData(true, empty)
-                    },
-                    [nameof(Database.Metrics.TimeSeries)] = new DynamicJsonValue
-                    {
-                        [nameof(Database.Metrics.TimeSeries.PutsPerSec)] = Database.Metrics.TimeSeries.PutsPerSec.CreateMeterData(true, empty)
-                    }
-                });
-            }
+            using (var processor = new StatsHandlerProcessorForGetMetricsPuts(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/metrics/bytes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task BytesMetrics()
         {
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var empty = GetBoolValueQueryString("empty", required: false) ?? true;
-
-                context.Write(writer, new DynamicJsonValue
-                {
-                    [nameof(Database.Metrics.Docs)] = new DynamicJsonValue
-                    {
-                        [nameof(Database.Metrics.Docs.BytesPutsPerSec)] = Database.Metrics.Docs.BytesPutsPerSec.CreateMeterData(true, empty)
-                    },
-                    [nameof(Database.Metrics.Attachments)] = new DynamicJsonValue
-                    {
-                        [nameof(Database.Metrics.Attachments.BytesPutsPerSec)] = Database.Metrics.Attachments.BytesPutsPerSec.CreateMeterData(true, empty)
-                    },
-                    [nameof(Database.Metrics.Counters)] = new DynamicJsonValue
-                    {
-                        [nameof(Database.Metrics.Counters.BytesPutsPerSec)] = Database.Metrics.Counters.BytesPutsPerSec.CreateMeterData(true, empty)
-                    },
-                    [nameof(Database.Metrics.TimeSeries)] = new DynamicJsonValue
-                    {
-                        [nameof(Database.Metrics.TimeSeries.BytesPutsPerSec)] = Database.Metrics.TimeSeries.BytesPutsPerSec.CreateMeterData(true, empty)
-                    }
-                });
-            }
+            using (var processor = new StatsHandlerProcessorForGetMetricsBytes(this))
+                await processor.ExecuteAsync();
         }
     }
 }

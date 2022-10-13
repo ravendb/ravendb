@@ -33,5 +33,26 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedStatsHandlerProcessorForDatabaseHealthCheck(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/metrics", "GET")]
+        public async Task Metrics()
+        {
+            using (var processor = new ShardedStatsHandlerProcessorForGetMetrics(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/metrics/puts", "GET")]
+        public async Task PutsMetrics()
+        {
+            using (var processor = new ShardedStatsHandlerProcessorForGetMetricsPuts(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/metrics/bytes", "GET")]
+        public async Task BytesMetrics()
+        {
+            using (var processor = new ShardedStatsHandlerProcessorForGetMetricsBytes(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
