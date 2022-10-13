@@ -27,13 +27,15 @@ class snapshot {
         const compressionLevel = snapshot.compressionLevelDictionary.find(x => x.name === this.compressionLevel());
 
         return {
-            CompressionLevel: compressionLevel.fullName
+            CompressionLevel: compressionLevel.fullName,
+            ExcludeIndexes: false
         }
     }
 
     static empty(): snapshot {
         return new snapshot({
-            CompressionLevel: "Optimal"
+            CompressionLevel: "Optimal",
+            ExcludeIndexes: false
         });
     }
 }

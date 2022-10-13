@@ -92,7 +92,9 @@ namespace Voron.Util.Settings
             if (PlatformDetails.RunningOnPosix)
                 result = PosixHelper.FixLinuxPath(result);
 
-            return Path.GetFullPath(result); // it will unify directory separators and sort out parent directories
+            return result != string.Empty || resultRoot == null ? 
+                Path.GetFullPath(result) :
+                Path.GetFullPath(resultRoot); // it will unify directory separators and sort out parent directories
         }
 
         public static bool IsSubDirectory(string userPath, string rootPath)
