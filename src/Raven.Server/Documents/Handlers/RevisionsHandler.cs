@@ -188,8 +188,8 @@ namespace Raven.Server.Documents.Handlers
 
                 configuration = JsonDeserializationServer.RevertRevisions(json);
             }
-
-            List<string> collections = configuration.PerCollections ? configuration.Collections : null;
+            
+            HashSet<string> collections = configuration.ApplyToSpecifiedCollectionsOnly ? new HashSet<string>(configuration.Collections, StringComparer.OrdinalIgnoreCase) : null;
 
             var token = CreateTimeLimitedOperationToken();
             var operationId = ServerStore.Operations.GetNextOperationId();

@@ -44,12 +44,19 @@ namespace Raven.Client.Documents.Operations.Revisions
     public class RevertResult : OperationResult
     {
         public int RevertedDocuments { get; set; }
+        private int _failedCollections { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(RevertedDocuments)] = RevertedDocuments;
             return json;
+        }
+
+        public void WarnAboutFailedCollection(string message)
+        {
+            var id = $"Revert Collection Fail No.{++_failedCollections}";
+            Warn(id, message);
         }
     }
 }

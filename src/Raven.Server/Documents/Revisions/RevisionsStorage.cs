@@ -1455,7 +1455,7 @@ namespace Raven.Server.Documents.Revisions
             public Action<IOperationProgress> OnProgress;
         }
 
-        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token, List<string> collections = null)
+        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token, HashSet<string> collections = null)
         {
             var list = new List<Document>();
             var result = new RevertResult();
@@ -1472,16 +1472,6 @@ namespace Raven.Server.Documents.Revisions
             // send initial progress
             parameters.OnProgress?.Invoke(result);
 
-            HashSet<string> collectionsHashSet = null;
-            if (collections != null)
-            {
-                collectionsHashSet = new HashSet<string>();
-                foreach (var col in collections)
-                {
-                    collectionsHashSet.Add(col.ToLower());
-                }
-            }
-
             var hasMore = true;
             while (hasMore)
             {
@@ -1489,7 +1479,7 @@ namespace Raven.Server.Documents.Revisions
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
                 {
-                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, token, collectionsHashSet);
+                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, token, collections);
                     await WriteRevertedRevisions(list, token);
                 }
             }
@@ -1515,27 +1505,29 @@ namespace Raven.Server.Documents.Revisions
                 IEnumerable<Table.TableValueHolder> tvrs = null;
                 if (collections != null)
                 {
-                    foreach(var collection in collections)
+                    tvrs = Enumerable.Empty<Table.TableValueHolder>();
+                    foreach (var collection in collections)
                     {
                         if (collection == null)
                         {
-                            if(_logger.IsInfoEnabled)
-                                _logger.Info($"Tried to revert revisions in collection that is null");
+                            var msg = "Tried to revert revisions in collection that is null";
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info(msg);
+                            result.WarnAboutFailedCollection(msg);
                             continue;
                         }
                         var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
                         if (collectionName == null)
                         {
+                            var msg = $"Tried to revert revisions in the collection '{collection}' which does not exist";
                             if (_logger.IsInfoEnabled)
-                                _logger.Info($"Tried to revert revisions in the collection '{collection}' which does not exist");
+                                _logger.Info(msg);
+                            result.WarnAboutFailedCollection(msg);
                             continue;
                         }
                         var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
                         var revisions = readCtx.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
-                        if (tvrs == null)
-                            tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag);
-                        else
-                            tvrs = tvrs.Concat(revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag));
+                        tvrs = tvrs.Concat(revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag));
                     }
                 }
                 else

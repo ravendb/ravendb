@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Revisions
     {
         public DateTime Time { get; set; }
         public long WindowInSec { get; set; }
-        public bool PerCollections { get; set; } = false;
-        public List<string> Collections { get; set; } = null;
+        public bool ApplyToSpecifiedCollectionsOnly { get; set; } = false;
+        public string[] Collections { get; set; } = null;
     }
 }
