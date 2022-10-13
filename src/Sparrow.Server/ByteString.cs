@@ -894,13 +894,37 @@ namespace Sparrow.Server
             var memoryManager = new ByteStringMemoryManager<T>(this, output);
             buffer = memoryManager.Memory;
             return memoryManager;
-        } 
-        
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public InternalScope Allocate(int length, out ByteString output)
         {
             output = AllocateInternal(length, ByteStringType.Mutable);
             return new InternalScope(this, output);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public InternalScope AllocateDirect(int length, out ByteString output)
+        {
+            // PERF: The difference between the normal allocate and direct is that we will get 
+            // the memory straight from the top of the stack without reuse. This is useful for 
+            // cases where the memory throughput and the size of the allocation is so high-frequency
+            // that even looking for memory to reuse can dominate the actual operation cost.
+            // We will allocate from the current segment.
+            int allocationSize = length + sizeof(ByteStringStorage);
+            int allocationUnit = Bits.PowerOf2(allocationSize);
+            if (allocationUnit <= _internalCurrent.SizeLeft)
+            {
+                var byteString = Create(_internalCurrent.Current, length, allocationUnit, ByteStringType.Mutable);
+                _internalCurrent.Current += byteString._pointer->Size;
+
+                output = byteString;
+                return new InternalScope(this, output);
+            }
+
+            // We will allocate also allocating a segment. 
+            output = AllocateInternalUnlikely(length, allocationUnit, ByteStringType.Mutable);
+            return new InternalScope(this, output); 
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
