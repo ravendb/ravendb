@@ -186,7 +186,7 @@
     <PackageReference Include="NuGet.ProjectModel" Version="6.3.0" />
     <PackageReference Include="NuGet.Resolver" Version="6.3.0" />
     <PackageReference Include="NuGet.PackageManagement" Version="6.3.0" />
-    <PackageReference Include="NuGet.Protocol" Version="6.3.0" />
+    <PackageReference Include="NuGet.Protocol" Version="6.3.1" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.70" />
     <PackageReference Include="Parquet.Net" Version="3.9.1" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
