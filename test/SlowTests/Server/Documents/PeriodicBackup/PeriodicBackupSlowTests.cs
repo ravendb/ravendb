@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
@@ -534,6 +535,84 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
         }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task CanBackupAndRestoreSnapshotExcludingIndexes()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Lev1" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Lev2" }, "users/2");
+                    await session.StoreAsync(new User { Name = "Lev3" }, "users/3");
+                    await session.SaveChangesAsync();
+                }
+
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(0, stats.CountOfIndexes);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session
+                        .Query<User>()
+                        .Where(x => x.Name == "Lev")
+                        .ToListAsync(); // create an index to backup
+
+                    await session
+                        .Query<Order>()
+                        .Where(x => x.Freight > 5)
+                        .ToListAsync(); // create an index to backup
+
+                    await session.SaveChangesAsync();
+                }
+
+                stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(2, stats.CountOfIndexes);
+
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.Fastest, ExcludeIndexes = false };
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                
+                // check that backup file consist Indexes folder
+                var backupLocation = Directory.GetDirectories(backupPath).First();
+                using (ReadOnly(backupLocation))
+                {
+                    var backupFile = Directory.GetFiles(backupLocation).First();
+                    using (ZipArchive archive = ZipFile.OpenRead(backupFile))
+                        Assert.True(archive.Entries.Any(entry => entry.FullName.Contains("Indexes")));
+                }
+
+                Directory.Delete(backupLocation, true);
+                Assert.False(Directory.Exists(backupLocation));
+
+                config.SnapshotSettings.ExcludeIndexes = true;
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                
+                backupLocation = Directory.GetDirectories(backupPath).First();
+                using (ReadOnly(backupLocation))
+                {
+                    var backupFile = Directory.GetFiles(backupLocation).First();
+
+                    using (ZipArchive archive = ZipFile.OpenRead(backupFile))
+                        Assert.False(archive.Entries.Any(entry => entry.FullName.Contains("Indexes")));
+
+                    using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupLocation, DatabaseName = restoredDatabaseName }))
+                    using (var session = store.OpenAsyncSession(restoredDatabaseName))
+                    {
+                        var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        Assert.NotNull(users["users/1"]);
+                        Assert.NotNull(users["users/2"]);
+                        Assert.True(users.Any(x => x.Value.Name == "Lev1"));
+                        Assert.True(users.Any(x => x.Value.Name == "Lev2"));
+                    }
+                }
+            }
+        }
+
 
         [Theory, Trait("Category", "Smuggler")]
         [InlineData(BackupType.Snapshot)]

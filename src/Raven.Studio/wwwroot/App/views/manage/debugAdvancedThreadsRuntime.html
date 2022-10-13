@@ -4,15 +4,32 @@
             <div class="flex-header flex-horizontal flex-noshrink margin-bottom">
                 <div>
                     <div class="btn-group">
-                        <button type="button" class="btn btn-primary"
-                                data-bind="click: refresh, enable: !spinners.refresh(), css: { 'btn-spinner': spinners.refresh() }">
-                            <i class="icon-refresh"></i>
-                            <span>Refresh</span>
+                        <button class="btn btn-primary" data-bind="click: pause, visible: liveClient">
+                            <i class="icon-pause"></i> <span>Pause</span>
+                        </button>
+                        <button class="btn btn-primary" data-bind="click: resume, visible: !liveClient()">
+                            <i class="icon-play"></i> <span>Resume</span>
                         </button>
                     </div>
                 </div>
                 <div>
                     <input class="form-control" placeholder="Filter (Name, Thread Id)" data-bind="textInput: filter" />
+                </div>
+                <div>
+                    <div class="text-muted info-block">
+                        <div class="text-center"><small>RavenDB CPU Usage:</small></div>
+                        <div class="text-center">
+                            <small><strong data-bind="text: serverCpuUsage().toFixed(0) + ' %'"></strong></small>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-muted info-block">
+                        <div class="text-center"><small>Machine CPU Usage:</small></div>
+                        <div class="text-center">
+                            <small><strong data-bind="text: machineCpuUsage().toFixed(0) + ' %'"></strong></small>
+                        </div>
+                    </div>
                 </div>
                 <div>
                     <div class="text-muted info-block">
@@ -33,7 +50,13 @@
             </div>
         </div>
     </div>
-    <div class="flex-window-scroll">
+    <div class="flex-grow">
+        <div class="results-error" data-bind="visible: !isConnectedToWebSocket()">
+            <div class="help-block bg-warning text-warning">
+                <span data-bind="visible: isPause"><i class="icon-warning"></i><span>Live Update is paused</span></span>
+                <span data-bind="visible: !isPause()"><i class="btn-spinner"></i><span class="margin-left">Trying to Connect</span></span>
+            </div>
+        </div>
         <div class="scroll-stretch">
             <div class="panel-body">
                 <virtual-grid class="resizable documents-grid" params="controller: gridController, emptyTemplate: 'empty-threads-info-template'"></virtual-grid>

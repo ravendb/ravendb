@@ -66,8 +66,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                 if (id != null)
                     _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 
-                _session.OnAfterConversionToEntityInvoke(id, json, entity);
-
                 return entity;
             }
             catch (Exception ex)
