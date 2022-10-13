@@ -6,6 +6,7 @@ import { EssentialDatabaseStatsComponent } from "./EssentialDatabaseStatsCompone
 import { useAppUrls } from "../../../../hooks/useAppUrls";
 import { DetailedDatabaseStats } from "./DetailedDatabaseStats";
 import { IndexesDatabaseStats } from "./IndexesDatabaseStats";
+import { Col, Row } from "reactstrap";
 
 interface StatisticsPageProps {
     database: database;
@@ -46,16 +47,16 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
 
     return (
         <div className="stats">
-            <div className="row">
-                <div className="col">
+            <Row>
+                <Col>
                     <h2 className="on-base-background">
                         General Database Stats
                         <a className="margin-left-xs" target="_blank" href={rawJsonUrl} title="Show raw output">
                             <i className="icon-link"></i>
                         </a>
                     </h2>
-                </div>
-                <div className="col-auto">
+                </Col>
+                <Col sm="auto">
                     <button
                         onClick={() => setDbDetailsVisible((x) => !x)}
                         type="button"
@@ -73,8 +74,8 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
                         <i className="icon-refresh"></i>
                         <span>Refresh</span>
                     </button>
-                </div>
-            </div>
+                </Col>
+            </Row>
             <EssentialDatabaseStatsComponent stats={essentialStats} />
 
             {dbDetailsVisible && <DetailedDatabaseStats key="db-stats" database={database} />}

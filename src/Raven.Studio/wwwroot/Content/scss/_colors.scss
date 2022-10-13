@@ -75,7 +75,7 @@ $brand-danger: $color-1;
 $brand-danger-light: adjust-color($color-1, $lightness: 13%, $saturation: 20%);
 
 $primary:       $brand-primary !default;
-$secondary:     $gray-400 !default;
+$secondary:     $gray-600 !default;
 $success:       $brand-success !default;
 $info:          $brand-info !default;
 $warning:       $brand-warning !default;
@@ -104,8 +104,8 @@ $progress-color: $color-2-3;
 // Dark Theme
 $body-bg: $black;
 $border-color: $gray-300;
-$border-color-light: $gray-500;
-$border-color-disabled: $gray-500;
+$border-color-light: $gray-600;
+$border-color-disabled: $gray-600;
 
 $text-color: $gray-100;
 $text-muted: $gray-200;

@@ -1,7 +1,7 @@
 import { IndexesPage } from "./IndexesPage";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import React from "react";
-import { withStorybookContexts } from "../../../../../test/storybookTestUtils";
+import { withBootstrap5, withStorybookContexts } from "../../../../../test/storybookTestUtils";
 import { mockServices } from "../../../../../test/mocks/MockServices";
 import accessManager from "common/shell/accessManager";
 import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
@@ -19,7 +19,7 @@ function indexesHolder(storyFn: any) {
 export default {
     title: "Pages/Indexes page",
     component: IndexesPage,
-    decorators: [withStorybookContexts, indexesHolder],
+    decorators: [withStorybookContexts, indexesHolder, withBootstrap5],
 } as ComponentMeta<typeof IndexesPage>;
 
 function commonInit() {

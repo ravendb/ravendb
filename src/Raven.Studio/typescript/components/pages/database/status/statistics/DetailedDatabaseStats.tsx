@@ -94,9 +94,9 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
     }, [loadDetailedStats]);
 
     return (
-        <>
-        <h2 className="on-base-background margin-top-lg">Detailed Database Stats</h2>
-        <div className="panel no-padding margin-top">
+        <section className="margin-top-lg">
+        <h2 className="on-base-background">Detailed Database Stats</h2>
+        <div className="panel margin-top">
             <div className="table-responsive">
             <table className="table table-bordered table-striped">
                 <thead>
@@ -134,7 +134,7 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
                                 return (
                                     <div id={id}>
                                         {formattedChangeVector.map((cv) => (
-                                            <div key={cv.fullFormat} className="badge badge-default margin-right-xs">
+                                            <div key={cv.fullFormat} className="badge bg-secondary margin-right-xs">
                                                 {cv.shortFormat}
                                             </div>
                                         ))}
@@ -302,6 +302,6 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
             </table>
         </div>
         </div>
-    </>
+    </section>
     );
 }
