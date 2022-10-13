@@ -146,7 +146,9 @@ namespace Voron.Data.Sets
             {
                 if (_moveNextIndex < _moveNextLength)
                 {
-                    l = _moveNextBuffer[_moveNextIndex++];
+                    l = _moveNextBuffer[_moveNextIndex++]; 
+
+                    _lastVal = l;
                     return true;
                 }
 
@@ -156,6 +158,8 @@ namespace Voron.Data.Sets
                     var hasResult =_moveNextLength > 0;
                     l = hasResult ? _moveNextBuffer[0] : -1; 
                     _moveNextIndex = 1; // we already consumed the first item
+                    
+                    _lastVal = l;
                     return hasResult;
                 }
             }
