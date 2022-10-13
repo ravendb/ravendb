@@ -189,6 +189,7 @@ namespace Voron.Data.CompactTrees
             public byte* EncodedWith(long dictionaryId, out int length)
             {
                 [SkipLocalsInit]
+                [MethodImpl(MethodImplOptions.NoInlining)]
                 byte* EncodeFromDecodedForm()
                 {
                     Debug.Assert(IsValid, "At this stage we either created the key using an unencoded version. Current dictionary cannot be invalid.");
@@ -496,7 +497,7 @@ namespace Voron.Data.CompactTrees
                 // in the hash structure and if the key is not found setup everything so that it gets
                 // lazily reencoded on the next access.
 
-                if (dictionaryId != _currentKeyIdx)
+                if (dictionaryId != Dictionary)
                 {
                     Dictionary = dictionaryId;
                     _currentKeyIdx = Invalid;
