@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class PutAttachmentCommandData : ICommandData
     {
-        public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, bool fromEtl = false)
+        public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -21,10 +21,15 @@ namespace Raven.Client.Documents.Commands.Batches
             Stream = stream;
             ContentType = contentType;
             ChangeVector = changeVector;
-            FromEtl = fromEtl;
 
             PutAttachmentCommandHelper.ValidateStream(stream);
         }
+
+        public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, bool fromEtl) : this(documentId, name, stream, contentType, changeVector)
+        {
+            FromEtl = fromEtl;
+        }
+
 
         public string Id { get; }
         public string Name { get; }
