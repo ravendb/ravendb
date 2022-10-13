@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,7 +34,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByCollection()
         {
-            var collection = "companies";
+            var collections = new HashSet<string>() { "companies" };
             var company = new Company { Name = "Company Name" };
             var user = new User { Name = "User Name" };
             using (var store = GetDocumentStore())
@@ -63,7 +64,7 @@ namespace SlowTests.Server.Documents.Revisions
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
                     result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
-                        token: token, collections: new List<string>() { collection });
+                        token: token, collections: collections);
                 }
 
                 Assert.Equal(2, result.ScannedRevisions);
@@ -91,7 +92,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByMultipleCollections()
         {
-            var collections = new List<string>() { "companies", "users" };
+            var collections = new HashSet<string>() { "companies", "users" };
             var company = new Company { Name = "Company Name" };
             var user = new User { Name = "User Name" };
             var contact = new Contact { FirstName = "User Name" };
@@ -161,7 +162,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByMultipleExistingAndDeletedCollections()
         {
-            var collections = new List<string>() { "companies", "users" };
+            var collections = new HashSet<string>() { "companies", "users" };
             var company = new Company { Name = "Company Name" };
             var user = new User { Name = "User Name" };
             var contact = new Contact { FirstName = "User Name" };
@@ -238,7 +239,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByWrongCollection()
         {
-            var collections = new List<string>()
+            var collections = new HashSet<string>()
             {
                 "companies", 
                 "notExistingCollection" // not existing collection
@@ -285,7 +286,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByCollection_EndPointCheck()
         {
-            var collections = new List<string>() { "companies" };
+            var collections = new string[] { "companies" };
             var company = new Company { Name = "Company Name" };
             var user = new User { Name = "User Name" };
             using (var store = GetDocumentStore())
@@ -333,7 +334,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByMultipleCollections_EndPointCheck()
         {
-            var collections = new List<string>() { "companies", "users" };
+            var collections = new string[] { "companies", "users" };
             var company = new Company { Name = "Company Name" };
             var user = new User { Name = "User Name" };
             var contact = new Contact { FirstName = "User Name" };
@@ -393,7 +394,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByMultipleExistingAndDeletedCollections_EndPointCheck()
         {
-            var collections = new List<string>() { "companies", "users" };
+            var collections = new string[] { "companies", "users" };
             var company = new Company { Name = "Company Name" };
             var user = new User { Name = "User Name" };
             var contact = new Contact { FirstName = "User Name" };
@@ -460,7 +461,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact] //--
         public async Task RevertByWrongCollection_EndPointCheck()
         {
-            var collections = new List<string>()
+            var collections = new string[]
             {
                 "companies",
                 "notExistingCollection" // not existing collection
@@ -553,14 +554,19 @@ namespace SlowTests.Server.Documents.Revisions
         {
             private readonly RevertRevisionsRequest _request;
 
-            public RevertRevisionsOperation(DateTime time, long window, List<string> collections = null)
+            public RevertRevisionsOperation(DateTime time, long window)
             {
                 _request = new RevertRevisionsRequest() { 
                     Time = time, 
                     WindowInSec = window,
-                    PerCollections = collections!=null,
-                    Collections = collections
                 };
+            }
+
+            public RevertRevisionsOperation(DateTime time, long window, string[] collections) : this(time, window)
+            {
+                Debug.Assert(collections != null);
+                _request.ApplyToSpecifiedCollectionsOnly = true;
+                _request.Collections = collections;
             }
 
             public RevertRevisionsOperation(RevertRevisionsRequest request)
@@ -577,7 +583,7 @@ namespace SlowTests.Server.Documents.Revisions
             {
                 private readonly RevertRevisionsRequest _request;
 
-                public RevertRevisionsCommand(RevertRevisionsRequest request, string collection = null)
+                public RevertRevisionsCommand(RevertRevisionsRequest request)
                 {
                     _request = request;
                 }
