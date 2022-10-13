@@ -1032,7 +1032,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private IEnumerable<FullBackup.StorageEnvironmentInformation> GetAllStoragesForBackup()
+        private IEnumerable<FullBackup.StorageEnvironmentInformation> GetAllStoragesForBackup(bool excludeIndexes)
         {
             foreach (var storageEnvironmentWithType in GetAllStoragesEnvironment())
             {
@@ -1048,6 +1048,9 @@ namespace Raven.Server.Documents
                         break;
 
                     case StorageEnvironmentWithType.StorageEnvironmentType.Index:
+                        if (excludeIndexes)
+                            break;
+
                         yield return new FullBackup.StorageEnvironmentInformation
                         {
                             Name = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(storageEnvironmentWithType.Name),
@@ -1072,7 +1075,7 @@ namespace Raven.Server.Documents
         }
 
         public SmugglerResult FullBackupTo(string backupPath, CompressionLevel compressionLevel = CompressionLevel.Optimal,
-            Action<(string Message, int FilesCount)> infoNotify = null, CancellationToken cancellationToken = default)
+            bool excludeIndexes = false, Action<(string Message, int FilesCount)> infoNotify = null, CancellationToken cancellationToken = default)
         {
             SmugglerResult smugglerResult;
 
@@ -1160,7 +1163,7 @@ namespace Raven.Server.Documents
 
                 infoNotify?.Invoke(("Backed up database values", 1));
 
-                BackupMethods.Full.ToFile(GetAllStoragesForBackup(), package, compressionLevel,
+                BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), package, compressionLevel,
                     infoNotify: infoNotify, cancellationToken: cancellationToken);
 
                 file.Flush(true); // make sure that we fully flushed to disk
