@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -347,6 +348,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
                     await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, result, onProgress);
+
+                    result.AddInfo($"Loading the database after restore");
+
+                    try
+                    {
+                        await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, addToInitLog: message => result.AddInfo(message));
+                    }
+                    catch (Exception e)
+                    {
+                        // we failed to load the database after restore, we don't want to fail the entire restore process since it will delete the database if we throw here
+                        result.AddError($"Failed to load the database after restore, {e}");
+
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Failed to load the database '{databaseName}' after restore", e);
+                    }
 
                     return result;
                 }
