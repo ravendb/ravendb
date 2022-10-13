@@ -439,7 +439,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
 
                         while (iterator.ReadNext())
                         {
-                            if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                            if (iterator.IsNull || iterator.IsEmptyString)
                             {
                                 var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
                                 if (comparer.Mode == MultiUnaryItem.UnaryMode.All)

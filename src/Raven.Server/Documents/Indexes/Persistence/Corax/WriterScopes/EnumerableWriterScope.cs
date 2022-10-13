@@ -251,11 +251,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
                 case DataType.DynamicRaws:
                     entryWriter.WriteDynamic(path, new BlittableIterator(_blittableJsonReaderObjects), IndexEntryFieldType.Raw);
                     break;
-
-
+                
                 case DataType.Empty:
-                    //do nothing;
+                    entryWriter.Write(field, EmptyIterator.Instance);
                     break;
+                
                 default:
                     ThrowMixedValues();
                     break;

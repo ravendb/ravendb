@@ -623,7 +623,7 @@ namespace Raven.Server.Documents.Queries.Results
                     {
                         tupleList.Add(null);
                     }
-                    else if (iterator.IsEmpty)
+                    else if (iterator.IsEmptyCollection)
                     {
                         throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
                     }
@@ -677,7 +677,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     Debug.Assert((fieldType & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
 
-                    if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                    if (iterator.IsEmptyString || iterator.IsNull)
                     {
                         array.Add(iterator.IsNull ? null : string.Empty);
                     }

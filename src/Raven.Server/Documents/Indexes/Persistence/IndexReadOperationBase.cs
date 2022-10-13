@@ -1,12 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using Lucene.Net.Search;
-using Raven.Server.Documents.Handlers.Debugging;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Explanation;
@@ -76,7 +70,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 }
             }
         }
-
+        
         public struct QueryResult
         {
             public Document Result;
