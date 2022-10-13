@@ -345,7 +345,7 @@ namespace FastTests.Corax
 
             fieldIterator = reader.GetReaderFor(1).ReadMany();
             Assert.Equal(0, fieldIterator.Count);
-            Assert.True(fieldIterator.IsEmpty);
+            Assert.True(fieldIterator.IsEmptyCollection);
 
             try
             { var __ = fieldIterator.IsNull; }
@@ -362,7 +362,7 @@ namespace FastTests.Corax
 
             fieldIterator = reader.GetReaderFor(0).ReadMany();
             Assert.Equal(0, fieldIterator.Count);
-            Assert.True(fieldIterator.IsEmpty);
+            Assert.True(fieldIterator.IsEmptyCollection);
 
             try
             { var __ = fieldIterator.IsNull; }
@@ -438,7 +438,7 @@ namespace FastTests.Corax
 
             var iterator = reader.GetReaderFor(0).ReadMany();
             Assert.True(iterator.IsValid);
-            Assert.False(iterator.IsEmpty);
+            Assert.False(iterator.IsEmptyCollection);
             int i = 0;
             while (iterator.ReadNext())
             {
@@ -449,7 +449,7 @@ namespace FastTests.Corax
                 else
                 {
                     Assert.False(iterator.IsNull);
-                    Assert.False(iterator.IsEmpty);
+                    Assert.False(iterator.IsEmptyCollection);
                     Assert.Equal(values[i], Encoding.UTF8.GetString(iterator.Sequence));
                 }
                 i++;
@@ -459,11 +459,11 @@ namespace FastTests.Corax
 
             iterator = reader.GetReaderFor(1).ReadMany();
             Assert.True(iterator.IsValid);
-            Assert.True(iterator.IsEmpty);
+            Assert.True(iterator.IsEmptyCollection);
 
             iterator = reader.GetReaderFor(2).ReadMany();
             Assert.True(iterator.IsValid);
-            Assert.False(iterator.IsEmpty);
+            Assert.False(iterator.IsEmptyCollection);
 
             i = 0;
             while (iterator.ReadNext())
@@ -475,7 +475,7 @@ namespace FastTests.Corax
                 else
                 {
                     Assert.False(iterator.IsNull);
-                    Assert.False(iterator.IsEmpty);
+                    Assert.False(iterator.IsEmptyCollection);
                     Assert.Equal(values[i], Encoding.UTF8.GetString(iterator.Sequence));
                     Assert.Equal(i, iterator.Long);
                     Assert.True((i + (i / 65.0) - iterator.Double) < 0.0001);
@@ -485,7 +485,7 @@ namespace FastTests.Corax
 
             iterator = reader.GetReaderFor(3).ReadMany();
             Assert.True(iterator.IsValid);
-            Assert.False(iterator.IsEmpty);
+            Assert.False(iterator.IsEmptyCollection);
 
             i = 0;
             while (iterator.ReadNext())
@@ -497,7 +497,7 @@ namespace FastTests.Corax
                 else
                 {
                     Assert.False(iterator.IsNull);
-                    Assert.False(iterator.IsEmpty);
+                    Assert.False(iterator.IsEmptyCollection);
                     Assert.Equal(values[i], Encoding.UTF8.GetString(iterator.Sequence));
                     Assert.Equal(i, iterator.Long);
                     Assert.True((i + (i / 65.0) - iterator.Double) < 0.0001);

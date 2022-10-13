@@ -178,7 +178,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
                     {
                         InsertTerm(CoraxProj.Constants.NullValueSlice);
                     }
-                    else if (iterator.IsEmpty)
+                    else if (iterator.IsEmptyString)
                     {
                         throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
                     }
@@ -227,7 +227,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
                 {
                     Debug.Assert((fieldType & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
 
-                    if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                    if (iterator.IsEmptyCollection || iterator.IsNull)
                     {
                         var fieldValue = iterator.IsNull ? CoraxProj.Constants.NullValueSlice : CoraxProj.Constants.EmptyStringSlice;
                         InsertTerm(fieldValue.AsReadOnlySpan());

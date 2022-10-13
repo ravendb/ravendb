@@ -664,7 +664,7 @@ namespace Corax
                     case IndexEntryFieldType.TupleList:
                         if (_fieldReader.TryReadMany(out var iterator) == false)
                             break;
-
+                        
                         while (iterator.ReadNext())
                         {
                             if (iterator.IsNull)
@@ -672,7 +672,7 @@ namespace Corax
                                 ExactInsert(Constants.NullValueSlice);
                                 NumericInsert(0L, double.NaN);
                             }
-                            else if (iterator.IsEmpty)
+                            else if (iterator.IsEmptyString)
                             {
                                 throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
                             }
@@ -723,7 +723,7 @@ namespace Corax
                         {
                             Debug.Assert((_fieldReader.Type & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
 
-                            if ((_fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                            if (iterator.IsNull || iterator.IsEmptyString)
                             {
                                 var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
                                 ExactInsert(fieldValue.AsReadOnlySpan());
@@ -801,19 +801,8 @@ namespace Corax
 
             void ExactInsert(ReadOnlySpan<byte> value)
             {
-                ByteStringContext<ByteStringMemoryCache>.InternalScope? scope;
-
-                Slice slice;
-                if (value.Length == 0)
-                {
-                    slice = Constants.EmptyStringSlice;
-                    scope = null;
-                }
-                else
-                {
-                    scope = CreateNormalizedTerm(_context, value, out slice);
-                }
-
+                ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(_context, value, out var slice);
+                
                 // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
                 // dictionary we need to close the slice as we are disposing it afterwards. 
                 ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedField.Textual, slice, out var exists);
@@ -916,7 +905,7 @@ namespace Corax
                         {
                             RecordTupleToDelete(indexedField, Constants.NullValueSlice, double.NaN, 0);
                         }
-                        else if (iterator.IsEmpty)
+                        else if (iterator.IsEmptyString)
                         {
                             throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
                         }
@@ -964,7 +953,7 @@ namespace Corax
                         {
                             RecordExactTermToDelete(Constants.NullValueSlice, indexedField);
                         }
-                        else if (iterator.IsEmpty)
+                        else if (iterator.IsEmptyString)
                         {
                             RecordExactTermToDelete(Constants.EmptyStringSlice, indexedField);
                         }

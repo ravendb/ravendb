@@ -81,7 +81,7 @@ public class CoraxIndexedEntriesReader : IDisposable
                     {
                         _container.Add(null);
                     }
-                    else if (iterator.IsEmpty)
+                    else if (iterator.IsEmptyString)
                     {
                         throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
                     }
@@ -129,12 +129,9 @@ public class CoraxIndexedEntriesReader : IDisposable
                 {
                     Debug.Assert((fieldReader.Type & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
 
-                    if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                    if (iterator.IsEmptyString || iterator.IsNull)
                     {
-                        if (iterator.IsEmpty)
-                            _container.Add(string.Empty);
-                        else
-                            _container.Add(null);
+                        _container.Add(iterator.IsEmptyString ? string.Empty : null);
                     }
                     else
                     {
