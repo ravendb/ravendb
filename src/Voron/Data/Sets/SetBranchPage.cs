@@ -1,16 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Xml;
 using Sparrow;
 using Sparrow.Compression;
-using Sparrow.Server.Compression;
 using Voron.Global;
 using Voron.Impl;
-using static Voron.Data.CompactTrees.CompactTree;
 
 namespace Voron.Data.Sets
 {
@@ -129,7 +125,7 @@ namespace Voron.Data.Sets
                     key = -1;
                     return false;
                 }
-                (key, page) = ZigZagEncoding.Decode2<long>(_parent.Span, out int _, _parent.PositionsPtr[_pos++]);
+                (key, page) = ZigZagEncoding.Decode2<long>(_parent._page.Pointer, out int _, _parent.PositionsPtr[_pos++]);
                 return true;
             }
         }
@@ -141,15 +137,27 @@ namespace Voron.Data.Sets
                 index = ~index;
             if (match != 0)
                 index--; // went too far
+
             var actual = Math.Min(Header->NumberOfEntries - 1, index);
-            var (_, value) = ZigZagEncoding.Decode2<long>(_page.Pointer, out var _, PositionsPtr[actual]);
+
+            // PERF: Skipping is much less resource intensive than reading. If we don't need the key, why read it?
+            byte* ptr = VariableSizeEncoding.Skip<long>(_page.Pointer + PositionsPtr[actual]);
+            long value = ZigZagEncoding.Decode<long>(ptr, out var _);
             return (value, index, match);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public (long Key, long Page) GetByIndex(int index)
         {
-            return ZigZagEncoding.Decode2<long>(Span, out var _, PositionsPtr[index]);
+            return ZigZagEncoding.Decode2<long>(_page.Pointer, out var _, PositionsPtr[index]);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public long GetPageByIndex(int index)
+        {
+            // PERF: Skipping is much less resource intensive than reading. If we don't need the key, why read it?
+            byte* ptr = VariableSizeEncoding.Skip<long>(_page.Pointer + PositionsPtr[index]);
+            return ZigZagEncoding.Decode<long>(ptr, out var _);
         }
 
         public bool TryGetValue(long key, out long value)
@@ -160,7 +168,7 @@ namespace Voron.Data.Sets
                 value = -1;
                 return false;
             }
-            (_, value) = ZigZagEncoding.Decode2<long>(Span, out var _, PositionsPtr[index]);
+            (_, value) = ZigZagEncoding.Decode2<long>(_page.Pointer, out var _, PositionsPtr[index]);
             return true;
         }
 
@@ -184,7 +192,10 @@ namespace Voron.Data.Sets
             var (index, match) = SearchInPage(key);
             if (match ==  0)
             {
-                var (_, existing) = ZigZagEncoding.Decode2<long>(Span, out var _, Positions[index]);
+                // PERF: Skipping is much less resource intensive than reading. If we don't need the key, why read it?
+                byte* ptr = VariableSizeEncoding.Skip<long>(_page.Pointer + PositionsPtr[index]);
+
+                var existing = ZigZagEncoding.Decode<long>(ptr, out var _);
                 if (existing == page)
                     return true; // already here
                 

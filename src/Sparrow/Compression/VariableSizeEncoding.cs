@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace Sparrow.Compression
@@ -259,6 +259,51 @@ namespace Sparrow.Compression
 
             ThrowInvalidShift();
             return (T)(object)-1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe byte* Skip<T>(byte* input) where T : unmanaged
+        {
+            if (typeof(T) == typeof(sbyte) || typeof(T) == typeof(byte) || typeof(T) == typeof(bool))
+            {
+                return input + 1;
+            }
+
+            int offset = 0;
+
+            if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong) ||
+                typeof(T) == typeof(int) || typeof(T) == typeof(uint) ||
+                typeof(T) == typeof(short) || typeof(T) == typeof(ushort))
+            {
+                int bytesReadWhenOverflow;
+                if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
+                    bytesReadWhenOverflow = 12;
+                else if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
+                    bytesReadWhenOverflow = 7;
+                else
+                    bytesReadWhenOverflow = 5;
+
+                // PERF: We need this for the JIT to understand that this can be profitable. 
+                var buffer = input;
+
+                byte b;
+                do
+                {
+                    if (offset == bytesReadWhenOverflow)
+                        goto Fail; // PERF: Using goto to diminish the size of the loop.
+
+                    b = *(buffer + offset);
+                    offset++;
+                }
+                while (b >= 0x80);
+
+                return input + offset;
+            }
+
+            ThrowNotSupportedException<T>();
+
+        Fail:
+            return input;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
