@@ -1122,7 +1122,8 @@ namespace Corax
                 var id = idInTree & Constants.StorageMask.ContainerType;
                 var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, id);
                 ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
-                var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
+                
+                using var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
                 var iterator = set.Iterate();
                 while (iterator.MoveNext())
                 {
@@ -1461,11 +1462,12 @@ namespace Corax
         {
             var llt = Transaction.LowLevelTransaction;
 
-            var setSpace = Container.GetMutable(llt, id);
-            ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
-            var set = new Set(llt, Slices.Empty, setState);
             entries.Sort();
 
+            var setSpace = Container.GetMutable(llt, id);
+            ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
+            
+            using var set = new Set(llt, Slices.Empty, setState);
             set.Remove(entries.Removals);
             set.Add(entries.Additions);
 
@@ -1616,7 +1618,8 @@ namespace Corax
             long setId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, sizeof(SetState), out var setSpace);
             ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
             Set.Create(Transaction.LowLevelTransaction, ref setState);
-            var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
+            
+            using var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
             set.Add(additions);
             setState = set.State;
             termId = setId | (long)TermIdMask.Set;
