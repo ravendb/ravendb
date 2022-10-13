@@ -1083,6 +1083,15 @@ namespace Corax
             using var _ = Slice.From(Transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
             return TryDeleteEntry(key, termSlice.AsSpan());
         }
+        
+        public bool TryDeleteEntry(string key, string term, out long entriesCountDifference)
+        {
+            var originAmountOfModifications = _numberOfModifications;
+            var result = TryDeleteEntry(key, term);
+            entriesCountDifference = _numberOfModifications - originAmountOfModifications;
+            
+            return result;
+        }
 
         public bool TryDeleteEntry(string key, Span<byte> term)
         {
