@@ -3,17 +3,13 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Corax;
-using NetTopologySuite.Utilities;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions.Corax;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
-using Voron;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
 
@@ -76,6 +72,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             LazyStringValue lowerId;
             ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
             ByteString data;
+            
             using (Stats.ConvertStats.Start())
             {
                 scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data);
@@ -103,6 +100,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);
+            
             _entriesCount++;
             LazyStringValue lowerId;
             ByteString data;
@@ -170,15 +168,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             DeleteByField(Constants.Documents.Indexing.Fields.DocumentIdFieldName, key, stats);
         }
-
+        
+        /// <summary>
+        /// Should be called to delete whole entry or entires, not only one field.
+        /// </summary>
         private void DeleteByField(string fieldName, LazyStringValue key, IndexingStatsScope stats)
         {
             EnsureValidStats(stats);
             using (Stats.DeleteStats.Start())
             {
-                if (_indexWriter.TryDeleteEntry(fieldName, key.ToString(CultureInfo.InvariantCulture)))
+                if (_indexWriter.TryDeleteEntry(fieldName, key.ToString(CultureInfo.InvariantCulture), out var entriesCountDifference))
                 {
-                    _entriesCount--;
+                    _entriesCount += entriesCountDifference;
                 }
             }
         }
