@@ -297,7 +297,9 @@ namespace Raven.Server.Rachis
         {
             try
             {
-                var handles = new WaitHandle[]
+                ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, ToString(), _engine.Log);
+
+                var handles = new[]
                 {
                     _newEntry,
                     _voterResponded,
@@ -356,7 +358,7 @@ namespace Raven.Server.Rachis
                     if (lowestIndexInEntireCluster > lastTruncated)
                     {
                         var command = new LeaderTruncateLogCommand(_engine, lowestIndexInEntireCluster);
-                        _engine.TxMerger.Enqueue(command).Wait();;
+                        _engine.TxMerger.Enqueue(command).Wait();
 
                         LowestIndexInEntireCluster = lowestIndexInEntireCluster;
                     }
@@ -386,7 +388,7 @@ namespace Raven.Server.Rachis
 
                 try
                 {
-                    _engine.SwitchToCandidateStateAsync("An error occurred during our leadership." + Environment.NewLine + e).Wait();;
+                    _engine.SwitchToCandidateStateAsync("An error occurred during our leadership." + Environment.NewLine + e).Wait();
                 }
                 catch (Exception e2)
                 {
