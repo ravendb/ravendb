@@ -360,13 +360,10 @@ namespace Raven.Server.Rachis
 
                     if (lowestIndexInEntireCluster > lastTruncated)
                     {
-                        using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                        using (context.OpenWriteTransaction())
-                        {
-                            _engine.TruncateLogBefore(context, lowestIndexInEntireCluster);
-                            LowestIndexInEntireCluster = lowestIndexInEntireCluster;
-                            context.Transaction.Commit();
-                        }
+                        var command = new LeaderTruncateLogCommand(_engine, lowestIndexInEntireCluster);
+                        await _engine.TxMerger.Enqueue(command);
+
+                        LowestIndexInEntireCluster = lowestIndexInEntireCluster;
                     }
                 }
             }
