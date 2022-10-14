@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using JetBrains.Annotations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.TransactionMerger;
@@ -24,7 +23,7 @@ public class ClusterTransactionOperationsMerger : AbstractTransactionOperationsM
 
     internal override ClusterTransaction BeginAsyncCommitAndStartNewTransaction(ClusterTransaction previousTransaction, ClusterOperationContext currentContext)
     {
-        throw new NotImplementedException();
+        return previousTransaction.BeginAsyncCommitAndStartNewTransaction(currentContext);
     }
 
     internal override void UpdateGlobalReplicationInfoBeforeCommit(ClusterOperationContext context)

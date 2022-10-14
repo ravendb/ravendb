@@ -19,7 +19,7 @@ namespace Raven.Server.ServerWide.Context
 
         protected override ClusterTransaction CloneReadTransaction(ClusterTransaction previous)
         {
-            var clonedTx = new ClusterTransaction(Environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator), _changes);
+            var clonedTx = new ClusterTransaction(this, Environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator), _changes);
 
             previous.Dispose();
 
@@ -28,12 +28,12 @@ namespace Raven.Server.ServerWide.Context
 
         protected override ClusterTransaction CreateReadTransaction()
         {
-            return new ClusterTransaction(Environment.ReadTransaction(PersistentContext, Allocator), _changes);
+            return new ClusterTransaction(this, Environment.ReadTransaction(PersistentContext, Allocator), _changes);
         }
 
         protected override ClusterTransaction CreateWriteTransaction(TimeSpan? timeout = null)
         {
-            return new ClusterTransaction(Environment.WriteTransaction(PersistentContext, Allocator, timeout), _changes);
+            return new ClusterTransaction(this, Environment.WriteTransaction(PersistentContext, Allocator, timeout), _changes);
         }
     }
 
@@ -41,12 +41,23 @@ namespace Raven.Server.ServerWide.Context
     {
         private List<CompareExchangeChange> _compareExchangeNotifications;
 
+        private readonly ClusterOperationContext _context;
         protected readonly ClusterChanges _clusterChanges;
 
-        public ClusterTransaction(Transaction transaction, ClusterChanges clusterChanges)
+        private bool _replaced;
+
+        public ClusterTransaction(ClusterOperationContext context, Transaction transaction, ClusterChanges clusterChanges)
             : base(transaction)
         {
+            _context = context;
             _clusterChanges = clusterChanges ?? throw new System.ArgumentNullException(nameof(clusterChanges));
+        }
+
+        public ClusterTransaction BeginAsyncCommitAndStartNewTransaction(ClusterOperationContext context)
+        {
+            _replaced = true;
+            var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction(context.PersistentContext);
+            return new ClusterTransaction(context, tx, _clusterChanges);
         }
 
         public void AddAfterCommitNotification(CompareExchangeChange change)
@@ -72,6 +83,25 @@ namespace Raven.Server.ServerWide.Context
                     _clusterChanges.RaiseNotifications(notification);
                 }
             }
+        }
+
+        private bool _isDisposed;
+
+        public override void Dispose()
+        {
+            if (_isDisposed)
+                return;
+            _isDisposed = true;
+
+            if (_replaced == false)
+            {
+                if (_context.Transaction != null && _context.Transaction != this)
+                    ThrowInvalidTransactionUsage();
+
+                _context.Transaction = null;
+            }
+
+            base.Dispose();
         }
     }
 }
