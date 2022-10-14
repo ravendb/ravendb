@@ -1,7 +1,9 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis.Commands;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -34,6 +36,11 @@ namespace Raven.Server.Rachis
         }
 
         private void HandleVoteRequest()
+        {
+            HandleVoteRequestAsync().Wait();
+        }
+
+        private async Task HandleVoteRequestAsync()
         {
             try
             {
@@ -202,15 +209,8 @@ namespace Raven.Server.Rachis
                                 // election on a term that is greater than the current term plus one, we should
                                 // consider this an indication that the cluster was able to move past our term
                                 // and update the term accordingly
-                                using (context.OpenWriteTransaction())
-                                {
-                                    // double checking things under the transaction lock
-                                    if (rv.Term > _engine.CurrentTerm + 1)
-                                    {
-                                        _engine.CastVoteInTerm(context, rv.Term - 1, null, "Noticed that the term in the cluster grew beyond what I was familiar with, increasing it");
-                                    }
-                                    context.Transaction.Commit();
-                                }
+                                var castVoteInTermCommand = new ElectorCastVoteInTermCommand(_engine, rv);
+                                await _engine.TxMerger.Enqueue(castVoteInTermCommand);
 
                                 _connection.Send(context, new RequestVoteResponse
                                 {
@@ -258,16 +258,10 @@ namespace Raven.Server.Rachis
 
                             _engine.ForTestingPurposes?.BeforeCastingForRealElection();
 
-                            HandleVoteResult result;
-                            using (context.OpenWriteTransaction())
-                            {
-                                result = ShouldGrantVote(context, lastLogIndex, rv);
-                                if (result.DeclineVote == false)
-                                {
-                                    _engine.CastVoteInTerm(context, rv.Term, rv.Source, "Casting vote as elector");
-                                    context.Transaction.Commit();
-                                }
-                            }
+                            var castVoteInTermWithShouldGrantVoteCommand = new ElectorCastVoteInTermWithShouldGrantVoteCommand(_engine, this, rv, lastLogIndex);
+                            await _engine.TxMerger.Enqueue(castVoteInTermWithShouldGrantVoteCommand);
+
+                            var result = castVoteInTermWithShouldGrantVoteCommand.VoteResult;
 
                             if (result.DeclineVote)
                             {
@@ -311,14 +305,14 @@ namespace Raven.Server.Rachis
             return e is OperationCanceledException || e is ObjectDisposedException;
         }
 
-        private class HandleVoteResult
+        internal class HandleVoteResult
         {
             public string DeclineReason;
             public bool DeclineVote;
             public long VotedTerm;
         }
 
-        private HandleVoteResult ShouldGrantVote(ClusterOperationContext context, long lastIndex, RequestVote rv)
+        internal HandleVoteResult ShouldGrantVote(ClusterOperationContext context, long lastIndex, RequestVote rv)
         {
             var result = new HandleVoteResult();
             var lastLogIndexUnderWriteLock = _engine.GetLastEntryIndex(context);
