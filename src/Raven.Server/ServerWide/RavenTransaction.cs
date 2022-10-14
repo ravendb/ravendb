@@ -59,6 +59,11 @@ namespace Raven.Server.ServerWide
             return false;
         }
 
+        protected static void ThrowInvalidTransactionUsage()
+        {
+            throw new InvalidOperationException("There is a different transaction in context.");
+        }
+
         private void AfterCommit()
         {
             if (ShouldRaiseNotifications() == false)

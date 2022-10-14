@@ -97,11 +97,6 @@ namespace Raven.Server.Documents
             base.Dispose();
         }
 
-        private static void ThrowInvalidTransactionUsage()
-        {
-            throw new InvalidOperationException("There is a different transaction in context.");
-        }
-
         protected override void RaiseNotifications()
         {
             base.RaiseNotifications();

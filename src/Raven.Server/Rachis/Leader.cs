@@ -42,7 +42,7 @@ namespace Raven.Server.Rachis
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource<object> _errorOccurred = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        private readonly ConcurrentDictionary<long, CommandState> _entries = new ConcurrentDictionary<long, CommandState>();
+        internal readonly ConcurrentDictionary<long, CommandState> _entries = new ConcurrentDictionary<long, CommandState>();
 
         private MultipleUseFlag _hasNewTopology = new MultipleUseFlag();
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
@@ -662,7 +662,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private class RachisMergedCommand
+        internal class RachisMergedCommand
         {
             public CommandBase Command;
             public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
@@ -670,6 +670,8 @@ namespace Raven.Server.Rachis
         }
 
         private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
+
+        private readonly SemaphoreSlim _commandsQueueLocker = new SemaphoreSlim(1, 1);
 
         private readonly AsyncManualResetEvent _waitForCommit = new AsyncManualResetEvent();
 
@@ -688,10 +690,11 @@ namespace Raven.Server.Rachis
                 try
                 {
                     var waitAsync = _waitForCommit.WaitAsync(timeout);
-                    Monitor.TryEnter(_commandsQueue, ref lockTaken);
+
+                    lockTaken = await _commandsQueueLocker.WaitAsync(0);
                     if (lockTaken)
                     {
-                        EmptyQueue();
+                        await EmptyQueueAsync();
                     }
                     else
                     {
@@ -712,7 +715,7 @@ namespace Raven.Server.Rachis
                 {
                     if (lockTaken)
                     {
-                        Monitor.Exit(_commandsQueue);
+                        _commandsQueueLocker.Release();
                         _waitForCommit.SetAndResetAtomically();
                     }
                 }
@@ -728,10 +731,11 @@ namespace Raven.Server.Rachis
             return await inner;
         }
 
-        private void EmptyQueue()
+        private async ValueTask EmptyQueueAsync()
         {
-            var list = new List<TaskCompletionSource<Task<(long, object)>>>();
-            var tasks = new List<Task<(long, object)>>();
+            //var list = new List<TaskCompletionSource<Task<(long, object)>>>();
+            //var tasks = new List<Task<(long, object)>>();
+            var commandsToProcess = new List<RachisMergedCommand>();
             const string leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
             var lostLeadershipException = new NotLeadingException(leaderDisposedMessage);
 
@@ -739,13 +743,13 @@ namespace Raven.Server.Rachis
             {
                 try
                 {
-                    using (context.OpenWriteTransaction())
+                    using (context.OpenReadTransaction())
                     {
                         var cmdsCount = 0;
                         _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
-                        while (cmdsCount++ < 128 && _commandsQueue.TryDequeue(out var cmd))
+                        while (cmdsCount++ < 128 && _commandsQueue.TryDequeue(out var commandToProcess))
                         {
-                            if (cmd.Consumed.Raise() == false)
+                            if (commandToProcess.Consumed.Raise() == false)
                             {
                                 // if the command was aborted due to timeout, we should skip it.
                                 // The command is not appended, so We can and must do so, because the context of the command is no longer valid.
@@ -754,84 +758,63 @@ namespace Raven.Server.Rachis
 
                             if (_running.IsRaised() == false)
                             {
-                                cmd.Tcs.TrySetException(lostLeadershipException);
+                                commandToProcess.Tcs.TrySetException(lostLeadershipException);
                                 continue;
                             }
 
-                            list.Add(cmd.Tcs);
-                            _engine.InvokeBeforeAppendToRaftLog(context, cmd.Command);
+                            commandsToProcess.Add(commandToProcess);
 
-                            if (_engine.LogHistory.HasHistoryLog(context, cmd.Command.UniqueRequestId, out var index, out var result, out var exception))
+                            if (_engine.LogHistory.HasHistoryLog(context, commandToProcess.Command.UniqueRequestId, out var index, out var result, out var exception))
                             {
                                 // if this command is already committed, we can skip it and notify the caller about it
                                 if (lastCommitted >= index)
                                 {
                                     if (exception != null)
                                     {
-                                        cmd.Tcs.TrySetException(exception);
+                                        commandToProcess.Tcs.TrySetException(exception);
                                     }
                                     else
                                     {
                                         if (result != null)
                                         {
-                                            result = GetConvertResult(cmd.Command)?.Apply(result) ?? cmd.Command.FromRemote(result);
+                                            result = GetConvertResult(commandToProcess.Command)?.Apply(result) ?? commandToProcess.Command.FromRemote(result);
                                         }
 
-                                        cmd.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
+                                        commandToProcess.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
                                     }
-                                    list.Remove(cmd.Tcs);
+
+                                    commandsToProcess.RemoveAt(commandsToProcess.Count - 1);
                                     continue;
                                 }
                             }
-                            else
-                            {
-                                var djv = cmd.Command.ToJson(context);
-                                using (var cmdJson = context.ReadObject(djv, "raft/command"))
-                                    index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
-                            }
-
-                            if (_entries.TryGetValue(index, out var state))
-                            {
-                                tasks.Add(state.TaskCompletionSource.Task);
-                            }
-                            else
-                            {
-                                var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                                tasks.Add(tcs.Task);
-                                state = new
-                                    CommandState
-                                // we need to add entry inside write tx lock to avoid
-                                // a situation when command will be applied (and state set)
-                                // before it is added to the entries list
-                                {
-                                    CommandIndex = index,
-                                    TaskCompletionSource = tcs,
-                                    ConvertResult = GetConvertResult(cmd.Command),
-                                };
-                                _entries[index] = state;
-                            }
                         }
-                        context.Transaction.Commit();
                     }
 
+                    var command = new LeaderEmptyQueueCommand(_engine, this, commandsToProcess);
+                    await _engine.TxMerger.Enqueue(command);
+
+                    var tasks = command.Tasks;
                     if (tasks.Count > 0)
                         _newEntry.Set();
 
-                    for (int i = 0; i < tasks.Count; i++)
+                    for (int i = 0; i < commandsToProcess.Count; i++)
                     {
-                        list[i].TrySetResult(tasks[i]);
+                        var c = commandsToProcess[i];
+                        var t = tasks[i];
+
+                        c.Tcs.TrySetResult(t);
                     }
                 }
                 catch (Exception e)
                 {
+                    if (e is AggregateException ae)
+                        e = ae.ExtractSingleInnerException();
+
                     if (_running.IsRaised() == false)
-                    {
                         e = new NotLeadingException(leaderDisposedMessage, e);
-                    }
-                    foreach (var tcs in list)
-                    {
-                        tcs.TrySetException(e);
-                    }
+
+                    foreach (var command in commandsToProcess)
+                        command.Tcs.TrySetException(e);
 
                     _errorOccurred.TrySetException(e);
                 }
