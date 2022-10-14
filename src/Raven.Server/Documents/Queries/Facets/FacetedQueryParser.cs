@@ -440,6 +440,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     Operation.None => true,
                     Operation.GreaterThan => value > LowValueAsDouble,
                     Operation.GreaterOrEqualThan => value >= LowValueAsDouble,
+                    _ => ThrowOnUnsupportedType(_leftSide)
                 };
                 
                 var rightSide = _rightSide switch
@@ -447,6 +448,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     Operation.None => true,
                     Operation.LowerThan => value < HighValueAsDouble,
                     Operation.LowerOrEqualThan => value <= HighValueAsDouble,
+                    _ => ThrowOnUnsupportedType(_rightSide)
                 };
 
                 return leftSide & rightSide;
@@ -459,6 +461,8 @@ namespace Raven.Server.Documents.Queries.Facets
                     Operation.None => true,
                     Operation.GreaterThan => value > LowValueAsLong,
                     Operation.GreaterOrEqualThan => value >= LowValueAsLong,
+                    _ => ThrowOnUnsupportedType(_leftSide)
+
                 };
                 
                 var rightSide = _rightSide switch
@@ -466,6 +470,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     Operation.None => true,
                     Operation.LowerThan => value < HighValueAsLong,
                     Operation.LowerOrEqualThan => value <= HighValueAsLong,
+                    _ => ThrowOnUnsupportedType(_rightSide)
                 };
 
                 return leftSide & rightSide;
@@ -498,6 +503,11 @@ namespace Raven.Server.Documents.Queries.Facets
                     return false;
 
                 return true;
+            }
+
+            private bool ThrowOnUnsupportedType(Operation operation)
+            {
+                throw new NotSupportedException($"{nameof(CoraxParsedRange)} is not supporting {operation} comparison. This is a bug.");
             }
             
             [Flags]
