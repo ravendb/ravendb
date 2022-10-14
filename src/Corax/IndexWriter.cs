@@ -1277,7 +1277,12 @@ namespace Corax
 
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
-                if (termsSpan[^1] == '\0') break;
+                
+                if (termsSpan[^1] == '\0')
+                {
+                    throw new InvalidDataException($"Got term '{Encodings.Utf8.GetString(termsSpan)}' with NULL character at the end for field {indexedField.Name}. This is a bug.");
+                }
+                
                 if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
                 {
                     if (entries.TotalRemovals != 0)
