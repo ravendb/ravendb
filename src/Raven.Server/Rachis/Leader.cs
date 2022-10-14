@@ -764,29 +764,28 @@ namespace Raven.Server.Rachis
 
                             commandsToProcess.Add(commandToProcess);
 
-                            if (_engine.LogHistory.HasHistoryLog(context, commandToProcess.Command.UniqueRequestId, out var index, out var result, out var exception))
+                            if (_engine.LogHistory.HasHistoryLog(context, commandToProcess.Command.UniqueRequestId, out var index, out var result, out var exception) == false)
+                                continue;
+
+                            if (lastCommitted < index)
+                                continue;
+
+                            // if this command is already committed, we can skip it and notify the caller about it
+                            if (exception != null)
                             {
-                                // if this command is already committed, we can skip it and notify the caller about it
-                                if (lastCommitted >= index)
-                                {
-                                    if (exception != null)
-                                    {
-                                        commandToProcess.Tcs.TrySetException(exception);
-                                    }
-                                    else
-                                    {
-                                        if (result != null)
-                                        {
-                                            result = GetConvertResult(commandToProcess.Command)?.Apply(result) ?? commandToProcess.Command.FromRemote(result);
-                                        }
-
-                                        commandToProcess.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
-                                    }
-
-                                    commandsToProcess.RemoveAt(commandsToProcess.Count - 1);
-                                    continue;
-                                }
+                                commandToProcess.Tcs.TrySetException(exception);
                             }
+                            else
+                            {
+                                if (result != null)
+                                {
+                                    result = GetConvertResult(commandToProcess.Command)?.Apply(result) ?? commandToProcess.Command.FromRemote(result);
+                                }
+
+                                commandToProcess.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
+                            }
+
+                            commandsToProcess.RemoveAt(commandsToProcess.Count - 1);
                         }
                     }
 
