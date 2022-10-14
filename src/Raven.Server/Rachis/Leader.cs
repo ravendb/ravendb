@@ -761,10 +761,7 @@ namespace Raven.Server.Rachis
                             list.Add(cmd.Tcs);
                             _engine.InvokeBeforeAppendToRaftLog(context, cmd.Command);
 
-                            var djv = cmd.Command.ToJson(context);
-                            var cmdJson = context.ReadObject(djv, "raft/command");
-
-                            if (_engine.LogHistory.HasHistoryLog(context, cmdJson, out var index, out var result, out var exception))
+                            if (_engine.LogHistory.HasHistoryLog(context, cmd.Command.UniqueRequestId, out var index, out var result, out var exception))
                             {
                                 // if this command is already committed, we can skip it and notify the caller about it
                                 if (lastCommitted >= index)
@@ -788,7 +785,9 @@ namespace Raven.Server.Rachis
                             }
                             else
                             {
-                                index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+                                var djv = cmd.Command.ToJson(context);
+                                using (var cmdJson = context.ReadObject(djv, "raft/command"))
+                                    index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
                             }
 
                             if (_entries.TryGetValue(index, out var state))

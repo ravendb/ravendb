@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
@@ -105,9 +104,9 @@ namespace Raven.Server.Rachis
         }
 
 
-        public string GetGuidFromCommand(BlittableJsonReaderObject cmd)
+        public static string GetUniqueRequestIdFromCommand(BlittableJsonReaderObject command)
         {
-            if (cmd.TryGet(nameof(CommandBase.UniqueRequestId), out string guid))
+            if (command.TryGet(nameof(CommandBase.UniqueRequestId), out string guid))
                 return guid;
 
             return null;
@@ -125,22 +124,22 @@ namespace Raven.Server.Rachis
 
         public void InsertHistoryLog(ClusterOperationContext context, long index, long term, BlittableJsonReaderObject cmd)
         {
-            if (HasHistoryLog(context, cmd, out _, out _, out _))
+            var uniqueRequestId = GetUniqueRequestIdFromCommand(cmd);
+            if (uniqueRequestId == null) // shouldn't happened in new cluster version!
+                return;
+
+            if (HasHistoryLog(context, uniqueRequestId, out _, out _, out _))
             {
                 return;
             }
 
-            var guid = GetGuidFromCommand(cmd);
-            if (guid == null) // shouldn't happened in new cluster version!
-                return;
-
-            if (guid == RaftIdGenerator.DontCareId)
+            if (uniqueRequestId == RaftIdGenerator.DontCareId)
                 return;
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
             var type = GetTypeFromCommand(cmd);
 
-            using (Slice.From(context.Allocator, guid, out var guidSlice))
+            using (Slice.From(context.Allocator, uniqueRequestId, out var guidSlice))
             using (Slice.From(context.Allocator, type, out var typeSlice))
             using (table.Allocate(out TableValueBuilder tvb))
             {
@@ -166,15 +165,15 @@ namespace Raven.Server.Rachis
 
         public void UpdateHistoryLog(ClusterOperationContext context, long index, long term, BlittableJsonReaderObject cmd, object result, Exception exception)
         {
-            var guid = GetGuidFromCommand(cmd);
-            if (guid == null) // shouldn't happened in new cluster version!
+            var uniqueRequestId = GetUniqueRequestIdFromCommand(cmd);
+            if (uniqueRequestId == null) // shouldn't happened in new cluster version!
                 return;
-            if (guid == RaftIdGenerator.DontCareId)
+            if (uniqueRequestId == RaftIdGenerator.DontCareId)
                 return;
 
             var type = GetTypeFromCommand(cmd);
 
-            UpdateInternal(context, cmd, guid, type, index, term, HistoryStatus.Committed, result, exception);
+            UpdateInternal(context, cmd, uniqueRequestId, type, index, term, HistoryStatus.Committed, result, exception);
         }
 
         public void UpdateHistoryLogPreservingGuidAndStatus(ClusterOperationContext context, long index, long term, BlittableJsonReaderObject cmd)
@@ -434,21 +433,20 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe bool HasHistoryLog(ClusterOperationContext context, BlittableJsonReaderObject cmd, out long index, out object result, out Exception exception)
+        public unsafe bool HasHistoryLog(ClusterOperationContext context, string uniqueRequestId, out long index, out object result, out Exception exception)
         {
             result = null;
             exception = null;
             index = 0;
 
-            var guid = GetGuidFromCommand(cmd);
-            if (guid == null) // shouldn't happened in new cluster version!
+            if (uniqueRequestId == null) // shouldn't happened in new cluster version!
                 return false;
 
-            if (guid == RaftIdGenerator.DontCareId)
+            if (uniqueRequestId == RaftIdGenerator.DontCareId)
                 return false;
 
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
-            using (Slice.From(context.Allocator, guid, out var guidSlice))
+            using (Slice.From(context.Allocator, uniqueRequestId, out var guidSlice))
             {
                 if (table.ReadByKey(guidSlice, out var reader) == false)
                     return false;
@@ -478,7 +476,7 @@ namespace Raven.Server.Rachis
                     {
                         if (_log.IsInfoEnabled)
                         {
-                            _log.Info($"failed to generate the exception dynamically for guid {guid}", e);
+                            _log.Info($"failed to generate the exception dynamically for guid {uniqueRequestId}", e);
                         }
 
                         exception = new Exception($"failed to generate the exception dynamically, but the original exception message is:" +
