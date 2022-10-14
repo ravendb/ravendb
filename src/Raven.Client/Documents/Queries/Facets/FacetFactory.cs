@@ -20,9 +20,22 @@ namespace Raven.Client.Documents.Queries.Facets
         IFacetOperations<T> AverageOn(Expression<Func<T, object>> path, string displayName = null);
     }
 
+    public interface IFacetByRangesOperations<T>
+    {
+        IFacetByRangesOperations<T> WithDisplayName(string displayName);
+        
+        IFacetByRangesOperations<T> SumOn(Expression<Func<T, object>> path, string displayName = null);
+
+        IFacetByRangesOperations<T> MinOn(Expression<Func<T, object>> path, string displayName = null);
+
+        IFacetByRangesOperations<T> MaxOn(Expression<Func<T, object>> path, string displayName = null);
+
+        IFacetByRangesOperations<T> AverageOn(Expression<Func<T, object>> path, string displayName = null);
+    }
+    
     public interface IFacetBuilder<T>
     {
-        IFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths);
+        IFacetByRangesOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths);
 
         IFacetOperations<T> ByField(Expression<Func<T, object>> path);
 
@@ -31,7 +44,7 @@ namespace Raven.Client.Documents.Queries.Facets
         IFacetOperations<T> AllResults();
     }
 
-    internal class FacetBuilder<T> : IFacetBuilder<T>, IFacetOperations<T>
+    internal class FacetBuilder<T> : IFacetBuilder<T>, IFacetOperations<T>, IFacetByRangesOperations<T>
     {
         private RangeFacet<T> _range;
         private Facet _default;
@@ -47,7 +60,7 @@ namespace Raven.Client.Documents.Queries.Facets
             "UPDATE"
         };
 
-        public IFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
+        public IFacetByRangesOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
         {
             if (path == null)
                 throw new ArgumentNullException(nameof(path));
@@ -108,6 +121,37 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             Facet.DisplayFieldName = displayName;
             return this;
+        }
+
+        IFacetByRangesOperations<T> IFacetByRangesOperations<T>.SumOn(Expression<Func<T, object>> path, string displayName)
+        {
+            SumOn(path, displayName);
+            return this;
+        }
+
+        IFacetByRangesOperations<T> IFacetByRangesOperations<T>.MinOn(Expression<Func<T, object>> path, string displayName)
+        {
+            MinOn(path, displayName);
+            return this;
+        }
+
+        IFacetByRangesOperations<T> IFacetByRangesOperations<T>.MaxOn(Expression<Func<T, object>> path, string displayName)
+        {
+            MaxOn(path, displayName);
+            return this;
+        }
+
+        IFacetByRangesOperations<T> IFacetByRangesOperations<T>.AverageOn(Expression<Func<T, object>> path, string displayName)
+        {
+            AverageOn(path, displayName);
+            return this;
+        }
+
+        IFacetByRangesOperations<T> IFacetByRangesOperations<T>.WithDisplayName(string displayName)
+        {
+            WithDisplayName(displayName);
+            return this;
+            
         }
 
         public IFacetOperations<T> SumOn(Expression<Func<T, object>> path, string displayName = null)
