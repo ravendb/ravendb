@@ -11,7 +11,6 @@ using System.Reflection.Metadata;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -41,6 +40,8 @@ namespace Raven.Server.Documents.Indexes.Static
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
 
         internal const string IndexExtension = ".index";
+
+        internal const string AdditionalSourceExtension = ".source";
 
         internal const string IndexNamePrefix = "Index_";
 
@@ -184,7 +185,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var @namespace = RoslynHelper.CreateNamespace(IndexNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
 
-            var res = GetUsingDirectiveAndSyntaxTreesAndReferences(definition);
+            var res = GetUsingDirectiveAndSyntaxTreesAndReferences(definition, cSharpSafeName);
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
                 .WithUsings(RoslynHelper.CreateUsings(res.UsingDirectiveSyntaxes))
@@ -264,7 +265,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) GetUsingDirectiveAndSyntaxTreesAndReferences(IndexDefinition definition)
+        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) GetUsingDirectiveAndSyntaxTreesAndReferences(IndexDefinition definition, string cSharpSafeName)
         {
             if (definition.AdditionalSources == null && definition.AdditionalSources == null)
             {
@@ -272,7 +273,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) result;
-            var syntaxTrees = new List<SyntaxTree>();
+            var syntaxTrees = new Dictionary<string, SyntaxTree>();
             var usings = new HashSet<string>();
 
             if (definition.AdditionalSources != null)
@@ -280,7 +281,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 foreach (var ext in definition.AdditionalSources)
                 {
                     var tree = SyntaxFactory.ParseSyntaxTree(AddUsingIndexStatic(ext.Value));
-                    syntaxTrees.Add(tree);
+                    syntaxTrees.Add(ext.Key, tree);
 
                     var ns = tree.GetRoot().DescendantNodes()
                         .OfType<NamespaceDeclarationSyntax>()
@@ -321,7 +322,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var tempCompilation = CSharpCompilation.Create(
                 assemblyName: string.Empty,
-                syntaxTrees: syntaxTrees,
+                syntaxTrees: syntaxTrees.Values,
                 references: result.References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                     .WithOptimizationLevel(EnableDebugging ? OptimizationLevel.Debug : OptimizationLevel.Release)
@@ -330,12 +331,32 @@ namespace Raven.Server.Documents.Indexes.Static
             var rewriter = new MethodDynamicParametersRewriter();
             result.SyntaxTrees = new List<SyntaxTree>();
 
-            foreach (var tree in syntaxTrees) //now do the rewrites
+            foreach (var kvp in syntaxTrees) //now do the rewrites
             {
+                var sourceName = kvp.Key;
+                var tree = kvp.Value;
+
                 rewriter.SemanticModel = tempCompilation.GetSemanticModel(tree);
 
                 var rewritten = rewriter.Visit(tree.GetRoot()).NormalizeWhitespace();
-                result.SyntaxTrees.Add(SyntaxFactory.SyntaxTree(rewritten, new CSharpParseOptions(documentationMode: DocumentationMode.None)));
+
+                SyntaxTree syntaxTree;
+
+                if (EnableDebugging)
+                {
+                    var name = cSharpSafeName + "." + Guid.NewGuid() + "." + sourceName + AdditionalSourceExtension;
+
+                    var sourceFile = Path.Combine(Path.GetTempPath(), name + ".cs");
+                    File.WriteAllText(sourceFile, rewritten.ToFullString(), Encoding.UTF8);
+
+                    syntaxTree = SyntaxFactory.ParseSyntaxTree(File.ReadAllText(sourceFile), path: sourceFile, encoding: Encoding.UTF8);
+                }
+                else
+                {
+                    syntaxTree = SyntaxFactory.SyntaxTree(rewritten, new CSharpParseOptions(documentationMode: DocumentationMode.None));
+                }
+
+                result.SyntaxTrees.Add(syntaxTree);
             }
 
             return result;
