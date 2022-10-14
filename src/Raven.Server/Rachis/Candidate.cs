@@ -40,11 +40,6 @@ namespace Raven.Server.Rachis
 
         private void Run(object obj)
         {
-            RunAsync().Wait();
-        }
-
-        private async Task RunAsync()
-        {
             var ambassadorsToRemove = new List<CandidateAmbassador>();
             try
             {
@@ -66,7 +61,7 @@ namespace Raven.Server.Rachis
 
                     if (clusterTopology.Members.Count == 1)
                     {
-                        await CastVoteForSelfAsync(ElectionTerm + 1, "Single member cluster, natural leader");
+                        CastVoteForSelfAsync(ElectionTerm + 1, "Single member cluster, natural leader").Wait();
                         _engine.SwitchToLeaderState(ElectionTerm, ClusterCommandsVersionManager.CurrentClusterMinimalVersion,
                             "I'm the only one in the cluster, so no need for elections, I rule.");
                         return;
@@ -84,7 +79,7 @@ namespace Raven.Server.Rachis
 
                     if (IsForcedElection)
                     {
-                        await CastVoteForSelfAsync(ElectionTerm + 1, "Voting for self in forced elections");
+                        CastVoteForSelfAsync(ElectionTerm + 1, "Voting for self in forced elections").Wait();
                     }
                     else
                     {
@@ -182,7 +177,7 @@ namespace Raven.Server.Rachis
                         if (RunRealElectionAtTerm != ElectionTerm &&
                             trialElectionsCount >= majority)
                         {
-                            await CastVoteForSelfAsync(ElectionTerm, "Won in the trial elections");
+                            CastVoteForSelfAsync(ElectionTerm, "Won in the trial elections").Wait();
                         }
                     }
                 }
@@ -195,7 +190,7 @@ namespace Raven.Server.Rachis
                     if (_engine.CurrentState == RachisState.Candidate)
                     {
                         // if we are still a candidate, start the candidacy again.
-                        await _engine.SwitchToCandidateStateAsync("An error occurred during the last candidacy: " + e);
+                        _engine.SwitchToCandidateStateAsync("An error occurred during the last candidacy: " + e).Wait();
                     }
                     else if (_engine.CurrentState != RachisState.Passive)
                     {

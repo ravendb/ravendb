@@ -106,7 +106,7 @@ namespace Raven.Server.Rachis
             RefreshAmbassadors(clusterTopology, connections);
 
             _leaderLongRunningWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, $"Consensus Leader - {_engine.Tag} in term {Term}");
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(Run, null, $"Consensus Leader - {_engine.Tag} in term {Term}");
         }
 
         private int _steppedDown;
@@ -290,15 +290,10 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void Run()
-        {
-            RunAsync().Wait();
-        }
-
         /// <summary>
         /// This is expected to run for a long time, and it cannot leak exceptions
         /// </summary>
-        private async Task RunAsync()
+        private void Run(object obj)
         {
             try
             {
@@ -325,7 +320,7 @@ namespace Raven.Server.Rachis
                             break;
                         case 1: // voter responded
                             _voterResponded.Reset();
-                            await OnVoterConfirmationAsync();
+                            OnVoterConfirmationAsync().Wait();
                             break;
                         case 2: // promotable updated
                             _promotableUpdated.Reset();
@@ -361,7 +356,7 @@ namespace Raven.Server.Rachis
                     if (lowestIndexInEntireCluster > lastTruncated)
                     {
                         var command = new LeaderTruncateLogCommand(_engine, lowestIndexInEntireCluster);
-                        await _engine.TxMerger.Enqueue(command);
+                        _engine.TxMerger.Enqueue(command).Wait();;
 
                         LowestIndexInEntireCluster = lowestIndexInEntireCluster;
                     }
@@ -391,7 +386,7 @@ namespace Raven.Server.Rachis
 
                 try
                 {
-                    await _engine.SwitchToCandidateStateAsync("An error occurred during our leadership." + Environment.NewLine + e);
+                    _engine.SwitchToCandidateStateAsync("An error occurred during our leadership." + Environment.NewLine + e).Wait();;
                 }
                 catch (Exception e2)
                 {
