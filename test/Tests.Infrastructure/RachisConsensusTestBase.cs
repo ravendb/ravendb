@@ -17,6 +17,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
@@ -206,7 +207,7 @@ namespace Tests.Infrastructure
             serverStore.Initialize();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
-            rachis.Initialize(storageEnvironment, configuration, new ClusterChanges(), configuration.Core.ServerUrls[0], null, new SystemTime(), out _, CancellationToken.None);
+            rachis.Initialize(storageEnvironment, configuration, new ClusterChanges(), configuration.Core.ServerUrls[0], new DummyNotificationCenter(), new SystemTime(), out _, CancellationToken.None);
             rachis.OnDispose += (sender, args) =>
             {
                 serverStore.Dispose();
@@ -536,6 +537,13 @@ namespace Tests.Infrastructure
                 djv[nameof(Value)] = Value;
 
                 return djv;
+            }
+        }
+
+        private class DummyNotificationCenter : NotificationCenter
+        {
+            public DummyNotificationCenter() : base(null, null, CancellationToken.None, null)
+            {
             }
         }
     }

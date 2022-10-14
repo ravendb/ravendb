@@ -290,10 +290,15 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private void Run()
+        {
+            RunAsync().Wait();
+        }
+
         /// <summary>
         /// This is expected to run for a long time, and it cannot leak exceptions
         /// </summary>
-        private void Run()
+        private async Task RunAsync()
         {
             try
             {
@@ -320,7 +325,7 @@ namespace Raven.Server.Rachis
                             break;
                         case 1: // voter responded
                             _voterResponded.Reset();
-                            OnVoterConfirmationAsync().Wait();
+                            await OnVoterConfirmationAsync();
                             break;
                         case 2: // promotable updated
                             _promotableUpdated.Reset();
@@ -389,7 +394,7 @@ namespace Raven.Server.Rachis
 
                 try
                 {
-                    _engine.SwitchToCandidateState("An error occurred during our leadership." + Environment.NewLine + e);
+                    await _engine.SwitchToCandidateStateAsync("An error occurred during our leadership." + Environment.NewLine + e);
                 }
                 catch (Exception e2)
                 {

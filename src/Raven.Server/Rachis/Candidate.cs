@@ -40,6 +40,11 @@ namespace Raven.Server.Rachis
 
         private void Run()
         {
+            RunAsync().Wait();
+        }
+
+        private async Task RunAsync()
+        {
             var ambassadorsToRemove = new List<CandidateAmbassador>();
             try
             {
@@ -190,7 +195,7 @@ namespace Raven.Server.Rachis
                     if (_engine.CurrentState == RachisState.Candidate)
                     {
                         // if we are still a candidate, start the candidacy again.
-                        _engine.SwitchToCandidateState("An error occurred during the last candidacy: " + e);
+                        await _engine.SwitchToCandidateStateAsync("An error occurred during the last candidacy: " + e);
                     }
                     else if (_engine.CurrentState != RachisState.Passive)
                     {
