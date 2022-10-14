@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Sparrow.Threading;
 using Raven.Server.Utils;
+using Raven.Server.Rachis.Commands;
 
 namespace Raven.Server.Rachis
 {
@@ -38,7 +38,7 @@ namespace Raven.Server.Rachis
 
         public long ElectionTerm { get; private set; }
 
-        private void Run()
+        private void Run(object obj)
         {
             RunAsync().Wait();
         }
@@ -66,7 +66,7 @@ namespace Raven.Server.Rachis
 
                     if (clusterTopology.Members.Count == 1)
                     {
-                        CastVoteForSelf(ElectionTerm + 1, "Single member cluster, natural leader");
+                        await CastVoteForSelfAsync(ElectionTerm + 1, "Single member cluster, natural leader");
                         _engine.SwitchToLeaderState(ElectionTerm, ClusterCommandsVersionManager.CurrentClusterMinimalVersion,
                             "I'm the only one in the cluster, so no need for elections, I rule.");
                         return;
@@ -84,7 +84,7 @@ namespace Raven.Server.Rachis
 
                     if (IsForcedElection)
                     {
-                        CastVoteForSelf(ElectionTerm + 1, "Voting for self in forced elections");
+                        await CastVoteForSelfAsync(ElectionTerm + 1, "Voting for self in forced elections");
                     }
                     else
                     {
@@ -182,7 +182,7 @@ namespace Raven.Server.Rachis
                         if (RunRealElectionAtTerm != ElectionTerm &&
                             trialElectionsCount >= majority)
                         {
-                            CastVoteForSelf(ElectionTerm, "Won in the trial elections");
+                            await CastVoteForSelfAsync(ElectionTerm, "Won in the trial elections");
                         }
                     }
                 }
@@ -251,17 +251,13 @@ namespace Raven.Server.Rachis
             return true;
         }
 
-        private void CastVoteForSelf(long electionTerm, string reason, bool setStateChange = true)
+        private async Task CastVoteForSelfAsync(long electionTerm, string reason, bool setStateChange = true)
         {
-            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                _engine.CastVoteInTerm(context, electionTerm, _engine.Tag, reason);
+            var command = new CandidateCastVoteInTermCommand(_engine, electionTerm, reason);
+            await _engine.TxMerger.Enqueue(command);
 
-                ElectionTerm = RunRealElectionAtTerm = electionTerm;
-                
-                tx.Commit();
-            }
+            ElectionTerm = RunRealElectionAtTerm = electionTerm;
+
             if (_engine.Log.IsInfoEnabled)
             {
                 _engine.Log.Info($"Candidate {_engine.Tag}: casting vote for self ElectionTerm={electionTerm} RunRealElectionAtTerm={RunRealElectionAtTerm}");
@@ -281,7 +277,7 @@ namespace Raven.Server.Rachis
             {
                 dic.Add(voter.Tag, voter.GetStatus());
             }
-           
+
             return dic;
         }
 
@@ -299,7 +295,7 @@ namespace Raven.Server.Rachis
 
         public void Start()
         {
-            _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x=>Run(), null, "Candidate for - " + _engine.Tag);
+            _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(Run, null, "Candidate for - " + _engine.Tag);
         }
 
         public void Dispose()
