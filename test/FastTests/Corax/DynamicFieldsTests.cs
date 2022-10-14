@@ -23,6 +23,27 @@ public class DynamicFieldsTests : StorageTest
     }
 
     [Fact]
+    public void WriteEmptyAsSimpleInDynamicField()
+    {
+        const string fieldName = "Scope_0";
+        using ByteStringContext bsc = new(SharedMultipleUseFlag.None);
+
+        using var _ = StorageEnvironment.GetStaticContext(out ByteStringContext ctx);
+        Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
+        Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
+
+        IndexFieldsMapping knownFields = new(ctx);
+        IndexEntryWriter writer = new(bsc, knownFields);
+        
+        writer.WriteDynamic(fieldName, Encoding.UTF8.GetBytes(""));
+        using var __ = writer.Finish(out ByteString element);
+        IndexEntryReader reader = new(element.ToSpan());
+        
+        var fieldReader = reader.GetReaderFor(Encoding.UTF8.GetBytes(fieldName));
+        Assert.Equal(IndexEntryFieldType.Empty, fieldReader.Type);
+    }
+
+    [Fact]
     public void SimpleDynamicWrite()
     {
         using ByteStringContext bsc = new(SharedMultipleUseFlag.None);

@@ -541,7 +541,7 @@ public ref struct IndexEntryReader
     {
         if (ReadDynamicValueOffset(name, out var intOffset, out bool isTyped))
         {
-            var type = (IndexEntryFieldType)VariableSizeEncoding.Read<ushort>(_buffer, out _, intOffset);
+            var type = Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);
             if (isTyped == false)
                 intOffset += sizeof(IndexEntryFieldType);
             
