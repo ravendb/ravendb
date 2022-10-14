@@ -1,11 +1,8 @@
-using System;
 using System.Linq;
-using Corax;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,6 +12,36 @@ namespace SlowTests.Issues;
 public class RavenDB_19426 : RavenTestBase
 {
     private const string DocName = "doc/1";
+
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void UpdateItemWithSameTermsInAdditionAndRemoval(Options options)
+    {
+        var store = GetDocumentStore(options);
+        {
+            using var session = store.OpenSession();
+            //We want this to be a `Small`, not single
+            session.Store(new IndexSearchAnalyzer.Dto()
+            {
+                Name = "Maciej Kaszebe"
+            }, DocName);
+            session.Store(new IndexSearchAnalyzer.Dto()
+            {
+                Name = "Maciej Kaszebe"
+            });
+            session.SaveChanges();
+        }
+        var index = CreateIndex<IndexSearchAnalyzer>(store);
+        {
+            using var session = store.OpenSession();
+            var result = session.Load<IndexSearchAnalyzer.Dto>(DocName);
+            result.Name = "Kaszebe Maciej";
+            session.SaveChanges();
+        }
+        
+        AssertIndexIsNotCorrupted(index, store);
+    }
+    
     
     public RavenDB_19426(ITestOutputHelper output) : base(output)
     {
@@ -114,8 +141,6 @@ public class RavenDB_19426 : RavenTestBase
         return index;
     }
     
-   
-    
     private class IndexForArrayWithEmpty : AbstractIndexCreationTask<IndexForArrayWithEmpty.Dto>
     {
         public class Dto
@@ -159,6 +184,20 @@ public class RavenDB_19426 : RavenTestBase
                     Name = doc.Name,
                     Data = d.Select(i => i)
                 };
+        }
+    }
+    
+    private class IndexSearchAnalyzer : AbstractIndexCreationTask<IndexSearchAnalyzer.Dto>
+    {
+        public class Dto
+        {
+            public string Name { get; set; }
+        }
+        
+        public IndexSearchAnalyzer()
+        {
+            Map = dtos => dtos.Select(i => new {Name = i.Name});
+            Index(i => i.Name, FieldIndexing.Search);
         }
     }
 }

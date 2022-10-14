@@ -96,6 +96,14 @@ namespace Corax
                 if (FreeSpace == 0)
                     GrowBuffer();
 
+                //Lets assert if it is in last removals
+                if (_removals > 0 && *(_end - _removals + 1) == entryId)
+                {
+                    // Lets remove removal and do not proceed addition.
+                    _removals--;
+                    return;
+                }
+                
                 *(_start + _additions) = entryId;
                 _additions++;
 
@@ -110,6 +118,15 @@ namespace Corax
                 if (FreeSpace == 0)
                     GrowBuffer();
 
+                //Lets assert if it is in last additions
+                if (_additions > 0 && *(_start + _additions - 1) == entryId)
+                {
+                    // Lets remove addition and do not proceed removal.
+                    _additions--;
+                    return;
+                }
+                
+                
                 *(_end - _removals) = entryId;
                 _removals++;
 
