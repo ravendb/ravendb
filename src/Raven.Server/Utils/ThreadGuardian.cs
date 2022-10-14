@@ -24,9 +24,11 @@ public class ThreadGuardian
     [Conditional("DEBUG")]
     public void Guard()
     {
+#if DEBUG
         var currentThread = Thread.CurrentThread;
         var currentThreadId = currentThread.ManagedThreadId;
         if (currentThreadId != _threadId)
             throw new InvalidOperationException($"Thread with name '{_threadName}' ({_threadId}) was switched to thread '{currentThread.Name}' ({currentThreadId}).");
+#endif
     }
 }
