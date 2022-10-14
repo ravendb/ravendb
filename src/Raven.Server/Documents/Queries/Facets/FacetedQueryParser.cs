@@ -129,6 +129,9 @@ namespace Raven.Server.Documents.Queries.Facets
             }
             else if (facet is RangeFacet)
             {
+                if (facet.Options != null)
+                    ThrowWhenOptionsAreUsedForRangeFacet();
+                
                 Debug.Assert(facetRanges != null && facetRanges.Count > 0);
 
                 RangeType? rangeType = null;
@@ -601,6 +604,11 @@ namespace Raven.Server.Documents.Queries.Facets
             throw new InvalidOperationException($"Unsupported facet type: {facet.GetType().FullName}");
         }
 
+        private static void ThrowWhenOptionsAreUsedForRangeFacet()
+        {
+            throw new NotSupportedException($"Options are not supported in range facets.");
+        }
+        
         private static void ThrowRangeDefinedOnDifferentFields(FacetQuery query, string fieldName, string differentField)
         {
             throw new InvalidQueryException($"Facet ranges must be defined on the same field while we got '{fieldName}' and '{differentField}' used in the same faced",
