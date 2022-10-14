@@ -22,11 +22,13 @@ namespace Raven.Server.Rachis
             _connection = connection;
         }
 
+        private ThreadGuardian _threadGuardian;
+
         public void Run()
         {
             _engine.AppendElector(this);
 
-            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");
+            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(HandleVoteRequest, null, $"Elector for candidate {_connection.Source}");
         }
 
         public override string ToString()
@@ -34,7 +36,7 @@ namespace Raven.Server.Rachis
             return $"Elector {_engine.Tag} for {_connection.Source}";
         }
 
-        private void HandleVoteRequest()
+        private void HandleVoteRequest(object obj)
         {
             try
             {
@@ -44,6 +46,9 @@ namespace Raven.Server.Rachis
                 {
                     while (_engine.IsDisposed == false)
                     {
+                        _threadGuardian ??= new ThreadGuardian();
+                        _threadGuardian.Guard();
+
                         _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
 
                         using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))

@@ -290,6 +290,8 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private ThreadGuardian _threadGuardian;
+
         /// <summary>
         /// This is expected to run for a long time, and it cannot leak exceptions
         /// </summary>
@@ -311,6 +313,9 @@ namespace Raven.Server.Rachis
                 _newEntry.Set(); //This is so the noop would register right away
                 while (_running)
                 {
+                    _threadGuardian ??= new ThreadGuardian();
+                    _threadGuardian.Guard();
+
                     switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeout))
                     {
                         case 0: // new entry
