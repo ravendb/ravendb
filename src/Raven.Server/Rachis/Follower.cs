@@ -67,7 +67,6 @@ namespace Raven.Server.Rachis
 
             while (true)
             {
-                _threadGuardian ??= new ThreadGuardian();
                 _threadGuardian.Guard();
 
                 entries.Clear();
@@ -1075,6 +1074,8 @@ namespace Raven.Server.Rachis
 
         private void Run(object obj)
         {
+            _threadGuardian = new ThreadGuardian();
+
             try
             {
                 ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, _debugName, _engine.Log);

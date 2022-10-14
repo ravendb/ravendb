@@ -297,6 +297,8 @@ namespace Raven.Server.Rachis
         /// </summary>
         private void Run(object obj)
         {
+            _threadGuardian = new ThreadGuardian();
+
             try
             {
                 ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, ToString(), _engine.Log);
@@ -313,7 +315,6 @@ namespace Raven.Server.Rachis
                 _newEntry.Set(); //This is so the noop would register right away
                 while (_running)
                 {
-                    _threadGuardian ??= new ThreadGuardian();
                     _threadGuardian.Guard();
 
                     switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeout))
