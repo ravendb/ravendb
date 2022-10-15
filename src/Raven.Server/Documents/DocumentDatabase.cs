@@ -48,9 +48,7 @@ using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
-using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Meters;
-using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -455,7 +453,7 @@ namespace Raven.Server.Documents
                     using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        await ExecuteClusterTransaction(context);
+                        await ExecuteClusterTransaction(context, 1);
                     }
                 }
                 catch (Exception e)
@@ -468,13 +466,13 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async Task ExecuteClusterTransaction(TransactionOperationContext context)
+        public async Task<List<ClusterTransactionCommand.SingleClusterDatabaseCommand>> ExecuteClusterTransaction(TransactionOperationContext context, int batchSize)
         {
             var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
-                ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: 256));
+                ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: batchSize));
 
             if (batch.Count == 0)
-                return;
+                return batch;
 
             var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
             try
@@ -490,12 +488,14 @@ namespace Raven.Server.Documents
                     _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
                 }
                 await ExecuteClusterTransactionOneByOne(batch);
-                return;
             }
+
             foreach (var command in batch)
             {
                 OnClusterTransactionCompletion(command, mergedCommands);
             }
+
+            return batch;
         }
 
         private async Task ExecuteClusterTransactionOneByOne(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
