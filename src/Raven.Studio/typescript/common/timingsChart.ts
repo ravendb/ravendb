@@ -110,6 +110,9 @@ class timingsChart {
     }
     
     getColorClass(item: string) {
+        if (item.startsWith("AggregateBy/")) {
+            return "aggregateBy";
+        }
         return _.camelCase(item);
     }
     
