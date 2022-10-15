@@ -5,6 +5,7 @@ import getDatabaseDetailedStatsCommand = require("commands/resources/getDatabase
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
 import changeVectorUtils = require("common/changeVectorUtils");
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
 
 class databaseIDs extends viewModelBase {
 
@@ -14,6 +15,8 @@ class databaseIDs extends viewModelBase {
     
     databaseID = ko.observable<string>();
     databaseChangeVector = ko.observableArray<string>([]);
+    
+    nonLocalDatabaseNodes: KnockoutComputed<string[]>; 
     
     unusedDatabaseIDs = ko.observableArray<string>([]);
     inputDatabaseId = ko.observable<string>();
@@ -26,7 +29,18 @@ class databaseIDs extends viewModelBase {
 
     constructor() {
         super();
-        this.bindToCurrentInstance("addToUnusedList", "removeFromUnusedList");
+        this.bindToCurrentInstance("addToUnusedList", "removeFromUnusedList", "linkToUnusedDatabaseIds");
+        
+        this.nonLocalDatabaseNodes = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (!db) {
+                return [];
+            }
+            const nodes = db.nodes();
+            const localNodeTag = clusterTopologyManager.default.localNodeTag();
+            
+            return nodes.filter(tag => tag !== localNodeTag);
+        });
     }
 
     compositionComplete() {
@@ -36,6 +50,13 @@ class databaseIDs extends viewModelBase {
     
     canAddIdToUnusedIDs(cvEntry: string) {
        return ko.pureComputed(() => changeVectorUtils.getDatabaseID(cvEntry) !== this.databaseID());
+    }
+    
+    linkToUnusedDatabaseIds(nodeTag: string) {
+        const link = appUrl.forDatabaseIDs(this.activeDatabase());
+        const nodeInfo = clusterTopologyManager.default.getClusterNodeByTag(nodeTag);
+
+        return appUrl.toExternalUrl(nodeInfo.serverUrl(), link);
     }
 
     itemIsInsideUnusedList(cvEntry: string) {

@@ -2,27 +2,47 @@
     <form data-bind="submit: saveUnusedDatabaseIDs" novalidate autocomplete="off" class="flex-form">
         <div class="content-margin">
             <div class="row">
-                <div class="col-xs-12 col-xl-6 margin-top margin-top-lg no-padding-right">
-                    <div class="panel padding margin-bottom no-padding-right">
-                        <div class="panel-body no-padding-right">
+                <div class="col-xs-12 col-xl-6 margin-top margin-top-lg">
+                    <div class="panel">
+                        <div class="panel-body">
+                            <div class="text-warning padding padding-xs margin-top margin-bottom">
+                                <small>
+                                    <i class="icon-warning"></i>
+                                    Please verify that database ids are not used on ANY cluster node. 
+                                </small>
+                            </div>
+
                             <div class="form-group">
                                 <label class="control-label">Database ID</label>
-                                <div class="margin-top margin-top-xs" >
-                                    <strong class="form-control-static" data-bind="text: databaseID"></strong>
+                                <div>
+                                    <div class="margin-top margin-top-xs">
+                                        <strong class="form-control-static" data-bind="text: databaseID"></strong>
+                                        (current node)
+                                    </div>
+                                    <div data-bind="foreach: nonLocalDatabaseNodes">
+                                        <div class="margin-top margin-top-xs">
+                                            <div class="form-control-static">
+                                                <a href="#" target="_blank" data-bind="attr: { href: $root.linkToUnusedDatabaseIds($data) }">
+                                                    check database ID on Node <span data-bind="text: $data"></span> <i class="icon-link"></i> 
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+                            
                             <div data-bind="if: databaseChangeVector().length > 0">
                                 <div class="form-group margin-top margin-top-lg" >
                                     <label class="control-label">Change Vector</label>
                                     <div class="margin-top margin-top-sm flex-grow">
                                         <div data-bind="foreach: databaseChangeVector">
                                             <div class="row container-fluid">
-                                                <div class="col-xs-7 badge margin-bottom margin-bottom-sm change-vector-entry" data-bind="text: $data">
+                                                <div class="col-xs-7 badge margin-bottom margin-bottom-sm change-vector-entry padding padding-sm" data-bind="text: $data">
                                                 </div>
                                                 <div class="col-xs-5">
                                                     <span class="has-disable-reason" data-placement="right"
                                                           data-bind="attr: { 'data-original-title': $parent.itemIsInsideUnusedList($data)() ? 'ID entry already in list' : '' }">
-                                                        <button class="btn btn-default btn-sm margin-bottom margin-bottom-sm add-to-unused-btn" title="Click to add the database ID from this entry to the unused database IDs"
+                                                        <button class="btn btn-default btn-sm margin-bottom margin-bottom-sm" title="Click to add the database ID from this entry to the unused database IDs"
                                                                 data-bind="visible: $parent.canAddIdToUnusedIDs($data), disable: $parent.itemIsInsideUnusedList($data), click: _.partial($parent.addToUnusedList, $data)">
                                                             <span>Add to unused</span><i class="margin-left margin-left-sm icon-arrow-filled-right"></i>
                                                         </button>
