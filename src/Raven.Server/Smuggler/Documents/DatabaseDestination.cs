@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -23,11 +22,10 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -114,14 +112,14 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseKeyValueActions(_database);
         }
 
-        public ICompareExchangeActions CompareExchange(JsonOperationContext context)
+        public ICompareExchangeActions CompareExchange(JsonOperationContext context, RestoreBackupTaskBase.BackupType backupType)
         {
-            return new DatabaseCompareExchangeActions(_database, context, _token);
+            return new DatabaseCompareExchangeActions(_database, context, backupType, _token);
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(_database, context, _token);
+            return new DatabaseCompareExchangeActions(_database, context, RestoreBackupTaskBase.BackupType.None, _token);
         }
 
         public ICounterActions Counters(SmugglerResult result)
@@ -563,28 +561,32 @@ namespace Raven.Server.Smuggler.Documents
 
             private readonly DocumentDatabase _database;
             private readonly JsonOperationContext _context;
-            private readonly CancellationToken _token;
+
             private readonly List<RemoveCompareExchangeCommand> _compareExchangeRemoveCommands = new List<RemoveCompareExchangeCommand>();
             private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeAddOrUpdateCommands = new List<AddOrUpdateCompareExchangeCommand>();
             private DisposableReturnedArray<BatchRequestParser.CommandData> _clusterTransactionCommands = new DisposableReturnedArray<BatchRequestParser.CommandData>(BatchSize);
             private readonly DocumentContextHolder _documentContextHolder;
             private long? _lastAddOrUpdateOrRemoveResultIndex;
+            private long? _lastClusterTransactionIndex;
+            private readonly RestoreBackupTaskBase.BackupType _backupType;
+            private readonly CancellationToken _token;
 
-            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, CancellationToken token)
+            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, RestoreBackupTaskBase.BackupType backupType, CancellationToken token)
             {
                 _database = database;
                 _context = context;
+                _backupType = backupType;
                 _token = token;
                 _documentContextHolder = new DocumentContextHolder(database);
 
                 _compareExchangeValuesBatchSize = new Size(database.Is32Bits ? 2 : 4, SizeUnit.Megabytes);
                 _compareExchangeValuesSize = new Size(0, SizeUnit.Megabytes);
 
-                _clusterTransactionCommandsBatchSize = new Size(database.Is32Bits ? 2 : 32, SizeUnit.Megabytes);
+                _clusterTransactionCommandsBatchSize = new Size(database.Is32Bits ? 2 : 8, SizeUnit.Megabytes);
                 _clusterTransactionCommandsSize = new Size(0, SizeUnit.Megabytes);
             }
 
-            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, bool fromFullBackup)
+            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
             {
                 if (_compareExchangeValuesSize >= _compareExchangeValuesBatchSize || _compareExchangeAddOrUpdateCommands.Count >= BatchSize)
                 {
@@ -600,18 +602,42 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
+                    value?.Dispose();
+
                     var ctx = _documentContextHolder.GetContextForRead();
 
-                    var doc = _database.DocumentsStorage.Get(ctx, docId, DocumentFields.Data | DocumentFields.ChangeVector | DocumentFields.Id);
-                    if (doc == null)
-                        return;
+                    Document doc;
+                    if (existingDocument != null)
+                    {
+                        doc = existingDocument;
+                        doc.Data = doc.Data.Clone(ctx);
+                    }
+                    else
+                    {
+                        if (_backupType is RestoreBackupTaskBase.BackupType.Full or RestoreBackupTaskBase.BackupType.Incremental)
+                        {
+                            // if we are restoring from a backup, we'll check if the atomic guard already exists
+                            // if it does, we don't need to save it again
+                            using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                            using (context.OpenReadTransaction())
+                            {
+                                var result = _database.ServerStore.Cluster.GetCompareExchangeValue(context, CompareExchangeKey.GetStorageKey(_database.Name, key));
+                                if (result.Value != null)
+                                    return;
+                            }
+                        }
+
+                        doc = _database.DocumentsStorage.Get(ctx, docId, DocumentFields.Data | DocumentFields.ChangeVector | DocumentFields.Id);
+                        if (doc == null)
+                            return;
+                    }
 
                     _clusterTransactionCommands.Push(new BatchRequestParser.CommandData {
                         Id = doc.Id,
                         Document = doc.Data,
                         Type = CommandType.PUT,
                         OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector),
-                        FromFullBackup = fromFullBackup
+                        FromFullBackup = _backupType == RestoreBackupTaskBase.BackupType.Full
                     });
 
                     _clusterTransactionCommandsSize.Add(doc.Data.Size, SizeUnit.Bytes);
@@ -646,7 +672,10 @@ namespace Raven.Server.Smuggler.Documents
                     await SendRemoveCommandsAsync(_context);
 
                     if (_lastAddOrUpdateOrRemoveResultIndex != null)
-                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastAddOrUpdateOrRemoveResultIndex.Value);
+                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastAddOrUpdateOrRemoveResultIndex.Value, TimeSpan.FromMinutes(5));
+
+                    if (_lastClusterTransactionIndex != null)
+                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastClusterTransactionIndex.Value, TimeSpan.FromMinutes(5));
                 }
             }
 
@@ -680,19 +709,7 @@ namespace Raven.Server.Smuggler.Documents
                         ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
                     };
 
-                await _database.ServerStore.Cluster.WaitForIndexNotification(clusterTransactionResult.Index);
-
-                //When restoring from snapshot the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
-                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext writeContext))
-                using (writeContext.OpenWriteTransaction())
-                using (var rawDatabaseRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(writeContext, _database.Name, out _))
-                {
-                    if (rawDatabaseRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
-                    {
-                        await _database.ExecuteClusterTransaction(writeContext);
-                    }
-                }
-                await _database.RachisLogIndexNotifications.WaitForIndexNotification(clusterTransactionResult.Index, _token);
+                _lastClusterTransactionIndex = clusterTransactionResult.Index;
             }
 
             private async ValueTask SendAddOrUpdateCommandsAsync(JsonOperationContext context)
