@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -249,25 +249,62 @@ namespace FastTests.Client
                 using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new User { Name = "John" }, "users/1");
-                    newSession.Store(new User { Name = "Jane" }, "users/2");
-                    newSession.Store(new User { Name = "Tarzan" }, "users/3");
+                    newSession.Store(new User { Name = "john" }, "users/2");
+                    newSession.Store(new User { Name = "Jane" }, "users/3");
+                    newSession.Store(new User { Name = "jane" }, "users/4");
+                    newSession.Store(new User { Name = "Tarzan" }, "users/5");
+                    newSession.Store(new User { Name = "tarzan" }, "users/6");
                     newSession.SaveChanges();
 
                     var queryResult = newSession.Query<User>()
                         .Where(x => x.Name.StartsWith("J"))
                         .ToList();
+                    Assert.Equal(queryResult.Count, 4);
 
-                    var queryResult2 = newSession.Query<User>()
+                    queryResult = newSession.Query<User>()
+                        .Where(x => x.Name.StartsWith('j'))
+                        .ToList();
+                    Assert.Equal(queryResult.Count, 4);
+
+                    queryResult = newSession.Query<User>()
                         .Where(x => x.Name.Equals("Tarzan"))
                         .ToList();
+                    Assert.Equal(queryResult.Count, 2);
 
-                    var queryResult3 = newSession.Query<User>()
+                    queryResult = newSession.Query<User>()
                         .Where(x => x.Name.EndsWith("n"))
                         .ToList();
+                    Assert.Equal(queryResult.Count, 4);
 
+                    queryResult = newSession.Query<User>()
+                        .Where(x => x.Name.EndsWith('n'))
+                        .ToList();
+                    Assert.Equal(queryResult.Count, 4);
+
+                    queryResult = newSession.Query<User>()
+                        .Where(x => x.Name.StartsWith("j", StringComparison.InvariantCulture))
+                        .ToList();
                     Assert.Equal(queryResult.Count, 2);
-                    Assert.Equal(queryResult2.Count, 1);
-                    Assert.Equal(queryResult3.Count, 2);
+
+                    queryResult = newSession.Query<User>()
+                        .Where(x => x.Name.StartsWith("J", StringComparison.InvariantCulture))
+                        .ToList();
+                    Assert.Equal(queryResult.Count, 2);
+
+                    queryResult = newSession.Query<User>()
+                        .Where(x => x.Name.Equals("tarzan", StringComparison.Ordinal))
+                        .ToList();
+                    Assert.Equal(queryResult.Count, 1);
+
+                    queryResult = newSession.Query<User>()
+                        .Where(x => x.Name.EndsWith("n", StringComparison.InvariantCulture))
+                        .ToList();
+                    Assert.Equal(queryResult.Count, 4);
+
+                    queryResult = newSession.Query<User>()
+                        .Where(x => x.Name.EndsWith("N", StringComparison.InvariantCulture))
+                        .ToList();
+                    Assert.Equal(queryResult.Count, 0);
                 }
             }
         }
@@ -332,105 +369,142 @@ namespace FastTests.Client
 
             using var store = GetDocumentStore(options);
             using var session = store.OpenAsyncSession();
-            
+
             await session.StoreAsync(new User { Name = "John" });
             await session.StoreAsync(new User { Name = "Jane" });
             await session.StoreAsync(new User { Name = varStrToQuery });
+            await session.StoreAsync(new User { Name = varStrToQuery.ToLowerInvariant() });
             await session.SaveChangesAsync();
 
             var queryResult = await session.Query<User>()
                 //x.Name - ExpressionType.MemberAccess, varStrToQuery - ExpressionType.MemberAccess
                 .Where(x => string.Equals(x.Name, varStrToQuery))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //x.Name - ExpressionType.MemberAccess, varStrToQuery - ExpressionType.MemberAccess
                 .Where(x => string.Equals(x.Name, varStrToQuery, StringComparison.OrdinalIgnoreCase))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //x.Name - ExpressionType.MemberAccess, constStrToQuery - ExpressionType.Constant
                 .Where(x => string.Equals(x.Name, constStrToQuery))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //x.Name - ExpressionType.MemberAccess, constStrToQuery - ExpressionType.Constant
                 .Where(x => string.Equals(x.Name, constStrToQuery, StringComparison.CurrentCultureIgnoreCase))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //x.Name - ExpressionType.MemberAccess, varStrToQuery - ExpressionType.MemberAccess
                 .Where(x => string.Equals(varStrToQuery, x.Name))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //x.Name - ExpressionType.MemberAccess, varStrToQuery - ExpressionType.MemberAccess
                 .Where(x => string.Equals(varStrToQuery, x.Name, StringComparison.CurrentCultureIgnoreCase))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //constStrToQuery - ExpressionType.Constant, x.Name - ExpressionType.MemberAccess, 
                 .Where(x => string.Equals(constStrToQuery, x.Name))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //constStrToQuery - ExpressionType.Constant, x.Name - ExpressionType.MemberAccess, 
                 .Where(x => string.Equals(constStrToQuery, x.Name, StringComparison.CurrentCultureIgnoreCase))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //varStrToQuery - ExpressionType.MemberAccess, x.Name - ExpressionType.MemberAccess
                 .Where(x => varStrToQuery.Equals(x.Name))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //varStrToQuery - ExpressionType.MemberAccess, x.Name - ExpressionType.MemberAccess
                 .Where(x => varStrToQuery.Equals(x.Name, StringComparison.OrdinalIgnoreCase))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //varStrToQuery - ExpressionType.Constant, x.Name - ExpressionType.MemberAccess
                 .Where(x => constStrToQuery.Equals(x.Name))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
-            
+            Assert.Equal(queryResult.Count, 2);
+
             queryResult = await session.Query<User>()
                 //varStrToQuery - ExpressionType.Constant, x.Name - ExpressionType.MemberAccess
                 .Where(x => constStrToQuery.Equals(x.Name, StringComparison.OrdinalIgnoreCase))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //x.Name - ExpressionType.MemberAccess, varStrToQuery - ExpressionType.MemberAccess
                 .Where(x => x.Name.Equals(varStrToQuery))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //x.Name - ExpressionType.MemberAccess, varStrToQuery - ExpressionType.MemberAccess
                 .Where(x => x.Name.Equals(varStrToQuery, StringComparison.OrdinalIgnoreCase))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //x.Name - ExpressionType.MemberAccess, constStrToQuery - ExpressionType.Constant
                 .Where(x => x.Name.Equals(constStrToQuery))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<User>()
                 //x.Name - ExpressionType.MemberAccess, constStrToQuery - ExpressionType.Constant
                 .Where(x => x.Name.Equals(constStrToQuery, StringComparison.CurrentCultureIgnoreCase))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 2);
+
+            queryResult = await session.Query<User>()
+                //x.Name - ExpressionType.MemberAccess, varStrToQuery - ExpressionType.Constant
+                .Where(x => x.Name.Equals(varStrToQuery, StringComparison.CurrentCulture))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<User>()
+                //x.Name - ExpressionType.MemberAccess, constStrToQuery - ExpressionType.Constant
+                .Where(x => x.Name.Equals(constStrToQuery, StringComparison.CurrentCulture))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<User>()
+                //x.Name - ExpressionType.MemberAccess, varStrToQuery - ExpressionType.Constant
+                .Where(x => x.Name.Equals(varStrToQuery, StringComparison.Ordinal))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<User>()
+                //x.Name - ExpressionType.MemberAccess, constStrToQuery - ExpressionType.Constant
+                .Where(x => x.Name.Equals(constStrToQuery, StringComparison.Ordinal))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<User>()
+                //x.Name - ExpressionType.MemberAccess, varStrToQuery - ExpressionType.Constant
+                .Where(x => x.Name.Equals(varStrToQuery, StringComparison.InvariantCulture))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<User>()
+                //x.Name - ExpressionType.MemberAccess, constStrToQuery - ExpressionType.Constant
+                .Where(x => x.Name.Equals(constStrToQuery, StringComparison.InvariantCulture))
                 .ToListAsync();
             Assert.Equal(queryResult.Count, 1);
         }
@@ -453,101 +527,174 @@ namespace FastTests.Client
             await session.StoreAsync(new Test {StrList = new[]{"John"}});
             await session.StoreAsync(new Test {StrList = new[]{"Jane"}});
             await session.StoreAsync(new Test {StrList = new[]{varStrToQuery}});
+            await session.StoreAsync(new Test {StrList = new[]{varStrToQuery.ToLowerInvariant()}});
             await session.SaveChangesAsync();
 
             var queryResult = await session.Query<Test>()
                 //x1 - ExpressionType.Parameter, varStrToQuery - ExpressionType.MemberAccess
                 .Where(x => x.StrList.Any(x1 => string.Equals(x1, varStrToQuery)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //x1 - ExpressionType.Parameter, varStrToQuery - ExpressionType.MemberAccess
                 .Where(x => x.StrList.Any(x1 => string.Equals(x1, varStrToQuery, StringComparison.OrdinalIgnoreCase)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //x.Name - ExpressionType.Parameter, constStrToQuery - ExpressionType.Constant
                 .Where(x => x.StrList.Any(x1 => string.Equals(x1, constStrToQuery)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //x.Name - ExpressionType.Parameter, constStrToQuery - ExpressionType.Constant
                 .Where(x => x.StrList.Any(x1 => string.Equals(x1, constStrToQuery, StringComparison.OrdinalIgnoreCase)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //varStrToQuery - ExpressionType.Parameter, x1 - ExpressionType.MemberAccess
                 .Where(x => x.StrList.Any(x1 => string.Equals(varStrToQuery, x1)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //varStrToQuery - ExpressionType.Parameter, x1 - ExpressionType.MemberAccess
                 .Where(x => x.StrList.Any(x1 => string.Equals(varStrToQuery, x1, StringComparison.OrdinalIgnoreCase)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //constStrToQuery - ExpressionType.Constant, x1 - ExpressionType.Parameter, 
                 .Where(x => x.StrList.Any(x1 => string.Equals(constStrToQuery, x1)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //constStrToQuery - ExpressionType.Constant, x1 - ExpressionType.Parameter, 
                 .Where(x => x.StrList.Any(x1 => string.Equals(constStrToQuery, x1, StringComparison.OrdinalIgnoreCase)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //varStrToQuery - ExpressionType.MemberAccess, x1 - ExpressionType.Parameter
                 .Where(x => x.StrList.Any(x1 => varStrToQuery.Equals(x1)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //varStrToQuery - ExpressionType.MemberAccess, x1 - ExpressionType.Parameter
                 .Where(x => x.StrList.Any(x1 => varStrToQuery.Equals(x1, StringComparison.OrdinalIgnoreCase)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //varStrToQuery - ExpressionType.Constant, x1 - ExpressionType.Parameter
                 .Where(x => x.StrList.Any(x1 => constStrToQuery.Equals(x1)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //varStrToQuery - ExpressionType.Constant, x1 - ExpressionType.Parameter
                 .Where(x => x.StrList.Any(x1 => constStrToQuery.Equals(x1, StringComparison.OrdinalIgnoreCase)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
+            Assert.Equal(queryResult.Count, 2);
             
             queryResult = await session.Query<Test>()
                 //x1 - ExpressionType.Parameter, varStrToQuery - ExpressionType.MemberAccess
                 .Where(x => x.StrList.Any(x1 => x1.Equals(varStrToQuery)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
-            
+            Assert.Equal(queryResult.Count, 2);
+
             queryResult = await session.Query<Test>()
                 //x1 - ExpressionType.Parameter, varStrToQuery - ExpressionType.MemberAccess
                 .Where(x => x.StrList.Any(x1 => x1.Equals(varStrToQuery, StringComparison.CurrentCultureIgnoreCase)))
                 .ToListAsync();
-            Assert.Equal(queryResult.Count, 1);
-            
+            Assert.Equal(queryResult.Count, 2);
+
             queryResult = await session.Query<Test>()
                 //x1 - ExpressionType.Parameter, constStrToQuery - ExpressionType.Constant
                 .Where(x => x.StrList.Any(x1 => x1.Equals(constStrToQuery)))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 2);
+
+            queryResult = await session.Query<Test>()
+                //x1 - ExpressionType.Parameter, constStrToQuery - ExpressionType.Constant
+                .Where(x => x.StrList.Any(x1 => x1.Equals(constStrToQuery, StringComparison.CurrentCultureIgnoreCase)))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 2);
+
+            queryResult = await session.Query<Test>()
+                //x1 - ExpressionType.Parameter, varStrToQuery - ExpressionType.MemberAccess
+                .Where(x => x.StrList.Any(x1 => x1.Equals(varStrToQuery, StringComparison.InvariantCultureIgnoreCase)))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 2);
+
+            queryResult = await session.Query<Test>()
+                //x1 - ExpressionType.Parameter, constStrToQuery - ExpressionType.Constant
+                .Where(x => x.StrList.Any(x1 => x1.Equals(constStrToQuery, StringComparison.InvariantCultureIgnoreCase)))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 2);
+
+            queryResult = await session.Query<Test>()
+              //x1 - ExpressionType.Parameter, varStrToQuery - ExpressionType.MemberAccess
+              .Where(x => x.StrList.Any(x1 => string.Equals(x1, varStrToQuery, StringComparison.Ordinal)))
+              .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<Test>()
+                //x.Name - ExpressionType.Parameter, constStrToQuery - ExpressionType.Constant
+                .Where(x => x.StrList.Any(x1 => string.Equals(x1, constStrToQuery, StringComparison.Ordinal)))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<Test>()
+                //varStrToQuery - ExpressionType.Parameter, x1 - ExpressionType.MemberAccess
+                .Where(x => x.StrList.Any(x1 => string.Equals(varStrToQuery, x1, StringComparison.Ordinal)))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<Test>()
+                //constStrToQuery - ExpressionType.Constant, x1 - ExpressionType.Parameter,
+                .Where(x => x.StrList.Any(x1 => string.Equals(constStrToQuery, x1, StringComparison.Ordinal)))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<Test>()
+                //varStrToQuery - ExpressionType.MemberAccess, x1 - ExpressionType.Parameter
+                .Where(x => x.StrList.Any(x1 => varStrToQuery.Equals(x1, StringComparison.Ordinal)))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<Test>()
+                //varStrToQuery - ExpressionType.Constant, x1 - ExpressionType.Parameter
+                .Where(x => x.StrList.Any(x1 => constStrToQuery.Equals(x1, StringComparison.Ordinal)))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<Test>()
+                //x1 - ExpressionType.Parameter, varStrToQuery - ExpressionType.MemberAccess
+                .Where(x => x.StrList.Any(x1 => x1.Equals(varStrToQuery, StringComparison.CurrentCulture)))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<Test>()
+                //x1 - ExpressionType.Parameter, constStrToQuery - ExpressionType.Constant
+                .Where(x => x.StrList.Any(x1 => x1.Equals(constStrToQuery, StringComparison.CurrentCulture)))
+                .ToListAsync();
+            Assert.Equal(queryResult.Count, 1);
+
+            queryResult = await session.Query<Test>()
+                //x1 - ExpressionType.Parameter, varStrToQuery - ExpressionType.MemberAccess
+                .Where(x => x.StrList.Any(x1 => x1.Equals(varStrToQuery, StringComparison.InvariantCulture)))
                 .ToListAsync();
             Assert.Equal(queryResult.Count, 1);
             
             queryResult = await session.Query<Test>()
                 //x1 - ExpressionType.Parameter, constStrToQuery - ExpressionType.Constant
-                .Where(x => x.StrList.Any(x1 => x1.Equals(constStrToQuery, StringComparison.CurrentCultureIgnoreCase)))
+                .Where(x => x.StrList.Any(x1 => x1.Equals(constStrToQuery, StringComparison.InvariantCulture)))
                 .ToListAsync();
             Assert.Equal(queryResult.Count, 1);
         }
@@ -569,51 +716,22 @@ namespace FastTests.Client
             await session.StoreAsync(new Test {StrList = new[]{"Jane"}});
             await session.StoreAsync(new Test {StrList = new[]{toQuery}});
             await session.SaveChangesAsync();
-            
+
             await Assert.ThrowsAsync<NotSupportedException>(async () =>
             {
                 await session.Query<User>()
                     .Where(x => string.Equals(x.Name, x.LastName))
                     .ToListAsync();
             });
-            
-            await Assert.ThrowsAsync<NotSupportedException>(async () =>
-            {
-                await session.Query<User>()
-                    .Where(x => string.Equals(x.Name, toQuery, StringComparison.Ordinal))
-                    .ToListAsync();
-            });
-            
+
             await Assert.ThrowsAsync<NotSupportedException>(async () =>
             {
                 await session.Query<User>()
                     .Where(x => x.Name.Equals(x.LastName))
                     .ToListAsync();
             });
-            
-            await Assert.ThrowsAsync<NotSupportedException>(async () =>
-            {
-                await session.Query<User>()
-                    .Where(x => x.Name.Equals(toQuery, StringComparison.CurrentCulture))
-                    .ToListAsync();
-            });
-
-            await Assert.ThrowsAsync<NotSupportedException>(async () =>
-            {
-                await session.Query<Test>()
-                    .Where(x => x.StrList.Any(x1 => string.Equals(x1, toQuery, StringComparison.CurrentCulture)))
-                    .ToListAsync();
-            });
-
-            await Assert.ThrowsAsync<NotSupportedException>(async () =>
-            {
-                await session.Query<Test>()
-                    //x1 - ExpressionType.Parameter, varStrToQuery - ExpressionType.MemberAccess
-                    .Where(x => x.StrList.Any(x1 => x1.Equals(toQuery, StringComparison.Ordinal)))
-                    .ToListAsync();
-            });
         }
-        
+
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void Query_With_Customize(Options options)
