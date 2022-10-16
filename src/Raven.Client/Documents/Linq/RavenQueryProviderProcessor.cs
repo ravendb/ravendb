@@ -765,7 +765,7 @@ namespace Raven.Client.Documents.Linq
 
         private void VisitEquals(MethodCallExpression expression)
         {
-            GetEqualsArgumentsFromExpression(expression, out var firstArg, out var secondArg, out var comparisonArg);
+            GetStringComparisonArgumentsFromExpression(expression, out var firstArg, out var secondArg, out var comparisonArg);
 
             ExpressionInfo fieldInfo;
             Expression constant;
@@ -791,35 +791,45 @@ namespace Raven.Client.Documents.Linq
                                                 $"`{firstArg}` and `{secondArg}` are both constants, so cannot convert {expression} to a proper query.");
             }
 
-            if (comparisonArg != null
-                && comparisonArg.NodeType == ExpressionType.Constant
-                && comparisonArg.Type == typeof(StringComparison))
-            {
-                var comparisonType = ((ConstantExpression)comparisonArg).Value;
-                switch ((StringComparison)comparisonType)
-                {
-                    case StringComparison.CurrentCulture:
-                    case StringComparison.Ordinal:
-                        throw new NotSupportedException(
-                            "RavenDB queries case sensitivity is dependent on the index, not the query. If you need case sensitive queries, use a static index and an NotAnalyzed field for that.");
-                    case StringComparison.CurrentCultureIgnoreCase:
-                    case StringComparison.OrdinalIgnoreCase:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
+            bool exact = _insideExact ? true : ConvertStringComparisonToExact(comparisonArg);
 
             DocumentQuery.WhereEquals(new WhereParams
             {
                 FieldName = fieldInfo.Path,
                 Value = GetValueFromExpression(constant, GetMemberType(fieldInfo)),
                 AllowWildcards = false,
-                Exact = _insideExact
+                Exact = exact
             });
         }
 
-        private static void GetEqualsArgumentsFromExpression(MethodCallExpression expression, out Expression firstArg, out Expression secondArg, out Expression comparisonArg)
+        private static bool ConvertStringComparisonToExact(Expression comparisonArg)
+        {
+            if (comparisonArg != null
+                    && comparisonArg.NodeType == ExpressionType.Constant
+                    && comparisonArg.Type == typeof(StringComparison))
+            {
+                var comparisonType = ((ConstantExpression)comparisonArg).Value;
+                switch ((StringComparison)comparisonType)
+                {
+                    case StringComparison.InvariantCulture:
+                    case StringComparison.CurrentCulture:
+                    case StringComparison.Ordinal:
+                        return true;
+
+                    case StringComparison.InvariantCultureIgnoreCase:
+                    case StringComparison.CurrentCultureIgnoreCase:
+                    case StringComparison.OrdinalIgnoreCase:
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException("value", comparisonType, "Unsupported string comparison type.");
+                }
+            }
+
+            return false;
+        }
+
+        private static void GetStringComparisonArgumentsFromExpression(MethodCallExpression expression, out Expression firstArg, out Expression secondArg, out Expression comparisonArg)
         {
             comparisonArg = null;
             if (expression.Object == null)
@@ -846,20 +856,28 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void VisitStartsWith(MethodCallExpression expression)
         {
+            GetStringComparisonArgumentsFromExpression(expression, out var firstArg, out var secondArg, out var comparisonArg);
+
             var memberInfo = GetMember(expression.Object);
+
+            bool exact = _insideExact ? true : ConvertStringComparisonToExact(comparisonArg);
 
             DocumentQuery.WhereStartsWith(
                 memberInfo.Path,
-                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)), _insideExact);
+                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)), exact);
         }
 
         private void VisitEndsWith(MethodCallExpression expression)
         {
+            GetStringComparisonArgumentsFromExpression(expression, out var firstArg, out var secondArg, out var comparisonArg);
+
             var memberInfo = GetMember(expression.Object);
+
+            bool exact = _insideExact ? true : ConvertStringComparisonToExact(comparisonArg);
 
             DocumentQuery.WhereEndsWith(
                 memberInfo.Path,
-                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)), _insideExact);
+                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)), exact);
         }
 
         private void VisitIsNullOrEmpty(MethodCallExpression expression, bool notEquals)
