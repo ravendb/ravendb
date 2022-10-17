@@ -739,6 +739,7 @@ namespace Raven.Server.Rachis
         {
             var maxCommandsToProcessSize = new Size(32, SizeUnit.Megabytes); // TODO [ppekrol] make configurable
             var maxCommandsToProcessCount = 128; // TODO [ppekrol] make configurable
+            var maxCommandsToProcessTime = TimeSpan.FromMilliseconds(100); // TODO [ppekrol] make configurable
 
             var commandsToProcessSize = new Size(0, SizeUnit.Bytes);
             var commandsToProcess = new List<(RachisMergedCommand Command, BlittableJsonReaderObject CommandJson)>();
@@ -751,6 +752,7 @@ namespace Raven.Server.Rachis
                 {
                     using (context.OpenReadTransaction())
                     {
+                        var sw = Stopwatch.StartNew();
                         var cmdsCount = 0;
                         _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
                         while (cmdsCount++ < maxCommandsToProcessCount && _commandsQueue.TryDequeue(out var commandToProcess))
@@ -800,6 +802,9 @@ namespace Raven.Server.Rachis
                             commandsToProcessSize.Add(commandJson.Size, SizeUnit.Bytes);
 
                             if (commandsToProcessSize >= maxCommandsToProcessSize)
+                                break;
+
+                            if (sw.Elapsed >= maxCommandsToProcessTime)
                                 break;
                         }
                     }

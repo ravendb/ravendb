@@ -97,7 +97,7 @@ namespace Sparrow.Threading
             return Interlocked.CompareExchange(ref _state, 1, 0) == 0;
         }
 
-        /// <returns>True iff the flag is raised</returns>
+        /// <returns>True if the flag is raised</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsRaised()
         {
