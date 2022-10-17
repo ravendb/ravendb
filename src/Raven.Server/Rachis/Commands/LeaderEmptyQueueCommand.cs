@@ -36,12 +36,12 @@ internal class LeaderEmptyQueueCommand : MergedTransactionCommand<ClusterOperati
 
             if (_engine.LogHistory.HasHistoryLog(context, command.Command.UniqueRequestId, out var index, out var result, out var exception))
             {
-                var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                Tasks.Add(tcs.Task);
-
                 // if this command is already committed, we can skip it and notify the caller about it
                 if (lastCommitted >= index)
                 {
+                    var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    Tasks.Add(tcs.Task);
+
                     if (exception != null)
                     {
                         tcs.TrySetException(exception);
