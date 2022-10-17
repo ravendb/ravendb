@@ -860,7 +860,7 @@ namespace RachisTests
                 while (true)
                 {
                     var r = await cluster.Leader.ServerStore.Engine.CurrentLeader.TryModifyTopologyAsync(follower.ServerStore.NodeTag, follower.ServerStore.Engine.Url, Leader.TopologyModification.NonVoter);
-                    if (r.Result == false)
+                    if (r.Success == false)
                         continue;
 
                     await r.Task;
