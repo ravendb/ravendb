@@ -2133,11 +2133,10 @@ namespace Raven.Server.Rachis
             while (true)
             {
                 var result = await leader.TryModifyTopologyAsync(nodeTag, nodeUrl, modification, validateNotInTopology);
-                if (result.Success == false)
-                    continue;
-
                 await result.Task;
-                break;
+
+                if (result.Success)
+                    break;
             }
         }
 

@@ -1016,7 +1016,7 @@ namespace Raven.Server.Rachis
                 catch (Exception e)
                 {
                     if (e is AggregateException ae)
-                        e = e.ExtractSingleInnerException();
+                        e = ae.ExtractSingleInnerException();
 
                     Interlocked.Exchange(ref _topologyModification, null)?.TrySetException(e);
                     throw;
