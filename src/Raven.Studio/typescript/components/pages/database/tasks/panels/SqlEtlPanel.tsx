@@ -63,7 +63,7 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
         (transformationName: string) => {
             showItemPreview(data, transformationName);
         },
-        [data]
+        [data, showItemPreview]
     );
 
     return (

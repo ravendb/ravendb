@@ -91,7 +91,7 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
 
     useEffect(() => {
         loadDetailedStats();
-    }, [database, databasesService]);
+    }, [loadDetailedStats]);
 
     return (
         <div className="margin-top">

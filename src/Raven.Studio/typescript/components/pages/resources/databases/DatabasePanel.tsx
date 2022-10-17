@@ -17,6 +17,8 @@ interface DatabasePanelProps {
     toggleSelection: () => void;
 }
 
+//TODO:
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function badgeClass(db: DatabaseSharedInfo) {
     /* TODO
      if (this.hasLoadError()) {
@@ -36,6 +38,7 @@ function badgeClass(db: DatabaseSharedInfo) {
     return "state-success";
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function badgeText(db: DatabaseSharedInfo) {
     /* TODO
         if (this.hasLoadError()) {
@@ -117,7 +120,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                 setLockChanges(false);
             }
         },
-        [db]
+        [databasesService]
     );
 
     const allowDatabaseDelete: MouseEventHandler<HTMLElement> = useCallback(
@@ -127,7 +130,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
             eventsCollector.reportEvent("databases", "set-lock-mode", "Unlock");
             await updateDatabaseLockMode(db, "Unlock");
         },
-        [db]
+        [db, eventsCollector, updateDatabaseLockMode]
     );
 
     const preventDatabaseDelete: MouseEventHandler<HTMLElement> = useCallback(
@@ -137,7 +140,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
             eventsCollector.reportEvent("databases", "set-lock-mode", "LockedIgnore");
             await updateDatabaseLockMode(db, "PreventDeletesIgnore");
         },
-        [db]
+        [db, eventsCollector, updateDatabaseLockMode]
     );
 
     const preventDatabaseDeleteWithError: MouseEventHandler<HTMLElement> = useCallback(
@@ -147,7 +150,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
             eventsCollector.reportEvent("databases", "set-lock-mode", "LockedError");
             await updateDatabaseLockMode(db, "PreventDeletesError");
         },
-        [db]
+        [db, eventsCollector, updateDatabaseLockMode]
     );
 
     //TODO: createIsLocalDatabaseObservable -> relevant

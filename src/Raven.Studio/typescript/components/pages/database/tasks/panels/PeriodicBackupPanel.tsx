@@ -93,7 +93,7 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
 
         const fromDuration = genUtils.formatDurationByDate(moment.utc(onGoingBackup.StartTime), true);
         return `${fromDuration} (${formatBackupType(data.shared.backupType, onGoingBackup.IsFull)})`;
-    }, [data.shared]);
+    }, [data.shared, onGoingBackup]);
 
     const retentionPolicyHumanized = useMemo(() => {
         const disabled = data.shared.retentionPolicy ? data.shared.retentionPolicy.Disabled : true;

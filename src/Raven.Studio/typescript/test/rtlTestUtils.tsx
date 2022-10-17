@@ -56,11 +56,11 @@ async function fillInput(element: HTMLElement, value: string) {
     });
 }
 
-const AllProviders =
-    () =>
-    ({ children }: any) => {
-        return <ServiceProvider services={mockServices.context}>{children}</ServiceProvider>;
-    };
+const AllProviders = () => AllProvidersInner;
+
+function AllProvidersInner({ children }: any) {
+    return <ServiceProvider services={mockServices.context}>{children}</ServiceProvider>;
+}
 
 export function rtlRender(
     ui: React.ReactElement,

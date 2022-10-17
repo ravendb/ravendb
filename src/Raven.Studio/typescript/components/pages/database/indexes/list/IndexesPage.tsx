@@ -230,6 +230,8 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const [selectedIndexes, setSelectedIndexes] = useState<string[]>([]);
     const [swapNowProgress, setSwapNowProgress] = useState<string[]>([]);
+    //TODO:
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [globalLockChanges, setGlobalLockChanges] = useState(false);
 
     const { groups, replacements } = useMemo(() => {
@@ -243,7 +245,7 @@ export function IndexesPage(props: IndexesPageProps) {
         }
 
         return groupedIndexes;
-    }, [stats, filter]);
+    }, [stats, filter, selectedIndexes]);
 
     const fetchProgress = async (location: databaseLocationSpecifier) => {
         try {
@@ -272,7 +274,7 @@ export function IndexesPage(props: IndexesPageProps) {
                 stats,
             });
         },
-        [database]
+        [database, indexesService]
     );
 
     const throttledRefresh = useRef(
@@ -299,12 +301,14 @@ export function IndexesPage(props: IndexesPageProps) {
         }
     }, 3_000);
 
+    const [resettingIndex, setResettingIndex] = useState(false);
+
     useEffect(() => {
         const nodeTag = clusterTopologyManager.default.localNodeTag();
         const initialLocation = database.getFirstLocation(nodeTag);
 
         fetchStats(initialLocation);
-    }, []);
+    }, [fetchStats, database]);
 
     const processIndexEvent = useCallback(
         (e: Raven.Client.Documents.Changes.IndexChange) => {
@@ -318,7 +322,7 @@ export function IndexesPage(props: IndexesPageProps) {
 
             throttledRefresh.current();
         },
-        [filter.autoRefresh]
+        [filter.autoRefresh, resettingIndex]
     );
 
     useEffect(() => {
@@ -357,132 +361,152 @@ export function IndexesPage(props: IndexesPageProps) {
         return confirmDeleteIndexes(database, getSelectedIndexes());
     };
 
-    const disableIndexes = async (
-        enableIndex: boolean,
-        indexes: IndexSharedInfo[],
-        locations: databaseLocationSpecifier[]
-    ) => {
-        eventsCollector.reportEvent("index", "toggle-status", status);
+    const disableIndexes = useCallback(
+        async (enableIndex: boolean, indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
+            eventsCollector.reportEvent("index", "toggle-status", status);
 
-        const locationsToApply = [...locations];
+            const locationsToApply = [...locations];
 
-        while (locationsToApply.length > 0) {
-            const location = locationsToApply.pop();
+            while (locationsToApply.length > 0) {
+                const location = locationsToApply.pop();
 
-            const indexesToApply = [...indexes];
-            while (indexesToApply.length > 0) {
-                const index = indexesToApply.pop();
-                if (enableIndex) {
-                    await indexesService.enable(index, database, location);
-                } else {
-                    await indexesService.disable(index, database, location);
+                const indexesToApply = [...indexes];
+                while (indexesToApply.length > 0) {
+                    const index = indexesToApply.pop();
+                    if (enableIndex) {
+                        await indexesService.enable(index, database, location);
+                    } else {
+                        await indexesService.disable(index, database, location);
+                    }
+
+                    dispatch({
+                        type: enableIndex ? "EnableIndexing" : "DisableIndexing",
+                        indexName: index.name,
+                        location,
+                    });
                 }
-
-                dispatch({
-                    type: enableIndex ? "EnableIndexing" : "DisableIndexing",
-                    indexName: index.name,
-                    location,
-                });
             }
-        }
-    };
+        },
+        [indexesService, database, eventsCollector]
+    );
 
-    const toggleDisableIndexes = useCallback(async (enableIndex: boolean, indexes: IndexSharedInfo[]) => {
-        const locations = database.getLocations();
-        const confirmation = enableIndex
-            ? bulkIndexOperationConfirm.forEnable(indexes, locations)
-            : bulkIndexOperationConfirm.forDisable(indexes, locations);
+    const toggleDisableIndexes = useCallback(
+        async (enableIndex: boolean, indexes: IndexSharedInfo[]) => {
+            const locations = database.getLocations();
+            const confirmation = enableIndex
+                ? bulkIndexOperationConfirm.forEnable(indexes, locations)
+                : bulkIndexOperationConfirm.forDisable(indexes, locations);
 
-        confirmation.result.done((result) => {
-            if (result.can) {
-                disableIndexes(enableIndex, indexes, result.locations);
-            }
-        });
+            confirmation.result.done((result) => {
+                if (result.can) {
+                    disableIndexes(enableIndex, indexes, result.locations);
+                }
+            });
 
-        app.showBootstrapDialog(confirmation);
-    }, []);
+            app.showBootstrapDialog(confirmation);
+        },
+        [database, disableIndexes]
+    );
 
     const enableSelectedIndexes = useCallback(
         () => toggleDisableIndexes(true, getSelectedIndexes()),
-        [getSelectedIndexes]
+        [getSelectedIndexes, toggleDisableIndexes]
     );
 
     const disableSelectedIndexes = useCallback(
         () => toggleDisableIndexes(false, getSelectedIndexes()),
-        [getSelectedIndexes]
+        [getSelectedIndexes, toggleDisableIndexes]
     );
 
-    const pauseIndexes = async (
-        resume: boolean,
-        indexes: IndexSharedInfo[],
-        locations: databaseLocationSpecifier[]
-    ) => {
-        eventsCollector.reportEvent("index", "toggle-status", status);
+    const pauseIndexes = useCallback(
+        async (resume: boolean, indexes: IndexSharedInfo[], locations: databaseLocationSpecifier[]) => {
+            eventsCollector.reportEvent("index", "toggle-status", status);
 
-        const locationsToApply = [...locations];
+            const locationsToApply = [...locations];
 
-        while (locationsToApply.length > 0) {
-            const location = locationsToApply.pop();
+            while (locationsToApply.length > 0) {
+                const location = locationsToApply.pop();
 
-            const indexesToApply = [...indexes];
-            while (indexesToApply.length > 0) {
-                const index = indexesToApply.pop();
-                if (resume) {
-                    await indexesService.resume(index, database, location);
-                } else {
-                    await indexesService.pause(index, database, location);
+                const indexesToApply = [...indexes];
+                while (indexesToApply.length > 0) {
+                    const index = indexesToApply.pop();
+                    if (resume) {
+                        await indexesService.resume(index, database, location);
+                    } else {
+                        await indexesService.pause(index, database, location);
+                    }
+
+                    dispatch({
+                        type: resume ? "ResumeIndexing" : "PauseIndexing",
+                        indexName: index.name,
+                        location,
+                    });
                 }
-
-                dispatch({
-                    type: resume ? "ResumeIndexing" : "PauseIndexing",
-                    indexName: index.name,
-                    location,
-                });
             }
-        }
-    };
+        },
+        [eventsCollector, indexesService, database]
+    );
 
-    const togglePauseIndexes = useCallback(async (resume: boolean, indexes: IndexSharedInfo[]) => {
-        const locations = database.getLocations();
-        const confirmation = resume
-            ? bulkIndexOperationConfirm.forResume(indexes, locations)
-            : bulkIndexOperationConfirm.forPause(indexes, locations);
+    const togglePauseIndexes = useCallback(
+        async (resume: boolean, indexes: IndexSharedInfo[]) => {
+            const locations = database.getLocations();
+            const confirmation = resume
+                ? bulkIndexOperationConfirm.forResume(indexes, locations)
+                : bulkIndexOperationConfirm.forPause(indexes, locations);
 
-        confirmation.result.done((result) => {
-            if (result.can) {
-                pauseIndexes(resume, indexes, result.locations);
-            }
-        });
+            confirmation.result.done((result) => {
+                if (result.can) {
+                    pauseIndexes(resume, indexes, result.locations);
+                }
+            });
 
-        app.showBootstrapDialog(confirmation);
-    }, []);
+            app.showBootstrapDialog(confirmation);
+        },
+        [database, pauseIndexes]
+    );
 
     const resumeSelectedIndexes = useCallback(
         () => togglePauseIndexes(true, getSelectedIndexes()),
-        [getSelectedIndexes]
+        [getSelectedIndexes, togglePauseIndexes]
     );
 
     const pauseSelectedIndexes = useCallback(
         () => togglePauseIndexes(false, getSelectedIndexes()),
-        [getSelectedIndexes]
+        [getSelectedIndexes, togglePauseIndexes]
     );
 
-    const setLockModeSelectedIndexes = async (lockMode: IndexLockMode, indexes: IndexSharedInfo[]) => {
-        eventsCollector.reportEvent("index", "set-lock-mode-selected", lockMode);
+    const setIndexLockModeInternal = useCallback(
+        async (index: IndexSharedInfo, lockMode: IndexLockMode) => {
+            await indexesService.setLockMode([index], lockMode, database);
 
-        if (indexes.length) {
-            setGlobalLockChanges(true);
+            dispatch({
+                type: "SetLockMode",
+                lockMode,
+                indexName: index.name,
+            });
+        },
+        [database, indexesService]
+    );
 
-            try {
-                while (indexes.length) {
-                    await setIndexLockModeInternal(indexes.pop(), lockMode);
+    const setLockModeSelectedIndexes = useCallback(
+        async (lockMode: IndexLockMode, indexes: IndexSharedInfo[]) => {
+            eventsCollector.reportEvent("index", "set-lock-mode-selected", lockMode);
+
+            if (indexes.length) {
+                setGlobalLockChanges(true);
+
+                try {
+                    while (indexes.length) {
+                        await setIndexLockModeInternal(indexes.pop(), lockMode);
+                    }
+                    messagePublisher.reportSuccess("Lock mode was set to: " + IndexUtils.formatLockMode(lockMode));
+                } finally {
+                    setGlobalLockChanges(false);
                 }
-                messagePublisher.reportSuccess("Lock mode was set to: " + IndexUtils.formatLockMode(lockMode));
-            } finally {
-                setGlobalLockChanges(false);
             }
-        }
-    };
+        },
+        [eventsCollector, setIndexLockModeInternal]
+    );
 
     const confirmSetLockModeSelectedIndexes = useCallback(
         async (lockMode: IndexLockMode) => {
@@ -508,7 +532,7 @@ export function IndexesPage(props: IndexesPageProps) {
                     }
                 });
         },
-        [selectedIndexes, stats, setLockModeSelectedIndexes, getSelectedIndexes]
+        [setLockModeSelectedIndexes, getSelectedIndexes]
     );
 
     const confirmDeleteIndexes = async (db: database, indexes: IndexSharedInfo[]): Promise<void> => {
@@ -537,19 +561,6 @@ export function IndexesPage(props: IndexesPageProps) {
             indexName: index.name,
         });
     };
-
-    const setIndexLockModeInternal = useCallback(
-        async (index: IndexSharedInfo, lockMode: IndexLockMode) => {
-            await indexesService.setLockMode([index], lockMode, database);
-
-            dispatch({
-                type: "SetLockMode",
-                lockMode,
-                indexName: index.name,
-            });
-        },
-        [database]
-    );
 
     const setIndexLockMode = useCallback(
         async (index: IndexSharedInfo, lockMode: IndexLockMode) => {
@@ -602,8 +613,6 @@ export function IndexesPage(props: IndexesPageProps) {
                 }
             });
     };
-
-    const [resettingIndex, setResettingIndex] = useState(false);
 
     const resetIndex = async (index: IndexSharedInfo) => {
         const canReset = await confirmResetIndex(database, index);

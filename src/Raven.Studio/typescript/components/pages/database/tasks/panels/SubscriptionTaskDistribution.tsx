@@ -3,7 +3,6 @@ import { DistributionItem, DistributionLegend, LocationDistribution } from "../.
 import classNames from "classnames";
 import { OngoingTaskInfo, OngoingTaskNodeInfo, OngoingTaskSubscriptionInfo } from "../../../../models/tasks";
 import { ProgressCircle } from "../../../../common/ProgressCircle";
-import { PopoverWithHover } from "../../../../common/PopoverWithHover";
 
 interface OngoingEtlTaskDistributionProps {
     task: OngoingTaskSubscriptionInfo;
@@ -105,12 +104,13 @@ export function SubscriptionTaskProgress(props: SubscriptionTaskProgressProps) {
         </ProgressCircle>
     );
 }
-
+/* TODO
 interface SubscriptionTaskProgressTooltipProps {
     target: string;
     nodeInfo: OngoingTaskNodeInfo;
     task: OngoingTaskInfo;
 }
+
 
 function SubscriptionTaskProgressTooltip(props: SubscriptionTaskProgressTooltipProps) {
     const { target } = props;
@@ -124,6 +124,7 @@ function SubscriptionTaskProgressTooltip(props: SubscriptionTaskProgressTooltipP
         </PopoverWithHover>
     );
 }
+ */
 
 const taskNodeInfoKey = (nodeInfo: OngoingTaskNodeInfo) =>
     nodeInfo.location.shardNumber + "__" + nodeInfo.location.nodeTag;

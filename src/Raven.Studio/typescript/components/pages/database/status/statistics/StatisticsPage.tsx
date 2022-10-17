@@ -1,5 +1,5 @@
 ﻿import database from "models/resources/database";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useServices } from "../../../../hooks/useServices";
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 import { EssentialDatabaseStatsComponent } from "./EssentialDatabaseStatsComponent";
@@ -18,17 +18,17 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
     const [essentialStats, setEssentialStats] = useState<EssentialDatabaseStatistics>();
     const [dbDetailsVisible, setDbDetailsVisible] = useState(false);
 
-    const fetchEssentialStats = async () => {
+    const fetchEssentialStats = useCallback(async () => {
         const stats = await databasesService.getEssentialStats(database);
         setEssentialStats(stats);
-    };
+    }, [databasesService, database]);
 
     const rawJsonUrl = useAppUrls().appUrl.forEssentialStatsRawData(database);
 
     useEffect(() => {
         // noinspection JSIgnoredPromiseFromCall
         fetchEssentialStats();
-    }, []);
+    }, [fetchEssentialStats]);
 
     if (!essentialStats) {
         return (

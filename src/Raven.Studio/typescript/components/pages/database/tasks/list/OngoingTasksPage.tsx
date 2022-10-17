@@ -85,7 +85,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const reload = useCallback(async () => {
         const loadTasks = tasks.locations.map((location) => fetchTasks(location));
         await Promise.all(loadTasks);
-    }, [database, tasks, fetchTasks]);
+    }, [tasks, fetchTasks]);
 
     useInterval(reload, 10_000);
 
@@ -108,7 +108,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         const initialLocation = database.getFirstLocation(nodeTag);
 
         fetchTasks(initialLocation);
-    }, []);
+    }, [fetchTasks, database]);
 
     const addNewOngoingTask = useCallback(() => {
         const addOngoingTaskView = new createOngoingTask(database);
@@ -128,7 +128,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
             await tasksService.toggleOngoingTask(database, task, enable);
             await reload();
         },
-        [database, tasksService]
+        [database, reload, tasksService]
     );
 
     const onEtlProgress = useCallback(
@@ -142,11 +142,14 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
         [dispatch]
     );
 
-    const showItemPreview = useCallback((task: OngoingTaskInfo, scriptName: string) => {
-        const taskType = TaskUtils.studioTaskTypeToTaskType(task.shared.taskType);
-        const etlType = TaskUtils.taskTypeToEtlType(taskType);
-        definitionCache.showDefinitionFor(etlType, task.shared.taskId, scriptName);
-    }, []);
+    const showItemPreview = useCallback(
+        (task: OngoingTaskInfo, scriptName: string) => {
+            const taskType = TaskUtils.studioTaskTypeToTaskType(task.shared.taskType);
+            const etlType = TaskUtils.taskTypeToEtlType(taskType);
+            definitionCache.showDefinitionFor(etlType, task.shared.taskId, scriptName);
+        },
+        [definitionCache]
+    );
 
     const canNavigateToServerWideTasks = isClusterAdminOrClusterNode();
     const serverWideTasksUrl = appUrl.forServerWideTasks();

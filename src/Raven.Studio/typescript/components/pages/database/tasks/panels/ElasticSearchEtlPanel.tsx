@@ -60,7 +60,7 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanSh
         (transformationName: string) => {
             showItemPreview(data, transformationName);
         },
-        [data]
+        [data, showItemPreview]
     );
 
     return (

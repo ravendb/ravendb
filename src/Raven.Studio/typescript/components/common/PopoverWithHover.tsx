@@ -28,6 +28,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
             sanitize: false,
             ...rest,
         } as any);
+        // eslint-disable-next-line
     }, [target]);
 
     return null as JSX.Element;

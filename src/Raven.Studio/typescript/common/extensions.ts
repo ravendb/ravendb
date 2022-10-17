@@ -226,6 +226,7 @@ class extensions {
                 const options = ko.unwrap(valueAccessor());
 
                 if (options && options.component) {
+                    // eslint-disable-next-line
                     const componentInstance = ReactDOM.render(
                         React.createElement(options.component, options.props),
                         element

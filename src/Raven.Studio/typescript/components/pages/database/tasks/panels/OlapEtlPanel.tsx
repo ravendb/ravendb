@@ -59,7 +59,7 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
         (transformationName: string) => {
             showItemPreview(data, transformationName);
         },
-        [data]
+        [data, showItemPreview]
     );
 
     return (
