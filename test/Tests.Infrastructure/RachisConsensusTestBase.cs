@@ -259,7 +259,7 @@ namespace Tests.Infrastructure
                             MultiTree = true
                         }, () => tcpClient.Client?.Disconnect(false));
 
-                    rachis.AcceptNewConnection(remoteConnection, tcpClient.Client.RemoteEndPoint, hello =>
+                    await rachis.AcceptNewConnectionAsync(remoteConnection, tcpClient.Client.RemoteEndPoint, hello =>
                     {
                         if (rachis.Url == null)
                             return;

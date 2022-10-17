@@ -1200,7 +1200,7 @@ namespace Raven.Server.Rachis
         /// This method is expected to run for a long time (lifetime of the connection)
         /// and can never throw. We expect this to be on a separate thread
         /// </summary>
-        public void AcceptNewConnection(RemoteConnection remoteConnection, EndPoint remoteEndpoint, Action<RachisHello> sayHello = null)
+        public async Task AcceptNewConnectionAsync(RemoteConnection remoteConnection, EndPoint remoteEndpoint, Action<RachisHello> sayHello = null)
         {
             try
             {
@@ -1267,10 +1267,11 @@ namespace Raven.Server.Rachis
                             break;
 
                         case InitialMessageType.AppendEntries:
-                            if (Follower.CheckIfValidLeader(this, remoteConnection, out var negotiation))
+                            var r = await Follower.CheckIfValidLeaderAsync(this, remoteConnection);
+                            if (r.Success)
                             {
-                                var follower = new Follower(this, negotiation.Term, remoteConnection);
-                                follower.AcceptConnection(negotiation);
+                                var follower = new Follower(this, r.Negotiation.Term, remoteConnection);
+                                follower.AcceptConnection(r.Negotiation);
                             }
                             else
                             {
@@ -1937,24 +1938,13 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void FoundAboutHigherTerm(long term, string reason)
+        public async Task FoundAboutHigherTermAsync(long term, string reason)
         {
             if (term <= CurrentTerm)
                 return;
 
-            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            {
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    // we check it here again because now we are under the tx lock, so we can't get into concurrency issues
-                    if (term <= CurrentTerm)
-                        return;
-
-                    CastVoteInTerm(context, term, votedFor: null, reason: reason);
-
-                    tx.Commit();
-                }
-            }
+            var command = new CastVoteInTermCommand(this, term, reason);
+            await TxMerger.Enqueue(command);
         }
 
         public void ValidateTerm(long term)

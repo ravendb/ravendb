@@ -2353,7 +2353,7 @@ namespace Raven.Server
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
             {
                 var tcpClient = tcp.TcpClient.Client;
-                ServerStore.ClusterAcceptNewConnection(tcp, header, tcp.Dispose, tcpClient.RemoteEndPoint);
+                await ServerStore.ClusterAcceptNewConnectionAsync(tcp, header, tcp.Dispose, tcpClient.RemoteEndPoint);
                 return true;
             }
 

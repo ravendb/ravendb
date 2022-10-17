@@ -299,9 +299,8 @@ namespace Raven.Server.Rachis
             return (HasRemovedFromTopology: command.RemovedFromTopology, LastAcknowledgedIndex: lastAcknowledgedIndex, LastTruncate: command.LastTruncate, LastCommit: command.LastCommit);
         }
 
-        public static bool CheckIfValidLeader(RachisConsensus engine, RemoteConnection connection, out LogLengthNegotiation negotiation)
+        public static async Task<(bool Success, LogLengthNegotiation Negotiation)> CheckIfValidLeaderAsync(RachisConsensus engine, RemoteConnection connection)
         {
-            negotiation = null;
             using (engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 var logLength = connection.Read<LogLengthNegotiation>(context);
@@ -320,17 +319,17 @@ namespace Raven.Server.Rachis
                         CurrentTerm = engine.CurrentTerm
                     });
                     connection.Dispose();
-                    return false;
+                    return (false, null);
                 }
                 if (engine.Log.IsInfoEnabled)
                 {
                     engine.Log.Info($"The incoming term {logLength.Term} is from a valid leader (From thread: {logLength.SendingThread})");
                 }
-                engine.FoundAboutHigherTerm(logLength.Term, "Setting the term of the new leader");
+                await engine.FoundAboutHigherTermAsync(logLength.Term, "Setting the term of the new leader");
                 engine.Timeout.Defer(connection.Source);
-                negotiation = logLength;
+
+                return (true, logLength);
             }
-            return true;
         }
 
         private void NegotiateWithLeader(ClusterOperationContext context, LogLengthNegotiation negotiation)
