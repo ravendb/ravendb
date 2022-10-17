@@ -17,6 +17,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
@@ -736,9 +737,11 @@ namespace Raven.Server.Rachis
 
         private async ValueTask EmptyQueueAsync()
         {
-            //var list = new List<TaskCompletionSource<Task<(long, object)>>>();
-            //var tasks = new List<Task<(long, object)>>();
-            var commandsToProcess = new List<RachisMergedCommand>();
+            var maxCommandsToProcessSize = new Size(32, SizeUnit.Megabytes); // TODO [ppekrol] make configurable
+            var maxCommandsToProcessCount = 128; // TODO [ppekrol] make configurable
+
+            var commandsToProcessSize = new Size(0, SizeUnit.Bytes);
+            var commandsToProcess = new List<(RachisMergedCommand Command, BlittableJsonReaderObject CommandJson)>();
             const string leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
             var lostLeadershipException = new NotLeadingException(leaderDisposedMessage);
 
@@ -750,7 +753,7 @@ namespace Raven.Server.Rachis
                     {
                         var cmdsCount = 0;
                         _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
-                        while (cmdsCount++ < 128 && _commandsQueue.TryDequeue(out var commandToProcess))
+                        while (cmdsCount++ < maxCommandsToProcessCount && _commandsQueue.TryDequeue(out var commandToProcess))
                         {
                             if (commandToProcess.Consumed.Raise() == false)
                             {
@@ -765,30 +768,39 @@ namespace Raven.Server.Rachis
                                 continue;
                             }
 
-                            commandsToProcess.Add(commandToProcess);
-
-                            if (_engine.LogHistory.HasHistoryLog(context, commandToProcess.Command.UniqueRequestId, out var index, out var result, out var exception) == false)
-                                continue;
-
-                            if (lastCommitted < index)
-                                continue;
-
-                            // if this command is already committed, we can skip it and notify the caller about it
-                            if (exception != null)
+                            if (_engine.LogHistory.HasHistoryLog(context, commandToProcess.Command.UniqueRequestId, out var index, out var result, out var exception))
                             {
-                                commandToProcess.Tcs.TrySetException(exception);
-                            }
-                            else
-                            {
-                                if (result != null)
+                                // if this command is already committed, we can skip it and notify the caller about it
+                                if (lastCommitted >= index)
                                 {
-                                    result = GetConvertResult(commandToProcess.Command)?.Apply(result) ?? commandToProcess.Command.FromRemote(result);
-                                }
+                                    if (exception != null)
+                                    {
+                                        commandToProcess.Tcs.TrySetException(exception);
+                                    }
+                                    else
+                                    {
+                                        if (result != null)
+                                        {
+                                            result = GetConvertResult(commandToProcess.Command)?.Apply(result) ?? commandToProcess.Command.FromRemote(result);
+                                        }
 
-                                commandToProcess.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
+                                        commandToProcess.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
+                                    }
+
+                                    continue;
+                                }
                             }
 
-                            commandsToProcess.RemoveAt(commandsToProcess.Count - 1);
+                            _engine.InvokeBeforeAppendToRaftLog(context, commandToProcess.Command);
+
+                            var djv = commandToProcess.Command.ToJson(context);
+                            var commandJson = context.ReadObject(djv, "raft/command");
+
+                            commandsToProcess.Add((commandToProcess, commandJson));
+                            commandsToProcessSize.Add(commandJson.Size, SizeUnit.Bytes);
+
+                            if (commandsToProcessSize >= maxCommandsToProcessSize)
+                                break;
                         }
                     }
 
@@ -801,7 +813,7 @@ namespace Raven.Server.Rachis
 
                     for (int i = 0; i < commandsToProcess.Count; i++)
                     {
-                        var c = commandsToProcess[i];
+                        var c = commandsToProcess[i].Command;
                         var t = tasks[i];
 
                         c.Tcs.TrySetResult(t);
@@ -815,8 +827,8 @@ namespace Raven.Server.Rachis
                     if (_running.IsRaised() == false)
                         e = new NotLeadingException(leaderDisposedMessage, e);
 
-                    foreach (var command in commandsToProcess)
-                        command.Tcs.TrySetException(e);
+                    foreach (var value in commandsToProcess)
+                        value.Command.Tcs.TrySetException(e);
 
                     _errorOccurred.TrySetException(e);
                 }

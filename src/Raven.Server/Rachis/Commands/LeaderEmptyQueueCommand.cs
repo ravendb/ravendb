@@ -12,11 +12,11 @@ internal class LeaderEmptyQueueCommand : MergedTransactionCommand<ClusterOperati
 {
     private readonly RachisConsensus _engine;
     private readonly Leader _leader;
-    private readonly List<Leader.RachisMergedCommand> _commandsToProcess;
+    private readonly List<(Leader.RachisMergedCommand Command, BlittableJsonReaderObject CommandJson)> _commandsToProcess;
 
     public List<Task<(long, object)>> Tasks { get; private set; }
 
-    public LeaderEmptyQueueCommand([NotNull] RachisConsensus engine, [NotNull] Leader leader, [NotNull] List<Leader.RachisMergedCommand> commandsToProcess)
+    public LeaderEmptyQueueCommand([NotNull] RachisConsensus engine, [NotNull] Leader leader, [NotNull] List<(Leader.RachisMergedCommand Command, BlittableJsonReaderObject CommandJson)> commandsToProcess)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _leader = leader ?? throw new ArgumentNullException(nameof(leader));
@@ -29,8 +29,11 @@ internal class LeaderEmptyQueueCommand : MergedTransactionCommand<ClusterOperati
 
         _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
 
-        foreach (var command in _commandsToProcess)
+        foreach (var value in _commandsToProcess)
         {
+            var command = value.Command;
+            var commandJson = value.CommandJson;
+
             if (_engine.LogHistory.HasHistoryLog(context, command.Command.UniqueRequestId, out var index, out var result, out var exception))
             {
                 var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -56,11 +59,7 @@ internal class LeaderEmptyQueueCommand : MergedTransactionCommand<ClusterOperati
             }
             else
             {
-                _engine.InvokeBeforeAppendToRaftLog(context, command.Command);
-
-                var djv = command.Command.ToJson(context);
-                using (var cmdJson = context.ReadObject(djv, "raft/command"))
-                    index = _engine.InsertToLeaderLog(context, _leader.Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+                index = _engine.InsertToLeaderLog(context, _leader.Term, commandJson, RachisEntryFlags.StateMachineCommand);
             }
 
             if (_leader._entries.TryGetValue(index, out var state))
@@ -89,6 +88,6 @@ internal class LeaderEmptyQueueCommand : MergedTransactionCommand<ClusterOperati
 
     public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(JsonOperationContext context)
     {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 }
