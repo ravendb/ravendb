@@ -1205,15 +1205,8 @@ namespace Raven.Server.Rachis
                     }
                     if (_tag == InitialTag)
                     {
-                        using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                        using (context.OpenWriteTransaction())
-                        {
-                            if (_tag == InitialTag)// double checked locking under tx write lock
-                            {
-                                UpdateNodeTag(context, initialMessage.DebugDestinationIdentifier);
-                                context.Transaction.Commit();
-                            }
-                        }
+                        var command = new UpdateNodeTagCommand(this, _tag, initialMessage);
+                        await TxMerger.Enqueue(command);
 
                         if (_tag != initialMessage.DebugDestinationIdentifier)
                         {
@@ -1378,23 +1371,6 @@ namespace Raven.Server.Rachis
             catch (Exception e)
             {
                 throw new RachisApplyException($"Failed to remove entry number {index} from raft log", e);
-            }
-        }
-
-        public long AppendToLog(CommandBase cmd, long term)
-        {
-            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            {
-                var djv = cmd.ToJson(context);
-                var cmdJson = context.ReadObject(djv, "raft/command");
-
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    var index = InsertToLeaderLog(context, term, cmdJson, RachisEntryFlags.StateMachineCommand);
-                    tx.Commit();
-
-                    return index;
-                }
             }
         }
 
