@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Queries.Facets
             }
             else if (facet is RangeFacet)
             {
-                if (facet.Options != null)
+                if (facet.Options != null && facet.Options != FacetOptions.Default)
                     ThrowWhenOptionsAreUsedForRangeFacet();
                 
                 Debug.Assert(facetRanges != null && facetRanges.Count > 0);
