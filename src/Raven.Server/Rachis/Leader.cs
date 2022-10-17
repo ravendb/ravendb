@@ -398,6 +398,9 @@ namespace Raven.Server.Rachis
                 }
                 catch (Exception e2)
                 {
+                    if (e2 is AggregateException ae2)
+                        e2 = ae2.ExtractSingleInnerException();
+
                     if (_engine.Log.IsOperationsEnabled)
                     {
                         _engine.Log.Operations("After leadership failure, could not setup switch to candidate state", e2);
