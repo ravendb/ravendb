@@ -190,7 +190,7 @@ namespace Raven.Server.Rachis
                                     var disconnect = connection.Disconnect;
                                     var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, connection.SupportedFeatures.Cluster, disconnect);
                                     Interlocked.Exchange(ref _connection, con);
-                                    
+
                                     ClusterTopology topology;
                                     using (context.OpenReadTransaction())
                                     {
@@ -240,7 +240,7 @@ namespace Raven.Server.Rachis
                             continue;
                         }
 
-                        var matchIndex = InitialNegotiationWithFollower();
+                        var matchIndex = InitialNegotiationWithFollowerAsync().Result;
                         _debugRecorder.Record("start negotiation with follower");
                         UpdateLastMatchFromFollower(matchIndex);
                         SendSnapshot(_connection.Stream);
@@ -629,7 +629,7 @@ namespace Raven.Server.Rachis
                             {
                                 case RootObjectType.VariableSizeTree:
                                     var tree = txr.ReadTree(currentTreeKey);
-                                    
+
                                     binaryWriter.Write(tree.State.NumberOfEntries);
                                     totalSizeInBytes += sizeof(long);
 
@@ -639,7 +639,7 @@ namespace Raven.Server.Rachis
                                         binaryWriter.Write((int)type);
                                         totalSizeInBytes += sizeof(int);
                                     }
-                                    
+
                                     using (var treeIterator = tree.Iterate(false))
                                     {
                                         if (treeIterator.Seek(Slices.BeforeAllKeys))
@@ -818,7 +818,7 @@ namespace Raven.Server.Rachis
             return entry;
         }
 
-        private long InitialNegotiationWithFollower()
+        private async Task<long> InitialNegotiationWithFollowerAsync()
         {
             Interlocked.Exchange(ref _followerMatchIndex, 0);
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -858,7 +858,7 @@ namespace Raven.Server.Rachis
                         // we need to abort the current leadership
                         var msg = $"{ToString()}: found election term {llr.CurrentTerm:#,#;;0} that is higher than ours {_term:#,#;;0}";
                         _engine.SetNewState(RachisState.Follower, null, _term, msg);
-                        _engine.FoundAboutHigherTerm(llr.CurrentTerm, "Append entries response with higher term");
+                        await _engine.FoundAboutHigherTermAsync(llr.CurrentTerm, "Append entries response with higher term");
                         RachisInvalidOperationException.Throw(msg);
                     }
 

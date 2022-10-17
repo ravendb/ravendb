@@ -466,7 +466,7 @@ namespace RachisTests
             firstLeader.AppendToLog(new TestCommand { Name = "foo", Value = 123 }, currentTerm);
 
             Assert.True(await firstLeader.WaitForState(RachisState.Candidate, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait),$"{firstLeader.CurrentState}");
-            follower.FoundAboutHigherTerm(currentTerm + 1," why not, should work!");
+            await follower.FoundAboutHigherTermAsync(currentTerm + 1," why not, should work!");
             Reconnect(follower.Url, firstLeader.Url);
 
             RavenTestHelper.AssertTrue(await firstLeader.WaitForState(RachisState.Leader, CancellationToken.None).WaitWithoutExceptionAsync(timeToWait), () =>

@@ -3184,7 +3184,7 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForState(rachisState, token);
         }
 
-        public void ClusterAcceptNewConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, Action disconnect, EndPoint remoteEndpoint)
+        public async ValueTask ClusterAcceptNewConnectionAsync(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, Action disconnect, EndPoint remoteEndpoint)
         {
             try
             {
@@ -3198,7 +3198,7 @@ namespace Raven.Server.ServerWide
                 var features = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Cluster, tcp.ProtocolVersion);
                 var remoteConnection = new RemoteConnection(_engine.Tag, _engine.CurrentTerm, tcp.Stream, features.Cluster, disconnect);
 
-                _engine.AcceptNewConnection(remoteConnection, remoteEndpoint);
+                await _engine.AcceptNewConnectionAsync(remoteConnection, remoteEndpoint);
             }
             catch (IOException e)
             {
