@@ -30,6 +30,48 @@ Recommended dev environment is
 6. Open http://127.0.0.1:8080/ in a browser to access Studio
 7. Register your development license in the OS environment as `RAVEN_License`
 
+## Building RavenDB artifacts
+
+Preconditions
+
+- .NET 6 SDKs
+- latest NodeJS LTS 
+
+1. Run `./build.ps1` (Windows) or `build.sh` (Linux)
+2. After script completes, `artifacts` folder in the root of the repository will contain generated artifacts
+
+Usually, you want to run `build` with option(s) to generate subset of all possible artifacts.  
+Options are available via `-help` switch and they include
+
+```
+-WinX64     - build only Windows x64 artifacts
+-WinX86     - build only Windows x86 artifacts
+-LinuxX64   - build only Linux x64 artifacts
+-LinuxArm64 - build only Linux Arm64 artifacts
+-MacOs      - build only MacOS artifacts
+-Osx        - build only OS X artifacts
+-Rpi        - build only Raspberry Pi artifacts
+-DontRebuildStudio - skip building studio if it was build before
+-Target [TargetIds] - accepts comma-separated list of build target names; builds only for selected platforms (possible build targets: win-x64, win-x86, linux-x64, macos-x64, macos-arm64, rpi, linux-arm64)
+```
+
+Building Studio takes significant amount of time. In case you did not make any changes to the Studio,
+use `DontRebuildStudio` switch to speed up build process.  
+Hence, if you are not developing RavenDB Studio, typical cycle would be to call
+
+```
+-[Target]
+```
+
+first time, and then 
+
+```
+-[Target]
+-DontRebuildStudio
+```
+
+subsequently.
+
 ### Community
 
 Community Group is available via [GitHub Issues](https://github.com/ravendb/ravendb/issues) or [Google Groups](https://groups.google.com/forum/#!forum/ravendb). Do not hesitate to join and ask for help.
