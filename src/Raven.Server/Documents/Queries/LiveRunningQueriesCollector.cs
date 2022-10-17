@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils.Stats;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -49,25 +51,53 @@ namespace Raven.Server.Documents.Queries
 
                 var dbNameAsString = dbName.ToString();
 
-                if (_dbNames != null && !_dbNames.Contains(dbNameAsString))
+                if (ShouldFilterOut(dbNameAsString))
                     continue;
 
                 var database = value.Result;
 
-                foreach (var group in database.QueryRunner.CurrentlyRunningQueries
-                    .Where(x => x.DurationInMs > 100)
-                    .GroupBy(x => x.IndexName))
-                {
-                    result.Add(new ExecutingQueryCollection
-                    {
-                        DatabaseName = dbNameAsString,
-                        IndexName = group.Key,
-                        RunningQueries = group.ToList()
-                    });
-                }
+                result.AddRange(GetQueries(dbNameAsString, database.QueryRunner));
+            }
+
+            foreach ((StringSegment dbName, Task<ShardedDatabaseContext> value) in _serverStore.DatabasesLandlord.ShardedDatabasesCache)
+            {
+                if (value.IsCompletedSuccessfully == false)
+                    continue;
+
+                var dbNameAsString = dbName.ToString();
+
+                if (ShouldFilterOut(dbNameAsString))
+                    continue;
+
+                var database = value.Result;
+
+                result.AddRange(GetQueries(dbNameAsString, database.QueryRunner));
             }
 
             return result;
+
+            bool ShouldFilterOut(string database)
+            {
+                if (_dbNames == null)
+                    return false;
+
+                return _dbNames.Contains(database) == false;
+            }
+
+            IEnumerable<ExecutingQueryCollection> GetQueries(string database, AbstractQueryRunner queryRunner)
+            {
+                foreach (var group in queryRunner.CurrentlyRunningQueries
+                             .Where(x => x.DurationInMs > 100)
+                             .GroupBy(x => x.IndexName))
+                {
+                    yield return new ExecutingQueryCollection
+                    {
+                        DatabaseName = database,
+                        IndexName = group.Key,
+                        RunningQueries = group.ToList()
+                    };
+                }
+            }
         }
 
         protected override void WriteStats(List<ExecutingQueryCollection> stats, AsyncBlittableJsonTextWriter writer, JsonOperationContext context)
