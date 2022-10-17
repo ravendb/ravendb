@@ -189,7 +189,7 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
                     if (stat.status === "loaded" && !locationDetails) {
                         return (
                             <td key={key} className="text-danger">
-                                (index wasn't found on: {genUtils.formatLocation(location)})
+                                (index wasn&apos;t found on: {genUtils.formatLocation(location)})
                             </td>
                         );
                     }
@@ -255,8 +255,6 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
                                 const showErrorCounts = index.details.some((x) => x && x.errorsCount > 0);
                                 const showMapErrors = index.details.some((x) => x && x.mapErrors > 0);
                                 const performanceUrl = appUrl.forIndexPerformance(database, index.name);
-
-                                const showStale = index.details.some((x) => x && x.isStale);
 
                                 const showMapReferenceSection = index.details.some(
                                     (x) =>

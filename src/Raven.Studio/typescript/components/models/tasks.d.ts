@@ -102,9 +102,9 @@ export interface OngoingTaskReplicationSinkSharedInfo extends OngoingTaskSharedI
     mode: PullReplicationMode;
 }
 
-export type OngoingTaskKafkaEtlSharedInfo = OngoingTaskQueueEtlSharedInfo
+export type OngoingTaskKafkaEtlSharedInfo = OngoingTaskQueueEtlSharedInfo;
 
-export type OngoingTaskRabbitMqEtlSharedInfo = OngoingTaskQueueEtlSharedInfo
+export type OngoingTaskRabbitMqEtlSharedInfo = OngoingTaskQueueEtlSharedInfo;
 
 export interface OngoingTaskQueueEtlSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
@@ -125,29 +125,29 @@ export interface OngoingTaskSubscriptionSharedInfo extends OngoingTaskSharedInfo
     lastClientConnectionTime?: string;
 }
 
-export type OngoingTaskElasticSearchEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
+export type OngoingTaskElasticSearchEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
-export type OngoingTaskExternalReplicationNodeInfoDetails = OngoingTaskNodeInfoDetails
+export type OngoingTaskExternalReplicationNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
-export type OngoingTaskOlapEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
+export type OngoingTaskOlapEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export interface OngoingTaskPeriodicBackupNodeInfoDetails extends OngoingTaskNodeInfoDetails {
     onGoingBackup: Raven.Client.Documents.Operations.OngoingTasks.RunningBackup;
 }
 
-export type OngoingTaskRavenEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
+export type OngoingTaskRavenEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
-export type OngoingTaskReplicationHubNodeInfoDetails = OngoingTaskNodeInfoDetails
+export type OngoingTaskReplicationHubNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
-export type OngoingTaskReplicationSinkNodeInfoDetails = OngoingTaskNodeInfoDetails
+export type OngoingTaskReplicationSinkNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
-export type OngoingTaskSqlEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
+export type OngoingTaskSqlEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
-export type OngoingTaskSubscriptionNodeInfoDetails = OngoingTaskNodeInfoDetails
+export type OngoingTaskSubscriptionNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
-export type OngoingTaskKafkaEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
+export type OngoingTaskKafkaEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
-export type OngoingTaskRabbitMqEtlNodeInfoDetails = OngoingTaskNodeInfoDetails
+export type OngoingTaskRabbitMqEtlNodeInfoDetails = OngoingTaskNodeInfoDetails;
 
 export type AnyEtlOngoingTaskInfo =
     | OngoingTaskSqlEtlInfo

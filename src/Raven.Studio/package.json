@@ -12,6 +12,8 @@
         "release": "npm run fix-packages && node scripts/typings.js && webpack --config webpack.config.js --mode production",
         "fix-packages": "node scripts/fix_packages.js",
         "test": "jest",
+        "prettier": "prettier --check .",
+        "prettier-fix": "prettier --write .",
         "lint": "eslint typescript/**/*.{tsx,ts}",
         "lint-fix": "eslint typescript/**/*.{tsx,ts} --fix",
         "storybook": "start-storybook --no-manager-cache -p 6006",

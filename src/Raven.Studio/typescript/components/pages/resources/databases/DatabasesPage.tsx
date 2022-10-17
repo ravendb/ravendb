@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useEffect, useMemo, useReducer, useState } from "react";
-import { useServices } from "../../../hooks/useServices";
+import { useServices } from "hooks/useServices";
 import { databasesStatsReducer, databasesStatsReducerInitializer, DatabasesStatsState } from "./DatabasesStatsReducer";
 import { DatabasePanel } from "./DatabasePanel";
 import { DatabasesToolbarActions } from "./DatabasesToolbarActions";
@@ -21,6 +21,7 @@ function filterDatabases(stats: DatabasesStatsState, criteria: DatabaseFilterCri
     return stats.databases;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function DatabasesPage(props: DatabasesPageProps) {
     //TODO: highlight active database
 
@@ -49,7 +50,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
             type: "StatsLoaded",
             stats,
         });
-    }, []);
+    }, [databasesService]);
 
     const toggleSelectAll = useCallback(() => {
         const selectedCount = selectedDatabases.length;
@@ -73,7 +74,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
         }
 
         return "unchecked";
-    }, [filteredDatabases, selectedDatabases]);
+    }, [filteredDatabases, selectedDatabases, stats.databases]);
 
     const toggleSelection = (db: DatabaseSharedInfo) => {
         if (selectedDatabases.includes(db.name)) {
@@ -85,7 +86,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     useEffect(() => {
         fetchDatabases();
-    }, []);
+    }, [fetchDatabases]);
 
     useEffect(() => {
         if (serverNotifications) {
@@ -93,7 +94,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
             return () => sub.off();
         }
-    }, [serverNotifications]);
+    }, [serverNotifications, fetchDatabases]);
 
     return (
         <div>

@@ -179,35 +179,38 @@ export function BackupsPage(props: BackupsPageProps) {
         [database, tasksService, dispatch]
     );
 
-    const fetchManualBackup = async (silent = false) => {
-        if (!silent) {
-            setManualBackup({
-                data: null,
-                status: "loading",
-            });
-        }
+    const fetchManualBackup = useCallback(
+        async (silent = false) => {
+            if (!silent) {
+                setManualBackup({
+                    data: null,
+                    status: "loading",
+                });
+            }
 
-        try {
-            const manualBackup = await tasksService.getManualBackup(database);
+            try {
+                const manualBackup = await tasksService.getManualBackup(database);
 
-            setManualBackup({
-                data: manualBackup.Status ? mapManualBackup(manualBackup.Status) : null,
-                status: "loaded",
-            });
-        } catch (e) {
-            setManualBackup({
-                data: null,
-                error: e,
-                status: "error",
-            });
-        }
-    };
+                setManualBackup({
+                    data: manualBackup.Status ? mapManualBackup(manualBackup.Status) : null,
+                    status: "loaded",
+                });
+            } catch (e) {
+                setManualBackup({
+                    data: null,
+                    error: e,
+                    status: "error",
+                });
+            }
+        },
+        [database, tasksService]
+    );
 
     const reload = useCallback(async () => {
         const loadTasks = tasks.locations.map((location) => fetchTasks(location));
         const loadManualBackup = fetchManualBackup(true);
         await Promise.all(loadTasks.concat(loadManualBackup));
-    }, [database, tasks, fetchTasks, fetchManualBackup]);
+    }, [tasks, fetchTasks, fetchManualBackup]);
 
     useInterval(reload, 10_000);
 
@@ -234,7 +237,7 @@ export function BackupsPage(props: BackupsPageProps) {
 
         // noinspection JSIgnoredPromiseFromCall
         fetchManualBackup();
-    }, []);
+    }, [fetchManualBackup, fetchTasks, database]);
 
     const canNavigateToServerWideTasks = isClusterAdminOrClusterNode();
     const serverWideTasksUrl = appUrl.forServerWideTasks();
@@ -249,7 +252,7 @@ export function BackupsPage(props: BackupsPageProps) {
             await tasksService.deleteOngoingTask(database, task);
             await reload();
         },
-        [tasksService]
+        [tasksService, reload, database]
     );
 
     const toggleOngoingTask = useCallback(
@@ -257,7 +260,7 @@ export function BackupsPage(props: BackupsPageProps) {
             await tasksService.toggleOngoingTask(database, task, enable);
             await reload();
         },
-        [database, tasksService]
+        [database, tasksService, reload]
     );
 
     const sharedPanelProps: Omit<BaseOngoingTaskPanelProps<OngoingTaskInfo>, "data"> = {

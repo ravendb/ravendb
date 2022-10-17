@@ -57,7 +57,7 @@ export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformation
         (transformationName: string) => {
             showItemPreview(data, transformationName);
         },
-        [data]
+        [data, showItemPreview]
     );
 
     return (

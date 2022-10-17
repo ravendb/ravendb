@@ -10,14 +10,17 @@ interface DatabasesFilterProps {
 }
 
 export function DatabasesFilter(props: DatabasesFilterProps) {
-    const { filter, toggleSelectAll, selectionState } = props;
+    const { filter, toggleSelectAll, selectionState, setFilter } = props;
 
-    const onSearchTextChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-        props.setFilter((f) => ({
-            ...f,
-            searchText: e.target.value,
-        }));
-    }, []);
+    const onSearchTextChange = useCallback(
+        (e: ChangeEvent<HTMLInputElement>) => {
+            setFilter((f) => ({
+                ...f,
+                searchText: e.target.value,
+            }));
+        },
+        [setFilter]
+    );
 
     return (
         <div className="databasesToolbar-filter">

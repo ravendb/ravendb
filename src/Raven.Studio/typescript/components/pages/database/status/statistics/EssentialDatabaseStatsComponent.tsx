@@ -113,9 +113,9 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                                     <br />
                                     <li>
                                         <small>
-                                            Segments' maximum size is 2KB. <br /> Segments are added as needed when the
-                                            number of entries grows, <br /> or when a certain amount of time has passed
-                                            since the last entry.
+                                            Segments&apos; maximum size is 2KB. <br /> Segments are added as needed when
+                                            the number of entries grows, <br /> or when a certain amount of time has
+                                            passed since the last entry.
                                         </small>
                                     </li>
                                 </ul>

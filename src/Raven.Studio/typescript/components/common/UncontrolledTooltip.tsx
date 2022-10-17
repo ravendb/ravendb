@@ -22,6 +22,7 @@ export function UncontrolledTooltip(props: UncontrolledTooltipProps) {
         return () => {
             ReactDOM.unmountComponentAtNode(container);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [target]);
 
     return null as JSX.Element;

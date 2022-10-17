@@ -53,7 +53,7 @@ export function RabbitMqEtlPanel(props: RabbitMqEtlPanelProps & ICanShowTransfor
         (transformationName: string) => {
             showItemPreview(data, transformationName);
         },
-        [data]
+        [data, showItemPreview]
     );
 
     return (

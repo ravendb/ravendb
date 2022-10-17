@@ -53,7 +53,7 @@ export function useTasksOperations(editUrl: string, props: BaseOngoingTaskPanelP
                     onDelete(task);
                 }
             });
-    }, [database, onDelete]);
+    }, [onDelete, data.shared]);
 
     const toggleStateHandler = useCallback(
         (enable: boolean) => {
@@ -61,8 +61,8 @@ export function useTasksOperations(editUrl: string, props: BaseOngoingTaskPanelP
             const confirmationTitle = enable ? "Enable Task" : "Disable Task";
             const taskType = ongoingTaskModel.formatStudioTaskType(task.taskType);
             const confirmationMsg = enable
-                ? `You're enabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`
-                : `You're disabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`;
+                ? `You&apos;re enabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`
+                : `You&apos;re disabling ${taskType} task:<br><ul><li><strong>${task.taskName}</strong></li></ul>`;
             const confirmButtonText = enable ? "Enable" : "Disable";
 
             viewHelpers
@@ -76,7 +76,7 @@ export function useTasksOperations(editUrl: string, props: BaseOngoingTaskPanelP
                     }
                 });
         },
-        [toggleState]
+        [toggleState, data.shared]
     );
 
     const toggleDetails = useCallback(() => {
@@ -269,7 +269,7 @@ export function EmptyScriptsWarning(props: { task: AnyEtlOngoingTaskInfo }) {
         <RichPanelDetailItem className="text-warning">
             <small>
                 <i className="icon-warning" />
-                Following scripts don't match any documents: {emptyScripts.join(", ")}
+                Following scripts don&apos;t match any documents: {emptyScripts.join(", ")}
             </small>
         </RichPanelDetailItem>
     );
