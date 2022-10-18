@@ -27,7 +27,7 @@ public class RavenDB_17854 : RavenTestBase
         IRawDocumentQuery<DataForAggregation> query(IDocumentSession session) => session.Advanced.RawQuery<DataForAggregation>($"from index 'Index' select facet(Age < 23, Age >= 24, '{optionsInJson}')");
         var exception = Assert.ThrowsAny<Exception>(() => RunTest(query));
 
-        Assert.Contains("Options are not supported in range facets.", exception.Message);
+        Assert.Contains(Exception, exception.Message);
     }
     
     private void RunTest(Func<IDocumentSession, IRawDocumentQuery<DataForAggregation>> query, bool assertByField = true, bool assertByRange = true)

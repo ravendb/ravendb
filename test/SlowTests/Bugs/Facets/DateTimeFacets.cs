@@ -63,7 +63,6 @@ namespace SlowTests.Bugs.Facets
                 var n = facetsNewWay[i];
 
                 Assert.Equal(o.DisplayFieldName, n.DisplayFieldName);
-                Assert.Equal(o.Options, n.Options);
                 Assert.Equal(o.Ranges.Count, n.Ranges.Count);
 
                 for (int j = 0; j < o.Ranges.Count; j++)

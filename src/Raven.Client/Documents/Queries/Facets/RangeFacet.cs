@@ -79,7 +79,6 @@ namespace Raven.Client.Documents.Queries.Facets
             return new RangeFacet(other)
             {
                 Ranges = ranges,
-                Options = other.Options,
                 Aggregations = other.Aggregations,
                 DisplayFieldName = other.DisplayFieldName
             };

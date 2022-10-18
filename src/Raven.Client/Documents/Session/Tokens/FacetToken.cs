@@ -176,7 +176,11 @@ namespace Raven.Client.Documents.Session.Tokens
 
         private static string GetOptionsParameterName(FacetBase facet, Func<object, string> addQueryParameter)
         {
-            return facet.Options != null && facet.Options != FacetOptions.Default ? addQueryParameter(facet.Options) : null;
+            return facet switch
+            {
+                Facet facetWithOptions => facetWithOptions.Options != null && facetWithOptions.Options != FacetOptions.Default ? addQueryParameter(facetWithOptions.Options) : null,
+                _ => null
+            };
         }
 
         private class FacetAggregationToken : QueryToken

@@ -12,6 +12,8 @@ namespace Raven.Client.Documents.Queries.Facets
         /// Name of field the facet aggregate on
         /// </summary>
         public string FieldName { get; set; }
+        
+        public FacetOptions Options { get; set; }
 
         internal override FacetToken ToFacetToken(Func<object, string> addQueryParameter)
         {
@@ -40,6 +42,8 @@ namespace Raven.Client.Documents.Queries.Facets
         /// Name of field the facet aggregate on
         /// </summary>
         public Expression<Func<T, object>> FieldName { get; set; }
+
+        public FacetOptions Options { get; set; }
 
         public static implicit operator Facet(Facet<T> other)
         {
