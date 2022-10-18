@@ -23,7 +23,6 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Pkcs;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
@@ -36,7 +35,6 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
-using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
@@ -1726,7 +1724,7 @@ namespace Raven.Server
         public string WebUrl { get; private set; }
 
         internal CertificateUtils.CertificateHolder Certificate;
-        
+
         public class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
@@ -2656,6 +2654,8 @@ namespace Raven.Server
 
         internal NamedPipeServerStream LogStreamPipe { get; set; }
 
+        internal static bool SkipCertificateDispose = false;
+
         public void Dispose()
         {
             if (Disposed)
@@ -2698,6 +2698,9 @@ namespace Raven.Server
                 ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
                 ea.Execute(() => _cpuCreditsMonitoring?.Join(int.MaxValue));
                 ea.Execute(() => CpuUsageCalculator.Dispose());
+
+                if (SkipCertificateDispose == false)
+                    ea.Execute(() => Certificate?.Dispose());
 
                 // this should be last
                 ea.Execute(() => AfterDisposal?.Invoke());

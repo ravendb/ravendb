@@ -52,7 +52,7 @@ for (var i = 0; i < counters.length; i++) {
             {
                 using var session = dest.OpenAsyncSession();
                 var all = (await session.CountersFor(entity.Id).GetAllAsync()).Keys.ToArray();
-                return all.Except(counters).Any() == false;
+                return all.Length == count && all.Except(counters).Any() == false;
             }, interval:_waitInterval);
 
             using (var session = src.OpenAsyncSession())
