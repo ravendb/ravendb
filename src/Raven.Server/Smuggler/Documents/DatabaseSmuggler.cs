@@ -679,7 +679,7 @@ namespace Raven.Server.Smuggler.Documents
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var documentActions = _destination.Documents(throwOnCollectionMismatchError))
-            await using (var compareExchangeActions = _destination.CompareExchange(context, BackupType))
+            await using (var compareExchangeActions = _destination.CompareExchange(context, BackupType, withDocuments: true))
             {
                 List<string> legacyIdsToDelete = null;
 
@@ -853,7 +853,7 @@ namespace Raven.Server.Smuggler.Documents
             result.CompareExchange.Start();
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var actions = _destination.CompareExchange(context, BackupType))
+            await using (var actions = _destination.CompareExchange(context, BackupType, withDocuments: false))
             {
                 await foreach (var kvp in _source.GetCompareExchangeValuesAsync(actions))
                 {

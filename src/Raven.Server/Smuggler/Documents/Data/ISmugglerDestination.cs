@@ -35,7 +35,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         IKeyValueActions<long> Identities();
 
-        ICompareExchangeActions CompareExchange(JsonOperationContext context, RestoreBackupTaskBase.BackupType backupType);
+        ICompareExchangeActions CompareExchange(JsonOperationContext context, RestoreBackupTaskBase.BackupType backupType, bool withDocuments);
 
         ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context);
 
