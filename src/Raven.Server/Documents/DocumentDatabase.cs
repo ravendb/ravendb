@@ -453,7 +453,13 @@ namespace Raven.Server.Documents
                     using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        await ExecuteClusterTransaction(context, 1);
+                        const int batchSize = 256;
+                        var executed = await ExecuteClusterTransaction(context, batchSize: batchSize);
+                        if (executed.Count == batchSize)
+                        {
+                            // we might have more to execute
+                            _hasClusterTransaction.Set();
+                        }
                     }
                 }
                 catch (Exception e)
