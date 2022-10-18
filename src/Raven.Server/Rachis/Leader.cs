@@ -996,6 +996,15 @@ namespace Raven.Server.Rachis
 
                 try
                 {
+                    using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var clusterTopology = _engine.GetTopology(context);
+
+                        //We need to validate that the node doesn't exists before we generate the nodeTag
+                        LeaderModifyTopologyCommand.AssertTopology(clusterTopology, validateNotInTopology, nodeTag, nodeUrl);
+                    }
+
                     var command = new LeaderModifyTopologyCommand(_engine, this, modification, nodeTag, nodeUrl, validateNotInTopology);
                     await _engine.TxMerger.Enqueue(command);
 
