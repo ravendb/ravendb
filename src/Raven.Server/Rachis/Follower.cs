@@ -419,7 +419,7 @@ namespace Raven.Server.Rachis
             {
                 KeepAliveAndExecuteAction(() =>
                 {
-                    onFullSnapshotInstalledTask = ReadAndCommitSnapshot(context, snapshot, cts.Token);
+                    onFullSnapshotInstalledTask = ReadAndCommitSnapshotAsync(context, snapshot, cts.Token).Result;
                 }, cts, "ReadAndCommitSnapshot");
             }
 
@@ -490,96 +490,15 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private Task ReadAndCommitSnapshot(ClusterOperationContext context, InstallSnapshot snapshot, CancellationToken token)
+        private async Task<Task> ReadAndCommitSnapshotAsync(ClusterOperationContext context, InstallSnapshot snapshot, CancellationToken token)
         {
-            Task onFullSnapshotInstalledTask = null;
+            var command = new FollowerReadAndCommitSnapshotCommand(_engine, this, snapshot, token);
+            await _engine.TxMerger.Enqueue(command);
 
-            using (context.OpenWriteTransaction())
-            {
-                var lastTerm = _engine.GetTermFor(context, snapshot.LastIncludedIndex);
-                var lastCommitIndex = _engine.GetLastEntryIndex(context);
-
-                if (_engine.GetSnapshotRequest(context) == false &&
-                    snapshot.LastIncludedTerm == lastTerm && snapshot.LastIncludedIndex < lastCommitIndex)
-                {
-                    if (_engine.Log.IsInfoEnabled)
-                    {
-                        _engine.Log.Info(
-                            $"{ToString()}: Got installed snapshot with last index={snapshot.LastIncludedIndex} while our lastCommitIndex={lastCommitIndex}, will just ignore it");
-                    }
-
-                    //This is okay to ignore because we will just get the committed entries again and skip them
-                    ReadInstallSnapshotAndIgnoreContent(token);
-                }
-                else if (InstallSnapshot(context, token))
-                {
-                    if (_engine.Log.IsInfoEnabled)
-                    {
-                        _engine.Log.Info(
-                            $"{ToString()}: Installed snapshot with last index={snapshot.LastIncludedIndex} with LastIncludedTerm={snapshot.LastIncludedTerm} ");
-                    }
-
-                    _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
-                    _engine.ClearLogEntriesAndSetLastTruncate(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
-
-                    onFullSnapshotInstalledTask = _engine.OnSnapshotInstalled(context, snapshot.LastIncludedIndex, token);
-                }
-                else
-                {
-                    var lastEntryIndex = _engine.GetLastEntryIndex(context);
-                    if (lastEntryIndex < snapshot.LastIncludedIndex)
-                    {
-                        var message =
-                            $"The snapshot installation had failed because the last included index {snapshot.LastIncludedIndex} in term {snapshot.LastIncludedTerm} doesn't match the last entry {lastEntryIndex}";
-                        if (_engine.Log.IsInfoEnabled)
-                        {
-                            _engine.Log.Info($"{ToString()}: {message}");
-                        }
-                        throw new InvalidOperationException(message);
-                    }
-                }
-
-                // snapshot always has the latest topology
-                if (snapshot.Topology == null)
-                {
-                    const string message = "Expected to get topology on snapshot";
-                    if (_engine.Log.IsInfoEnabled)
-                    {
-                        _engine.Log.Info($"{ToString()}: {message}");
-                    }
-
-                    throw new InvalidOperationException(message);
-                }
-
-                using (var topologyJson = context.ReadObject(snapshot.Topology, "topology"))
-                {
-                    if (_engine.Log.IsInfoEnabled)
-                    {
-                        _engine.Log.Info($"{ToString()}: topology on install snapshot: {topologyJson}");
-                    }
-
-                    var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(topologyJson);
-
-                    RachisConsensus.SetTopology(_engine, context, topology);
-                }
-
-                _engine.SetSnapshotRequest(context, false);
-
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += t =>
-                {
-                    if (t is LowLevelTransaction llt && llt.Committed)
-                    {
-                        // we might have moved from passive node, so we need to start the timeout clock
-                        _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
-                    }
-                };
-
-                context.Transaction.Commit();
-            }
-            return onFullSnapshotInstalledTask;
+            return command.OnFullSnapshotInstalledTask;
         }
 
-        private bool InstallSnapshot(ClusterOperationContext context, CancellationToken token)
+        internal bool InstallSnapshot(ClusterOperationContext context, CancellationToken token)
         {
             var txw = context.Transaction.InnerTransaction;
 
@@ -754,7 +673,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void ReadInstallSnapshotAndIgnoreContent(CancellationToken token)
+        internal void ReadInstallSnapshotAndIgnoreContent(CancellationToken token)
         {
             var reader = _connection.CreateReader();
             while (true)
