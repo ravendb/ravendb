@@ -36,6 +36,7 @@ Preconditions
 
 - .NET 6 SDKs
 - latest NodeJS LTS 
+- PowerShell (if you are working on Linux, you can find installation instructions [here](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux)) 
 
 1. Run `./build.ps1` (Windows) or `build.sh` (Linux)
 2. After script completes, `artifacts` folder in the root of the repository will contain generated artifacts
@@ -57,20 +58,14 @@ Options are available via `-help` switch and they include
 
 Building Studio takes significant amount of time. In case you did not make any changes to the Studio,
 use `DontRebuildStudio` switch to speed up build process.  
-Hence, if you are not developing RavenDB Studio, typical cycle would be to call
+Additionally, `DontRebuildStudio` will detect if Studio has not been built yet, and will build it first time.
 
-```
--[Target]
-```
-
-first time, and then 
+Hence, if you are not developing RavenDB Studio, you can use
 
 ```
 -[Target]
 -DontRebuildStudio
 ```
-
-subsequently.
 
 ### Community
 
