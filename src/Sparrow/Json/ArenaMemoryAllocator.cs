@@ -78,6 +78,9 @@ namespace Sparrow.Json
 
         public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
         {
+            if (allocation.SizeInBytes + sizeIncrease > MaxArenaSize)
+                return false;
+
             // we need to keep the total allocation size as power of 2
             var totalAllocation = Bits.PowerOf2(allocation.SizeInBytes + sizeIncrease);
             var index = Bits.MostSignificantBit(totalAllocation) - 1;
