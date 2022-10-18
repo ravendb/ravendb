@@ -9,7 +9,11 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class PutAttachmentCommandData : ICommandData
     {
-        public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector)
+        public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector) : this(documentId, name, stream, contentType, changeVector, false)
+        {
+        }
+
+        internal PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, bool fromEtl)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -21,9 +25,11 @@ namespace Raven.Client.Documents.Commands.Batches
             Stream = stream;
             ContentType = contentType;
             ChangeVector = changeVector;
+            FromEtl = fromEtl;
 
             PutAttachmentCommandHelper.ValidateStream(stream);
         }
+
 
         public string Id { get; }
         public string Name { get; }
@@ -31,6 +37,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string ChangeVector {get; }
         public string ContentType { get; }
         public CommandType Type { get; } = CommandType.AttachmentPUT;
+        public bool FromEtl { get; }
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
@@ -40,7 +47,8 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Name)] = Name,
                 [nameof(ContentType)] = ContentType,
                 [nameof(ChangeVector)] = ChangeVector,
-                [nameof(Type)] = Type.ToString()
+                [nameof(Type)] = Type.ToString(),
+                [nameof(FromEtl)] = FromEtl
             };
         }
 
