@@ -4709,7 +4709,7 @@ namespace Raven.Server.Documents.Indexes
                     using (var txw = indexContext.OpenWriteTransaction())
                     using (var writer = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext))
                     {
-                        writer.Optimize();
+                        writer.Optimize(token);
 
                         txw.Commit();
                     }
