@@ -754,7 +754,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (SkipDocument(buildType, isPreV4Revision, item, result, ref legacyIdsToDelete))
                         continue;
 
-                    if (compareExchangeActions != null && item.Document.ChangeVector.Contains(ChangeVectorParser.TrxnTag))
+                    if (compareExchangeActions != null && item.Document.ChangeVector != null && item.Document.ChangeVector.Contains(ChangeVectorParser.TrxnTag))
                     {
                         var key = ClusterTransactionCommand.GetAtomicGuardKey(item.Document.Id);
                         await compareExchangeActions.WriteKeyValueAsync(key, null, item.Document);
