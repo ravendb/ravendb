@@ -5,34 +5,17 @@
                 <div class="col-xs-12 col-xl-6 margin-top margin-top-lg">
                     <div class="panel">
                         <div class="panel-body">
-                            <div class="text-warning padding padding-xs margin-top margin-bottom">
-                                <small>
-                                    <i class="icon-warning"></i>
-                                    Please verify that database ids are not used on ANY cluster node. 
-                                </small>
-                            </div>
-
-                            <div class="form-group">
+                            <div class="form-group margin-top-lg">
                                 <label class="control-label">Database ID</label>
                                 <div>
                                     <div class="margin-top margin-top-xs">
                                         <strong class="form-control-static" data-bind="text: databaseID"></strong>
                                         (current node)
                                     </div>
-                                    <div data-bind="foreach: nonLocalDatabaseNodes">
-                                        <div class="margin-top margin-top-xs">
-                                            <div class="form-control-static">
-                                                <a href="#" target="_blank" data-bind="attr: { href: $root.linkToUnusedDatabaseIds($data) }">
-                                                    check database ID on Node <span data-bind="text: $data"></span> <i class="icon-link"></i> 
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
-                            
                             <div data-bind="if: databaseChangeVector().length > 0">
-                                <div class="form-group margin-top margin-top-lg" >
+                                <div class="form-group margin-top-lg margin-bottom-lg" >
                                     <label class="control-label">Change Vector</label>
                                     <div class="margin-top margin-top-sm flex-grow">
                                         <div data-bind="foreach: databaseChangeVector">
@@ -53,9 +36,29 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group margin-top" data-bind="if: databaseChangeVector().length === 0">
-                                <label class="control-label">Change Vector</label>
-                                <div class="form-control-static">Not yet defined</div>
+                            <div data-bind="if: databaseChangeVector().length === 0">
+                                <div class="form-group margin-top margin-bottom-lg" >
+                                    <label class="control-label">Change Vector</label>
+                                    <div class="form-control-static">Not yet defined</div>
+                                </div>
+                            </div>
+                            <div class="form-group margin-top">
+                                <label class="control-label">&nbsp;</label>
+                                <div>
+                                    <div class="text-warning bg-warning padding padding-xs margin-bottom">
+                                        <small>
+                                            <i class="icon-warning"></i>
+                                            <span>Database IDs that are used by other nodes in the database group cannot be added to unused.</span>
+                                        </small>
+                                    </div>
+                                    <div data-bind="foreach: nonLocalDatabaseNodes">
+                                        <div>
+                                            <a href="#" target="_blank" data-bind="attr: { href: $root.linkToUnusedDatabaseIds($data) }">
+                                                Verify database ID on Node <span data-bind="text: $data"></span> <i class="icon-link"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
