@@ -672,10 +672,10 @@ namespace Raven.Server.Smuggler.Documents
                     await SendRemoveCommandsAsync(_context);
 
                     if (_lastAddOrUpdateOrRemoveResultIndex != null)
-                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastAddOrUpdateOrRemoveResultIndex.Value, TimeSpan.FromMinutes(5));
+                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastAddOrUpdateOrRemoveResultIndex.Value, TimeSpan.FromSeconds(1));
 
                     if (_lastClusterTransactionIndex != null)
-                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastClusterTransactionIndex.Value, TimeSpan.FromMinutes(5));
+                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastClusterTransactionIndex.Value, TimeSpan.FromMinutes(1));
                 }
             }
 
