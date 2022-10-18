@@ -675,7 +675,15 @@ namespace Raven.Server.Smuggler.Documents
                         await _database.ServerStore.Cluster.WaitForIndexNotification(_lastAddOrUpdateOrRemoveResultIndex.Value, TimeSpan.FromSeconds(1));
 
                     if (_lastClusterTransactionIndex != null)
+                    {
                         await _database.ServerStore.Cluster.WaitForIndexNotification(_lastClusterTransactionIndex.Value, TimeSpan.FromMinutes(1));
+
+                        if (_backupType == RestoreBackupTaskBase.BackupType.None)
+                        {
+                            // waiting for the commands to be applied
+                            await _database.RachisLogIndexNotifications.WaitForIndexNotification(_lastClusterTransactionIndex.Value, _token);
+                        }
+                    }
                 }
             }
 
