@@ -15,9 +15,7 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             Aggregations = new Dictionary<FacetAggregation, HashSet<FacetAggregationField>>();
         }
-
-        public FacetOptions Options { get; set; }
-
+        
         public Dictionary<FacetAggregation, HashSet<FacetAggregationField>> Aggregations { get; set; }
 
         /// <summary>
@@ -40,9 +38,9 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (json.TryGet(nameof(facet.DisplayFieldName), out string displayFieldName))
                 facet.DisplayFieldName = displayFieldName;
-
-            if (json.TryGet(nameof(facet.Options), out BlittableJsonReaderObject options) && options != null)
-                facet.Options = FacetOptions.Create(options);
+            
+            if (facet is Facet facetWithOptions && json.TryGet(nameof(facetWithOptions.Options), out BlittableJsonReaderObject options) && options != null)
+                facetWithOptions.Options = FacetOptions.Create(options);
 
             if (json.TryGet(nameof(facet.Aggregations), out BlittableJsonReaderObject aggregations) && aggregations != null)
             {

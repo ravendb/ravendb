@@ -42,10 +42,14 @@ namespace Raven.Server.Documents.Queries.Facets
                 }
 
                 FacetBase facet;
+                var options = facetField.GetOptions(context, query.Query.QueryParameters) ?? FacetOptions.Default;
 
                 if (facetField.Ranges != null && facetField.Ranges.Count > 0)
                 {
                     var rangeFacet = new RangeFacet();
+                    
+                    if (options != FacetOptions.Default)
+                        ThrowWhenOptionsAreUsedForRangeFacet();
 
                     foreach (var range in facetField.Ranges)
                         rangeFacet.Ranges.Add(range.GetText(query.Query));
@@ -57,13 +61,13 @@ namespace Raven.Server.Documents.Queries.Facets
                     facet = new Facet
                     {
                         FieldName = facetField.Name,
+                        Options = options
                     };
                 }
-
+                
                 facet.DisplayFieldName = facetField.Alias;
                 facet.Aggregations = facetField.Aggregations;
-                facet.Options = facetField.GetOptions(context, query.Query.QueryParameters) ?? FacetOptions.Default;
-
+                
                 var result = ProcessFacet(facet, facetField.Ranges, query, searchEngineType);
                 results[result.Result.Name] = result;
             }
@@ -86,9 +90,6 @@ namespace Raven.Server.Documents.Queries.Facets
             foreach (var f in setup.RangeFacets)
             {
                 List<QueryExpression> facetRanges = null;
-
-                if (f.Options == null)
-                    f.Options = FacetOptions.Default;
 
                 if (f.Ranges != null && f.Ranges.Count > 0)
                 {
@@ -117,7 +118,7 @@ namespace Raven.Server.Documents.Queries.Facets
             var result = new FacetResult
             {
                 Result = new Raven.Client.Documents.Queries.Facets.FacetResult(),
-                Options = facet.Options
+                Options = facet is Facet facetWithOptions ? facetWithOptions.Options : null
             };
 
             string fieldName = null;
@@ -129,9 +130,6 @@ namespace Raven.Server.Documents.Queries.Facets
             }
             else if (facet is RangeFacet)
             {
-                if (facet.Options != null && facet.Options != FacetOptions.Default)
-                    ThrowWhenOptionsAreUsedForRangeFacet();
-                
                 Debug.Assert(facetRanges != null && facetRanges.Count > 0);
 
                 RangeType? rangeType = null;
