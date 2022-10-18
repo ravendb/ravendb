@@ -14,9 +14,12 @@ class snapshot {
 
     compressionLevel = ko.observable<string>();
 
+    excludeIndexes = ko.observable<boolean>(false);
+    
     constructor(dto: Raven.Client.Documents.Operations.Backups.SnapshotSettings) {
         const compressionLevel = snapshot.compressionLevelDictionary.find(x => x.fullName === dto.CompressionLevel);
         this.compressionLevel(compressionLevel.name);
+        this.excludeIndexes(dto.ExcludeIndexes);
     }
 
     useCompression(option: string) {
@@ -28,7 +31,7 @@ class snapshot {
 
         return {
             CompressionLevel: compressionLevel.fullName,
-            ExcludeIndexes: false
+            ExcludeIndexes: this.excludeIndexes()
         }
     }
 
