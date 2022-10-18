@@ -112,7 +112,7 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseKeyValueActions(_database);
         }
 
-        public ICompareExchangeActions CompareExchange(JsonOperationContext context, RestoreBackupTaskBase.BackupType backupType)
+        public ICompareExchangeActions CompareExchange(JsonOperationContext context, RestoreBackupTaskBase.BackupType backupType, bool withDocuments)
         {
             return new DatabaseCompareExchangeActions(_database, context, backupType, _token);
         }

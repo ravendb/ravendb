@@ -162,11 +162,9 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamKeyValueActions<long>(_writer, nameof(DatabaseItemType.Identities));
         }
 
-        public ICompareExchangeActions CompareExchange(JsonOperationContext context, RestoreBackupTaskBase.BackupType backupType)
+        public ICompareExchangeActions CompareExchange(JsonOperationContext context, RestoreBackupTaskBase.BackupType backupType, bool withDocuments)
         {
-            return backupType is RestoreBackupTaskBase.BackupType.Full or RestoreBackupTaskBase.BackupType.Incremental 
-                ? null
-                : new StreamCompareExchangeActions(_writer, nameof(DatabaseItemType.CompareExchange));
+            return withDocuments ? null : new StreamCompareExchangeActions(_writer, nameof(DatabaseItemType.CompareExchange));
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
