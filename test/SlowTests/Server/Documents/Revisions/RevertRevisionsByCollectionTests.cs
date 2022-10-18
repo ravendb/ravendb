@@ -34,7 +34,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByCollection()
         {
-            var collections = new HashSet<string>() { "companies" };
+            var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "companies" };
             var company = new Company { Name = "Company Name" };
             var user = new User { Name = "User Name" };
             using (var store = GetDocumentStore())
@@ -92,7 +92,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByMultipleCollections()
         {
-            var collections = new HashSet<string>() { "companies", "users" };
+            var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "companies", "users" };
             var company = new Company { Name = "Company Name" };
             var user = new User { Name = "User Name" };
             var contact = new Contact { FirstName = "User Name" };
@@ -162,7 +162,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByMultipleExistingAndDeletedCollections()
         {
-            var collections = new HashSet<string>() { "companies", "users" };
+            var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "companies", "users" };
             var company = new Company { Name = "Company Name" };
             var user = new User { Name = "User Name" };
             var contact = new Contact { FirstName = "User Name" };
@@ -239,7 +239,7 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByWrongCollection()
         {
-            var collections = new HashSet<string>()
+            var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 "companies", 
                 "notExistingCollection" // not existing collection

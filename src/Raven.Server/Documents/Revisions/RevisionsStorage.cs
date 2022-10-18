@@ -1504,6 +1504,10 @@ namespace Raven.Server.Documents.Revisions
                 IEnumerable<Table.TableValueHolder> tvrs = null;
                 if (collections != null)
                 {
+                    if (collections.Comparer != null && collections.Comparer != StringComparer.OrdinalIgnoreCase)
+                    {
+                        throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
+                    }
                     tvrs = Enumerable.Empty<Table.TableValueHolder>();
                     foreach (var collection in collections)
                     {
