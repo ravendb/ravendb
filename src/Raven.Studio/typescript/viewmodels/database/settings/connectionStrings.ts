@@ -362,7 +362,20 @@ class connectionStrings extends viewModelBase {
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 this.editedSqlEtlConnectionString(new connectionStringSqlEtlModel(result.SqlConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, "Sql")));
                 this.onSqlEtl();
+                
+                // using timeout as we can't bind to post composition hook
+                setTimeout(() => {
+                    this.initSyntaxHelpTooltip();
+                }, 100);
             });
+    }
+    
+    private initSyntaxHelpTooltip() {
+        popoverUtils.longWithHover($("#js-sql-syntax"), {
+            html: true,
+            content: () => this.editedSqlEtlConnectionString()?.syntaxHtml() ?? "",
+            placement: "top"
+        });
     }
     
     private onSqlEtl() {

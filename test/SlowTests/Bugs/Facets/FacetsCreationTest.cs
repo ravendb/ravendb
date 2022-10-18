@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Bugs.Facets
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void PrestonThinksFacetsShouldAllowSimpleExpressionsDuringCreation()
         {
             var now = DateTime.Now;

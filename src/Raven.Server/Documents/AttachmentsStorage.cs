@@ -145,7 +145,7 @@ namespace Raven.Server.Documents
                 // This will validate that we cannot put an attachment on a conflicted document
                 var hasDoc = TryGetDocumentTableValueReaderForAttachment(context, documentId, name, lowerDocumentId, out TableValueReader tvr);
                 if (hasDoc == false)
-                    throw new InvalidOperationException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
+                    throw new DocumentDoesNotExistException($"Cannot put attachment {name} on a non existent document '{documentId}'.");
                 var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
                 if (flags.HasFlag(DocumentFlags.Artificial))
                     throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");

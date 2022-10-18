@@ -121,7 +121,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var value2 = Guid.NewGuid().ToString();
                 if (noAsciiDbName)
                 {
-                    string dateStr = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss");
+                    string dateStr = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff");
                     key = $"{dateStr}.ravendb-żżżרייבן-A-backup/{dateStr}.ravendb-full-backup";
                     property1 = "Description-żżרייבן";
                     value1 = "ravendb-żżżרייבן-A-backup";

@@ -4,14 +4,15 @@ import database = require("models/resources/database");
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import jsonUtil = require("common/jsonUtil");
+import sqlConnectionStringSyntax = require("common/helpers/database/sqlConnectionStringSyntax");
 
 class connectionStringSqlEtlModel extends connectionStringModel {
 
-    static sqlProviders: Array<valueAndLabelItem<string, string>> = [
-        { value: "System.Data.SqlClient", label: "Microsoft SQL Server" },
-        { value: "MySql.Data.MySqlClient", label: "MySQL Server" },
-        { value: "Npgsql", label: "PostgreSQL" },
-        { value: "Oracle.ManagedDataAccess.Client", label: "Oracle Database" },
+    static sqlProviders: Array<valueAndLabelItem<string, string> & { tooltip: string }> = [
+        { value: "System.Data.SqlClient", label: "Microsoft SQL Server", tooltip: sqlConnectionStringSyntax.mssqlSyntax },
+        { value: "MySql.Data.MySqlClient", label: "MySQL Server", tooltip: sqlConnectionStringSyntax.mysqlSyntax },
+        { value: "Npgsql", label: "PostgreSQL", tooltip: sqlConnectionStringSyntax.npgsqlSyntax },
+        { value: "Oracle.ManagedDataAccess.Client", label: "Oracle Database", tooltip: sqlConnectionStringSyntax.oracleSyntax },
     ];
     
     connectionString = ko.observable<string>();
@@ -78,6 +79,11 @@ class connectionStringSqlEtlModel extends connectionStringModel {
     fullNameFor(factoryName: string): string {
         const provider = connectionStringSqlEtlModel.sqlProviders.find(x => x.value === factoryName);
         return provider ? `${provider.label} (${provider.value})` : null;
+    }
+    
+    syntaxHtml(): string {
+        const provider = connectionStringSqlEtlModel.sqlProviders.find(x => x.value === this.factoryName());
+        return provider ? provider.tooltip : null;
     }
 
     static empty(): connectionStringSqlEtlModel {

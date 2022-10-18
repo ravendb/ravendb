@@ -12,6 +12,61 @@ In order to submit an issue please visit our [YouTrack](https://issues.hibernati
 - [RavenDB Clients](https://issues.hibernatingrhinos.com/issues/RDBC) - for Client API issues
 - [RavenDB Documentation](https://issues.hibernatingrhinos.com/issues/RDoc) - for Documentation issues
 
+## Setting up Development Environment
+
+Recommended dev environment is
+
+- VS 2022 updated to the latest version
+- .NET 6 SDKs
+- latest NodeJS LTS  
+
+1. Clone this repo, open it in VS 2022.  
+2. Install [NPM Task runner for VS](https://github.com/madskristensen/NpmTaskRunner)  
+3. Open Task Runner Explorer (View > Other Windows > Task Runner Explorer)
+    - run package.json > Defaults > install
+    - run package.json > Custom > restore_compile
+4. Set up src/Raven.Server as a Startup Project
+5. Run it with or without debugging, console with RavenDB Server will start
+6. Open http://127.0.0.1:8080/ in a browser to access Studio
+7. Register your development license in the OS environment as `RAVEN_License`
+
+## Building RavenDB artifacts
+
+Preconditions
+
+- .NET 6 SDKs
+- latest NodeJS LTS 
+- PowerShell (if you are working on Linux, you can find installation instructions [here](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux)) 
+
+1. Run `./build.ps1` (Windows) or `build.sh` (Linux)
+2. After script completes, `artifacts` folder in the root of the repository will contain generated artifacts
+
+Usually, you want to run `build` with option(s) to generate subset of all possible artifacts.  
+Options are available via `-help` switch and they include
+
+```
+-WinX64     - build only Windows x64 artifacts
+-WinX86     - build only Windows x86 artifacts
+-LinuxX64   - build only Linux x64 artifacts
+-LinuxArm64 - build only Linux Arm64 artifacts
+-MacOs      - build only MacOS artifacts
+-Osx        - build only OS X artifacts
+-Rpi        - build only Raspberry Pi artifacts
+-DontRebuildStudio - skip building studio if it was build before
+-Target [TargetIds] - accepts comma-separated list of build target names; builds only for selected platforms (possible build targets: win-x64, win-x86, linux-x64, macos-x64, macos-arm64, rpi, linux-arm64)
+```
+
+Building Studio takes significant amount of time. In case you did not make any changes to the Studio,
+use `DontRebuildStudio` switch to speed up build process.  
+Additionally, `DontRebuildStudio` will detect if Studio has not been built yet, and will build it first time.
+
+Hence, if you are not developing RavenDB Studio, you can use
+
+```
+-[Target]
+-DontRebuildStudio
+```
+
 ### Community
 
 Community Group is available via [GitHub Issues](https://github.com/ravendb/ravendb/issues) or [Google Groups](https://groups.google.com/forum/#!forum/ravendb). Do not hesitate to join and ask for help.

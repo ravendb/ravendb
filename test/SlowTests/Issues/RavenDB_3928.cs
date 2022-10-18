@@ -6,6 +6,7 @@
 
 using FastTests;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +36,7 @@ namespace SlowTests.Issues
             public double Age3 { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void FacetShouldWorkWithNullableExpressions()
         {
             var expected1 = RangeFacet<Person2>.Parse(x => x.Age1 < 15);

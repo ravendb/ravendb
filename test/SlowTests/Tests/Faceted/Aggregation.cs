@@ -45,7 +45,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_AnonymousTypes_Double(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -82,7 +82,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_AnonymousTypes_Float(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -120,7 +120,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_AnonymousTypes_Int(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -158,7 +158,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_AnonymousTypes_Long(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -196,7 +196,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -228,7 +228,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_MultipleItems(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -268,7 +268,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_MultipleAggregations(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -303,7 +303,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_LongDataType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -333,7 +333,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_DateTimeDataType(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -357,13 +357,13 @@ namespace SlowTests.Tests.Faceted
                     var facetResult = r["At"];
                     Assert.Equal(2, facetResult.Values.Count);
 
-                    Assert.Equal(1, facetResult.Values.Count(x => x.Range == DateTime.Today.ToString(DefaultFormat.DateTimeFormatsToWrite)));
+                    Assert.Equal(1, facetResult.Values.Count(x => x.Range.Equals(DateTime.Today.ToString(DefaultFormat.DateTimeFormatsToWrite), StringComparison.InvariantCultureIgnoreCase)));
                 }
             }
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void CanCorrectlyAggregate_DisplayName(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -398,7 +398,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_Ranges(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -442,7 +442,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -457,7 +457,7 @@ namespace SlowTests.Tests.Faceted
                     session.Store(new ItemsOrder { Items = new List<string> { "first" }, At = DateTime.Today });
                     session.SaveChanges();
                 }
-
+                
                 var minValue = DateTime.MinValue;
                 var end0 = DateTime.Today.AddDays(-2);
                 var end1 = DateTime.Today.AddDays(-1);
@@ -484,7 +484,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts_AndInOperator_AfterOtherWhere(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -528,7 +528,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_DateTimeDataType_WithRangeCounts_AndInOperator_BeforeOtherWhere(Options options)
         {
             using (var store = GetDocumentStore(options))

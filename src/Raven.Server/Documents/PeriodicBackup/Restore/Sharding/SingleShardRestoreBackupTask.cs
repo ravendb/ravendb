@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
@@ -26,14 +27,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             _shardNumber = ShardHelper.GetShardNumber(DatabaseName);
         }
 
-        protected override Task OnBeforeRestoreAsync()
+        protected override Task<IDisposable> OnBeforeRestoreAsync()
         {
             CreateDocumentDatabase();
             
             var topology = RestoreSettings.DatabaseRecord.Sharding.Shards[_shardNumber];
             Database.SetIds(topology, RestoreSettings.DatabaseRecord.Sharding.DatabaseId);
 
-            return Task.CompletedTask;
+            return Task.FromResult<IDisposable>(Database);
         }
 
         protected override Task OnAfterRestoreAsync()

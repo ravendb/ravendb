@@ -69,7 +69,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -255,7 +255,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCorrectlyAggregate_Ranges(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -277,10 +277,11 @@ namespace SlowTests.Tests.Faceted
                     var r = session.Query<Order>("Orders/All")
                         .AggregateBy(f => f
                             .ByRanges(
-                                x => x.Total < 100,
+                               x => x.Total < 100,
                                 x => x.Total >= 100 && x.Total < 500,
                                 x => x.Total >= 500 && x.Total < 1500,
-                                x => x.Total >= 1500)
+                               x => x.Total >= 1500
+                    )
                             .SumOn(x => x.Total).AverageOn(x => x.Total).SumOn(x => x.Quantity))
                         .Execute();
 
@@ -421,7 +422,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldThrow(Options options)
         {
             using (var store = GetDocumentStore(options))

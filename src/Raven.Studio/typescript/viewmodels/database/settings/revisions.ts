@@ -261,8 +261,8 @@ class revisions extends shardViewModelBase {
             .done(() => {
                 this.dirtyFlag().reset();
                 
-                this.defaultConflictConfiguration().dirtyFlag().reset();
-                this.defaultDocumentConfiguration().dirtyFlag().reset();
+                this.defaultConflictConfiguration()?.dirtyFlag().reset();
+                this.defaultDocumentConfiguration()?.dirtyFlag().reset();
                 this.perCollectionConfigurations().forEach(item => item.dirtyFlag().reset());
                 
                 messagePublisher.reportSuccess(`Revisions configuration has been saved`);

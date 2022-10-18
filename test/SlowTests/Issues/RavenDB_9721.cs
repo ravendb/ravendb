@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Should_include_last_tombstone_as_cutoff_etag()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Should_include_last_tombstone_as_cutoff_etag(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByName().Execute(store);
 

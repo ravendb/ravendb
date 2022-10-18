@@ -81,6 +81,7 @@ namespace Raven.Client.Documents.Session.Operations
                 Metadata = metadata,
                 Entity = entity
             };
+            _session.OnAfterConversionToEntityInvoke(id, document, entity);
 
             return entity;
         }

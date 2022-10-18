@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -49,11 +50,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void QueryReturningMultipleValues()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryReturningMultipleValues(Options options)
         {
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SalesIndex().Execute(store);
 
@@ -97,8 +99,9 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public void QueryReturningMultipleValuesWithDifferentNames()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryReturningMultipleValuesWithDifferentNames(Options options)
         {
             using (var store = GetDocumentStore())
             {
@@ -146,10 +149,11 @@ namespace SlowTests.Issues
             }
 
         }
-        [Fact]
-        public void QueryCantReturnMultipleAggregationValuesWithSameName()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryCantReturnMultipleAggregationValuesWithSameName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SalesIndex().Execute(store);
 
@@ -194,10 +198,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryReturningMultipleValuesOnDifferentArguments()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryReturningMultipleValuesOnDifferentArguments(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SalesIndex().Execute(store);
 
@@ -233,10 +238,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryReturningMultipleValuesOnDifferentArguments_Legacy()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryReturningMultipleValuesOnDifferentArguments_Legacy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SalesIndex().Execute(store);
 
@@ -274,10 +280,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void QueryReturningMultipleValuesSameArg()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void QueryReturningMultipleValuesSameArg(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SalesIndex().Execute(store);
 

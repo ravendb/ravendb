@@ -1728,7 +1728,7 @@ namespace Raven.Server
         public string WebUrl { get; private set; }
 
         internal CertificateUtils.CertificateHolder Certificate;
-        
+
         public class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
@@ -2712,6 +2712,8 @@ namespace Raven.Server
 
         internal NamedPipeServerStream LogStreamPipe { get; set; }
 
+        internal static bool SkipCertificateDispose = false;
+
         public void Dispose()
         {
             if (Disposed)
@@ -2754,6 +2756,9 @@ namespace Raven.Server
                 ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
                 ea.Execute(() => _cpuCreditsMonitoring?.Join(int.MaxValue));
                 ea.Execute(() => CpuUsageCalculator.Dispose());
+
+                if (SkipCertificateDispose == false)
+                    ea.Execute(() => Certificate?.Dispose());
 
                 // this should be last
                 ea.Execute(() => AfterDisposal?.Invoke());
