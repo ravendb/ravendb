@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Indexes.Static
             CreateMetadataReferenceFromAssembly(typeof(IPAddress).Assembly)
         };
 
-        public static unsafe MetadataReference CreateMetadataReferenceFromAssembly(Assembly assembly)
+        private static unsafe MetadataReference CreateMetadataReferenceFromAssembly(Assembly assembly)
         {
             assembly.TryGetRawMetadata(out var blob, out var length);
             var moduleMetadata = ModuleMetadata.CreateFromMetadata((IntPtr)blob, length);
@@ -284,7 +284,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     syntaxTrees.Add(ext.Key, tree);
 
                     var ns = tree.GetRoot().DescendantNodes()
-                        .OfType<NamespaceDeclarationSyntax>()
+                        .OfType<BaseNamespaceDeclarationSyntax>()
                         .FirstOrDefault();
 
                     if (ns != null)
