@@ -116,11 +116,11 @@ namespace Raven.Client.Documents.Subscriptions
         {
             var s = _store.OpenAsyncSession(options);
 
-            var actualSession = (AsyncDocumentSession)s;
+            var ms = (InMemoryDocumentSessionOperations)s;
 
-            actualSession.OnAfterSaveChanges += (sender, args) =>
+            ms.OnSessionDisposing += (s, args) =>
             {
-                var en = args.DocumentsByEntity.GetEnumerator();
+                var en = args.Session.DocumentsByEntity.GetEnumerator();
                 do
                 {
                     if (en.Current == null || en.Current.Value == null)
@@ -153,17 +153,17 @@ namespace Raven.Client.Documents.Subscriptions
                             relevantItem.Metadata[kvp.Key] = kvp.Value;
                         }
 
-                        args.DisableDisposingContextAction?.Invoke();
+                        args.Session.DontDisposeContext = true;
                     }
                 } while (en.MoveNext());
 
-                foreach (var id in args.DeletedDocumentsIds)
+                foreach (var id in args.Session.DeletedDocumentsIds)
                 {
                     DeletedDocumentsIds.Add(id);
                 }
             };
 
-            LoadDataToSession((InMemoryDocumentSessionOperations)s);
+            LoadDataToSession(ms);
 
             return s;
         }
