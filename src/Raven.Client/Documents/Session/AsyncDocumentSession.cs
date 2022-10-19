@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -13,6 +15,8 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
+using Raven.Client.Json;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -164,8 +168,32 @@ namespace Raven.Client.Documents.Session
                     await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
                     UpdateSessionAfterSaveChanges(command.Result);
                     saveChangesOperation.SetResult(command.Result);
+                    OnAfterSaveChangesInvoke();
                 }
             }
         }
+
+        internal event EventHandler<OnAfterSaveChangesEventArgs> OnAfterSaveChanges;
+
+        internal class OnAfterSaveChangesEventArgs
+        {
+            public Action DisableDisposingContextAction { get; set; }
+            public HashSet<string> DeletedDocumentsIds { get; set; }
+            public DocumentsByEntityHolder DocumentsByEntity { get; set; }
+        }
+
+        internal void OnAfterSaveChangesInvoke()
+        {
+            OnAfterSaveChanges?.Invoke(this, new OnAfterSaveChangesEventArgs()
+            {
+                DeletedDocumentsIds = this.DeletedDocumentsIds,
+                DocumentsByEntity = this.DocumentsByEntity,
+                DisableDisposingContextAction = () =>
+                {
+                    DontDisposeContext = true;
+                }
+            });
+        }
+
     }
 }

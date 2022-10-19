@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -15,7 +16,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Represents a single item in a subscription batch results. This class should be used only inside the subscription's Run delegate, using it outside this scope might cause unexpected behavior.
         /// </summary>
-        public struct Item
+        public class Item
         {
             private T _result;
             public string ExceptionMessage { get; internal set; }
@@ -61,6 +62,8 @@ namespace Raven.Client.Documents.Subscriptions
         private List<BlittableJsonReaderObject> _includes;
         private List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> _counterIncludes;
         private List<BlittableJsonReaderObject> _timeSeriesIncludes;
+
+        internal HashSet<string> DeletedDocumentsIds = new HashSet<string>();
 
         public IDocumentSession OpenSession()
         {
@@ -113,6 +116,53 @@ namespace Raven.Client.Documents.Subscriptions
         {
             var s = _store.OpenAsyncSession(options);
 
+            var actualSession = (AsyncDocumentSession)s;
+
+            actualSession.OnAfterSaveChanges += (sender, args) =>
+            {
+                var en = args.DocumentsByEntity.GetEnumerator();
+                do
+                {
+                    if (en.Current == null || en.Current.Value == null)
+                    {
+                        continue;
+                    }
+                    var id = en.Current.Value.Id;
+                    var rawMetadata = en.Current.Value.Metadata;
+                    var metadataDict = new MetadataAsDictionary(rawMetadata);
+                    var rawResult = en.Current.Value.Document;
+                    var cv = en.Current.Value.ChangeVector;
+
+                    Item relevantItem = null;
+                    foreach (var item in Items)
+                    {
+                        if (item.Id == id)
+                        {
+                            relevantItem = item;
+                            break;
+                        }
+                    }
+
+                    if (relevantItem != null && relevantItem.ChangeVector != cv)
+                    {
+                        relevantItem.RawMetadata = rawMetadata;
+                        relevantItem.RawResult = rawResult;
+                        relevantItem.Metadata.Clear();
+                        foreach (var kvp in metadataDict)
+                        {
+                            relevantItem.Metadata[kvp.Key] = kvp.Value;
+                        }
+
+                        args.DisableDisposingContextAction?.Invoke();
+                    }
+                } while (en.MoveNext());
+
+                foreach (var id in args.DeletedDocumentsIds)
+                {
+                    DeletedDocumentsIds.Add(id);
+                }
+            };
+
             LoadDataToSession((InMemoryDocumentSessionOperations)s);
 
             return s;
@@ -155,7 +205,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             foreach (var item in Items)
             {
-                if (item.Projection || item.Revision)
+                if (item.RawResult.Disposed || item.RawMetadata.Disposed || DeletedDocumentsIds.Contains(item.Id) || item.Projection || item.Revision)
                     continue;
 
                 s.RegisterExternalLoadedIntoTheSession(new DocumentInfo
