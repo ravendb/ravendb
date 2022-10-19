@@ -44,6 +44,26 @@ namespace FastTests.Client.Indexing
         }
 
         [Fact]
+        public void CanCompileIndexWithExtensions2()
+        {
+            CopyNodaTimeIfNeeded();
+
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new PeopleByEmail2());
+                using (var session = store.OpenSession())
+                {
+                    var p = new Person() { Name = "Methuselah", Age = 969 };
+                    session.Store(p);
+                    session.SaveChanges();
+                    Indexes.WaitForIndexing(store);
+                    var query = session.Query<PeopleByEmail2.PeopleByEmailResult, PeopleByEmail2>()
+                        .Where(x => x.Email == PeopleUtil.CalculatePersonEmail(p.Name, p.Age)).OfType<Person>().Single();
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanUpdateIndexExtensions()
         {
             using (var store = GetDocumentStore())
@@ -1177,6 +1197,44 @@ namespace My.Crazy.Namespace
             //The code below intention is just to make sure NodaTime is compiling with our index
             return $""{name}.{Instant.FromDateTimeUtc(DateTime.Now.ToUniversalTime()).ToDateTimeUtc().Year - age}@ayende.com"";
         }
+    }
+}
+"
+                    }
+                };
+            }
+        }
+
+        private class PeopleByEmail2 : AbstractIndexCreationTask<Person>
+        {
+            public class PeopleByEmailResult
+            {
+                public string Email { get; set; }
+            }
+
+            public PeopleByEmail2()
+            {
+                Map = people => from person in people
+                    select new
+                    {
+                        _ = CreateField("Email", CalculatePersonEmail(person.Name, person.Age), true, true),
+                    };
+                AdditionalSources = new Dictionary<string, string>
+                {
+                    {
+                        "PeopleUtil",
+                        @"
+using System;
+using NodaTime;
+using static My.Crazy.Namespace.PeopleUtil;
+namespace My.Crazy.Namespace;
+
+public static class PeopleUtil
+{
+    public static string CalculatePersonEmail(string name, uint age)
+    {
+        //The code below intention is just to make sure NodaTime is compiling with our index
+        return $""{name}.{Instant.FromDateTimeUtc(DateTime.Now.ToUniversalTime()).ToDateTimeUtc().Year - age}@ayende.com"";
     }
 }
 "
