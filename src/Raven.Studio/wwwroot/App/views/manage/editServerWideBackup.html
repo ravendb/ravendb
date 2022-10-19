@@ -45,7 +45,7 @@
                     <span class="help-block" data-bind="validationMessage: backupType"></span>
                 </div>
             </div>
-            <div data-bind="visible: isSnapshot, with: snapshot">
+            <div data-bind="collapse: isSnapshot, with: snapshot">
                 <div class="row margin-bottom">
                     <label class="control-label col-sm-4 col-lg-2">Compression</label>
                     <div class="col-sm-4">
@@ -57,18 +57,6 @@
                             <ul class="dropdown-menu" data-bind="foreach: compressionLevelOptions">
                                 <li><a href="#" data-bind="text: $data, click: $parent.useCompression.bind($parent, $data)"></a></li>
                             </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="row margin-bottom">
-                    <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
-                        <div class="toggle">
-                            <div class="toggle" data-placement="right" data-toggle="tooltip"
-                                 title="Skip backup of indexed data. Only index definitions are exported. After restore server starts automatic re-indexing."
-                                 data-animation="true">
-                                <input id="excludeIndexes" type="checkbox" data-bind="checked: excludeIndexes">
-                                <label for="excludeIndexes">Exclude indexes data</label>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -108,6 +96,19 @@
                 <div class="row margin-bottom small">
                     <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4" data-bind="visible: mentorNode">
                         <div data-bind="compose: 'partial/pinResponsibleNodeTextScript.html'"></div>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="collapse: isSnapshot, with: snapshot">
+                <div class="row margin-bottom-xs">
+                    <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
+                        <div class="toggle">
+                            <div class="toggle" data-placement="right" data-toggle="tooltip" data-animation="true"
+                                 title="Back up index definitions only. Indexes will be rebuilt from these definitions upon Restore.">
+                                <input id="excludeIndexes" type="checkbox" data-bind="checked: excludeIndexes">
+                                <label for="excludeIndexes">Exclude indexes data</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

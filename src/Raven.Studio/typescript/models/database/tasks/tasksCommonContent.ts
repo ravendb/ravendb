@@ -1,32 +1,38 @@
 ﻿class tasksCommonContent {
         
     static readonly generalBackupInfo =
-        "Differences between Backup and Snapshot:" +
-        "<ul>" +
-            "<li>Data" +
-                "<small><ul>" +
-                    "<li><strong>Backup</strong> includes documents, indexes definitions and identities.<br> " +
-                    "It doesn't include the index data itself, the indexes will be rebuilt after Restore, based on exported definitions.</li>" +
-                    "<li><strong>Snapshot</strong> contains the raw data including the indexes (definitions and data).</li>" +
-                "</ul></small>" +
-            "</li>" +
-            "<li>Speed" +
-                "<small><ul>" +
-                "   <li><strong>Backup</strong> is usually much faster than a <strong>Snapshot</strong></li>" +
-                "</ul></small>" +
-            "</li>" +
-            "<li>Size" +
-                "<small><ul>" +
-                 "<li><strong>Backup</strong> is much smaller than <strong>Snapshot</strong></li>" +
-                "</ul></small>" +
-            "</li>" +
-            "<li>Restore" +
-                "<small><ul>" +
-                    "<li>Restore of a <strong>Snapshot</strong> is faster than of a <strong>Backup</strong></li>" +
-                "</ul></small>" +
-            "</li>" +
-        "</ul></>" +
-        "Note: An incremental Snapshot is the same as an incremental Backup";
+        `<div class="margin-bottom">Differences between Backup and Snapshot:</div> 
+        <ul>
+            <li>Data
+                <small><ul>
+                    <li><strong>Backup</strong> includes documents, identities, and index definitions.<br />
+                        It doesn't include index data - indexes are rebuilt from the backed-up definitions when restoring the database.</li>
+                    <li><strong>Snapshot</strong> contains the raw data including the indexes (definitions and data, or definitions only).</li>
+                </ul></small>
+            </li>
+        </ul>
+        <div class="margin-bottom">Differences when Snapshot backs up both indexes definitions and indexes data:</div>
+        <ul>
+            <li>Speed
+                <small><ul>
+                   <li><strong>Backup</strong> is usually much faster than a <strong>Snapshot</strong></li>
+                </ul></small>
+            </li>
+            <li>Size
+                <small><ul>
+                    <li><strong>Backup</strong> is usually much smaller than <strong>Snapshot</strong></li>
+                </ul></small>
+            </li>
+            <li>Restore
+                <small><ul>
+                    <li>Restoring a <strong>Snapshot</strong> is usually faster than restoring a <strong>Backup</strong></li>
+                </ul></small>
+            </li>
+        </ul>
+        <div>Notes:</div>
+        <ul>
+            <li><small>An incremental Snapshot is the same as an incremental Backup</small></li>
+        </ul>`;
     
     static readonly backupAgeInfo = 
         "<ul>" +
