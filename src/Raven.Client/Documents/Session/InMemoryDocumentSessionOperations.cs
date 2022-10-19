@@ -102,6 +102,10 @@ namespace Raven.Client.Documents.Session
 
         public IDictionary<string, object> ExternalState => _externalState ?? (_externalState = new Dictionary<string, object>());
 
+        protected bool DontDisposeContext { get; set; } = false;
+
+        internal HashSet<string> DeletedDocumentsIds = new HashSet<string>();
+
         public async Task<ServerNode> GetCurrentSessionNode()
         {
             using (AsyncTaskHolder())
@@ -604,6 +608,7 @@ more responsive application.
             }
 
             DeletedEntities.Add(entity);
+            DeletedDocumentsIds.Add(value.Id);
             IncludedDocumentsById.Remove(value.Id);
             _countersByDocId?.Remove(value.Id);
             _knownMissingIds.Add(value.Id);
@@ -644,6 +649,7 @@ more responsive application.
                         changeVector = documentInfo.ChangeVector;
                         DocumentsById.Remove(id);
                     }
+                    DeletedDocumentsIds.Add(id);
                 }
             }
 
@@ -1407,19 +1413,23 @@ more responsive application.
 
             _isDisposed = true;
 
-            if (isDisposing && RunningOn.FinalizerThread == false)
+            if (DontDisposeContext == false)
             {
-                GC.SuppressFinalize(this);
+                if (isDisposing && RunningOn.FinalizerThread == false)
+                {
+                    GC.SuppressFinalize(this);
 
-                _releaseOperationContext?.Dispose();
-            }
-            else
-            {
-                // when we are disposed from the finalizer then we have to dispose the context immediately instead of returning it to the pool because
-                // the finalizer of ArenaMemoryAllocator could be already called so we cannot return such context to the pool (RavenDB-7571)
+                    _releaseOperationContext?.Dispose();
+                }
+                else
+                {
+                    // when we are disposed from the finalizer then we have to dispose the context immediately instead of returning it to the pool because
+                    // the finalizer of ArenaMemoryAllocator could be already called so we cannot return such context to the pool (RavenDB-7571)
 
-                Context?.Dispose();
+                    Context?.Dispose();
+                }
             }
+            
 
             edi?.Throw();
         }
