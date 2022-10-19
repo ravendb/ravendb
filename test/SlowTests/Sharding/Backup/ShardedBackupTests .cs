@@ -31,42 +31,40 @@ namespace SlowTests.Sharding.Backup
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanBackupSharded(Options options)
         {
-            var file = GetTempFileName();
-            try
-            {
-                var backupPath = NewDataPath(suffix: $"{options.DatabaseMode}_BackupFolder");
+            var backupPath = NewDataPath(suffix: $"{options.DatabaseMode}_BackupFolder");
 
-                using (var store1 = Sharding.GetDocumentStore())
-                using (var store2 = GetDocumentStore(options))
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = GetDocumentStore(options))
+            {
+                await Sharding.Backup.InsertData(store1);
+
+                // assert that index was created on all shards
+                await foreach (var shard in Sharding.GetShardsDocumentDatabaseInstancesFor(store1))
                 {
-                    await Sharding.Backup.InsertData(store1);
-
-                    var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
-
-                    var config = Backup.CreateBackupConfiguration(backupPath);
-                    await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
-
-                    Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
-
-                    // import
-
-                    var dirs = Directory.GetDirectories(backupPath);
-
-                    Assert.Equal(3, dirs.Length);
-                    var importOptions = new DatabaseSmugglerImportOptions();
-
-                    foreach (var dir in dirs)
-                    {
-                        await store2.Smuggler.ImportIncrementalAsync(importOptions, dir);
-                        importOptions.OperateOnTypes &= ~DatabaseSmugglerOptions.OperateOnFirstShardOnly;
-                    }
-
-                    await Sharding.Backup.CheckData(store2, options.DatabaseMode, expectedRevisionsCount: 21);
+                    Assert.Equal(1, shard.IndexStore.Count);
                 }
-            }
-            finally
-            {
-                File.Delete(file);
+
+                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                // import
+
+                var dirs = Directory.GetDirectories(backupPath);
+
+                Assert.Equal(3, dirs.Length);
+                var importOptions = new DatabaseSmugglerImportOptions();
+
+                foreach (var dir in dirs)
+                {
+                    await store2.Smuggler.ImportIncrementalAsync(importOptions, dir);
+                    importOptions.OperateOnTypes &= ~DatabaseSmugglerOptions.OperateOnFirstShardOnly;
+                }
+
+                await Sharding.Backup.CheckData(store2, options.DatabaseMode, expectedRevisionsCount: 21);
             }
         }
 
