@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Tests.Faceted
             public Double Price { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void CanUseNewAPIToDoMultipleQueries()
         {
             var oldFacets = new List<FacetBase>
@@ -84,7 +85,7 @@ namespace SlowTests.Tests.Faceted
             Assert.Equal(true, AreFacetsEqual<Test>(oldFacets[2], newFacets[2]));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void NewAPIThrowsExceptionsForInvalidExpressions()
         {
             //Create an invalid lambda and check it throws an exception!!
@@ -110,7 +111,7 @@ namespace SlowTests.Tests.Faceted
                 }));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void AdvancedAPIAdvancedEdgeCases()
         {
             var now = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified);

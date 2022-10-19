@@ -110,11 +110,16 @@ namespace Raven.Server.Utils
             return true;
         }
 
-        public class CertificateHolder
+        public class CertificateHolder : IDisposable
         {
             public string CertificateForClients;
             public X509Certificate2 Certificate;
             public AsymmetricKeyEntry PrivateKey;
+
+            public void Dispose()
+            {
+                Certificate?.Dispose();
+            }
         }
         public static byte[] CreateSelfSignedTestCertificate(string commonNameValue, string issuerName, StringBuilder log = null)
         {

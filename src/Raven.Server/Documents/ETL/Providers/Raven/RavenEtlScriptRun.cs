@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var attachment in attachments)
                 {
-                    commands.Add(new PutAttachmentCommandData(remoteDocumentId, attachment.Name, attachment.Stream, attachment.ContentType, null));
+                    commands.Add(new PutAttachmentCommandData(remoteDocumentId, attachment.Name, attachment.Stream, attachment.ContentType, null, fromEtl: true));
 
                     _stats.IncrementBatchSize(attachment.Stream.Length);
                 }
@@ -300,7 +300,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         foreach (var addAttachment in putAttachments)
                         {
                             commands.Add(new PutAttachmentCommandData(remoteDocumentId, addAttachment.Name, addAttachment.Attachment.Stream, addAttachment.Attachment.ContentType,
-                                null));
+                                null, fromEtl: true));
                         }
                     }
 

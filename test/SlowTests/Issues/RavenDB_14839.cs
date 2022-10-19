@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void DocumentQueryWithWhereAndRangeFacetOnTheSamePropertyTest()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Index mixes value in dynamic array. This is not supported in Corax")]
+        public void DocumentQueryWithWhereAndRangeFacetOnTheSamePropertyTest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new Color_ForSearch());
                 using (var session = store.OpenSession())
@@ -36,7 +39,7 @@ namespace SlowTests.Issues
                 }
 
                 Indexes.WaitForIndexing(store);
-
+WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var documentQuery = session.Advanced.DocumentQuery<Color, Color_ForSearch>()

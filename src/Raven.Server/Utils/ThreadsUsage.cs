@@ -25,7 +25,22 @@ namespace Raven.Server.Utils
                 {
                     using (thread)
                     {
-                        _threadTimesInfo[thread.Id] = thread.TotalProcessorTime.Ticks;
+                        try
+                        {
+                            _threadTimesInfo[thread.Id] = thread.TotalProcessorTime.Ticks;
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            // thread has exited
+                        }
+                        catch (Win32Exception e) when (e.HResult == 0x5)
+                        {
+                            // thread has exited
+                        }
+                        catch (NotSupportedException)
+                        {
+                            // nothing to do
+                        }
                     }
                 }
 

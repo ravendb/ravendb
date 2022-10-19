@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             HasEncryptionKey = false;
         }
 
-        protected override async Task OnBeforeRestoreAsync()
+        protected override async Task<IDisposable> OnBeforeRestoreAsync()
         {
             ModifyDatabaseRecordSettings();
             InitializeShardingConfiguration();
@@ -55,6 +55,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
             var op = new WaitForIndexNotificationOnServerOperation(index);
             await shardedDbContext.AllNodesExecutor.ExecuteParallelForAllAsync(op);
+
+            return null;
         }
 
         protected override async Task RestoreAsync()

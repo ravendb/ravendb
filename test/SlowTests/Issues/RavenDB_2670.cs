@@ -59,10 +59,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void MaxSuggestionsShouldWork()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void MaxSuggestionsShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 

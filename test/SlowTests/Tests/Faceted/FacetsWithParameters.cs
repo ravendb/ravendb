@@ -69,8 +69,7 @@ namespace SlowTests.Tests.Faceted
 
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void FacetShouldUseParameters_WithFacetBaseList(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -114,8 +113,7 @@ namespace SlowTests.Tests.Faceted
 
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void FacetShouldUseParameters_WithTypedRangeFacetList(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -158,8 +156,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void FacetShouldUseParameters_WithIFacetBuilder(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -194,8 +191,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void FacetShouldUseParameters_WithUntypedRangeFacetList(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -239,8 +235,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void FacetSetupDocument_ShouldNotUseParameters(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -315,8 +310,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task TwoDifferentAsyncQueriesThatAreUsingTheSameFacetWithParametersShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -369,8 +363,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueryUsingMultipuleFacetsWithParametersShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -436,8 +429,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void FacetShouldUseParameters_WithNumbers(Options options)
         {
             using (var store = GetDocumentStore(options))

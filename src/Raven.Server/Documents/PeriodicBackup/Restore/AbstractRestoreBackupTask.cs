@@ -89,9 +89,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         ServerStore.PutSecretKey(RestoreConfiguration.EncryptionKey, RestoreSettings.DatabaseRecord.DatabaseName, overwrite: false);
                     }
 
-                    await OnBeforeRestoreAsync();
-                    await RestoreAsync();
-                    await OnAfterRestoreAsync();
+                    using (await OnBeforeRestoreAsync())
+                    {
+                        await RestoreAsync();
+                        await OnAfterRestoreAsync();
+                    }
+
+                    await OnAfterRestoreBeforeReturnAsync();
 
                     return OperationResult();
                 }
@@ -176,7 +180,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 .CreateDatabaseConfiguration(DatabaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true, RestoreSettings.DatabaseRecord);
         }
 
-        protected virtual async Task OnBeforeRestoreAsync()
+        protected virtual async Task<IDisposable> OnBeforeRestoreAsync()
         {
             ModifyDatabaseRecordSettings();
 
@@ -194,6 +198,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             await SaveDatabaseRecordAsync(DatabaseName, databaseRecord, RestoreSettings.DatabaseValues, Result, Progress);
 
             Database.SetIds(RestoreSettings.DatabaseRecord);
+
+            return Database;
+        }
+
+        protected virtual Task OnAfterRestoreBeforeReturnAsync()
+        {
+            return Task.CompletedTask;
         }
 
         protected virtual async Task OnAfterRestoreAsync()
@@ -634,7 +645,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public void Dispose()
         {
-            Database?.Dispose();
             RestoreSource?.Dispose();
             OperationCancelToken?.Dispose();
             _disposeContext?.Dispose();

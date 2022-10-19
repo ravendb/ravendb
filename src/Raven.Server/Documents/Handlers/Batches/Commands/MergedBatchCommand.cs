@@ -172,19 +172,7 @@ public class MergedBatchCommand : TransactionMergedCommand
                     var stream = attachmentStream.Stream;
                     _toDispose.Add(stream);
 
-                    var docId = cmd.Id;
-
-                    if (docId[docId.Length - 1] == Database.IdentityPartsSeparator)
-                    {
-                        // attachment sent by Raven ETL, only prefix is defined
-
-                        if (lastPutResult == null)
-                            ThrowUnexpectedOrderOfRavenEtlCommands("Bulk Docs");
-
-                        Debug.Assert(lastPutResult.Value.Id.StartsWith(docId));
-
-                        docId = lastPutResult.Value.Id;
-                    }
+                    var docId = EtlGetDocIdFromPrefixIfNeeded(cmd.Id, cmd, lastPutResult);
 
                     var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
                         cmd.ContentType, attachmentStream.Hash, cmd.ChangeVector, stream, updateDocument: false);
@@ -455,9 +443,9 @@ public class MergedBatchCommand : TransactionMergedCommand
 
     private string EtlGetDocIdFromPrefixIfNeeded(string docId, BatchRequestParser.CommandData cmd, DocumentsStorage.PutOperationResults? lastPutResult)
     {
-        if (!cmd.FromEtl || docId[^1] != Database.IdentityPartsSeparator)
+        if (cmd.FromEtl == false || docId[^1] != Database.IdentityPartsSeparator)
             return docId;
-        // counter/time-series sent by Raven ETL, only prefix is defined
+        // counter/time-series/attachments sent by Raven ETL, only prefix is defined
 
         if (lastPutResult == null)
             ThrowUnexpectedOrderOfRavenEtlCommands("Raven ETL");

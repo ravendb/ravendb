@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private Stopwatch _sw;
         private readonly string _firstFile, _extension;
 
-        public RestoreSnapshotTask(ServerStore serverStore, RestoreBackupConfigurationBase restoreConfiguration, IRestoreSource restoreSource, 
+        public RestoreSnapshotTask(ServerStore serverStore, RestoreBackupConfigurationBase restoreConfiguration, IRestoreSource restoreSource,
             string firstFile, string extension, List<string> filesToRestore, OperationCancelToken operationCancelToken) : base(serverStore, restoreConfiguration, restoreSource, filesToRestore, operationCancelToken)
         {
             _firstFile = firstFile;
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected override async Task InitializeAsync()
         {
             await base.InitializeAsync();
-            
+
             Options |= InitializeOptions.GenerateNewDatabaseId;
 
             Progress.Invoke(Result.Progress);
@@ -90,6 +90,24 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             // removing the snapshot from the list of files
             FilesToRestore.RemoveAt(0);
+        }
+
+        protected override async Task OnAfterRestoreBeforeReturnAsync()
+        {
+            Result.AddInfo($"Loading the database after restore");
+
+            try
+            {
+                await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(DatabaseName, addToInitLog: message => Result.AddInfo(message));
+            }
+            catch (Exception e)
+            {
+                // we failed to load the database after restore, we don't want to fail the entire restore process since it will delete the database if we throw here
+                Result.AddError($"Failed to load the database after restore, {e}");
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to load the database '{DatabaseName}' after restore", e);
+            }
         }
 
         protected override async Task OnAfterRestoreAsync()

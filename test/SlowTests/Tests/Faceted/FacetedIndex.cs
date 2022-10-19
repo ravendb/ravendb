@@ -174,6 +174,7 @@ namespace SlowTests.Tests.Faceted
 
         [RavenTheory(RavenTestCategory.Facets)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "by field")]
         public void CanPerformFacetedSearch_Remotely_Lazy_can_work_with_others(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -282,6 +283,8 @@ namespace SlowTests.Tests.Faceted
             CreateCameraCostIndex(store);
 
             InsertCameraData(store, _data);
+            
+            Indexes.WaitForIndexing(store);
         }
 
         private void CheckFacetResultsMatchInMemoryData(

@@ -137,7 +137,7 @@ namespace SlowTests.Tests.DistinctFacets
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void DistinctResult_WithFacets_ShouldThrow(Options options)
         {
             using (var store = GetDocumentStore(options))

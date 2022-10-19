@@ -55,10 +55,11 @@ namespace SlowTests.Issues
             Indexes.WaitForIndexing(store);
         }
 
-        [Fact]
-        public async Task CanChainSuggestions()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanChainSuggestions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -106,10 +107,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseAliasInSuggestions()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseAliasInSuggestions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -127,8 +129,8 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseSuggestionsWithAutoIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -149,8 +151,8 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanExtendAutoIndexWithSuggestions(Options options)
         {
             using (var store = GetDocumentStore(options))

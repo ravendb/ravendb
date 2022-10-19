@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,8 +15,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldNotThrowNRE()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldNotThrowNRE(Options options)
         {
             using (var store = GetDocumentStore())
             {

@@ -156,7 +156,7 @@ public partial class IndexSearcher
                 isNegated);
 
         if (typeof(TValue) == typeof(double))
-            return RangeBuilder<TScoreFunction, TLeftRange, TRightRange>(names.FieldName, names.NumericTree, double.MinValue, (long)(object)value, scoreFunction,
+            return RangeBuilder<TScoreFunction, TLeftRange, TRightRange>(names.FieldName, names.NumericTree, double.MinValue, (double)(object)value, scoreFunction,
                 isNegated);
         if (typeof(TValue) == typeof(string))
         {

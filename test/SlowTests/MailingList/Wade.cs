@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -47,10 +48,11 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
-        public void DateTime_Facet_Works_As_Expected()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DateTime_Facet_Works_As_Expected(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
 
                 CreateIndexes(documentStore);

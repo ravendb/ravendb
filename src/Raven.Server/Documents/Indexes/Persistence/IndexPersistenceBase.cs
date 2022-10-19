@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract IndexReadOperationBase OpenIndexReader(Transaction readTransaction, IndexQueryServerSide query = null);
 
         public abstract bool ContainsField(string field);
-        public abstract IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction);
+        public abstract IndexFacetReadOperationBase OpenFacetedIndexReader(Transaction readTransaction);
         public abstract SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field);
         internal abstract void RecreateSearcher(Transaction asOfTx);
         internal abstract void RecreateSuggestionsSearchers(Transaction asOfTx);

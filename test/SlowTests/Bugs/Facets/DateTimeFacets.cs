@@ -16,7 +16,7 @@ namespace SlowTests.Bugs.Facets
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void ManualCheck()
         {
             var now = DateTime.Today;
@@ -76,8 +76,8 @@ namespace SlowTests.Bugs.Facets
             }
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void PrestonThinksDateRangeQueryShouldProduceCorrectResultsWhenBuiltWithClient(Options options)
         {
             var cameras = GetCameras(30);
