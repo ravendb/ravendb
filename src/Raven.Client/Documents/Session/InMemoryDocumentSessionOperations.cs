@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Session
 
         public IDictionary<string, object> ExternalState => _externalState ?? (_externalState = new Dictionary<string, object>());
 
-        protected bool DontDisposeContext { get; set; } = false;
+        internal bool DontDisposeContext { get; set; } = false;
 
         internal HashSet<string> DeletedDocumentsIds = new HashSet<string>();
 
