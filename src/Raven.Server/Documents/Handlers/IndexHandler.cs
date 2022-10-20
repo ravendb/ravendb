@@ -1017,21 +1017,25 @@ namespace Raven.Server.Documents.Handlers
                 var token = CreateOperationToken();
                 using (index.DrainRunningQueries())
                 {
-                    var result = new CompactionResult(index.Name);
-                    var operationId = ServerStore.Operations.GetNextOperationId();
+                    var result = new IndexOptimizeResult(index.Name);
+                    var operationId = Database.Operations.GetNextOperationId();
                     
-                    var t = ServerStore.Operations.AddOperation(
+                    var t = Database.Operations.AddOperation(
                         Database,
                         "Optimizing index: " + index.Name,
                         Operations.Operations.OperationType.LuceneOptimizeIndex,
-                        taskFactory: onProgress => Task.Run(() =>
+                        taskFactory: _ => Task.Run(() =>
                         {
                             try
                             {
                                 using (token)
                                 using (Database.PreventFromUnloadingByIdleOperations())
                                 using (var indexCts = CancellationTokenSource.CreateLinkedTokenSource(token.Token, Database.DatabaseShutdown))
-                                using (index.RestartEnvironment(onBeforeEnvironmentDispose: () => index.Optimize(onProgress, result, indexCts.Token)))
+                                using (index.RestartEnvironment(onBeforeEnvironmentDispose: () =>
+                                       {
+                                           result.Message = $"Optimization of index {name} started...";
+                                           index.Optimize(indexCts.Token);
+                                       }))
                                 {
                                     return Task.FromResult((IOperationResult)result);
                                 }
@@ -1039,7 +1043,7 @@ namespace Raven.Server.Documents.Handlers
                             catch (Exception e)
                             {
                                 if (Logger.IsOperationsEnabled)
-                                    Logger.Operations("Compaction process failed", e);
+                                    Logger.Operations("Optimize process failed", e);
 
                                 throw;
                             }

@@ -90,7 +90,6 @@ public class RavenDB_19149 : RavenTestBase
         var indexStat = indexStats.FirstOrDefault(i => string.Compare(i.Name, index.IndexName, StringComparison.InvariantCultureIgnoreCase) == 0);
         Assert.NotNull(indexStat);
         Assert.Equal(IndexState.Normal, indexStat.State);
-        Assert.Equal(IndexRunningStatus.Paused, indexStat.Status);
     }
 
     private void PrepareDataOnTheServer(DocumentStore store, out ExampleIndex exampleIndex)
