@@ -2,6 +2,7 @@
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -20,7 +21,7 @@ namespace Sparrow.Server
         public static int Compare(byte* p1, byte* p2, int size)
         {
             if (size <= 128)
-                return CompareSmallInlineNet6OrLesser(p1, p2, size);
+                return CompareSmallInlineNet6OorLesser(p1, p2, size);
             
             return new ReadOnlySpan<byte>(p1, size).SequenceCompareTo(new ReadOnlySpan<byte>(p2, size));
         }
@@ -52,7 +53,7 @@ namespace Sparrow.Server
         };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        internal static int CompareAvx2(void* p1, void* p2, int size)
+        internal static int CompareAvx2_Loop(void* p1, void* p2, int size)
         {
             byte* bpx = (byte*)p1;
 
@@ -151,39 +152,40 @@ namespace Sparrow.Server
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        internal static int CompareAvx2Expanded(void* p1, void* p2, int size)
+        internal static int CompareAvx2(void* p1, void* p2, int size)
         {
-            byte* bpx = (byte*)p1;
-            byte* bpy = (byte*)p2;
-
-            nuint length = (nuint) size;
-
             // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
-            //       hardware instructions without needed an extra register.            
-            long offset = bpy - bpx;
+            //       hardware instructions without needed an extra register.
+            byte* bpx = (byte*)p1;
+            nuint offset = (nuint)((byte*)p2 - bpx);
+
+            nuint length = (nuint)size;
             byte* bpxEnd = bpx + length;
 
-            uint matches = uint.MaxValue;
-
-            // Check if we are completely aligned, in that case just skip everything and go straight to the
-            // core of the routine. We have much bigger fishes to fry. 
-            nuint alignmentUnit = length & (nuint)(Vector256<byte>.Count - 1);
-            if (alignmentUnit == 0)
+            if (length >= (nuint)Vector256<byte>.Count)
                 goto ProcessAligned;
 
-            if ((alignmentUnit & 2) != 0)
+            //// Check if we are completely aligned, in that case just skip everything and go straight to the
+            //// core of the routine. We have much bigger fishes to fry. 
+            //nuint alignmentUnit = length & (nuint)(Vector256<byte>.Count - 1);
+            //if (alignmentUnit == 0)
+            //    goto ProcessAligned;
+
+            if ((length & 2) != 0)
             {
                 if (*(ushort*)bpx != *(ushort*)(bpx + offset))
-                    goto DoneShort;
+                {
+                    if (*bpx == *(bpx + offset))
+                        bpx++;
+                    goto DoneByte;
+                }
 
                 bpx += 2;
             }
 
-            int result = 0;
-
             // We have a potential problem. As AVX2 doesn't provide us a masked load that could address bytes
             // we will need to ensure we are int aligned. Therefore, we have to do this as fast as possibly. 
-            if ((alignmentUnit & 1) != 0)
+            if ((length & 1) != 0)
             {
                 if (*bpx != *(bpx + offset))
                     goto DoneByte;
@@ -193,33 +195,24 @@ namespace Sparrow.Server
 
             length = (nuint)(bpxEnd - bpx);
             if (length == 0)
-                goto DoneByte;
-
-            goto EnsureAlignedBlock;
-
-            DoneShort:
-            bpx += (*bpx == *(bpx + offset)).ToInt32();
-            DoneByte:
-            return *bpx - *(bpx + offset);
-
-            EnsureAlignedBlock:
+                goto Equals;
 
             // Now we know we are 32 bits aligned. So now we can actually use this knowledge to perform a masked load
             // of the leftovers needed to align. In the case that we are smaller, this will just find the difference
             // and we will jump to difference. Essentially we can have up-to 31 integers to load. 
             // Masked loads and stores will not cause memory access violations because no memory access happens per presentation from Intel.
             // https://llvm.org/devmtg/2015-04/slides/MaskedIntrinsics.pdf
-            alignmentUnit = length & (nuint)(Vector256<byte>.Count - 1);
-            if (alignmentUnit == 0)
-                goto ProcessAligned;
+            //var alignmentUnit = length & (nuint)(Vector256<byte>.Count - 1);
+            //if (alignmentUnit == 0)
+            //    goto ProcessAligned;
 
-            Debug.Assert(alignmentUnit / sizeof(int) != 0, "Cannot be 0 because that means it is aligned.");
-            Debug.Assert(alignmentUnit / sizeof(int) < (nuint)Vector256<int>.Count, $"Cannot be {Vector256<int>.Count} or greater because that means it is aligned.");
+            Debug.Assert(length / sizeof(int) != 0, "Cannot be 0 because that means that we have completed already.");
+            Debug.Assert(length / sizeof(int) < (nuint)Vector256<int>.Count, $"Cannot be {Vector256<int>.Count} or greater because that means it is a full vector.");
 
             int* tablePtr = (int*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(LoadMaskTable));
-            var mask = Avx2.LoadDquVector256(tablePtr + ((nuint)Vector256<int>.Count - alignmentUnit / sizeof(uint)));
+            var mask = Avx2.LoadDquVector256(tablePtr + ((nuint)Vector256<int>.Count - length / sizeof(uint)));
 
-            matches = (uint)Avx2.MoveMask(
+            var matches = (uint)Avx2.MoveMask(
                 Avx2.CompareEqual(
                     Avx2.MaskLoad((int*)bpx, mask).AsByte(),
                     Avx2.MaskLoad((int*)(bpx + offset), mask).AsByte()
@@ -229,12 +222,10 @@ namespace Sparrow.Server
             if (matches != uint.MaxValue)
                 goto Difference;
 
-            bpx += alignmentUnit;
-            if (bpx == bpxEnd)
-                return 0;
+            return 0;
 
             ProcessAligned:
-            byte* loopEnd = bpxEnd - Vector256<byte>.Count;
+            byte* loopEnd = bpxEnd - (nuint)Vector256<byte>.Count;
             while (bpx <= loopEnd)
             {
                 matches = (uint)Avx2.MoveMask(
@@ -248,36 +239,37 @@ namespace Sparrow.Server
                 // So the bit position in 'matches' corresponds to the element offset.
 
                 // 32 elements in Vector256<byte> so we compare to uint.MaxValue to check if everything matched
-                if (matches != uint.MaxValue)
-                    goto Difference;
-    
-                // All matched
-                bpx += (nuint)Vector256<byte>.Count;
+                if (matches == uint.MaxValue)
+                {
+                    // All matched
+                    bpx += (nuint)Vector256<byte>.Count;
+                    continue;
+                }
+                goto Difference;
             }
 
-            if (bpx != bpxEnd)
-            {
-                bpx = bpxEnd - Vector256<byte>.Count;
-                matches = (uint)Avx2.MoveMask(Avx2.CompareEqual(Avx.LoadVector256(bpx), Avx.LoadVector256(bpx + offset)));
-            }
+            // This statement ensures that if we have ended already (length of a AVX2 round number), we don't do the last check. 
+            if (bpx == bpxEnd)
+                goto Equals;
 
+            bpx = bpxEnd - (nuint)Vector256<byte>.Count;
+            matches = (uint)Avx2.MoveMask(Avx2.CompareEqual(Avx.LoadVector256(bpx), Avx.LoadVector256(bpx + offset)));
             if (matches == uint.MaxValue)
-            {
-                // All matched
-                return 0;
-            }
-
+                goto Equals;
+  
             Difference:
+            // We invert matches to find differences, which are found in the bit-flag. .
+            // We then add offset of first difference to the current offset in order to check that specific byte.
+            bpx += (nuint)BitOperations.TrailingZeroCount(~matches);
 
-            // Invert matches to find differences
-            nuint differences = ~matches;
-
-            // Find bitflag offset of first difference and add to current offset
-            bpx += (uint)BitOperations.TrailingZeroCount(differences);
-
-            result = *bpx - *(bpx + offset);
+            DoneByte:
+            var result = *bpx - *(bpx + offset);
             Debug.Assert(result != 0);
             return result;
+
+            Equals:
+            return 0;
+
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -290,7 +282,6 @@ namespace Sparrow.Server
             //       hardware instructions without needed an extra register.            
             long offset = bpy - bpx;
             byte* bpxEnd = bpx + size;
-
 
             if (size >= Vector256<byte>.Count)
             {
@@ -327,7 +318,7 @@ namespace Sparrow.Server
                     return 0;
                 }
 
-            Difference:
+                Difference:
 
                 // Invert matches to find differences
                 uint differences = ~matches;
@@ -359,7 +350,7 @@ namespace Sparrow.Server
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        internal static int CompareSmallInlineNet6OrLesser(void* p1, void* p2, int size)
+        internal static int CompareSmallInlineNet6OorLesser(void* p1, void* p2, int size)
         {
             byte* bpx = (byte*)p1;
             byte* bpy = (byte*)p2;
@@ -411,7 +402,7 @@ namespace Sparrow.Server
                     return *bpx - *(bpx + offset);
                 }
 
-            SMALL_TAIL:
+                SMALL_TAIL:
                 return Math.Sign(BinaryPrimitives.ReverseEndianness(uix) - BinaryPrimitives.ReverseEndianness(uiy));
             }
 
@@ -435,7 +426,7 @@ namespace Sparrow.Server
                 xor = *(ulong*)bpx ^ *(ulong*)(bpx + offset);
             }
 
-        TAIL:
+            TAIL:
             // Correctness path for equals. IF the XOR is actually zero, we are done. 
             if (xor == 0)
                 return 0;
