@@ -1,11 +1,21 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -43,6 +53,45 @@ public class RavenDB_19149 : RavenTestBase
 
         operation.WaitForCompletion(TimeSpan.FromMinutes(1));
     }
+    
+    [Fact]
+    public async Task LuceneOptimizeEndpoint()
+    {
+        using var store = GetDocumentStore(new Options()
+        {
+            RunInMemory = false,
+        });
+
+        PrepareDataOnTheServer(store, out ExampleIndex index);
+
+        var operation = await store.Maintenance.SendAsync(new IndexOptimizeOperation(index.IndexName));
+        Assert.NotNull(operation);
+
+        OperationState OperationStatusChecker()
+        {
+            OperationState output;
+            do
+            {
+                Task.Delay(TimeSpan.FromSeconds(1));
+                output = store.Maintenance.Send(new GetOperationStateOperation(operation.Id));
+            } while (output is not {Status: OperationStatus.Completed});
+
+            return output;
+        }
+
+        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60)))
+        {
+            var result = await Task.Run(OperationStatusChecker, cts.Token);
+            Assert.Equal(OperationStatus.Completed, result.Status);
+        }
+        
+        //Assert index live again and ready for querying.
+        var indexStats = await store.Maintenance.SendAsync(new GetIndexesStatisticsOperation());
+        var indexStat = indexStats.FirstOrDefault(i => string.Compare(i.Name, index.IndexName, StringComparison.InvariantCultureIgnoreCase) == 0);
+        Assert.NotNull(indexStat);
+        Assert.Equal(IndexState.Normal, indexStat.State);
+        Assert.Equal(IndexRunningStatus.Paused, indexStat.Status);
+    }
 
     private void PrepareDataOnTheServer(DocumentStore store, out ExampleIndex exampleIndex)
     {
@@ -69,4 +118,48 @@ public class RavenDB_19149 : RavenTestBase
         }
     }
     
+    private class IndexOptimizeOperation : IMaintenanceOperation<OperationIdResult>
+    {
+        private readonly string _indexName;
+
+        public IndexOptimizeOperation(string indexName)
+        {
+            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
+        }
+
+        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        {
+            return new IndexOptimizeCommand(_indexName);
+        }
+
+        private class IndexOptimizeCommand : RavenCommand<OperationIdResult>
+        {
+            private readonly string _indexName;
+
+            public IndexOptimizeCommand(string indexName)
+            {
+                _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
+            }
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/indexes/optimize?name={Uri.EscapeDataString(_indexName)}";
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post
+                };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    return;
+
+                Result = JsonDeserializationClient.OperationIdResult(response);
+            }
+
+            public override bool IsReadRequest => true;
+        }
+    }
 }
