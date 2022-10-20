@@ -25,7 +25,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -112,14 +112,14 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseKeyValueActions(_database);
         }
 
-        public ICompareExchangeActions CompareExchange(JsonOperationContext context, RestoreBackupTaskBase.BackupType backupType, bool withDocuments)
+        public ICompareExchangeActions CompareExchange(JsonOperationContext context, BackupKind? backupKind, bool withDocuments)
         {
-            return new DatabaseCompareExchangeActions(_database, context, backupType, _token);
+            return new DatabaseCompareExchangeActions(_database, context, backupKind, _token);
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(_database, context, RestoreBackupTaskBase.BackupType.None, _token);
+            return new DatabaseCompareExchangeActions(_database, context, backupKind: null, _token);
         }
 
         public ICounterActions Counters(SmugglerResult result)
@@ -564,25 +564,25 @@ namespace Raven.Server.Smuggler.Documents
 
             private readonly List<RemoveCompareExchangeCommand> _compareExchangeRemoveCommands = new List<RemoveCompareExchangeCommand>();
             private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeAddOrUpdateCommands = new List<AddOrUpdateCompareExchangeCommand>();
-            private DisposableReturnedArray<BatchRequestParser.CommandData> _clusterTransactionCommands = new DisposableReturnedArray<BatchRequestParser.CommandData>(BatchSize);
+            private DisposableReturnedArray<ClusterTransactionCommand.ClusterTransactionDataCommand> _clusterTransactionCommands = new DisposableReturnedArray<ClusterTransactionCommand.ClusterTransactionDataCommand>(BatchSize);
             private readonly DocumentContextHolder _documentContextHolder;
             private long? _lastAddOrUpdateOrRemoveResultIndex;
             private long? _lastClusterTransactionIndex;
-            private readonly RestoreBackupTaskBase.BackupType _backupType;
+            private readonly BackupKind? _backupKind;
             private readonly CancellationToken _token;
 
-            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, RestoreBackupTaskBase.BackupType backupType, CancellationToken token)
+            public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, CancellationToken token)
             {
                 _database = database;
                 _context = context;
-                _backupType = backupType;
+                _backupKind = backupKind;
                 _token = token;
                 _documentContextHolder = new DocumentContextHolder(database);
 
                 _compareExchangeValuesBatchSize = new Size(database.Is32Bits ? 2 : 4, SizeUnit.Megabytes);
                 _compareExchangeValuesSize = new Size(0, SizeUnit.Megabytes);
 
-                _clusterTransactionCommandsBatchSize = new Size(database.Is32Bits ? 2 : 8, SizeUnit.Megabytes);
+                _clusterTransactionCommandsBatchSize = new Size(database.Is32Bits ? 2 : 16, SizeUnit.Megabytes);
                 _clusterTransactionCommandsSize = new Size(0, SizeUnit.Megabytes);
             }
 
@@ -614,7 +614,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     else
                     {
-                        if (_backupType is RestoreBackupTaskBase.BackupType.Full or RestoreBackupTaskBase.BackupType.Incremental)
+                        if (_backupKind is BackupKind.Full or BackupKind.Incremental)
                         {
                             // if we are restoring from a backup, we'll check if the atomic guard already exists
                             // if it does, we don't need to save it again
@@ -632,12 +632,13 @@ namespace Raven.Server.Smuggler.Documents
                             return;
                     }
 
-                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData {
+                    _clusterTransactionCommands.Push(new ClusterTransactionCommand.ClusterTransactionDataCommand
+                    {
                         Id = doc.Id,
                         Document = doc.Data,
                         Type = CommandType.PUT,
-                        OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector),
-                        FromFullBackup = _backupType == RestoreBackupTaskBase.BackupType.Full
+                        ChangeVector = ctx.GetLazyString(doc.ChangeVector),
+                        FromBackup = _backupKind
                     });
 
                     _clusterTransactionCommandsSize.Add(doc.Data.Size, SizeUnit.Bytes);
@@ -672,13 +673,13 @@ namespace Raven.Server.Smuggler.Documents
                     await SendRemoveCommandsAsync(_context);
 
                     if (_lastAddOrUpdateOrRemoveResultIndex != null)
-                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastAddOrUpdateOrRemoveResultIndex.Value, TimeSpan.FromSeconds(1));
+                        await _database.ServerStore.Cluster.WaitForIndexNotification(_lastAddOrUpdateOrRemoveResultIndex.Value, TimeSpan.FromMinutes(1));
 
                     if (_lastClusterTransactionIndex != null)
                     {
                         await _database.ServerStore.Cluster.WaitForIndexNotification(_lastClusterTransactionIndex.Value, TimeSpan.FromMinutes(1));
 
-                        if (_backupType == RestoreBackupTaskBase.BackupType.None)
+                        if (_backupKind is null or BackupKind.None)
                         {
                             // waiting for the commands to be applied
                             await _database.RachisLogIndexNotifications.WaitForIndexNotification(_lastClusterTransactionIndex.Value, _token);
@@ -705,7 +706,6 @@ namespace Raven.Server.Smuggler.Documents
                 for (int i = 0; i < _clusterTransactionCommands.Length; i++)
                 {
                     _clusterTransactionCommands[i].Document.Dispose();
-                    _clusterTransactionCommands[i].OriginalChangeVector.Dispose();
                 }
 
                 _clusterTransactionCommands.Clear();

@@ -17,6 +17,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Sparrow;
@@ -44,7 +45,6 @@ namespace Raven.Server.Documents.Handlers
             public bool IdPrefixed;
             public long Index;
             public bool FromEtl;
-            public bool FromFullBackup;
             public bool ReturnDocument;
 
             public bool SeenCounters;
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Handlers
             using (var parser = new UnmanagedJsonParser(context, state, "bulk_docs"))
             /* In case we have a conflict between attachment with the same name we need attachment information from metadata */
             /* we can't know from advanced if we will need this information so we save this for all batch commands */
-            using (var modifier = new BlittableMetadataModifier(context, legacyImport: false, readLegacyEtag: false,DatabaseItemType.Attachments))
+            using (var modifier = new BlittableMetadataModifier(context, legacyImport: false, readLegacyEtag: false, DatabaseItemType.Attachments))
             {
                 while (parser.Read() == false)
                     await RefillParserBuffer(stream, buffer, parser);
@@ -670,18 +670,6 @@ namespace Raven.Server.Documents.Handlers
                         commandData.FromEtl = state.CurrentTokenType == JsonParserToken.True;
                         break;
 
-                    case CommandPropertyName.FromFullBackup:
-                        while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
-
-                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
-                        {
-                            ThrowUnexpectedToken(JsonParserToken.True, state);
-                        }
-
-                        commandData.FromFullBackup = state.CurrentTokenType == JsonParserToken.True;
-                        break;
-
                     case CommandPropertyName.AttachmentType:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
@@ -924,8 +912,7 @@ namespace Raven.Server.Documents.Handlers
 
             #endregion RavenData
 
-            FromEtl,
-            FromFullBackup
+            FromEtl
 
             // other properties are ignore (for legacy support)
         }
@@ -1033,11 +1020,6 @@ namespace Raven.Server.Documents.Handlers
                         *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 25968)
                         return CommandPropertyName.AttachmentType;
 
-                    if (*(int*)state.StringBuffer == 1836020294 &&
-                        *(long*)(state.StringBuffer + sizeof(int)) == 7738135522667427142 &&
-                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 28789)
-                        return CommandPropertyName.FromFullBackup;
-
                     return CommandPropertyName.NoSuchProperty;
 
                 case 15:
@@ -1051,9 +1033,9 @@ namespace Raven.Server.Documents.Handlers
                         *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 28265 &&
                         state.StringBuffer[14] == (byte)'g')
                         return CommandPropertyName.CreateIfMissing;
-        
+
                     return CommandPropertyName.NoSuchProperty;
-                
+
                 case 20:
                     if (*(long*)state.StringBuffer == 7809644627822735951 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 7302135340735752259 &&

@@ -14,7 +14,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
-using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
@@ -37,7 +37,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public Action<IndexDefinitionAndType> OnIndexAction;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
-        public RestoreBackupTaskBase.BackupType BackupType = RestoreBackupTaskBase.BackupType.None;
+        public BackupKind BackupKind = BackupKind.None;
 
         public const string PreV4RevisionsDocumentId = "/revisions/";
 
@@ -679,7 +679,7 @@ namespace Raven.Server.Smuggler.Documents
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var documentActions = _destination.Documents(throwOnCollectionMismatchError))
-            await using (var compareExchangeActions = _destination.CompareExchange(context, BackupType, withDocuments: true))
+            await using (var compareExchangeActions = _destination.CompareExchange(context, BackupKind, withDocuments: true))
             {
                 List<string> legacyIdsToDelete = null;
 
@@ -853,7 +853,7 @@ namespace Raven.Server.Smuggler.Documents
             result.CompareExchange.Start();
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var actions = _destination.CompareExchange(context, BackupType, withDocuments: false))
+            await using (var actions = _destination.CompareExchange(context, BackupKind, withDocuments: false))
             {
                 await foreach (var kvp in _source.GetCompareExchangeValuesAsync(actions))
                 {
