@@ -576,7 +576,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
                 config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.Fastest, ExcludeIndexes = false };
                 await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
-                
+
                 // check that backup file consist Indexes folder
                 var backupLocation = Directory.GetDirectories(backupPath).First();
                 using (ReadOnly(backupLocation))
@@ -591,7 +591,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 config.SnapshotSettings.ExcludeIndexes = true;
                 await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
-                
+
                 backupLocation = Directory.GetDirectories(backupPath).First();
                 using (ReadOnly(backupLocation))
                 {
@@ -647,7 +647,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
             await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
-            
+
             // restore the database with a different name
             string restoredDatabaseName = GetDatabaseName();
             var backupLocation = Directory.GetDirectories(backupPath).First();
@@ -670,7 +670,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var restoreStats = await destination.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
                 Assert.Equal(sourceStats.CountOfCompareExchange, restoreStats.CountOfCompareExchange);
 
-                using (var session = destination.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+                using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var user = await session.LoadAsync<User>(ids[0]);
 
@@ -678,7 +678,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     await session.SaveChangesAsync();
                 }
-                
+
                 using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     await session.StoreAsync(new User(), ids[0]);
@@ -2823,9 +2823,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 const string country = "Israel";
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
-                       {
-                           TransactionMode = TransactionMode.ClusterWide
-                       }))
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
                 {
                     await session.StoreAsync(new User
                     {
@@ -2838,18 +2838,18 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
-                       {
-                           TransactionMode = TransactionMode.ClusterWide
-                       }))
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
                 {
                     session.Delete("users/1");
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenAsyncSession(new SessionOptions
-                       {
-                           TransactionMode = TransactionMode.ClusterWide
-                       }))
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
                 {
                     await session.StoreAsync(new Address
                     {

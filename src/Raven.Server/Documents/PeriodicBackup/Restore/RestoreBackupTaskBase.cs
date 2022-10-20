@@ -867,17 +867,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 {
                     OnIndexAction = onIndexAction,
                     OnDatabaseRecordAction = onDatabaseRecordAction,
-                    BackupType = BackupUtils.IsFullBackup(Path.GetExtension(filePath)) ? BackupType.Full : BackupType.Incremental
+                    BackupKind = BackupUtils.IsFullBackup(Path.GetExtension(filePath)) ? BackupKind.Full : BackupKind.Incremental
                 };
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false, isLastFile);
             }
-        }
-
-        public enum BackupType
-        {
-            None,
-            Full,
-            Incremental
         }
 
         /// <summary>
@@ -914,7 +907,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
                                 database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token)
                             {
-                                BackupType = BackupType.Incremental
+                                BackupKind = BackupKind.Incremental
                             };
 
                             await smuggler.ExecuteAsync(ensureStepsProcessed: true, isLastFile: true);
