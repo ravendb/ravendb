@@ -25,20 +25,12 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ForbidOpeningMoreThenOneSessionPerSubscriptionBatch()
         {
-            var store = GetDocumentStore();
-
-            string id1;
-            string id2;
+            using var store = GetDocumentStore();
             using (var session = store.OpenAsyncSession())
             {
-                var c1 = new Command { Value = 1 };
-                var c2 = new Command { Value = 2 };
-                await session.StoreAsync(c1);
-                await session.StoreAsync(c2);
+                await session.StoreAsync(new Command { Value = 1 });
+                await session.StoreAsync(new Command { Value = 2 });
                 await session.SaveChangesAsync();
-
-                id1 = c1.Id;
-                id2 = c2.Id;
             }
 
             try
@@ -70,54 +62,24 @@ namespace SlowTests.Issues
             InvalidOperationException exception = null;
             var t = worker.Run(async batch =>
             {
-                if (batch.Items.Count < 2)
-                    return;
-
-                var item0 = batch.Items[0];
                 using (var session = batch.OpenAsyncSession())
                 {
-                    item0.Result.ProcessedOn = last;
-                    await session.SaveChangesAsync();
                 }
-
-                var item1 = batch.Items[1];
 
                 exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 {
-                    using (var session = batch.OpenAsyncSession())
-                    {
-                        item1.Result.ProcessedOn = last;
-                        await session.SaveChangesAsync();
-                    }
+                    using var session = batch.OpenAsyncSession();
                 });
-
 
                 mre.Set();
             }, cts.Token);
 
-
             Assert.True(mre.WaitOne(TimeSpan.FromSeconds(15)));
             Assert.NotNull(exception);
-            Assert.Equal("'SubscriptionBatch' can open only 1 session", exception.Message);
-
-            DateTime? pVal1 = null;
-            DateTime? pVal2 = null;
-            using (var session = store.OpenAsyncSession())
-            {
-                var c1 = await session.LoadAsync<Command>(id1);
-                var c2 = await session.LoadAsync<Command>(id2);
-
-                await session.SaveChangesAsync();
-
-                pVal1 = c1.ProcessedOn;
-                pVal2 = c2.ProcessedOn;
-            }
-
-            Assert.Equal(last, pVal1);
-            Assert.Equal(null, pVal2);
+            Assert.Equal("Session can only be opened once per each Subscription batch", exception.Message);
         }
 
-        public class Command
+        private class Command
         {
             public string Id { get; set; }
 
