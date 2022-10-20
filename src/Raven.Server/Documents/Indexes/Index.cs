@@ -4632,8 +4632,12 @@ namespace Raven.Server.Documents.Indexes
                     
                     using (RestartEnvironment(onBeforeEnvironmentDispose: () =>
                            {
-                               if (shouldSkipOptimization == false) 
-                                   Optimize(onProgress, result, token);
+                               if (shouldSkipOptimization) 
+                                   return;
+                               
+                               result.AddMessage($"Starting data optimization of index '{Name}'.");
+                               onProgress?.Invoke(result.Progress);
+                               Optimize(token);
                            }))
                     {
                         DocumentDatabase.IndexStore?.ForTestingPurposes?.IndexCompaction?.Invoke();
@@ -4648,8 +4652,7 @@ namespace Raven.Server.Documents.Indexes
                             return;
                         }
 
-                        var environmentOptions =
-                                                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
+                        var environmentOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
                         var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, environmentOptions.TempPath?.FullPath, null, DocumentDatabase.IoChanges,
                             DocumentDatabase.CatastrophicFailureNotification);
 
@@ -4707,7 +4710,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
         
-        internal void Optimize(Action<IOperationProgress> onProgress, CompactionResult result, CancellationToken token)
+        internal void Optimize(CancellationToken token)
         {
             if (_isIndexOptimizationInProgress)
                 throw new InvalidOperationException($"Index '{Name}' cannot be optimized because optimization is already in progress.");
@@ -4715,8 +4718,6 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 _isIndexOptimizationInProgress = true;
-                result.AddMessage($"Starting data optimization of index '{Name}'.");
-                onProgress?.Invoke(result.Progress);
 
                 using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
