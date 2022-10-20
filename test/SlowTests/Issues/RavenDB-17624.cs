@@ -23,7 +23,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task CreatingAndDisposingSessionPerSubscriptionBatchItemThrows()
+        public async Task ForbidOpeningMoreThenOneSessionPerSubscriptionBatch()
         {
             var store = GetDocumentStore();
 
@@ -67,22 +67,38 @@ namespace SlowTests.Issues
             var mre = new ManualResetEvent(false);
             var cts = new CancellationTokenSource();
             var last = DateTime.UtcNow;
+            InvalidOperationException exception = null;
             var t = worker.Run(async batch =>
             {
-                foreach (var item in batch.Items)
+                if (batch.Items.Count < 2)
+                    return;
+
+                var item0 = batch.Items[0];
+                using (var session = batch.OpenAsyncSession())
+                {
+                    item0.Result.ProcessedOn = last;
+                    await session.SaveChangesAsync();
+                }
+
+                var item1 = batch.Items[1];
+
+                exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 {
                     using (var session = batch.OpenAsyncSession())
                     {
-                        item.Result.ProcessedOn = last;
+                        item1.Result.ProcessedOn = last;
                         await session.SaveChangesAsync();
                     }
-                }
+                });
+
 
                 mre.Set();
             }, cts.Token);
 
 
-            Assert.True(mre.WaitOne(TimeSpan.FromSeconds(5)));
+            Assert.True(mre.WaitOne(TimeSpan.FromSeconds(15)));
+            Assert.NotNull(exception);
+            Assert.Equal("'SubscriptionBatch' can open only 1 session", exception.Message);
 
             DateTime? pVal1 = null;
             DateTime? pVal2 = null;
@@ -98,96 +114,7 @@ namespace SlowTests.Issues
             }
 
             Assert.Equal(last, pVal1);
-            Assert.Equal(last, pVal2);
-        }
-
-        [Fact]
-        public async Task CreatingAndDisposingSessionPerSubscriptionBatchItemThrows_SessionDelete()
-        {
-            var store = GetDocumentStore();
-
-            string id1;
-            string id2;
-            using (var session = store.OpenAsyncSession())
-            {
-                var c1 = new Command { Value = 1 };
-                var c2 = new Command { Value = 2 };
-                await session.StoreAsync(c1);
-                await session.StoreAsync(c2);
-                await session.SaveChangesAsync();
-
-                id1 = c1.Id;
-                id2 = c2.Id;
-            }
-
-            try
-            {
-                await store.Subscriptions
-                    .GetSubscriptionStateAsync("BackgroundSubscriptionWorker");
-            }
-            catch (SubscriptionDoesNotExistException)
-            {
-                await store.Subscriptions
-                    .CreateAsync(new SubscriptionCreationOptions<Command>
-                    {
-                        Name = "BackgroundSubscriptionWorker",
-                        Filter = x => x.ProcessedOn == null
-                    });
-            }
-
-            var workerOptions = new SubscriptionWorkerOptions("BackgroundSubscriptionWorker");
-
-            using var worker = store.Subscriptions
-               .GetSubscriptionWorker<Command>(workerOptions);
-
-            worker.OnSubscriptionConnectionRetry += exception => Console.WriteLine(exception);
-            worker.OnUnexpectedSubscriptionError += exception => Console.WriteLine(exception);
-
-            var mre = new ManualResetEvent(false);
-            var cts = new CancellationTokenSource();
-            var last = DateTime.UtcNow;
-            var t = worker.Run(async batch =>
-            {
-                bool first = false;
-                foreach (var item in batch.Items)
-                {
-                    using (var session = batch.OpenAsyncSession())
-                    {
-                        if (first == false)
-                        {
-                            session.Delete(item.Id);
-                            first = true;
-                        }
-                        else
-                        {
-                            item.Result.ProcessedOn = last;
-                        }
-
-                        await session.SaveChangesAsync();
-                    }
-                }
-
-                mre.Set();
-            }, cts.Token);
-
-
-            Assert.True(mre.WaitOne(TimeSpan.FromSeconds(5)));
-
-            DateTime? pVal2 = null;
-            Command cmd1;
-            using (var session = store.OpenAsyncSession())
-            {
-                cmd1 = await session.LoadAsync<Command>(id1);
-                var c2 = await session.LoadAsync<Command>(id2);
-
-                await session.SaveChangesAsync();
-
-                pVal2 = c2.ProcessedOn;
-
-            }
-
-            Assert.Null(cmd1);
-            Assert.Equal(last, pVal2);
+            Assert.Equal(null, pVal2);
         }
 
         public class Command

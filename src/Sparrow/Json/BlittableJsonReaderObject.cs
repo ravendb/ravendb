@@ -29,11 +29,6 @@ namespace Sparrow.Json
         private Dictionary<StringSegment, object> _objectsPathCache;
         private Dictionary<int, object> _objectsPathCacheByIndex;
 
-        public bool Disposed
-        {
-            get => _mem == null;
-        }
-
         public override string ToString()
         {
             AssertContextNotDisposed();
