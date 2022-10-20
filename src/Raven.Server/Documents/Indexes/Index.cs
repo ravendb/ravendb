@@ -216,6 +216,7 @@ namespace Raven.Server.Documents.Indexes
         internal NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
         private bool _isCompactionInProgress;
+        private bool _isIndexOptimizationInProgress;
         public bool _firstQuery = true;
         internal TimeSpan? _firstBatchTimeout;
         private Lazy<Size?> _transactionSizeLimit;
@@ -4600,7 +4601,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, CancellationToken token)
+        public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, bool shouldSkipOptimization, CancellationToken token)
         {
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name}' cannot be compacted because compaction is already in progress.");
@@ -4628,8 +4629,12 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     var storageEnvironmentOptions = _environment.Options;
-
-                    using (RestartEnvironment(onBeforeEnvironmentDispose: Optimize))
+                    
+                    using (RestartEnvironment(onBeforeEnvironmentDispose: () =>
+                           {
+                               if (shouldSkipOptimization == false) 
+                                   Optimize(onProgress, result, token);
+                           }))
                     {
                         DocumentDatabase.IndexStore?.ForTestingPurposes?.IndexCompaction?.Invoke();
 
@@ -4698,25 +4703,46 @@ namespace Raven.Server.Documents.Indexes
                     _isCompactionInProgress = false;
                 }
 
-                void Optimize()
-                {
-                    result.AddMessage($"Starting data optimization of index '{Name}'.");
-                    onProgress?.Invoke(result.Progress);
-
-                    using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
-                    using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-                    using (CurrentIndexingScope.Current = new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
-                    using (var txw = indexContext.OpenWriteTransaction())
-                    using (var writer = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext))
-                    {
-                        writer.Optimize(token);
-
-                        txw.Commit();
-                    }
-                }
+                
             }
         }
+        
+        internal void Optimize(Action<IOperationProgress> onProgress, CompactionResult result, CancellationToken token)
+        {
+            if (_isIndexOptimizationInProgress)
+                throw new InvalidOperationException($"Index '{Name}' cannot be optimized because optimization is already in progress.");
+            
+            try
+            {
+                _isIndexOptimizationInProgress = true;
+                result.AddMessage($"Starting data optimization of index '{Name}'.");
+                onProgress?.Invoke(result.Progress);
 
+                using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+                using (CurrentIndexingScope.Current = new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext,
+                           GetOrAddSpatialField, _unmanagedBuffersPool))
+                using (var txw = indexContext.OpenWriteTransaction())
+                using (var writer = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext))
+                {
+                    writer.Optimize(token);
+
+                    txw.Commit();
+                }
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations("Unable to complete optimization, index is not usable and may require reset of the index to recover", e);
+
+                throw;
+            }
+            finally
+            {
+                _isIndexOptimizationInProgress = false;
+            }
+        }
+        
         public IDisposable RestartEnvironment(Action onBeforeEnvironmentDispose = null)
         {
             // shutdown environment

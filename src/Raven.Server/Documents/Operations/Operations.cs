@@ -477,7 +477,10 @@ namespace Raven.Server.Documents.Operations
             DebugPackage,
 
             [Description("Dump Raw Index Data - Debug")]
-            DumpRawIndexData
+            DumpRawIndexData,
+            
+            [Description("Lucene: optimize index")]
+            LuceneOptimizeIndex
         }
     }
 }
