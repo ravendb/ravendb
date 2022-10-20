@@ -3,15 +3,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Jint.Native;
 using Jint.Native.Object;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -1002,6 +1005,56 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/indexes/optimize", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
+        public async Task OptimizeIndex()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("index");
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    throw new InvalidDataException($"Index '{name}' not found. Cannot perform optimize.");
+
+                var token = CreateOperationToken();
+                using (index.DrainRunningQueries())
+                {
+                    var result = new CompactionResult(index.Name);
+                    var operationId = ServerStore.Operations.GetNextOperationId();
+                    
+                    var t = ServerStore.Operations.AddOperation(
+                        Database,
+                        "Optimizing index: " + index.Name,
+                        Operations.Operations.OperationType.LuceneOptimizeIndex,
+                        taskFactory: onProgress => Task.Run(() =>
+                        {
+                            try
+                            {
+                                using (token)
+                                using (Database.PreventFromUnloadingByIdleOperations())
+                                using (var indexCts = CancellationTokenSource.CreateLinkedTokenSource(token.Token, Database.DatabaseShutdown))
+                                using (index.RestartEnvironment(onBeforeEnvironmentDispose: () => index.Optimize(onProgress, result, indexCts.Token)))
+                                {
+                                    return Task.FromResult((IOperationResult)result);
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                if (Logger.IsOperationsEnabled)
+                                    Logger.Operations("Compaction process failed", e);
+
+                                throw;
+                            }
+                        }, token.Token),
+                        id: operationId, token: token);
+                    
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+                    }
+                }
+            }
+        }
+        
         [RavenAction("/databases/*/indexes/suggest-index-merge", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task SuggestIndexMerge()
         {
