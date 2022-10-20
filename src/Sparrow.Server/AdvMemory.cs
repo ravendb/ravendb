@@ -165,91 +165,92 @@ namespace Sparrow.Server
             nuint length = (nuint)size;
             byte* bpxEnd = bpx + length;
 
+            uint matches;
+
             if (length >= (nuint)Vector256<byte>.Count)
-                goto ProcessAligned;
-
-            // Check if we are completely aligned, in that case just skip everything and go straight to the
-            // core of the routine. We have much bigger fishes to fry. 
-            if ((length & 2) != 0)
             {
-                if (*(ushort*)bpx != *(ushort*)(bpx + offset))
+                byte* loopEnd = bpxEnd - (nuint)Vector256<byte>.Count;
+                while (bpx <= loopEnd)
                 {
-                    if (*bpx == *(bpx + offset))
-                        bpx++;
-                    goto DoneByte;
+                    matches = (uint)Avx2.MoveMask(
+                        Avx2.CompareEqual(
+                            Avx.LoadVector256(bpx),
+                            Avx.LoadVector256(bpx + offset)
+                        )
+                    );
+
+                    // Note that MoveMask has converted the equal vector elements into a set of bit flags,
+                    // So the bit position in 'matches' corresponds to the element offset.
+
+                    // 32 elements in Vector256<byte> so we compare to uint.MaxValue to check if everything matched
+                    if (matches == uint.MaxValue)
+                    {
+                        // All matched
+                        bpx += (nuint)Vector256<byte>.Count;
+                        continue;
+                    }
+                    goto Difference;
                 }
 
-                bpx += 2;
-            }
+                if (bpx == loopEnd)
+                    goto Equals;
 
-            // We have a potential problem. As AVX2 doesn't provide us a masked load that could address bytes
-            // we will need to ensure we are int aligned. Therefore, we have to do this as fast as possibly. 
-            if ((length & 1) != 0)
-            {
-                if (*bpx != *(bpx + offset))
-                    goto DoneByte;
-
-                bpx += 1;
-            }
-
-            length = (nuint)(bpxEnd - bpx);
-            if (length == 0)
-                goto Equals;
-
-            // Now we know we are 32 bits aligned. So now we can actually use this knowledge to perform a masked load
-            // of the leftovers needed to align. In the case that we are smaller, this will just find the difference
-            // and we will jump to difference. Essentially we can have up-to 31 integers to load. 
-            // Masked loads and stores will not cause memory access violations because no memory access happens per presentation from Intel.
-            // https://llvm.org/devmtg/2015-04/slides/MaskedIntrinsics.pdf
-            Debug.Assert(length / sizeof(int) != 0, "Cannot be 0 because that means that we have completed already.");
-            Debug.Assert(length / sizeof(int) < (nuint)Vector256<int>.Count, $"Cannot be {Vector256<int>.Count} or greater because that means it is a full vector.");
-
-            int* tablePtr = (int*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(LoadMaskTable));
-            var mask = Avx.LoadDquVector256(tablePtr + ((nuint)Vector256<int>.Count - length / sizeof(uint)));
-
-            var matches = (uint)Avx2.MoveMask(
-                Avx2.CompareEqual(
-                    Avx2.MaskLoad((int*)bpx, mask).AsByte(),
-                    Avx2.MaskLoad((int*)(bpx + offset), mask).AsByte()
-                    )
-                );
-
-            if (matches != uint.MaxValue)
-                goto Difference;
-
-            goto DoneByte;
-
-            ProcessAligned:
-            byte* loopEnd = bpxEnd - (nuint)Vector256<byte>.Count;
-            while (bpx <= loopEnd)
-            {
-                matches = (uint)Avx2.MoveMask(
-                                    Avx2.CompareEqual(
-                                        Avx.LoadVector256(bpx), 
-                                        Avx.LoadVector256(bpx + offset)
-                                        )
-                                    );
-
-                // Note that MoveMask has converted the equal vector elements into a set of bit flags,
-                // So the bit position in 'matches' corresponds to the element offset.
-
-                // 32 elements in Vector256<byte> so we compare to uint.MaxValue to check if everything matched
+                bpx = loopEnd;
+                matches = (uint)Avx2.MoveMask(Avx2.CompareEqual(Avx.LoadVector256(loopEnd), Avx.LoadVector256(loopEnd + offset)));
                 if (matches == uint.MaxValue)
-                {
-                    // All matched
-                    bpx += (nuint)Vector256<byte>.Count;
-                    continue;
-                }
-                goto Difference;
+                    goto Equals;
             }
+            else
+            {
+                // Check if we are completely aligned, in that case just skip everything and go straight to the
+                // core of the routine. We have much bigger fishes to fry. 
+                if ((length & 2) != 0)
+                {
+                    if (*(ushort*)bpx != *(ushort*)(bpx + offset))
+                    {
+                        if (*bpx == *(bpx + offset))
+                            bpx++;
+                        goto DoneByte;
+                    }
 
-            if (bpx == loopEnd)
-                goto Equals;
+                    bpx += 2;
+                }
 
-            bpx = loopEnd;
-            matches = (uint)Avx2.MoveMask(Avx2.CompareEqual(Avx.LoadVector256(loopEnd), Avx.LoadVector256(loopEnd + offset)));
-            if (matches == uint.MaxValue)
-                goto Equals;
+                // We have a potential problem. As AVX2 doesn't provide us a masked load that could address bytes
+                // we will need to ensure we are int aligned. Therefore, we have to do this as fast as possibly. 
+                if ((length & 1) != 0)
+                {
+                    if (*bpx != *(bpx + offset))
+                        goto DoneByte;
+
+                    bpx += 1;
+                }
+
+                length = (nuint)(bpxEnd - bpx);
+                if (length == 0)
+                    goto Equals;
+
+                // Now we know we are 32 bits aligned. So now we can actually use this knowledge to perform a masked load
+                // of the leftovers needed to align. In the case that we are smaller, this will just find the difference
+                // and we will jump to difference. Essentially we can have up-to 31 integers to load. 
+                // Masked loads and stores will not cause memory access violations because no memory access happens per presentation from Intel.
+                // https://llvm.org/devmtg/2015-04/slides/MaskedIntrinsics.pdf
+                Debug.Assert(length / sizeof(int) != 0, "Cannot be 0 because that means that we have completed already.");
+                Debug.Assert(length / sizeof(int) < (nuint)Vector256<int>.Count, $"Cannot be {Vector256<int>.Count} or greater because that means it is a full vector.");
+
+                int* tablePtr = (int*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(LoadMaskTable));
+                var mask = Avx.LoadDquVector256(tablePtr + ((nuint)Vector256<int>.Count - length / sizeof(uint)));
+
+                matches = (uint)Avx2.MoveMask(
+                    Avx2.CompareEqual(
+                        Avx2.MaskLoad((int*)bpx, mask).AsByte(),
+                        Avx2.MaskLoad((int*)(bpx + offset), mask).AsByte()
+                        )
+                    );
+
+                if (matches == uint.MaxValue)
+                    goto DoneByte;
+            }
 
             Difference:
             // We invert matches to find differences, which are found in the bit-flag. .
