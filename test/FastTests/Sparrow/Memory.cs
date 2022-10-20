@@ -1,4 +1,6 @@
-﻿using Sparrow;
+﻿using System.Runtime.Intrinsics.X86;
+using Sparrow;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,11 +30,15 @@ namespace FastTests.Sparrow
                     Assert.True(Memory.CompareInline(s1Ptr, s2Ptr, s1.Length) > 0);
                     Assert.True(Memory.CompareInline(s2Ptr, s1Ptr, s1.Length) < 0);
 
+                    Assert.True(AdvMemory.CompareSmall(s1Ptr, s2Ptr, s1.Length) > 0);
+                    Assert.True(AdvMemory.CompareSmall(s2Ptr, s1Ptr, s1.Length) < 0);
+
                     // We reset the state to zero
                     s1Ptr[i] = 0x00;
                     s2Ptr[i] = 0x00;
 
                     Assert.True(Memory.CompareInline(s1Ptr, s2Ptr, s1.Length) == 0);
+                    Assert.True(AdvMemory.CompareSmall(s1Ptr, s2Ptr, s1.Length) == 0);
                 };
             }
         }
@@ -50,21 +56,80 @@ namespace FastTests.Sparrow
                     fixed (byte* s1Ptr = s1)
                     fixed (byte* s2Ptr = s2)
                     {
-                        // We set the particular place to fit
-                        s1Ptr[i] = 0x10;
-                        s2Ptr[i] = 0x01;
+                        s1[i] = 0x10;
+                        s2[i] = 0x01;
 
-                        Assert.True(Memory.CompareInline(s1Ptr, s2Ptr, s1.Length) > 0);
-                        Assert.True(Memory.CompareInline(s2Ptr, s1Ptr, s1.Length) < 0);
+                        // We set the particular place to fit
+                        TestCompatibilityDifference(s1Ptr, s2Ptr, s1.Length);
 
                         // We reset the state to zero
                         s1Ptr[i] = 0x00;
                         s2Ptr[i] = 0x00;
 
-                        Assert.True(Memory.CompareInline(s1Ptr, s2Ptr, s1.Length) == 0);
+                        // We set the particular place to fit
+                        TestCompatibilityEquality(s1Ptr, s2Ptr, s1.Length);
                     };
                 }
 
+            }
+        }
+
+        [Theory]
+        [InlineData(6)]
+        public void TestCompatibility(int i)
+        {
+            var s1 = new byte[i+1];
+            var s2 = new byte[i+1];
+
+            fixed (byte* s1Ptr = s1)
+            fixed (byte* s2Ptr = s2)
+            {
+                s1[i] = 0x10;
+                s2[i] = 0x01;
+
+                // We set the particular place to fit
+                TestCompatibilityDifference(s1Ptr, s2Ptr, s1.Length);
+
+                // We reset the state to zero
+                s1Ptr[i] = 0x00;
+                s2Ptr[i] = 0x00;
+
+                // We set the particular place to fit
+                TestCompatibilityEquality(s1Ptr, s2Ptr, s1.Length);
+            };
+        }
+
+        private static void TestCompatibilityDifference(byte* s1Ptr, byte* s2Ptr, int length)
+        {
+            Assert.True(Memory.CompareInline(s1Ptr, s2Ptr, length) > 0);
+            Assert.True(Memory.CompareInline(s2Ptr, s1Ptr, length) < 0);
+
+            Assert.True(AdvMemory.CompareSmall(s1Ptr, s2Ptr, length) > 0);
+            Assert.True(AdvMemory.CompareSmall(s2Ptr, s1Ptr, length) < 0);
+
+            Assert.True(AdvMemory.CompareSmallInlineNet6OrLesser(s1Ptr, s2Ptr, length) > 0);
+            Assert.True(AdvMemory.CompareSmallInlineNet6OrLesser(s2Ptr, s1Ptr, length) < 0);
+
+            Assert.True(AdvMemory.CompareSmallInlineNet7(s1Ptr, s2Ptr, length) > 0);
+            Assert.True(AdvMemory.CompareSmallInlineNet7(s2Ptr, s1Ptr, length) < 0);
+
+            if (Avx2.IsSupported)
+            {
+                Assert.True(AdvMemory.CompareAvx2(s1Ptr, s2Ptr, length) > 0);
+                Assert.True(AdvMemory.CompareAvx2(s2Ptr, s1Ptr, length) < 0);
+            }
+        }
+
+        private static void TestCompatibilityEquality(byte* s1Ptr, byte* s2Ptr, int length)
+        {
+            Assert.True(Memory.CompareInline(s1Ptr, s2Ptr, length) == 0);
+            Assert.True(AdvMemory.CompareSmall(s1Ptr, s2Ptr, length) == 0);
+            Assert.True(AdvMemory.CompareSmallInlineNet6OrLesser(s1Ptr, s2Ptr, length) == 0);
+            Assert.True(AdvMemory.CompareSmallInlineNet7(s1Ptr, s2Ptr, length) == 0);
+
+            if (Avx2.IsSupported)
+            {
+                Assert.True(AdvMemory.CompareAvx2(s1Ptr, s2Ptr, length) == 0);
             }
         }
 
@@ -88,16 +153,37 @@ namespace FastTests.Sparrow
                         Assert.True(Memory.CompareInline(s1Ptr, s2Ptr, s1.Length) > 0);
                         Assert.True(Memory.CompareInline(s2Ptr, s1Ptr, s1.Length) < 0);
 
+                        Assert.True(AdvMemory.CompareSmall(s1Ptr, s2Ptr, s1.Length) > 0);
+                        Assert.True(AdvMemory.CompareSmall(s2Ptr, s1Ptr, s1.Length) < 0);
+
+                        Assert.True(AdvMemory.CompareSmallInlineNet6OrLesser(s1Ptr, s2Ptr, s1.Length) > 0);
+                        Assert.True(AdvMemory.CompareSmallInlineNet6OrLesser(s2Ptr, s1Ptr, s1.Length) < 0);
+
+                        Assert.True(AdvMemory.CompareSmallInlineNet7(s1Ptr, s2Ptr, s1.Length) > 0);
+                        Assert.True(AdvMemory.CompareSmallInlineNet7(s2Ptr, s1Ptr, s1.Length) < 0);
+
+                        if (Avx2.IsSupported)
+                        {
+                            Assert.True(AdvMemory.CompareAvx2(s1Ptr, s2Ptr, s1.Length) > 0);
+                            Assert.True(AdvMemory.CompareAvx2(s2Ptr, s1Ptr, s1.Length) < 0);
+                        }
+
                         // We reset the state to zero
                         s1Ptr[i] = 0x00;
                         s2Ptr[i] = 0x00;
 
                         Assert.True(Memory.CompareInline(s1Ptr, s2Ptr, s1.Length) == 0);
+                        Assert.True(AdvMemory.CompareSmall(s1Ptr, s2Ptr, s1.Length) == 0);
+                        Assert.True(AdvMemory.CompareSmallInlineNet6OrLesser(s1Ptr, s2Ptr, s1.Length) == 0);
+                        Assert.True(AdvMemory.CompareSmallInlineNet7(s1Ptr, s2Ptr, s1.Length) == 0);
+
+                        if (Avx2.IsSupported)
+                        {
+                            Assert.True(AdvMemory.CompareAvx2(s1Ptr, s2Ptr, s1.Length) == 0);
+                        }
                     };
                 }
-
             }
         }
-
     }
 }
