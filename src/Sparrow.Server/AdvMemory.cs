@@ -154,6 +154,9 @@ namespace Sparrow.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         internal static int CompareAvx2(void* p1, void* p2, int size)
         {
+            Sse.Prefetch0(p1);
+            Sse.Prefetch0(p2);
+
             // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
             //       hardware instructions without needed an extra register.
             byte* bpx = (byte*)p1;
@@ -165,12 +168,8 @@ namespace Sparrow.Server
             if (length >= (nuint)Vector256<byte>.Count)
                 goto ProcessAligned;
 
-            //// Check if we are completely aligned, in that case just skip everything and go straight to the
-            //// core of the routine. We have much bigger fishes to fry. 
-            //nuint alignmentUnit = length & (nuint)(Vector256<byte>.Count - 1);
-            //if (alignmentUnit == 0)
-            //    goto ProcessAligned;
-
+            // Check if we are completely aligned, in that case just skip everything and go straight to the
+            // core of the routine. We have much bigger fishes to fry. 
             if ((length & 2) != 0)
             {
                 if (*(ushort*)bpx != *(ushort*)(bpx + offset))
@@ -202,15 +201,11 @@ namespace Sparrow.Server
             // and we will jump to difference. Essentially we can have up-to 31 integers to load. 
             // Masked loads and stores will not cause memory access violations because no memory access happens per presentation from Intel.
             // https://llvm.org/devmtg/2015-04/slides/MaskedIntrinsics.pdf
-            //var alignmentUnit = length & (nuint)(Vector256<byte>.Count - 1);
-            //if (alignmentUnit == 0)
-            //    goto ProcessAligned;
-
             Debug.Assert(length / sizeof(int) != 0, "Cannot be 0 because that means that we have completed already.");
             Debug.Assert(length / sizeof(int) < (nuint)Vector256<int>.Count, $"Cannot be {Vector256<int>.Count} or greater because that means it is a full vector.");
 
             int* tablePtr = (int*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(LoadMaskTable));
-            var mask = Avx2.LoadDquVector256(tablePtr + ((nuint)Vector256<int>.Count - length / sizeof(uint)));
+            var mask = Avx.LoadDquVector256(tablePtr + ((nuint)Vector256<int>.Count - length / sizeof(uint)));
 
             var matches = (uint)Avx2.MoveMask(
                 Avx2.CompareEqual(
@@ -222,7 +217,7 @@ namespace Sparrow.Server
             if (matches != uint.MaxValue)
                 goto Difference;
 
-            return 0;
+            goto DoneByte;
 
             ProcessAligned:
             byte* loopEnd = bpxEnd - (nuint)Vector256<byte>.Count;
@@ -248,28 +243,24 @@ namespace Sparrow.Server
                 goto Difference;
             }
 
-            // This statement ensures that if we have ended already (length of a AVX2 round number), we don't do the last check. 
-            if (bpx == bpxEnd)
+            if (bpx == loopEnd)
                 goto Equals;
 
-            bpx = bpxEnd - (nuint)Vector256<byte>.Count;
-            matches = (uint)Avx2.MoveMask(Avx2.CompareEqual(Avx.LoadVector256(bpx), Avx.LoadVector256(bpx + offset)));
+            bpx = loopEnd;
+            matches = (uint)Avx2.MoveMask(Avx2.CompareEqual(Avx.LoadVector256(loopEnd), Avx.LoadVector256(loopEnd + offset)));
             if (matches == uint.MaxValue)
                 goto Equals;
-  
+
             Difference:
             // We invert matches to find differences, which are found in the bit-flag. .
             // We then add offset of first difference to the current offset in order to check that specific byte.
             bpx += (nuint)BitOperations.TrailingZeroCount(~matches);
-
+            
             DoneByte:
-            var result = *bpx - *(bpx + offset);
-            Debug.Assert(result != 0);
-            return result;
+            return *bpx - *(bpx + offset);
 
             Equals:
             return 0;
-
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
