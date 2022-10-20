@@ -1005,16 +1005,15 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/indexes/optimize", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
+        [RavenAction("/databases/*/indexes/optimize", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task OptimizeIndex()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("index");
+                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
                     throw new InvalidDataException($"Index '{name}' not found. Cannot perform optimize.");
-
                 var token = CreateOperationToken();
                 using (index.DrainRunningQueries())
                 {
@@ -1046,7 +1045,6 @@ namespace Raven.Server.Documents.Handlers
                             }
                         }, token.Token),
                         id: operationId, token: token);
-                    
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
