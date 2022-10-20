@@ -84,6 +84,11 @@ namespace Raven.Client.Documents.Subscriptions
 
         private IDocumentSession OpenSessionInternal(SessionOptions options)
         {
+            if (_sessionOpened)
+            {
+                ThrowSessionCanBeOpenedOnce();
+            }
+            _sessionOpened = true;
             var s = _store.OpenSession(options);
 
             LoadDataToSession((InMemoryDocumentSessionOperations)s);
@@ -114,7 +119,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
             if (_sessionOpened)
             {
-                throw new InvalidOperationException("'SubscriptionBatch' can open only 1 session");
+                ThrowSessionCanBeOpenedOnce();
             }
             _sessionOpened = true;
 
@@ -123,6 +128,11 @@ namespace Raven.Client.Documents.Subscriptions
             LoadDataToSession((InMemoryDocumentSessionOperations)s);
 
             return s;
+        }
+
+        private void ThrowSessionCanBeOpenedOnce()
+        {
+            throw new InvalidOperationException("Session can only be opened once per each Subscription batch");
         }
 
         private static void ValidateSessionOptions(SessionOptions options)
