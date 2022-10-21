@@ -494,6 +494,7 @@ namespace Raven.Server.Documents
                     _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
                 }
                 await ExecuteClusterTransactionOneByOne(batch);
+                return batch;
             }
 
             foreach (var command in batch)
