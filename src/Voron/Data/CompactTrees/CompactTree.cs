@@ -514,7 +514,7 @@ namespace Voron.Data.CompactTrees
                 int length = *((int*)encodedStartPtr);
                 Debug.Assert(encodedStartPtr[sizeof(int) + length - 1] == 0, "The encoded key is not null terminated.");
 
-                var result = Memory.CompareInline(encodedStartPtr + sizeof(int), nextEntryPtr, Math.Min(length, nextEntryLength));
+                var result = AdvMemory.CompareInline(encodedStartPtr + sizeof(int), nextEntryPtr, Math.Min(length, nextEntryLength));
                 return result == 0 ? length - nextEntryLength : result;
             }
 
@@ -539,7 +539,7 @@ namespace Voron.Data.CompactTrees
 
                 Debug.Assert(encodedStartPtr[encodedLength - 1] == 0, "The encoded key is not null terminated.");
 
-                var result = Memory.CompareInline(encodedStartPtr, nextEntryPtr, Math.Min(encodedLength, nextEntryLength));
+                var result = AdvMemory.CompareInline(encodedStartPtr, nextEntryPtr, Math.Min(encodedLength, nextEntryLength));
                 return result == 0 ? encodedLength - nextEntryLength : result;
             }
 
@@ -2012,7 +2012,7 @@ namespace Voron.Data.CompactTrees
 
                 encodedKeyLength = GetEncodedKeyPtr(state.Page, @base[bot + mid], out encodedKeyPtr);
 
-                match = Memory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
+                match = AdvMemory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
                 match = match == 0 ? keyLength - encodedKeyLength : match;
                 if (match >= 0)
                     bot += mid;
