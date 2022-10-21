@@ -159,9 +159,9 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
                     while (iterator.ReadNext())
                     {
-                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmptyCollection || iterator.IsNull))
                         {
-                            var value = iterator.IsEmpty ? Constants.EmptyStringSlice : Constants.NullValueSlice;
+                            var value = iterator.IsEmptyCollection ? Constants.EmptyStringSlice : Constants.NullValueSlice;
                             isMatching |= range.IsMatch(value);
                             continue;
                         }
@@ -178,9 +178,9 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
                     while (tupleIterator.ReadNext())
                     {
-                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmpty || tupleIterator.IsNull))
+                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmptyCollection || tupleIterator.IsNull))
                         {
-                            var value = tupleIterator.IsEmpty ? Constants.EmptyStringSlice : Constants.NullValueSlice;
+                            var value = tupleIterator.IsEmptyCollection ? Constants.EmptyStringSlice : Constants.NullValueSlice;
                             isMatching |= range.IsMatch(value);
                             continue;
                         }
@@ -270,7 +270,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
                 while (iterator.ReadNext())
                 {
-                    if (iterator.IsNull || iterator.IsEmpty)
+                    if (iterator.IsNull || iterator.IsEmptyCollection)
                     {
                         facetValues[iterator.IsNull ? Constants.NullValue : Constants.EmptyString].IncrementCount(1);
                         continue;
@@ -363,7 +363,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
                     while (tupleIterator.ReadNext())
                     {
-                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmpty || tupleIterator.IsNull))
+                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmptyCollection || tupleIterator.IsNull))
                         {
                             continue;
                         }
