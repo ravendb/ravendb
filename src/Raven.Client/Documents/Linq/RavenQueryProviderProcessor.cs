@@ -3469,14 +3469,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
         }
         private bool NeedToAddFromAliasToField(string field)
         {
-            return _addedDefaultAlias &&
-                   field.StartsWith($"{FromAlias}.") == false &&
-                   field.StartsWith("id(") == false &&
-                   field.StartsWith("counter(") == false &&
-                   field.StartsWith("counterRaw(") == false &&
-                   field.StartsWith("cmpxchg(") == false;
+            return _addedDefaultAlias && FieldTypeAllowToAddAlias(field);
         }
 
+        private bool FieldTypeAllowToAddAlias(string field)
+        {
+            return field.StartsWith($"{FromAlias}.") == false &&
+                field.StartsWith("id(") == false &&
+                field.StartsWith("counter(") == false &&
+                field.StartsWith("counterRaw(") == false &&
+                field.StartsWith("cmpxchg(") == false;
+        }
+        
         private void AddFromAliasToFieldToFetch(ref string field, ref string alias, bool quote = false)
         {
             if (field == alias)
@@ -3484,11 +3488,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 alias = null;
             }
 
-            if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-            {
-                field = $"id({FromAlias})";
+            if (FieldTypeAllowToAddAlias(field) == false)
                 return;
-            }
 
             field = quote
                 ? $"{FromAlias}.'{field}'"
@@ -3501,11 +3502,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             AddFromAlias(fromAlias);
             foreach (var fieldToFetch in FieldsToFetch)
             {
-                if (fieldToFetch.Name == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                {
-                    fieldToFetch.Name = $"id({fromAlias})";
-                }
-                else
+                if (FieldTypeAllowToAddAlias(fieldToFetch.Name))
                 {
                     fieldToFetch.Name = $"{fromAlias}.{fieldToFetch.Name}";
                 }
