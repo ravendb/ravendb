@@ -66,9 +66,10 @@ namespace SlowTests.Issues
                 {
                 }
 
-                exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+                exception = await Assert.ThrowsAsync<InvalidOperationException>( () =>
                 {
                     using var session = batch.OpenAsyncSession();
+                    return Task.CompletedTask;
                 });
 
                 mre.Set();

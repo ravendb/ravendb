@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
             if (_sessionOpened)
             {
-                ThrowSessionCanBeOpenedOnce();
+                ThrowSessionCanBeOpenedOnlyOnce();
             }
             _sessionOpened = true;
             var s = _store.OpenSession(options);
@@ -119,7 +119,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
             if (_sessionOpened)
             {
-                ThrowSessionCanBeOpenedOnce();
+                ThrowSessionCanBeOpenedOnlyOnce();
             }
             _sessionOpened = true;
 
@@ -130,7 +130,7 @@ namespace Raven.Client.Documents.Subscriptions
             return s;
         }
 
-        private void ThrowSessionCanBeOpenedOnce()
+        private void ThrowSessionCanBeOpenedOnlyOnce()
         {
             throw new InvalidOperationException("Session can only be opened once per each Subscription batch");
         }
