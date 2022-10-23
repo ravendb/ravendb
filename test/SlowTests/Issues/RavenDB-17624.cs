@@ -53,9 +53,6 @@ namespace SlowTests.Issues
             using var worker = store.Subscriptions
                .GetSubscriptionWorker<Command>(workerOptions);
 
-            worker.OnSubscriptionConnectionRetry += exception => Console.WriteLine(exception);
-            worker.OnUnexpectedSubscriptionError += exception => Console.WriteLine(exception);
-
             var mre = new ManualResetEvent(false);
             var cts = new CancellationTokenSource();
             var last = DateTime.UtcNow;
