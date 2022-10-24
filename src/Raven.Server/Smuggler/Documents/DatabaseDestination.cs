@@ -114,7 +114,25 @@ namespace Raven.Server.Smuggler.Documents
 
         public ICompareExchangeActions CompareExchange(JsonOperationContext context, BackupKind? backupKind, bool withDocuments)
         {
-            return new DatabaseCompareExchangeActions(_database, context, backupKind, _token);
+            if (withDocuments == false)
+                return CreateActions();
+
+            switch (backupKind)
+            {
+                case null:
+                case BackupKind.None:
+                    return null; // do not optimize for Import
+                case BackupKind.Full:
+                case BackupKind.Incremental:
+                    return CreateActions();
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(backupKind), backupKind, null);
+            }
+
+            DatabaseCompareExchangeActions CreateActions()
+            {
+                return new DatabaseCompareExchangeActions(_database, context, backupKind, _token);
+            }
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
