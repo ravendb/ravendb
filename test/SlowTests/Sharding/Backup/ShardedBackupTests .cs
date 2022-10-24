@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
@@ -21,7 +20,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Backup
 {
-    public class ShardedBackupTests : RavenTestBase
+    public class ShardedBackupTests : ClusterTestBase
     {
         public ShardedBackupTests(ITestOutputHelper output) : base(output)
         {
@@ -359,6 +358,45 @@ namespace SlowTests.Sharding.Backup
                     }
 
                     await AssertDocs(store2, idPrefix, options.DatabaseMode);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task CanGetShardedBackupStatus()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new User(), $"users/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                var dirs = Directory.GetDirectories(backupPath).ToList();
+                Assert.Equal(cluster.Nodes.Count, dirs.Count);
+
+                var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId));
+
+                Assert.Equal(3, status.StatusPerShard.Length);
+                foreach (var shardBackupStatus in status.StatusPerShard)
+                {
+                    Assert.NotNull(shardBackupStatus);
                 }
             }
         }

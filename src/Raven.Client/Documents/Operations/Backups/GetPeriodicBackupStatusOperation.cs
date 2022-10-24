@@ -52,5 +52,7 @@ namespace Raven.Client.Documents.Operations.Backups
     public class GetPeriodicBackupStatusOperationResult
     {
         public PeriodicBackupStatus Status;
+
+        public PeriodicBackupStatus[] StatusPerShard;
     }
 }
