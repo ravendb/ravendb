@@ -13,6 +13,7 @@ using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
+using static Voron.Data.CompactTrees.CompactTree;
 
 namespace Voron.Data.CompactTrees
 {
@@ -1866,23 +1867,42 @@ namespace Voron.Data.CompactTrees
             return GetEncodingDictionaryUnlikely();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int GetEncodedKeyPtr(Page page, ushort entryOffset, out byte* encodedKey)
         {
-            // TODO: Add the key trick for Variable Size Read
-
             var entryPos = page.Pointer + entryOffset;
-            var keyLen = VariableSizeEncoding.Read<ushort>(entryPos, out var lenOfKeyLen);
-            encodedKey = entryPos + lenOfKeyLen;
-            return keyLen;
+            if (*entryPos < 0x80)
+            {
+                encodedKey = entryPos + 1;
+                return *entryPos;
+            }
+
+            int EncodedKeyPtrUnlikely(out byte* encodedKey)
+            {
+                var keyLen = VariableSizeEncoding.Read<ushort>(entryPos, out var lenOfKeyLen);
+                encodedKey = entryPos + lenOfKeyLen;
+                return keyLen;
+            }
+
+            return EncodedKeyPtrUnlikely(out encodedKey);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ReadOnlySpan<byte> GetEncodedKey(Page page, ushort entryOffset)
         {
             // TODO: Add the key trick for Variable Size Read
 
             var entryPos = page.Pointer + entryOffset;
-            var keyLen = VariableSizeEncoding.Read<ushort>(entryPos, out var lenOfKeyLen);
-            return new ReadOnlySpan<byte>(entryPos + lenOfKeyLen, keyLen);
+            if (*entryPos < 0x80)
+                return new ReadOnlySpan<byte>(entryPos + 1, *entryPos);
+
+            return GetEncodedKeyUnlikely();
+
+            ReadOnlySpan<byte> GetEncodedKeyUnlikely()
+            {
+                var keyLen = VariableSizeEncoding.Read<ushort>(entryPos, out var lenOfKeyLen);
+                return new ReadOnlySpan<byte>(entryPos + lenOfKeyLen, keyLen);
+            }
         }
 
         private static long GetValue(ref CursorState state, int pos)
@@ -1893,21 +1913,28 @@ namespace Voron.Data.CompactTrees
 
         private static void GetValuePointer(ref CursorState state, int pos, out byte* p)
         {
-            int GetValuePointerUnlikely(ref byte* p, out int lenKeyLen)
+            byte* GetValuePointerUnlikely(byte* p)
             {
-                return VariableSizeEncoding.Read<int>(p, out lenKeyLen);
+                var keyLen = VariableSizeEncoding.Read<int>(p, out var lenKeyLen);
+                return p + keyLen + lenKeyLen;
             }
 
             ushort entryOffset = state.EntriesOffsets[pos];
             p = state.Page.Pointer + entryOffset;
 
             // TODO: Investigate if viable to do the unlikely byte read.
-
-            var keyLen = (int)VariableSizeEncoding.Read<short>(p, out var lenKeyLen, out var success);
-            if (success == false)
-                keyLen = GetValuePointerUnlikely(ref p, out lenKeyLen);
-
-            p += keyLen + lenKeyLen;
+            if (p[0] < 0x80)
+            {
+                p += p[0] + 1;
+            }
+            else if (p[1] < 0x80)
+            {
+                p += ((p[0] & 0x7F) | (p[1] << 7)) + 2;
+            }
+            else
+            {
+                p = GetValuePointerUnlikely(p);
+            }
         }
 
         internal static int GetEncodedEntry(Page page, ushort entryOffset, out Span<byte> key, out long value)
@@ -2022,7 +2049,7 @@ namespace Voron.Data.CompactTrees
 
             encodedKeyLength = GetEncodedKeyPtr(state.Page, @base[bot], out encodedKeyPtr);
             
-            match = Memory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
+            match = AdvMemory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
             match = match == 0 ? keyLength - encodedKeyLength : match;
             if (match == 0)
             {
