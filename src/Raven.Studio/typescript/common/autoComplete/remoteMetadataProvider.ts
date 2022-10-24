@@ -1,6 +1,7 @@
 import database = require("models/resources/database");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
+import index from "models/database/index";
 
 class remoteMetadataProvider implements queryCompleterProviders {
     
@@ -20,7 +21,7 @@ class remoteMetadataProvider implements queryCompleterProviders {
         new getIndexEntriesFieldsCommand(indexName, this.database(), false)
             .execute()
             .done(result => {
-                callback(result.Static);
+                callback(result.Static.filter(x => !index.FieldsToHideOnUi.includes(x)));
             });
     }
 
