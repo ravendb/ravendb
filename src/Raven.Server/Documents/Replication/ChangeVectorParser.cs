@@ -12,6 +12,7 @@ namespace Raven.Server.Documents.Replication
         public static readonly int RaftInt = RaftTag.ParseNodeTag();
         public static readonly int TrxnInt = TrxnTag.ParseNodeTag();
         public static readonly int SinkInt = SinkTag.ParseNodeTag();
+        public static readonly int DbBase64IdSize = 23;
 
         private enum State
         {
@@ -132,7 +133,7 @@ namespace Raven.Server.Documents.Replication
                         if (changeVector[current] == '-')
                         {
                             var etag = ParseEtag(changeVector, start, current - 1);
-                            if (current + 23 > changeVector.Length)
+                            if (current + DbBase64IdSize > changeVector.Length)
                                 ThrowInvalidEndOfString("DbId", changeVector);
                             list.Add(new ChangeVectorEntry
                             {
@@ -140,7 +141,7 @@ namespace Raven.Server.Documents.Replication
                                 Etag = etag,
                                 DbId = changeVector.Substring(current + 1, 22)
                             });
-                            start = current + 23;
+                            start = current + DbBase64IdSize;
                             current = start;
                             state = State.Whitespace;
                         }
@@ -210,7 +211,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             var etag = ParseEtag(changeVector, start, current - 1);
 
-                            if (current + 23 > changeVector.Length)
+                            if (current + DbBase64IdSize > changeVector.Length)
                                 ThrowInvalidEndOfString("DbId", changeVector);
                             bool found = false;
                             var dbId = changeVector.Substring(current + 1, 22);
@@ -241,7 +242,7 @@ namespace Raven.Server.Documents.Replication
                                 });
                             }
                           
-                            start = current + 23;
+                            start = current + DbBase64IdSize;
                             current = start;
                             state = State.Whitespace;
                         }
@@ -299,7 +300,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             var etag = ParseEtag(changeVector, start, current - 1);
 
-                            if (current + 23 > changeVector.Length)
+                            if (current + DbBase64IdSize > changeVector.Length)
                                 ThrowInvalidEndOfString("DbId", changeVector);
                  
                             var dbId = changeVector.Substring(current + 1, 22);
@@ -320,7 +321,7 @@ namespace Raven.Server.Documents.Replication
                                 }
                             }
                           
-                            start = current + 23;
+                            start = current + DbBase64IdSize;
                             current = start;
                             state = State.Whitespace;
                         }

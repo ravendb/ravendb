@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        public async Task<(string AcceptedChangeVector, long LastAcceptedEtag)> GetFirstChangeVectorFromShardAsync() => await _firstChangeVector.Task;
+        public Task<(string AcceptedChangeVector, long LastAcceptedEtag)> GetFirstChangeVectorFromShardAsync() => _firstChangeVector.Task;
 
         protected override DynamicJsonValue GetInitialHandshakeRequest()
         {

@@ -91,18 +91,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 tasks[i] = _handlers[i].SendBatch(batches[i]);
             }
 
-
-            foreach (var task in tasks)
-            {
-                try
-                {
-                    task.WaitAndUnwrapException();
-                }
-                catch (Exception e)
-                {
-                    throw task.Exception ?? e;
-                }
-            }
+            Task.WaitAll(tasks);
 
             var cvs = new List<string>();
             foreach (ReplicationBatch replicationBatch in batches)
