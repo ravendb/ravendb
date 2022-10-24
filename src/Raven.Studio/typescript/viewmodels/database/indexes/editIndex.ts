@@ -515,7 +515,7 @@ class editIndex extends viewModelBase {
         new getIndexFieldsFromMapCommand(this.activeDatabase(), map, additionalSourcesDto, additionalAssembliesDto)
             .execute()
             .done((fields: resultsDto<string>) => {
-                this.fieldNames(fields.Results);
+                this.fieldNames(fields.Results.filter(x => !index.FieldsToHideOnUi.includes(x)));
             });
     }
 

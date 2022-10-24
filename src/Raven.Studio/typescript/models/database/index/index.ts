@@ -4,6 +4,8 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import generalUtils = require("common/generalUtils");
 
 class index {
+    static readonly FieldsToHideOnUi = ["_", "__"];
+    
     static readonly SideBySideIndexPrefix = "ReplacementOf/";
     static readonly AutoIndexPrefix = "Auto/";
     static readonly TestIndexPrefix = "Test/";
