@@ -6,7 +6,7 @@ using Voron.Data.CompactTrees;
 
 namespace Corax.Queries
 {
-    public unsafe struct ContainsTermProvider : ITermProvider
+    public struct ContainsTermProvider : ITermProvider
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
@@ -25,7 +25,7 @@ namespace Corax.Queries
         }
 
         public void Reset()
-        {            
+        {
             _iterator = _tree.Iterate();
             _iterator.Reset();
         }

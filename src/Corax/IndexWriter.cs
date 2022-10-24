@@ -17,10 +17,12 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Sets;
 using Voron.Impl;
+using static Voron.Data.CompactTrees.CompactTree;
 
 namespace Corax
 {
@@ -1166,7 +1168,7 @@ namespace Corax
             using var __ = CreateNormalizedTerm(Transaction.Allocator, term, out var termSlice);
 
             var termValue = termSlice.AsReadOnlySpan();
-            return fieldTree.TryGetValue(termValue, out idInTree, out var _);
+            return fieldTree.TryGetValue(termValue, out idInTree);
         }
 
         private void UnlikelyGrowBuffer(int newBufferSize, int newTokenSize)
@@ -1288,7 +1290,7 @@ namespace Corax
                     throw new InvalidDataException($"Got term '{Encodings.Utf8.GetString(termsSpan)}' with NULL character at the end for field {indexedField.Name}. This is a bug.");
                 }
                 
-                if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
+                if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var scope) == false)
                 {
                     if (entries.TotalRemovals != 0)
                     {
@@ -1298,7 +1300,8 @@ namespace Corax
                     AddNewTerm(entries, tmpBuf, out termId);
 
                     dumper.WriteAddition(term, termId);
-                    fieldTree.Add(termsSpan, termId, encodedKey);
+                    fieldTree.Add(termsSpan, termId, scope.Key);
+                    scope.Dispose();
                     continue;
                 }
 
@@ -1306,7 +1309,7 @@ namespace Corax
                 {
                     case AddEntriesToTermResult.UpdateTermId:
                         dumper.WriteAddition(term, termId);
-                        fieldTree.Add(termsSpan, termId, encodedKey);
+                        fieldTree.Add(termsSpan, termId, scope.Key);
                         break;
                     case AddEntriesToTermResult.RemoveTermId:
                         if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
@@ -1317,6 +1320,7 @@ namespace Corax
                         dumper.WriteRemoval(term, ttt);
                         break;
                 }
+                scope.Dispose();
             }
         }
 

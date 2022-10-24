@@ -7,7 +7,7 @@ using Voron.Global;
 using Voron.Impl;
 using Xunit;
 
-namespace Tryouts
+namespace FastTests.Voron.Sets
 {
     public unsafe class SetLeafPageTests : IDisposable
     {

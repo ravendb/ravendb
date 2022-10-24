@@ -5,7 +5,7 @@ namespace Voron.Data.CompactTrees
 {
     partial class CompactTree
     {
-        public unsafe struct Iterator 
+        public unsafe struct Iterator
         {
             private readonly CompactTree _tree;
             private IteratorCursorState _cursor;
@@ -25,6 +25,7 @@ namespace Voron.Data.CompactTrees
             public void Seek(ReadOnlySpan<byte> key)
             {
                 _tree.FindPageFor(key, ref _cursor);
+
                 ref var state = ref _cursor._stk[_cursor._pos];
                 if (state.LastSearchPosition < 0)
                     state.LastSearchPosition = ~state.LastSearchPosition;
