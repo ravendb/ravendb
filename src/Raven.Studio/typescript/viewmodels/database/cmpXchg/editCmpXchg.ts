@@ -260,24 +260,36 @@ class editCmpXchg extends viewModelBase {
 
         popoverUtils.longWithHover($(".key-info"),
             {
-                content: `<small>A unique identifier that is <strong>reserved accross the cluster</strong></small>`,
+                content: `<small>A unique identifier in the database</small>`,
                 html: true,
                 placement: "bottom"
             });
         
         popoverUtils.longWithHover($(".value-info"),
             {
-                content: `<small>A Value that is associated with the Key</small>`,
+                content: `<ul class="margin-top margin-top-xs margin-bottom-xs margin-right">
+                              <li>
+                                  <small>A Value that is associated with the Key.</small>
+                              </li>
+                              <li>
+                                  <small>Can be a number, string, array, or any valid JSON object.</small>
+                              </li>
+                          </ul>`,
                 html: true,
                 placement: "bottom"
             });
         
         popoverUtils.longWithHover($(".metadata-info"),
             {
-                content: `<ul class="margin-top margin-top-xs margin-right">
-                              <li><small>The Metadata is associated with the Key, similar to a document's metadata.</small></li>
+                content: `<ul class="margin-top margin-top-xs margin-bottom-xs margin-right">
                               <li>
-                                  <small>Can be used to set the <strong>Compare Exchange item expiration.</strong></small><br>
+                                  <small>The Metadata is associated with the Key, similar to a document's metadata.</small>
+                              </li>
+                              <li>
+                                  <small>Can be a number, string, array, or any valid JSON object.</small>
+                              </li>
+                              <li>
+                                  <small>Can be used to set the <strong>Compare-Exchange item expiration.</strong></small><br>
                                   <small>Set the <i>@expires</i> field to schedule expiration.</small><br>
                                   <small>e.g. <code>{ "@expires": "2021-02-26T13:09:37.4040256Z" }</code></small>
                               </li>
@@ -288,8 +300,8 @@ class editCmpXchg extends viewModelBase {
         
         popoverUtils.longWithHover($(".raft-index-info"),
             {
-                content: `<ul class="margin-top margin-top-xs margin-right">
-                              <li><small>The Raft Index indicates the <strong>Value's version</strong>.</small></li>
+                content: `<ul class="margin-top margin-top-xs margin-bottom-xs margin-right">
+                              <li><small>The Raft Index indicates the <strong>Compare-Exchange item's version</strong>.</small></li>
                               <li><small>Used for concurrency control.</small></li>
                           </ul>`,
                 html: true,
