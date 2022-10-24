@@ -65,27 +65,7 @@ public class RavenDB_19149 : RavenTestBase
         PrepareDataOnTheServer(store, out ExampleIndex index);
 
         var operation = await store.Maintenance.SendAsync(new IndexOptimizeOperation(index.IndexName));
-        Assert.NotNull(operation);
-
-        OperationState OperationStatusChecker()
-        {
-            OperationState output;
-            do
-            {
-                Task.Delay(TimeSpan.FromSeconds(1));
-                output = store.Maintenance.Send(new GetOperationStateOperation(operation.Id));
-            } while (output is not {Status: OperationStatus.Completed});
-
-            return output;
-        }
-
-        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60)))
-        {
-            var result = await Task.Run(OperationStatusChecker, cts.Token);
-            Assert.Equal(OperationStatus.Completed, result.Status);
-        }
-        
-        //Assert index live again and ready for querying.
+        var results = await operation.WaitForCompletionAsync<IndexOptimizeResult>(TimeSpan.FromSeconds(60));
         var indexStats = await store.Maintenance.SendAsync(new GetIndexesStatisticsOperation());
         var indexStat = indexStats.FirstOrDefault(i => string.Compare(i.Name, index.IndexName, StringComparison.InvariantCultureIgnoreCase) == 0);
         Assert.NotNull(indexStat);
@@ -142,7 +122,7 @@ public class RavenDB_19149 : RavenTestBase
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes/optimize?name={Uri.EscapeDataString(_indexName)}";
+                url = $"{node.Url}/databases/{node.Database}/admin/indexes/optimize?name={Uri.EscapeDataString(_indexName)}";
 
                 return new HttpRequestMessage
                 {
