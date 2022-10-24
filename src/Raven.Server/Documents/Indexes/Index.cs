@@ -216,7 +216,6 @@ namespace Raven.Server.Documents.Indexes
         internal NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
         private bool _isCompactionInProgress;
-        private bool _isIndexOptimizationInProgress;
         public bool _firstQuery = true;
         internal TimeSpan? _firstBatchTimeout;
         private Lazy<Size?> _transactionSizeLimit;
@@ -4600,11 +4599,10 @@ namespace Raven.Server.Documents.Indexes
                     _logger.Info($"{Name} is still waiting for other indexes to complete their batches because there is a {reason} condition in action...");
             }
         }
-
+        
         public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, bool shouldSkipOptimization, CancellationToken token)
         {
-            if (_isCompactionInProgress)
-                throw new InvalidOperationException($"Index '{Name}' cannot be compacted because compaction is already in progress.");
+            AssertCompactionOrOptimizationIsNotInProgress(Name, nameof(Compact));
 
             result.SizeBeforeCompactionInMb = CalculateIndexStorageSize().GetValue(SizeUnit.Megabytes);
 
@@ -4637,7 +4635,7 @@ namespace Raven.Server.Documents.Indexes
                                
                                result.AddMessage($"Starting data optimization of index '{Name}'.");
                                onProgress?.Invoke(result.Progress);
-                               Optimize(token);
+                               OptimizeInternal(token);
                            }))
                     {
                         DocumentDatabase.IndexStore?.ForTestingPurposes?.IndexCompaction?.Invoke();
@@ -4705,24 +4703,38 @@ namespace Raven.Server.Documents.Indexes
 
                     _isCompactionInProgress = false;
                 }
-
-                
             }
         }
-        
-        internal void Optimize(CancellationToken token)
+
+        public void Optimize(IndexOptimizeResult result, CancellationToken token)
         {
-            if (_isIndexOptimizationInProgress)
-                throw new InvalidOperationException($"Index '{Name}' cannot be optimized because optimization is already in progress.");
+            AssertCompactionOrOptimizationIsNotInProgress(Name, nameof(Optimize));
             
             try
             {
-                _isIndexOptimizationInProgress = true;
+                _isCompactionInProgress = true;
+                using (DrainRunningQueries())
+                using (RestartEnvironment(onBeforeEnvironmentDispose: () =>
+                       {
+                           result.Message = $"Optimization of index {Name} started...";
+                           OptimizeInternal(token);
+                       }))
+                {
+                }
+            }
+            finally
+            {
+                _isCompactionInProgress = false;
+            }
+        }
 
+        private void OptimizeInternal(CancellationToken token)
+        {
+            try
+            {
                 using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-                using (CurrentIndexingScope.Current = new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext,
-                           GetOrAddSpatialField, _unmanagedBuffersPool))
+                using (CurrentIndexingScope.Current = new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
                 using (var txw = indexContext.OpenWriteTransaction())
                 using (var writer = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext))
                 {
@@ -4738,10 +4750,12 @@ namespace Raven.Server.Documents.Indexes
 
                 throw;
             }
-            finally
-            {
-                _isIndexOptimizationInProgress = false;
-            }
+        }
+        
+        private void AssertCompactionOrOptimizationIsNotInProgress(string name, string operation)
+        {
+            if (_isCompactionInProgress)
+                throw new InvalidOperationException($"Index '{Name}' cannot be '{operation}' because compaction/optimization is already in progress.");
         }
         
         public IDisposable RestartEnvironment(Action onBeforeEnvironmentDispose = null)

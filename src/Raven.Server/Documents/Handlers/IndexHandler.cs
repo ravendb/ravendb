@@ -1004,58 +1004,6 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
         }
-
-        [RavenAction("/databases/*/indexes/optimize", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
-        public async Task OptimizeIndex()
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
-                    throw new InvalidDataException($"Index '{name}' not found. Cannot perform optimize.");
-                var token = CreateOperationToken();
-                using (index.DrainRunningQueries())
-                {
-                    var result = new IndexOptimizeResult(index.Name);
-                    var operationId = Database.Operations.GetNextOperationId();
-                    
-                    var t = Database.Operations.AddOperation(
-                        Database,
-                        "Optimizing index: " + index.Name,
-                        Operations.Operations.OperationType.LuceneOptimizeIndex,
-                        taskFactory: _ => Task.Run(() =>
-                        {
-                            try
-                            {
-                                using (token)
-                                using (Database.PreventFromUnloadingByIdleOperations())
-                                using (var indexCts = CancellationTokenSource.CreateLinkedTokenSource(token.Token, Database.DatabaseShutdown))
-                                using (index.RestartEnvironment(onBeforeEnvironmentDispose: () =>
-                                       {
-                                           result.Message = $"Optimization of index {name} started...";
-                                           index.Optimize(indexCts.Token);
-                                       }))
-                                {
-                                    return Task.FromResult((IOperationResult)result);
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                if (Logger.IsOperationsEnabled)
-                                    Logger.Operations("Optimize process failed", e);
-
-                                throw;
-                            }
-                        }, token.Token),
-                        id: operationId, token: token);
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
-                    }
-                }
-            }
-        }
         
         [RavenAction("/databases/*/indexes/suggest-index-merge", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task SuggestIndexMerge()
