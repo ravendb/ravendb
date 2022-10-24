@@ -112,12 +112,11 @@ namespace SlowTests.Issues
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var firstNode2 = record.Topology.Members[0];
 
-                var random = new Random();
                 Assert.True(await WaitForValueAsync(async () =>
                 {
                     record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     var list = record.Topology.Members;
-                    Shuffle(list, random);
+                    list.Shuffle();
                     await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, list));
 
                     record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
