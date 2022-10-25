@@ -113,20 +113,6 @@ namespace Voron.Data.CompactTrees
             // The decoded key pointer points toward the actual decoded key (if available). If not we will take the current
             // dictionary and just decode it into the storage. 
             private int _decodedKeyIdx;
-
-            // The mapping dictionary works like glorified cache but it is really more like a hash-table.
-            // The base idea is to access directly the encoded key representation already stored in this
-            // key auxiliary storage in order to reuse and avoid redundant work. 
-            // In true DOS fashion, 64 values ought to be enough for anybody.
-            private struct KeyMapping
-            {
-                // If the dictionary is 0 then the dictionary is not present in this key.
-                public long Dictionary;
-
-                // If we have the encoded version of the key available already, the KeyIndex will be >0 and the Dictionary Valid. 
-                public int KeyIndex;
-            }
-
             private int _currentKeyIdx;
 
             private const int MappingTableSize = 64;
@@ -201,7 +187,7 @@ namespace Voron.Data.CompactTrees
                     // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes.
 
                     // We look for an appropriate place to put this key
-                    int buckedIdx = SelectHashBucketForWrite();
+                    int buckedIdx = SelectBucketForWrite();
                     _keyMappingDictionary[buckedIdx] = dictionaryId;
                     _keyMappingIndex[buckedIdx] = (int)(_currentPtr - _storage.Ptr);
 
@@ -233,7 +219,7 @@ namespace Voron.Data.CompactTrees
                 }
                 else
                 {
-                    int bucketIdx = SelectHashBucketForRead(dictionaryId);
+                    int bucketIdx = SelectBucketForRead(dictionaryId);
                     if (bucketIdx == Invalid)
                     {
                         start = EncodeFromDecodedForm();
@@ -393,37 +379,42 @@ namespace Voron.Data.CompactTrees
             public void Set(ReadOnlySpan<byte> key)
             {
                 // This is the operation to set an unencoded key, therefore we need to restart everything.
-                _currentPtr = _storage.Ptr;
+                var currentPtr = _storage.Ptr;
 
                 // Initialize the memory to zero (this ensures the mappings defaults are correct for operation). 
                 int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
+                var mappingDictionary = _keyMappingDictionary;
                 while (elementIdx >= 0)
                 {
-                    _keyMappingDictionary[elementIdx] = 0;
+                    mappingDictionary[elementIdx] = 0;
                     elementIdx--;
                 }
 
                 _keyMappingCurrent = Invalid;
 
                 // Since the size is big enough to store the unencoded key, we don't check the remaining size here.
-                _decodedKeyIdx = (int)(_currentPtr - (long)_storage.Ptr);
+                _decodedKeyIdx = (int)(currentPtr - (long)_storage.Ptr);
                 _currentKeyIdx = Invalid;
                 Dictionary = Invalid;
 
                 int keyLength = key.Length;
-                int n = keyLength + (key[^1] != 0).ToInt32();
+                int n = keyLength;
+                if (key[^1] != 0)
+                    n++;
 
                 // We write the size and the key. 
-                *((int*)_currentPtr) = n;
-                _currentPtr += sizeof(int);
+                *((int*)currentPtr) = n;
+                currentPtr += sizeof(int);
                 
                 // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
-                Unsafe.CopyBlock(ref Unsafe.AsRef<byte>(_currentPtr), ref Unsafe.AsRef<byte>(key[0]), (uint)keyLength );
-                
-                _currentPtr += n; // We update the new pointer. 
+                Unsafe.CopyBlock(ref Unsafe.AsRef<byte>(currentPtr), ref Unsafe.AsRef<byte>(key[0]), (uint)keyLength );
+
+                currentPtr += n; // We update the new pointer. 
 
                 // If it is null terminated we are overwriting it, but we avoid a branch misprediction.
-                _currentPtr[-1] = 0;
+                currentPtr[-1] = 0;
+                
+                _currentPtr = currentPtr;
             }
 
             public void Set(ReadOnlySpan<byte> key, long dictionaryId)
@@ -451,7 +442,7 @@ namespace Voron.Data.CompactTrees
 
                     int keyLength = key.Length;
                     int n = keyLength + (key[^1] != 0).ToInt32();
-                    int bucketIdx = SelectHashBucketForWrite();
+                    int bucketIdx = SelectBucketForWrite();
                     _keyMappingDictionary[bucketIdx] = dictionaryId;
                     _keyMappingIndex[bucketIdx] = _currentKeyIdx;
 
@@ -467,7 +458,7 @@ namespace Voron.Data.CompactTrees
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private int SelectHashBucketForRead(long dictionaryId)
+            private int SelectBucketForRead(long dictionaryId)
             {
                 int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
                 while (elementIdx >= 0)
@@ -483,7 +474,7 @@ namespace Voron.Data.CompactTrees
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private int SelectHashBucketForWrite()
+            private int SelectBucketForWrite()
             {
                 _keyMappingCurrent++;
                 return _keyMappingCurrent & MappingTableMask;
@@ -563,9 +554,10 @@ namespace Voron.Data.CompactTrees
             public int ComputeFreeSpace()
             {
                 var usedSpace = PageHeader.SizeOf + sizeof(ushort) * Header->NumberOfEntries;
+                var entriesOffsetsPtr = EntriesOffsetsPtr;
                 for (int i = 0; i < Header->NumberOfEntries; i++)
                 {
-                    GetEntryBuffer(Page, EntriesOffsets[i], out _, out var len);
+                    GetEntryBuffer(Page, entriesOffsetsPtr[i], out _, out var len);
                     Debug.Assert(len < Constants.CompactTree.MaximumKeySize);
                     usedSpace += len;
                 }
@@ -838,7 +830,7 @@ namespace Voron.Data.CompactTrees
             var shouldBeInCurrentPage = pos < state.Header->NumberOfEntries;
             if (shouldBeInCurrentPage)
             {
-                var nextEntryLength = GetEncodedKeyPtr(state.Page, state.EntriesOffsets[pos], out var nextEntryPtr);
+                var nextEntryLength = GetEncodedKeyPtr(state.Page, state.EntriesOffsetsPtr[pos], out var nextEntryPtr);
 
                 // var match = encodedKey.Encoded.SequenceCompareTo(nextEntry);
                 var match = encodedKey.CompareEncodedWithCurrent(nextEntryPtr, nextEntryLength);
@@ -866,7 +858,7 @@ namespace Voron.Data.CompactTrees
                     // We change the current dictionary for this key. 
                     currentKeyInPageDictionary.ChangeDictionary(cur.Header->DictionaryId);
 
-                    var currentKeyInPageDictionaryLength = GetEncodedKeyPtr(cur.Page, cur.EntriesOffsets[cur.LastSearchPosition + 1], out var currentKeyInPageDictionaryPtr);
+                    var currentKeyInPageDictionaryLength = GetEncodedKeyPtr(cur.Page, cur.EntriesOffsetsPtr[cur.LastSearchPosition + 1], out var currentKeyInPageDictionaryPtr);
 
                     var match = currentKeyInPageDictionary.CompareEncodedWithCurrent(currentKeyInPageDictionaryPtr, currentKeyInPageDictionaryLength);
                     if (match < 0)
@@ -1098,7 +1090,7 @@ namespace Voron.Data.CompactTrees
                 byte* keyEncodingBuffer = stackalloc byte[16];
 
                 // We get the encoded key and value from the sibling page
-                var sourceEntrySize = GetEncodedEntry(sourcePage, sourceState.EntriesOffsets[sourceKeysCopied], out var encodedKey, out var val);
+                var sourceEntrySize = GetEncodedEntry(sourcePage, sourceState.EntriesOffsetsPtr[sourceKeysCopied], out var encodedKey, out var val);
                 
                 // If they have a different dictionary, we need to re-encode the entry with the new dictionary.
                 if (encodedKey.Length != 0)
@@ -1143,7 +1135,7 @@ namespace Voron.Data.CompactTrees
             bool MoveEntryAsIs(ref CursorState destinationState, Span<ushort> entries)
             {
                 // We get the encoded key and value from the sibling page
-                var entry = GetEncodedEntryBuffer(sourcePage, sourceState.EntriesOffsets[sourceKeysCopied]);
+                var entry = GetEncodedEntryBuffer(sourcePage, sourceState.EntriesOffsetsPtr[sourceKeysCopied]);
                 
                 // If we dont have enough free space in the receiving page, we move on. 
                 var requiredSize = entry.Length;
@@ -1659,7 +1651,7 @@ namespace Voron.Data.CompactTrees
             state.Header->Upper = (ushort)(Constants.Storage.PageSize - size);
             state.Header->FreeSpace -= (ushort)(size + sizeof(ushort));
 
-            state.EntriesOffsets[0] = state.Header->Upper;
+            state.EntriesOffsetsPtr[0] = state.Header->Upper;
             byte* entryPos = state.Page.Pointer + state.Header->Upper;
             *entryPos++ = 0; // zero len key
             Memory.Copy(entryPos, pageNumberBufferPtr, pageNumberLength);
@@ -1890,8 +1882,6 @@ namespace Voron.Data.CompactTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ReadOnlySpan<byte> GetEncodedKey(Page page, ushort entryOffset)
         {
-            // TODO: Add the key trick for Variable Size Read
-
             var entryPos = page.Pointer + entryOffset;
             if (*entryPos < 0x80)
                 return new ReadOnlySpan<byte>(entryPos + 1, *entryPos);
@@ -1911,18 +1901,12 @@ namespace Voron.Data.CompactTrees
             return ZigZagEncoding.Decode<long>(p, out _);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void GetValuePointer(ref CursorState state, int pos, out byte* p)
         {
-            byte* GetValuePointerUnlikely(byte* p)
-            {
-                var keyLen = VariableSizeEncoding.Read<int>(p, out var lenKeyLen);
-                return p + keyLen + lenKeyLen;
-            }
-
-            ushort entryOffset = state.EntriesOffsets[pos];
+            ushort entryOffset = state.EntriesOffsetsPtr[pos];
             p = state.Page.Pointer + entryOffset;
 
-            // TODO: Investigate if viable to do the unlikely byte read.
             if (p[0] < 0x80)
             {
                 p += p[0] + 1;
@@ -1933,6 +1917,12 @@ namespace Voron.Data.CompactTrees
             }
             else
             {
+                byte* GetValuePointerUnlikely(byte* p)
+                {
+                    var keyLen = VariableSizeEncoding.Read<int>(p, out var lenKeyLen);
+                    return p + keyLen + lenKeyLen;
+                }
+
                 p = GetValuePointerUnlikely(p);
             }
         }
@@ -2115,7 +2105,7 @@ namespace Voron.Data.CompactTrees
             {
                 mid = (high + low) / 2;
                 
-                var cur = GetEncodedKey(state.Page, state.EntriesOffsets[mid]);
+                var cur = GetEncodedKey(state.Page, state.EntriesOffsetsPtr[mid]);
 
                 match = DictionaryOrder(encodedKey, cur);
 
