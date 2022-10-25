@@ -1053,7 +1053,7 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-
+        
         [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task CompactDatabase()
         {
@@ -1133,7 +1133,7 @@ namespace Raven.Server.Web.System
                                             }
 
                                             // we want to send progress of entire operation (indexes and documents), but we should update stats only for index compaction
-                                            index.Compact(progress => onProgress(overallResult.Progress), indexCompactionResult, indexCts.Token);
+                                            index.Compact(progress => onProgress(overallResult.Progress), indexCompactionResult, compactSettings.SkipOptimizeIndexes, indexCts.Token);
                                             indexCompactionResult.Processed = true;
                                         }
                                     }

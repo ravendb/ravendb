@@ -26,8 +26,12 @@ namespace Raven.Client.Documents.Smuggler
         {
             var extension = Path.GetExtension(filePath);
 
-            return IsSnapshot(extension) ||
-                   Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
+            return IsFullBackup(extension) || IsSnapshot(extension);
+        }
+
+        internal static bool IsFullBackup(string extension)
+        {
+            return Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                    Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
         }
 

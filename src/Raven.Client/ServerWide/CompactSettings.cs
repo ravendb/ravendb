@@ -9,6 +9,8 @@ namespace Raven.Client.ServerWide
         public bool Documents { get; set; }
 
         public string[] Indexes { get; set; }
+        
+        public bool SkipOptimizeIndexes { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -16,7 +18,8 @@ namespace Raven.Client.ServerWide
             {
                 [nameof(DatabaseName)] = DatabaseName,
                 [nameof(Documents)] = Documents,
-                [nameof(Indexes)] = Indexes
+                [nameof(Indexes)] = Indexes,
+                [nameof(SkipOptimizeIndexes)] = SkipOptimizeIndexes
             };
         }
     }
