@@ -82,7 +82,7 @@ unsafe partial class CompactTree
                     }
                     else
                     {
-                        GetEntry(_tree, state.Page, state.EntriesOffsets[_currentIdx], out keySpan, out var value);
+                        GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[_currentIdx], out keySpan, out var value);
                         _currentIdx++;
                         goto Success;
                     }
@@ -94,7 +94,7 @@ unsafe partial class CompactTree
             if (state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
             {
                 int randomEntry = _generator.Next(state.Header->NumberOfEntries);
-                GetEntry(_tree, state.Page, state.EntriesOffsets[randomEntry], out keySpan, out var value);
+                GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[randomEntry], out keySpan, out var value);
 
                 // Move the cursor to the root.                 
                 _cursor._pos = -1;

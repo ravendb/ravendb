@@ -62,7 +62,7 @@ namespace Voron.Data.CompactTrees
                     Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
                     if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
                     {
-                        GetEntry(_tree, state.Page, state.EntriesOffsets[state.LastSearchPosition], out key, out value);
+                        GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[state.LastSearchPosition], out key, out value);
                         state.LastSearchPosition++;                        
 
                         float currentScore = distance.GetDistance(_baseKey, key);
