@@ -127,7 +127,7 @@ namespace Voron
 
         public event Action OnLogsApplied;
 
-        private readonly long[] _validPages;
+        internal readonly long[] _validPages;
 
         public bool IsNew { get; }
 
@@ -1293,6 +1293,16 @@ namespace Voron
 
         private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, long index, long old, long bitToSet)
         {
+            // No need to call EnsureMapped here. ValidatePageChecksum is only called for pages in the datafile, 
+            // which we already got using AcquirePagePointerWithOverflowHandling()
+            if (pageNumber != current->PageNumber)
+                ThrowInvalidPageNumber(pageNumber, current);
+
+            ulong checksum = CalculatePageChecksum((byte*)current, current->PageNumber, current->Flags, current->OverflowSize);
+
+            if (checksum != current->Checksum)
+                ThrowInvalidChecksum(pageNumber, current, checksum);
+
             var spinner = new SpinWait();
             while (true)
             {
@@ -1303,19 +1313,6 @@ namespace Voron
                 old = modified;
                 spinner.SpinOnce();
             }
-
-            // No need to call EnsureMapped here. ValidatePageChecksum is only called for pages in the datafile, 
-            // which we already got using AcquirePagePointerWithOverflowHandling()
-
-            if (pageNumber != current->PageNumber)
-                ThrowInvalidPageNumber(pageNumber, current);
-
-            ulong checksum = CalculatePageChecksum((byte*)current, current->PageNumber, current->Flags, current->OverflowSize);
-
-            if (checksum == current->Checksum)
-                return;
-
-            ThrowInvalidChecksum(pageNumber, current, checksum);
         }
 
         private static unsafe void ThrowInvalidPageNumber(long pageNumber, PageHeader* current)

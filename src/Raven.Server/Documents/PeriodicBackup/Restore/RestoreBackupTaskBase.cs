@@ -36,6 +36,7 @@ using Sparrow.Utils;
 using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
+using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
@@ -741,6 +742,27 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 });
+
+            long totalExecutedCommands = 0;
+
+            //when restoring from a backup, the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
+            while (true)
+            {
+                _operationCancelToken.Token.ThrowIfCancellationRequested();
+
+                using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
+                    var executed = await database.ExecuteClusterTransaction(serverContext, batchSize: 1);
+                    if (executed.Count == 0)
+                        break;
+
+                    totalExecutedCommands += executed.Sum(x => x.Commands.Length);
+                    result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
+                    onProgress.Invoke(result.Progress);
+                }
+            }
         }
 
         private bool IsDefaultDataDirectory(string dataDirectory, string databaseName)
@@ -864,7 +886,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     database.Time, options, result: restoreResult, onProgress: onProgress, token: _operationCancelToken.Token)
                 {
                     OnIndexAction = onIndexAction,
-                    OnDatabaseRecordAction = onDatabaseRecordAction
+                    OnDatabaseRecordAction = onDatabaseRecordAction,
+                    BackupKind = BackupUtils.IsFullBackup(Path.GetExtension(filePath)) ? BackupKind.Full : BackupKind.Incremental
                 };
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false, isLastFile);
             }
@@ -902,7 +925,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         {
                             var source = new StreamSource(uncompressed, context, database);
                             var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
-                                database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token);
+                                database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token)
+                            {
+                                BackupKind = BackupKind.Incremental
+                            };
 
                             await smuggler.ExecuteAsync(ensureStepsProcessed: true, isLastFile: true);
                         }

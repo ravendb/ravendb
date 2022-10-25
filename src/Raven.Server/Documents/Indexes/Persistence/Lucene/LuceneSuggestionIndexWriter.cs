@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Documents;
@@ -209,11 +210,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public void Optimize(IState state)
+        public void Optimize(IState state, CancellationToken token)
         {
             try
             {
-                _indexWriter.Optimize(state);
+                _indexWriter.Optimize(state, token);
             }
             catch (SystemException e)
             {

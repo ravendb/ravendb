@@ -11,7 +11,7 @@
                 </ul></small>
             </li>
         </ul>
-        <div class="margin-bottom">Differences when Snapshot backs up both indexes definitions and indexes data:</div>
+        <div class="margin-bottom">Differences when Snapshot backs up both index definitions and index data:</div>
         <ul>
             <li>Speed
                 <small><ul>

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -11,6 +13,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -370,6 +373,52 @@ namespace Raven.Server.Documents.Handlers.Admin
                     [nameof(CurrentFileSizeInBytes)] = CurrentFileSizeInBytes,
                     [nameof(CurrentFileCopiedBytes)] = CurrentFileCopiedBytes
                 };
+            }
+        }
+        
+        [RavenAction("/databases/*/admin/indexes/optimize", "POST", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
+        public async Task OptimizeIndex()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    IndexDoesNotExistException.ThrowFor(name);
+                
+                var token = CreateOperationToken();
+                var result = new IndexOptimizeResult(index.Name);
+                var operationId = Database.Operations.GetNextOperationId();
+                var t = Database.Operations.AddOperation(
+                    Database,
+                    "Optimizing index: " + index.Name,
+                    Operations.Operations.OperationType.LuceneOptimizeIndex,
+                    taskFactory: _ => Task.Run(() =>
+                    {
+                        try
+                        {
+                            using (token)
+                            using (Database.PreventFromUnloadingByIdleOperations())
+                            using (var indexCts = CancellationTokenSource.CreateLinkedTokenSource(token.Token, Database.DatabaseShutdown))
+                            {
+                                index.Optimize(result, indexCts.Token);
+                                return Task.FromResult((IOperationResult)result);
+    }
+}
+                        catch (Exception e)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations("Optimize process failed", e);
+
+                            throw;
+                        }
+                    }, token.Token),
+                    id: operationId, token: token);
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+                }
+                
             }
         }
     }
