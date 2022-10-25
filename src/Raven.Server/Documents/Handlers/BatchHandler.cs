@@ -23,6 +23,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -628,12 +629,16 @@ namespace Raven.Server.Documents.Handlers
                                 case CommandType.PUT:
                                     if (current < count)
                                     {
-                                        // delete the document to avoid exception if we put new document in a different collection.
-                                        // TODO: document this behavior
-                                        using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                        // if the document came from a full backup it must have the same collection
+                                        // the only thing that we update is the change vector
+                                        if (cmd.FromBackup is not BackupKind.Full)
                                         {
-                                            Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
-                                                nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+                                            // delete the document to avoid exception if we put new document in a different collection.
+                                            using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                            {
+                                                Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
+                                                    nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+                                            }
                                         }
 
                                         var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector,
@@ -1199,7 +1204,7 @@ namespace Raven.Server.Documents.Handlers
 
             private void EtlGetDocIdFromPrefixIfNeeded(ref string docId, BatchRequestParser.CommandData cmd, DocumentsStorage.PutOperationResults? lastPutResult)
             {
-                if (cmd.FromEtl==false || docId[^1] != Database.IdentityPartsSeparator)
+                if (cmd.FromEtl == false || docId[^1] != Database.IdentityPartsSeparator)
                     return;
                 // counter/time-series/attachments sent by Raven ETL, only prefix is defined
 

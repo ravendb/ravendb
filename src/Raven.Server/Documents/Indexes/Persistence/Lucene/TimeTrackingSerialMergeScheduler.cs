@@ -37,7 +37,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     while (true)
                     {
-                        if (sp.Elapsed > _maxMergeTime)
+                                                            //we can schedule index merging only when Optimize is not running
+                        if (sp.Elapsed > _maxMergeTime && (writer.OptimizeScope == null || writer.OptimizeScope.IsRunning == false))
                         {
                             if (writer.PendingMergesCount > 0)
                                 _index.ScheduleIndexingRun(); // we stop before we are done merging, force a new batch

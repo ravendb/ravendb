@@ -61,6 +61,7 @@ namespace Raven.Client.Documents.Subscriptions
         private List<BlittableJsonReaderObject> _includes;
         private List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> _counterIncludes;
         private List<BlittableJsonReaderObject> _timeSeriesIncludes;
+        private bool _sessionOpened = false;
 
         public IDocumentSession OpenSession()
         {
@@ -83,6 +84,11 @@ namespace Raven.Client.Documents.Subscriptions
 
         private IDocumentSession OpenSessionInternal(SessionOptions options)
         {
+            if (_sessionOpened)
+            {
+                ThrowSessionCanBeOpenedOnlyOnce();
+            }
+            _sessionOpened = true;
             var s = _store.OpenSession(options);
 
             LoadDataToSession((InMemoryDocumentSessionOperations)s);
@@ -111,11 +117,22 @@ namespace Raven.Client.Documents.Subscriptions
 
         private IAsyncDocumentSession OpenAsyncSessionInternal(SessionOptions options)
         {
+            if (_sessionOpened)
+            {
+                ThrowSessionCanBeOpenedOnlyOnce();
+            }
+            _sessionOpened = true;
+
             var s = _store.OpenAsyncSession(options);
 
             LoadDataToSession((InMemoryDocumentSessionOperations)s);
 
             return s;
+        }
+
+        private void ThrowSessionCanBeOpenedOnlyOnce()
+        {
+            throw new InvalidOperationException("Session can only be opened once per each Subscription batch");
         }
 
         private static void ValidateSessionOptions(SessionOptions options)
