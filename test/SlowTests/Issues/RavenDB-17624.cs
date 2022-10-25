@@ -77,6 +77,40 @@ namespace SlowTests.Issues
             Assert.Equal("Session can only be opened once per each Subscription batch", exception.Message);
         }
 
+        [Fact]
+        public async Task ClearSessionOpenedWhenBatchIsReused()
+        {
+            using var store = GetDocumentStore();
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Command { Value = 1 });
+                await session.StoreAsync(new Command { Value = 2 });
+                await session.SaveChangesAsync();
+            }
+
+            await store.Subscriptions
+                .CreateAsync(new SubscriptionCreationOptions<Command>
+                {
+                    Name = "BackgroundSubscriptionWorker",
+                });
+
+            var workerOptions = new SubscriptionWorkerOptions("BackgroundSubscriptionWorker")
+            {
+                MaxDocsPerBatch = 1,
+                CloseWhenNoDocsLeft = true
+            };
+
+            await using var worker = store.Subscriptions
+               .GetSubscriptionWorker<Command>(workerOptions);
+            
+            await Assert.ThrowsAsync<SubscriptionClosedException>(() => worker.Run(batch =>
+            {
+                using (var session = batch.OpenAsyncSession())
+                {
+                }
+            }));
+        }
+
         private class Command
         {
             public string Id { get; set; }
