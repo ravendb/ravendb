@@ -199,6 +199,8 @@ namespace Raven.Client.Documents.Subscriptions
 
         internal string Initialize(BatchFromServer batch)
         {
+            _sessionOpened = false;
+
             _includes = batch.Includes;
             _counterIncludes = batch.CounterIncludes;
             _timeSeriesIncludes = batch.TimeSeriesIncludes;
