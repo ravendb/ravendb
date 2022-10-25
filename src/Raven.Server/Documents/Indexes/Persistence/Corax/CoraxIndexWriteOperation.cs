@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Corax;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
@@ -159,7 +160,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return (1024 * 1024, 1024 * 1024);
         }
 
-        public override void Optimize()
+        public override void Optimize(CancellationToken token)
         {
             // Lucene method
         }

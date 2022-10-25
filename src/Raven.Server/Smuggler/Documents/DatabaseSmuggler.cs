@@ -14,6 +14,9 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
@@ -34,6 +37,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public Action<IndexDefinitionAndType> OnIndexAction;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
+        public BackupKind BackupKind = BackupKind.None;
 
         public const string PreV4RevisionsDocumentId = "/revisions/";
 
@@ -673,11 +677,13 @@ namespace Raven.Server.Smuggler.Documents
 
             var throwOnCollectionMismatchError = _options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) == false;
 
-            await using (var actions = _destination.Documents(throwOnCollectionMismatchError))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var documentActions = _destination.Documents(throwOnCollectionMismatchError))
+            await using (var compareExchangeActions = _destination.CompareExchange(context, BackupKind, withDocuments: true))
             {
                 List<string> legacyIdsToDelete = null;
 
-                await foreach (DocumentItem item in _source.GetDocumentsAsync(_options.Collections, actions))
+                await foreach (DocumentItem item in _source.GetDocumentsAsync(_options.Collections, documentActions))
                 {
                     _token.ThrowIfCancellationRequested();
 
@@ -748,10 +754,17 @@ namespace Raven.Server.Smuggler.Documents
                     if (SkipDocument(buildType, isPreV4Revision, item, result, ref legacyIdsToDelete))
                         continue;
 
-                    await actions.WriteDocumentAsync(item, result.Documents);
+                    if (compareExchangeActions != null && item.Document.ChangeVector != null && item.Document.ChangeVector.Contains(ChangeVectorParser.TrxnTag))
+                    {
+                        var key = ClusterTransactionCommand.GetAtomicGuardKey(item.Document.Id);
+                        await compareExchangeActions.WriteKeyValueAsync(key, null, item.Document);
+                        continue;
+                    }
+
+                    await documentActions.WriteDocumentAsync(item, result.Documents);
                 }
 
-                await TryHandleLegacyDocumentTombstonesAsync(legacyIdsToDelete, actions, result);
+                await TryHandleLegacyDocumentTombstonesAsync(legacyIdsToDelete, documentActions, result);
             }
 
             if (buildType == BuildVersionType.V3 && result.RevisionDocuments.ReadCount > 0)
@@ -840,7 +853,7 @@ namespace Raven.Server.Smuggler.Documents
             result.CompareExchange.Start();
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var actions = _destination.CompareExchange(context))
+            await using (var actions = _destination.CompareExchange(context, BackupKind, withDocuments: false))
             {
                 await foreach (var kvp in _source.GetCompareExchangeValuesAsync(actions))
                 {
@@ -857,7 +870,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     try
                     {
-                        await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
+                        await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value, null);
                         result.CompareExchange.LastEtag = kvp.Index;
                     }
                     catch (Exception e)

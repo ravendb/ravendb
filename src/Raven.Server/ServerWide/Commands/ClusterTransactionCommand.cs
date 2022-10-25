@@ -7,6 +7,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
@@ -40,6 +41,7 @@ namespace Raven.Server.ServerWide.Commands
             public BlittableJsonReaderObject Document;
             public string ChangeVector;
             public long Index;
+            public BackupKind? FromBackup;
             public string Error;
 
             public static ClusterTransactionDataCommand FromCommandData(BatchRequestParser.CommandData command)
@@ -55,13 +57,14 @@ namespace Raven.Server.ServerWide.Commands
                     ChangeVector = command.OriginalChangeVector ?? command.ChangeVector,
                     Document = command.Document,
                     Index = command.Index,
-                    Type = command.Type
+                    Type = command.Type,
+                    FromBackup = null
                 };
             }
 
             public DynamicJsonValue ToJson(JsonOperationContext context)
             {
-                return new DynamicJsonValue
+                var djv = new DynamicJsonValue
                 {
                     [nameof(Type)] = Type,
                     [nameof(Id)] = Id,
@@ -70,6 +73,11 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(Document)] = Document?.Clone(context),
                     [nameof(Error)] = Error
                 };
+
+                if (FromBackup.HasValue)
+                    djv[nameof(FromBackup)] = FromBackup.Value;
+
+                return djv;
             }
         }
 
@@ -77,7 +85,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             public string Message;
             public ConcurrencyViolation Violation;
-            
+
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
@@ -122,7 +130,7 @@ namespace Raven.Server.ServerWide.Commands
 
         [JsonDeserializationIgnore]
         public ClusterTransactionOptions Options;
-        
+
         [JsonDeserializationIgnore]
         public readonly List<ClusterTransactionDataCommand> DatabaseCommands = new List<ClusterTransactionDataCommand>();
 
@@ -130,21 +138,18 @@ namespace Raven.Server.ServerWide.Commands
 
         public ClusterTransactionCommand() { }
 
-        public ClusterTransactionCommand(string databaseName, char identityPartsSeparator, DatabaseTopology topology,
+        public ClusterTransactionCommand(
+            string databaseName,
+            char identityPartsSeparator,
+            DatabaseTopology topology,
             ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
-            ClusterTransactionOptions options, string uniqueRequestId) : base(uniqueRequestId)
+            ClusterTransactionOptions options, string uniqueRequestId) : this(databaseName, identityPartsSeparator, topology, options, uniqueRequestId)
         {
-            DatabaseName = databaseName;
-            DatabaseRecordId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
-            ClusterTransactionId = topology.ClusterTransactionIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
-            Options = options;
-            CommandCreationTicks = SystemTime.UtcNow.Ticks;
-
             foreach (var commandData in commandParsedCommands)
             {
                 var command = ClusterTransactionDataCommand.FromCommandData(commandData);
                 ClusterCommandValidation(command, identityPartsSeparator);
-                switch (commandData.Type)
+                switch (command.Type)
                 {
                     case CommandType.PUT:
                     case CommandType.DELETE:
@@ -160,6 +165,49 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             DatabaseCommandsCount = DatabaseCommands.Count;
+        }
+
+        public ClusterTransactionCommand(
+            string databaseName,
+            char identityPartsSeparator,
+            DatabaseTopology topology,
+            ArraySegment<ClusterTransactionDataCommand> commandParsedCommands,
+            ClusterTransactionOptions options,
+            string uniqueRequestId) : this(databaseName, identityPartsSeparator, topology, options, uniqueRequestId)
+        {
+            foreach (var command in commandParsedCommands)
+            {
+                ClusterCommandValidation(command, identityPartsSeparator);
+                switch (command.Type)
+                {
+                    case CommandType.PUT:
+                    case CommandType.DELETE:
+                        DatabaseCommands.Add(command);
+                        break;
+                    case CommandType.CompareExchangePUT:
+                    case CommandType.CompareExchangeDELETE:
+                        ClusterCommands.Add(command);
+                        break;
+                    default:
+                        throw new RachisApplyException($"The type '{command.Type}' is not supported in '{nameof(ClusterTransactionCommand)}.'");
+                }
+            }
+
+            DatabaseCommandsCount = DatabaseCommands.Count;
+        }
+
+        private ClusterTransactionCommand(
+            string databaseName,
+            char identityPartsSeparator,
+            DatabaseTopology topology,
+            ClusterTransactionOptions options,
+            string uniqueRequestId) : base(uniqueRequestId)
+        {
+            DatabaseName = databaseName;
+            DatabaseRecordId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
+            ClusterTransactionId = topology.ClusterTransactionIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
+            Options = options;
+            CommandCreationTicks = SystemTime.UtcNow.Ticks;
         }
 
         private static void ClusterCommandValidation(ClusterTransactionDataCommand command, char identityPartsSeparator)
@@ -245,9 +293,9 @@ namespace Raven.Server.ServerWide.Commands
                 Message = msg,
                 Violation = new ConcurrencyViolation
                 {
-                    Id = clusterCommand.Id, 
-                    Actual = actualIndex, 
-                    Expected = clusterCommand.Index, 
+                    Id = clusterCommand.Id,
+                    Actual = actualIndex,
+                    Expected = clusterCommand.Index,
                     Type = type
                 }
             };
@@ -260,7 +308,7 @@ namespace Raven.Server.ServerWide.Commands
 
             if (SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands) == false)
                 return;
-            
+
             ClusterCommands ??= new List<ClusterTransactionDataCommand>();
             foreach (BlittableJsonReaderObject dbCmd in commands)
             {
@@ -282,18 +330,18 @@ namespace Raven.Server.ServerWide.Commands
                     Index = changeVectorIndex,
                     Error = $"Guard compare exchange value '{atomicGuardKey}' index does not match the transaction index's {changeVectorIndex} change vector on {docId}"
                 };
-                
+
                 switch (cmdType)
                 {
                     case nameof(CommandType.PUT):
                         clusterTransactionDataCommand.Type = CommandType.CompareExchangePUT;
-                        
+
                         var dynamicJsonValue = new DynamicJsonValue { ["Id"] = docId };
                         if (dbCmd.TryGet(nameof(ClusterTransactionDataCommand.Document), out BlittableJsonReaderObject document)
                             && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
                             && metadata.TryGet(Constants.Documents.Metadata.Expires, out LazyStringValue expires))
                         {
-                            dynamicJsonValue[Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Constants.Documents.Metadata.Expires] = expires};
+                            dynamicJsonValue[Constants.Documents.Metadata.Key] = new DynamicJsonValue { [Constants.Documents.Metadata.Expires] = expires };
                         }
 
                         clusterTransactionDataCommand.Document = context.ReadObject(dynamicJsonValue, "cmp-xchg-content");

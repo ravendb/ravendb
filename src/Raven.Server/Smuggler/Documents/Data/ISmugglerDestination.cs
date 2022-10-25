@@ -10,6 +10,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -34,7 +35,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         IKeyValueActions<long> Identities();
 
-        ICompareExchangeActions CompareExchange(JsonOperationContext context);
+        ICompareExchangeActions CompareExchange(JsonOperationContext context, BackupKind? backupKind, bool withDocuments);
 
         ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context);
 
@@ -104,7 +105,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface ICompareExchangeActions : INewCompareExchangeActions, IAsyncDisposable
     {
-        ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value);
+        ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument);
 
         ValueTask WriteTombstoneKeyAsync(string key);
     }
