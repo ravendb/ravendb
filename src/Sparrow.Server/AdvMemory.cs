@@ -81,9 +81,10 @@ namespace Sparrow.Server
             // for a length smaller than a vector or to force alignment to a certain memory boundary. This will cause some
             // multi-modal behavior to appear (specially close to the vector size) because we will become dependent on
             // the input. The biggest gains will be seen when the compares are several times bigger than the vector size,
-            // where the aligned memory access (no penalty) will dominate the runtime. 
-            nuint alignmentUnit = length >= (nuint)Vector256<byte>.Count ? (nuint)((long)bpx & (Vector256<byte>.Count - 1)) : length;
-            if (alignmentUnit == 0)
+            // where the aligned memory access (no penalty) will dominate the runtime. So this formula will calculate how
+            // many bytes are required to get to an aligned pointer.
+            nuint alignmentUnit = length >= (nuint)Vector256<byte>.Count ? (nuint)(Vector256<byte>.Count - (long)bpx % Vector256<byte>.Count) : length;
+            if ((alignmentUnit & (nuint)(Vector256<byte>.Count-1)) == 0 || length is >= 32 and <= 512)
                 goto ProcessAligned;
 
             // Check if we are completely aligned, in that case just skip everything and go straight to the
@@ -131,8 +132,8 @@ namespace Sparrow.Server
             // because no memory access happens per presentation from Intel.
             // https://llvm.org/devmtg/2015-04/slides/MaskedIntrinsics.pdf
 
-            Debug.Assert(alignmentUnit / sizeof(int) != 0, "Cannot be 0 because that means that we have completed already.");
-            Debug.Assert(alignmentUnit / sizeof(int) < (nuint)Vector256<int>.Count, $"Cannot be {Vector256<int>.Count} or greater because that means it is a full vector.");
+            Debug.Assert(alignmentUnit > 0, "Cannot be 0 because that means that we have completed already.");
+            Debug.Assert(alignmentUnit < (nuint)Vector256<int>.Count * sizeof(int), $"Cannot be {Vector256<int>.Count * sizeof(int)} or greater because that means it is a full vector.");
 
             int* tablePtr = (int*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(LoadMaskTable));
             var mask = Avx.LoadDquVector256(tablePtr + ((nuint)Vector256<int>.Count - alignmentUnit / sizeof(uint)));
