@@ -118,6 +118,7 @@ namespace Voron.Data.CompactTrees
             private const int MappingTableSize = 64;
             private const int MappingTableMask = MappingTableSize - 1;
 
+            // TODO: Convert this to pointers using the original allocation at the storage scope. 
             private readonly long[] _keyMappingDictionary = new long[MappingTableSize];
             private readonly int[] _keyMappingIndex = new int[MappingTableSize];
 
@@ -355,7 +356,7 @@ namespace Voron.Data.CompactTrees
 
                 // Copy the key mapping and content.
                 int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
-                if (elementIdx > 0)
+                if (elementIdx >= 0)
                 {
                     var srcDictionary = key._keyMappingDictionary;
                     var destDictionary = _keyMappingDictionary;
@@ -381,6 +382,7 @@ namespace Voron.Data.CompactTrees
                 // This is the operation to set an unencoded key, therefore we need to restart everything.
                 var currentPtr = _storage.Ptr;
 
+                // TODO: This can exploit AVX2 instructions.
                 // Initialize the memory to zero (this ensures the mappings defaults are correct for operation). 
                 int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
                 var mappingDictionary = _keyMappingDictionary;
@@ -419,6 +421,7 @@ namespace Voron.Data.CompactTrees
 
             public void Set(ReadOnlySpan<byte> key, long dictionaryId)
             {
+                // TODO: This can exploit AVX2 instructions.
                 // Initialize the memory to zero (this ensures the mappings defaults are correct for operation). 
                 int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
                 while (elementIdx >= 0)
@@ -460,6 +463,7 @@ namespace Voron.Data.CompactTrees
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private int SelectBucketForRead(long dictionaryId)
             {
+                // TODO: This can exploit AVX2 instructions.
                 int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
                 while (elementIdx >= 0)
                 {
@@ -489,17 +493,20 @@ namespace Voron.Data.CompactTrees
                 // in the hash structure and if the key is not found setup everything so that it gets
                 // lazily reencoded on the next access.
 
-                if (dictionaryId != Dictionary)
-                {
-                    Dictionary = dictionaryId;
-                    _currentKeyIdx = Invalid;
-                }
+                if (dictionaryId == Dictionary) 
+                    return;
+
+                Dictionary = dictionaryId;
+                _currentKeyIdx = Invalid;
             }
 
             public int CompareEncodedWithCurrent(byte* nextEntryPtr, int nextEntryLength)
             {
-                if (_currentKeyIdx == Invalid)
+                if (Dictionary == Invalid)
                     throw new VoronErrorException("The dictionary is not set.");
+
+                if (_currentKeyIdx == Invalid)
+                    return CompareEncodedWith(nextEntryPtr, nextEntryLength, Dictionary);
 
                 // This method allows us to compare the key in it's encoded form directly using the current dictionary. 
                 byte* encodedStartPtr = _storage.Ptr + _currentKeyIdx;
@@ -516,7 +523,7 @@ namespace Voron.Data.CompactTrees
                 // the current dictionary/cached state. 
                 byte* encodedStartPtr;
                 int encodedLength;
-                if (Dictionary == dictionaryId)
+                if (Dictionary == dictionaryId && _currentKeyIdx != Invalid)
                 {
                     Debug.Assert(_currentKeyIdx != Invalid, "The current key index is not set and it should be.");
                     
@@ -832,8 +839,7 @@ namespace Voron.Data.CompactTrees
             {
                 var nextEntryLength = GetEncodedKeyPtr(state.Page, state.EntriesOffsetsPtr[pos], out var nextEntryPtr);
 
-                // var match = encodedKey.Encoded.SequenceCompareTo(nextEntry);
-                var match = encodedKey.CompareEncodedWithCurrent(nextEntryPtr, nextEntryLength);
+                var match = encodedKey.CompareEncodedWith(nextEntryPtr, nextEntryLength, state.Header->DictionaryId);
 
                 shouldBeInCurrentPage = match < 0;
             }
@@ -856,11 +862,14 @@ namespace Voron.Data.CompactTrees
                         continue;
 
                     // We change the current dictionary for this key. 
-                    currentKeyInPageDictionary.ChangeDictionary(cur.Header->DictionaryId);
-
                     var currentKeyInPageDictionaryLength = GetEncodedKeyPtr(cur.Page, cur.EntriesOffsetsPtr[cur.LastSearchPosition + 1], out var currentKeyInPageDictionaryPtr);
 
-                    var match = currentKeyInPageDictionary.CompareEncodedWithCurrent(currentKeyInPageDictionaryPtr, currentKeyInPageDictionaryLength);
+                    // PERF: The reason why we are changing the dictionary instead of comparing with a dictionary instead is because we want
+                    // to explicitly exploit the fact that when dictionaries do not change along the search path, we can use the fast-path
+                    // to find the encoded key. 
+                    long dictionaryId = cur.Header->DictionaryId;
+                    currentKeyInPageDictionary.ChangeDictionary(dictionaryId);
+                    var match = currentKeyInPageDictionary.CompareEncodedWith(currentKeyInPageDictionaryPtr, currentKeyInPageDictionaryLength, dictionaryId);
                     if (match < 0)
                         continue;
 
@@ -884,7 +893,7 @@ namespace Voron.Data.CompactTrees
                 state = ref _internalCursor._stk[_internalCursor._pos];
                 var previousSearchPosition = state.LastSearchPosition;
 
-                encodedKey.ChangeDictionary(_internalCursor._stk[_internalCursor._pos].Header->DictionaryId);
+                encodedKey.ChangeDictionary(state.Header->DictionaryId);
                 SearchInCurrentPage(encodedKey, ref state);
 
                 if (state.LastSearchPosition < 0)
