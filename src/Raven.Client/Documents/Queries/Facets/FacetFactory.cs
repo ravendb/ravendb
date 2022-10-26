@@ -5,32 +5,27 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    public interface IFacetOperations<T>
+    public interface IFacetOperationsBase<T, out TSelf>
+        where TSelf : class
     {
-        IFacetOperations<T> WithDisplayName(string displayName);
+        TSelf WithDisplayName(string displayName);
 
-        IFacetOperations<T> WithOptions(FacetOptions options);
+        TSelf SumOn(Expression<Func<T, object>> path, string displayName = null);
 
-        IFacetOperations<T> SumOn(Expression<Func<T, object>> path, string displayName = null);
+        TSelf MinOn(Expression<Func<T, object>> path, string displayName = null);
 
-        IFacetOperations<T> MinOn(Expression<Func<T, object>> path, string displayName = null);
+        TSelf MaxOn(Expression<Func<T, object>> path, string displayName = null);
 
-        IFacetOperations<T> MaxOn(Expression<Func<T, object>> path, string displayName = null);
-
-        IFacetOperations<T> AverageOn(Expression<Func<T, object>> path, string displayName = null);
+        TSelf AverageOn(Expression<Func<T, object>> path, string displayName = null);
     }
 
-    public interface IRangeFacetOperations<T>
+    public interface IFacetOperations<T> : IFacetOperationsBase<T, IFacetOperations<T>>
     {
-        IRangeFacetOperations<T> WithDisplayName(string displayName);
-        
-        IRangeFacetOperations<T> SumOn(Expression<Func<T, object>> path, string displayName = null);
+        IFacetOperations<T> WithOptions(FacetOptions options);
+    }
 
-        IRangeFacetOperations<T> MinOn(Expression<Func<T, object>> path, string displayName = null);
-
-        IRangeFacetOperations<T> MaxOn(Expression<Func<T, object>> path, string displayName = null);
-
-        IRangeFacetOperations<T> AverageOn(Expression<Func<T, object>> path, string displayName = null);
+    public interface IRangeFacetOperations<T> : IFacetOperationsBase<T, IRangeFacetOperations<T>>
+    {
     }
     
     public interface IFacetBuilder<T>
@@ -126,31 +121,31 @@ namespace Raven.Client.Documents.Queries.Facets
             return this;
         }
 
-        IRangeFacetOperations<T> IRangeFacetOperations<T>.SumOn(Expression<Func<T, object>> path, string displayName)
+        IRangeFacetOperations<T> IFacetOperationsBase<T, IRangeFacetOperations<T>>.SumOn(Expression<Func<T, object>> path, string displayName)
         {
             SumOn(path, displayName);
             return this;
         }
 
-        IRangeFacetOperations<T> IRangeFacetOperations<T>.MinOn(Expression<Func<T, object>> path, string displayName)
+        IRangeFacetOperations<T> IFacetOperationsBase<T, IRangeFacetOperations<T>>.MinOn(Expression<Func<T, object>> path, string displayName)
         {
             MinOn(path, displayName);
             return this;
         }
 
-        IRangeFacetOperations<T> IRangeFacetOperations<T>.MaxOn(Expression<Func<T, object>> path, string displayName)
+        IRangeFacetOperations<T> IFacetOperationsBase<T, IRangeFacetOperations<T>>.MaxOn(Expression<Func<T, object>> path, string displayName)
         {
             MaxOn(path, displayName);
             return this;
         }
 
-        IRangeFacetOperations<T> IRangeFacetOperations<T>.AverageOn(Expression<Func<T, object>> path, string displayName)
+        IRangeFacetOperations<T> IFacetOperationsBase<T, IRangeFacetOperations<T>>.AverageOn(Expression<Func<T, object>> path, string displayName)
         {
             AverageOn(path, displayName);
             return this;
         }
 
-        IRangeFacetOperations<T> IRangeFacetOperations<T>.WithDisplayName(string displayName)
+        IRangeFacetOperations<T> IFacetOperationsBase<T, IRangeFacetOperations<T>>.WithDisplayName(string displayName)
         {
             WithDisplayName(displayName);
             return this;
