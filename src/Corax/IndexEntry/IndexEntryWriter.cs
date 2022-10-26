@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Mappings;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;

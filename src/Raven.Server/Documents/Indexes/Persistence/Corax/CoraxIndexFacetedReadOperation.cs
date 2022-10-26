@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
+using Corax.Mappings;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -48,7 +49,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         Dictionary<string, Dictionary<string, FacetValues>> facetsByName = new();
         Dictionary<string, Dictionary<string, FacetValues>> facetsByRange = new();
 
-        var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, null, null, query, _index, query.QueryParameters, _queryBuilderFactories,
+        var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, query.QueryParameters, _queryBuilderFactories,
             _fieldMappings, null, null, -1, null);
         var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out var isBinary);
         var coraxPageSize = CoraxGetPageSize(_indexSearcher, facetQuery.Query.PageSize, query, isBinary);
@@ -329,7 +330,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
     private void GetFieldReader(ref IndexEntryReader reader, in string name, out IndexEntryReader.FieldReader fieldReader)
     {
-        if (_fieldMappings.TryGetByFieldName(name, out var binding))
+        if (_fieldMappings.TryGetByFieldName(_allocator, name, out var binding))
         {
             // In this case we've to check if field is dynamic also
             fieldReader = reader.GetReaderFor(binding.FieldId);

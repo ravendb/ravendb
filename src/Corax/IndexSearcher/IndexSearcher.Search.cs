@@ -40,7 +40,7 @@ public partial class IndexSearcher
         }
 
         var searchAnalyzer = isDynamic 
-            ? _fieldMapping.DefaultSearchAnalyzer(field) 
+            ? _fieldMapping.SearchAnalyzer(field) 
             : indexFieldBinding?.Analyzer;
         
         var wildcardAnalyzer = Analyzer.Create<WhitespaceTokenizer, ExactTransformer>();

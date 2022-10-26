@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Threading;
 using Corax;
+using Corax.Mappings;
 using Corax.Queries;
 using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -73,7 +74,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             bool isBinary;
             using (coraxScope?.Start())
             {
-                var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories,
+                var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories,
                     _fieldMappings, fieldsToFetch, highlightingTerms, take);
                 if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary)) is null)
                     yield break;
@@ -197,7 +198,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                                 //We have to get analyzer so dynamic field have priority over normal name
                                 // We get the field binding to ensure that we are running the analyzer to find the actual tokens.
-                                if (_fieldMappings.TryGetByFieldName(fieldDescription.DynamicFieldName ?? fieldDescription.FieldName, out var fieldBinding) == false)
+                                if (_fieldMappings.TryGetByFieldName(_allocator, fieldDescription.DynamicFieldName ?? fieldDescription.FieldName, out var fieldBinding) == false)
                                     continue;
 
                                 // We will get the actual tokens dictionary for this field. If it exists we get it immediately, if not we create
@@ -486,7 +487,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 using (closeServerTransaction)
                 {
-                    builderParameters = new (_indexSearcher, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+                    builderParameters = new (_indexSearcher, _allocator, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
                         _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, null);
                     moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(builderParameters, query.Metadata.Query.Where, out isBinary);
                 }
@@ -513,7 +514,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
             }
 
-            builderParameters = new (_indexSearcher, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
+            builderParameters = new (_indexSearcher, _allocator, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
                 _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, null);
             var mlt = new RavenRavenMoreLikeThis(builderParameters, options);
             long? baseDocId = null;
@@ -632,7 +633,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             IQueryMatch queryMatch;
             bool isBinary;
-            var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, null, null, query, _index, null, null, _fieldMappings, null, null, -1, null);
+            var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, null, null, _fieldMappings, null, null, -1, null);
             if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary)) is null)
                 yield break;
 

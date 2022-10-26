@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Corax;
+using Corax.Mappings;
 using Corax.Pipeline;
 using Sparrow;
 using Sparrow.Json.Parsing;

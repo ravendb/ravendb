@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow;
@@ -232,7 +233,13 @@ namespace Corax
         private readonly HashSet<long> _deletedEntries = new();
 
         private readonly long _postingListContainerId, _entriesContainerId;
-        private readonly IndexDynamicFieldsMapping _dynamicFieldsMapping;
+        private IndexFieldsMapping _dynamicFieldsMapping;
+
+        public void UpdateDynamicFieldsMapping(IndexFieldsMapping current)
+        {
+            _dynamicFieldsMapping = current;
+
+        }
 
         private const string SuggestionsTreePrefix = "__Suggestion_";
         
@@ -243,7 +250,6 @@ namespace Corax
         private IndexWriter(IndexFieldsMapping fieldsMapping)
         {
             _fieldsMapping = fieldsMapping;
-            fieldsMapping.UpdateMaximumOutputAndTokenSize();
             _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
             _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
             _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
@@ -270,9 +276,8 @@ namespace Corax
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
         }
 
-        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, IndexDynamicFieldsMapping dynamicFieldsMapping) : this(tx, fieldsMapping)
+        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, bool hasDynamics) : this(tx, fieldsMapping)
         {
-            _dynamicFieldsMapping = dynamicFieldsMapping;
             _persistedDynamicFieldsAnalyzers = Transaction.CreateTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
         }
         
@@ -577,8 +582,8 @@ namespace Corax
                 Analyzer analyzer = mode switch
                 {
                     FieldIndexingMode.No => null,
-                    FieldIndexingMode.Exact => _dynamicFieldsMapping!.DefaultExactAnalyzer(slice.ToString()),
-                    FieldIndexingMode.Search => _dynamicFieldsMapping!.DefaultSearchAnalyzer(slice.ToString()),
+                    FieldIndexingMode.Exact => _dynamicFieldsMapping!.ExactAnalyzer(slice.ToString()),
+                    FieldIndexingMode.Search => _dynamicFieldsMapping!.SearchAnalyzer(slice.ToString()),
                     _ => _dynamicFieldsMapping!.DefaultAnalyzer
                 };
                 
@@ -589,8 +594,8 @@ namespace Corax
 
             void CreateDynamicField(Analyzer analyzer, FieldIndexingMode mode)
             {
-                IndexFieldsMappingBase.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
-                IndexFieldsMappingBase.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
+                IndexFieldsMappingBuilder.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
+                IndexFieldsMappingBuilder.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
                 indexedField = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, analyzer, mode, false);
                 _dynamicFieldsTerms[clonedFieldName] = indexedField;
             }
