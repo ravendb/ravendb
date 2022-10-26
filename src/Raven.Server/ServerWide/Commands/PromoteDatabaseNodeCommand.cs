@@ -19,13 +19,15 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            if (record.Topology.Promotables.Contains(NodeTag) == false)
+            var topology = record.IsSharded ? record.Sharding.Orchestrator.Topology : record.Topology;
+
+            if (topology.Promotables.Contains(NodeTag) == false)
                 return ;
 
-            record.Topology.PromotablesStatus.Remove(NodeTag);
-            record.Topology.DemotionReasons.Remove(NodeTag);
-            record.Topology.Promotables.Remove(NodeTag);
-            record.Topology.Members.Add(NodeTag);
+            topology.PromotablesStatus.Remove(NodeTag);
+            topology.DemotionReasons.Remove(NodeTag);
+            topology.Promotables.Remove(NodeTag);
+            topology.Members.Add(NodeTag);
         }
 
         public override void FillJson(DynamicJsonValue json)

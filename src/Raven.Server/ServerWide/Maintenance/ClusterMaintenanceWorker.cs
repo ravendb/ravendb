@@ -140,13 +140,20 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        private void HeartbeatVersion42000(JsonOperationContext ctx, MaintenanceReport report)
+        private void HeartbeatVersion42000(ClusterOperationContext ctx, MaintenanceReport report)
         {
+            long index;
+            using (ctx.OpenReadTransaction())
+            {
+                _server.Engine.GetLastCommitIndex(ctx, out index, out _);
+            }
+
             report.ServerReport = new ServerReport
             {
                 OutOfCpuCredits = _server.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised(),
                 EarlyOutOfMemory = LowMemoryNotification.Instance.IsEarlyOutOfMemory,
-                HighDirtyMemory = LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty
+                HighDirtyMemory = LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty,
+                LastCommittedIndex = index
             };
 
             using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))
@@ -172,6 +179,19 @@ namespace Raven.Server.ServerWide.Maintenance
 
                     var sharding = rawRecord.Sharding;
                     var currentMigration = sharding?.BucketMigrations.SingleOrDefault(pair => pair.Value.Status < MigrationStatus.OwnershipTransferred).Value;
+                    
+                    //create mock database report for the sharded db for the cluster observer topology update
+                    if (rawRecord.IsSharded)
+                    {
+                        var report = new DatabaseStatusReport()
+                        {
+                            Status = DatabaseStatus.Loaded,
+                            Name = databaseName,
+                            NodeName = _server.NodeTag,
+                            UpTime = _server.Server.Statistics.UpTime
+                        };
+                        result[databaseName] = report;
+                    }
 
                     foreach (var tuple in rawRecord.Topologies)
                     {

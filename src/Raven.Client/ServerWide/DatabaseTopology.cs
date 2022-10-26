@@ -9,6 +9,7 @@ using Raven.Client.Http;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Client.ServerWide
 {
@@ -151,6 +152,12 @@ namespace Raven.Client.ServerWide
             Stamp = topology.Stamp;
             PriorityOrder = topology.PriorityOrder;
             NodesModifiedAt = topology.NodesModifiedAt;
+        }
+        
+        public override bool EntireDatabasePendingDeletion(Dictionary<string, DeletionInProgressStatus> deletionInProgress)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle checking all shard databases are being deleted");
+            return false;
         }
     }
 
@@ -310,7 +317,7 @@ namespace Raven.Client.ServerWide
             return destinations;
         }
 
-        public bool EntireDatabasePendingDeletion(Dictionary<string, DeletionInProgressStatus> deletionInProgress)
+        public virtual bool EntireDatabasePendingDeletion(Dictionary<string, DeletionInProgressStatus> deletionInProgress)
         {
             if (Count == 0)
                 return true;

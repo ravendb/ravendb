@@ -1,7 +1,12 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Config;
 using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Cluster
@@ -11,27 +16,174 @@ namespace SlowTests.Sharding.Cluster
         public ShardedClusterObserverTests(ITestOutputHelper output) : base(output)
         {
         }
-
+        
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
-        public async Task CanMoveToRehab()
+        public async Task CanMoveToRehabAndBackToMember()
         {
-            var database = GetDatabaseName();
-            var cluster = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0);
-            await ShardingCluster.CreateShardedDatabaseInCluster(database, replicationFactor: 3, cluster, shards: 3);
-            await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[1]);
+            var cluster = await CreateRaftCluster(3, leaderIndex: 0, shouldRunInMemory: false);
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 3, orchestratorReplicationFactor: 3, dynamicNodeDistribution: false);
+            
+            options.Server = cluster.Leader;
+            using (var store = GetDocumentStore(options))
+            {
+                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[1]);
 
-            using (var store = GetDocumentStore(new Options
-            {
-                Server = cluster.Leader,
-                CreateDatabase = false,
-                ModifyDatabaseName = _ => database
-            }))
-            {
                 await AssertWaitForValueAsync(async () =>
                 {
                     var shards = await ShardingCluster.GetShards(store);
                     return shards.Sum(s => s.Rehabs.Count);
                 }, 3);
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    var top = record.Sharding.Orchestrator.Topology;
+                    return top.Members.Count;
+                }, 2);
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var top = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(2, top.Members.Count);
+                Assert.Equal(1, top.Rehabs.Count);
+                Assert.Equal(result.NodeTag, top.Rehabs.First());
+                Assert.Equal(1, top.DemotionReasons.Count);
+                Assert.Equal(1, top.PromotablesStatus.Count);
+
+                var settings = new Dictionary<string, string>
+                {
+                    {RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url}
+                };
+
+                //revive the node
+                var revived = GetNewServer(new ServerCreationOptions
+                {
+                    RunInMemory = false,
+                    DeletePrevious = false,
+                    DataDirectory = result.DataDirectory,
+                    CustomSettings = settings,
+                    NodeTag = result.NodeTag
+                });
+                
+                await AssertWaitForValueAsync(async () =>
+                {
+                    var shards = await ShardingCluster.GetShards(store);
+                    return shards?.Sum(s => s.Members.Count);
+                }, 9);
+                
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    top = record.Sharding.Orchestrator.Topology;
+                    return top.Members.Count;
+                }, 3);
+
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                top = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(3, top.Members.Count);
+                Assert.Equal(0, top.Rehabs.Count);
+                Assert.Equal(0, top.DemotionReasons.Count);
+                Assert.Equal(0, top.PromotablesStatus.Count);
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task AddNodeToOrchestratorTopologyAndWaitForPromote()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3);
+
+            var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 2);
+
+            using (var store = GetDocumentStore(options))
+            {
+                var record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
+                var dbTopology = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(2, dbTopology.Members.Count);
+                Assert.Equal(0, dbTopology.Promotables.Count);
+
+                var allNodes = new[] {"A", "B", "C"};
+                
+                var nodeInOrchestratorTopology = allNodes.First(x => record.Sharding.Orchestrator.Topology.Members.Contains(x));
+
+                //remove the node from orchestrator topology
+                store.Maintenance.Server.Send(new RemoveNodeFromOrchestratorTopologyOperation(store.Database, nodeInOrchestratorTopology));
+                record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
+                dbTopology = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(1, dbTopology.Members.Count);
+                Assert.Equal(0, dbTopology.Promotables.Count);
+                Assert.Equal(0, dbTopology.Rehabs.Count);
+
+                //add node to orchestrator topology
+                store.Maintenance.Server.Send(new AddNodeToOrchestratorTopologyOperation(store.Database,
+                    nodeInOrchestratorTopology));
+                record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
+                dbTopology = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(1, dbTopology.Members.Count);
+                Assert.Equal(1, dbTopology.Promotables.Count);
+                Assert.Equal(nodeInOrchestratorTopology, dbTopology.Promotables[0]);
+
+                //wait for cluster observer to promote it to orchestrator
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
+                    dbTopology = record.Sharding.Orchestrator.Topology;
+                    return dbTopology.Members.Count == 2 && dbTopology.Promotables.Count == 0;
+                }, true);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task DynamicNodeDistributionForOrchestrator()
+        {
+            var cluster = await CreateRaftCluster(3);
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 2, dynamicNodeDistribution: true);
+            options.Server = cluster.Leader;
+
+            using (var store = GetDocumentStore(options))
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.Equal(2, record.Sharding.Orchestrator.Topology.Members.Count);
+
+                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[1]);
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Orchestrator.Topology.Members.Count;
+                }, 1);
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Orchestrator.Topology.Rehabs.Count;
+                }, 1);
+
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var top = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(1, top.Members.Count);
+                Assert.Equal(1, top.Rehabs.Count);
+                Assert.Equal(result.NodeTag, top.Rehabs.First());
+                Assert.Equal(1, top.DemotionReasons.Count);
+                Assert.Equal(1, top.PromotablesStatus.Count);
+
+                var stableNode = top.Members.First();
+
+                //wait for dynamic node distribution to kick in and choose a different node
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Orchestrator.Topology.Members.Count;
+                }, 2);
+
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                top = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(2, top.Members.Count);
+                Assert.DoesNotContain(result.NodeTag, top.Members);
+                Assert.Equal(1, top.Rehabs.Count);
+                Assert.Equal(2, top.DemotionReasons.Count);
+                var newChosenNode = top.Members.First(x => x != stableNode);
+                Assert.Contains("Maintain the replication factor and create new replica instead of node", top.DemotionReasons[newChosenNode]);
+                Assert.Equal(2, top.PromotablesStatus.Count);
+                Assert.Equal(DatabasePromotionStatus.WaitingForFirstPromotion, top.PromotablesStatus[newChosenNode]);
             }
         }
 

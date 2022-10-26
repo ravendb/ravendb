@@ -91,6 +91,9 @@ namespace Raven.Server.Web.System
                     throw new DatabaseDoesNotExistException("Database Record not found when trying to add a node to the database topology");
                 }
 
+                if (databaseRecord.IsSharded)
+                    throw new InvalidOperationException($"Can't add database {name} to node because it is a sharded database.");
+
                 var clusterTopology = ServerStore.GetClusterTopology(context);
 
                 if (databaseRecord.Encrypted)
@@ -484,7 +487,7 @@ namespace Raven.Server.Web.System
                     if (rawRecord == null)
                         DatabaseDoesNotExistException.Throw(name);
 
-                    topology = rawRecord.Topology;
+                    topology = rawRecord.IsSharded ? rawRecord.Sharding.Orchestrator.Topology : rawRecord.Topology;
                 }
 
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "nodes");
@@ -685,7 +688,7 @@ namespace Raven.Server.Web.System
                         {
                             if (rawRecord == null)
                                 continue;
-
+                            
                             switch (rawRecord.LockMode)
                             {
                                 case DatabaseLockMode.Unlock:
