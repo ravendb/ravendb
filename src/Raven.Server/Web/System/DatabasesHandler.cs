@@ -99,14 +99,6 @@ namespace Raven.Server.Web.System
                 var json = await context.ReadForDiskAsync(RequestBodyStream(), "Database Topology");
                 var databaseTopology = JsonDeserializationCluster.DatabaseTopology(json);
 
-                if (LoggingSource.AuditLog.IsInfoEnabled)
-                {
-                    var clientCert = GetCurrentCertificate();
-
-                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
-                    auditLog.Info($"Database \'{dbName}\' record has been modified by {clientCert?.Subject} ({clientCert?.Thumbprint})");
-                }
-
                 // Validate Database Name
                 DatabaseRecord databaseRecord;
                 using (context.OpenReadTransaction())
@@ -114,7 +106,18 @@ namespace Raven.Server.Web.System
 
                 if (databaseRecord == null)
                 {
-                    throw new DatabaseDoesNotExistException($"Database {dbName} Record not found when trying to modify database topology");
+                    DatabaseDoesNotExistException.ThrowWithMessage(dbName, $"Database Record was not found when trying to modify database topology");
+                    return;
+                }
+
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCert = GetCurrentCertificate();
+
+                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
+                    auditLog.Info($"Database \'{dbName}\' topology is being modified by {clientCert?.Subject} ({clientCert?.Thumbprint})," +
+                                  $"Old topology: {databaseRecord.Topology} " +
+                                  $"New topology: {databaseTopology}.");
                 }
 
                 // Validate Topology
@@ -143,13 +146,11 @@ namespace Raven.Server.Web.System
                 await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
                 // Return Raft Index
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DatabasePutResult.RaftCommandIndex)] = newIndex
+                        [nameof(ModifyDatabaseTopologyResult.RaftCommandIndex)] = newIndex
                     });
                 }
             }
