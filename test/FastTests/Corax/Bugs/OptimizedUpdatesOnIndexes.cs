@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
 using Corax;
+using Corax.Mappings;
 using Corax.Queries;
 using FastTests.Voron;
 using Sparrow.Json;
@@ -20,7 +21,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
     [Fact]
     public void CanUpdateAndNotDelete()
     {
-        var fields = CreateKnownFields(Allocator);
+        using var fields = CreateKnownFields(Allocator);
         byte[] buffer = new byte[1024];
         long oldId; 
         using (var indexWriter = new IndexWriter(Env, fields))
@@ -87,10 +88,11 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
         Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice nameSlice);
         Slice.From(ctx, "Age", ByteStringType.Immutable, out Slice ageSlice);
 
-        return new IndexFieldsMapping(ctx)
+        var builder = new IndexFieldsMappingBuilder(true)
             .AddBinding(0, idSlice)
             .AddBinding(1, nameSlice)
             .AddBinding(2, ageSlice);
+        return builder.Build();
     }
 
 }

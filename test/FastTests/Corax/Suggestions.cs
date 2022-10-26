@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Corax;
+using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
 using FastTests.Voron;
@@ -36,7 +37,7 @@ namespace FastTests.Corax
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
-            var mapping = CreateKnownFields(bsc);
+            using var mapping = CreateKnownFields(bsc);
 
             IndexEntries(bsc, new[] { entry1, entry2, entry3, entry4, entry5 }, mapping);
 
@@ -95,7 +96,7 @@ namespace FastTests.Corax
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
-            var mapping = CreateKnownFields(bsc);
+            using var mapping = CreateKnownFields(bsc);
 
             IndexEntries(bsc, new[] { entry1, entry2, entry3 }, mapping);
 
@@ -132,7 +133,7 @@ namespace FastTests.Corax
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
-            var mapping = CreateKnownFields(bsc, Analyzer.DefaultAnalyzer);
+            using var mapping = CreateKnownFields(bsc, Analyzer.DefaultAnalyzer);
 
             IndexEntries(bsc, new[] { entry1, entry2, entry3, entry4, entry5 }, mapping);
             {
@@ -160,10 +161,10 @@ namespace FastTests.Corax
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            return new IndexFieldsMapping(ctx)
+            using var builder = new IndexFieldsMappingBuilder(true)
                 .AddBinding(IdIndex, idSlice, analyzer)
-                .AddBinding(ContentIndex, contentSlice, analyzer, hasSuggestion:true);
-            ;
+                .AddBinding(ContentIndex, contentSlice, analyzer, hasSuggestion: true);
+            return builder.Build();
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(

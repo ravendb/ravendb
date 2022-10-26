@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Corax;
+using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
 using FastTests.Voron;
@@ -32,7 +33,8 @@ public class DynamicFieldsTests : StorageTest
         Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
         Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
-        IndexFieldsMapping knownFields = new(ctx);
+        using var builder = new IndexFieldsMappingBuilder(true);
+        using var knownFields = builder.Build();
         IndexEntryWriter writer = new(bsc, knownFields);
         
         writer.WriteDynamic(fieldName, Encoding.UTF8.GetBytes(""));
@@ -53,9 +55,10 @@ public class DynamicFieldsTests : StorageTest
         Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
         // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
-        IndexFieldsMapping knownFields = new IndexFieldsMapping(ctx)
+        using IndexFieldsMapping knownFields = new IndexFieldsMappingBuilder(true)
             .AddBinding(0, aSlice)
-            .AddBinding(1, dSlice);
+            .AddBinding(1, dSlice)
+            .Build();
 
         IndexEntryWriter writer = new(bsc, knownFields);
         writer.Write(0, Encoding.UTF8.GetBytes("1.001"), 1, 1.001);
@@ -136,7 +139,7 @@ public class DynamicFieldsTests : StorageTest
     [InlineData(53.015261, 18.611487, "u3mjxe0kr")]
     public void CanIndexReadAndDeleteLongLatSpatialDynamically(double latitude, double longitude, string geohash)
     {
-        IndexFieldsMapping fields = PrepareSpatial();
+        using IndexFieldsMapping fields = PrepareSpatial();
 
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
         using (var writer = new IndexWriter(Env, fields))
@@ -190,17 +193,17 @@ public class DynamicFieldsTests : StorageTest
         Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
         // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
-        IndexFieldsMapping fields = new IndexFieldsMapping(ctx)
+        using var builder = new IndexFieldsMappingBuilder(true)
             .AddBinding(0, aSlice)
             .AddBinding(1, dSlice);
-        return fields;
+        return builder.Build();
     }
 
     [Theory]
     [InlineData(4, new double[]{ -10.5, 12.4, -123D, 53}, new double[]{-52.123, 23.32123, 52.32423, -42.1235})]
     public unsafe void WriteAndReadSpatialListDynamically(int size, double[] lat, double[] lon)
     {
-        IndexFieldsMapping fields = PrepareSpatial();
+        using IndexFieldsMapping fields = PrepareSpatial();
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
         var entryBuilder = new IndexEntryWriter(bsc, fields);
