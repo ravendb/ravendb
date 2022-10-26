@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Corax;
+using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Extensions;
@@ -56,11 +57,12 @@ namespace FastTests.Corax
             Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
-            var knownFields = new IndexFieldsMapping(ctx)
+            using var builder = new IndexFieldsMappingBuilder(true)
                                     .AddBinding(0, aSlice)
                                     .AddBinding(1, bSlice)
                                     .AddBinding(2, cSlice)
                                     .AddBinding(3, dSlice);
+            using var knownFields = builder.Build();
 
             var writer = new IndexEntryWriter(bsc, knownFields);
             writer.Write(0, Encoding.UTF8.GetBytes("1.001"), 1, 1.001);
@@ -118,11 +120,12 @@ namespace FastTests.Corax
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
 
-            var knownFields = new IndexFieldsMapping(ctx)
+            using var builder = new IndexFieldsMappingBuilder(true)
                                     .AddBinding(0, aSlice)
                                     .AddBinding(1, bSlice)
                                     .AddBinding(2, cSlice)
-                                    .AddBinding(3, dSlice);
+                                    .AddBinding(3, dSlice); 
+            using var knownFields = builder.Build();
 
             string[] values =
             {
@@ -195,11 +198,12 @@ namespace FastTests.Corax
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
 
-            var knownFields = new IndexFieldsMapping(ctx)
+            using var builder = new IndexFieldsMappingBuilder(true)
                                     .AddBinding(0, aSlice)
                                     .AddBinding(1, bSlice)
                                     .AddBinding(2, cSlice)
                                     .AddBinding(3, dSlice);
+            using var knownFields = builder.Build();
 
             string[] values =
             {
@@ -306,11 +310,12 @@ namespace FastTests.Corax
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
 
-            var knownFields = new IndexFieldsMapping(ctx)
+            using var builder = new IndexFieldsMappingBuilder(true)
                                     .AddBinding(0, aSlice)
                                     .AddBinding(1, bSlice)
                                     .AddBinding(2, cSlice)
                                     .AddBinding(3, dSlice);
+            using var knownFields = builder.Build();
 
             string[] values = { };
             Span<long> longValues = new long[] { };
@@ -392,11 +397,12 @@ namespace FastTests.Corax
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
 
-            var knownFields = new IndexFieldsMapping(ctx)
+            using var builder = new IndexFieldsMappingBuilder(true)
                                     .AddBinding(0, aSlice)
                                     .AddBinding(1, bSlice)
                                     .AddBinding(2, cSlice)
                                     .AddBinding(3, dSlice);
+            using var knownFields = builder.Build();
             var random = new Random(seed);
             
             string RandomString(int length)

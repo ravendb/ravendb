@@ -1,5 +1,6 @@
 ﻿using System;
 using Corax;
+using Corax.Mappings;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
@@ -156,18 +157,21 @@ public class RawCoraxFlag : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-        return analyzers
-            ? new IndexFieldsMapping(ctx)
+        using var builder = (analyzers
+            ? new IndexFieldsMappingBuilder(true)
                 .AddBinding(IndexId, idSlice, Analyzer.DefaultAnalyzer)
                 .AddBinding(ContentId, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30)))
-            : new IndexFieldsMapping(ctx)
+            : new IndexFieldsMappingBuilder(true)
                 .AddBinding(IndexId, idSlice)
-                .AddBinding(ContentId, contentSlice, fieldIndexingMode: FieldIndexingMode.No);
+                .AddBinding(ContentId, contentSlice, fieldIndexingMode: FieldIndexingMode.No));
+        
+        return builder.Build();
     }
 
     public override void Dispose()
     {
         _bsc.Dispose();
+        _analyzers.Dispose();
         base.Dispose();
     }
 }

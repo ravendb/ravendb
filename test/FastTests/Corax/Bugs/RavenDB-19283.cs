@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Corax;
+using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -29,9 +30,10 @@ public class RavenDB_19283 : StorageTest
 
         // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
 
-        var knownFields = new IndexFieldsMapping(ctx)
+        using var builder = new IndexFieldsMappingBuilder(true)
             .AddBinding(0, idSlice)
             .AddBinding(1, itemsSlice);
+        using var knownFields = builder.Build();
 
         var options = new[] { "one", "two", "three" };
         

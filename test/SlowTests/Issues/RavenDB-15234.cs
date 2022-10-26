@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
@@ -60,8 +59,8 @@ namespace SlowTests.Issues
             new Index().Execute(store);
             using (var s = store.OpenSession())
             {
-                var q = s.Query<Item, Index>().Where(x => x.Fields["1-A"] == "Blue").ToString();
-                Assert.Equal("from index 'Index' where Fields_1-A = $p0", q);
+                var q = s.Query<Item, Index>().Where(x => x.Fields["1-A"] == "Blue");
+                Assert.Equal("from index 'Index' where Fields_1-A = $p0", q.ToString());
             }
         }
         
