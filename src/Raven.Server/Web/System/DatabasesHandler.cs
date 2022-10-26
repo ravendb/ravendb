@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Extensions;
@@ -344,9 +342,8 @@ namespace Raven.Server.Web.System
                 var online = ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> dbTask) &&
                              dbTask != null &&
                              dbTask.IsCompleted;
-
-                var dbRecord = rawDatabaseRecord.MaterializedRecord;
-                var topology = dbRecord.IsSharded ? dbRecord.Sharding.Orchestrator.Topology : dbRecord.Topology;
+                
+                var topology = rawDatabaseRecord.IsSharded ? rawDatabaseRecord.Sharding.Orchestrator.Topology : rawDatabaseRecord.Topology;
 
                 var statuses = ServerStore.GetNodesStatuses();
                 if (topology != null)
@@ -358,7 +355,7 @@ namespace Raven.Server.Web.System
 
                     foreach (var member in topology.Members)
                     {
-                        if (dbRecord.DeletionInProgress != null && dbRecord.DeletionInProgress.ContainsKey(member))
+                        if (rawDatabaseRecord.DeletionInProgress != null && rawDatabaseRecord.DeletionInProgress.ContainsKey(member))
                             continue;
 
                         var url = clusterTopology.GetUrlFromTag(member);
@@ -374,7 +371,7 @@ namespace Raven.Server.Web.System
 
                     foreach (var promotable in topology.Promotables)
                     {
-                        if (dbRecord.DeletionInProgress != null && dbRecord.DeletionInProgress.ContainsKey(promotable))
+                        if (rawDatabaseRecord.DeletionInProgress != null && rawDatabaseRecord.DeletionInProgress.ContainsKey(promotable))
                             continue;
 
                         topology.PredefinedMentors.TryGetValue(promotable, out var mentorCandidate);
@@ -386,7 +383,7 @@ namespace Raven.Server.Web.System
 
                     foreach (var rehab in topology.Rehabs)
                     {
-                        if (dbRecord.DeletionInProgress != null && dbRecord.DeletionInProgress.ContainsKey(rehab))
+                        if (rawDatabaseRecord.DeletionInProgress != null && rawDatabaseRecord.DeletionInProgress.ContainsKey(rehab))
                             continue;
 
                         var node = GetNode(databaseName, clusterTopology, rehab, null, out var promotableTask);
@@ -410,18 +407,18 @@ namespace Raven.Server.Web.System
                 if (indexingStatus == null)
                 {
                     // Looking for disabled indexing flag inside the database settings for offline database status
-                    if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) &&
+                    if (rawDatabaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) &&
                         bool.TryParse(val, out var indexingDisabled) && indexingDisabled)
                         indexingStatus = IndexRunningStatus.Disabled;
                 }
 
-                var disabled = dbRecord.Disabled;
-                var lockMode = dbRecord.LockMode;
+                var disabled = rawDatabaseRecord.IsDisabled;
+                var lockMode = rawDatabaseRecord.LockMode;
 
                 var studioEnvironment = StudioConfiguration.StudioEnvironment.None;
-                if (dbRecord.Studio != null && !dbRecord.Studio.Disabled)
+                if (rawDatabaseRecord.StudioConfiguration != null && !rawDatabaseRecord.StudioConfiguration.Disabled)
                 {
-                    studioEnvironment = dbRecord.Studio.Environment;
+                    studioEnvironment = rawDatabaseRecord.StudioConfiguration.Environment;
                 }
 
                 if (online == false)
@@ -432,7 +429,7 @@ namespace Raven.Server.Web.System
 
                         var periodicBackups = new List<PeriodicBackup>();
 
-                        foreach (var periodicBackupConfiguration in dbRecord.PeriodicBackups)
+                        foreach (var periodicBackupConfiguration in rawDatabaseRecord.PeriodicBackupsConfiguration)
                         {
                             periodicBackups.Add(new PeriodicBackup
                             {
@@ -447,7 +444,7 @@ namespace Raven.Server.Web.System
                             [nameof(DatabaseInfo.LockMode)] = lockMode,
                             [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus,
                             [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
-                            [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress),
+                            [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(rawDatabaseRecord.DeletionInProgress),
                             [nameof(DatabaseInfo.Environment)] = studioEnvironment,
                             [nameof(DatabaseInfo.BackupInfo)] = BackupUtils.GetBackupInfo(
                                 new BackupUtils.BackupInfoParameters()
@@ -480,7 +477,7 @@ namespace Raven.Server.Web.System
                     TempBuffersSize = size.TempBuffers,
 
                     IsAdmin = true,
-                    IsEncrypted = dbRecord.Encrypted,
+                    IsEncrypted = rawDatabaseRecord.IsEncrypted,
                     UpTime = online ? (TimeSpan?)GetUptime(db) : null,
                     BackupInfo = GetBackupInfo(db, context),
 
@@ -501,7 +498,7 @@ namespace Raven.Server.Web.System
                     NodesTopology = nodesTopology,
                     ReplicationFactor = topology?.ReplicationFactor ?? -1,
                     DynamicNodesDistribution = topology?.DynamicNodesDistribution ?? false,
-                    DeletionInProgress = dbRecord.DeletionInProgress
+                    DeletionInProgress = rawDatabaseRecord.DeletionInProgress
                 };
 
                 var doc = databaseInfo.ToJson();
