@@ -119,7 +119,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task AfterSuggestionQueryExecutedShouldBeExecutedOnlyOnce(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -399,7 +399,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task AfterLazySuggestionQueryExecutedShouldBeExecutedOnlyOnce(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -556,7 +556,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanGetValidStatisticsInSuggestionQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
