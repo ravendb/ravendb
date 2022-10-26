@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                 for (int i = 0; i < existing.Values.Length; i++)
                 {
-                    incrementOperation.Values[i] += existing.Values[i];
+                    existing.Values[i] += incrementOperation.Values[i];
                 }
             }
             else
