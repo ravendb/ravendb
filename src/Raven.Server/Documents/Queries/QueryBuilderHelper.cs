@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Corax;
+using Corax.Mappings;
 using Corax.Queries;
 using Mono.Unix.Native;
 using Raven.Client.Documents.Indexes;
@@ -18,6 +19,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Spatial4n.Shapes;
 using Constants = Raven.Client.Constants;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -507,16 +509,16 @@ public static class QueryBuilderHelper
         throw new InvalidQueryException("Expected field, got: " + field, query.QueryText, parameters);
     }
 
-    internal static int GetFieldIdForOrderBy(string fieldName, Index index, bool hasDynamics, Lazy<List<string>> dynamicFields, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
+    internal static int GetFieldIdForOrderBy(ByteStringContext allocator, string fieldName, Index index, bool hasDynamics, Lazy<List<string>> dynamicFields, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
         bool isForQuery = true)
     {
         if (fieldName is "score()")
             return ScoreId;
 
-        return GetFieldId(fieldName, index, indexMapping, queryMapping, hasDynamics, dynamicFields, isForQuery);
+        return GetFieldId(allocator, fieldName, index, indexMapping, queryMapping, hasDynamics, dynamicFields, isForQuery);
     }
 
-    internal static int GetFieldId(string fieldName, Index index, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
+    internal static int GetFieldId(ByteStringContext allocator, string fieldName, Index index, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
         bool exact = false)
     {
         if (exact)
@@ -536,7 +538,7 @@ public static class QueryBuilderHelper
         IndexField indexField = null;
         IndexFieldBinding binding = null;
         if (queryMapping?.IndexFields.TryGetValue(fieldName, out indexField) is null or false &&
-            indexMapping?.TryGetByFieldName(fieldName, out binding) is null or false)
+            indexMapping?.TryGetByFieldName(allocator, fieldName, out binding) is null or false)
         {
             if (hasDynamics && dynamicFields.Value.Contains(fieldName))
                 return Corax.Constants.IndexWriter.DynamicField;

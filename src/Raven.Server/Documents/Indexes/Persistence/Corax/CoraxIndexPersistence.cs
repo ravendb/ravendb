@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Corax.Exceptions;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -73,7 +73,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 
     public override SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field)
     {
-        if (_converter.GetKnownFieldsForQuerying().TryGetByFieldName(field, out var binding) == false)
+        if (_converter.GetKnownFieldsForQuerying().TryGetByFieldName(readTransaction.Allocator, field, out var binding) == false)
             throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
 
         return new CoraxSuggestionReader(_index, _logger, binding, readTransaction, _converter.GetKnownFieldsForQuerying());

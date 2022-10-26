@@ -53,7 +53,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
         }
 
         id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
-        var singleEntryWriterScope = new SingleEntryWriterScope(_allocator);
+        var singleEntryWriterScope = new SingleEntryWriterScope(Allocator);
 
         if (TryGetBoostedValue(documentToProcess, out var boostedValue, out var documentBoost))
             ThrowWhenBoostingIsInDocument();
@@ -228,7 +228,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             if (_fields.TryGetValue(propertyAsString, out var field) == false)
             {
                 int currentId = CoraxLib.Constants.IndexWriter.DynamicField;
-                if (_knownFieldsForWriter.TryGetByFieldName(propertyAsString, out var binding))
+                if (KnownFieldsForWriter.TryGetByFieldName(Allocator, propertyAsString, out var binding))
                     currentId = binding.FieldId;
 
                 field = _fields[propertyAsString] = IndexField.Create(propertyAsString, new IndexFieldOptions(), _allFields, currentId);
@@ -262,7 +262,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             var storedValue = JsBlittableBridge.Translate(indexContext, documentToProcess.Engine, documentToProcess);
             unsafe
             {
-                using (_allocator.Allocate(storedValue.Size, out Span<byte> blittableBuffer))
+                using (Allocator.Allocate(storedValue.Size, out Span<byte> blittableBuffer))
                 {
                     fixed (byte* bPtr = blittableBuffer)
                         storedValue.CopyTo(bPtr);

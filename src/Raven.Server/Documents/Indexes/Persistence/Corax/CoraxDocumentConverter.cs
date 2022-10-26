@@ -32,7 +32,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
         var document = (Document)doc;
         id = document.LowerId ?? key;
 
-        var scope = new SingleEntryWriterScope(_allocator);
+        var scope = new SingleEntryWriterScope(Allocator);
 
         // We prepare for the next entry.
         ref var entryWriter = ref GetEntriesWriter();
@@ -83,7 +83,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
         {
             unsafe
             {
-                using (_allocator.Allocate(document.Data.Size, out Span<byte> blittableBuffer))
+                using (Allocator.Allocate(document.Data.Size, out Span<byte> blittableBuffer))
                 {
                     fixed (byte* bPtr = blittableBuffer)
                         document.Data.CopyTo(bPtr);

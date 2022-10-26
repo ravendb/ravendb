@@ -14,6 +14,7 @@ using System.Linq;
 using System.Reflection;
 using Raven.Client.Documents.Indexes;
 using Corax;
+using Corax.Mappings;
 using Constants = Raven.Client.Constants;
 using Sparrow.Server;
 using Voron;
@@ -46,7 +47,7 @@ public static class CoraxIndexingHelpers
         return analyzerInstance;
     }
 
-    public static IndexFieldsMapping CreateMappingWithAnalyzers(ByteStringContext context, Index index, IndexDefinitionBaseServerSide indexDefinition, IndexFieldsMapping rawMapping, bool forQuerying = false)
+    public static IndexFieldsMapping CreateMappingWithAnalyzers(ByteStringContext context, Index index, IndexDefinitionBaseServerSide indexDefinition, string keyFieldName, bool storedValue, string storedValueFieldName,  bool forQuerying = false)
     {
         if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
             throw new InvalidOperationException(
@@ -72,20 +73,13 @@ public static class CoraxIndexingHelpers
                     case FieldIndexing.Search:
                         if (value.Analyzer != null)
                         {
-                            var defaultAnalyzerToUseFromLucene = GetCoraxAnalyzer(Constants.Documents.Indexing.Fields.AllFields, value.Analyzer, analyzers, forQuerying,
+                            defaultAnalyzerToUse = GetCoraxAnalyzer(Constants.Documents.Indexing.Fields.AllFields, value.Analyzer, analyzers, forQuerying,
                                 index.DocumentDatabase.Name);
+                            break;
                         }
 
-                        if (defaultAnalyzerToUse == null)
-                            defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields,
-                                index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
-                        break;
-
-                    case null:
-                    case FieldIndexing.No:
-                    case FieldIndexing.Default:
-                    default:
-                        // explicitly ignore all other values
+                        defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields,
+                            index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
                         break;
                 }
             }
@@ -98,64 +92,72 @@ public static class CoraxIndexingHelpers
             analyzers.Add(defaultAnalyzerToUse.GetType(), defaultAnalyzerToUse);
         }
 
-        var perFieldAnalyzerWrapper = indexDefinition.HasDynamicFields 
-            ? new IndexFieldsMapping(context, 
-                searchAnalyzer: fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer),
-                exactAnalyzer: fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer)) 
-            : new IndexFieldsMapping(context);
-        perFieldAnalyzerWrapper.DefaultAnalyzer = defaultAnalyzerToUse;
+        using var mappingBuilder = new IndexFieldsMappingBuilder(forQuerying == false);
+        mappingBuilder.AddDefaultAnalyzer(defaultAnalyzer ?? defaultAnalyzerToUse);
         
-        foreach (var field in indexDefinition.IndexFields)
+        if (indexDefinition.HasDynamicFields)
         {
-            var fieldName = field.Value.Name;
-            Slice.From(context, field.Value.Name, out Slice fieldNameSlice);
-
-            var fieldId = field.Value.Id;
-
-            switch (field.Value.Indexing)
+            mappingBuilder
+                .AddExactAnalyzer(fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer))
+                .AddSearchAnalyzer(fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer));
+        }
+        
+        //Adding id of document        
+        mappingBuilder.AddBinding(0, keyFieldName, defaultAnalyzer);
+        
+        foreach (var field in indexDefinition.IndexFields.Values)
+        {
+            var fieldName = field.Name;
+            Slice.From(context, fieldName, out Slice fieldNameSlice);
+            var fieldId = field.Id;
+            
+            if (fieldId == global::Corax.Constants.IndexWriter.DynamicField)
+                continue;
+            
+            var hasSuggestions = field.HasSuggestions;
+            var hasSpatial = field.Spatial is not null;
+            
+            
+            switch (field.Indexing)
             {
                 case FieldIndexing.Exact:
                     var keywordAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer);
-
-                    perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, keywordAnalyzer, fieldIndexingMode: FieldIndexingMode.Exact);
+                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, keywordAnalyzer, hasSuggestions, FieldIndexingMode.Exact, hasSpatial);
                     break;
 
                 case FieldIndexing.Search:
-                    var analyzer = GetCoraxAnalyzer(fieldName, field.Value.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
+                    var analyzer = GetCoraxAnalyzer(fieldName, field.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
                     if (analyzer != null)
                     {
-                        perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, analyzer, fieldIndexingMode: FieldIndexingMode.Search);
+                        mappingBuilder.AddBinding(fieldId, fieldNameSlice, analyzer, hasSuggestions, FieldIndexingMode.Search, hasSpatial);
                         continue;
                     }
 
                     var standardAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
-                    perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, standardAnalyzer, fieldIndexingMode: FieldIndexingMode.Search);
-
+                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, standardAnalyzer, hasSuggestions, FieldIndexingMode.Search, hasSpatial);
                     break;
 
                 case FieldIndexing.Default:
                     if (hasDefaultFieldOptions)
                     {
                         defaultAnalyzer ??= CreateDefaultAnalyzer(fieldName, index.Configuration.DefaultAnalyzerType.Value.Type);
-
-                        perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, defaultAnalyzer);
                     }
+                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, defaultAnalyzer, hasSuggestions, FieldIndexingMode.Normal, hasSpatial);
 
                     break;
-                
+                case FieldIndexing.No:
+                    mappingBuilder.AddBinding(fieldId, fieldNameSlice, null, fieldIndexingMode: FieldIndexingMode.No);
+                    break;
             }
         }
 
-        foreach (var originField in rawMapping)
+        if (storedValue)
         {
-            if (perFieldAnalyzerWrapper.TryGetByFieldName(originField.FieldName, out _))
-                continue;
-
-            perFieldAnalyzerWrapper.AddBinding(originField);
+            mappingBuilder.AddBindingToEnd(storedValueFieldName, fieldIndexingMode: FieldIndexingMode.No);
         }
-        perFieldAnalyzerWrapper.CompleteAnalyzerGathering();
         
-        return perFieldAnalyzerWrapper;
+        
+        return mappingBuilder.Build();
 
         CoraxAnalyzer GetOrCreateAnalyzer(string fieldName, Type analyzerType, Func<string, Type, CoraxAnalyzer> createAnalyzer)
         {

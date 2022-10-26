@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
+using Corax.Mappings;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
@@ -11,6 +11,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Voron;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
 
@@ -21,26 +22,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public const int MaximumPersistedCapacityOfCoraxWriter = 512;
         private readonly IndexWriter _indexWriter;
         private readonly CoraxDocumentConverterBase _converter;
-        private readonly IndexDynamicFieldsMapping _dynamicFields;
+        private readonly IndexFieldsMappingBuilder _dynamicFieldsBuilder;
+        private IndexFieldsMapping _dynamicFields;
         private long _entriesCount = 0;
         private readonly CurrentIndexingScope _indexingScope;
+        private readonly ByteStringContext _allocator;
 
         public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverterBase converter, Logger logger) : base(index, logger)
         {
             _converter = converter;
-            IndexFieldsMapping knownFields = _converter.GetKnownFieldsForWriter();
+            var knownFields = _converter.GetKnownFieldsForWriter();
             _indexingScope = CurrentIndexingScope.Current;
-            if (index.Definition.HasDynamicFields)
-            {
-                _dynamicFields = knownFields.CreateIndexMappingForDynamic();
-                _indexingScope.DynamicFields ??= new();
-                UpdateDynamicFieldsBindings();
-            }
-            
+            _allocator = writeTransaction.Allocator;
             try
             {
                 _indexWriter = index.Definition.HasDynamicFields 
-                    ? new IndexWriter(writeTransaction, knownFields, _dynamicFields) 
+                    ? new IndexWriter(writeTransaction, knownFields, true) 
                     : new IndexWriter(writeTransaction, knownFields);
                 _entriesCount = _indexWriter.GetNumberOfEntries();
             }
@@ -51,6 +48,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             catch (Exception e)
             {
                 throw new IndexWriteException(e);
+            }
+            
+            if (index.Definition.HasDynamicFields)
+            {
+                _dynamicFieldsBuilder = new IndexFieldsMappingBuilder(true, true)
+                    .AddDefaultAnalyzer(knownFields.DefaultAnalyzer)
+                    .AddExactAnalyzer(knownFields.ExactAnalyzer)
+                    .AddSearchAnalyzer(knownFields.SearchAnalyzer);
+                
+                _indexingScope.DynamicFields ??= new();
+                UpdateDynamicFieldsBindings();
             }
         }
         
@@ -79,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data);
             }
             
-            if (_dynamicFields != null && _dynamicFields.Count != _indexingScope.CreatedFieldsCount)
+            if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
             {
                 UpdateDynamicFieldsBindings();
             }
@@ -111,11 +119,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data);
             }
             
-            if (_dynamicFields != null && _dynamicFields.Count != _indexingScope.CreatedFieldsCount)
-            {
-                UpdateDynamicFieldsBindings();
-            }
-
             using (scope)
             {
                 if (data.Length == 0)
@@ -127,21 +130,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 }
 
                 stats.RecordIndexingOutput();
-            } 
+            }
+            
+            if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
+            {
+                UpdateDynamicFieldsBindings();
+            }
         }
 
         private void UpdateDynamicFieldsBindings()
         {
             foreach (var (fieldName, fieldIndexing) in _indexingScope.DynamicFields)
             {
-                if (_dynamicFields.TryGetByFieldName(fieldName, out _))
-                {
-                    continue;
-                }
-
-                _dynamicFields.AddBinding(fieldName, FieldIndexingIntoFieldIndexingMode(fieldIndexing));
+                using var _ = Slice.From(_allocator, fieldName, out var slice);
+                _dynamicFieldsBuilder.AddDynamicBinding(slice, FieldIndexingIntoFieldIndexingMode(fieldIndexing));
             }
 
+            _dynamicFields = _dynamicFieldsBuilder.Build();
+            _indexWriter.UpdateDynamicFieldsMapping(_dynamicFields);
+            
             FieldIndexingMode FieldIndexingIntoFieldIndexingMode(FieldIndexing option) => option switch
             {
                 FieldIndexing.Search => FieldIndexingMode.Search,
@@ -213,6 +220,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override void Dispose()
         {
             _indexWriter?.Dispose();
+            _dynamicFieldsBuilder?.Dispose();
+            _dynamicFields?.Dispose();
             if (_converter.StringsListForEnumerableScope?.Capacity > MaximumPersistedCapacityOfCoraxWriter)
             {
                 //We want to make sure we didn't persist too much memory for our enumerable writer.

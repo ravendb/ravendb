@@ -11,6 +11,7 @@ using Voron.Impl;
 using Voron.Data.Containers;
 using Sparrow;
 using System.Runtime.Intrinsics.X86;
+using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
 using Sparrow.Compression;
@@ -46,6 +47,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public IndexFieldsMapping FieldMapping => _fieldMapping;
 
     private readonly bool _ownsTransaction;
+    private readonly bool _ownsIndexMapping;
 
     private readonly Tree _metadataTree;
     private readonly Tree _fieldsTree;
@@ -53,22 +55,34 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
-    public IndexSearcher(StorageEnvironment environment, IndexFieldsMapping fieldsMapping = null)
+    public IndexSearcher(StorageEnvironment environment, IndexFieldsMapping fieldsMapping = null) : this(fieldsMapping)
     {
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
-        _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
     }
 
-    public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null)
+    public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null) : this(fieldsMapping)
     {
         _ownsTransaction = false;
         _transaction = tx;
-        _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
         _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
+    }
+
+    private IndexSearcher(IndexFieldsMapping fieldsMapping)
+    {
+        if (fieldsMapping is null)
+        {
+            _ownsIndexMapping = true;
+            using var builder = new IndexFieldsMappingBuilder(false);
+            _fieldMapping = builder.Build();
+        }
+        else
+        {
+            _fieldMapping = fieldsMapping;
+        }
     }
 
     public UnmanagedSpan GetIndexEntryPointer(long id)
@@ -295,5 +309,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         if (_ownsTransaction)
             _transaction?.Dispose();
+        
+        if (_ownsIndexMapping)
+            _fieldMapping?.Dispose();
     }
 }

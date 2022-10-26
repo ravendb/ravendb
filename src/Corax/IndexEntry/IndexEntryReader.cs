@@ -5,6 +5,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Mappings;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Compression;

@@ -39,7 +39,7 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         else
             accessor = TypeConverter.GetPropertyAccessor(documentToProcess);
 
-        var scope = new SingleEntryWriterScope(_allocator);
+        var scope = new SingleEntryWriterScope(Allocator);
         var storedValue = _storeValue ? new DynamicJsonValue() : null;
 
         var knownFields = GetKnownFieldsForWriter();
