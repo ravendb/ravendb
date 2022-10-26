@@ -7,6 +7,7 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -321,6 +322,22 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private StudioConfiguration _studioConfiguration;
+
+        public StudioConfiguration StudioConfiguration
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.Studio;
+
+                if (_studioConfiguration == null && _record.TryGet(nameof(DatabaseRecord.Studio), out BlittableJsonReaderObject config) && config != null)
+                    _studioConfiguration = JsonDeserializationServer.StudioConfiguration(config);
+
+                return _studioConfiguration;
+            }
+        }
+
         private TimeSeriesConfiguration _timeSeriesConfiguration;
 
         public TimeSeriesConfiguration TimeSeriesConfiguration
@@ -524,6 +541,36 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _periodicBackupsTaskIds;
+            }
+        }
+
+        private List<PeriodicBackupConfiguration> _periodicBackupsConfiguration;
+
+        public List<PeriodicBackupConfiguration> PeriodicBackupsConfiguration
+        {
+            get
+            {
+                if (_periodicBackupsConfiguration == null)
+                {
+                    if (_materializedRecord != null)
+                    {
+                        _periodicBackupsConfiguration = _materializedRecord.PeriodicBackups;
+                    }
+                    else
+                    {
+                        _periodicBackupsConfiguration = new List<PeriodicBackupConfiguration>();
+                        
+                        if (_record.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray bjra) && bjra != null)
+                        {
+                            foreach (BlittableJsonReaderObject element in bjra)
+                            {
+                                _periodicBackupsConfiguration.Add(JsonDeserializationCluster.PeriodicBackupConfiguration(element));
+                            }
+                        }
+                    }
+                }
+
+                return _periodicBackupsConfiguration;
             }
         }
 
