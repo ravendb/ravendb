@@ -373,53 +373,56 @@ namespace Sparrow.Server.Compression
             return Decode(data.Length * 8, data, outputBuffer);
         }
 
+        [SkipLocalsInit]
         public int Decode(int bits, ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
-            fixed (Interval3Gram* table = EncodingTable)
-            fixed( byte* outputBufferPtr = outputBuffer)
+            ref Interval3Gram tableRef = ref EncodingTable[0];
+            ref byte symbolsPtrRef = ref outputBuffer[0];
+
+            var tree = BinaryTree<short>.Open(_state.DecodingTable);
+            ref byte dataRef = ref MemoryMarshal.GetReference(data);
+
+            int bitStreamLength = bits;
+            int readerBitIdx = 0;
+            bool endsWithNull = false;
+
+            byte* auxBuffer = stackalloc byte[4];
+            nuint offset = 0;
+            while (readerBitIdx < bitStreamLength && endsWithNull == false)
             {
-                byte* symbolsPtr = outputBufferPtr;
+                readerBitIdx = tree.FindCommonPrefix(ref dataRef, data.Length, readerBitIdx, out var idx);
+                if (readerBitIdx == 0)
+                    goto Fail;
 
-                var tree = BinaryTree<short>.Open(_state.DecodingTable);
-                ref byte dataRef = ref MemoryMarshal.GetReference(data);
+                var p = Unsafe.AddByteOffset(ref tableRef, (IntPtr) (idx * Unsafe.SizeOf<Interval3Gram>()));
 
-                int bitStreamLength = bits;
-                int readerBitIdx = 0;
-                bool endsWithNull = false;
-                while (readerBitIdx < bitStreamLength && endsWithNull == false)
+                int prefixLength = p.PrefixLength;
+                *(uint*)auxBuffer = p.BufferAndLength;
+
+                if (prefixLength == 1)
                 {
-                    readerBitIdx = tree.FindCommonPrefix(ref dataRef, data.Length, readerBitIdx, out var idx);
-                    if (readerBitIdx == 0)
-                        goto Fail;
-
-                    var p = table + idx;
-
-                    int prefixLength = p->PrefixLength;
-                    byte* buffer = p->KeyBuffer;
-
-                    if (prefixLength == 1)
-                    {
-                        symbolsPtr[0] = buffer[0];
-                    }
-                    else if (prefixLength == 2)
-                    {
-                        symbolsPtr[0] = buffer[0];
-                        symbolsPtr[1] = buffer[1];
-                    }
-                    else
-                    {
-                        Unsafe.CopyBlockUnaligned(symbolsPtr, p->KeyBuffer, p->PrefixLength);
-                    }
-
-                    endsWithNull = buffer[prefixLength - 1] == 0;
-                    symbolsPtr += prefixLength;
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
+                }
+                else if (prefixLength == 2)
+                {
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+1), auxBuffer[1]);
+                }
+                else
+                {
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+1), auxBuffer[1]);
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+2), auxBuffer[2]);
                 }
 
-                return (int)(symbolsPtr - outputBufferPtr);
-
-                Fail:
-                throw new IOException("Invalid data stream.");
+                endsWithNull = auxBuffer[prefixLength - 1] == 0;
+                offset += (nuint)prefixLength;
             }
+
+            return (int)offset;
+
+            Fail:
+            throw new IOException("Invalid data stream.");
         }
 
         public int NumberOfEntries
