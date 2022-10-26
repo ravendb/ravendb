@@ -160,7 +160,7 @@ namespace Raven.Server.Web
             return false;
         }
 
-        protected void ValidateNodeForAddingToDb(string databaseName, string node, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, string baseMessage = null)
+        public static void ValidateNodeForAddingToDb(string databaseName, string node, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, string baseMessage = null)
         {
             baseMessage ??= "Can't execute the operation";
 
