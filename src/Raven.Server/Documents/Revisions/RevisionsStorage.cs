@@ -1454,7 +1454,12 @@ namespace Raven.Server.Documents.Revisions
             public Action<IOperationProgress> OnProgress;
         }
 
-        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token, HashSet<string> collections = null)
+        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        {
+            return await RevertRevisions(before, window, onProgress, collections: null, token);
+        }
+
+        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, HashSet<string> collections, OperationCancelToken token)
         {
             var list = new List<Document>();
             var result = new RevertResult();
@@ -1478,7 +1483,7 @@ namespace Raven.Server.Documents.Revisions
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
                 {
-                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, token, collections);
+                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, collections, token);
                     await WriteRevertedRevisions(list, token);
                 }
             }
@@ -1496,7 +1501,7 @@ namespace Raven.Server.Documents.Revisions
             list.Clear();
         }
 
-        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, OperationCancelToken token, HashSet<string> collections)
+        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, HashSet<string> collections, OperationCancelToken token)
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
