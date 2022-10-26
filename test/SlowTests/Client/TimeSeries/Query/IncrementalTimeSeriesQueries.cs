@@ -2596,9 +2596,9 @@ select out(p)")
 
                     Assert.Equal(3, heartrate.Length);
 
-                    Assert.Equal(159, heartrate[0].Value);
-                    Assert.Equal(179, heartrate[1].Value);
-                    Assert.Equal(169, heartrate[2].Value);
+                    Assert.Equal(159+259, heartrate[0].Value);
+                    Assert.Equal(179 + 279, heartrate[1].Value);
+                    Assert.Equal(169 + 269, heartrate[2].Value);
 
                     var stocks = result[0].Stocks;
 
