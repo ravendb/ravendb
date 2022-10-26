@@ -37,6 +37,7 @@ using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations.TrafficWatch;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
 
@@ -107,6 +108,8 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskSqlEtlDetails> GetOngoingTaskSqlEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskSqlEtlDetails>();
 
         public static readonly Func<BlittableJsonReaderObject, ModifySolverResult> ModifySolverResult = GenerateJsonDeserializationRoutine<ModifySolverResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, ModifyOrchestratorTopologyResult> ModifyOrchestratorTopologyResult = GenerateJsonDeserializationRoutine<ModifyOrchestratorTopologyResult>();
 
         public static readonly Func<BlittableJsonReaderObject, DisableDatabaseToggleResult> DisableResourceToggleResult = GenerateJsonDeserializationRoutine<DisableDatabaseToggleResult>();
 

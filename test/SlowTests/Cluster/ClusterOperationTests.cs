@@ -47,6 +47,53 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task ReorderDatabaseNodesSharded()
+        {
+            var db = "ReorderDatabaseNodesSharded";
+            var (nodes, leader) = await CreateRaftCluster(3);
+            
+            await ShardingCluster.CreateShardedDatabaseInCluster(db, 3, (nodes, leader));
+            using (var store = new DocumentStore
+                   {
+                       Database = db,
+                       Urls = new[] { leader.WebUrl }
+                   }.Initialize())
+            {
+                await ReverseOrderSuccessfully(store, db);
+                await FailSuccessfully(store, db);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task ReorderDatabaseShardNodesSharded()
+        {
+            var db = "ReorderDatabaseNodesSharded";
+            var (nodes, leader) = await CreateRaftCluster(3);
+            await ShardingCluster.CreateShardedDatabaseInCluster(db, 3, (nodes, leader));
+
+            using (var store = new DocumentStore
+                   {
+                       Database = db,
+                       Urls = new[] { leader.WebUrl }
+                   }.Initialize())
+            {
+                WaitForUserToContinueTheTest(store);
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db));
+                var topology = record.Sharding.Shards[0];
+                topology.Members.Reverse();
+                var copy = new List<string>(topology.Members);
+                var shardDBName = ShardHelper.ToShardName(db, 0);
+                await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(shardDBName, topology.Members));
+
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db));
+                topology = record.Sharding.Shards[0];
+                Assert.True(copy.All(topology.Members.Contains));
+
+                await FailSuccessfully(store, db);
+            }
+        }
+
         public static async Task FailSuccessfully(IDocumentStore store, string db)
         {
             var ex = await Assert.ThrowsAsync<RavenException>(async () =>
@@ -385,11 +432,13 @@ namespace SlowTests.Cluster
         public static async Task ReverseOrderSuccessfully(IDocumentStore store, string db)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db));
-            record.Topology.Members.Reverse();
-            var copy = new List<string>(record.Topology.Members);
-            await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(db, record.Topology.Members));
+            var topology = record.IsSharded ? record.Sharding.Orchestrator.Topology : record.Topology;
+            topology.Members.Reverse();
+            var copy = new List<string>(topology.Members);
+            await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(db, topology.Members));
             record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db));
-            Assert.True(copy.All(record.Topology.Members.Contains));
+            topology = record.IsSharded ? record.Sharding.Orchestrator.Topology : record.Topology;
+            Assert.True(copy.All(topology.Members.Contains));
         }
     }
 }

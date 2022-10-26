@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using NuGet.Protocol.Plugins;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Sparrow.Json.Parsing;
 
@@ -40,6 +42,8 @@ namespace Raven.Server.ServerWide.Maintenance
         public bool? EarlyOutOfMemory;
 
         public bool? HighDirtyMemory;
+        
+        public long? LastCommittedIndex;
 
         public DynamicJsonValue ToJson()
         {
@@ -47,7 +51,8 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 [nameof(OutOfCpuCredits)] = OutOfCpuCredits,
                 [nameof(EarlyOutOfMemory)] = EarlyOutOfMemory,
-                [nameof(HighDirtyMemory)] = HighDirtyMemory
+                [nameof(HighDirtyMemory)] = HighDirtyMemory,
+                [nameof(LastCommittedIndex)] = LastCommittedIndex
             };
         }
     }

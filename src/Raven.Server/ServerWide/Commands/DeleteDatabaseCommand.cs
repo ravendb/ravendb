@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -69,7 +70,7 @@ namespace Raven.Server.ServerWide.Commands
                         record.Sharding.Shards[i] = RemoveDatabaseFromAllNodes(record, record.Sharding.Shards[i], $"${i}", deletionInProgressStatus);
                     }
 
-                    record.Topology = new DatabaseTopology
+                    record.Sharding.Orchestrator.Topology = new OrchestratorTopology()
                     {
                         Stamp = record.Topology?.Stamp, 
                         ReplicationFactor = 0

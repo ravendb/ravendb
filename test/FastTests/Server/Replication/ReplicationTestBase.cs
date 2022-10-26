@@ -448,7 +448,7 @@ namespace FastTests.Server.Replication
             {
                 return -1;
             }
-            return res.Topology.Rehabs.Count;
+            return res.IsSharded ? res.Sharding.Orchestrator.Topology.Rehabs.Count : res.Topology.Rehabs.Count;
         }
 
         protected static async Task<int> GetMembersCount(IDocumentStore store, string databaseName = null)
@@ -458,7 +458,7 @@ namespace FastTests.Server.Replication
             {
                 return -1;
             }
-            return res.Topology.Members.Count;
+            return res.IsSharded ? res.Sharding.Orchestrator.Topology.Members.Count : res.Topology.Members.Count;
         }
 
         protected static async Task<int> GetDeletionCount(IDocumentStore store, string databaseName)
