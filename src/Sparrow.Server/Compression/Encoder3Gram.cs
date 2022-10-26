@@ -367,72 +367,58 @@ namespace Sparrow.Server.Compression
             }
         }
 
-        public int DecodeStochasticBug(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
-        {
-            Span<byte> buffer = outputBuffer;
-            fixed (Interval3Gram* table = EncodingTable)
-            {
-                var tree = BinaryTree<short>.Open(_state.DecodingTable);
-
-                var reader = new BitReader(data);
-                var endsWithNull = false;
-                while (reader.Length > 0 && endsWithNull == false)
-                {
-                    int length = Lookup(reader, ref buffer, table, tree, out endsWithNull);
-                    if (length < 0)
-                        throw new IOException("Invalid data stream.");
-
-                    // Advance the reader.
-                    reader.Skip(length);
-                }
-
-                return outputBuffer.Length - buffer.Length;
-            }
-        }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Decode(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
-            Span<byte> buffer = outputBuffer;
-            fixed (Interval3Gram* table = EncodingTable)
-            {
-                var tree = BinaryTree<short>.Open(_state.DecodingTable);
-                var reader = new BitReader(data);
-                var endsWithNull = false;
-                while (reader.Length > 0 && endsWithNull == false)
-                {
-                    int length = Lookup(reader, ref buffer, table, tree, out endsWithNull);
-                    if (length < 0)
-                        throw new IOException("Invalid data stream.");
-
-                    // Advance the reader.
-                    reader.Skip(length);
-                }
-
-                return outputBuffer.Length - buffer.Length;
-            }
+            return Decode(data.Length * 8, data, outputBuffer);
         }
 
         public int Decode(int bits, ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
             fixed (Interval3Gram* table = EncodingTable)
+            fixed( byte* outputBufferPtr = outputBuffer)
             {
+                byte* symbolsPtr = outputBufferPtr;
+
                 var tree = BinaryTree<short>.Open(_state.DecodingTable);
-                var buffer = outputBuffer;
-                var reader = new BitReader(data);
-                var endsWithNull = false;
-                while (bits > 0 && endsWithNull == false)
+                ref byte dataRef = ref MemoryMarshal.GetReference(data);
+
+                int bitStreamLength = bits;
+                int readerBitIdx = 0;
+                bool endsWithNull = false;
+                while (readerBitIdx < bitStreamLength && endsWithNull == false)
                 {
-                    int length = Lookup(reader, ref buffer, table, tree, out endsWithNull);
-                    if (length < 0)
-                        throw new IOException("Invalid data stream.");
+                    readerBitIdx = tree.FindCommonPrefix(ref dataRef, data.Length, readerBitIdx, out var idx);
+                    if (readerBitIdx == 0)
+                        goto Fail;
 
-                    // Advance the reader.
-                    reader.Skip(length);
+                    var p = table + idx;
 
-                    bits -= length;
+                    int prefixLength = p->PrefixLength;
+                    byte* buffer = p->KeyBuffer;
+
+                    if (prefixLength == 1)
+                    {
+                        symbolsPtr[0] = buffer[0];
+                    }
+                    else if (prefixLength == 2)
+                    {
+                        symbolsPtr[0] = buffer[0];
+                        symbolsPtr[1] = buffer[1];
+                    }
+                    else
+                    {
+                        Unsafe.CopyBlockUnaligned(symbolsPtr, p->KeyBuffer, p->PrefixLength);
+                    }
+
+                    endsWithNull = buffer[prefixLength - 1] == 0;
+                    symbolsPtr += prefixLength;
                 }
 
-                return outputBuffer.Length - buffer.Length;
+                return (int)(symbolsPtr - outputBufferPtr);
+
+                Fail:
+                throw new IOException("Invalid data stream.");
             }
         }
 
@@ -542,8 +528,7 @@ namespace Sparrow.Server.Compression
                 maxBitSequenceLength = Math.Max(maxBitSequenceLength, entry.Code.Length);
                 minBitSequenceLength = Math.Min(minBitSequenceLength, entry.Code.Length);
 
-                var reader = new TypedBitReader<uint>(codeValue, entry.Code.Length);
-                tree.Add(ref reader, (short)i);
+                tree.Add(codeValue, entry.Code.Length, (short)i);
             }
 
             _entries = dictSize;
