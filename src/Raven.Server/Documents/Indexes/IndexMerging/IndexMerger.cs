@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 TrySetCollectionName(mergeProposal, mergeSuggestion);
 
                 var map = mergeProposal.ProposedForMerge[0].BuildExpression(selectExpressionDict);
-                mergeSuggestion.MergedIndex.Maps.Add(map);
+                mergeSuggestion.MergedIndex.Maps.Add(SourceCodeBeautifier.FormatIndex(map).Expression);
                 RemoveMatchingIndexes(mergeProposal, selectExpressionDict, mergeSuggestion, indexMergeResults);
 
                 if (mergeProposal.ProposedForMerge.Count == 1 && mergeProposal.ProposedForMerge[0].IsSuitedForMerge == false)
