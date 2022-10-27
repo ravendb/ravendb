@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Amqp.Types;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Documents;
@@ -1461,34 +1462,65 @@ namespace Raven.Server.Documents.Revisions
 
         public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, HashSet<string> collections, OperationCancelToken token)
         {
-            var list = new List<Document>();
             var result = new RevertResult();
+            var etagBarrier = _documentsStorage.GenerateNextEtag(); // every change after this etag, will _not_ be reverted.
+            var minimalDate = before.Add(-window); // since the documents/revisions are not sorted by date, stop searching if we reached this date.
 
-            var parameters = new Parameters
+            if (collections == null) // revert all collections
             {
-                Before = before,
-                MinimalDate = before.Add(-window), // since the documents/revisions are not sorted by date, stop searching if we reached this date.
-                EtagBarrier = _documentsStorage.GenerateNextEtag(), // every change after this etag, will _not_ be reverted.
-                OnProgress = onProgress
-            };
-            parameters.LastScannedEtag = parameters.EtagBarrier;
-
-            // send initial progress
-            parameters.OnProgress?.Invoke(result);
-
-            var hasMore = true;
-            while (hasMore)
+                var list = new List<Document>();
+                await ActualRevert(list, null);
+            }
+            else
             {
-                token.Delay();
-
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
+                if (collections.Comparer != null && collections.Comparer.Equals(StringComparer.OrdinalIgnoreCase) == false )
                 {
-                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, collections, token);
-                    await WriteRevertedRevisions(list, token);
+                    throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
+                }
+                foreach (var collection in collections)
+                {
+                    var list = new List<Document>();
+                    if (collection == null)
+                    {
+                        var msg = "Tried to revert revisions in collection that is null";
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(msg);
+                        result.WarnAboutFailedCollection(msg);
+                        continue;
+                    }
+
+                    await ActualRevert(list, collection);
                 }
             }
 
             return result;
+
+            async Task ActualRevert(List<Document> list, string collection)
+            {
+                var parameters = new Parameters
+                {
+                    Before = before,
+                    MinimalDate = minimalDate,
+                    EtagBarrier = etagBarrier,
+                    OnProgress = onProgress,
+                    LastScannedEtag = etagBarrier
+                };
+
+                // send initial progress
+                parameters.OnProgress?.Invoke(result);
+
+                var hasMore = true;
+                while (hasMore)
+                {
+                    token.Delay();
+
+                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
+                    {
+                        hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, collection, token);
+                        await WriteRevertedRevisions(list, token);
+                    }
+                }
+            }
         }
 
         private async Task WriteRevertedRevisions(List<Document> list, OperationCancelToken token)
@@ -1501,42 +1533,26 @@ namespace Raven.Server.Documents.Revisions
             list.Clear();
         }
 
-        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, HashSet<string> collections, OperationCancelToken token)
+        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, string collection, OperationCancelToken token)
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
             {
                 IEnumerable<Table.TableValueHolder> tvrs = null;
-                if (collections != null)
+                if (collection != null)
                 {
-                    if (collections.Comparer != null && collections.Comparer != StringComparer.OrdinalIgnoreCase)
+                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                    if (collectionName == null)
                     {
-                        throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
+                        var msg = $"Tried to revert revisions in the collection '{collection}' which does not exist"; 
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(msg);
+                        result.WarnAboutFailedCollection(msg);
+                        return false;
                     }
-                    tvrs = Enumerable.Empty<Table.TableValueHolder>();
-                    foreach (var collection in collections)
-                    {
-                        if (collection == null)
-                        {
-                            var msg = "Tried to revert revisions in collection that is null";
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info(msg);
-                            result.WarnAboutFailedCollection(msg);
-                            continue;
-                        }
-                        var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
-                        if (collectionName == null)
-                        {
-                            var msg = $"Tried to revert revisions in the collection '{collection}' which does not exist";
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info(msg);
-                            result.WarnAboutFailedCollection(msg);
-                            continue;
-                        }
-                        var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
-                        var revisions = readCtx.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
-                        tvrs = tvrs.Concat(revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag));
-                    }
+                    var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+                    var revisions = readCtx.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag);
                 }
                 else
                 {
