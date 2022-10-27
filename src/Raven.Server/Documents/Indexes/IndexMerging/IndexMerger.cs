@@ -17,7 +17,9 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
         public IndexMerger(Dictionary<string, IndexDefinition> indexDefinitions)
         {
-            _indexDefinitions = indexDefinitions;
+            _indexDefinitions = indexDefinitions
+                .Where(i => i.Value.Type != IndexType.AutoMap && i.Value.Type != IndexType.AutoMapReduce)
+                .ToDictionary(i => i.Key, i=> i.Value);
         }
 
         private List<MergeProposal> MergeIndexes(List<IndexData> indexes)

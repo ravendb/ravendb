@@ -500,6 +500,46 @@ select new
 }", results.Suggestions.First().MergedIndex.Maps.First());
         }
 
+        
+        [Fact]
+        public void AutoIndexesWillNotBeIncludedInOperationOutput()
+        {
+            using var store = GetDocumentStore();
+            {
+                using var session = store.OpenSession();
+                session.Store(new AutoIndexMockup("Maciej", 1));
+                session.SaveChanges();
+            }
+
+            {
+                using var session = store.OpenSession();
+                var createAutoIndexMap = session.Query<AutoIndexMockup>().Where(i => i.Name == "maciej").ToList();
+                var createAutoIndexReduce = session.Query<AutoIndexMockup>().GroupBy(i => i.Count).Select(x => new
+                {
+                    Name = x.Key,
+                    Count = x.Count(),
+                }).ToList();
+            }
+            var mapName = "Auto/AutoIndexMockups/ByName";
+            var mapIndex = store
+                .Maintenance
+                .Send(new GetIndexOperation(mapName));
+            var reduceName = "Auto/AutoIndexMockupsReducedByCount";
+            var mapReduce = store
+                .Maintenance
+                .Send(new GetIndexOperation(reduceName));
+            var dictionary = new Dictionary<string, IndexDefinition>
+            {
+                {mapName, mapIndex},
+                {reduceName, mapReduce}
+            };
+            var merger = new IndexMerger(dictionary);
+            Assert.Equal(0, merger.ProposeIndexMergeSuggestions().Suggestions.Count);
+            Assert.Equal(0, merger.ProposeIndexMergeSuggestions().Unmergables.Count);
+        }
+
+        private record AutoIndexMockup(string Name, int Count);
+
         private IndexMergeResults GetMergeReportOfTwoIndexes(IndexDefinition index1, IndexDefinition index2)
         {
             using var store = GetDocumentStore();
