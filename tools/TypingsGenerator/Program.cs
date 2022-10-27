@@ -281,7 +281,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexProgress));
             scripter.AddType(typeof(IndexesProgress));
             scripter.AddType(typeof(IndexErrors));
-            scripter.AddType(typeof(StudioTasksHandler.FormattedExpression));
+            scripter.AddType(typeof(Raven.Server.Documents.Indexes.IndexMerging.SourceCodeBeautifier.FormattedExpression));
             scripter.AddType(typeof(StudioIndexHandler.IndexTypeInfo));
             scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
             scripter.AddType(typeof(StudioDatabaseTasksHandler.IndexDefaults));
