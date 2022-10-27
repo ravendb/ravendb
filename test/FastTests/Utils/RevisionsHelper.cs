@@ -26,6 +26,25 @@ namespace FastTests.Utils
             await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(result.RaftCommandIndex.Value, serverStore.Engine.OperationTimeout);
         }
 
+        public static async Task<long> SetupRevisions(IDocumentStore documentStore, Raven.Server.ServerWide.ServerStore serverStore)
+        {
+            var configuration = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false
+                }
+            };
+
+            var database = documentStore.Database;
+            var index = await SetupRevisions(serverStore, database, configuration);
+
+            var documentDatabase = await serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, serverStore.Engine.OperationTimeout);
+
+            return index;
+        }
+
         public static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, Action<RevisionsConfiguration> modifyConfiguration = null, int minRevisionToKeep = 5)
         {
             var configuration = new RevisionsConfiguration
