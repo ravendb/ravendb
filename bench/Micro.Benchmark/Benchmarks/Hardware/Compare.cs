@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -146,17 +146,17 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         //    return CompareOriginal(source.Ptr, destination.Ptr, Length);
         //}
 
-        [Benchmark]
-        public int Current()
-        {
-            return Memory.CompareInline(source.Ptr, destination.Ptr, Length);
-        }
+        //[Benchmark]
+        //public int Current()
+        //{
+        //    return Memory.CompareInline(source.Ptr, destination.Ptr, Length);
+        //}
 
-        [Benchmark]
-        public int Avx2()
-        {
-            return AdvMemory.CompareAvx2(source.Ptr, destination.Ptr, Length);
-        }
+        //[Benchmark]
+        //public int Avx2()
+        //{
+        //    return AdvMemory.CompareAvx2(source.Ptr, destination.Ptr, Length);
+        //}
 
         [Benchmark]
         public int SpanHelpers()
@@ -175,20 +175,20 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         //    return r;
         //}
 
-        [Benchmark]
-        public int Current_WithCacheMisses()
-        {
-            int index = randomLocation[_randomIdx++ % Operations];
-            return Memory.Compare(source.Ptr + index, destination.Ptr + index, Length);
-        }
+        //[Benchmark]
+        //public int Current_WithCacheMisses()
+        //{
+        //    int index = randomLocation[_randomIdx++ % Operations];
+        //    return Memory.Compare(source.Ptr + index, destination.Ptr + index, Length);
+        //}
 
 
-        [Benchmark]
-        public int Avx2_WithCacheMisses()
-        {
-            int index = randomLocation[(_randomIdx++) % Operations];
-            return AdvMemory.CompareAvx2(source.Ptr + index, destination.Ptr + index, Length);
-        }
+        //[Benchmark]
+        //public int Avx2_WithCacheMisses()
+        //{
+        //    int index = randomLocation[(_randomIdx++) % Operations];
+        //    return AdvMemory.CompareAvx2(source.Ptr + index, destination.Ptr + index, Length);
+        //}
 
         [Benchmark]
         public int SpanHelpers_WithCacheMisses()

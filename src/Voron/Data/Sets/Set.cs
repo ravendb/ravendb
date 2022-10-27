@@ -641,7 +641,6 @@ namespace Voron.Data.Sets
                 // take the left-most pointer on any branch node.
                 var state = _parent.FindSmallestValue();
 
-                //ref var state = ref _parent._stk[_parent._pos];
                 var leafPage = new SetLeafPage(state->Page);
                 _it = leafPage.GetIterator(_parent._llt);
             }
