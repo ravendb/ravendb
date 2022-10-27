@@ -52,11 +52,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             
             if (index.Definition.HasDynamicFields)
             {
-                _dynamicFieldsBuilder = new IndexFieldsMappingBuilder(true, true)
-                    .AddDefaultAnalyzer(knownFields.DefaultAnalyzer)
-                    .AddExactAnalyzer(knownFields.ExactAnalyzer)
-                    .AddSearchAnalyzer(knownFields.SearchAnalyzer);
-                
+                _dynamicFieldsBuilder = IndexFieldsMappingBuilder.CreateForWriter(true);
+                try
+                {
+                    _dynamicFieldsBuilder
+                        .AddDefaultAnalyzer(knownFields.DefaultAnalyzer)
+                        .AddExactAnalyzer(knownFields.ExactAnalyzer)
+                        .AddSearchAnalyzer(knownFields.SearchAnalyzer);
+                }
+                catch
+                {
+                    _dynamicFieldsBuilder.Dispose();
+                    throw;
+                }
                 _indexingScope.DynamicFields ??= new();
                 UpdateDynamicFieldsBindings();
             }

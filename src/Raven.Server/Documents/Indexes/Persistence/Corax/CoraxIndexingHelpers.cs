@@ -92,7 +92,10 @@ public static class CoraxIndexingHelpers
             analyzers.Add(defaultAnalyzerToUse.GetType(), defaultAnalyzerToUse);
         }
 
-        using var mappingBuilder = new IndexFieldsMappingBuilder(forQuerying == false);
+        
+        using var mappingBuilder = forQuerying 
+            ? IndexFieldsMappingBuilder.CreateForReader() 
+            : IndexFieldsMappingBuilder.CreateForWriter(false);
         mappingBuilder.AddDefaultAnalyzer(defaultAnalyzer ?? defaultAnalyzerToUse);
         
         if (indexDefinition.HasDynamicFields)
