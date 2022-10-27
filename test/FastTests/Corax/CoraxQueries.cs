@@ -269,7 +269,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "DoubleItem", ByteStringType.Immutable, out Slice doubleSlice);
             Slice.From(ctx, "TextualItem", ByteStringType.Immutable, out Slice textualSlice);
 
-            using var builder = new IndexFieldsMappingBuilder(true)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IndexId, idSlice)
                 .AddBinding(LongValue, longSlice)
                 .AddBinding(DoubleValue, doubleSlice)

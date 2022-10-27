@@ -33,7 +33,7 @@ public class DynamicFieldsTests : StorageTest
         Slice.From(ctx, "A", ByteStringType.Immutable, out Slice aSlice);
         Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
-        using var builder = new IndexFieldsMappingBuilder(true);
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false);
         using var knownFields = builder.Build();
         IndexEntryWriter writer = new(bsc, knownFields);
         
@@ -55,7 +55,7 @@ public class DynamicFieldsTests : StorageTest
         Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
         // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
-        using IndexFieldsMapping knownFields = new IndexFieldsMappingBuilder(true)
+        using IndexFieldsMapping knownFields = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, aSlice)
             .AddBinding(1, dSlice)
             .Build();
@@ -193,7 +193,7 @@ public class DynamicFieldsTests : StorageTest
         Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
         // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
-        using var builder = new IndexFieldsMappingBuilder(true)
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, aSlice)
             .AddBinding(1, dSlice);
         return builder.Build();

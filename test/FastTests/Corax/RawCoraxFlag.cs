@@ -158,10 +158,10 @@ public class RawCoraxFlag : StorageTest
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
         using var builder = (analyzers
-            ? new IndexFieldsMappingBuilder(true)
+            ? IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IndexId, idSlice, Analyzer.DefaultAnalyzer)
                 .AddBinding(ContentId, contentSlice, LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Lucene.Net.Util.Version.LUCENE_30)))
-            : new IndexFieldsMappingBuilder(true)
+            : IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IndexId, idSlice)
                 .AddBinding(ContentId, contentSlice, fieldIndexingMode: FieldIndexingMode.No));
         

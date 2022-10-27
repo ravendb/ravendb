@@ -30,7 +30,7 @@ public class RavenDB_19283 : StorageTest
 
         // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
 
-        using var builder = new IndexFieldsMappingBuilder(true)
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, idSlice)
             .AddBinding(1, itemsSlice);
         using var knownFields = builder.Build();

@@ -171,7 +171,7 @@ public class DeleteTest : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-        using var builder = new IndexFieldsMappingBuilder(true)
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(IndexId, idSlice)
             .AddBinding(ContentId, contentSlice);
         return builder.Build();

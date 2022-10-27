@@ -38,7 +38,7 @@ public class SpatialTests : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out var idSlice);
         Slice.From(ctx, "Coordinates", ByteStringType.Immutable, out var idCoordinates);
 
-        using var builder = new IndexFieldsMappingBuilder(true)
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(IdIndex, idSlice)
             .AddBinding(CoordinatesIndex, idCoordinates);
         _fieldsMapping = builder.Build();
