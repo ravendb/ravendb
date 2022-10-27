@@ -80,7 +80,7 @@ namespace Voron.Data.CompactTrees
             else
             {
                 // We know we may be forcing the death of a key, but we are doing so because we are 
-                // going to be reclaiming one of them anyways.
+                // going to be reclaiming one of them anyways. 
                 _internalKeyCache2 = key;
             }
         }
@@ -532,6 +532,7 @@ namespace Voron.Data.CompactTrees
             public Page Page;
             public int LastMatch;
             public int LastSearchPosition;
+
             public CompactPageHeader* Header => (CompactPageHeader*)Page.Pointer;
             
             public Span<ushort> EntriesOffsets => new Span<ushort>(Page.Pointer+ PageHeader.SizeOf, Header->NumberOfEntries);
@@ -1813,11 +1814,12 @@ namespace Voron.Data.CompactTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void PushPage(long nextPage, ref IteratorCursorState cstate)
         {
-            if (cstate._pos + 1 >= cstate._stk.Length) //  should never actually happen
+            if (cstate._pos > cstate._stk.Length) //  should never actually happen
                 Array.Resize(ref cstate._stk, cstate._stk.Length * 2); // but let's be safe
 
-            Page page = _llt.GetPage(nextPage);
-            cstate._stk[++cstate._pos] = new CursorState { Page = page, };
+            ref var state = ref cstate._stk[++cstate._pos];
+            state.Page = _llt.GetPage(nextPage);
+
             cstate._len++;
         }
 
