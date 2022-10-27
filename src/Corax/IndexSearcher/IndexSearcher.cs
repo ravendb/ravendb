@@ -76,7 +76,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (fieldsMapping is null)
         {
             _ownsIndexMapping = true;
-            using var builder = new IndexFieldsMappingBuilder(false);
+            using var builder =  IndexFieldsMappingBuilder.CreateForReader();
             _fieldMapping = builder.Build();
         }
         else

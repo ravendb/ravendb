@@ -27,8 +27,12 @@ public class IndexFieldsMappingBuilder : IDisposable
     private int _maximumTokenSize = Constants.Terms.MaxLength;
 
     public int Count => _fields.Count;
+
+    public static IndexFieldsMappingBuilder CreateForWriter(bool isDynamic) => new IndexFieldsMappingBuilder(true, isDynamic);
     
-    public IndexFieldsMappingBuilder(bool isForWriter, bool isDynamic = false)
+    public static IndexFieldsMappingBuilder CreateForReader() => new IndexFieldsMappingBuilder(false, false);
+    
+    private IndexFieldsMappingBuilder(bool isForWriter, bool isDynamic = false)
     {
         _context = new ByteStringContext(SharedMultipleUseFlag.None);
         _fields = new(SliceComparer.Instance);
@@ -92,7 +96,7 @@ public class IndexFieldsMappingBuilder : IDisposable
         }
         else
         {
-            Debug.Assert(analyzer == storedAnalyzer.Analyzer);
+            Debug.Assert(analyzer == storedAnalyzer.Analyzer, $"Field '{fieldName}' no {fieldId} is already added but has different analyzer.");
         }
 
         return this;
