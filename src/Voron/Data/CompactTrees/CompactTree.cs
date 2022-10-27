@@ -73,12 +73,14 @@ namespace Voron.Data.CompactTrees
                 return;
             }
 
-            if (_internalKeyCache2 != null)
+            if (_internalKeyCache1 == null)
             {
                 _internalKeyCache1 = key;
             }
             else
             {
+                // We know we may be forcing the death of a key, but we are doing so because we are 
+                // going to be reclaiming one of them anyways.
                 _internalKeyCache2 = key;
             }
         }
