@@ -105,7 +105,7 @@ namespace FastTests.Corax
             Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(bsc, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            using var builder = new IndexFieldsMappingBuilder(true)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IndexId, idSlice)
                 .AddBinding(ContentId, contentSlice);
             return builder.Build();

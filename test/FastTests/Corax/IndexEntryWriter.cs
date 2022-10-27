@@ -57,7 +57,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
-            using var builder = new IndexFieldsMappingBuilder(true)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                                     .AddBinding(0, aSlice)
                                     .AddBinding(1, bSlice)
                                     .AddBinding(2, cSlice)
@@ -120,7 +120,7 @@ namespace FastTests.Corax
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
 
-            using var builder = new IndexFieldsMappingBuilder(true)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                                     .AddBinding(0, aSlice)
                                     .AddBinding(1, bSlice)
                                     .AddBinding(2, cSlice)
@@ -198,7 +198,7 @@ namespace FastTests.Corax
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
 
-            using var builder = new IndexFieldsMappingBuilder(true)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                                     .AddBinding(0, aSlice)
                                     .AddBinding(1, bSlice)
                                     .AddBinding(2, cSlice)
@@ -310,7 +310,7 @@ namespace FastTests.Corax
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
 
-            using var builder = new IndexFieldsMappingBuilder(true)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                                     .AddBinding(0, aSlice)
                                     .AddBinding(1, bSlice)
                                     .AddBinding(2, cSlice)
@@ -397,7 +397,7 @@ namespace FastTests.Corax
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
 
-            using var builder = new IndexFieldsMappingBuilder(true)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                                     .AddBinding(0, aSlice)
                                     .AddBinding(1, bSlice)
                                     .AddBinding(2, cSlice)

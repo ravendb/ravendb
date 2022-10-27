@@ -38,7 +38,7 @@ public class IndexSearcherTest : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-        using var builder = new IndexFieldsMappingBuilder(true)
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(IdIndex, idSlice, analyzer)
             .AddBinding(ContentIndex, contentSlice, analyzer);
         return builder.Build();
@@ -319,7 +319,7 @@ public class IndexSearcherTest : StorageTest
 
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
-            using var builder = new IndexFieldsMappingBuilder(true)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IdIndex, idSlice)
                 .AddBinding(ContentIndex, contentSlice);
             using var mapping = builder.Build();

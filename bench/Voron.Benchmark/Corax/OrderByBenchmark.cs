@@ -122,7 +122,7 @@ namespace Voron.Benchmark.Corax
             Slice.From(bsc, "Age", ByteStringType.Immutable, out var ageSlice);
             Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
 
-            using var builder = new IndexFieldsMappingBuilder(true)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(0, nameSlice)
                 .AddBinding(1, familySlice)
                 .AddBinding(2, ageSlice)

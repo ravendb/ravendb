@@ -34,7 +34,7 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
     {
         using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         var scope = new SingleEntryWriterScope(allocator);
-        using var builder = new IndexFieldsMappingBuilder(true)
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, "id()")
             .AddBinding(1, "Badges");
         using var knownFields = builder.Build();

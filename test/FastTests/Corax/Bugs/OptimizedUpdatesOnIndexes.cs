@@ -88,7 +88,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
         Slice.From(ctx, "Name", ByteStringType.Immutable, out Slice nameSlice);
         Slice.From(ctx, "Age", ByteStringType.Immutable, out Slice ageSlice);
 
-        var builder = new IndexFieldsMappingBuilder(true)
+        var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, idSlice)
             .AddBinding(1, nameSlice)
             .AddBinding(2, ageSlice);
