@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using Sparrow;
 using Sparrow.Compression;
@@ -118,11 +120,9 @@ namespace Voron.Data.CompactTrees
             private const int MappingTableSize = 64;
             private const int MappingTableMask = MappingTableSize - 1;
 
-            // TODO: Convert this to pointers using the original allocation at the storage scope. 
-            private readonly long[] _keyMappingDictionary = new long[MappingTableSize];
-            private readonly int[] _keyMappingIndex = new int[MappingTableSize];
-
-            private int _keyMappingCurrent;
+            private readonly long* _keyMappingCache;
+            private readonly long* _keyMappingCacheIndex;
+            private int _lastKeyMappingItem;
 
             public long Dictionary { get; private set; }
 
@@ -134,34 +134,16 @@ namespace Voron.Data.CompactTrees
                 Dictionary = Invalid;
                 _currentKeyIdx = Invalid;
                 _decodedKeyIdx = Invalid;
-                _keyMappingCurrent = Invalid;
+                _lastKeyMappingItem = Invalid;
 
-                _storageScope = Owner.Llt.Allocator.Allocate(Constants.CompactTree.MaximumKeySize * 2, out _storage);
-                _currentPtr = _storage.Ptr; 
-                _currentEndPtr = _currentPtr + Constants.CompactTree.MaximumKeySize * 2;
-            }
+                int allocationSize = 2 * Constants.CompactTree.MaximumKeySize + 2 * MappingTableSize * sizeof(long);
 
-            public EncodedKey(EncodedKey key)
-            {
-                // This operation is essentially a simplifier Set where we would just copy
-                // the entire structure of the key through memory copy. This behaves like a
-                // deep clone.
-
-                Owner = key.Owner;
-                Dictionary = key.Dictionary;
-                _currentKeyIdx = key._currentKeyIdx;
-                _decodedKeyIdx = key._decodedKeyIdx;
-                _keyMappingCurrent = key._keyMappingCurrent;
-
-                _storageScope = Owner.Llt.Allocator.Allocate(key._storage.Size, out _storage);
+                _storageScope = Owner.Llt.Allocator.Allocate(allocationSize, out _storage);
                 _currentPtr = _storage.Ptr;
-                long size = (key._currentEndPtr - key._storage.Ptr);
-                _currentEndPtr = _currentPtr + size;
+                _currentEndPtr = _currentPtr + Constants.CompactTree.MaximumKeySize * 2;
 
-                // Copy the key mapping and content.
-                key._keyMappingDictionary.CopyTo(_keyMappingDictionary.AsSpan());
-                key._keyMappingIndex.CopyTo(_keyMappingIndex.AsSpan());
-                Memory.Copy(_storage.Ptr, key._storage.Ptr, size);
+                _keyMappingCache = (long*)_currentEndPtr;
+                _keyMappingCacheIndex = (long*)(_currentEndPtr + MappingTableSize * sizeof(long));
             }
 
             public bool IsValid => Dictionary > 0;
@@ -189,8 +171,8 @@ namespace Voron.Data.CompactTrees
 
                     // We look for an appropriate place to put this key
                     int buckedIdx = SelectBucketForWrite();
-                    _keyMappingDictionary[buckedIdx] = dictionaryId;
-                    _keyMappingIndex[buckedIdx] = (int)(_currentPtr - _storage.Ptr);
+                    _keyMappingCache[buckedIdx] = dictionaryId;
+                    _keyMappingCacheIndex[buckedIdx] = (int)(_currentPtr - _storage.Ptr);
 
                     // We will grow the 
                     var dictionary = Owner.GetEncodingDictionary(dictionaryId);
@@ -224,18 +206,18 @@ namespace Voron.Data.CompactTrees
                     if (bucketIdx == Invalid)
                     {
                         start = EncodeFromDecodedForm();
-                        bucketIdx = _keyMappingCurrent;
+                        bucketIdx = _lastKeyMappingItem;
 
                         // IMPORTANT: Pointers are potentially invalidated by the grow storage call at EncodeFromDecodedForm, be careful here. 
                     }
                     else
                     {
-                        start = _storage.Ptr + _keyMappingIndex[bucketIdx];
+                        start = _storage.Ptr + _keyMappingCacheIndex[bucketIdx];
                     }
 
                     // Because we are decoding for the current dictionary, we will update the lazy index to avoid searching again next time. 
                     if (Dictionary == dictionaryId)
-                        _currentKeyIdx = _keyMappingIndex[bucketIdx];
+                        _currentKeyIdx = (int)_keyMappingCacheIndex[bucketIdx];
                 }
 
 
@@ -257,11 +239,11 @@ namespace Voron.Data.CompactTrees
 
                 long currentDictionary = Dictionary;
                 int currentKeyIdx = _currentKeyIdx;
-                if (currentKeyIdx == Invalid && _keyMappingDictionary[0] != 0)
+                if (currentKeyIdx == Invalid && _keyMappingCache[0] != 0)
                 {
                     // We don't have any decoded version, so we pick the first one and do it. 
-                    currentDictionary = _keyMappingDictionary[0];
-                    currentKeyIdx = _keyMappingIndex[0];
+                    currentDictionary = _keyMappingCache[0];
+                    currentKeyIdx = (int)_keyMappingCacheIndex[0];
                 }
 
                 Debug.Assert(currentKeyIdx != Invalid);
@@ -348,26 +330,40 @@ namespace Voron.Data.CompactTrees
                 Dictionary = key.Dictionary;
                 _currentKeyIdx = key._currentKeyIdx;
                 _decodedKeyIdx = key._decodedKeyIdx;
-                _keyMappingCurrent = key._keyMappingCurrent;
+                _lastKeyMappingItem = key._lastKeyMappingItem;
 
                 var originalSize = (int)(key._currentPtr - key._storage.Ptr);
                 if (originalSize > _storage.Length)
                     UnlikelyGrowStorage(originalSize);
 
                 // Copy the key mapping and content.
-                int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
-                if (elementIdx >= 0)
+                int lastElementIdx = Math.Min(_lastKeyMappingItem, MappingTableSize - 1);
+                if (lastElementIdx >= 0)
                 {
-                    var srcDictionary = key._keyMappingDictionary;
-                    var destDictionary = _keyMappingDictionary;
-                    var srcIndex = key._keyMappingIndex;
-                    var destIndex = _keyMappingIndex;
+                    var srcDictionary = key._keyMappingCache;
+                    var destDictionary = _keyMappingCache;
+                    var srcIndex = key._keyMappingCacheIndex;
+                    var destIndex = _keyMappingCacheIndex;
 
-                    while (elementIdx >= 0)
+                    // PERF: Since we are avoiding the cost of general purpose copying, if we have the vector instruction set we should use it. 
+                    if (Avx.IsSupported)
                     {
-                        destDictionary[elementIdx] = srcDictionary[elementIdx];
-                        destIndex[elementIdx] = srcIndex[elementIdx];
-                        elementIdx--;
+                        int currentElementIdx = 0;
+                        while (currentElementIdx <= lastElementIdx)
+                        {
+                            Avx.Store(_keyMappingCache + currentElementIdx, Avx.LoadDquVector256(key._keyMappingCache + currentElementIdx));
+                            Avx.Store(_keyMappingCacheIndex + currentElementIdx, Avx.LoadDquVector256(key._keyMappingCacheIndex + currentElementIdx));
+                            currentElementIdx += Vector256<long>.Count;
+                        }
+                    }
+                    else
+                    {
+                        while (lastElementIdx >= 0)
+                        {
+                            destDictionary[lastElementIdx] = srcDictionary[lastElementIdx];
+                            destIndex[lastElementIdx] = srcIndex[lastElementIdx];
+                            lastElementIdx--;
+                        }
                     }
                 }
 
@@ -382,17 +378,7 @@ namespace Voron.Data.CompactTrees
                 // This is the operation to set an unencoded key, therefore we need to restart everything.
                 var currentPtr = _storage.Ptr;
 
-                // TODO: This can exploit AVX2 instructions.
-                // Initialize the memory to zero (this ensures the mappings defaults are correct for operation). 
-                int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
-                var mappingDictionary = _keyMappingDictionary;
-                while (elementIdx >= 0)
-                {
-                    mappingDictionary[elementIdx] = 0;
-                    elementIdx--;
-                }
-
-                _keyMappingCurrent = Invalid;
+                _lastKeyMappingItem = Invalid;
 
                 // Since the size is big enough to store the unencoded key, we don't check the remaining size here.
                 _decodedKeyIdx = (int)(currentPtr - (long)_storage.Ptr);
@@ -421,16 +407,7 @@ namespace Voron.Data.CompactTrees
 
             public void Set(ReadOnlySpan<byte> key, long dictionaryId)
             {
-                // TODO: This can exploit AVX2 instructions.
-                // Initialize the memory to zero (this ensures the mappings defaults are correct for operation). 
-                int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
-                while (elementIdx >= 0)
-                {
-                    _keyMappingDictionary[elementIdx] = 0;
-                    elementIdx--;
-                }
-
-                _keyMappingCurrent = Invalid;
+                _lastKeyMappingItem = Invalid;
 
                 // This is the operation to set an unencoded key, therefore we need to restart everything.
                 _currentPtr = _storage.Ptr;
@@ -446,8 +423,8 @@ namespace Voron.Data.CompactTrees
                     int keyLength = key.Length;
                     int n = keyLength + (key[^1] != 0).ToInt32();
                     int bucketIdx = SelectBucketForWrite();
-                    _keyMappingDictionary[bucketIdx] = dictionaryId;
-                    _keyMappingIndex[bucketIdx] = _currentKeyIdx;
+                    _keyMappingCache[bucketIdx] = dictionaryId;
+                    _keyMappingCacheIndex[bucketIdx] = _currentKeyIdx;
 
                     // We write the size and the key. 
                     *(int*)_currentPtr = n;
@@ -464,10 +441,10 @@ namespace Voron.Data.CompactTrees
             private int SelectBucketForRead(long dictionaryId)
             {
                 // TODO: This can exploit AVX2 instructions.
-                int elementIdx = Math.Min(_keyMappingCurrent, MappingTableSize - 1);
+                int elementIdx = Math.Min(_lastKeyMappingItem, MappingTableSize - 1);
                 while (elementIdx >= 0)
                 {
-                    long currentDictionary = _keyMappingDictionary[elementIdx];
+                    long currentDictionary = _keyMappingCache[elementIdx];
                     if (currentDictionary == dictionaryId)
                         return elementIdx;
 
@@ -480,8 +457,8 @@ namespace Voron.Data.CompactTrees
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private int SelectBucketForWrite()
             {
-                _keyMappingCurrent++;
-                return _keyMappingCurrent & MappingTableMask;
+                _lastKeyMappingItem++;
+                return _lastKeyMappingItem & MappingTableMask;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
