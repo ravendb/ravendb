@@ -277,11 +277,11 @@ namespace Sparrow.Compression
             {
                 int bytesReadWhenOverflow;
                 if (typeof(T) == typeof(long) || typeof(T) == typeof(ulong))
-                    bytesReadWhenOverflow = 12;
+                    bytesReadWhenOverflow = 10;
                 else if (typeof(T) == typeof(int) || typeof(T) == typeof(uint))
-                    bytesReadWhenOverflow = 7;
-                else
                     bytesReadWhenOverflow = 5;
+                else
+                    bytesReadWhenOverflow = 3;
 
                 // PERF: We need this for the JIT to understand that this can be profitable. 
                 var buffer = input;
