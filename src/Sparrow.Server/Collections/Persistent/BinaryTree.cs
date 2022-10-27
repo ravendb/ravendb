@@ -50,7 +50,7 @@ namespace Sparrow.Server.Collections.Persistent
         }
 
         private readonly Span<byte> _storage;
-        private readonly Span<Node> Nodes => MemoryMarshal.Cast<byte, Node>(_storage[2..]);
+        private readonly Span<Node> _nodes;
 
         private ushort FreeNodes
         {
@@ -58,15 +58,16 @@ namespace Sparrow.Server.Collections.Persistent
             set { MemoryMarshal.Write(_storage, ref value); }
         }
 
-        public int MaxNodes => Nodes.Length - 1;
-        public int AvailableNodes => Nodes.Length - FreeNodes - 1;
+        public int MaxNodes => _nodes.Length - 1;
+        public int AvailableNodes => _nodes.Length - FreeNodes - 1;
         public int MemoryUsed => (MaxNodes - AvailableNodes) * Unsafe.SizeOf<Node>() + sizeof(ushort);
 
         public BinaryTree(Span<byte> storage)
         {
             _storage = storage;
+            _nodes = MemoryMarshal.Cast<byte, Node>(_storage[2..]);
 
-            if (Nodes.Length > short.MaxValue)
+            if (_nodes.Length > short.MaxValue)
             {
                 // We are going to be using 1 bit from the Left Child
                 // therefore the max amount of nodes available are
@@ -89,15 +90,15 @@ namespace Sparrow.Server.Collections.Persistent
 
         public void Initialize()
         {
-            Nodes[0]._leftChild = Invalid;
-            Nodes[0]._rightChild = Invalid;
+            _nodes[0]._leftChild = Invalid;
+            _nodes[0]._rightChild = Invalid;
 
             FreeNodes = 1;
         }
 
         public void Add(ref BitReader key, T value)
         {
-            Span<Node> nodes = Nodes;
+            Span<Node> nodes = _nodes;
 
             ref Node u = ref nodes[0];
 
@@ -143,7 +144,7 @@ namespace Sparrow.Server.Collections.Persistent
 
         public void Add(uint key, int length, T value)
         {
-            Span<Node> nodes = Nodes;
+            Span<Node> nodes = _nodes;
 
             ref Node u = ref nodes[0];
 
@@ -192,7 +193,7 @@ namespace Sparrow.Server.Collections.Persistent
         }
         public bool Find(ref BitReader key, out T value)
         {
-            Span<Node> nodes = Nodes;
+            Span<Node> nodes = _nodes;
 
             ref Node u = ref nodes[0];
 
@@ -228,7 +229,7 @@ namespace Sparrow.Server.Collections.Persistent
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public readonly int FindCommonPrefix(ref byte key, int length, int currentBit, out T value)
         {
-            ref Node nodeRef = ref MemoryMarshal.GetReference(Nodes);
+            ref Node nodeRef = ref MemoryMarshal.GetReference(_nodes);
 
             // The key length is the current available bytes starting from the current bit.
             int keyLength = length * 8 - currentBit;
@@ -249,7 +250,7 @@ namespace Sparrow.Server.Collections.Persistent
                     // In this way we just need 2 instructions to do so. 
                     var current = currentByte & (0b1000_0000 >> (currentBit % 8));
 
-                    int u = current > 0 ? currentNode.RightChild : currentNode.LeftChild;
+                    int u = current <= 0 ? currentNode.LeftChild : currentNode.RightChild;
                     currentNode = ref Unsafe.AddByteOffset(ref nodeRef, (IntPtr)(u * Unsafe.SizeOf<Node>()));
 
                     keyLength--;
@@ -269,7 +270,7 @@ namespace Sparrow.Server.Collections.Persistent
 
         public readonly bool FindCommonPrefix(ref BitReader key, out T value)
         {
-            Span<Node> nodes = Nodes;
+            Span<Node> nodes = _nodes;
 
             int u = 0;
             while (!nodes[u].HasValue)
