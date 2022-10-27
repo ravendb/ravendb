@@ -101,13 +101,16 @@ namespace Raven.Server.Web.System
 
                 // Validate Database Name
                 DatabaseRecord databaseRecord;
+                ClusterTopology clusterTopology;
                 using (context.OpenReadTransaction())
-                    databaseRecord = ServerStore.Cluster.ReadDatabase(context, dbName, out var index);
-
-                if (databaseRecord == null)
                 {
-                    DatabaseDoesNotExistException.ThrowWithMessage(dbName, $"Database Record was not found when trying to modify database topology");
-                    return;
+                    databaseRecord = ServerStore.Cluster.ReadDatabase(context, dbName, out var index);
+                    if (databaseRecord == null)
+                    {
+                        DatabaseDoesNotExistException.ThrowWithMessage(dbName, $"Database Record was not found when trying to modify database topology");
+                        return;
+                    }
+                    clusterTopology = ServerStore.GetClusterTopology(context);
                 }
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
@@ -121,7 +124,6 @@ namespace Raven.Server.Web.System
                 }
 
                 // Validate Topology
-                var clusterTopology = ServerStore.GetClusterTopology(context);
                 var databaseAllNodes = databaseTopology.AllNodes;
                 foreach (var node in databaseAllNodes)
                 {
