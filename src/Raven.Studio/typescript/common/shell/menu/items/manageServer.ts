@@ -51,7 +51,7 @@ function getManageServerMenuItem() {
             title: 'Server Settings',
             nav: true,
             css: 'icon-server-settings',
-            dynamicHash: appUrl.forGlobalStudioConfiguration,
+            dynamicHash: appUrl.forServerSettings,
             requiredAccess: "ClusterAdmin"
         }),
         new leafMenuItem({

@@ -181,11 +181,11 @@ class appUrl {
     }
 
     static forGlobalStudioConfiguration(): string {
-        return "#admin/settings/serverSettings";
+        return "#admin/settings/studioConfiguration";
     }
 
     static forServerSettings(): string {
-        return "#admin/settings/studioConfiguration";
+        return "#admin/settings/serverSettings";
     }
 
     static forCertificates(): string {
