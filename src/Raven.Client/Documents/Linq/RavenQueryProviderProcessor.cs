@@ -1951,6 +1951,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         else
                         {
+                            if (_insideSelect == 0 && FieldsToFetch.Count > 0)
+                                throw new InvalidOperationException("Projection is already done. You should not project your result twice.");
                             _insideSelect++;
                             VisitSelect(operand);
                             _insideSelect--;
