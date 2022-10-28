@@ -70,6 +70,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes.Debugging;
+using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
@@ -272,6 +273,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(PutIndexResult));
             scripter.AddType(typeof(IndexStats));
+            scripter.AddType(typeof(IndexMergeResults));
             scripter.AddType(typeof(IndexingStatus));
             scripter.AddType(typeof(IndexPerformanceStats));
             scripter.AddType(typeof(IndexDefinition));
