@@ -208,6 +208,9 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         public void FieldsToFetch(IEnumerable<string> fields)
         {
+            if (_provider.IsProjectInto)
+                throw new InvalidOperationException("'ProjectInto' was already called. You can perform this operation only once per query.");
+            
             _provider.IsProjectInto = true;
 
             foreach (var field in fields)
