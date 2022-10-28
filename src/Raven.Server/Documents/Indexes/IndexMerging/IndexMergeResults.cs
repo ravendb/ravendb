@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
         // start MergedIndex != null
         public List<string> CanMerge = new List<string>();  // index names
 
-        public string Collection = String.Empty; // the collection that is being merged
+        public string Collection = string.Empty; // the collection that is being merged
         // end MergedIndex != null
 
         // start MergedIndex == null
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             {
                 [nameof(CanMerge)] = new DynamicJsonArray(CanMerge),
                 [nameof(CanDelete)] = new DynamicJsonArray(CanDelete),
-                [nameof(MergedIndex)] = MergedIndex.ToJson(),
+                [nameof(MergedIndex)] = MergedIndex?.ToJson(),
                 [nameof(Collection)] = Collection,
                 [nameof(SurpassingIndex)] = SurpassingIndex
             };

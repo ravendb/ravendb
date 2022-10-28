@@ -32,6 +32,19 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="bg-info flex-horizontal padding padding-xs" data-bind="visible: indexesToDeleteAfterMerge().length > 0, if: indexesToDeleteAfterMerge().length > 0">
+                <div class="flex-start">
+                    <small class="padding padding-sm"><i class="icon-info"></i></small>
+                </div>
+                <div>
+                    This is a suggestion for a new index that will merge the following indexes: <br /> 
+                    <span data-bind="text: indexesToDeleteAfterMerge().join(', ')"></span>.<br />
+                    Please review the index definition before saving. <br />
+                    After saving, the next dialog will list the original indexes that may be deleted.
+                </div>
+            </div>
+            
             <div class="row margin-top margin-top-lg">
                 <div class="col-sm-2">
                     <h3 class="margin-bottom margin-bottom-xs on-base-background">Index Name</h3>
@@ -792,7 +805,7 @@
 
 <script type="text/html" id="index-history-dialog">
     <button class="btn btn-default dropdown-toggle" type="button" id="dropdownIndexHistory" data-toggle="dropdown"
-            data-bind="click: indexHistoryButtonHandler, attr: { title: isEditingExistingIndex() ? 'View this index history' : 'View the history of the index you cloned from' }">
+            data-bind="click: indexHistoryButtonHandler, attr: { title: isEditingExistingIndex() ? 'View this index history' : 'View the history of the index you cloned from' }, visible: !indexesToDeleteAfterMerge().length">
         <i class="icon-index-history"></i><span>Index History</span>
         <span class="caret"></span>
     </button>

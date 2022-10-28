@@ -39,6 +39,14 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.visualizer
         }),
         new leafMenuItem({
+            route: 'databases/indexes/cleanup',
+            moduleId: require('viewmodels/database/indexes/indexCleanup'),
+            title: 'Index Cleanup',
+            nav: true,
+            css: 'icon-index-cleanup',
+            dynamicHash: appUrls.indexCleanup
+        }),
+        new leafMenuItem({
             route: 'databases/indexes/indexErrors',
             moduleId: require('viewmodels/database/indexes/indexErrors'),
             title: 'Index Errors',
