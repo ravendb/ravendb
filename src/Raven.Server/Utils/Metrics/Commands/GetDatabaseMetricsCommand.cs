@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Utils.Metrics.Commands
 {
-    internal class GetDatabaseMetricsCommand : RavenCommand<BlittableJsonReaderObject>
+    internal class GetDatabaseMetricsCommand : RavenCommand
     {
         private readonly bool _putsOnly;
         private readonly bool _bytesOnly;
@@ -20,6 +20,11 @@ namespace Raven.Server.Utils.Metrics.Commands
         public GetDatabaseMetricsCommand(bool putsOnly = false, bool bytesOnly = false, bool filterEmpty = true) : this (putsOnly, bytesOnly)
         {
             _filterEmpty = filterEmpty;
+        }
+
+        public GetDatabaseMetricsCommand(string nodeTag, bool putsOnly = false, bool bytesOnly = false, bool filterEmpty = true) : this(putsOnly, bytesOnly, filterEmpty)
+        {
+            SelectedNodeTag = nodeTag;
         }
 
         public override bool IsReadRequest => true;

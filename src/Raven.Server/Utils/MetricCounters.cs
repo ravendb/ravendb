@@ -149,6 +149,52 @@ namespace Raven.Server.Utils
                 }
             };
         }
+
+        public DynamicJsonValue ToJsonForGetPuts(bool empty = true)
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Docs)] = new DynamicJsonValue
+                {
+                    [nameof(Docs.PutsPerSec)] = Docs.PutsPerSec.CreateMeterData(true, empty)
+                },
+                [nameof(Attachments)] = new DynamicJsonValue
+                {
+                    [nameof(Attachments.PutsPerSec)] = Attachments.PutsPerSec.CreateMeterData(true, empty)
+                },
+                [nameof(Counters)] = new DynamicJsonValue
+                {
+                    [nameof(Counters.PutsPerSec)] = Counters.PutsPerSec.CreateMeterData(true, empty)
+                },
+                [nameof(TimeSeries)] = new DynamicJsonValue
+                {
+                    [nameof(TimeSeries.PutsPerSec)] = TimeSeries.PutsPerSec.CreateMeterData(true, empty)
+                }
+            };
+        }
+
+        public DynamicJsonValue ToJsonForGetBytes(bool empty = true)
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Docs)] = new DynamicJsonValue
+                {
+                    [nameof(Docs.BytesPutsPerSec)] = Docs.BytesPutsPerSec.CreateMeterData(true, empty)
+                },
+                [nameof(Attachments)] = new DynamicJsonValue
+                {
+                    [nameof(Attachments.BytesPutsPerSec)] = Attachments.BytesPutsPerSec.CreateMeterData(true, empty)
+                },
+                [nameof(Counters)] = new DynamicJsonValue
+                {
+                    [nameof(Counters.BytesPutsPerSec)] = Counters.BytesPutsPerSec.CreateMeterData(true, empty)
+                },
+                [nameof(TimeSeries)] = new DynamicJsonValue
+                {
+                    [nameof(TimeSeries.BytesPutsPerSec)] = TimeSeries.BytesPutsPerSec.CreateMeterData(true, empty)
+                }
+            };
+        }
     }
 
     public static class MetricsExtensions
