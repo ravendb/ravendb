@@ -1,11 +1,11 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
+using Raven.Client.Http;
+using Raven.Server.Utils.Metrics.Commands;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Stats
 {
-    internal abstract class AbstractStatsHandlerProcessorForGetMetrics<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractStatsHandlerProcessorForGetMetrics<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<object, TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
@@ -13,16 +13,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
         {
         }
 
-        protected abstract ValueTask<DynamicJsonValue> GetDatabaseMetricsAsync(JsonOperationContext context);
-
-        public override async ValueTask ExecuteAsync()
-        {
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-            {
-                var metrics = await GetDatabaseMetricsAsync(context);
-                context.Write(writer, metrics);
-            }
-        }
+        protected override RavenCommand CreateCommandForNode(string nodeTag) => new GetDatabaseMetricsCommand(nodeTag);
     }
 }

@@ -1,25 +1,27 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Handlers.Processors.Stats;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
+using Raven.Server.Web.Http;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats
 {
-    internal class ShardedStatsHandlerProcessorForGetMetricsPuts : AbstractStatsHandlerProcessorForGetMetrics<ShardedDatabaseRequestHandler, TransactionOperationContext>
+    internal class ShardedStatsHandlerProcessorForGetMetricsPuts : AbstractStatsHandlerProcessorForGetMetricsPuts<ShardedDatabaseRequestHandler, TransactionOperationContext>
     {
         public ShardedStatsHandlerProcessorForGetMetricsPuts([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
-        protected override async ValueTask<DynamicJsonValue> GetDatabaseMetricsAsync(JsonOperationContext context)
+        protected override bool SupportsCurrentNode => false;
+
+        protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
+
+        protected override Task HandleRemoteNodeAsync(ProxyCommand<object> command, OperationCancelToken token)
         {
-            using (var token = RequestHandler.CreateOperationToken())
-            {
-                var metrics = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(new ShardedStatsHandlerProcessorForGetMetrics.GetShardedDatabaseMetricsOperation(RequestHandler, context, puts: true, bytes: null), token.Token);
-                return metrics;
-            }
+            var shardNumber = GetShardNumber();
+            return RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token);
         }
     }
 }
