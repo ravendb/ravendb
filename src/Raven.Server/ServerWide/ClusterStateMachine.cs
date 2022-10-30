@@ -423,6 +423,9 @@ namespace Raven.Server.ServerWide
                     case nameof(PutAnalyzersCommand):
                     case nameof(DeleteAnalyzerCommand):
                     case nameof(PutIndexCommand):
+                    case nameof(PutDatabaseStudioConfigurationCommand):
+                    case nameof(PutDatabaseSettingsCommand):
+                    case nameof(PutDatabaseClientConfigurationCommand):
                     case nameof(PutIndexesCommand):
                     case nameof(PutAutoIndexCommand):
                     case nameof(PutRollingIndexCommand):
@@ -2477,6 +2480,9 @@ namespace Raven.Server.ServerWide
                 case nameof(RemoveElasticSearchConnectionStringCommand):
                 case nameof(RemoveQueueConnectionStringCommand):
                 case nameof(PutIndexCommand):
+                case nameof(PutDatabaseStudioConfigurationCommand):
+                case nameof(PutDatabaseSettingsCommand):
+                case nameof(PutDatabaseClientConfigurationCommand):
                 case nameof(PutAutoIndexCommand):
                 case nameof(DeleteIndexCommand):
                 case nameof(SetIndexLockCommand):

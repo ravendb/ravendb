@@ -153,6 +153,9 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateQueueEtlCommand)] = 54_000,
             [nameof(PutQueueConnectionStringCommand)] = 54_000,
             [nameof(RemoveQueueConnectionStringCommand)] = 54_000,
+            [nameof(PutDatabaseStudioConfigurationCommand)] = 54_000,
+            [nameof(PutDatabaseSettingsCommand)] = 54_000,
+            [nameof(PutDatabaseClientConfigurationCommand)] = 54_000,
         };
 
         public static bool CanPutCommand(string command)
