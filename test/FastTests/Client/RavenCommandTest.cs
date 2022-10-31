@@ -44,7 +44,7 @@ namespace FastTests.Client
                 "DeleteDocumentCommand", "DeleteIndexCommand", "DeleteServerWideBackupConfigurationCommand", "DeleteSorterCommand", "DeleteSubscriptionCommand",
                 "DemoteClusterNodeCommand", "DisableIndexCommand", "DropSubscriptionConnectionCommand", "EditClientCertificateCommand",
                 "EnableIndexCommand", "ExportCommand", "HiLoReturnCommand", "ImportCommand", "KillOperationCommand", "PromoteClusterNodeCommand",
-                "PutClientCertificateCommand", "PutDatabaseClientConfigurationCommand", "PutSecretKeyCommand", "PutSortersCommand", "RemoveClusterNodeCommand",
+                "PutClientCertificateCommand", "PutClientConfigurationCommand", "PutSecretKeyCommand", "PutSortersCommand", "RemoveClusterNodeCommand",
                 "ReorderDatabaseMembersCommand", "ReplaceClusterCertificateCommand", "ResetEtlCommand", "ResetIndexCommand", "SetDatabaseDynamicDistributionCommand",
                 "SetIndexLockCommand", "SetIndexPriorityCommand", "SetLogsConfigurationCommand", "StartIndexCommand", "StartIndexingCommand",
                 "StartTransactionsRecordingCommand", "StopIndexCommand", "StopIndexingCommand", "StopTransactionsRecordingCommand",
@@ -62,7 +62,8 @@ namespace FastTests.Client
                 "SetDatabasesLockCommand",
                 "GetDatabaseSettingsCommand", "PutDatabaseConfigurationSettingsCommand", "ConfigurePostgreSqlCommand",
                 "GetTrafficWatchConfigurationCommand", "SetTrafficWatchConfigurationCommand",
-                "GetNextServerOperationIdCommand", "KillServerOperationCommand", "ModifyDatabaseTopologyCommand"
+                "GetNextServerOperationIdCommand", "KillServerOperationCommand", "ModifyDatabaseTopologyCommand",
+                "PutDatabaseClientConfigurationCommand", "PutDatabaseSettingsCommand", "PutDatabaseStudioConfigurationCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);

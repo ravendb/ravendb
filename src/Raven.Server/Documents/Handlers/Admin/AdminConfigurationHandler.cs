@@ -5,7 +5,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using MySqlX.XDevAPI;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
@@ -18,7 +17,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using static Raven.Server.Documents.TransactionCommands.JsonPatchCommand;
 using ConfigurationEntryScope = Raven.Server.Config.Attributes.ConfigurationEntryScope;
 
 namespace Raven.Server.Documents.Handlers.Admin
@@ -94,7 +92,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 var databaseSettingsJson = await context.ReadForDiskAsync(RequestBodyStream(), Constants.DatabaseSettings.StudioId);
 
-                Dictionary<string, string> settings = new Dictionary<string, string>();
+                var settings = new Dictionary<string, string>();
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
 
                 for (int i = 0; i < databaseSettingsJson.Count; i++)
@@ -192,22 +190,5 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        private async Task UpdateDatabaseRecord(TransactionOperationContext context, Action<DatabaseRecord, long> action, string raftRequestId)
-        {
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
-            if (action == null)
-                throw new ArgumentNullException(nameof(action));
-
-            using (context.OpenReadTransaction())
-            {
-                var record = ServerStore.Cluster.ReadDatabase(context, Database.Name, out long index);
-
-                action(record, index);
-
-                var result = await ServerStore.WriteDatabaseRecordAsync(Database.Name, record, index, raftRequestId);
-                await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, ServerStore.Engine.OperationTimeout);
-            }
-        }
     }
 }
