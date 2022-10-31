@@ -49,6 +49,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         }
     }
 
+    // fromBucket, toBucket, scale
     public static IEnumerable<BucketStatistics> GetBucketStatistics(DocumentsOperationContext context, int start, int take = int.MaxValue)
     {
         var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsSlice);
