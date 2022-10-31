@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
-using NuGet.ContentModel;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents;

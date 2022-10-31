@@ -87,7 +87,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/topology/modify", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/databases/topology/modify", "POST", AuthorizationStatus.Operator)]
         public async Task ModifyTopology()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
@@ -144,8 +144,6 @@ namespace Raven.Server.Web.System
                 };
 
                 var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);
-
-                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
                 // Return Raft Index
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

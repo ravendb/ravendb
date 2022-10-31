@@ -44,7 +44,7 @@ namespace Raven.Client.ServerWide.Operations
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/topology/modify?name={_databaseName}";
+                url = $"{node.Url}/admin/databases/topology/modify?name={_databaseName}";
 
                 var topologyDocument = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_databaseTopology, ctx);
 
