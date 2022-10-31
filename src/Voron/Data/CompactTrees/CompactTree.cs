@@ -563,25 +563,12 @@ namespace Voron.Data.CompactTrees
                 int total = 0;
                 for (int i = 0; i < Header->NumberOfEntries; i++)
                 {
-                    total += GetEncodedEntry(Page, EntriesOffsets[i], out var key, out var l);
+                    total += tree.GetEncodedEntry(Page, EntriesOffsets[i], out var key, out var l);
 
                     var decodedKey = tempBuffer;
                     dictionary.Decode(key, ref decodedKey);
 
                     sb.AppendLine($" - {Encoding.UTF8.GetString(decodedKey)} - {l}");
-                }
-                sb.AppendLine($"---- size:{total} ----");
-                return sb.ToString();
-            }
-
-            public string DumpRawPageDebug()
-            {
-                var sb = new StringBuilder();
-                int total = 0;
-                for (int i = 0; i < Header->NumberOfEntries; i++)
-                {
-                    total += GetEncodedEntry(Page, EntriesOffsets[i], out var key, out var l);
-                    sb.AppendLine($" - {Encoding.UTF8.GetString(key)} - {l}");
                 }
                 sb.AppendLine($"---- size:{total} ----");
                 return sb.ToString();
@@ -1917,12 +1904,34 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        internal static int GetEncodedEntry(Page page, ushort entryOffset, out Span<byte> key, out long value)
+        internal int GetEncodedEntry(Page page, ushort entryOffset, out Span<byte> key, out long value)
         {
             if(entryOffset < PageHeader.SizeOf)
                 throw new ArgumentOutOfRangeException();
             byte* entryPos = page.Pointer + entryOffset;
-            var keyLen = VariableSizeEncoding.Read<int>(entryPos, out var lenOfKeyLen);
+
+            int keyLen;
+            int lenOfKeyLen;
+            if (entryPos[0] < 0x80)
+            {
+                keyLen = entryPos[0];
+                lenOfKeyLen = 1;
+            }
+            else if (entryPos[1] < 0x80)
+            {
+                keyLen = (entryPos[0] & 0x7F) | (entryPos[1] << 7);
+                lenOfKeyLen = 2;
+            }
+            else
+            {
+                int GetEncodedEntryUnlikely(byte* p, out int length)
+                {
+                    return VariableSizeEncoding.Read<int>(p, out length);
+                }
+
+                keyLen = GetEncodedEntryUnlikely(entryPos, out lenOfKeyLen);
+            }
+
             key = new Span<byte>(entryPos + lenOfKeyLen, keyLen);
             entryPos += keyLen + lenOfKeyLen;
             value = ZigZagEncoding.Decode<long>(entryPos, out var valLen);
@@ -1960,7 +1969,7 @@ namespace Voron.Data.CompactTrees
 
         internal static bool GetEntry(CompactTree tree, Page page, ushort entriesOffset, out Span<byte> encodedKeyStream, out long value)
         {
-            GetEncodedEntry(page, entriesOffset, out encodedKeyStream, out value);
+            tree.GetEncodedEntry(page, entriesOffset, out encodedKeyStream, out value);
             if (encodedKeyStream.Length == 0)
                 return false;
 
