@@ -93,7 +93,6 @@ namespace Voron.Impl
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
         // END: Structures that are safe to pool.
 
-
         public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
 
         public event Action<LowLevelTransaction> LastChanceToReadFromWriteTransactionBeforeCommit;

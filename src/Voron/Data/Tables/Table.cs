@@ -614,12 +614,13 @@ namespace Voron.Data.Tables
                 var indexTree = GetTree(dynamicKeyIndexDef);
                 using (dynamicKeyIndexDef.GetValue(_tx.Allocator, ref value, out Slice val))
                 {
+                    dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldSize: value.Size, newSize: 0);
+
                     var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
                     if (fst.Delete(id).NumberOfEntriesDeleted == 0)
                     {
                         ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, dynamicKeyIndexDef.Name);
                     }
-                    dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldSize: value.Size, newSize: 0);
                 }
             }
 

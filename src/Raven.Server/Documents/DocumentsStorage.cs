@@ -2578,20 +2578,27 @@ namespace Raven.Server.Documents
         // TODO : use a dedicated attribute
         internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, int oldSize, int newSize)
         {
-            UpdateBucketStats(tx, key, oldSize, newSize, isDocument: true);
+            int numOfDocsChanged = 0;
+            if (oldSize == 0)
+                numOfDocsChanged = 1;
+            else if (newSize == 0)
+                numOfDocsChanged = -1;
+
+            UpdateBucketStats(tx, key, oldSize, newSize, numOfDocsChanged);
         }
 
         internal static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize)
         {
-            UpdateBucketStats(tx, key, oldSize, newSize, isDocument: false);
+            UpdateBucketStats(tx, key, oldSize, newSize, numOfDocsChanged: 0);
         }
 
-        private static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize, bool isDocument)
+        private static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize, int numOfDocsChanged)
         {
             var nowTicks = DateTime.UtcNow.Ticks;
             var bucket = *(int*)key.Content.Ptr;
 
-            if (tx.BucketStatistics.TryGetValue(bucket, out var bucketStats) == false)
+            tx.BucketStatistics.TryGetValue(bucket, out var bucketStats);
+            /*if (tx.BucketStatistics.TryGetValue(bucket, out var bucketStats) == false)
             {
                 var bucketStatsTree = tx.ReadTree(BucketStatsSlice);
 
@@ -2604,18 +2611,10 @@ namespace Raven.Server.Documents
                     if (readResult != null)
                         bucketStats = *(Voron.Data.BucketStats*)readResult.Reader.Base;
                 }
-            }
+            }*/
 
             bucketStats.Size += newSize - oldSize;
-
-            if (isDocument)
-            {
-                if (oldSize == 0)
-                    bucketStats.NumberOfDocuments++;
-                else if (newSize == 0)
-                    bucketStats.NumberOfDocuments--;
-            }
-
+            bucketStats.NumberOfDocuments += numOfDocsChanged;
             bucketStats.LastModifiedTicks = nowTicks;
 
             tx.BucketStatistics[bucket] = bucketStats;
