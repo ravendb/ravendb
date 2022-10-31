@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Exceptions.Sharding;
+using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Streaming;
@@ -44,6 +44,15 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         var idsByShard = ShardLocator.GetDocumentIdsByShards(context, RequestHandler.DatabaseContext, ids);
         var op = new FetchDocumentsFromShardsOperation(context, RequestHandler, idsByShard, includePaths, revisions, counters, timeSeries, compareExchangeValuesAsArray, etag, metadataOnly);
         var shardedReadResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(idsByShard.Keys.ToArray(), op, CancellationToken);
+
+        if (ids.Count == 1 && shardedReadResult.Result?.Documents.Count == 0)
+        {
+            return new DocumentsByIdResult<BlittableJsonReaderObject>
+            {
+                StatusCode = HttpStatusCode.NotFound,
+                Etag = HttpCache.NotFoundResponse
+            };
+        }
 
         var result = new DocumentsByIdResult<BlittableJsonReaderObject>
         {
