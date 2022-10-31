@@ -462,7 +462,7 @@ namespace Raven.Server.Web.System
                         OperationId = operationId,
                         BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),
                         IsFullBackup = true,
-                        TempBackupPath = (Database.Configuration.Storage.TempPath ?? Database.Configuration.Core.DataDirectory).Combine("OneTimeBackupTemp"),
+                        TempBackupPath = BackupUtils.GetBackupTempPath(Database.Configuration, "OneTimeBackupTemp"),
                         Name = backupName
                     };
 
