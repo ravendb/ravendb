@@ -31,7 +31,6 @@ namespace SlowTests.Issues
                         MaxNumberOfRequestsPerSession = 30
                     }));
 
-            //In the origin case the update topology trigger by the watcher
             var updateTopology = store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, fixedOrder, true));
 
             await Task.WhenAll(updateClientConfig, updateTopology);
