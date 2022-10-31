@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Amqp.Framing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Extensions;
@@ -15,7 +14,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class PutDatabaseSettingsCommand : UpdateDatabaseCommand
     {
-        public Dictionary<string, string> Settings;
+        public Dictionary<string, string> Configuration;
 
         public PutDatabaseSettingsCommand()
         {
@@ -24,17 +23,17 @@ namespace Raven.Server.ServerWide.Commands
 
         public PutDatabaseSettingsCommand(Dictionary<string, string> settings, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
-            Settings = settings;
+            Configuration = settings;
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Settings)] = TypeConverter.ToBlittableSupportedType(Settings);
+            json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.Settings = Settings;
+            record.Settings = Configuration;
         }
     }
 }
