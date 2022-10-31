@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Handlers
 
         public static async Task WaitForIndexesAsync(DocumentsContextPool contextPool, DocumentDatabase database, TimeSpan timeout,
             List<string> specifiedIndexesQueryString, bool throwOnTimeout,
-            string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections)
+            string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections, long lastDocumentEtag = -1)
         {
             // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
             // waitForSpecificIndex=specific index1 & waitForSpecificIndex=specific index 2
@@ -390,6 +390,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             var lastEtag = lastChangeVector != null ? ChangeVectorUtils.GetEtagById(lastChangeVector, database.DbBase64Id) : 0;
+            lastEtag = Math.Max(lastEtag, lastDocumentEtag);
             var cutoffEtag = Math.Max(lastEtag, lastTombstoneEtag);
 
             while (true)
@@ -504,7 +505,9 @@ namespace Raven.Server.Documents.Handlers
             protected readonly DocumentDatabase Database;
             public HashSet<string> ModifiedCollections;
             public string LastChangeVector;
+            
             public long LastTombstoneEtag;
+            public long LastDocumentEtag;
 
             public DynamicJsonArray Reply = new DynamicJsonArray();
 
@@ -516,6 +519,7 @@ namespace Raven.Server.Documents.Handlers
             protected void AddPutResult(DocumentsStorage.PutOperationResults putResult)
             {
                 LastChangeVector = putResult.ChangeVector;
+                LastDocumentEtag = putResult.Etag;
                 ModifiedCollections?.Add(putResult.Collection.Name);
 
                 // Make sure all the metadata fields are always been add
