@@ -2029,9 +2029,12 @@ namespace Voron.Data.CompactTrees
                 encodedKeyLength = GetEncodedKeyPtr(state.Page, @base[bot + mid], out encodedKeyPtr);
 
                 match = AdvMemory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
-                match = match == 0 ? keyLength - encodedKeyLength : match;
                 if (match >= 0)
+                {
                     bot += mid;
+                    if (match == 0)
+                        goto IsMatch;
+                }
 
                 top -= mid;
             }
@@ -2039,6 +2042,8 @@ namespace Voron.Data.CompactTrees
             encodedKeyLength = GetEncodedKeyPtr(state.Page, @base[bot], out encodedKeyPtr);
             
             match = AdvMemory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
+
+            IsMatch:
             match = match == 0 ? keyLength - encodedKeyLength : match;
             if (match == 0)
             {
