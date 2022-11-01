@@ -175,8 +175,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             || binding.FieldIndexingMode is FieldIndexingMode.Exact
             || binding.Analyzer is null)
         {
-            var disposable = Slice.From(Allocator, originalTerm, ByteStringType.Immutable, out var originalTermSliced);
-            value = originalTermSliced;
+            var disposable = Allocator.AllocateDirect(originalTerm.Length, ByteStringType.Immutable, out var originalTermSliced);
+            originalTerm.CopyTo(new Span<byte>(originalTermSliced._pointer->Ptr, originalTerm.Length));
+
+            value = new Slice(originalTermSliced);
             return disposable;
         }
 

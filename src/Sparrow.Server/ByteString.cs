@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -924,7 +924,31 @@ namespace Sparrow.Server
 
             // We will allocate also allocating a segment. 
             output = AllocateInternalUnlikely(length, allocationUnit, ByteStringType.Mutable);
-            return new InternalScope(this, output); 
+            return new InternalScope(this, output);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public InternalScope AllocateDirect(int length, ByteStringType type, out ByteString output)
+        {
+            // PERF: The difference between the normal allocate and direct is that we will get 
+            // the memory straight from the top of the stack without reuse. This is useful for 
+            // cases where the memory throughput and the size of the allocation is so high-frequency
+            // that even looking for memory to reuse can dominate the actual operation cost.
+            // We will allocate from the current segment.
+            int allocationSize = length + sizeof(ByteStringStorage);
+            int allocationUnit = Bits.PowerOf2(allocationSize);
+            if (allocationUnit <= _internalCurrent.SizeLeft)
+            {
+                var byteString = Create(_internalCurrent.Current, length, allocationUnit, type);
+                _internalCurrent.Current += byteString._pointer->Size;
+
+                output = byteString;
+                return new InternalScope(this, output);
+            }
+
+            // We will allocate also allocating a segment. 
+            output = AllocateInternalUnlikely(length, allocationUnit, type);
+            return new InternalScope(this, output);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1442,14 +1466,14 @@ namespace Sparrow.Server
 
             var byteCount = Encodings.Utf8.GetMaxByteCount(value.Length) + 1;
             str = AllocateInternal(byteCount, type);
-            fixed (char* ptr = value)
-            {
-                int length = Encodings.Utf8.GetBytes(ptr, value.Length, str.Ptr, byteCount);
 
-                *(str.Ptr + length) = endSeparator;
-                // We can do this because it is internal. See if it makes sense to actually give this ability. 
-                str._pointer->Length = length + 1;
-            }
+            // PERF: By avoiding having to request fixing the value object, we improve the performance.
+            int length = Encodings.Utf8.GetBytes(value, new Span<byte>(str.Ptr, byteCount));
+
+            *(str.Ptr + length) = endSeparator;
+
+            // We can do this because it is internal. See if it makes sense to actually give this ability. 
+            str._pointer->Length = length + 1;
 
             RegisterForValidation(str);
             return new InternalScope(this, str);
@@ -1499,10 +1523,7 @@ namespace Sparrow.Server
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
             str = AllocateInternal(count, type);
-            fixed (byte* ptr = value)
-            {
-                Memory.Copy(str._pointer->Ptr, ptr + offset, count);
-            }
+            value.Slice(offset, count).CopyTo(new Span<byte>(str._pointer->Ptr, count));
 
             RegisterForValidation(str);
             return new InternalScope(this, str);
