@@ -60,7 +60,7 @@ namespace Voron.Data.CompactTrees
                 while (true)
                 {
                     Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
-                    if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
+                    if (state.LastSearchPosition < state.Header->NumberOfEntries && state.LastSearchPosition >= 0) // same page
                     {
                         GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[state.LastSearchPosition], out key, out value);
                         state.LastSearchPosition++;                        

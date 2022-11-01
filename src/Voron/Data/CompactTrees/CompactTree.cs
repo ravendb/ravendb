@@ -1634,17 +1634,12 @@ namespace Voron.Data.CompactTrees
 
             Debug.Assert(state.Header->FreeSpace == (state.Header->Upper - state.Header->Lower));
 
-            InsertToStack(new CursorState
-            {
-                Page = page,
-                LastMatch = state.LastMatch,
-                LastSearchPosition = state.LastSearchPosition
-            });
+            InsertToStack(state with { Page = page });
             state.LastMatch = -1;
             state.LastSearchPosition = 0;
         }
 
-        private void InsertToStack(CursorState newPageState)
+        private void InsertToStack(in CursorState newPageState)
         {
             // insert entry and shift other elements
             if (_internalCursor._len + 1 >= _internalCursor._stk.Length)// should never happen
@@ -1920,10 +1915,10 @@ namespace Voron.Data.CompactTrees
         {
             if(entryOffset < PageHeader.SizeOf)
                 throw new ArgumentOutOfRangeException();
-            byte* entryPos = page.Pointer + entryOffset;
 
             int keyLen;
             int lenOfKeyLen;
+            byte* entryPos = page.Pointer + entryOffset;
             if (entryPos[0] < 0x80)
             {
                 keyLen = entryPos[0];

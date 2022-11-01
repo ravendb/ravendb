@@ -82,9 +82,12 @@ unsafe partial class CompactTree
 
         _ = GetEncodedEntry(current.Page, current.EntriesOffsets[0], out var lastEncodedKey, out var l);
 
-
         Span<byte> lastDecodedKey = new byte[dictionary.GetMaxDecodingBytes(lastEncodedKey.Length)];
-        dictionary.Decode(lastEncodedKey, ref lastDecodedKey);
+
+        if (lastEncodedKey.Length != 0)
+        {
+            dictionary.Decode(lastEncodedKey, ref lastDecodedKey);
+        }
 
         for (int i = 1; i < current.Header->NumberOfEntries; i++)
         {

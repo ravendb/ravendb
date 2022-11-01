@@ -325,8 +325,8 @@ namespace Voron.Debugging
             for (int i = 0; i < header->NumberOfEntries; i++)
             {
                 CompactTree.GetEntry(tree, page, entries[i], out var key, out var val);
-                string keyText = Encoding.UTF8.GetString(key);
-
+                string keyText = key.Length != 0 ? Encoding.UTF8.GetString(key) : "---first---";
+                
                 if (header->PageFlags.HasFlag(CompactPageFlags.Leaf))
                 {
                     sw.Write($"<li>{keyText} {val}</li>");
