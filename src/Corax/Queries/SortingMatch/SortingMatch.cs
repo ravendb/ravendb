@@ -186,7 +186,7 @@ namespace Corax.Queries
                 bMatchesScores.Fill(1);
                 match._inner.Score(matchesSpan[totalMatches..temporaryTotalMatches], bMatchesScores);
 
-                if (temporaryTotalMatches > 3 * matches.Length && !isSorted)
+                if (temporaryTotalMatches > 3 * matches.Length)
                 {
                     // We need to first sort by match to remove the duplicates.
                     temporaryTotalMatches = Sorting.SortAndRemoveDuplicates(matchesSpanPtr, scoresSpanPtr, temporaryTotalMatches);

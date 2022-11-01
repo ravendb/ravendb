@@ -1815,6 +1815,9 @@ namespace Voron.Data.CompactTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private PersistentDictionary GetEncodingDictionary(long dictionaryId)
         {
+            // PERF: Since this call is very unlikely we are explicitly preventing the JIT to inline this method in order
+            // to shrink the size of the generated code, which helps to generate even more efficient at the call site. 
+            [MethodImpl(MethodImplOptions.NoInlining)]
             PersistentDictionary GetEncodingDictionaryUnlikely()
             {
                 _llt.PersistentDictionariesForCompactTrees ??= new Dictionary<long, PersistentDictionary>();
@@ -1846,6 +1849,9 @@ namespace Voron.Data.CompactTrees
                 return *entryPos;
             }
 
+            // PERF: Since this call is very unlikely we are explicitly preventing the JIT to inline this method in order
+            // to shrink the size of the generated code, which helps to generate even more efficient at the call site. 
+            [MethodImpl(MethodImplOptions.NoInlining)]
             int EncodedKeyPtrUnlikely(out byte* encodedKey)
             {
                 var keyLen = VariableSizeEncoding.Read<ushort>(entryPos, out var lenOfKeyLen);
@@ -1865,6 +1871,9 @@ namespace Voron.Data.CompactTrees
 
             return GetEncodedKeyUnlikely();
 
+            // PERF: Since this call is very unlikely we are explicitly preventing the JIT to inline this method in order
+            // to shrink the size of the generated code, which helps to generate even more efficient at the call site. 
+            [MethodImpl(MethodImplOptions.NoInlining)]
             ReadOnlySpan<byte> GetEncodedKeyUnlikely()
             {
                 var keyLen = VariableSizeEncoding.Read<ushort>(entryPos, out var lenOfKeyLen);
@@ -1894,6 +1903,9 @@ namespace Voron.Data.CompactTrees
             }
             else
             {
+                // PERF: Since this call is very unlikely we are explicitly preventing the JIT to inline this method in order
+                // to shrink the size of the generated code, which helps to generate even more efficient at the call site. 
+                [MethodImpl(MethodImplOptions.NoInlining)]
                 byte* GetValuePointerUnlikely(byte* p)
                 {
                     var keyLen = VariableSizeEncoding.Read<int>(p, out var lenKeyLen);
@@ -1924,6 +1936,9 @@ namespace Voron.Data.CompactTrees
             }
             else
             {
+                // PERF: Since this call is very unlikely we are explicitly preventing the JIT to inline this method in order
+                // to shrink the size of the generated code, which helps to generate even more efficient at the call site. 
+                [MethodImpl(MethodImplOptions.NoInlining)]
                 int GetEncodedEntryUnlikely(byte* p, out int length)
                 {
                     return VariableSizeEncoding.Read<int>(p, out length);
@@ -1977,8 +1992,8 @@ namespace Voron.Data.CompactTrees
             scope.Key.Set(encodedKeyStream, ((CompactPageHeader*)page.Pointer)->DictionaryId);
 
             var actualKeyPtr = scope.Key.DecodedPtr(out int length);
-            tree.Llt.Allocator.Allocate(length, out var output);
-            Memory.Copy(output.Ptr, actualKeyPtr, length);
+            tree.Llt.Allocator.AllocateDirect(length, out var output);
+            Unsafe.CopyBlockUnaligned(output.Ptr, actualKeyPtr, (uint)length);
             
             var outputSpan = output.ToSpan();
             encodedKeyStream = outputSpan[^1] == 0 ? outputSpan[..^1] : outputSpan;
