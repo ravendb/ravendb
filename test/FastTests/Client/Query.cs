@@ -242,7 +242,7 @@ namespace FastTests.Client
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public void Query_With_Where_Clause(Options options)
+        public void StringComparisonStringOrdinalWorks(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -305,6 +305,31 @@ namespace FastTests.Client
                         .Where(x => x.Name.EndsWith("N", StringComparison.InvariantCulture))
                         .ToList();
                     Assert.Equal(queryResult.Count, 0);
+                }
+            }
+        }
+        
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StringComparisonStringCompareOrdinalWorks(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new User { Name = "John" }, "users/1");
+                    newSession.Store(new User { Name = "john" }, "users/2");
+                    newSession.Store(new User { Name = "Jane" }, "users/3");
+                    newSession.Store(new User { Name = "jane" }, "users/4");
+                    newSession.Store(new User { Name = "Tarzan" }, "users/5");
+                    newSession.Store(new User { Name = "tarzan" }, "users/6");
+                    newSession.SaveChanges();
+                    
+
+                    var queryResult = newSession.Query<User>()
+                        .Where(x => string.Compare(x.Name, "tarzan", StringComparison.Ordinal) == 0);
+                    Assert.Equal("from 'Users' where exact(Name = $p0)", queryResult.ToString());
+                    Assert.Equal(queryResult.Count(), 1);
                 }
             }
         }
