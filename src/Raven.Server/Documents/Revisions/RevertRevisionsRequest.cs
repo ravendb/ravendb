@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using Amqp.Types;
 
 namespace Raven.Server.Documents.Revisions
 {

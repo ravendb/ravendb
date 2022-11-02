@@ -193,10 +193,6 @@ namespace SlowTests.Server.Documents.Revisions
 
                 WaitForUserToContinueTheTest(store);
 
-                // Assert.Equal(2, result.ScannedRevisions);
-                // Assert.Equal(1, result.ScannedDocuments);
-                // Assert.Equal(1, result.RevertedDocuments);
-
                 using (var session = store.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
@@ -255,10 +251,6 @@ namespace SlowTests.Server.Documents.Revisions
                     result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
                         collections, token);
                 }
-
-                // Assert.Equal(4, result.ScannedRevisions);
-                // Assert.Equal(2, result.ScannedDocuments);
-                // Assert.Equal(2, result.RevertedDocuments);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -331,10 +323,6 @@ namespace SlowTests.Server.Documents.Revisions
                     result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
                         collections, token);
                 }
-
-                // Assert.Equal(5, result.ScannedRevisions);
-                // Assert.Equal(2, result.ScannedDocuments);
-                // Assert.Equal(2, result.RevertedDocuments);
 
                 using (var session = store.OpenAsyncSession())
                 {

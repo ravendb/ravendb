@@ -1469,7 +1469,7 @@ namespace Raven.Server.Documents.Revisions
             if (collections == null) // revert all collections
             {
                 var list = new List<Document>();
-                await ActualRevert(list, null);
+                await RevertRevisionsInternal(list, collection: null, before, minimalDate, etagBarrier, onProgress, result, token);
             }
             else
             {
@@ -1489,36 +1489,36 @@ namespace Raven.Server.Documents.Revisions
                         continue;
                     }
 
-                    await ActualRevert(list, collection);
+                    await RevertRevisionsInternal(list, collection, before, minimalDate, etagBarrier, onProgress, result, token);
                 }
             }
 
             return result;
+        }
 
-            async Task ActualRevert(List<Document> list, string collection)
+        private async Task RevertRevisionsInternal(List<Document> list, string collection, DateTime before, DateTime minimalDate, long etagBarrier, Action<IOperationProgress> onProgress, RevertResult result, OperationCancelToken token)
+        {
+            var parameters = new Parameters
             {
-                var parameters = new Parameters
+                Before = before,
+                MinimalDate = minimalDate,
+                EtagBarrier = etagBarrier,
+                OnProgress = onProgress,
+                LastScannedEtag = etagBarrier
+            };
+
+            // send initial progress
+            parameters.OnProgress?.Invoke(result);
+
+            var hasMore = true;
+            while (hasMore)
+            {
+                token.Delay();
+
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
                 {
-                    Before = before,
-                    MinimalDate = minimalDate,
-                    EtagBarrier = etagBarrier,
-                    OnProgress = onProgress,
-                    LastScannedEtag = etagBarrier
-                };
-
-                // send initial progress
-                parameters.OnProgress?.Invoke(result);
-
-                var hasMore = true;
-                while (hasMore)
-                {
-                    token.Delay();
-
-                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
-                    {
-                        hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, collection, token);
-                        await WriteRevertedRevisions(list, token);
-                    }
+                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, collection, token);
+                    await WriteRevertedRevisions(list, token);
                 }
             }
         }
