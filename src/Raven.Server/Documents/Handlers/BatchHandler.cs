@@ -127,8 +127,9 @@ namespace Raven.Server.Documents.Handlers
 
                 if (waitForIndexesTimeout != null)
                 {
+                    long lastEtag = ChangeVectorUtils.GetEtagById(command.LastChangeVector, Database.DbBase64Id);
                     await WaitForIndexesAsync(ContextPool, Database, waitForIndexesTimeout.Value, specifiedIndexesQueryString.ToList(), waitForIndexThrow,
-                        command.LastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections);
+                        lastEtag, command.LastTombstoneEtag, command.ModifiedCollections);
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -352,7 +353,7 @@ namespace Raven.Server.Documents.Handlers
 
         public static async Task WaitForIndexesAsync(DocumentsContextPool contextPool, DocumentDatabase database, TimeSpan timeout,
             List<string> specifiedIndexesQueryString, bool throwOnTimeout,
-            string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections, long lastDocumentEtag = -1)
+            long lastDocumentEtag, long lastTombstoneEtag, HashSet<string> modifiedCollections)
         {
             // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
             // waitForSpecificIndex=specific index1 & waitForSpecificIndex=specific index 2
@@ -389,9 +390,7 @@ namespace Raven.Server.Documents.Handlers
                 needsServerContext |= index.Definition.HasCompareExchange;
             }
 
-            var lastEtag = lastChangeVector != null ? ChangeVectorUtils.GetEtagById(lastChangeVector, database.DbBase64Id) : 0;
-            lastEtag = Math.Max(lastEtag, lastDocumentEtag);
-            var cutoffEtag = Math.Max(lastEtag, lastTombstoneEtag);
+            var cutoffEtag = Math.Max(lastDocumentEtag, lastTombstoneEtag);
 
             while (true)
             {

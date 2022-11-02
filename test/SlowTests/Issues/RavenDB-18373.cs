@@ -41,9 +41,9 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(TransactionMode.ClusterWide)] //Fails
-        [InlineData(TransactionMode.SingleNode)] //Succeeds
-        public async Task TestCase(TransactionMode transactionMode)
+        [InlineData(TransactionMode.ClusterWide)]
+        [InlineData(TransactionMode.SingleNode)]
+        public async Task Waiting_For_Index_Doesnt_Work_For_ClusterWideTransaction(TransactionMode transactionMode)
         {
             using var store = GetDocumentStore();
 
