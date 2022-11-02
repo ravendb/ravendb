@@ -68,6 +68,14 @@ namespace Raven.Client.Documents.Session
 
     }
 
+    public interface ISessionDocumentTypedIncrementTimeSeriesBase<T> where T : new()
+    {
+        void Increment(DateTime timestamp, T entry);
+
+        void Increment(T entry);
+
+    }
+
     public interface ITimeSeriesStreamingBase<out T>
     {
         IEnumerator<T> Stream(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null);
