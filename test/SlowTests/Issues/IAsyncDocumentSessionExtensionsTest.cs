@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Commands;
+using Raven.Server.Documents.Sharding.Streaming;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -64,6 +68,41 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStreamStartWithAsync2(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 100; i++)
+                    {
+                        session.Store(new User
+                        {
+                            Name = "Geralt of Rivia " + i,
+                            Description = "If I'm to choose between one evil and another, I'd rather not choose at all."
+                        });
+                    }
+                    session.SaveChanges();
+                }
+
+
+                using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
+                {
+                    var cmd = new GetDocumentsCommand(startWith: "users/", startAfter: null, matches: null, exclude: null, start: 0, pageSize: int.MaxValue,
+                        metadataOnly: false);
+                    await store.GetRequestExecutor().ExecuteAsync(cmd, context);
+
+                    var results = cmd.Result.Results;
+                    Assert.Equal(100, results.Length);
+
+                    var docs = ConvertBlittableJsonReaderArrayToListOfDocuments(results);
+                    AssertIsSortedByDocumentId(docs);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanStreamWithSkipAsync(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -94,6 +133,41 @@ namespace SlowTests.Issues
                     }
                 }
                 Assert.Equal(4, count);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStreamWithSkipAsync2(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 100; i++)
+                    {
+                        session.Store(new User
+                        {
+                            Name = "Geralt of Rivia " + i,
+                            Description = "If I'm to choose between one evil and another, I'd rather not choose at all."
+                        });
+                    }
+                    session.SaveChanges();
+                }
+
+
+                using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
+                {
+                    var cmd = new GetDocumentsCommand(startWith: "users/", startAfter: null, matches: null, exclude: null, start: 6, pageSize: int.MaxValue,
+                        metadataOnly: false);
+                    await store.GetRequestExecutor().ExecuteAsync(cmd, context);
+
+                    var results = cmd.Result.Results;
+                    Assert.Equal(94, results.Length);
+
+                    var docs = ConvertBlittableJsonReaderArrayToListOfDocuments(results);
+                    AssertIsSortedByDocumentId(docs);
+                }
             }
         }
 
@@ -135,6 +209,39 @@ namespace SlowTests.Issues
                     }
                 }
                 Assert.Equal(11, count);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStreamByLastModifiedOrderAsync2(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 100; i++)
+                    {
+                        session.Store(new User
+                        {
+                            Name = "Geralt of Rivia " + i,
+                            Description = "If I'm to choose between one evil and another, I'd rather not choose at all."
+                        });
+                    }
+                    session.SaveChanges();
+                }
+
+                using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
+                {
+                    var cmd = new GetDocumentsCommand(start: 0, pageSize: int.MaxValue);
+                    await store.GetRequestExecutor().ExecuteAsync(cmd, context);
+
+                    var results = cmd.Result.Results;
+                    Assert.Equal(101, results.Length);
+
+                    var docs = ConvertBlittableJsonReaderArrayToListOfDocuments(results);
+                    AssertIsSortedByLastModified(docs);
+                }
             }
         }
 
@@ -212,6 +319,77 @@ namespace SlowTests.Issues
                         return usersCount;
                     }
                 }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanStreamStartWithAndStartAfter2(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 100; i++)
+                    {
+                        session.Store(new User
+                        {
+                            Name = "Geralt of Rivia " + i,
+                            Description = "If I'm to choose between one evil and another, I'd rather not choose at all."
+                        }, $"users/{i}");
+                    }
+                    session.SaveChanges();
+                }
+
+                using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
+                {
+                    var cmd = new GetDocumentsCommand(startWith: "users/", start: 0, pageSize: int.MaxValue, startAfter: "users/95", matches: null, exclude: null, metadataOnly: false);
+                    await store.GetRequestExecutor().ExecuteAsync(cmd, context);
+
+                    var results = cmd.Result.Results;
+                    Assert.Equal(4, results.Length);
+                }
+            }
+        }
+
+        private List<Raven.Server.Documents.Document> ConvertBlittableJsonReaderArrayToListOfDocuments(BlittableJsonReaderArray bjra)
+        {
+            var docs = new List<Raven.Server.Documents.Document>();
+            foreach (var obj in bjra)
+            {
+                if (obj is BlittableJsonReaderObject blittable)
+                {
+                    var doc = ShardResultConverter.BlittableToDocumentConverter(blittable);
+                    docs.Add(doc);
+                }
+            }
+
+            return docs;
+        }
+
+        private void AssertIsSortedByDocumentId(List<Raven.Server.Documents.Document> docs)
+        {
+            var id = "";
+            foreach (var doc in docs)
+            {
+                var tmp = doc.LowerId;
+                Assert.True(string.Compare(id, tmp, StringComparison.OrdinalIgnoreCase) < 0);
+                id = tmp;
+            }
+        }
+
+        private void AssertIsSortedByLastModified(List<Raven.Server.Documents.Document> docs)
+        {
+            var lastModified = DateTime.MaxValue;
+            foreach (var doc in docs)
+            {
+                if (doc.TryGetMetadata(out var metadata) == false)
+                    throw new InvalidOperationException($"Couldn't get metadata for '{doc.LowerId}' document");
+
+                var tmp = DateTime.ParseExact(metadata[Constants.Documents.Metadata.LastModified].ToString(), "yyyy-MM-dd'T'HH:mm:ss.fffffff'Z'",
+                    CultureInfo.InvariantCulture, DateTimeStyles.None);
+                Assert.True(lastModified >= tmp);
+                lastModified = tmp;
             }
         }
     }
