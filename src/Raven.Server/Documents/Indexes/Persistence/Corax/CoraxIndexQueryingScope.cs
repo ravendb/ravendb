@@ -25,7 +25,7 @@ public class CoraxIndexQueryingScope : IndexQueryingScopeBase<UnmanagedSpan>
         _fieldsMapping = fieldsMapping;
     }
 
-    public int RecordAlreadyPagedItemsInPreviousPage(Span<long> ids, IQueryMatch match, Reference<int> totalResults, out int read, ref int queryStart,
+    public int RecordAlreadyPagedItemsInPreviousPage(Span<long> ids, IQueryMatch match, Reference<long> totalResults, out int read, ref long queryStart,
         CancellationToken token)
     {
         read = match.Fill(ids);
@@ -53,7 +53,7 @@ public class CoraxIndexQueryingScope : IndexQueryingScopeBase<UnmanagedSpan>
         
         queryStart -= limit;
 
-        var distinctIds = ids.Slice(0, limit);
+        var distinctIds = ids.Slice(0, (int)limit);
 
         // we are paging, we need to check that we don't have duplicates in the previous pages
         // see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
@@ -70,7 +70,7 @@ public class CoraxIndexQueryingScope : IndexQueryingScopeBase<UnmanagedSpan>
 
         if (_fieldsToFetch.IsDistinct == false)
         {
-            return limit;
+            return (int)limit;
         }
 
         foreach (var id in distinctIds)
@@ -100,7 +100,7 @@ public class CoraxIndexQueryingScope : IndexQueryingScopeBase<UnmanagedSpan>
             }
         }
 
-        return limit;
+        return (int)limit;
     }
 
     private unsafe class UnmanagedSpanComparer : IEqualityComparer<UnmanagedSpan>

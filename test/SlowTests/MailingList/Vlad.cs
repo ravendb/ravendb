@@ -142,7 +142,7 @@ namespace SlowTests.MailingList
                 {
                     int pageSize = 2;
                     int pageNumber = 0;
-                    int recordsToSkip = 0;
+                    long recordsToSkip = 0;
 
                     var posts = new List<Post>();
 
@@ -155,7 +155,7 @@ namespace SlowTests.MailingList
                             .Statistics(out stat)
                             .Where(x => x.Tag == "cloud")
                             .Take(pageSize)
-                            .Skip(recordsToSkip)
+                            .Skip((int)recordsToSkip)
                             .As<Post>()
                             .ToList();
 

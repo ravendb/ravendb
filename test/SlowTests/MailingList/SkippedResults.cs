@@ -51,8 +51,8 @@ namespace SlowTests.MailingList
                 {
                     const int pageSize = 2;
                     int pageNumber = 0;
-                    int skippedResults = 0;
-                    int recordsToSkip = 0;
+                    long skippedResults = 0;
+                    long recordsToSkip = 0;
 
                     var providers = new List<Provider>();
 
@@ -65,7 +65,7 @@ namespace SlowTests.MailingList
                                       where p.Zip == "97520"
                                       select p)
                             .Take(pageSize)
-                            .Skip(recordsToSkip)
+                            .Skip((int)recordsToSkip)
                             .ToList();
 
                         providers.AddRange(result);

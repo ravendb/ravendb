@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Lucene.Net.Index;
@@ -82,8 +83,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return Convert.ToInt64(_searcher.IndexReader.NumDocs());
         }
 
-        public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults,
-            Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<long> totalResults, Reference<long> skippedResults,
+            Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             ExplanationOptions explanationOptions = null;
 
@@ -93,12 +94,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var isDistinctCount = pageSize == 0 && query.Metadata.IsDistinct;
             if (isDistinctCount)
                 pageSize = int.MaxValue;
-
-            pageSize = LuceneGetPageSize(_searcher, pageSize);
-
-            var docsToGet = pageSize;
             var position = query.Start;
-
+            
+            if (position > int.MaxValue || pageSize > int.MaxValue)
+                ThrowQueryWantToExceedsInt32();
+            
+            pageSize = LuceneGetPageSize(_searcher, pageSize);
+            var docsToGet = pageSize;
+    
+            
             QueryTimingsScope luceneScope = null;
             QueryTimingsScope highlightingScope = null;
             QueryTimingsScope explanationsScope = null;
@@ -140,7 +144,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     // We are going to execute the query (EVAL) and the crawl the results in batches and in-order of score.                    
                     TopDocs search;
                     using (luceneScope?.Start())
-                        search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
+                        search = ExecuteQuery(luceneQuery, (int)query.Start, (int)docsToGet, sort);
 
                     totalResults.Value = search.TotalHits;
 
@@ -276,6 +280,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
+        private static void ThrowQueryWantToExceedsInt32()
+        {
+            throw new InvalidDataException($"Lucene entries limit is int32 documents. ({int.MaxValue}).");
+        }
+
         private ExplanationResult GetQueryExplanations(ExplanationOptions options, Query luceneQuery, IndexSearcher searcher, ScoreDoc scoreDoc, Document document, global::Lucene.Net.Documents.Document luceneDocument)
         {
             string key;
@@ -376,10 +385,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
 
-        public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<long> totalResults, Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var method = query.Metadata.Query.Where as MethodExpression;
-
+            if (query.Start > int.MaxValue || query.PageSize > int.MaxValue)
+                ThrowQueryWantToExceedsInt32();
+            
             if (method == null)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just an intersect() method call while it got {query.Metadata.Query.Where.Type} expression", query.Metadata.QueryText, query.QueryParameters);
 
@@ -457,7 +468,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 //Using the final set of results in the intersectionCollector
                 int returnedResults = 0;
-                for (int i = query.Start; i < intersectResults.Count && (i - query.Start) < pageSizeBestGuess; i++)
+                for (int i = (int)query.Start; i < intersectResults.Count && (i - query.Start) < pageSizeBestGuess; i++)
                 {
                     var indexResult = intersectResults[i];
                     var document = _searcher.Doc(indexResult.LuceneId, _state);
@@ -906,15 +917,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token)
+        public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<long> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token)
         {
+            if (query.PageSize > int.MaxValue || query.Start > int.MaxValue)
+                ThrowQueryWantToExceedsInt32();
+            
             var docsToGet = LuceneGetPageSize(_searcher, query.PageSize);
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, QueryBuilderFactories);
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
             {
-                var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
+                var search = ExecuteQuery(luceneQuery, (int)query.Start, docsToGet, sort);
                 var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, ignoreLimit, _state);
 
                 totalResults.Value = search.TotalHits;

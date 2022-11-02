@@ -43,13 +43,13 @@ public class RavenDB_19076 : RavenTestBase
                 var pagging = new List<Order>();
                 int pageNumber = 0;
                 int pageSize = 101;
-                int skippedResults = 0;
+                long skippedResults = 0;
                 List<Order> results;
                 do
                 {
                     results = session.Advanced.RawQuery<Orders.Order>(query)
                         .Statistics(out QueryStatistics stats)
-                        .Skip((pageNumber * pageSize) + skippedResults)
+                        .Skip((pageNumber * pageSize) + (int)skippedResults)
                         .Take(pageSize)
                         .ToList();
 

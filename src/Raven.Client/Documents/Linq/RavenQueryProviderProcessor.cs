@@ -3935,8 +3935,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case SpecialQueryType.LongCount:
                     {
                         var qr = finalQuery.GetQueryResult();
-                        if (_queryType != SpecialQueryType.Count)
-                            return qr.LongTotalResults;
+                        if (_queryType == SpecialQueryType.Count)
+                        {
+                            if (qr.TotalResults > int.MaxValue)
+                                DocumentSession.ThrowWhenResultsAreOverInt32(qr.TotalResults, "Count", "LongCount");
+                            return (int)qr.TotalResults;
+                        }
                         return qr.TotalResults;
                     }
                 default:

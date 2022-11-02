@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -247,12 +248,17 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
     {
         if (_query.Offset is > 0 && result.Results.Count > _query.Offset)
         {
-            result.Results.RemoveRange(0, _query.Offset ?? 0);
+            var count = Math.Min(_query.Offset ?? 0, int.MaxValue);
+            result.Results.RemoveRange(0, (int)count);
         }
 
         if (_query.Limit is > 0 && result.Results.Count > _query.Limit)
         {
-            result.Results.RemoveRange(_query.Limit.Value, result.Results.Count - _query.Limit.Value);
+            var index = Math.Min(_query.Limit.Value, int.MaxValue);
+            var count = result.Results.Count - _query.Limit.Value;
+            if (count > int.MaxValue)
+                count = int.MaxValue; //todo: Grisha: take a look
+            result.Results.RemoveRange((int)index, (int)count);
         }
     }
 

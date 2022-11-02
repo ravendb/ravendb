@@ -69,7 +69,7 @@ namespace SlowTests.Issues
                     IList<T> results;
                     int pageNumber = 0;
                     int pageSize = 101;
-                    int skippedResults = 0;
+                    long skippedResults = 0;
                     do
                     {
                         results = session
@@ -86,7 +86,6 @@ namespace SlowTests.Issues
                         if (results.Count == pageSize)
                         {
                             Assert.Equal(-1, stats.TotalResults);
-                            Assert.Equal(-1, stats.LongTotalResults);
                         }
                     }
                     while (results.Count > 0);

@@ -89,7 +89,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   The page size to use when querying the index
         /// </summary>
-        protected int? PageSize;
+        protected long? PageSize;
 
         protected LinkedList<QueryToken> SelectTokens = new LinkedList<QueryToken>();
 
@@ -114,14 +114,14 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   which record to start reading from
         /// </summary>
-        protected int Start;
+        protected long Start;
 
         private readonly DocumentConventions _conventions;
 
         /// <summary>
         /// Limits filter clause.
         /// </summary>
-        protected int? FilterLimit;
+        protected long? FilterLimit;
 
         /// <summary>
         /// Timeout for this query
@@ -538,7 +538,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         /// <param name = "count">The count.</param>
         /// <returns></returns>
-        public void Take(int count)
+        public void Take(long count)
         {
             PageSize = count;
         }
@@ -548,7 +548,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         /// <param name = "count">The count.</param>
         /// <returns></returns>
-        public void Skip(int count)
+        public void Skip(long count)
         {
             Start = count;
         }
@@ -1981,11 +1981,11 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             return "$" + AddQueryParameter(value);
         }
 
-        internal void AddFilterLimit(int filterLimit)
+        internal void AddFilterLimit(long filterLimit)
         {
             if (filterLimit <= 0)
                 throw new InvalidDataException("filter_limit needs to be positive and bigger than 0.");
-            if (filterLimit is not int.MaxValue)
+            if (filterLimit is not long.MaxValue)
                 FilterLimit = filterLimit;
         }
     }

@@ -76,7 +76,7 @@ namespace SlowTests.MailingList
                                         .OrderBy(t => t.Val)
                                         .Select(t => t.Val)
                                         .Distinct()
-                                        .Skip(results.Count + skippedResults)
+                                        .Skip((int)(results.Count + skippedResults))
                                         .Take(10)
                                         .ToList();
 

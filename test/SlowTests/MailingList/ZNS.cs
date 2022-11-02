@@ -117,9 +117,9 @@ namespace SlowTests.MailingList
                 List<TestItem> pagedResult = new List<TestItem>();
                 QueryStatistics stats2;
 
-                int skip = 0;
+                long skip = 0;
                 var take = 10;
-                int page = 0;
+                long page = 0;
 
                 do
                 {

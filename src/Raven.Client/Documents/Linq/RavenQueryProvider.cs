@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -186,7 +187,13 @@ namespace Raven.Client.Documents.Linq
         /// <returns></returns>
         TS IQueryProvider.Execute<TS>(Expression expression)
         {
-            return (TS)Execute(expression);
+            var result = Execute(expression);
+            // if (typeof(TS) == typeof(int) && result is long)
+            // {
+            //     return (TS)(object)Convert.ToInt32(result);
+            // }
+            
+            return (TS)result;
         }
 
         /// <summary>

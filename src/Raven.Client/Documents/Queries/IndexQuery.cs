@@ -111,7 +111,7 @@ namespace Raven.Client.Documents.Queries
 
     public abstract class IndexQueryBase<T> : IIndexQuery, IEquatable<IndexQueryBase<T>>
     {
-        private int _pageSize = int.MaxValue;
+        private long _pageSize = int.MaxValue;
 
         /// <summary>
         /// Whether the page size was explicitly set or still at its default value
@@ -131,13 +131,13 @@ namespace Raven.Client.Documents.Queries
         /// Number of records that should be skipped.
         /// </summary>
         [Obsolete("Use OFFSET in RQL instead")]
-        public int Start { get; set; }
+        public long Start { get; set; }
 
         /// <summary>
         /// Maximum number of records that will be retrieved.
         /// </summary>
         [Obsolete("Use LIMIT in RQL instead")]
-        public int PageSize
+        public long PageSize
         {
             get => _pageSize;
             set
@@ -193,7 +193,7 @@ namespace Raven.Client.Documents.Queries
                 var hashCode = PageSizeSet.GetHashCode();
 #pragma warning disable 618
                 hashCode = (hashCode * 397) ^ PageSize.GetHashCode();
-                hashCode = (hashCode * 397) ^ Start;
+                hashCode = (hashCode * 397) ^ Start.GetHashCode();
 #pragma warning restore 618
                 hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
@@ -215,7 +215,7 @@ namespace Raven.Client.Documents.Queries
 
     public interface IIndexQuery
     {
-        int PageSize { set; get; }
+        long PageSize { set; get; }
 
         TimeSpan? WaitForNonStaleResultsTimeout { get; }
     }

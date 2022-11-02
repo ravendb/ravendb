@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Session
         ///     Skips the specified count.
         /// </summary>
         /// <param name="count">Number of items to skip.</param>
-        TSelf Skip(int count);
+        TSelf Skip(long count);
 
         /// <summary>
         ///     Provide statistics about the query, such as total count of matching records
@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Session
         ///     Takes the specified count.
         /// </summary>
         /// <param name="count">Maximum number of items to take.</param>
-        TSelf Take(int count);
+        TSelf Take(long count);
 
         /// <summary>
         ///     Select the default operator to use for this query

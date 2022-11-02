@@ -253,5 +253,10 @@ namespace Raven.Client.Documents.Session
             return false;
         }
 
+        internal static void ThrowWhenResultsAreOverInt32(long value, string caller, string suggestedMethod)
+        {
+            if (int.MaxValue < value)
+                throw new OverflowException($"Value '{value}' from '{caller}' method exceeds max Int32 value ('{value}'). You should use '{suggestedMethod}' instead.");
+        }
     }
 }

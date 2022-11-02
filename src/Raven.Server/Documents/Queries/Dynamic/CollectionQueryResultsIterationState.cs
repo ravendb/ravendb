@@ -10,8 +10,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
         }
 
-        public int Start;
-        public int Take;
+        public long Start;
+        public long Take;
 
         public override void OnMoveNext(Document current)
         {

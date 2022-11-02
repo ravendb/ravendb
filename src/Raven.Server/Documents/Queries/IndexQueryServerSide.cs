@@ -32,13 +32,13 @@ namespace Raven.Server.Documents.Queries
         public bool ReturnMissingIncludeAsNull;
 
         [JsonDeserializationIgnore]
-        public int? Offset;
+        public long? Offset;
 
         [JsonDeserializationIgnore]
-        public int? Limit;
+        public long? Limit;
 
         [JsonDeserializationIgnore]
-        public int? FilterLimit { get; set; }
+        public long? FilterLimit { get; set; }
 
         [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Queries
         public SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator Distances;
 
 
-        public new int Start
+        public new long Start
         {
 #pragma warning disable 618
             get => base.Start;
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Queries
 #pragma warning restore 618
         }
 
-        public new int PageSize
+        public new long PageSize
         {
 #pragma warning disable 618
             get => base.PageSize;

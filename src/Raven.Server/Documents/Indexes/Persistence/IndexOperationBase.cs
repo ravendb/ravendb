@@ -116,7 +116,7 @@ public abstract class IndexOperationBase : IDisposable
         return (int)pageSize;
     }
 
-    protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, int pageSize, IndexQueryServerSide query, bool isBoolean = false)
+    protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, long pageSize, IndexQueryServerSide query, bool isBoolean = false)
     {
         var numberOfEntries = searcher.NumberOfEntries;
         
@@ -141,8 +141,8 @@ public abstract class IndexOperationBase : IDisposable
             : DefaultBufferSizeForCorax;
     }
     
-    protected QueryFilter GetQueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults,
-        Reference<int> scannedDocuments, IQueryResultRetriever retriever, QueryTimingsScope queryTimings)
+    protected QueryFilter GetQueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<long> skippedResults,
+        Reference<long> scannedDocuments, IQueryResultRetriever retriever, QueryTimingsScope queryTimings)
     {
         if (query.Metadata.FilterScript is null)
             return null;
