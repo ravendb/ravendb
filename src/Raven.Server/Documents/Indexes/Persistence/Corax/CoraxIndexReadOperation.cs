@@ -10,6 +10,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Highlightings;
@@ -49,18 +50,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override long EntriesCount() => _entriesCount;
         
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
-            Reference<int> totalResults, Reference<int> skippedResults,
-            Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
+            Reference<long> totalResults, Reference<long> skippedResults,
+            Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
             CancellationToken token)
         {
             var pageSize = query.PageSize;
             var isDistinctCount = pageSize == 0 && query.Metadata.IsDistinct;
             if (isDistinctCount)
+            {
+                if (pageSize > int.MaxValue)
+                    ThrowDistinctOnBiggerCollectionThanInt32();
+                
                 pageSize = int.MaxValue;
+            }
 
             var position = query.Start;
 
             var take = pageSize + position;
+
+            if (pageSize > int.MaxValue && query.IsStream == false)
+                ThrowCollectionTooBigToFetchWithoutStream();
+
             if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
@@ -80,15 +90,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using (coraxScope?.Start())
             {
                 var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories,
-                    _fieldMappings, fieldsToFetch, highlightingTerms, take);
+                    _fieldMappings, fieldsToFetch, highlightingTerms, (int)take);
                 if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary)) is null)
                     yield break;
             }
-
+            
             
             var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary ));
-            int docsToLoad = pageSize;
-            int queryStart = query.Start;
+            long docsToLoad = pageSize;
+            long queryStart = query.Start;
             bool hasHighlights = query.Metadata.HasHighlightings;
             if (hasHighlights)
             {
@@ -437,8 +447,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults,
-            Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever,
+        public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<long> totalResults,
+            Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever,
             DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             throw new NotImplementedException($"{nameof(Corax)} does not support intersect queries.");
@@ -620,12 +630,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             QueryPool.Return(ids);
         }
 
-        public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults,
+        public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<long> totalResults,
             DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token)
         {
             var pageSize = query.PageSize;
             var position = query.Start;
-
+            
             if (query.Metadata.IsDistinct)
                 throw new NotSupportedException("We don't support Distinct in \"Show Raw Entry\" of Index.");
             if (query.Metadata.FilterScript != null)
@@ -684,7 +694,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         return 0;
                     }
 
-                    return position;
+                    return (int)position;
                 }
             }
         }
@@ -698,6 +708,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     continue;
                 yield return field;
             }
+        }
+
+        private static void ThrowDistinctOnBiggerCollectionThanInt32()
+        {
+            throw new NotSupportedInCoraxException($"Corax doesn't support 'Distinct' operation on collection bigger than int32 ({int.MaxValue}).");
+        }
+
+        private static void ThrowCollectionTooBigToFetchWithoutStream()
+        {
+            throw new NotSupportedInCoraxException($"Fetching over int32 ({int.MaxValue}) entries in one query is available only via stream.");
         }
 
         public override void Dispose()

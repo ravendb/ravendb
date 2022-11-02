@@ -155,6 +155,25 @@ namespace Raven.Client.Documents.Session
             var lazyValue = new Lazy<int>(() =>
             {
                 ExecuteAllPendingLazyOperations();
+
+                var value = operation.QueryResult.TotalResults;
+                if (value > int.MaxValue)
+                    ThrowWhenResultsAreOverInt32(value, nameof(AddLazyCountOperation), nameof(AddLazyLongCountOperation));
+                
+                return (int)operation.QueryResult.TotalResults;
+            });
+
+            return lazyValue;
+        }
+        
+        internal Lazy<long> AddLazyLongCountOperation(ILazyOperation operation)
+        {
+            PendingLazyOperations.Add(operation);
+            var lazyValue = new Lazy<long>(() =>
+            {
+                ExecuteAllPendingLazyOperations();
+                
+                
                 return operation.QueryResult.TotalResults;
             });
 

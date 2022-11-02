@@ -171,7 +171,7 @@ namespace Raven.Server.Documents
             return numberOfResults > Database.Configuration.PerformanceHints.MaxNumberOfResults;
         }
 
-        public override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes)
+        public override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, long pageSize, long duration, long totalDocumentsSizeInBytes)
         {
             if (ShouldAddPagingPerformanceHint(numberOfResults))
                 Database.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);

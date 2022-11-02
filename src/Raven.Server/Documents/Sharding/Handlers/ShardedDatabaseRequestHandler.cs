@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             return numberOfResults > DatabaseContext.Configuration.PerformanceHints.MaxNumberOfResults;
         }
 
-        public override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration,
+        public override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, long pageSize, long duration,
             long totalDocumentsSizeInBytes)
         {
             if (ShouldAddPagingPerformanceHint(numberOfResults))

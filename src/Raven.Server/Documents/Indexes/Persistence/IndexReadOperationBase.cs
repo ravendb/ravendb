@@ -45,11 +45,11 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract long EntriesCount();
 
         public abstract IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
-            Reference<int> totalResults, Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext,
+            Reference<long> totalResults, Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext,
             Func<string, SpatialField> getSpatialField, CancellationToken token);
 
-        public abstract IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults,
-            Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
+        public abstract IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<long> totalResults,
+            Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
             CancellationToken token);
 
         public abstract SortedSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token);
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             DocumentsOperationContext context,
             CancellationToken token);
 
-        public abstract IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext,
+        public abstract IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<long> totalResults, DocumentsOperationContext documentsContext,
             Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token);
 
         public abstract IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields);

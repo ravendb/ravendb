@@ -33,7 +33,7 @@ namespace Raven.Server.NotificationCenter
             _logger = LoggingSource.Instance.GetLogger(notificationCenter.Database, GetType().FullName);
         }
 
-        public void Add(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes)
+        public void Add(PagingOperationType operation, string action, string details, long numberOfResults, long pageSize, long duration, long totalDocumentsSizeInBytes)
         {
             var now = SystemTime.UtcNow;
             var update = _pagingUpdates[(int)operation];
@@ -185,12 +185,12 @@ namespace Raven.Server.NotificationCenter
             public string Action { get; }
             public string Details { get; }
             public long NumberOfResults { get; }
-            public int PageSize { get; }
+            public long PageSize { get; }
             public long Duration { get; }
             public DateTime Occurrence { get; }
             public long TotalDocumentsSizeInBytes { get; }
 
-            public PagingInformation(PagingOperationType type, string action, string details, long numberOfResults, int pageSize, long duration, DateTime occurrence, long totalDocumentsSizeInBytes)
+            public PagingInformation(PagingOperationType type, string action, string details, long numberOfResults, long pageSize, long duration, DateTime occurrence, long totalDocumentsSizeInBytes)
             {
                 Type = type;
                 Action = action;

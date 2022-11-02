@@ -28,24 +28,19 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// What was the total count of the results that matched the query
         /// </summary>
-        public int TotalResults { get; set; }
-
-        /// <summary>
-        /// What was the total count of the results that matched the query as int64
-        /// </summary>
-        public long LongTotalResults { get; set; }
-
+        public long TotalResults { get; set; }
+        
         /// <summary>
         /// Gets or sets the skipped results
         /// </summary>
-        public int SkippedResults { get; set; }
+        public long SkippedResults { get; set; }
         
         /// <summary>
         /// The number of results (filtered or matches)
         /// that were scanned by the query. This is relevant
         /// only if you are using a filter clause in the query.
         /// </summary>
-        public int? ScannedResults { get; set; }
+        public long? ScannedResults { get; set; }
 
         /// <summary>
         /// The time when the query results were unstale.
@@ -82,7 +77,6 @@ namespace Raven.Client.Documents.Session
             IsStale = qr.IsStale;
             DurationInMs = qr.DurationInMs;
             TotalResults = qr.TotalResults;
-            LongTotalResults = qr.LongTotalResults;
             SkippedResults = qr.SkippedResults;
             ScannedResults = qr.ScannedResults;
             Timestamp = qr.IndexTimestamp;

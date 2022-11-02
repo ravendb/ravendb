@@ -58,28 +58,28 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.Take(int count)
+        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.Take(long count)
         {
             Take(count);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.Take(int count)
+        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.Take(long count)
         {
             Take(count);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.Skip(int count)
+        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.Skip(long count)
         {
             Skip(count);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.Skip(int count)
+        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.Skip(long count)
         {
             Skip(count);
             return this;
@@ -955,7 +955,12 @@ namespace Raven.Client.Documents.Session
         {
             Take(0);
             var result = await GetQueryResultAsync(token).ConfigureAwait(false);
-            return result.TotalResults;
+            var value = result.TotalResults;
+            
+            if (value > int.MaxValue)
+                DocumentSession.ThrowWhenResultsAreOverInt32(value, nameof(IAsyncDocumentQueryBase<T>.CountAsync), nameof(IAsyncDocumentQueryBase<T>.LongCountAsync));
+
+            return (int)value;
         }
 
         /// <inheritdoc />
@@ -963,7 +968,7 @@ namespace Raven.Client.Documents.Session
         {
             Take(0);
             var result = await GetQueryResultAsync(token).ConfigureAwait(false);
-            return result.LongTotalResults;
+            return result.TotalResults;
         }
 
         /// <inheritdoc />

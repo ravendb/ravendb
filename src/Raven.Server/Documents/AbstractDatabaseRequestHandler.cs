@@ -26,5 +26,5 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
 
     public abstract bool ShouldAddPagingPerformanceHint(long numberOfResults);
 
-    public abstract void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes);
+    public abstract void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, long pageSize, long duration, long totalDocumentsSizeInBytes);
 }

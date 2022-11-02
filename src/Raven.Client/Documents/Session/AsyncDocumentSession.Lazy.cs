@@ -51,6 +51,26 @@ namespace Raven.Client.Documents.Session
                 {
                     if (t.Exception != null)
                         throw new InvalidOperationException("Could not perform lazy count", t.Exception);
+                    
+                    var value = operation.QueryResult.TotalResults;
+                    if (value > int.MaxValue)
+                        DocumentSession.ThrowWhenResultsAreOverInt32(value, nameof(AddLazyCountOperation), nameof(AddLazyCountLongOperation));
+                    
+                    return (int)value;
+                }, token));
+
+            return lazyValue;
+        }
+        
+        internal Lazy<Task<long>> AddLazyCountLongOperation(ILazyOperation operation, CancellationToken token = default(CancellationToken))
+        {
+            PendingLazyOperations.Add(operation);
+            var lazyValue = new Lazy<Task<long>>(() => ExecuteAllPendingLazyOperationsAsync(token)
+                .ContinueWith(t =>
+                {
+                    if (t.Exception != null)
+                        throw new InvalidOperationException("Could not perform lazy count", t.Exception);
+                    
                     return operation.QueryResult.TotalResults;
                 }, token));
 

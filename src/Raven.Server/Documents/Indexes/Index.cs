@@ -3166,9 +3166,9 @@ namespace Raven.Server.Documents.Indexes
                                     fillScope = includesScope.For(nameof(QueryTimingsScope.Names.Fill), start: false);
                                 }
 
-                                Reference<int> totalResults = new Reference<int>();
-                                Reference<int> skippedResults = new Reference<int>();
-                                Reference<int> scannedResults = new Reference<int>();
+                                Reference<long> totalResults = new();
+                                Reference<long> skippedResults = new();
+                                Reference<long> scannedResults = new();
                                 IncludeCountersCommand includeCountersCommand = null;
                                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
                                 IncludeRevisionsCommand includeRevisionsCommand = new(DocumentDatabase, queryContext.Documents, query.Metadata.RevisionIncludes);
@@ -3264,12 +3264,12 @@ namespace Raven.Server.Documents.Indexes
                                         {
                                             var document = enumerator.Current;
 
-                                            resultToFill.LongTotalResults = resultToFill.TotalResults = totalResults.Value;
+                                            resultToFill.TotalResults = totalResults.Value;
 
                                             if (query.Offset != null || query.Limit != null)
                                             {
                                                 resultToFill.CappedMaxResults = Math.Min(
-                                                    query.Limit ?? int.MaxValue,
+                                                    query.Limit ?? long.MaxValue,
                                                     totalResults.Value - (query.Offset ?? 0)
                                                 );
                                             }
@@ -3326,7 +3326,6 @@ namespace Raven.Server.Documents.Indexes
                                 resultToFill.RegisterSpatialProperties(query);
 
                                 resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
-                                resultToFill.LongTotalResults = resultToFill.TotalResults;
                                 resultToFill.SkippedResults = skippedResults.Value;
                                 resultToFill.ScannedResults = scannedResults.Value;
                                 resultToFill.IncludedPaths = query.Metadata.Includes;
@@ -3415,12 +3414,11 @@ namespace Raven.Server.Documents.Indexes
 
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
-                            var totalResults = new Reference<int>();
+                            var totalResults = new Reference<long>();
 
                             foreach (var indexEntry in reader.IndexEntries(query, totalResults, queryContext.Documents, GetOrAddSpatialField, ignoreLimit, token.Token))
                             {
                                 resultToFill.TotalResults = totalResults.Value;
-                                resultToFill.LongTotalResults = totalResults.Value;
                                 await resultToFill.AddResultAsync(indexEntry, token.Token);
                             }
                         }
@@ -3550,7 +3548,6 @@ namespace Raven.Server.Documents.Indexes
                                     }
 
                                     result.TotalResults = result.Results.Count;
-                                    result.LongTotalResults = result.Results.Count;
 
                                     return result;
                                 }
@@ -3658,7 +3655,6 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             result.TotalResults = result.Results.Count;
-                            result.LongTotalResults = result.Results.Count;
                             return result;
                         }
                     }

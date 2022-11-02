@@ -85,14 +85,14 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "count">The count.</param>
         /// <returns></returns>
-        void Take(int count);
+        void Take(long count);
 
         /// <summary>
         ///   Skips the specified count.
         /// </summary>
         /// <param name = "count">The count.</param>
         /// <returns></returns>
-        void Skip(int count);
+        void Skip(long count);
 
         /// <summary>
         ///   Matches value

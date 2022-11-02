@@ -172,11 +172,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         private readonly Func<(JsonOperationContext, IDisposable)> _allocateJsonContext;
         private readonly IComparer<BlittableJsonReaderObject> _comparer;
         private readonly Dictionary<int, PostQueryStreamCommand> _queryStreamCommands;
-        private readonly int _skip;
-        private readonly int _take;
+        private readonly long _skip;
+        private readonly long _take;
         private readonly CancellationToken _token;
 
-        public ShardedStreamQueryOperation(HttpContext httpContext, Func<(JsonOperationContext, IDisposable)> allocateJsonContext, IComparer<BlittableJsonReaderObject> comparer, Dictionary<int, PostQueryStreamCommand> queryStreamCommands, int skip, int take, CancellationToken token)
+        public ShardedStreamQueryOperation(HttpContext httpContext, Func<(JsonOperationContext, IDisposable)> allocateJsonContext, IComparer<BlittableJsonReaderObject> comparer, Dictionary<int, PostQueryStreamCommand> queryStreamCommands, long skip, long take, CancellationToken token)
         {
             _httpContext = httpContext;
             _allocateJsonContext = allocateJsonContext;
@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             return (ApplySkipTake(mergedEnumerator, _skip, _take), queryStats);
         }
 
-        private IEnumerator<BlittableJsonReaderObject> ApplySkipTake(MergedEnumerator<BlittableJsonReaderObject> mergedEnumerator, int skip, int take)
+        private IEnumerator<BlittableJsonReaderObject> ApplySkipTake(MergedEnumerator<BlittableJsonReaderObject> mergedEnumerator, long skip, long take)
         {
             foreach (var item in mergedEnumerator)
             {

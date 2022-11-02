@@ -75,7 +75,7 @@ namespace SlowTests.SlowTests.Issues
             }
             Indexes.WaitForIndexing(store);
 
-            int skippedResults = 0;
+            long skippedResults = 0;
             var pagedResults = new List<User>();
 
             var page = 0;
@@ -90,7 +90,7 @@ namespace SlowTests.SlowTests.Issues
                     var results = session
                         .Query<User, UsersAndFiendsIndex>()
                         .Statistics(out stats)
-                        .Skip((page * pageSize) + skippedResults)
+                        .Skip((page * pageSize) + (int)skippedResults)
                         .Take(pageSize)
                         .Distinct()
                         .ToList();

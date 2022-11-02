@@ -70,7 +70,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             public long Duration { get; set; }
             public DateTime Occurrence { get; set; }
             public long NumberOfResults { get; set; }
-            public int PageSize { get; set; }
+            public long PageSize { get; set; }
             public long TotalDocumentsSizeInBytes { get; set; }
         }
     }

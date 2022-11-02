@@ -67,7 +67,7 @@ namespace SlowTests.Core.Querying
                         .Where(c => c.Name.StartsWith("Company"))
                         .Select(c => c.Name)
                         .Distinct()
-                        .Skip(5 + skipped)
+                        .Skip(5 + (int)skipped)
                         .Take(5)
                         .ToArray();
                     Assert.Equal(7, stats.TotalResults);
