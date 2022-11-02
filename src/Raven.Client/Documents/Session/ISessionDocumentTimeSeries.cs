@@ -88,7 +88,7 @@ namespace Raven.Client.Documents.Session
     public interface ISessionDocumentTypedIncrementalTimeSeries<TValues> :
         ITimeSeriesStreamingBase<TimeSeriesEntry<TValues>>,
         ISessionDocumentDeleteTimeSeriesBase,
-        ISessionDocumentIncrementTimeSeriesBase
+        ISessionDocumentTypedIncrementTimeSeriesBase<TValues>
         where TValues : new()
     {
         /// <summary>

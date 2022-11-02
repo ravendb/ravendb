@@ -124,6 +124,18 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        public void Increment<TValues>(DateTime timestamp, TValues value)
+        {
+            if (value is IEnumerable<double> doubles)
+            {
+                Increment(timestamp, doubles);
+                return;
+            }
+
+            var values = TimeSeriesValuesHelper.GetValues(value);
+            Increment(timestamp, values);
+        }
+
         public void Increment(DateTime timestamp, IEnumerable<double> values)
         {
             if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
