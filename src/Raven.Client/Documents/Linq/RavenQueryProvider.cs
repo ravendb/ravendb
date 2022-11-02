@@ -187,13 +187,7 @@ namespace Raven.Client.Documents.Linq
         /// <returns></returns>
         TS IQueryProvider.Execute<TS>(Expression expression)
         {
-            var result = Execute(expression);
-            // if (typeof(TS) == typeof(int) && result is long)
-            // {
-            //     return (TS)(object)Convert.ToInt32(result);
-            // }
-            
-            return (TS)result;
+            return (TS)Execute(expression);
         }
 
         /// <summary>
