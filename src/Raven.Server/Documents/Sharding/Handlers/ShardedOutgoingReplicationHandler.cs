@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private long _lastEtag;
         private string _lastAcceptedChangeVectorFromShard;
-        private readonly TaskCompletionSource<(string, long)> _firstChangeVector = new(TaskContinuationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<(string, long)> _firstChangeVector = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public string MissingAttachmentMessage { get; set; }
         public bool MissingAttachmentsInLastBatch { get; set; }
