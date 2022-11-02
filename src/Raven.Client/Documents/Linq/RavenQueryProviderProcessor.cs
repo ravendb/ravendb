@@ -485,6 +485,20 @@ namespace Raven.Client.Documents.Linq
                     ExpressionInfo expressionMemberInfo = null;
                     Expression argument = null;
                     var exact = _insideExact |methodCallExpression.Method.Name == nameof(string.CompareOrdinal);
+
+                    var isSimpleCompare = nameof(string.Compare) == methodCallExpression.Method.Name;
+                    var argumentsCount = methodCallExpression.Arguments.Count;
+                    
+                    if (isSimpleCompare == false && argumentsCount != 2)
+                        throw new NotSupportedException($"We do not support such overloads in '{methodCallExpression.Method.Name}'.");
+                    if (isSimpleCompare)
+                    {
+                        if (argumentsCount == 3 && exact == false)
+                            exact = ConvertStringComparisonToExact(methodCallExpression.Arguments[2]);
+                        else if (argumentsCount > 3)
+                            throw new NotSupportedException($"We do not support such overloads in '{methodCallExpression.Method.Name}'.");
+                    }
+                    
                     switch (methodCallExpression.Method.Name)
                     {
                         case nameof(string.Compare):
@@ -492,6 +506,7 @@ namespace Raven.Client.Documents.Linq
                             EnsureStringComparisonMethodComparedWithZero(expression, methodCallExpression);
                             expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
                             argument = methodCallExpression.Arguments[1];
+                            
                             break;
                         case nameof(string.CompareTo):
                             EnsureStringComparisonMethodComparedWithZero(expression, methodCallExpression);
@@ -1124,7 +1139,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     return false;
             }
 
-            bool checkValidComparison(MethodCallExpression methodCall, Expression compareExpression)
+            bool CheckValidComparison(MethodCallExpression methodCall, Expression compareExpression)
             {
                 // non-static string compare: x => x.CompareTo("Dave") > 0
                 if (methodCall.Object != null)
@@ -1153,7 +1168,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 if (leftMethodCall.Method.Name == nameof(string.CompareTo) || leftMethodCall.Method.Name == nameof(string.Compare))
                 {
-                    if (!checkValidComparison(leftMethodCall, expression.Right))
+                    if (CheckValidComparison(leftMethodCall, expression.Right) == false)
                         return false;
 
                     return true;
@@ -1163,7 +1178,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 if (rightMethodCall.Method.Name == nameof(string.CompareTo) || rightMethodCall.Method.Name == nameof(string.Compare))
                 {
-                    if (!checkValidComparison(rightMethodCall, expression.Left))
+                    if (CheckValidComparison(rightMethodCall, expression.Left) == false)
                         return false;
 
                     return true;
