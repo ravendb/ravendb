@@ -222,12 +222,20 @@ namespace Raven.Server.Documents.Sharding
 
             public async IAsyncEnumerable<Document> GetDocumentsAsync(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation, string resultPropertyName = "Results")
             {
-                await foreach (var result in PagedShardedDocumentsByLastModified(documents, resultPropertyName, pagingContinuation))
+                await foreach (var result in PagedShardedDocumentsBlittableByLastModified(documents, resultPropertyName, pagingContinuation))
                 {
-                    yield return result.Item;
+                    yield return ShardResultConverter.BlittableToDocumentConverter(result.Item);
                 }
             }
-            
+
+            public async IAsyncEnumerable<Document> GetDocumentsAsyncById(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation, string resultPropertyName = "Results")
+            {
+                await foreach (var result in PagedShardedDocumentsBlittableById(documents, resultPropertyName, pagingContinuation))
+                {
+                    yield return ShardResultConverter.BlittableToDocumentConverter(result.Item);
+                }
+            }
+
             public IEnumerable<T> PagedShardedItem<T, TInput>(
                 Memory<TInput> results,
                 Func<TInput, IEnumerable<T>> selector,
