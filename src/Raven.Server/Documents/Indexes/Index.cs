@@ -2304,7 +2304,7 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             var current = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
-                            stats.AddAllocatedBytes((current - _initialManagedAllocations).GetValue(SizeUnit.Bytes));
+                            stats.SetAllocatedManagedBytes((current - _initialManagedAllocations).GetValue(SizeUnit.Bytes));
 
                             if (writeOperation.IsValueCreated)
                             {
@@ -4450,7 +4450,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var currentManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
                 var diff = currentManagedAllocations - _initialManagedAllocations;
-                parameters.Stats.AddAllocatedBytes(diff.GetValue(SizeUnit.Bytes));
+                parameters.Stats.SetAllocatedManagedBytes(diff.GetValue(SizeUnit.Bytes));
 
                 if (diff > Configuration.ManagedAllocationsBatchLimit.Value)
                 {
@@ -4602,6 +4602,8 @@ namespace Raven.Server.Documents.Indexes
                         break;
                 }
             }
+            
+            stats?.SetAllocatedUnmanagedBytes(threadAllocations + txAllocations);
 
             var allocatedForProcessing = threadAllocations + indexWriterAllocations +
                                          // we multiple it to take into account additional work
