@@ -104,18 +104,7 @@ namespace Raven.Server.Web.System
                     if (databaseRecord.Topology.RelevantFor(node))
                         throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
 
-                    var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
-                                                databaseRecord.DeletionInProgress.TryGetValue(node, out var deletionInProgress) &&
-                                                deletionInProgress != DeletionInProgressStatus.No;
-                    if (databaseIsBeenDeleted)
-                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because it is currently being deleted from node '{node}'");
-
-                    var url = clusterTopology.GetUrlFromTag(node);
-                    if (url == null)
-                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because node {node} is not part of the cluster");
-
-                    if (databaseRecord.Encrypted && NotUsingHttps(url))
-                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
+                    ValidateNodeForAddingToDb(name, node, databaseRecord, clusterTopology, baseMessage: $"Can't add node {node} to database '{name}' topology");
                 }
 
                 //The case were we don't care where the database will be added to
