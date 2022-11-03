@@ -177,7 +177,7 @@ namespace SlowTests.Server.Documents.Indexing
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
                 Assert.Equal(FieldIndexing.Search, index.Fields["Name"].Indexing);
-                Assert.Equal(@"docs.Users.Select(doc => new
+                RavenTestHelper.AssertEqualRespectingNewLines(@"docs.Users.Select(doc => new
 {
     Age = doc.Age,
     Email = doc.Email,
@@ -300,7 +300,7 @@ namespace SlowTests.Server.Documents.Indexing
                 var index = suggestion.MergedIndex;
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
-                Assert.Equal(@"from doc in docs.Users
+                RavenTestHelper.AssertEqualRespectingNewLines(@"from doc in docs.Users
 select new
 {
     Age = doc.Age,
@@ -410,7 +410,7 @@ select new {
             var results = GetMergeReportOfTwoIndexes(index1, index2);
             
             Assert.Equal(1, results.Suggestions.Count);
-            Assert.Equal(@"from doc in docs.Products
+            RavenTestHelper.AssertEqualRespectingNewLines(@"from doc in docs.Products
 select new
 {
     Category = doc.Category,
@@ -490,7 +490,7 @@ select new
             var results = GetMergeReportOfTwoIndexes(index2, index1);
            
             Assert.Equal(1, results.Suggestions.Count);
-            Assert.Equal(@"from doc in docs.Orders
+            RavenTestHelper.AssertEqualRespectingNewLines(@"from doc in docs.Orders
 select new
 {
     Company = doc.Company,
