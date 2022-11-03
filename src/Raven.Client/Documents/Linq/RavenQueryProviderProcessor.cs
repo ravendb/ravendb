@@ -1951,11 +1951,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         else
                         {
-                            if (_insideSelect == 0 && FieldsToFetch.Count > 0)
-                                throw new InvalidOperationException("Projection is already done. You should not project your result twice.");
+                            var initialSelect = _insideSelect;
+                            var initialCount = FieldsToFetch.Count;
+                            
                             _insideSelect++;
                             VisitSelect(operand);
                             _insideSelect--;
+                            
+                            if (initialSelect == 0 && initialCount > 0 && FieldsToFetch.Count != initialCount)
+                                throw new InvalidOperationException("Projection is already done. You should not project your result twice.");
                         }
                         break;
                     }
