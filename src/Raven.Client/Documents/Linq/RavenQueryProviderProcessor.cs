@@ -489,7 +489,7 @@ namespace Raven.Client.Documents.Linq
                     var isSimpleCompare = nameof(string.Compare) == methodCallExpression.Method.Name;
                     var argumentsCount = methodCallExpression.Arguments.Count;
                     
-                    if (isSimpleCompare == false && argumentsCount != 2)
+                    if (isSimpleCompare == false && argumentsCount > 2)
                         throw new NotSupportedException($"We do not support such overloads in '{methodCallExpression.Method.Name}'.");
                     if (isSimpleCompare)
                     {
