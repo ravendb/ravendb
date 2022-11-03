@@ -26,7 +26,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Fail_To_Convert_Char_To_Blittable()
+        public void Can_Convert_Char_To_Blittable()
         {
             var json = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(new ClientConfiguration
             {
