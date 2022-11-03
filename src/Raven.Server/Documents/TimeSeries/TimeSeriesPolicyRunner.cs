@@ -452,7 +452,14 @@ namespace Raven.Server.Documents.TimeSeries
                     return false;
 
                 if (nextEnd < to)
+                {
+                    if (currentStats.End.Add(next.AggregationTime).Add(next.RetentionTime) < to)
+                    {
+                        return false;
+                    }
+
                     return true;
+                }
             }
 
             return false;
