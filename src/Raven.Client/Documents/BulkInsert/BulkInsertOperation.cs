@@ -8,7 +8,6 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -691,10 +690,10 @@ namespace Raven.Client.Documents.BulkInsert
         private static void ValidateTimeSeriesName(string name)
         {
             if (string.IsNullOrEmpty(name))
-                throw new InvalidDataException("Time Series name must contain at least one character");
+                throw new ArgumentException("Time Series name must contain at least one character");
 
             if (name.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && name.Contains('@') == false)
-                throw new InvalidDataException($"Time Series name cannot start with {Constants.Headers.IncrementalTimeSeriesPrefix} prefix");
+                throw new ArgumentException($"Time Series name cannot start with {Constants.Headers.IncrementalTimeSeriesPrefix} prefix");
         }
 
         public struct CountersBulkInsert

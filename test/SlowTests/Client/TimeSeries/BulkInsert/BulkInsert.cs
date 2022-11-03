@@ -1297,5 +1297,29 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
                 }
             }
         }
+
+        [Fact]
+        public void CreateTimeSeriesWithInvalidNameShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                Assert.Throws<ArgumentException>(() =>
+                {
+                    var baseline = RavenTestHelper.UtcToday.EnsureMilliseconds();
+
+                    const string documentId = "users/ayende";
+
+                    using (var bulkInsert = store.BulkInsert())
+                    {
+                        bulkInsert.Store(new { Name = "Oren" }, documentId);
+
+                        using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "INC:Heartrate"))
+                        {
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+                        }
+                    }
+                });
+            }
+        }
     }
 }
