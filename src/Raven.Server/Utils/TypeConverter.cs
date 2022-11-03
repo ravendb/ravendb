@@ -103,6 +103,9 @@ namespace Raven.Server.Utils
                 return IsSupportedType(dictionary.Values);
             }
 
+            if (value is char)
+                return true;
+
             if (value is char[])
                 return true;
 
@@ -214,7 +217,7 @@ namespace Raven.Server.Utils
                 type == typeof(double) || type == typeof(decimal) || type == typeof(float) || type == typeof(short) ||
                 type == typeof(byte) ||
                 type == typeof(DateTime) || type == typeof(DateTimeOffset) || type == typeof(TimeSpan) ||
-                type == typeof(DateOnly) || type == typeof(TimeOnly))
+                type == typeof(DateOnly) || type == typeof(TimeOnly) || type == typeof(char))
                 return BlittableSupportedReturnType.Same;
 
             if (value is JsValue)
