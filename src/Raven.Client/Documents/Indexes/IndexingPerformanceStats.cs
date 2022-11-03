@@ -48,6 +48,13 @@ namespace Raven.Client.Documents.Indexes
 
         public double DurationInMs { get; }
 
+        [Obsolete($"Use '{nameof(AllocatedManagedBytes)}' instead.")]
+        public Size AllocatedBytes
+        {
+            get { return AllocatedManagedBytes; }
+            set { AllocatedManagedBytes = value; }
+        }
+        
         public Size AllocatedManagedBytes { get; set; }
         
         public Size AllocatedUnmanagedBytes { get; set; }
