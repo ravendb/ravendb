@@ -37,6 +37,7 @@ import messagePublisher from "common/messagePublisher";
 import "./IndexesPage.scss";
 import { useChanges } from "hooks/useChanges";
 import { delay } from "../../../../utils/common";
+import { Col, Row } from "reactstrap";
 
 interface IndexesPageProps {
     database: database;
@@ -699,35 +700,34 @@ export function IndexesPage(props: IndexesPageProps) {
         <>
             <div className="sticky-header">
                 {stats.indexes.length > 0 && (
-                    <div className="clearfix toolbar">
-                        <div className="pull-left">
-                            <div className="form-inline">
-                                {canReadWriteDatabase(database) && (
-                                    <div
-                                        className="checkbox checkbox-primary checkbox-inline align-checkboxes"
-                                        title="Select all or none"
-                                    >
-                                        <CheckboxTriple onChanged={toggleSelectAll} state={indexesSelectionState()} />
-                                        <label />
-                                    </div>
-                                )}
-
-                                <IndexFilter filter={filter} setFilter={setFilter} />
-                                {canReadWriteDatabase(database) && (
-                                    <IndexToolbarActions
-                                        selectedIndexes={selectedIndexes}
-                                        deleteSelectedIndexes={deleteSelectedIndexes}
-                                        enableSelectedIndexes={enableSelectedIndexes}
-                                        disableSelectedIndexes={disableSelectedIndexes}
-                                        pauseSelectedIndexes={pauseSelectedIndexes}
-                                        resumeSelectedIndexes={resumeSelectedIndexes}
-                                        setLockModeSelectedIndexes={confirmSetLockModeSelectedIndexes}
-                                    />
-                                )}
-                            </div>
-                        </div>
+                    <Row>
+                        <Col>
+                            {canReadWriteDatabase(database) && (
+                                <div
+                                    className="checkbox checkbox-primary checkbox-inline align-checkboxes"
+                                    title="Select all or none"
+                                >
+                                    <CheckboxTriple onChanged={toggleSelectAll} state={indexesSelectionState()} />
+                                    <label />
+                                </div>
+                            )}
+                            <IndexFilter filter={filter} setFilter={setFilter} />
+                        </Col>
+                        <Col sm="auto">
+                            {canReadWriteDatabase(database) && (
+                                <IndexToolbarActions
+                                    selectedIndexes={selectedIndexes}
+                                    deleteSelectedIndexes={deleteSelectedIndexes}
+                                    enableSelectedIndexes={enableSelectedIndexes}
+                                    disableSelectedIndexes={disableSelectedIndexes}
+                                    pauseSelectedIndexes={pauseSelectedIndexes}
+                                    resumeSelectedIndexes={resumeSelectedIndexes}
+                                    setLockModeSelectedIndexes={confirmSetLockModeSelectedIndexes}
+                                />
+                            )}
+                        </Col>
                         {/*  TODO  <IndexGlobalIndexing /> */}
-                    </div>
+                    </Row>
                 )}
                 <IndexFilterDescription filter={filter} indexes={getAllIndexes(groups, replacements)} />
             </div>
