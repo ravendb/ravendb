@@ -23,6 +23,7 @@ import {
     RichPanelSelect,
 } from "../../../../common/RichPanel";
 import { Checkbox } from "../../../../common/Checkbox";
+import { Button, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
 
 interface IndexPanelProps {
     database: database;
@@ -169,18 +170,12 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                     </h3>
 
                     {!IndexUtils.hasAnyFaultyNode(index) && (
-                        <div className="index-properties">
+                        <div className="flex-horizontal">
                             {!IndexUtils.isSideBySide(index) && (
-                                <div className="btn-group properties-value">
-                                    <button
-                                        type="button"
-                                        className={classNames("btn set-size dropdown-toggle", {
-                                            "btn-spinner": updatingLocalPriority,
-                                            enable: !updatingLocalPriority,
-                                        })}
-                                        data-toggle="dropdown"
-                                        disabled={!canReadWriteDatabase(database)}
-                                    >
+                                <UncontrolledDropdown className="margin-right">
+
+                                    <DropdownToggle outline color="info" disabled={!canReadWriteDatabase(database)}>
+                                        {updatingLocalPriority && <Spinner size="sm" className="margin-right-xs" />}
                                         {index.priority === "Normal" && (
                                             <span>
                                                 <i className="icon-check" />
@@ -199,44 +194,30 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                                 <span>High Priority</span>
                                             </span>
                                         )}
-                                        <span className="caret" />
-                                    </button>
-                                    <ul className="dropdown-menu">
-                                        <li>
-                                            <a href="#" onClick={(e) => setPriority(e, "Low")} title="Low">
-                                                <i className="icon-coffee" />
-                                                <span>Low Priority</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="#" onClick={(e) => setPriority(e, "Normal")} title="Normal">
-                                                <i className="icon-check" />
-                                                <span>Normal Priority</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="#" onClick={(e) => setPriority(e, "High")} title="High">
-                                                <i className="icon-force" />
-                                                <span>High Priority</span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
+                                    </DropdownToggle>
+
+                                    <DropdownMenu>
+                                        <DropdownItem onClick={(e) => setPriority(e, "Low")} title="Low">
+                                            <i className="icon-coffee" /> <span>Low Priority</span>
+                                        </DropdownItem>
+                                        <DropdownItem onClick={(e) => setPriority(e, "Normal")} title="Normal">
+                                            <i className="icon-check" /> <span>Normal Priority</span>
+                                        </DropdownItem>
+                                        <DropdownItem onClick={(e) => setPriority(e, "High")} title="High">
+                                            <i className="icon-force" /> <span>High Priority</span>
+                                        </DropdownItem>
+                                    </DropdownMenu>
+
+                                </UncontrolledDropdown>
                             )}
 
                             {index.type !== "AutoMap" &&
                                 index.type !== "AutoMapReduce" &&
                                 !IndexUtils.isSideBySide(index) && (
-                                    <div className="btn-group properties-value">
-                                        <button
-                                            type="button"
-                                            className={classNames("btn set-size dropdown-toggle", {
-                                                "btn-spinner": updatingLockMode,
-                                                enable: !updatingLockMode,
-                                            })}
-                                            data-toggle="dropdown"
-                                            disabled={!canReadWriteDatabase(database)}
-                                        >
+                                    <UncontrolledDropdown className="margin-right">
+
+                                        <DropdownToggle outline color="info" disabled={!canReadWriteDatabase(database)}>
+                                            {updatingLockMode && <Spinner size="sm" className="margin-right-xs" />}
                                             {index.lockMode === "Unlock" && (
                                                 <span>
                                                     <i className="icon-unlock" />
@@ -255,42 +236,25 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                                     <span>Locked (Error)</span>
                                                 </span>
                                             )}
-                                            <span className="caret" />
-                                        </button>
-                                        <ul className="dropdown-menu">
-                                            <li>
-                                                <a
-                                                    href="#"
-                                                    onClick={(e) => setLockMode(e, "Unlock")}
-                                                    title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes()."
-                                                >
-                                                    <i className="icon-unlock" />
-                                                    <span>Unlock</span>
-                                                </a>
-                                            </li>
-                                            <li className="divider" />
-                                            <li>
-                                                <a
-                                                    href="#"
-                                                    onClick={(e) => setLockMode(e, "LockedIgnore")}
-                                                    title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored."
-                                                >
-                                                    <i className="icon-lock" />
-                                                    <span>Lock</span>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a
-                                                    href="#"
-                                                    onClick={(e) => setLockMode(e, "LockedError")}
-                                                    title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it."
-                                                >
-                                                    <i className="icon-lock-error" />
-                                                    <span>Lock (Error)</span>
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
+                                        </DropdownToggle>
+
+                                        <DropdownMenu>
+                                            <DropdownItem onClick={(e) => setLockMode(e, "Unlock")}
+                                                title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
+                                                <i className="icon-unlock" /> <span>Unlock</span>
+                                            </DropdownItem>
+                                            <DropdownItem divider />
+                                            <DropdownItem onClick={(e) => setLockMode(e, "LockedIgnore")}
+                                                title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
+                                                <i className="icon-lock" /> <span>Lock</span>
+                                            </DropdownItem>
+                                            <DropdownItem onClick={(e) => setLockMode(e, "LockedError")}
+                                                title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
+                                                <i className="icon-lock-error" /> <span>Lock (Error)</span>
+                                            </DropdownItem>
+                                        </DropdownMenu>
+
+                                    </UncontrolledDropdown>
                                 )}
                         </div>
                     )}
@@ -298,119 +262,82 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                     <div className="actions">
                         <div className="btn-toolbar pull-right-sm" role="toolbar">
                             {!IndexUtils.hasAnyFaultyNode(index) && (
-                                <div className="btn-group properties-value">
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        data-toggle="dropdown"
-                                        data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
+                                <UncontrolledDropdown>
+
+                                        <DropdownToggle data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
                                            enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
-                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }"
-                                    >
-                                        {updatingState && <i className="btn-spinner" />}
-                                        <span>Set State</span>
-                                        <span className="caret" />
-                                    </button>
-                                    <ul className="dropdown-menu">
-                                        <li>
-                                            <a href="#" onClick={enableIndexing} title="Enable indexing">
-                                                <i className="icon-play" />
-                                                <span>Enable indexing</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="#" onClick={disableIndexing} title="Disable indexing">
-                                                <i className="icon-cancel" />
-                                                <span>Disable indexing</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a
-                                                href="#"
-                                                onClick={pauseIndexing}
-                                                className="text-warning"
-                                                title="Pause until restart"
-                                            >
-                                                <i className="icon-pause" />
-                                                <span>Pause indexing until restart</span>
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a
-                                                href="#"
-                                                onClick={resumeIndexing}
-                                                className="text-success"
-                                                title="Resume indexing"
-                                            >
-                                                <i className="icon-play" />
-                                                <span>Resume indexing</span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
+                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
+                                            {updatingState && <Spinner size="sm" className="margin-right-xs" />}
+                                            <span>Set State</span>
+                                        </DropdownToggle>
+
+                                        <DropdownMenu>
+                                            <DropdownItem onClick={enableIndexing} title="Enable indexing">
+                                                <i className="icon-play" /> <span>Enable indexing</span>
+                                            </DropdownItem>
+                                            <DropdownItem onClick={disableIndexing} title="Disable indexing">
+                                                <i className="icon-cancel text-danger" /> <span>Disable indexing</span>
+                                            </DropdownItem>
+                                            <DropdownItem divider />
+                                            <DropdownItem onClick={resumeIndexing} title="Resume indexing">
+                                                <i className="icon-play" /> <span>Resume indexing</span>
+                                            </DropdownItem>
+                                            <DropdownItem onClick={pauseIndexing} title="Pause until restart">
+                                                <i className="icon-pause text-warning" /> <span>Pause indexing until restart</span>
+                                            </DropdownItem>
+                                            
+                                        </DropdownMenu>
+
+                                </UncontrolledDropdown>
                             )}
 
                             {!IndexUtils.hasAnyFaultyNode(index) && (
-                                <div className="btn-group margin-left-xxs" role="group">
-                                    <a className="btn btn-secondary" href={queryUrl}>
+                                <ButtonGroup className="margin-left-xxs">
+                                    <Button variant="secondary" href={queryUrl}>
                                         <i className="icon-search" />
                                         <span>Query</span>
-                                    </a>
-                                    <button
-                                        type="button"
-                                        className="btn btn-secondary dropdown-toggle"
-                                        data-toggle="dropdown"
-                                    >
-                                        <span className="caret" />
-                                        <span className="sr-only">Toggle Dropdown</span>
-                                    </button>
-                                    <ul className="dropdown-menu">
-                                        <li>
-                                            <a href={termsUrl}>
-                                                <i className="icon-terms" /> Terms
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
+                                    </Button>
+
+                                    <UncontrolledDropdown>
+                                        <DropdownToggle className="dropdown-toggle" />
+
+                                        <DropdownMenu right>
+                                            <DropdownItem href={termsUrl}> <i className="icon-terms" /> Terms </DropdownItem>
+                                        </DropdownMenu>
+                                    </UncontrolledDropdown>
+
+
+                                </ButtonGroup>
                             )}
 
-                            <div className="btn-group margin-left-xxs" role="group">
+                            <ButtonGroup className="margin-left-xxs">
                                 {!IndexUtils.isAutoIndex(index) && !canReadOnlyDatabase(database) && (
-                                    <a className="btn btn-secondary" href={editUrl} title="Edit index">
+                                    <Button href={editUrl} title="Edit index">
                                         <i className="icon-edit" />
-                                    </a>
+                                    </Button>
                                 )}
                                 {(IndexUtils.isAutoIndex(index) || canReadOnlyDatabase(database)) && (
-                                    <a className="btn btn-secondary" href={editUrl} title="View index">
+                                    <Button href={editUrl} title="View index">
                                         <i className="icon-preview" />
-                                    </a>
+                                    </Button>
                                 )}
-                            </div>
+                            </ButtonGroup>
 
                             {inlineDetails && isFaulty && (
-                                <button
-                                    type="button"
-                                    className="btn btn-danger"
-                                    onClick={() => openFaulty(index.nodesInfo[0].location)}
-                                >
+                                <Button onClick={() => openFaulty(index.nodesInfo[0].location)} className="margin-left-xxs">
                                     Open faulty index
-                                </button>
+                                </Button>
                             )}
 
                             {canReadWriteDatabase(database) && (
-                                <div className="btn-group margin-left-xxs" role="group">
-                                    <button
-                                        className="btn btn-warning"
-                                        type="button"
-                                        onClick={resetIndex}
-                                        title="Reset index (rebuild)"
-                                    >
+                                <ButtonGroup className="margin-left-xxs">
+                                    <Button color="warning" onClick={resetIndex} title="Reset index (rebuild)">
                                         <i className="icon-reset-index" />
-                                    </button>
-                                    <button className="btn btn-danger" onClick={deleteIndex} title="Delete the index">
+                                    </Button>
+                                    <Button color="danger" onClick={deleteIndex} title="Delete the index">
                                         <i className="icon-trash" />
-                                    </button>
-                                </div>
+                                    </Button>
+                                </ButtonGroup>
                             )}
                         </div>
                     </div>
@@ -476,7 +403,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             )}
                         </RichPanelDetailItem>
                     )}
-                    <RichPanelDetailItem>
+                    <RichPanelDetailItem className={isFaulty ? "text-danger" : ""}>
                         <i className={IndexUtils.indexTypeIcon(index.type)} />
                         {IndexUtils.formatType(index.type)}
                     </RichPanelDetailItem>

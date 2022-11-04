@@ -6,7 +6,7 @@ import { EssentialDatabaseStatsComponent } from "./EssentialDatabaseStatsCompone
 import { useAppUrls } from "../../../../hooks/useAppUrls";
 import { DetailedDatabaseStats } from "./DetailedDatabaseStats";
 import { IndexesDatabaseStats } from "./IndexesDatabaseStats";
-import { Col, Row } from "reactstrap";
+import { Button, Col, Row } from "reactstrap";
 
 interface StatisticsPageProps {
     database: database;
@@ -51,29 +51,19 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
                 <Col>
                     <h2 className="on-base-background">
                         General Database Stats
-                        <a className="margin-left-xs" target="_blank" href={rawJsonUrl} title="Show raw output">
+                        <Button color="link" className="margin-left-xs" target="_blank" href={rawJsonUrl} title="Show raw output">
                             <i className="icon-link"></i>
-                        </a>
+                        </Button>
                     </h2>
                 </Col>
                 <Col sm="auto">
-                    <button
-                        onClick={() => setDbDetailsVisible((x) => !x)}
-                        type="button"
-                        className="btn btn-primary pull-right margin-left-xs"
-                        title="Click to load detailed statistics"
-                    >
+                    <Button color="primary" onClick={() => setDbDetailsVisible((x) => !x)} title="Click to load detailed statistics">
                         <span>{dbDetailsVisible ? "Hide" : "Show"} details</span>
-                    </button>
-                    <button
-                        onClick={refreshStats}
-                        type="button"
-                        className="btn btn-primary pull-right margin-left-xs"
-                        title="Click to refresh stats"
-                    >
+                    </Button>
+                    <Button color="primary" onClick={refreshStats} className="margin-left-xs" title="Click to refresh stats">
                         <i className="icon-refresh"></i>
                         <span>Refresh</span>
-                    </button>
+                    </Button>
                 </Col>
             </Row>
             <EssentialDatabaseStatsComponent stats={essentialStats} />

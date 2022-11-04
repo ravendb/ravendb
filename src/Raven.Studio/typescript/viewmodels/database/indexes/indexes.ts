@@ -20,4 +20,8 @@ export class indexes extends shardViewModelBase {
         component: IndexesPage,
         props: this.props
     }));
+
+    isUsingBootstrap5() {
+        return true;
+    }
 }
