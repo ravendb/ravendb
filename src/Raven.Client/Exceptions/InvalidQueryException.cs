@@ -42,11 +42,22 @@ namespace Raven.Client.Exceptions
 
             if (parameters != null)
             {
-                result.Append(Environment.NewLine)
-                    .Append("Parameters: ")
-                    .Append(parameters);
-            }
+                string parametersString = null;
+                try
+                {
+                    parametersString = parameters.ToString();
+                }
+                catch (InsufficientExecutionStackException)
+                {
+                    parametersString = "Parameters are too big to attach them in exception.";
+                }
 
+                if (parametersString != null)
+                    result.Append(Environment.NewLine)
+                        .Append("Parameters: ")
+                        .Append(parametersString);
+            }
+            
             return result.ToString();
         }
     }
