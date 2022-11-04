@@ -32,6 +32,7 @@ namespace Voron.Data.BTrees
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private Dictionary<Slice, FixedSizeTree<double>> _fixedSizeTreesForDouble;
         private Dictionary<Slice, CompactTree> _compactTrees;
+        private WeakSliceSmallSet<CompactTree> _compactTreesLocator;
 
         public event Action<long, PageFlags> PageModified;
         public event Action<long, PageFlags> PageFreed;
@@ -1329,6 +1330,7 @@ namespace Voron.Data.BTrees
             }
 
             DecompressionsCache?.Dispose();
+            _compactTreesLocator?.Dispose();
         }
 
         private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode, int len, out byte* pos)
@@ -1405,33 +1407,31 @@ namespace Voron.Data.BTrees
         
         public CompactTree CompactTreeFor(Slice key)
         {
-            _compactTrees ??= new Dictionary<Slice, CompactTree>(SliceComparer.Instance);
-
-            if (_compactTrees.TryGetValue(key, out var compactTree) == false)
+            if (_compactTrees == null)
+            {
+                // Since the Weak Small Set will lose items if more than 128 items gets added,
+                // we will still be adding the compact trees to a dictionary; however, since
+                // the dictionary will get searched many times over the lifetime of the transaction
+                // the overhead caused by storing in two different data structures gets amortized.
+                _compactTrees = new Dictionary<Slice, CompactTree>(SliceComparer.Instance);
+                _compactTreesLocator = new WeakSliceSmallSet<CompactTree>(128);
+            }
+            
+            if (_compactTreesLocator.TryGetValue(key, out var compactTree) == false)
             {
                 compactTree = CompactTree.InternalCreate(this, key);
                 if (compactTree == null) // missing value on read transaction
                     return null;
-                
-                _compactTrees[key.Clone(_llt.Allocator)] = compactTree;
+
+                var keyClone = key.Clone(_llt.Allocator);
+                _compactTrees[keyClone] = compactTree;
+                _compactTreesLocator.Add(keyClone, compactTree);
             }
 
             State.Flags |= TreeFlags.CompactTrees;
 
             return compactTree;
         }
-
-        public long DeleteCompactTreeFor(Slice key)
-        {
-            var compactTree = CompactTreeFor(key);
-            var numberOfEntries = compactTree.NumberOfEntries;
-
-            CompactTree.Delete(compactTree, this);
-            _compactTrees.Remove(key);
-
-            return numberOfEntries;
-        }
-
 
         public FixedSizeTree FixedTreeFor(Slice key, byte valSize = 0)
         {
