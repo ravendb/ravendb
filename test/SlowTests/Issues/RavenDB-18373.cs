@@ -73,7 +73,6 @@ namespace SlowTests.Issues
 
             using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = transactionMode }))
             {
-                session.Advanced.WaitForReplicationAfterSaveChanges();
                 session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(3));
                 await session.StoreAsync(new TestObj(), "testObjs/0");
                 await session.StoreAsync(new TestObj(), "testObjs/1");
