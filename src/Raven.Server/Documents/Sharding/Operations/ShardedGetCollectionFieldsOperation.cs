@@ -9,28 +9,31 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
-    internal readonly struct ShardedGetCollectionFieldsOperation : IShardedOperation<BlittableJsonReaderObject, Dictionary<LazyStringValue, FieldType>>
+    internal readonly struct ShardedGetCollectionFieldsOperation : IShardedReadOperation<BlittableJsonReaderObject, Dictionary<LazyStringValue, FieldType>>
     {
         private readonly JsonOperationContext _context;
         private readonly HttpContext _httpContext;
         private readonly string _collection;
         private readonly string _prefix;
 
-        public ShardedGetCollectionFieldsOperation(JsonOperationContext context, HttpContext httpContext, string collection, string prefix)
+        public ShardedGetCollectionFieldsOperation(JsonOperationContext context, HttpContext httpContext, string collection, string prefix, string etag)
         {
             _context = context;
             _httpContext = httpContext;
             _collection = collection;
             _prefix = prefix;
+            ExpectedEtag = etag;
         }
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-        public Dictionary<LazyStringValue, FieldType> Combine(Memory<BlittableJsonReaderObject> results)
+        public string ExpectedEtag { get; }
+
+        public Dictionary<LazyStringValue, FieldType> CombineResults(Memory<BlittableJsonReaderObject> results)
         {
             var span = results.Span;
             var combined = new Dictionary<LazyStringValue, FieldType>(LazyStringValueComparer.Instance);
-            
+
             foreach (var collectionFields in span)
             {
                 if (collectionFields == null)
@@ -41,7 +44,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                 for (int i = 0; i < collectionFields.Count; i++)
                 {
                     collectionFields.GetPropertyByIndex(i, ref propDetails);
-                    if(Enum.TryParse(propDetails.Value.ToString(), out FieldType type))
+                    if (Enum.TryParse(propDetails.Value.ToString(), out FieldType type))
                         combined.TryAdd(propDetails.Name.Clone(_context), type);
                 }
             }

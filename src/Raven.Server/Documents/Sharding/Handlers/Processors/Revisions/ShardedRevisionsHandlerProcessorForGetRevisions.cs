@@ -26,26 +26,26 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 
         protected override async ValueTask GetRevisionByChangeVectorAsync(TransactionOperationContext context, Microsoft.Extensions.Primitives.StringValues changeVectors, bool metadataOnly, CancellationToken token)
         {
-            var cmd = new ShardedGetRevisionsByChangeVectorsOperation(HttpContext, changeVectors.ToArray(), metadataOnly, context);
+            var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+            var cmd = new ShardedGetRevisionsByChangeVectorsOperation(HttpContext, changeVectors.ToArray(), metadataOnly, context, etag);
+            var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(cmd, token);
 
-            var res = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(cmd, token);
-
-            if (res == null && changeVectors.Count == 1)
+            if (result.Result == null && changeVectors.Count == 1)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return;
             }
 
-            string etag = null; //TODO
-            if (NotModified(etag))
+            if (result.StatusCode == (int)HttpStatusCode.NotModified)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
             }
+            
+            if (string.IsNullOrEmpty(result.CombinedEtag) == false)
+                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.CombinedEtag + "\"";
 
-            if (string.IsNullOrEmpty(etag) == false)
-                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + etag + "\"";
-
+            var res = result.Result;
             var blittable = RequestHandler.GetBoolValueQueryString("blittable", required: false) ?? false;
 
             if (blittable)
@@ -72,29 +72,23 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
                 cmd = new GetRevisionsCommand(id, start, pageSize, metadataOnly);
             }
 
-            string etag = null; //TODO
-            if (NotModified(etag))
+            int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, id);
+            var result = await RequestHandler.ExecuteSingleShardAsync(context, cmd, shardNumber, token);
+
+            string actualChangeVector = cmd.Etag;
+            if (NotModified(actualChangeVector))
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
             }
 
-            if (string.IsNullOrEmpty(etag) == false)
-                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + etag + "\"";
+            if (string.IsNullOrEmpty(actualChangeVector) == false)
+                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualChangeVector + "\"";
 
-            int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, id);
-            var result = await RequestHandler.ExecuteSingleShardAsync(context, cmd, shardNumber, token);
-            var array = result.Results.Items.Select(x => ((BlittableJsonReaderObject)x).Clone(context)).ToArray();
-
+            var array = result.Results.Items.Select(x => (BlittableJsonReaderObject)x).ToArray();
             await WriteRevisionsResultAsync(context, RequestHandler, array, result.TotalResults);
 
             AddPagingPerformanceHint(PagingOperationType.Revisions, "", "", 0, 0, 0, 0);
-        }
-
-        protected override bool NotModified(string actualEtag)
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19066 Need to figure out the best way to combine ETags and send not modified");
-            return false;
         }
 
         public static async ValueTask WriteRevisionsResultAsync(JsonOperationContext context, ShardedDatabaseRequestHandler handler, BlittableJsonReaderObject[] array, long? totalResult, ContinuationToken continuationToken = null)

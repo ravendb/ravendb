@@ -1,5 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -9,7 +13,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Studio;
 using Raven.Server.Documents.Sharding.Operations;
 using Sparrow.Json;
@@ -178,6 +181,102 @@ namespace SlowTests.Client.Operations
 
                 Assert.NotNull(collectionFields);
                 Assert.Equal(5, collectionFields.Count);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Studio)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldGetNotModifiedStatusForGetStudioCollectionFields(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    var o1 = new MultipleFieldsClass1() { Name1 = "SomeName1", Name2 = "SomeName2" };
+                    session.Store(o1, "user/A-1");
+                    session.Advanced.GetMetadataFor(o1)[Constants.Documents.Metadata.Collection] = "User";
+
+                    var o2 = new MultipleFieldsClass2() { Name3 = "SomeName3", Name4 = "SomeName4" };
+                    session.Store(o2, "user/B-2");
+                    session.Advanced.GetMetadataFor(o2)[Constants.Documents.Metadata.Collection] = "User";
+
+                    var o3 = new NoFieldsClass();
+                    session.Store(o3, "user/E-3");
+                    session.Advanced.GetMetadataFor(o3)[Constants.Documents.Metadata.Collection] = "User";
+                    session.SaveChanges();
+                }
+
+                var serverNode = new ServerNode
+                {
+                    Database = store.Database,
+                    Url = store.Urls.First()
+                };
+
+                using (var re = store.GetRequestExecutor())
+                using (re.ContextPool.AllocateOperationContext(out var ctx))
+                {
+                    var command = new GetCollectionFieldsCommand("User", "");
+                    var request = command.CreateRequest(ctx, serverNode, out var url);
+                    request.RequestUri = new UriBuilder(url).Uri;
+
+                    var response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+
+                    Assert.True(response.StatusCode != HttpStatusCode.NotModified);
+
+                    var etagFromResponse = response.Headers.ETag?.Tag;
+
+                    command = new GetCollectionFieldsCommand("User", "");
+                    request = command.CreateRequest(ctx, serverNode, out url);
+                    request.RequestUri = new UriBuilder(url).Uri;
+                    request.Headers.IfNoneMatch.ParseAdd(etagFromResponse);
+
+                    response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+
+                    Assert.True(response.StatusCode == HttpStatusCode.NotModified);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Studio)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ShouldGetNotModifiedStatusForPreviewCollection(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "SomeDoc" });
+                    session.SaveChanges();
+                }
+
+                var serverNode = new ServerNode
+                {
+                    Database = store.Database,
+                    Url = store.Urls.First()
+                };
+
+                using (var re = store.GetRequestExecutor())
+                using (re.ContextPool.AllocateOperationContext(out var ctx))
+                {
+                    var request = new HttpRequestMessage {Method = HttpMethod.Get };
+                    var url = $"{serverNode.Url}/databases/{serverNode.Database}/studio/collections/preview";
+                    request.RequestUri = new UriBuilder(url).Uri;
+                   
+                    var response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+
+                    Assert.True(response.StatusCode != HttpStatusCode.NotModified);
+
+                    var etagFromResponse = response.Headers.ETag?.Tag;
+
+                    request = new HttpRequestMessage { Method = HttpMethod.Get };
+                    url = $"{serverNode.Url}/databases/{serverNode.Database}/studio/collections/preview";
+                    request.RequestUri = new UriBuilder(url).Uri;
+                    request.Headers.IfNoneMatch.ParseAdd(etagFromResponse);
+
+                    response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+
+                    Assert.True(response.StatusCode == HttpStatusCode.NotModified);
+                }
             }
         }
 
