@@ -88,6 +88,7 @@ namespace Raven.Client.Documents.Session
     public interface ISessionDocumentTypedIncrementalTimeSeries<TValues> :
         ITimeSeriesStreamingBase<TimeSeriesEntry<TValues>>,
         ISessionDocumentDeleteTimeSeriesBase,
+        ISessionDocumentIncrementTimeSeriesBase, // TODO: Remove - in 6.0 (breaking change - RavenDB-19447)
         ISessionDocumentTypedIncrementTimeSeriesBase<TValues>
         where TValues : new()
     {

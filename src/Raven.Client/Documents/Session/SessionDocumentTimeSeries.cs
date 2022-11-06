@@ -148,12 +148,12 @@ namespace Raven.Client.Documents.Session
             Increment(DateTime.UtcNow, new[] { value });
         }
 
-        public void Increment(DateTime timestamp, TValues entry)
+        void ISessionDocumentTypedIncrementTimeSeriesBase<TValues>.Increment(DateTime timestamp, TValues entry)
         {
             _asyncSessionTimeSeries.Increment(timestamp, entry);
         }
 
-        public void Increment(TValues entry)
+        void ISessionDocumentTypedIncrementTimeSeriesBase<TValues>.Increment(TValues entry)
         {
             _asyncSessionTimeSeries.Increment(DateTime.UtcNow, entry);
         }
