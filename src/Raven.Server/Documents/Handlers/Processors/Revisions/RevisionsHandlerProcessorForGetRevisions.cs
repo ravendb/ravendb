@@ -123,15 +123,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
             }
         }
 
-        protected override bool NotModified(string actualEtag)
-        {
-            var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-            if (etag == actualEtag)
-                return true;
-            
-            return false;
-        }
-
         protected async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteRevisionsJsonAsync(JsonOperationContext context, bool metadataOnly, List<Document> revisionsResult, CancellationToken token)
         {
             long numberOfResults;

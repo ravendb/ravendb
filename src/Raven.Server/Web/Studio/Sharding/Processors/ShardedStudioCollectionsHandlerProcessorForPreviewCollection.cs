@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Http;
 using NuGet.Packaging;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
@@ -19,7 +19,6 @@ using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.Json;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
@@ -33,6 +32,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
     private ShardedPagingContinuation _continuationToken;
 
     private CombinedReadContinuationState _combinedReadState;
+    private string _combinedEtag;
 
     public ShardedStudioCollectionsHandlerProcessorForPreviewCollection(ShardedDatabaseRequestHandler requestHandler)
         : base(requestHandler)
@@ -45,12 +45,12 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         await base.InitializeAsync();
 
         _releaseContext = RequestHandler.ContextPool.AllocateOperationContext(out _context);
-
         _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(_context);
 
         var op = new ShardedCollectionPreviewOperation(RequestHandler, null, _continuationToken);
         var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
         _combinedReadState = await result.Result.InitializeAsync(_requestHandler.DatabaseContext, _requestHandler.AbortRequestToken);
+        _combinedEtag = result.CombinedEtag;
     }
 
     protected override JsonOperationContext GetContext()
@@ -86,10 +86,13 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
     protected override bool NotModified(out string etag)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-            "RavenDB-19066 Need to figure out the best way to combine ETags and send not modified. See `null` passed as etag to above new ShardedCollectionPreviewOperation()");
-
         etag = null;
+        var etagFromRequest = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+
+        if (etagFromRequest != null && etagFromRequest == _combinedEtag)
+            return true;
+
+        etag = _combinedEtag;
         return false;
     }
 

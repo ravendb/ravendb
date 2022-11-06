@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Server.Documents.Handlers.Processors.Studio;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 {
@@ -17,14 +18,21 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 
         protected override async ValueTask<Dictionary<LazyStringValue, FieldType>> GetFieldsAsync(TransactionOperationContext context, string collection, string prefix)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "RavenDB-19066 Handle NotModified");
-
             using (var token = RequestHandler.CreateOperationToken())
             {
-                var op = new ShardedGetCollectionFieldsOperation(context, HttpContext, collection, prefix);
+                var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+                var op = new ShardedGetCollectionFieldsOperation(context, HttpContext, collection, prefix, etag);
                 var collectionFields = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token.Token);
-                
-                return collectionFields;
+
+                if (collectionFields.StatusCode == (int)HttpStatusCode.NotModified)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return null;
+                }
+
+                HttpContext.Response.Headers["ETag"] = "\"" + collectionFields.CombinedEtag + "\"";
+
+                return collectionFields.Result;
             }
         }
     }

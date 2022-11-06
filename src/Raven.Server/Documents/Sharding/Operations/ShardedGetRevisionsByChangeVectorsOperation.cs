@@ -7,24 +7,27 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
-    internal readonly struct ShardedGetRevisionsByChangeVectorsOperation : IShardedOperation<BlittableArrayResult, BlittableJsonReaderObject[]>
+    internal readonly struct ShardedGetRevisionsByChangeVectorsOperation : IShardedReadOperation<BlittableArrayResult, BlittableJsonReaderObject[]>
     {
         private readonly HttpContext _httpContext;
         private readonly string[] _changeVectors;
         private readonly bool _metadataOnly;
         private readonly JsonOperationContext _context;
 
-        public ShardedGetRevisionsByChangeVectorsOperation(HttpContext httpContext, string[] changeVectors, bool metadataOnly, JsonOperationContext context)
+        public ShardedGetRevisionsByChangeVectorsOperation(HttpContext httpContext, string[] changeVectors, bool metadataOnly, JsonOperationContext context, string etag)
         {
             _httpContext = httpContext;
             _changeVectors = changeVectors;
             _metadataOnly = metadataOnly;
             _context = context;
+            ExpectedEtag = etag;
         }
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-        public BlittableJsonReaderObject[] Combine(Memory<BlittableArrayResult> results)
+        public string ExpectedEtag { get; }
+
+        public BlittableJsonReaderObject[] CombineResults(Memory<BlittableArrayResult> results)
         {
             var span = results.Span;
 

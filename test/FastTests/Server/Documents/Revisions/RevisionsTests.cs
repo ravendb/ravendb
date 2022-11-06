@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -2142,6 +2143,120 @@ namespace FastTests.Server.Documents.Revisions
                 {
                     var companiesRevisionsCount = await session.Advanced.Revisions.GetCountForAsync(company.Id);
                     Assert.Equal(2, companiesRevisionsCount);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task GetRevisionsByIdShouldGetNotModifiedStatus(Options options)
+        {
+            var company = new Company { Name = "Company Name" };
+            using (var store = GetDocumentStore(options))
+            {
+                await RevisionsHelper.SetupRevisionsAsync(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company2 = await session.LoadAsync<Company>(company.Id);
+                    company2.Name = "Hibernating Rhinos";
+                    await session.SaveChangesAsync();
+                }
+
+                var serverNode = new ServerNode
+                {
+                    Database = store.Database,
+                    Url = store.Urls.First()
+                };
+
+                using (var re = store.GetRequestExecutor())
+                using (re.ContextPool.AllocateOperationContext(out var ctx))
+                {
+                    var revisionsCommand = new GetRevisionsCommand(company.Id, before: DateTime.MaxValue);
+                    var request = revisionsCommand.CreateRequest(ctx, serverNode, out var url);
+                    request.RequestUri = new UriBuilder(url).Uri;
+
+                    var response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+
+                    Assert.True(response.StatusCode != HttpStatusCode.NotModified);
+
+                    var etagFromResponse = response.Headers.ETag?.Tag;
+
+                    request = revisionsCommand.CreateRequest(ctx, serverNode, out url);
+                    request.RequestUri = new UriBuilder(url).Uri;
+                    request.Headers.IfNoneMatch.ParseAdd(etagFromResponse);
+
+                    response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+                    
+                    Assert.True(response.StatusCode == HttpStatusCode.NotModified);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task GetRevisionsByChangeVectorsShouldGetNotModifiedStatus(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var id = "users/1";
+                await RevisionsHelper.SetupRevisionsAsync(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<Company>(id);
+                        user.Name = "Fitzchak " + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
+                    Assert.Equal(11, revisionsMetadata.Count);
+
+                    var changeVectors = revisionsMetadata.Select(x => x.GetString(Constants.Documents.Metadata.ChangeVector)).ToList();
+                    changeVectors.Add("NotExistsChangeVector");
+
+                    var serverNode = new ServerNode
+                    {
+                        Database = store.Database,
+                        Url = store.Urls.First()
+                    };
+
+                    using (var re = store.GetRequestExecutor())
+                    using (re.ContextPool.AllocateOperationContext(out var ctx))
+                    {
+                        var revisionsCommand = new GetRevisionsCommand(changeVectors.ToArray());
+                        var request = revisionsCommand.CreateRequest(ctx, serverNode, out var url);
+                        request.RequestUri = new UriBuilder(url).Uri;
+
+                        var response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+
+                        Assert.True(response.StatusCode != HttpStatusCode.NotModified);
+
+                        var etagFromResponse = response.Headers.ETag?.Tag;
+
+                        request = revisionsCommand.CreateRequest(ctx, serverNode, out url);
+                        request.RequestUri = new UriBuilder(url).Uri;
+                        request.Headers.IfNoneMatch.ParseAdd(etagFromResponse);
+
+                        response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+
+                        Assert.True(response.StatusCode == HttpStatusCode.NotModified);
+                    }
                 }
             }
         }

@@ -17,8 +17,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
         {
         }
 
-        protected abstract bool NotModified(string actualEtag);
-
         protected abstract ValueTask GetRevisionByChangeVectorAsync(TOperationContext context, Microsoft.Extensions.Primitives.StringValues changeVectors, bool metadataOnly, CancellationToken token);
         
         protected abstract ValueTask GetRevisionsAsync(TOperationContext context, string id, DateTime? before, int start, int pageSize, bool metadataOnly, CancellationToken token);
@@ -46,6 +44,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
                     await GetRevisionsAsync(context, id, before, start, pageSize, metadataOnly, token.Token);
                 }
             }
+        }
+
+        protected bool NotModified(string actualEtag)
+        {
+            var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+            if (etag == actualEtag)
+                return true;
+
+            return false;
         }
 
         protected void WriteRevisionsBlittable(JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> documentsToWrite, out long numberOfResults, out long totalDocumentsSizeInBytes)
