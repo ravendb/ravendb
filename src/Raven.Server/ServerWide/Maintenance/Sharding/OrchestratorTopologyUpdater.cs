@@ -13,7 +13,7 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
             RachisConsensus<ClusterStateMachine> engine,
             ClusterConfiguration clusterConfiguration,
             DateTime clusterObserverStartTime,
-            LogMessageDel logMessage) : base(server, engine, clusterConfiguration, clusterObserverStartTime, logMessage)
+            ObserverLogger logger) : base(server, engine, clusterConfiguration, clusterObserverStartTime, logger)
         {
         }
 
@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
             return (true, $"Node {promotable} is ready to be promoted to orchestrator");
         }
 
-        protected override bool IsLastCommittedIndexCaughtUp(ClusterOperationContext context, string node, DatabaseTopology topology, ClusterNodeStatusReport nodeStats)
+        protected override bool IsLastCommittedIndexCaughtUp(ClusterOperationContext context, string node, DatabaseTopology topology, ClusterNodeStatusReport nodeStats, long iteration)
         {
             var lastCommittedIndex = _engine.GetLastCommitIndex(context);
 
@@ -39,7 +39,7 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
                           $"Last Committed Cluster Raft Index: {lastCommittedIndex}" + Environment.NewLine +
                           $"Leader's Last Completed Cluster Transaction Raft Index: {nodeStats.ServerReport.LastCommittedIndex}";
 
-                LogMessage($"Node {node} hasn't been promoted because its last commit index isn't up to date yet");
+                _logger.Log($"Node {node} hasn't been promoted because its last commit index isn't up to date yet", iteration);
 
                 if (topology.DemotionReasons.TryGetValue(node, out var demotionReason) == false ||
                     msg.Equals(demotionReason) == false)

@@ -42,7 +42,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly string _nodeTag;
         private readonly RachisConsensus<ClusterStateMachine> _engine;
         private readonly ClusterContextPool _contextPool;
-        private readonly Logger _logger;
+        private readonly ObserverLogger _observerLogger;
 
         private readonly TimeSpan _supervisorSamplePeriod;
         private readonly ServerStore _server;
@@ -67,16 +67,16 @@ namespace Raven.Server.ServerWide.Maintenance
             _engine = engine;
             _term = term;
             _contextPool = contextPool;
-            _logger = LoggingSource.Instance.GetLogger<ClusterObserver>(_nodeTag);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            _observerLogger = new ObserverLogger(_nodeTag);
 
             var config = server.Configuration.Cluster;
             _supervisorSamplePeriod = config.SupervisorSamplePeriod.AsTimeSpan;
             _stabilizationTime = config.StabilizationTime.AsTimeSpan;
             _stabilizationTimeMs = (long)config.StabilizationTime.AsTimeSpan.TotalMilliseconds;
             
-            _databaseTopologyUpdater = new DatabaseTopologyUpdater(server, engine, config, clusterObserverStartTime: DateTime.UtcNow, LogMessage);
-            _orchestratorTopologyUpdater = new OrchestratorTopologyUpdater(server, engine, config, clusterObserverStartTime: DateTime.UtcNow, LogMessage);
+            _databaseTopologyUpdater = new DatabaseTopologyUpdater(server, engine, config, clusterObserverStartTime: DateTime.UtcNow, _observerLogger);
+            _orchestratorTopologyUpdater = new OrchestratorTopologyUpdater(server, engine, config, clusterObserverStartTime: DateTime.UtcNow, _observerLogger);
 
             _observe = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
             {
@@ -92,7 +92,6 @@ namespace Raven.Server.ServerWide.Maintenance
         }
 
         public bool Suspended = false; // don't really care about concurrency here
-        private readonly BlockingCollection<ClusterObserverLogEntry> _decisionsLog = new BlockingCollection<ClusterObserverLogEntry>();
         private long _iteration;
         private readonly long _term;
         private long _lastIndexCleanupTimeInTicks;
@@ -102,7 +101,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public (ClusterObserverLogEntry[] List, long Iteration) ReadDecisionsForDatabase()
         {
-            return (_decisionsLog.ToArray(), _iteration);
+            return (_observerLogger.DecisionsLog.ToArray(), _iteration);
         }
 
         public void Run(CancellationToken token)
@@ -139,38 +138,17 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 catch (Exception e)
                 {
+                    Console.WriteLine(e);
+
                     Debug.Assert(e.InnerException is not KeyNotFoundException,
                         $"Got a '{nameof(KeyNotFoundException)}' while analyzing maintenance stats on node {_nodeTag} : {e}");
 
-                    LogMessage($"An error occurred while analyzing maintenance stats on node {_nodeTag}.", e);
+                    _observerLogger.Log($"An error occurred while analyzing maintenance stats on node {_nodeTag}.", _iteration, e);
                 }
                 finally
                 {
                     token.WaitHandle.WaitOne(_supervisorSamplePeriod);
                 }
-            }
-        }
-
-        private readonly Dictionary<string, long> _lastLogs = new Dictionary<string, long>();
-
-        internal void LogMessage(string message, Exception e = null, string database = null)
-        {
-            Console.WriteLine(_iteration);
-            if (_iteration % 10_000 == 0)
-                _lastLogs.Clear();
-
-            if (_lastLogs.TryGetValue(message, out var last))
-            {
-                if (last + 60 > _iteration)
-                    // each iteration occur every 500 ms, so we update the log with the _same_ message every 30 sec (60 * 0.5s)
-                    return;
-            }
-            _lastLogs[message] = _iteration;
-            AddToDecisionLog(database, message, e);
-
-            if (_logger.IsInfoEnabled)
-            {
-                _logger.Info(message, e);
             }
         }
 
@@ -215,7 +193,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         if (rawRecord == null)
                         {
-                            LogMessage($"Can't analyze the stats of database the {database}, because the database record is null.", database: database);
+                            _observerLogger.Log($"Can't analyze the stats of database the {database}, because the database record is null.", iteration: _iteration, database: database);
                             continue;
                         }
 
@@ -231,7 +209,8 @@ namespace Raven.Server.ServerWide.Maintenance
                                 Current = newStats,
                                 Previous = prevStats,
                                 RawDatabase = rawRecord,
-                                LastIndexModification = etag
+                                LastIndexModification = etag,
+                                ObserverIteration = _iteration
                             };
 
                             var updateReason = _orchestratorTopologyUpdater.Update(context, state, ref deletions);
@@ -239,14 +218,14 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             if (updateReason != null)
                             {
-                                AddToDecisionLog(databaseName, updateReason);
+                                _observerLogger.AddToDecisionLog(databaseName, updateReason, _iteration);
 
                                 var cmd = new UpdateTopologyCommand(databaseName, now, RaftIdGenerator.NewId())
                                 {
                                     Topology = topology,
                                     RaftCommandIndex = etag,
                                 };
-
+                                Console.WriteLine(updateReason);
                                 updateCommands.Add((cmd, updateReason));
                             }
 
@@ -265,7 +244,8 @@ namespace Raven.Server.ServerWide.Maintenance
                                 Current = newStats,
                                 Previous = prevStats,
                                 RawDatabase = rawRecord,
-                                LastIndexModification = etag
+                                LastIndexModification = etag,
+                                ObserverIteration = _iteration
                             };
 
                             mergedState.AddState(state);
@@ -276,7 +256,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             var updateReason =  _databaseTopologyUpdater.Update(context, state, ref deletions);
                             if (updateReason != null)
                             {
-                                AddToDecisionLog(state.Name, updateReason);
+                                _observerLogger.AddToDecisionLog(state.Name, updateReason, state.ObserverIteration);
 
                                 var cmd = new UpdateTopologyCommand(state.Name, now, RaftIdGenerator.NewId())
                                 {
@@ -336,7 +316,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 foreach (var (cmd, updateReason) in cleanUnusedAutoIndexesCommands)
                 {
                     await _engine.PutAsync(cmd);
-                    AddToDecisionLog(cmd.DatabaseName, updateReason);
+                    _observerLogger.AddToDecisionLog(cmd.DatabaseName, updateReason, _iteration);
                 }
 
                 _lastIndexCleanupTimeInTicks = now.Ticks;
@@ -382,8 +362,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     // this is sort of expected, if the database was
                     // modified by someone else, we'll avoid changing
                     // it and run the logic again on the next round
-                    AddToDecisionLog(command.Update.DatabaseName,
-                        $"Topology of database '{command.Update.DatabaseName}' was not changed, reason: {nameof(ConcurrencyException)}");
+                    _observerLogger.AddToDecisionLog(command.Update.DatabaseName,
+                        $"Topology of database '{command.Update.DatabaseName}' was not changed, reason: {nameof(ConcurrencyException)}", _iteration);
                 }
             }
 
@@ -391,8 +371,8 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 foreach (var command in deletions)
                 {
-                    AddToDecisionLog(command.DatabaseName,
-                        $"We reached the replication factor on '{command.DatabaseName}', so we try to remove promotables/rehabs from: {string.Join(", ", command.FromNodes)}");
+                    _observerLogger.AddToDecisionLog(command.DatabaseName,
+                        $"We reached the replication factor on '{command.DatabaseName}', so we try to remove promotables/rehabs from: {string.Join(", ", command.FromNodes)}", _iteration);
 
                     await Delete(command);
                 }
@@ -405,7 +385,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     foreach (var kvp in cleanUpState)
                     {
-                        AddToDecisionLog(kvp.Key, $"Should clean up values up to raft index {kvp.Value}.");
+                        _observerLogger.AddToDecisionLog(kvp.Key, $"Should clean up values up to raft index {kvp.Value}.", _iteration);
                     }
 
                     var cmd = new CleanUpClusterStateCommand(guid) { ClusterTransactionsCleanup = cleanUpState };
@@ -469,14 +449,14 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (databaseTopology == null)
             {
-                LogMessage($"Can't analyze the stats of database the {databaseName}, because the database topology is null.", database: databaseName);
+                _observerLogger.Log($"Can't analyze the stats of database the {databaseName}, because the database topology is null.", _iteration, database: databaseName);
                 return true;
             }
 
             if (databaseTopology.Count == 0)
             {
                 // database being deleted
-                LogMessage($"Skip analyze the stats of database the {databaseName}, because it being deleted", database: databaseName);
+                _observerLogger.Log($"Skip analyze the stats of database the {databaseName}, because it being deleted", _iteration, database: databaseName);
                 return true;
             }
 
@@ -487,7 +467,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (graceIfLeaderChanged || letStatsBecomeStable)
             {
-                LogMessage($"We give more time for the '{databaseName}' stats to become stable, so we skip analyzing it for now.", database: databaseName);
+                _observerLogger.Log($"We give more time for the '{databaseName}' stats to become stable, so we skip analyzing it for now.", _iteration, database: databaseName);
                 return true;
             }
 
@@ -782,29 +762,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             return true;
         }
-
-        private void AddToDecisionLog(string database, string updateReason, Exception e)
-        {
-            if (e != null)
-                updateReason += $"{Environment.NewLine}Error: {e}";
-
-            AddToDecisionLog(database, updateReason);
-        }
-
-        private void AddToDecisionLog(string database, string updateReason)
-        {
-            if (_decisionsLog.Count > 99)
-                _decisionsLog.Take();
-
-            _decisionsLog.Add(new ClusterObserverLogEntry
-            {
-                Database = database,
-                Iteration = _iteration,
-                Message = updateReason,
-                Date = DateTime.UtcNow
-            });
-        }
-
+        
         private Task<(long Index, object Result)> UpdateTopology(UpdateTopologyCommand cmd)
         {
             if (_engine.LeaderTag != _server.NodeTag)
@@ -897,6 +855,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             public RawDatabaseRecord RawDatabase;
             public long LastIndexModification;
+            public long ObserverIteration;
 
             public long ReadTruncatedClusterTransactionCommandsCount()
             {

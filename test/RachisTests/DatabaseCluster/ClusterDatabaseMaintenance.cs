@@ -1070,6 +1070,20 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "RavenDB-18803 all cluster nodes should be included in the orchestrator topology by default")]
+        public async Task AllClusterNodesShouldBeInOrchestratorTopologyByDefault(Options options)
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            options.Server = leader;
+            using (var store = GetDocumentStore(options))
+            {
+                var record = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
+                var dbTopology = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(3, dbTopology.Members.Count);
+            }
+        }
+
         [Fact]
         public async Task ChangeUrlOfSingleNodeCluster()
         {
