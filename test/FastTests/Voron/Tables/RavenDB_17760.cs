@@ -6,6 +6,7 @@ using Sparrow.Binary;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,6 +15,7 @@ namespace FastTests.Voron.Tables
     public unsafe class RavenDB_17760 : TableStorageTest
     {
         public static readonly Slice IndexName;
+        public static readonly Slice StatsTree;
 
         public RavenDB_17760(ITestOutputHelper output) : base(output)
         {
@@ -24,6 +26,7 @@ namespace FastTests.Voron.Tables
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
                 Slice.From(ctx, "DynamicKeyIndex", ByteStringType.Immutable, out IndexName);
+                Slice.From(ctx, "Stats", ByteStringType.Immutable, out StatsTree);
             }
         }
 
@@ -300,6 +303,90 @@ namespace FastTests.Voron.Tables
             }
         }
 
+        [Fact]
+        public void CanDoAdditionalWorkOnEntryChangeByDynamic()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.CreateTree(StatsTree);
+
+                DocsSchema.DynamicKeyIndexes[IndexName].OnEntryChanged = UpdateStats;
+                DocsSchema.Create(tx, "docs", 16);
+
+                tx.Commit();
+            }
+
+            const string id = "users/1";
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = tx.OpenTable(DocsSchema, "docs");
+                SetHelper(docs, id, "Users", 1L, "{'Name': 'Oren'}");
+
+                tx.Commit();
+            }
+
+            var hash = Hashing.XXHash64.Calculate(id, Encoding.UTF8);
+            var bucket = (int)(hash % 100);
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var readResult = GetStatsFor(tx, bucket);
+                Assert.NotNull(readResult);
+
+                var size = *(int*)readResult.Reader.Base;
+                Assert.Equal(41, size);
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var docs = tx.OpenTable(DocsSchema, "docs");
+
+                SetHelper(docs, id, "Users", 123456789L, "{'Name': 'ayende'}");
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var readResult = GetStatsFor(tx, bucket);
+                Assert.NotNull(readResult);
+
+                var size = *(int*)readResult.Reader.Base;
+                Assert.Equal(43, size);
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var docs = tx.OpenTable(DocsSchema, "docs");
+
+                bool gotValues = false;
+                foreach (var reader in docs.SeekForwardFrom(DocsSchema.DynamicKeyIndexes[IndexName], Slices.BeforeAllKeys, 0))
+                {
+                    AssertKey(id, etag: 123456789L, reader.Key);
+
+                    var handle = reader.Result;
+                    Assert.Equal("{'Name': 'ayende'}", handle.Reader.ReadString(3));
+                    gotValues = true;
+                    break;
+                }
+
+                Assert.True(gotValues);
+            }
+        }
+
+        private ReadResult GetStatsFor(Transaction tx, int bucket)
+        {
+            var statsTree = tx.ReadTree(StatsTree);
+            Assert.NotNull(statsTree);
+
+            using (tx.Allocator.Allocate(sizeof(int), out var keyBuffer))
+            {
+                *(int*)keyBuffer.Ptr = bucket;
+                var keySlice = new Slice(keyBuffer);
+                return statsTree.Read(keySlice);
+            }
+        }
+
         private void AssertKey(string id, long etag, Slice key)
         {
             using (Allocator.Allocate(sizeof(long) + sizeof(int), out var buffer))
@@ -336,5 +423,33 @@ namespace FastTests.Voron.Tables
             slice = new Slice(buffer);
             return scope;
         }
+
+        internal static void UpdateStats(Transaction tx, Slice key, int oldSize, int newSize)
+        {
+            var tree = tx.ReadTree(StatsTree);
+            var bucket = *(int*)key.Content.Ptr;
+
+            using (tx.Allocator.Allocate(sizeof(int), out var keyBuffer))
+            {
+                *(int*)keyBuffer.Ptr = bucket;
+                var keySlice = new Slice(keyBuffer);
+                var readResult = tree.Read(keySlice);
+                int size = 0;
+                if (readResult != null)
+                {
+                    var reader = readResult.Reader;
+                    size = *(int*)reader.Base;
+                }
+
+                size += newSize - oldSize;
+
+                using (tree.DirectAdd(keySlice, sizeof(int), out var ptr))
+                {
+                    *(int*)ptr = size;
+                }
+            }
+
+        }
+
     }
 }

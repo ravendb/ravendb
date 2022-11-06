@@ -54,6 +54,9 @@ namespace FastTests.Voron.Tables
                         Assert.Equal(expected.GenerateKey.Method.Name, actual.GenerateKey.Method.Name);
                         Assert.Equal(expected.GenerateKey.Method.DeclaringType, actual.GenerateKey.Method.DeclaringType);
 
+                        Assert.Equal(expected.OnEntryChanged?.Method.Name, actual.OnEntryChanged?.Method.Name);
+                        Assert.Equal(expected.OnEntryChanged?.Method.DeclaringType, actual.OnEntryChanged?.Method.DeclaringType);
+
                         break;
                     }
                     default:
@@ -87,6 +90,10 @@ namespace FastTests.Voron.Tables
             // Same keys for fixed size indexes
             Assert.Equal(expected.FixedSizeIndexes.Keys.Count, actual.FixedSizeIndexes.Keys.Count);
             Assert.Equal(expected.FixedSizeIndexes.Keys.Count, expected.FixedSizeIndexes.Keys.Intersect(actual.FixedSizeIndexes.Keys, SliceComparer.Instance).Count());
+            // Same keys for dynamic-key indexes
+            Assert.Equal(expected.DynamicKeyIndexes.Keys.Count, actual.DynamicKeyIndexes.Keys.Count);
+            Assert.Equal(expected.DynamicKeyIndexes.Keys.Count, expected.DynamicKeyIndexes.Keys.Intersect(actual.DynamicKeyIndexes.Keys, SliceComparer.Instance).Count());
+
             // Same indexes
             foreach (var entry in expected.Indexes)
             {
@@ -98,6 +105,12 @@ namespace FastTests.Voron.Tables
             {
                 var other = actual.FixedSizeIndexes[entry.Key];
                 FixedSchemaIndexDefEqual(entry.Value, other);
+            }
+
+            foreach (var entry in expected.DynamicKeyIndexes)
+            {
+                var other = actual.DynamicKeyIndexes[entry.Key];
+                SchemaIndexDefEqual(entry.Value, other);
             }
         }
 
@@ -291,6 +304,81 @@ namespace FastTests.Voron.Tables
                 };
                 Slice.From(tx.Allocator, "Test Name 3", ByteStringType.Immutable, out def3.Name);
 
+                var tableSchema = new TableSchema()
+                    .DefineIndex(def1)
+                    .DefineFixedSizeIndex(def2)
+                    .DefineIndex(def3)
+                    .DefineKey(new TableSchema.IndexDef
+                    {
+                        StartIndex = 3,
+                        Count = 1
+                    });
+
+                byte[] serialized = tableSchema.SerializeSchema();
+
+                fixed (byte* ptr = serialized)
+                {
+                    var actualTableSchema = TableSchema.ReadFrom(tx.Allocator, ptr, serialized.Length);
+                    // This checks that reserializing is the same
+                    Assert.Equal(serialized, actualTableSchema.SerializeSchema());
+                    // This checks that what was deserialized is correct
+                    SchemaDefEqual(tableSchema, actualTableSchema);
+                    tableSchema.Validate(actualTableSchema);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanSerializeDynamicIndex2()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var expectedIndex = new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = IndexKeyGenerator,
+                    OnEntryChanged = UpdateStats
+                };
+                Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable, out expectedIndex.Name);
+
+                byte[] serialized = expectedIndex.Serialize();
+
+                fixed (byte* serializedPtr = serialized)
+                {
+                    var reader = new TableValueReader(serializedPtr, serialized.Length);
+                    var actualIndex = TableSchema.DynamicKeyIndexDef.ReadFrom(tx.Allocator, ref reader);
+                    Assert.Equal(serialized, actualIndex.Serialize());
+                    SchemaIndexDefEqual(expectedIndex, actualIndex);
+                    expectedIndex.EnsureIdentical(actualIndex);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanSerializeSchemaWithDynamicIndex2()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var def1 = new TableSchema.IndexDef
+                {
+                    StartIndex = 5,
+                    Count = 2,
+                };
+                Slice.From(tx.Allocator, "Test Name 1", ByteStringType.Immutable, out def1.Name);
+
+                var def2 = new TableSchema.FixedSizeKeyIndexDef
+                {
+                    StartIndex = 2,
+                    IsGlobal = true
+                };
+                Slice.From(tx.Allocator, "Test Name 2", ByteStringType.Immutable, out def2.Name);
+
+                var def3 = new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = IndexKeyGenerator,
+                    OnEntryChanged = UpdateStats
+                };
+                Slice.From(tx.Allocator, "Test Name 3", ByteStringType.Immutable, out def3.Name);
+                
                 var tableSchema = new TableSchema()
                     .DefineIndex(def1)
                     .DefineFixedSizeIndex(def2)
