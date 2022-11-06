@@ -259,17 +259,48 @@ namespace Voron.Data.Tables
                     {
                         serializer.Add(declaringTypePtr, declaringTypeBytes.Length);
 
-                        byte[] serialized = new byte[serializer.Size];
-
-                        fixed (byte* destination = serialized)
+                        byte[] serialized;
+                        if (OnEntryChanged == null)
                         {
-                            serializer.CopyTo(destination);
+                            serializer.Add((byte)0);
+                            serialized = new byte[serializer.Size];
+
+                            fixed (byte* destination = serialized)
+                            {
+                                serializer.CopyTo(destination);
+                            }
+
+                            return serialized;
                         }
 
-                        return serialized;
+                        serializer.Add((byte)1);
+
+                        var onEntryChangedMethodNameBytes = Encodings.Utf8.GetBytes(OnEntryChanged.Method.Name);
+                        fixed (byte* onEntryChangedMethodNamePtr = onEntryChangedMethodNameBytes)
+                        {
+                            serializer.Add(onEntryChangedMethodNamePtr, onEntryChangedMethodNameBytes.Length);
+
+                            Debug.Assert(OnEntryChanged.Method.DeclaringType?.FullName != null && OnEntryChanged.Method.DeclaringType.Assembly.FullName != null,
+                                $"Invalid {nameof(OnEntryChanged)} '{OnEntryChanged.Method.Name}'");
+
+                            assemblyName = new AssemblyName(OnEntryChanged.Method.DeclaringType.Assembly.FullName);
+                            declaringType = $"{OnEntryChanged.Method.DeclaringType.FullName}, {assemblyName.Name}";
+                            var onEntryChangedDeclaringTypeBytes = Encodings.Utf8.GetBytes(declaringType);
+                            fixed (byte* onEntryChangedDeclaringTypePtr = onEntryChangedDeclaringTypeBytes)
+                            {
+                                serializer.Add(onEntryChangedDeclaringTypePtr, onEntryChangedDeclaringTypeBytes.Length);
+                                serialized = new byte[serializer.Size];
+
+                                fixed (byte* destination = serialized)
+                                {
+                                    serializer.CopyTo(destination);
+                                }
+
+                                return serialized;
+                            }
+                        }
                     }
                 }
-                //  TODO : serialize 'OnEntryChanged'
             }
 
             public static DynamicKeyIndexDef ReadFrom(ByteStringContext context, ref TableValueReader input)
@@ -290,7 +321,6 @@ namespace Voron.Data.Tables
                 currentPtr = input.Read(4, out currentSize);
                 var declaringType = Encodings.Utf8.GetString(currentPtr, currentSize);
 
-                //var type = System.Type.GetType(declaringType);
                 var type = System.Type.GetType(declaringType);
                 if (type == null)
                     throw new InvalidDataException($"Failed to get {nameof(GenerateKey)}.Method.DeclaringType from deserialized value : {declaringType}");
@@ -309,6 +339,37 @@ namespace Voron.Data.Tables
                 indexDef.GenerateKey = (IndexEntryKeyGenerator)@delegate;
 
                 //  TODO : read 'OnEntryChanged'
+
+                // read if this index has OnEntryChanged
+                currentPtr = input.Read(5, out currentSize);
+                var hasIndexEntryChangedDelegate = Convert.ToBoolean(*currentPtr);
+                if (hasIndexEntryChangedDelegate == false) 
+                    return indexDef;
+
+                // read OnEntryChanged method name
+                currentPtr = input.Read(6, out currentSize);
+                methodName = Encodings.Utf8.GetString(currentPtr, currentSize);
+
+                // read OnEntryChanged declaring type
+                currentPtr = input.Read(7, out currentSize);
+                declaringType = Encodings.Utf8.GetString(currentPtr, currentSize);
+
+                type = System.Type.GetType(declaringType);
+                if (type == null)
+                    throw new InvalidDataException($"Failed to get {nameof(OnEntryChanged)}.Method.DeclaringType from deserialized value : {declaringType}");
+
+                method = type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+                if (method == null)
+                    throw new InvalidDataException($"Failed to get method-info from type : {type}, method name : {methodName}");
+
+                if (method.IsStatic == false)
+                    throw new InvalidDataException($"{nameof(OnEntryChanged)} must be a static method. method name : {methodName}");
+
+                //if (method.GetCustomAttribute<StorageIndexEntryKeyGeneratorAttribute>() == null)
+                //    throw new InvalidDataException($"{nameof(OnEntryChanged)} must be marked with custom attribute '{nameof(StorageIndexEntryKeyGeneratorAttribute)}'. method name : {methodName}");
+
+                var onIndexEntryChangedDelegate = Delegate.CreateDelegate(typeof(OnIndexEntryChangedDelegate), method);
+                indexDef.OnEntryChanged = (OnIndexEntryChangedDelegate)onIndexEntryChangedDelegate;
 
                 return indexDef;
             }
@@ -345,7 +406,17 @@ namespace Voron.Data.Tables
                         $"got {nameof(GenerateKey)}.Method.DeclaringType='{actual.GenerateKey.Method.DeclaringType}' instead",
                         nameof(actual));
 
-                //  TODO : ensure 'OnEntryChanged' identical 
+                if (OnEntryChanged?.Method.Name != actual.OnEntryChanged?.Method.Name)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have {nameof(OnEntryChanged)}.Method.Name='{OnEntryChanged?.Method.Name}', " +
+                        $"got {nameof(OnEntryChanged)}.Method.Name='{actual.OnEntryChanged?.Method.Name}' instead",
+                        nameof(actual));
+
+                if (OnEntryChanged?.Method.DeclaringType != actual.OnEntryChanged?.Method.DeclaringType)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have {nameof(OnEntryChanged)}.Method.DeclaringType='{OnEntryChanged?.Method.DeclaringType}', " +
+                        $"got {nameof(GenerateKey)}.Method.DeclaringType='{actual.OnEntryChanged?.Method.DeclaringType}' instead",
+                        nameof(actual));
             }
 
             public void Validate()
@@ -365,7 +436,19 @@ namespace Voron.Data.Tables
                 if (GenerateKey.Method.GetCustomAttribute<StorageIndexEntryKeyGeneratorAttribute>() == null)
                     throw new ArgumentOutOfRangeException(nameof(GenerateKey), $"{nameof(GenerateKey)} must be marked with custom attribute '{nameof(StorageIndexEntryKeyGeneratorAttribute)}'");
 
-                //  TODO : validate 'OnEntryChanged'
+                if (OnEntryChanged != null)
+                {
+                    if (OnEntryChanged.Method.DeclaringType == null)
+                        throw new ArgumentOutOfRangeException(nameof(OnEntryChanged), $"{nameof(OnEntryChanged)}.Method.DeclaringType cannot be null");
+
+                    if (OnEntryChanged.Method.IsStatic == false)
+                        throw new ArgumentOutOfRangeException(nameof(OnEntryChanged), $"{nameof(OnEntryChanged)} must be a static method");
+
+                    //if (OnEntryChanged.Method.GetCustomAttribute<StorageIndexEntryKeyGeneratorAttribute>() == null)
+                    //  throw new ArgumentOutOfRangeException(nameof(OnEntryChanged), $"{nameof(OnEntryChanged)} must be marked with custom attribute '{nameof(StorageIndexEntryKeyGeneratorAttribute)}'");
+
+
+                }
             }
         }
 
