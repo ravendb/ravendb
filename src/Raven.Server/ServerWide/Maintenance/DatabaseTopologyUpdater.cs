@@ -25,35 +25,32 @@ namespace Raven.Server.ServerWide.Maintenance
         protected readonly RachisConsensus<ClusterStateMachine> _engine;
         private readonly bool _hardDeleteOnReplacement;
         private readonly DateTime _observerStartTime;
+        protected readonly ObserverLogger _logger;
         private readonly long _moveToRehabTimeMs;
         private readonly long _maxChangeVectorDistance;
         private readonly long _rotateGraceTimeMs;
         private readonly TimeSpan _breakdownTimeout;
         private readonly TimeSpan _supervisorSamplePeriod;
-
-        protected readonly LogMessageDel LogMessage;
-
-        public delegate void LogMessageDel(string message, Exception e = null, string database = null);
-
+        
         public DatabaseTopologyUpdater(ServerStore server,
             RachisConsensus<ClusterStateMachine> engine,
             ClusterConfiguration clusterConfiguration,
             DateTime clusterObserverStartTime,
-            LogMessageDel logMessage)
+            ObserverLogger logger)
         {
             _server = server;
             _engine = engine;
             _hardDeleteOnReplacement = clusterConfiguration.HardDeleteOnReplacement;
             _observerStartTime = clusterObserverStartTime;
+            _logger = logger;
             _moveToRehabTimeMs = (long)clusterConfiguration.MoveToRehabGraceTime.AsTimeSpan.TotalMilliseconds;
             _maxChangeVectorDistance = clusterConfiguration.MaxChangeVectorDistance;
             _rotateGraceTimeMs = (long)clusterConfiguration.RotatePreferredNodeGraceTime.AsTimeSpan.TotalMilliseconds;
             _breakdownTimeout = clusterConfiguration.AddReplicaTimeout.AsTimeSpan;
             _supervisorSamplePeriod = clusterConfiguration.SupervisorSamplePeriod.AsTimeSpan;
-            LogMessage = logMessage;
         }
 
-        public string Update(ClusterOperationContext context, DatabaseObservationState state, ref List<DeleteDatabaseCommand> deletions) //TODO stav: add iteration
+        public string Update(ClusterOperationContext context, DatabaseObservationState state, ref List<DeleteDatabaseCommand> deletions)
         {
             var hasLivingNodes = false;
 
@@ -89,8 +86,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     var msg =
                         $"The member node {member} was not found in both current and previous reports of the cluster observer. " +
                         $"If this error continue to raise, check the latency between the cluster nodes.";
-                    LogMessage(msg, database: dbName);
-                    RaiseNodeNotFoundAlert(msg, member);
+                    _logger.Log(msg, state.ObserverIteration, database: dbName);
+                    RaiseNodeNotFoundAlert(msg, member, state.ObserverIteration);
                     continue;
                 }
                 
@@ -136,7 +133,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     continue;
                 }
                 
-                if (TryMoveToRehab(dbName, databaseTopology, current, member))
+                if (TryMoveToRehab(dbName, databaseTopology, current, member, state.ObserverIteration))
                     return $"Node {member} is currently not responding (with status: {status}) and moved to rehab ({DateTime.UtcNow - nodeStats.LastSuccessfulUpdateDateTime})";
                 
                 // database distribution is off and the node is down
@@ -185,7 +182,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     databaseTopology.Promotables.Remove(node);
                     databaseTopology.Members.Add(node);
 
-                    RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, promoting {node} to avoid making the database completely unreachable.", dbName);
+                    RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, promoting {node} to avoid making the database completely unreachable.", dbName, state.ObserverIteration);
                     return $"None of '{dbName}' nodes are responding, promoting {node}";
                 }
 
@@ -194,7 +191,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     return null; // We delete the whole database.
                 }
 
-                RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, the database is unreachable.", dbName);
+                RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, the database is unreachable.", dbName, state.ObserverIteration);
             }
 
             if (someNodesRequireMoreTime == false)
@@ -303,7 +300,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         if (databaseTopology.PromotablesStatus.TryGetValue(rehab, out var status) == false || status != DatabasePromotionStatus.NotResponding)
                         {
                             // was already online, but now we lost the connection again
-                            if (TryMoveToRehab(dbName, databaseTopology, current, rehab))
+                            if (TryMoveToRehab(dbName, databaseTopology, current, rehab, state.ObserverIteration))
                             {
                                 return $"Node {rehab} is currently not responding";
                             }
@@ -320,14 +317,14 @@ namespace Raven.Server.ServerWide.Maintenance
                         }
 
                         // this check is only relevant to orchestrator
-                        if(IsLastCommittedIndexCaughtUp(context, rehab, databaseTopology, nodeStats) == false)
+                        if(IsLastCommittedIndexCaughtUp(context, rehab, databaseTopology, nodeStats, state.ObserverIteration) == false)
                             continue;
                             
                         var tryPromote = TryGetMentorAndPromote(context, state, rehab);
 
                         if (tryPromote.Promote)
                         {
-                            LogMessage($"The database {dbName} on {rehab} is reachable and up to date, so we promote it back to member.", database: dbName);
+                            _logger.Log($"The database {dbName} on {rehab} is reachable and up to date, so we promote it back to member.", state.ObserverIteration, database: dbName);
 
                             databaseTopology.Members.Add(rehab);
                             databaseTopology.Rehabs.Remove(rehab);
@@ -354,7 +351,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return null;
         }
 
-        protected virtual bool IsLastCommittedIndexCaughtUp(ClusterOperationContext context, string node, DatabaseTopology topology, ClusterNodeStatusReport nodeStats)
+        protected virtual bool IsLastCommittedIndexCaughtUp(ClusterOperationContext context, string node, DatabaseTopology topology, ClusterNodeStatusReport nodeStats, long iteration)
         {
             return true;
         }
@@ -496,7 +493,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return goodMembers;
         }
 
-        private bool TryMoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, string member)
+        private bool TryMoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, string member, long iteration)
         {
             DatabaseStatusReport dbStats = null;
             if (current.TryGetValue(member, out var nodeStats) &&
@@ -569,7 +566,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             RemoveNodeFromRehab(topology, member, reason, GetStatus(nodeStats));
 
-            LogMessage($"Node {member} of database '{dbName}': {reason}", database: dbName);
+            _logger.Log($"Node {member} of database '{dbName}': {reason}", iteration, database: dbName);
 
             return true;
         }
@@ -629,59 +626,59 @@ namespace Raven.Server.ServerWide.Maintenance
             if (previous.TryGetValue(mentorNode, out var mentorPrevClusterStats) == false ||
                 mentorPrevClusterStats.Report.TryGetValue(dbName, out var mentorPrevDbStats) == false)
             {
-                LogMessage($"Can't find previous mentor {mentorNode} stats for node {promotable}", database: dbName);
+                _logger.Log($"Can't find previous mentor {mentorNode} stats for node {promotable}", state.ObserverIteration, database: dbName);
                 return (false, null);
             }
 
             if (previous.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
                 promotablePrevClusterStats.Report.TryGetValue(dbName, out var promotablePrevDbStats) == false)
             {
-                LogMessage($"Can't find previous stats for node {promotable}", database: dbName);
+                _logger.Log($"Can't find previous stats for node {promotable}", state.ObserverIteration, database: dbName);
                 return (false, null);
             }
 
             if (current.TryGetValue(mentorNode, out var mentorCurrClusterStats) == false ||
                 mentorCurrClusterStats.Report.TryGetValue(dbName, out var mentorCurrDbStats) == false)
             {
-                LogMessage($"Can't find current mentor {mentorNode} stats for node {promotable}", database: dbName);
+                _logger.Log($"Can't find current mentor {mentorNode} stats for node {promotable}", state.ObserverIteration, database: dbName);
                 return (false, null);
             }
 
             if (current.TryGetValue(promotable, out var promotableClusterStats) == false ||
                 promotableClusterStats.Report.TryGetValue(dbName, out var promotableDbStats) == false)
             {
-                LogMessage($"Can't find current stats for node {promotable}", database: dbName);
+                _logger.Log($"Can't find current stats for node {promotable}", state.ObserverIteration, database: dbName);
                 return (false, null);
             }
 
             if (promotableClusterStats.ServerReport.OutOfCpuCredits == true)
             {
-                LogMessage($"Can't promote node {promotable}, it doesn't have enough CPU credits", database: dbName);
+                _logger.Log($"Can't promote node {promotable}, it doesn't have enough CPU credits", state.ObserverIteration, database: dbName);
                 return (false, null);
             }
 
             if (promotableClusterStats.ServerReport.EarlyOutOfMemory == true)
             {
-                LogMessage($"Can't promote node {promotable}, it's in an early out of memory state", database: dbName);
+                _logger.Log($"Can't promote node {promotable}, it's in an early out of memory state", state.ObserverIteration, database: dbName);
                 return (false, null);
             }
 
             if (promotableClusterStats.ServerReport.HighDirtyMemory == true)
             {
-                LogMessage($"Can't promote node {promotable}, it's in high dirty memory state", database: dbName);
+                _logger.Log($"Can't promote node {promotable}, it's in high dirty memory state", state.ObserverIteration, database: dbName);
                 return (false, null);
             }
 
             if (topology.Members.Count == topology.ReplicationFactor)
             {
-                LogMessage($"Replication factor is reached", database: dbName);
+                _logger.Log($"Replication factor is reached", state.ObserverIteration, database: dbName);
                 return (false, null);
             }
 
             var mentorsEtag = mentorPrevDbStats.LastEtag;
             if (mentorCurrDbStats.LastSentEtag.TryGetValue(promotable, out var lastSentEtag) == false)
             {
-                LogMessage($"Can't find last sent etag of mentor {mentorNode} for {promotable}", database: dbName);
+                _logger.Log($"Can't find last sent etag of mentor {mentorNode} for {promotable}", state.ObserverIteration, database: dbName);
                 return (false, null);
             }
 
@@ -693,7 +690,7 @@ namespace Raven.Server.ServerWide.Maintenance
                           $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
                           $"Mentor's Etag: {mentorsEtag:#,#;;0}";
 
-                LogMessage($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (time diff: {timeDiff}, sent etag: {lastSentEtag:#,#;;0}/{mentorsEtag:#,#;;0})", database: dbName);
+                _logger.Log($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (time diff: {timeDiff}, sent etag: {lastSentEtag:#,#;;0}/{mentorsEtag:#,#;;0})", state.ObserverIteration, database: dbName);
 
                 if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
                     msg.Equals(demotionReason) == false)
@@ -714,7 +711,7 @@ namespace Raven.Server.ServerWide.Maintenance
                           $"Last Compare Exchange Raft Index: {promotableLastCompareExchangeIndex}" + Environment.NewLine +
                           $"Leader's Compare Exchange Raft Index: {leaderLastCompareExchangeIndex}";
 
-                LogMessage($"Node {promotable} hasn't been promoted because it's raft index isn't updated yet", database: dbName);
+                _logger.Log($"Node {promotable} hasn't been promoted because it's raft index isn't updated yet", state.ObserverIteration, database: dbName);
 
                 if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
                     msg.Equals(demotionReason) == false)
@@ -735,7 +732,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (indexesCaughtUp)
             {
-                LogMessage($"We try to promote the database '{dbName}' on {promotable} to be a full member", database: dbName);
+                _logger.Log($"We try to promote the database '{dbName}' on {promotable} to be a full member", state.ObserverIteration, database: dbName);
 
                 topology.PromotablesStatus.Remove(promotable);
                 topology.DemotionReasons.Remove(promotable);
@@ -743,7 +740,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (true, $"Node {promotable} is up-to-date so promoting it to be member");
             }
 
-            LogMessage($"The database '{dbName}' on {promotable} is not ready to be promoted, because {reason}{Environment.NewLine}", database: dbName);
+            _logger.Log($"The database '{dbName}' on {promotable} is not ready to be promoted, because {reason}{Environment.NewLine}", state.ObserverIteration, database: dbName);
 
             if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
                 || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
@@ -791,7 +788,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (nodesToDelete.Count == 0)
                 return;
 
-            LogMessage($"We reached the replication factor on database '{dbName}', so we try to remove redundant nodes from {string.Join(", ", nodesToDelete)}.", database: dbName);
+            _logger.Log($"We reached the replication factor on database '{dbName}', so we try to remove redundant nodes from {string.Join(", ", nodesToDelete)}.", state.ObserverIteration, database: dbName);
 
             var deletionCmd = new DeleteDatabaseCommand(dbName, RaftIdGenerator.NewId())
             {
@@ -908,10 +905,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (bestNode == null)
             {
-                LogMessage($"The database '{database}' on {badNode} has not responded for a long time, but there is no free node to reassign it.", database: database);
+                _logger.Log($"The database '{database}' on {badNode} has not responded for a long time, but there is no free node to reassign it.", state.ObserverIteration, database: database);
                 return false;
             }
-            LogMessage($"The database '{database}' on {badNode} has not responded for a long time, so we reassign it to {bestNode}.", database: database);
+            _logger.Log($"The database '{database}' on {badNode} has not responded for a long time, so we reassign it to {bestNode}.", state.ObserverIteration, database: database);
 
             return true;
         }
@@ -1030,7 +1027,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private const string ThingsToCheck = "Things you may check: verify node is working, check for ports being blocked by firewall or similar software.";
 
-        private void RaiseNoLivingNodesAlert(string alertMsg, string dbName)
+        private void RaiseNoLivingNodesAlert(string alertMsg, string dbName, long iteration)
         {
             var alert = AlertRaised.Create(
                 dbName,
@@ -1041,10 +1038,10 @@ namespace Raven.Server.ServerWide.Maintenance
             );
 
             _server.NotificationCenter.Add(alert, updateExisting: false);
-            LogMessage(alertMsg, database: dbName);
+            _logger.Log(alertMsg, iteration, database: dbName);
         }
 
-        private void RaiseNodeNotFoundAlert(string alertMsg, string node)
+        private void RaiseNodeNotFoundAlert(string alertMsg, string node, long iteration)
         {
             var alert = AlertRaised.Create(
                 null,
@@ -1055,7 +1052,7 @@ namespace Raven.Server.ServerWide.Maintenance
             );
 
             _server.NotificationCenter.Add(alert, updateExisting: false);
-            LogMessage(alertMsg);
+            _logger.Log(alertMsg, iteration);
         }
     }
 }

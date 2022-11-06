@@ -156,7 +156,8 @@ namespace Raven.Client.ServerWide
         
         public override bool EntireDatabasePendingDeletion(Dictionary<string, DeletionInProgressStatus> deletionInProgress)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle checking all shard databases are being deleted");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
+                "Handle checking all shard databases are being deleted");
             return false;
         }
     }
