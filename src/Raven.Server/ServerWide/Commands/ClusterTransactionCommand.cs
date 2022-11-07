@@ -376,7 +376,8 @@ namespace Raven.Server.ServerWide.Commands
             return null;
         }
 
-        const string RvnAtomicPrefix = "rvn-atomic/";
+        internal const string RvnAtomicPrefix = "rvn-atomic/";
+
         public static bool IsAtomicGuardKey(string id, out string docId)
         {
             if (id.StartsWith(RvnAtomicPrefix) == false)
