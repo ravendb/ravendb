@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Http;
 using NuGet.Packaging;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
@@ -19,7 +20,6 @@ using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.Json;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
@@ -84,12 +84,41 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         return total;
     }
 
-    protected override bool NotModified(out string etag)
+    protected override async ValueTask<bool> NotModified()
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-            "RavenDB-19066 Need to figure out the best way to combine ETags and send not modified. See `null` passed as etag to above new ShardedCollectionPreviewOperation()");
+        var changeVectors = new List<string>();
+        if (IsAllDocsCollection)
+        {
+            for (int i = 0; i < RequestHandler.DatabaseContext.ShardCount; i++)
+            {
+                var shardExecutor = _requestHandler.ShardExecutor.GetRequestExecutorAt(i);
+                var cmd = new GetStatisticsOperation.GetStatisticsCommand(RequestHandler.Server.DebugTag, RequestHandler.DatabaseContext.ServerStore.NodeTag);
+                await shardExecutor.ExecuteAsync(cmd, _context);
+                var changeVector = cmd.Result.DatabaseChangeVector;
+                if (changeVector != null)
+                    changeVectors.Add(changeVector);
+            }
+        }
+        else
+        {
+            var result = await _requestHandler.ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(RequestHandler, Collection, RequestHandler.DatabaseName));
+            foreach ((_, string changeVector) in result.LastChangeVectors)
+            {
+                if (changeVector != null)
+                    changeVectors.Add(changeVector);
+            }
+        }
 
-        etag = null;
+        var etag = ComputeHttpEtags.ComputeEtagForChangeVectors(changeVectors);
+
+        if (etag == null)
+            return false;
+
+        if (etag == RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch))
+            return true;
+
+        HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
+
         return false;
     }
 

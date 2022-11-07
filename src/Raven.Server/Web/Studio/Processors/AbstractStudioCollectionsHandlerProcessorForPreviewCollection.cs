@@ -58,7 +58,7 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
 
     protected abstract ValueTask<long> GetTotalResultsAsync();
 
-    protected abstract bool NotModified(out string etag);
+    protected abstract ValueTask<bool> NotModified();
 
     protected abstract IAsyncEnumerable<Document> GetDocumentsAsync();
 
@@ -68,14 +68,11 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
     {
         await InitializeAsync();
 
-        if (NotModified(out var etag))
+        if (await NotModified())
         {
             RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
             return;
         }
-
-        if (etag != null)
-            HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
 
         var documents = GetDocumentsAsync();
         var totalResults = await GetTotalResultsAsync();

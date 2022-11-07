@@ -58,10 +58,10 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         return ValueTask.FromResult(_totalResults);
     }
 
-    protected override bool NotModified(out string etag)
+    protected override ValueTask<bool> NotModified()
     {
         string changeVector;
-        etag = null;
+        string etag = null;
         if (IsAllDocsCollection)
         {
             changeVector = DocumentsStorage.GetDatabaseChangeVector(_context);
@@ -76,12 +76,14 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         }
 
         if (etag == null)
-            return false;
+            return ValueTask.FromResult(false);
 
         if (etag == RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch))
-            return true;
+            return ValueTask.FromResult(true);
 
-        return false;
+        HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
+
+        return ValueTask.FromResult(false);
     }
 
     protected override IAsyncEnumerable<Document> GetDocumentsAsync()
