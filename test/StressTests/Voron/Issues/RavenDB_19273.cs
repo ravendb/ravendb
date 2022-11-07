@@ -42,16 +42,15 @@ public class RavenDB_19273 : StorageTest
 
             RequireFileBasedPager();
 
-            var writer = Env.Options.CreateJournalWriter(10, size);
-            writer.Write(1, (byte*)pos, (int)(size / _4Kb));
+            using (var writer = Env.Options.CreateJournalWriter(10, size))
+                writer.Write(1, (byte*)pos, (int)(size / _4Kb));
         }
         finally
         {
             Marshal.FreeHGlobal(ptr);
         }
 
-        var pager = Env.Options.OpenJournalPager(10, default(JournalInfo));
-
+        using (var pager = Env.Options.OpenJournalPager(10, default(JournalInfo)))
         using (var tx = Env.ReadTransaction())
         {
             var readPtr = pager.AcquirePagePointer(tx.LowLevelTransaction, 0);

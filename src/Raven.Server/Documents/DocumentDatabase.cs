@@ -557,7 +557,7 @@ namespace Raven.Server.Documents
                     {
                         indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
                             options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                            mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                            mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
                     }
 
                     var result = new BatchHandler.ClusterTransactionCompletionResult
