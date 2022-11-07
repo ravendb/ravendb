@@ -17,6 +17,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
 {
@@ -26,7 +27,21 @@ namespace Raven.Server.Integrations.PostgreSQL
         private readonly QueryOperationContext _queryOperationContext;
         private List<Document> _result;
         private readonly int? _limit;
+        private bool _queryWasRun;
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres RqlQuery");
 
+        ~RqlQuery()
+        {
+            Logger.Info($"Query '{this.QueryString}' wasn't disposed properly.\n" +
+                        $"Query was run: {_queryWasRun}\n" +
+                        $"Are transactions still opened: {_queryOperationContext.AreTransactionsOpened()}\n");
+
+            // Force the dispose
+            IsNamedStatement = false;
+            
+            Dispose();
+        }
+        
         public RqlQuery(string queryString, int[] parametersDataTypes, DocumentDatabase documentDatabase, int? limit = null) : base(queryString, parametersDataTypes)
         {
             DocumentDatabase = documentDatabase;
@@ -59,6 +74,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                 indexQuery.PageSize = _limit.Value == 0 ? 1 : _limit.Value;
             }
 
+            _queryWasRun = true;
             var documentQueryResult =
                 await DocumentDatabase.QueryRunner.ExecuteQuery(indexQuery, _queryOperationContext, null, OperationCancelToken.None);
 
@@ -335,6 +351,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public override void Dispose()
         {
+            GC.SuppressFinalize(this);
             if (IsNamedStatement)
                 return;
             _queryOperationContext?.Dispose();
