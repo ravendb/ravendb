@@ -392,7 +392,7 @@ namespace Raven.Client.Documents.Session
                         var entity = CompareExchangeValueBlittableJsonConverter.ConvertToBlittable(_value.Value, conventions, context, jsonSerializer);
                         var entityJson = entity as BlittableJsonReaderObject;
                         BlittableJsonReaderObject metadata = null;
-                        _originalValue?.Value.TryGet(Constants.Documents.Metadata.Key, out metadata);
+                        _originalValue?.Value?.TryGet(Constants.Documents.Metadata.Key, out metadata);
                         var metadataHasChanged = false;
                         if (_value.HasMetadata && _value.Metadata.Count != 0)
                         {
