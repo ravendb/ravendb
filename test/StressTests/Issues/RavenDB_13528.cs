@@ -28,8 +28,8 @@ namespace StressTests.Issues
 
                 RequireFileBasedPager();
 
-                var writer = Env.Options.CreateJournalWriter(10, size);
-                writer.Write(1, (byte*)pos, (int)(size / _4Kb));
+                using (var writer = Env.Options.CreateJournalWriter(10, size))
+                    writer.Write(1, (byte*)pos, (int)(size / _4Kb));
             }
             finally
             {
