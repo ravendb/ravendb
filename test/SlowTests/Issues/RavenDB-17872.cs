@@ -1,20 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client;
 using Raven.Client.Documents.Session;
-using Raven.Client.Json;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
-using SlowTests.Core.Utils.Entities;
+using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -250,12 +239,36 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task Can_Modify_Empty_Metadata()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string id = "users/1";
+                const string compareExchangeKey = $"{ClusterTransactionCommand.RvnAtomicPrefix}/{id}";
+
+                using (var session = store.OpenAsyncSession(new SessionOptions() { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(new TestObj(), id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions() { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var compareExchangeValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(compareExchangeKey)
+                        .ConfigureAwait(false);
+
+                    compareExchangeValue.Metadata.Add(Constants.Documents.Metadata.Expires, DateTime.UtcNow.AddHours(1));
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
         private class TestObj
         {
             public string Id { get; set; }
             public string Prop { get; set; }
         }
-
 
         [Fact]
         public async Task CompareExchangeNestedMetadata_Create_WithoutPropChange()
