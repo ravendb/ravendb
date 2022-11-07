@@ -2628,7 +2628,8 @@ namespace Raven.Server
                    header.LicensedFeatures?.DataCompression == true &&
                    (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication ||
                     header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription ||
-                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster);
+                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster ||
+                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Heartbeats);
         }
 
         private static void ThrowDatabaseShutdown(DocumentDatabase database)

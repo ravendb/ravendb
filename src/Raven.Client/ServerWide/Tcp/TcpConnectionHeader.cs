@@ -69,6 +69,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int HeartbeatsBaseLine = 20;
         public static readonly int Heartbeats41200 = 41_200;
         public static readonly int Heartbeats42000 = 42_000;
+        public static readonly int Heartbeats53000 = 53_000;
         public static readonly int ReplicationBaseLine = 31;
         public static readonly int ReplicationAttachmentMissing = 40_300;
         public static readonly int ReplicationAttachmentMissingVersion41 = 41_300;
@@ -85,7 +86,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int TestConnectionBaseLine = 50;
 
         public static readonly int ClusterTcpVersion = TcpConnectionsWithCompression;
-        public static readonly int HeartbeatsTcpVersion = Heartbeats42000;
+        public static readonly int HeartbeatsTcpVersion = Heartbeats53000;
         public static readonly int ReplicationTcpVersion = ReplicationWithDeduplicatedAttachments;
         public static readonly int SubscriptionTcpVersion = TcpConnectionsWithCompression; 
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
@@ -304,9 +305,10 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Heartbeats] = new List<int>
                 {
+                    Heartbeats53000,
                     Heartbeats42000,
                     Heartbeats41200,
-                    HeartbeatsBaseLine
+                    HeartbeatsBaseLine,
                 },
                 [OperationTypes.TestConnection] = new List<int>
                 {
@@ -484,6 +486,15 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Heartbeats] = new Dictionary<int, SupportedFeatures>
                 {
+                    [Heartbeats53000] = new SupportedFeatures(Heartbeats53000)
+                    {
+                        DataCompression = true,
+                        Heartbeats = new SupportedFeatures.HeartbeatsFeatures
+                        {
+                            IncludeServerInfo = true,
+                            SendChangesOnly = true
+                        }
+                    },
                     [Heartbeats42000] = new SupportedFeatures(Heartbeats42000)
                     {
                         Heartbeats = new SupportedFeatures.HeartbeatsFeatures
