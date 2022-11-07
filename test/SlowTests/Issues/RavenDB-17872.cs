@@ -245,7 +245,6 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 const string id = "users/1";
-                const string compareExchangeKey = $"{ClusterTransactionCommand.RvnAtomicPrefix}/{id}";
 
                 using (var session = store.OpenAsyncSession(new SessionOptions() { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -255,7 +254,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession(new SessionOptions() { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    var compareExchangeValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(compareExchangeKey)
+                    var compareExchangeValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(ClusterTransactionCommand.GetAtomicGuardKey(id))
                         .ConfigureAwait(false);
 
                     compareExchangeValue.Metadata.Add(Constants.Documents.Metadata.Expires, DateTime.UtcNow.AddHours(1));
