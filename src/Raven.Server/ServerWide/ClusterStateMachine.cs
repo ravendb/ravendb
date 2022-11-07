@@ -3621,7 +3621,7 @@ namespace Raven.Server.ServerWide
                     var result = await TcpUtils.ConnectSecuredTcpSocket(info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy,
                         TcpConnectionHeaderMessage.OperationTypes.Cluster, 
                         (string destUrl, TcpConnectionInfo tcpInfo, Stream conn, JsonOperationContext ctx, List<string> _) => NegotiateProtocolVersionAsyncForCluster(destUrl, tcpInfo, conn, ctx, tag), 
-                        context, _parent.TcpConnectionTimeout, null, token);
+                        context, _parent.TcpConnectionTimeout, null, token); 
 
                     tcpClient = result.TcpClient;
                     stream = result.Stream;
@@ -3692,7 +3692,7 @@ namespace Raven.Server.ServerWide
                 DestinationServerId = info.ServerId,
                 LicensedFeatures = new LicensedFeatures
                 {
-                    DataCompression = compressionSupport
+                    DataCompression = compressionSupport && _parent.ServerStore.Configuration.Server.DisableTcpCompression == false
                 }
             };
 

@@ -35,6 +35,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         internal readonly ClusterConfiguration Config;
         private readonly ServerStore _server;
+        internal ServerStore ServerStore => _server;
 
         internal TestingStuff ForTestingPurposes;
 
@@ -498,6 +499,13 @@ namespace Raven.Server.ServerWide.Maintenance
 
             private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionAsyncForClusterSupervisor(string url, TcpConnectionInfo info, Stream stream, JsonOperationContext context, List<string> _)
             {
+                bool compressionSupport = false;
+#if NETCOREAPP3_1_OR_GREATER
+                var version = TcpConnectionHeaderMessage.ClusterTcpVersion;
+                if (version >= TcpConnectionHeaderMessage.TcpConnectionsWithCompression)
+                    compressionSupport = true;
+#endif
+
                 var parameters = new AsyncTcpNegotiateParameters
                 {
                     Database = null,
@@ -506,7 +514,11 @@ namespace Raven.Server.ServerWide.Maintenance
                     ReadResponseAndGetVersionCallbackAsync = SupervisorReadResponseAndGetVersionAsync,
                     DestinationUrl = url,
                     DestinationNodeTag = ClusterTag,
-                    DestinationServerId = info.ServerId
+                    DestinationServerId = info.ServerId,
+                    LicensedFeatures = new LicensedFeatures
+                    {
+                        DataCompression = compressionSupport && _parent.ServerStore.Configuration.Server.DisableTcpCompression == false
+                    }
                 };
                 return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters);
             }
