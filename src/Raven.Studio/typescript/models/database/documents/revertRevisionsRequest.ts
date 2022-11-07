@@ -58,7 +58,9 @@ class revertRevisionsRequest {
         
         return {
             Time: date,
-            WindowInSec: window
+            WindowInSec: window,
+            ApplyToSpecifiedCollectionsOnly: false,
+            Collections: null
         }
     }
 }
