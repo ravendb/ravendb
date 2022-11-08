@@ -4,6 +4,7 @@
 
     <LangVersion>preview</LangVersion>
     <EnablePreviewFeatures>True</EnablePreviewFeatures>
+    <GenerateRequiresPreviewFeaturesAttribute>True</GenerateRequiresPreviewFeaturesAttribute>
     
     <WarningsAsErrors>true</WarningsAsErrors>
 
