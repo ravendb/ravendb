@@ -37,6 +37,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
@@ -533,8 +534,10 @@ namespace Raven.Server.Documents.Replication
                 _outgoing.TryRemove(source); // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
 
                 PoolOfThreads.PooledThread.ResetCurrentThreadName();
-                Thread.CurrentThread.Name = $"Pull Replication as Sink from {destination.Database} at {destination.Url}";
-
+                Thread.CurrentThread.Name = PlatformDetails.RunningOnLinux
+                    ? $"PRS f {destination.Database} a {destination.Url}"
+                    : $"Pull Replication as Sink from {destination.Database} at {destination.Url}";
+                
                 _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
                 IncomingReplicationAdded?.Invoke(newIncoming);
                 newIncoming.DoIncomingReplication();

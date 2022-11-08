@@ -90,7 +90,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     // nothing we can do here
                 }
-            }, null, $"Cluster observer for term {_term}");
+            }, null, $"Cluster observer for term {_term}", $"CO F T {_term}");
         }
 
         public bool Suspended = false; // don't really care about concurrency here

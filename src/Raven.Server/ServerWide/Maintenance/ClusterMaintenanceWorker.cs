@@ -32,6 +32,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly Logger _logger;
 
         private readonly string _name;
+        private readonly string _shortThreadName;
         public readonly long CurrentTerm;
 
         public readonly TimeSpan WorkerSamplePeriod;
@@ -47,6 +48,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _server = serverStore;
             _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>(serverStore.NodeTag);
             _name = $"Heartbeats worker connection to leader {leader} in term {term}";
+            _shortThreadName = $"HWCTL {leader} IT {term}";
             _temporaryDirtyMemoryAllowedPercentage = _server.Server.ServerStore.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage;
 
             WorkerSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
@@ -79,7 +81,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     // we don't want to crash the process so we don't propagate this exception.
                 }
             }
-            , null, _name);
+            , null, _name, _shortThreadName);
         }
 
         public void CollectDatabasesStatusReport()

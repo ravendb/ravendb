@@ -43,6 +43,8 @@ namespace Raven.Server.Utils
 
         private readonly ConcurrentQueue<PooledThread> _pool = new ConcurrentQueue<PooledThread>();
         private bool _disposed;
+        private readonly ConcurrentDictionary<long, string> _fullThreadNames = new();
+        public ConcurrentDictionary<long, string> FullThreadNames => _fullThreadNames;
 
         public void Dispose()
         {
@@ -86,8 +88,10 @@ namespace Raven.Server.Utils
             }
         }
 
-        public LongRunningWork LongRunning(Action<object> action, object state, string name)
+        public LongRunningWork LongRunning(Action<object> action, object state, string fullName, string shortName)
         {
+            var nameToUse = PlatformDetails.RunningOnLinux ? shortName : fullName;
+
             if (_pool.TryDequeue(out var pooled) == false)
             {
                 MemoryInformation.AssertNotAboutToRunOutOfMemory();
@@ -95,14 +99,18 @@ namespace Raven.Server.Utils
                 pooled = new PooledThread(this);
                 var thread = new Thread(pooled.Run, PlatformDetails.Is32Bits ? 512 * Constants.Size.Kilobyte : 0)
                 {
-                    Name = name,
+                    Name = nameToUse,
                     IsBackground = true,
+                    
                 };
+
+                FullThreadNames[thread.ManagedThreadId] = fullName;
 
                 thread.Start();
             }
+
             pooled.StartedAt = DateTime.UtcNow;
-            return pooled.SetWorkForThread(action, state, name);
+            return pooled.SetWorkForThread(action, state, nameToUse);
         }
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
@@ -182,7 +190,7 @@ namespace Raven.Server.Utils
                     while (true)
                     {
                         _waitForWork.WaitOne();
-
+                        
                         if (DoWork() == false)
                             return;
                     }
@@ -233,12 +241,14 @@ namespace Raven.Server.Utils
                 _action = null;
                 _state = null;
                 _workIsDone = null;
+                GlobalRavenThreadPool.FullThreadNames.TryRemove(Thread.CurrentThread.ManagedThreadId, out var _);
                 NativeMemory.CurrentThreadStats.CurrentlyAllocatedForProcessing = 0;
 
                 ThreadLocalCleanup.Run();
 
                 ResetCurrentThreadName();
-                Thread.CurrentThread.Name = "Available Pool Thread";
+                Thread.CurrentThread.Name = PlatformDetails.RunningOnLinux ? "Available PT" : "Available Pool Thread";
+                
 
                 var resetThread = ResetThreadPriority();
                 resetThread &= ResetThreadAffinity();

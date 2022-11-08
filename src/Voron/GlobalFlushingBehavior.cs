@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Impl.Journal;
 
@@ -11,7 +12,7 @@ namespace Voron
 {
     public class GlobalFlushingBehavior
     {
-        private const string FlushingThreadName = "Voron Global Flushing Thread";
+        private static readonly string FlushingThreadName = PlatformDetails.RunningOnLinux ? "VGF" : "Voron Global Flushing Thread";
 
         public static int NumberOfConcurrentSyncsPerPhysicalDrive = 3;
 
