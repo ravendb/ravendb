@@ -1143,7 +1143,8 @@ namespace Raven.Server.Rachis
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(
                     action: x => Run(x),
                     state: negotiation,
-                    name: $"Follower thread from {_connection} in term {negotiation.Term}");
+                    fullName: $"Follower thread from {_connection} in term {negotiation.Term}",
+                    shortName: $"FL f {_connection} IT {negotiation.Term}");
 
         }
 

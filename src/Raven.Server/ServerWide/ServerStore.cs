@@ -956,14 +956,15 @@ namespace Raven.Server.ServerWide
             }
 
             _clusterMaintenanceSetupTask = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
-                ClusterMaintenanceSetupTask(), null, "Cluster Maintenance Setup Task");
+                ClusterMaintenanceSetupTask(), null, "Cluster Maintenance Setup Task", "CM Setup Task");
 
             const string threadName = "Update Topology Change Notification Task";
+            const string shortThreadName = "UTCN Task";
             _updateTopologyChangeNotification = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
                 ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, Logger);
                 UpdateTopologyChangeNotification();
-            }, null, threadName);
+            }, null, threadName, shortThreadName);
         }
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)

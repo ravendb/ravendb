@@ -149,6 +149,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private string IncomingReplicationThreadName => $"Incoming replication {FromToString}";
+        private string IncomingReplicationShortThreadName => $"IR {_database.Name} f {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName}";
 
         public void Start()
         {
@@ -160,7 +161,7 @@ namespace Raven.Server.Documents.Replication
                 if (_incomingWork != null)
                     return; // already set by someone else, they can start it
 
-                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadName);
+                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadName, IncomingReplicationShortThreadName);
             }
 
             if (_log.IsInfoEnabled)

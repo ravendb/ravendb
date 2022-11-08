@@ -235,11 +235,11 @@ namespace Sparrow.Logging
                 return;
 
             _keepLogging.Raise();
-            _loggingThread = new Thread(BackgroundLogger) {IsBackground = true, Name = _name + " Thread"};
+            _loggingThread = new Thread(BackgroundLogger) {IsBackground = true, Name = PlatformDetails.RunningOnLinux ? _name : _name + " Thread"};
             _loggingThread.Start();
             if (compress)
             {
-                _compressLoggingThread = new Thread(BackgroundLoggerCompress) {IsBackground = true, Name = _name + "Log Compression Thread"};
+                _compressLoggingThread = new Thread(BackgroundLoggerCompress) {IsBackground = true, Name = PlatformDetails.RunningOnLinux ? _name + " LC" : _name + " Log Compression Thread"};
                 _compressLoggingThread.Start();
             }
             else

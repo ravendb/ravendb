@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Platform;
 
 namespace Raven.Server.Utils.Metrics
 {
@@ -33,7 +34,7 @@ namespace Raven.Server.Utils.Metrics
             _schedulerThread = new Thread(SchedulerTicking)
             {
                 IsBackground = true,
-                Name = "Metrics Scheduler"
+                Name = PlatformDetails.RunningOnLinux ? "MS" : "Metrics Scheduler"
             };
             _schedulerThread.Start();
         }

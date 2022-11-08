@@ -613,6 +613,7 @@ namespace Raven.Server.Documents.ETL
             _cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown);
 
             var threadName = $"{Tag} process: {Name}";
+            var shortThreadName = $"{Tag} {Name}";
             _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
                 try
@@ -628,7 +629,7 @@ namespace Raven.Server.Documents.ETL
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Failed to run ETL {Name}", e);
                 }
-            }, null, threadName);
+            }, null, threadName, shortThreadName);
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Starting {Tag} process: '{Name}'.");

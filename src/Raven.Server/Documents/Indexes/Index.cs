@@ -235,6 +235,7 @@ namespace Raven.Server.Documents.Indexes
         internal readonly QueryBuilderFactories _queryBuilderFactories;
 
         private string IndexingThreadName => "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name;
+        private string IndexingShortThreadName => "I:" + IndexNameByFirstLetters() + "-" + _indexStorage.DocumentDatabase.Name;
 
         private readonly WarnIndexOutputsPerDocument.WarningDetails _indexOutputsPerDocumentWarning = new WarnIndexOutputsPerDocument.WarningDetails
         {
@@ -905,7 +906,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     ReportUnexpectedIndexingError(e);
                 }
-            }, null, IndexingThreadName);
+            }, null, IndexingThreadName, IndexingShortThreadName);
 
             RollIfNeeded();
         }
@@ -4945,6 +4946,19 @@ namespace Raven.Server.Documents.Indexes
             autoDef = null;
 
             return false;
+        }
+
+        private string IndexNameByFirstLetters()
+        {
+            string result = "";
+            string[] separatedWords = Name.Split("/");
+
+            foreach (string word in separatedWords)
+            {
+                result += word[0];
+            }
+
+            return result;
         }
 
         protected class IndexQueryDoneRunning : IDisposable

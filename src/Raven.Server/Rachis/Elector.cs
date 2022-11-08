@@ -25,7 +25,7 @@ namespace Raven.Server.Rachis
         {
             _engine.AppendElector(this);
 
-            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");
+            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, "Elector for candidate {_connection.Source}", $"EFC {_connection.Source}");
         }
 
         public override string ToString()

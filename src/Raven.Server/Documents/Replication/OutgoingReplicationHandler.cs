@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Replication
         public void Start()
         {
             _longRunningSendingWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(Replication), null, OutgoingReplicationThreadName);
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(Replication), null, OutgoingReplicationThreadName, OutgoingReplicationShortThreadName);
         }
 
         public void StartPullReplicationAsHub(Stream stream, TcpConnectionHeaderMessage.SupportedFeatures supportedVersions)
@@ -173,16 +173,23 @@ namespace Raven.Server.Documents.Replication
             _stream = stream;
             IsPullReplicationAsHub = true;
             OutgoingReplicationThreadName = $"Pull replication as hub {FromToString}";
+            OutgoingReplicationShortThreadName = $"PRH f {_database.Name} t {Destination.FromString()}";
             _longRunningSendingWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, OutgoingReplicationThreadName);
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, OutgoingReplicationThreadName, OutgoingReplicationShortThreadName);
         }
 
         private string _outgoingReplicationThreadName;
+        private string _outgoingReplicationShortThreadName;
 
         public string OutgoingReplicationThreadName
         {
             set => _outgoingReplicationThreadName = value;
             get => _outgoingReplicationThreadName ?? (_outgoingReplicationThreadName = $"Outgoing replication {FromToString}");
+        }
+        public string OutgoingReplicationShortThreadName
+        {
+            set => _outgoingReplicationShortThreadName = value;
+            get => _outgoingReplicationShortThreadName ?? (_outgoingReplicationShortThreadName = $"OR f {_database.Name} t {Destination.FromString()}");
         }
 
         public bool IsPullReplicationAsHub;

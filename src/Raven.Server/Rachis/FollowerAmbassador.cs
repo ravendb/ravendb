@@ -968,7 +968,7 @@ namespace Raven.Server.Rachis
         {
             UpdateLastMatchFromFollower(0);
             _followerAmbassadorLongRunningOperation =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ToString());
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ToString(), $"FA F {_tag} IT {_term:#,#;;0}");
         }
 
         public override string ToString()

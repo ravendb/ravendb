@@ -346,7 +346,7 @@ namespace Raven.Server
                             if (Logger.IsOperationsEnabled)
                                 Logger.Operations("Fatal exception occured during cpu credit monitoring", e);
                         }
-                    }, null, "CPU Credits Monitoring");
+                    }, null, "CPU Credits Monitoring", "CPU-CM");
                 }
 
                 _refreshClusterCertificate?.Change(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
