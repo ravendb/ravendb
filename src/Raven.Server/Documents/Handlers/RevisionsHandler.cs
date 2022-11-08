@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.Handlers
                 configuration = JsonDeserializationServer.RevertRevisions(json);
             }
             
-            HashSet<string> collections = configuration.ApplyToSpecifiedCollectionsOnly ? new HashSet<string>(configuration.Collections, StringComparer.OrdinalIgnoreCase) : null;
+            HashSet<string> collections = configuration.Collections?.Length > 0 ? new HashSet<string>(configuration.Collections, StringComparer.OrdinalIgnoreCase) : null;
 
             var token = CreateTimeLimitedOperationToken();
             var operationId = ServerStore.Operations.GetNextOperationId();

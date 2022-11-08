@@ -6,7 +6,6 @@ namespace Raven.Server.Documents.Revisions
     {
         public DateTime Time { get; set; }
         public long WindowInSec { get; set; }
-        public bool ApplyToSpecifiedCollectionsOnly { get; set; } = false;
-        public string[] Collections { get; set; } = null;
+        public string[] Collections { get; set; } = null; 
     }
 }

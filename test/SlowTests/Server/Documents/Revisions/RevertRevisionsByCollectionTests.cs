@@ -678,8 +678,8 @@ namespace SlowTests.Server.Documents.Revisions
 
             public RevertRevisionsOperation(DateTime time, long window, string[] collections) : this(time, window)
             {
-                Debug.Assert(collections != null);
-                _request.ApplyToSpecifiedCollectionsOnly = true;
+                if(collections == null || collections.Length == 0)
+                    throw new InvalidOperationException("Collections array cant be null or empty.");
                 _request.Collections = collections;
             }
 
