@@ -3,6 +3,7 @@ import accessManager = require("common/shell/accessManager");
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
 import changeVectorUtils = require("common/changeVectorUtils");
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import getDatabaseStatsCommand from "commands/resources/getDatabaseStatsCommand";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
@@ -21,7 +22,9 @@ class databaseIDs extends shardViewModelBase {
     usedIDs = ko.observableArray<string>([]);
     idsFromCVs = ko.observableArray<string>();
     
-    inputDatabaseID = ko.observable<string>();
+    nonLocalDatabaseNodes: KnockoutComputed<string[]>; 
+    
+    inputDatabaseId = ko.observable<string>();
 
     suggestedIDs: KnockoutComputed<string[]>;
     
@@ -34,10 +37,21 @@ class databaseIDs extends shardViewModelBase {
 
     constructor(db: database) {
         super(db);
-        this.bindToCurrentInstance("addToUnusedList", "removeFromUnusedList");
+        this.bindToCurrentInstance("addToUnusedList", "removeFromUnusedList", "linkToUnusedDatabaseIds");
+        
+        this.nonLocalDatabaseNodes = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (!db) {
+                return [];
         this.initObservables();
     }
-    
+            const nodes = db.nodes();
+            const localNodeTag = clusterTopologyManager.default.localNodeTag();
+            
+            return nodes.filter(tag => tag !== localNodeTag);
+        });
+    }
+
     private initObservables(): void {
         this.suggestedIDs = ko.pureComputed(() => this.idsFromCVs().filter(x => !this.usedIDs().includes(x)));
     }
@@ -50,6 +64,14 @@ class databaseIDs extends shardViewModelBase {
     itemIsInsideUnusedList(dbId: string) {
         return ko.pureComputed(() => this.unusedIDs().includes(dbId));
     }
+
+    linkToUnusedDatabaseIds(nodeTag: string) {
+        const link = appUrl.forDatabaseIDs(this.activeDatabase());
+        const nodeInfo = clusterTopologyManager.default.getClusterNodeByTag(nodeTag);
+
+        return appUrl.toExternalUrl(nodeInfo.serverUrl(), link);
+    }
+
 
     canActivate(args: any) {
         return $.when<any>(super.canActivate(args))

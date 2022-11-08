@@ -23,7 +23,11 @@ namespace Raven.Server.Documents.Indexes
         public int ReduceErrors;
 
         public int IndexingOutputs;
-        public Size AllocatedBytes;
+        
+        public Size AllocatedManagedBytes;
+        
+        public Size AllocatedUnmanagedBytes;
+        
         public long DocumentsSize;
 
         public long? EntriesCount;

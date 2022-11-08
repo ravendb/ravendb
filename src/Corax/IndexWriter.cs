@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow;
@@ -16,10 +17,12 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.Sets;
 using Voron.Impl;
+using static Voron.Data.CompactTrees.CompactTree;
 
 namespace Corax
 {
@@ -96,6 +99,14 @@ namespace Corax
                 if (FreeSpace == 0)
                     GrowBuffer();
 
+                //Lets assert if it is in last removals
+                if (_removals > 0 && *(_end - _removals + 1) == entryId)
+                {
+                    // Lets remove removal and do not proceed addition.
+                    _removals--;
+                    return;
+                }
+                
                 *(_start + _additions) = entryId;
                 _additions++;
 
@@ -110,6 +121,15 @@ namespace Corax
                 if (FreeSpace == 0)
                     GrowBuffer();
 
+                //Lets assert if it is in last additions
+                if (_additions > 0 && *(_start + _additions - 1) == entryId)
+                {
+                    // Lets remove addition and do not proceed removal.
+                    _additions--;
+                    return;
+                }
+                
+                
                 *(_end - _removals) = entryId;
                 _removals++;
 
@@ -215,7 +235,13 @@ namespace Corax
         private readonly HashSet<long> _deletedEntries = new();
 
         private readonly long _postingListContainerId, _entriesContainerId;
-        private readonly IndexDynamicFieldsMapping _dynamicFieldsMapping;
+        private IndexFieldsMapping _dynamicFieldsMapping;
+
+        public void UpdateDynamicFieldsMapping(IndexFieldsMapping current)
+        {
+            _dynamicFieldsMapping = current;
+
+        }
 
         private const string SuggestionsTreePrefix = "__Suggestion_";
         
@@ -226,7 +252,6 @@ namespace Corax
         private IndexWriter(IndexFieldsMapping fieldsMapping)
         {
             _fieldsMapping = fieldsMapping;
-            fieldsMapping.UpdateMaximumOutputAndTokenSize();
             _encodingBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize);
             _tokensBufferHandler = Analyzer.TokensPool.Rent(fieldsMapping.MaximumTokenSize);
             _utf8ConverterBufferHandler = Analyzer.BufferPool.Rent(fieldsMapping.MaximumOutputSize * 10);
@@ -253,9 +278,8 @@ namespace Corax
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
         }
 
-        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, IndexDynamicFieldsMapping dynamicFieldsMapping) : this(tx, fieldsMapping)
+        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, bool hasDynamics) : this(tx, fieldsMapping)
         {
-            _dynamicFieldsMapping = dynamicFieldsMapping;
             _persistedDynamicFieldsAnalyzers = Transaction.CreateTree(Constants.IndexWriter.DynamicFieldsAnalyzersSlice);
         }
         
@@ -560,8 +584,8 @@ namespace Corax
                 Analyzer analyzer = mode switch
                 {
                     FieldIndexingMode.No => null,
-                    FieldIndexingMode.Exact => _dynamicFieldsMapping!.DefaultExactAnalyzer(slice.ToString()),
-                    FieldIndexingMode.Search => _dynamicFieldsMapping!.DefaultSearchAnalyzer(slice.ToString()),
+                    FieldIndexingMode.Exact => _dynamicFieldsMapping!.ExactAnalyzer(slice.ToString()),
+                    FieldIndexingMode.Search => _dynamicFieldsMapping!.SearchAnalyzer(slice.ToString()),
                     _ => _dynamicFieldsMapping!.DefaultAnalyzer
                 };
                 
@@ -572,8 +596,8 @@ namespace Corax
 
             void CreateDynamicField(Analyzer analyzer, FieldIndexingMode mode)
             {
-                IndexFieldsMappingBase.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
-                IndexFieldsMappingBase.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
+                IndexFieldsMappingBuilder.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
+                IndexFieldsMappingBuilder.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
                 indexedField = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, analyzer, mode, false);
                 _dynamicFieldsTerms[clonedFieldName] = indexedField;
             }
@@ -664,7 +688,7 @@ namespace Corax
                     case IndexEntryFieldType.TupleList:
                         if (_fieldReader.TryReadMany(out var iterator) == false)
                             break;
-
+                        
                         while (iterator.ReadNext())
                         {
                             if (iterator.IsNull)
@@ -672,7 +696,7 @@ namespace Corax
                                 ExactInsert(Constants.NullValueSlice);
                                 NumericInsert(0L, double.NaN);
                             }
-                            else if (iterator.IsEmpty)
+                            else if (iterator.IsEmptyString)
                             {
                                 throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
                             }
@@ -723,7 +747,7 @@ namespace Corax
                         {
                             Debug.Assert((_fieldReader.Type & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
 
-                            if ((_fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                            if (iterator.IsNull || iterator.IsEmptyString)
                             {
                                 var fieldValue = iterator.IsNull ? Constants.NullValueSlice : Constants.EmptyStringSlice;
                                 ExactInsert(fieldValue.AsReadOnlySpan());
@@ -801,19 +825,8 @@ namespace Corax
 
             void ExactInsert(ReadOnlySpan<byte> value)
             {
-                ByteStringContext<ByteStringMemoryCache>.InternalScope? scope;
-
-                Slice slice;
-                if (value.Length == 0)
-                {
-                    slice = Constants.EmptyStringSlice;
-                    scope = null;
-                }
-                else
-                {
-                    scope = CreateNormalizedTerm(_context, value, out slice);
-                }
-
+                ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = CreateNormalizedTerm(_context, value, out var slice);
+                
                 // We are gonna try to get the reference if it exists, but we wont try to do the addition here, because to store in the
                 // dictionary we need to close the slice as we are disposing it afterwards. 
                 ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedField.Textual, slice, out var exists);
@@ -916,7 +929,7 @@ namespace Corax
                         {
                             RecordTupleToDelete(indexedField, Constants.NullValueSlice, double.NaN, 0);
                         }
-                        else if (iterator.IsEmpty)
+                        else if (iterator.IsEmptyString)
                         {
                             throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
                         }
@@ -964,7 +977,7 @@ namespace Corax
                         {
                             RecordExactTermToDelete(Constants.NullValueSlice, indexedField);
                         }
-                        else if (iterator.IsEmpty)
+                        else if (iterator.IsEmptyString)
                         {
                             RecordExactTermToDelete(Constants.EmptyStringSlice, indexedField);
                         }
@@ -1083,6 +1096,15 @@ namespace Corax
             using var _ = Slice.From(Transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
             return TryDeleteEntry(key, termSlice.AsSpan());
         }
+        
+        public bool TryDeleteEntry(string key, string term, out long entriesCountDifference)
+        {
+            var originAmountOfModifications = _numberOfModifications;
+            var result = TryDeleteEntry(key, term);
+            entriesCountDifference = _numberOfModifications - originAmountOfModifications;
+            
+            return result;
+        }
 
         public bool TryDeleteEntry(string key, Span<byte> term)
         {
@@ -1100,7 +1122,8 @@ namespace Corax
                 var id = idInTree & Constants.StorageMask.ContainerType;
                 var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, id);
                 ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
-                var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
+                
+                using var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
                 var iterator = set.Iterate();
                 while (iterator.MoveNext())
                 {
@@ -1146,7 +1169,7 @@ namespace Corax
             using var __ = CreateNormalizedTerm(Transaction.Allocator, term, out var termSlice);
 
             var termValue = termSlice.AsReadOnlySpan();
-            return fieldTree.TryGetValue(termValue, out idInTree, out var _);
+            return fieldTree.TryGetValue(termValue, out idInTree);
         }
 
         private void UnlikelyGrowBuffer(int newBufferSize, int newTokenSize)
@@ -1262,8 +1285,13 @@ namespace Corax
 
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
-                if (termsSpan[^1] == '\0') break;
-                if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var encodedKey) == false)
+                
+                if (termsSpan[^1] == '\0')
+                {
+                    throw new InvalidDataException($"Got term '{Encodings.Utf8.GetString(termsSpan)}' with NULL character at the end for field {indexedField.Name}. This is a bug.");
+                }
+                
+                if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var scope) == false)
                 {
                     if (entries.TotalRemovals != 0)
                     {
@@ -1273,7 +1301,8 @@ namespace Corax
                     AddNewTerm(entries, tmpBuf, out termId);
 
                     dumper.WriteAddition(term, termId);
-                    fieldTree.Add(termsSpan, termId, encodedKey);
+                    fieldTree.Add(termsSpan, termId, scope.Key);
+                    scope.Dispose();
                     continue;
                 }
 
@@ -1281,7 +1310,7 @@ namespace Corax
                 {
                     case AddEntriesToTermResult.UpdateTermId:
                         dumper.WriteAddition(term, termId);
-                        fieldTree.Add(termsSpan, termId, encodedKey);
+                        fieldTree.Add(termsSpan, termId, scope.Key);
                         break;
                     case AddEntriesToTermResult.RemoveTermId:
                         if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
@@ -1292,6 +1321,7 @@ namespace Corax
                         dumper.WriteRemoval(term, ttt);
                         break;
                 }
+                scope.Dispose();
             }
         }
 
@@ -1432,11 +1462,12 @@ namespace Corax
         {
             var llt = Transaction.LowLevelTransaction;
 
-            var setSpace = Container.GetMutable(llt, id);
-            ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
-            var set = new Set(llt, Slices.Empty, setState);
             entries.Sort();
 
+            var setSpace = Container.GetMutable(llt, id);
+            ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
+            
+            using var set = new Set(llt, Slices.Empty, setState);
             set.Remove(entries.Removals);
             set.Add(entries.Additions);
 
@@ -1587,7 +1618,8 @@ namespace Corax
             long setId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, sizeof(SetState), out var setSpace);
             ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
             Set.Create(Transaction.LowLevelTransaction, ref setState);
-            var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
+            
+            using var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
             set.Add(additions);
             setState = set.State;
             termId = setId | (long)TermIdMask.Set;

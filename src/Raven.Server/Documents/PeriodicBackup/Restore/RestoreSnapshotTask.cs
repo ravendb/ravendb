@@ -248,7 +248,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         {
                             var source = new StreamSource(uncompressed, context, database.Name);
                             var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
-                                database.Time, context, smugglerOptions, onProgress: onProgress, token: OperationCancelToken.Token);
+                                database.Time, context, smugglerOptions, onProgress: onProgress, token: OperationCancelToken.Token)
+                            {
+                                BackupKind = BackupKind.Incremental
+                            };
 
                             await smuggler.ExecuteAsync(ensureStepsProcessed: true, isLastFile: true);
                         }

@@ -49,7 +49,7 @@ namespace Raven.Server.Smuggler.Documents
         protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result)
         {
             result.CompareExchange.Start();
-            await using (var actions = _destination.CompareExchange(_context))
+            await using (var actions = _destination.CompareExchange(_context, BackupKind, withDocuments: false))
             {
                 await foreach (var kvp in _source.GetCompareExchangeValuesAsync())
                 {
@@ -188,7 +188,7 @@ namespace Raven.Server.Smuggler.Documents
 
             try
             {
-                await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
+                        await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value, null);
                 result.CompareExchange.LastEtag = kvp.Index;
             }
             catch (Exception e)

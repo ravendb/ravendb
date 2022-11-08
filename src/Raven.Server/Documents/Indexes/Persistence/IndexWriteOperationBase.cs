@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Threading;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Exceptions;
@@ -19,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract void Commit(IndexingStatsScope stats);
 
-        public abstract void Optimize();
+        public abstract void Optimize(CancellationToken token);
 
         public abstract void UpdateDocument(string keyFieldName, LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,
             JsonOperationContext indexContext);

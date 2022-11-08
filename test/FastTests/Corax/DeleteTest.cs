@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Corax;
+using Corax.Mappings;
 using Corax.Queries;
 using FastTests.Voron;
 using Sparrow;
@@ -254,9 +255,8 @@ namespace FastTests.Corax
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            return new IndexFieldsMapping(ctx)
-                .AddBinding(IndexId, idSlice)
-                .AddBinding(ContentId, contentSlice);
+            using (var builder = IndexFieldsMappingBuilder.CreateForWriter(false).AddBinding(IndexId, idSlice).AddBinding(ContentId, contentSlice))
+                return builder.Build();
         }
 
         private class IndexSingleNumericalEntry<T>
@@ -268,6 +268,7 @@ namespace FastTests.Corax
         public override void Dispose()
         {
             _bsc.Dispose();
+            _analyzers.Dispose();
             base.Dispose();
         }
     }

@@ -42,6 +42,12 @@ namespace Sparrow.Server
             get { return ref Address[idx]; }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public T* GetAsPtr(int idx)
+        {
+            return Address + idx;
+        }
+
         public Span<T> ToSpan() => new(Address, Length);
         public ReadOnlySpan<T> ToReadOnlySpan() => new(Address, Length);
 

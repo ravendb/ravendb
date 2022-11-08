@@ -177,9 +177,11 @@ namespace SlowTests.Server.Documents.Indexing
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
                 Assert.Equal(FieldIndexing.Search, index.Fields["Name"].Indexing);
-                Assert.Equal(@"docs.Users.Select(doc => new
+                RavenTestHelper.AssertEqualRespectingNewLines(@"docs.Users.Select(doc => new
 {
-Age = doc.Age, Email = doc.Email, Name = doc.Name
+    Age = doc.Age,
+    Email = doc.Email,
+    Name = doc.Name
 })", index.Maps.First());
 
             }
@@ -298,10 +300,12 @@ Age = doc.Age, Email = doc.Email, Name = doc.Name
                 var index = suggestion.MergedIndex;
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
-                Assert.Equal(@"from doc in docs.Users
+                RavenTestHelper.AssertEqualRespectingNewLines(@"from doc in docs.Users
 select new
 {
-Age = doc.Age, Email = doc.Email, Name = doc.Name
+    Age = doc.Age,
+    Email = doc.Email,
+    Name = doc.Name
 }", index.Maps.First());
 
             }
@@ -406,10 +410,15 @@ select new {
             var results = GetMergeReportOfTwoIndexes(index1, index2);
             
             Assert.Equal(1, results.Suggestions.Count);
-            Assert.Equal(@"from doc in docs.Products
+            RavenTestHelper.AssertEqualRespectingNewLines(@"from doc in docs.Products
 select new
 {
-Category = doc.Category, Name = doc.Name, PricePerUnit = doc.PricePerUnit, Supplier = doc.Supplier, UnitOnStock = LoadCompareExchangeValue(Id(doc))}"
+    Category = doc.Category,
+    Name = doc.Name,
+    PricePerUnit = doc.PricePerUnit,
+    Supplier = doc.Supplier,
+    UnitOnStock = LoadCompareExchangeValue(Id(doc))
+}"
                 , results.Suggestions.First().MergedIndex.Maps.First());
         }
 
@@ -481,11 +490,55 @@ select new
             var results = GetMergeReportOfTwoIndexes(index2, index1);
            
             Assert.Equal(1, results.Suggestions.Count);
-            Assert.Equal(@"from doc in docs.Orders
+            RavenTestHelper.AssertEqualRespectingNewLines(@"from doc in docs.Orders
 select new
 {
-Company = doc.Company, Employee = doc.Employee, ShipmentLocation = CreateSpatialField(doc.ShipTo.Latitude, doc.ShipTo.Longitude), Total = doc.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))}", results.Suggestions.First().MergedIndex.Maps.First());
+    Company = doc.Company,
+    Employee = doc.Employee,
+    ShipmentLocation = CreateSpatialField(doc.ShipTo.Latitude, doc.ShipTo.Longitude),
+    Total = doc.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
+}", results.Suggestions.First().MergedIndex.Maps.First());
         }
+
+        
+        [Fact]
+        public void AutoIndexesWillNotBeIncludedInOperationOutput()
+        {
+            using var store = GetDocumentStore();
+            {
+                using var session = store.OpenSession();
+                session.Store(new AutoIndexMockup("Maciej", 1));
+                session.SaveChanges();
+            }
+
+            {
+                using var session = store.OpenSession();
+                var createAutoIndexMap = session.Query<AutoIndexMockup>().Where(i => i.Name == "maciej").ToList();
+                var createAutoIndexReduce = session.Query<AutoIndexMockup>().GroupBy(i => i.Count).Select(x => new
+                {
+                    Name = x.Key,
+                    Count = x.Count(),
+                }).ToList();
+            }
+            var mapName = "Auto/AutoIndexMockups/ByName";
+            var mapIndex = store
+                .Maintenance
+                .Send(new GetIndexOperation(mapName));
+            var reduceName = "Auto/AutoIndexMockupsReducedByCount";
+            var mapReduce = store
+                .Maintenance
+                .Send(new GetIndexOperation(reduceName));
+            var dictionary = new Dictionary<string, IndexDefinition>
+            {
+                {mapName, mapIndex},
+                {reduceName, mapReduce}
+            };
+            var merger = new IndexMerger(dictionary);
+            Assert.Equal(0, merger.ProposeIndexMergeSuggestions().Suggestions.Count);
+            Assert.Equal(0, merger.ProposeIndexMergeSuggestions().Unmergables.Count);
+        }
+
+        private record AutoIndexMockup(string Name, int Count);
 
         private IndexMergeResults GetMergeReportOfTwoIndexes(IndexDefinition index1, IndexDefinition index2)
         {

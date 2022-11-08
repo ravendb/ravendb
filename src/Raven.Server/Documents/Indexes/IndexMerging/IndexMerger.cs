@@ -17,7 +17,9 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
         public IndexMerger(Dictionary<string, IndexDefinition> indexDefinitions)
         {
-            _indexDefinitions = indexDefinitions;
+            _indexDefinitions = indexDefinitions
+                .Where(i => i.Value.Type.IsAuto() == false)
+                .ToDictionary(i => i.Key, i=> i.Value);
         }
 
         private List<MergeProposal> MergeIndexes(List<IndexData> indexes)
@@ -277,7 +279,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 TrySetCollectionName(mergeProposal, mergeSuggestion);
 
                 var map = mergeProposal.ProposedForMerge[0].BuildExpression(selectExpressionDict);
-                mergeSuggestion.MergedIndex.Maps.Add(map);
+                mergeSuggestion.MergedIndex.Maps.Add(SourceCodeBeautifier.FormatIndex(map).Expression);
                 RemoveMatchingIndexes(mergeProposal, selectExpressionDict, mergeSuggestion, indexMergeResults);
 
                 if (mergeProposal.ProposedForMerge.Count == 1 && mergeProposal.ProposedForMerge[0].IsSuitedForMerge == false)

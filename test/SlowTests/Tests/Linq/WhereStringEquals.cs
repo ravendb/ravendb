@@ -22,10 +22,13 @@ namespace SlowTests.Tests.Linq
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<NotSupportedException>(() =>
-                        session.Query<MyEntity>()
-                            .Customize(customization => customization.WaitForNonStaleResults())
-                            .Count(o => string.Equals(o.StringData, "Some data", StringComparison.Ordinal)));
+                    var query = session.Query<MyEntity>()
+                        .Customize(customization => customization.WaitForNonStaleResults())
+                        .Where(o => string.Equals(o.StringData, "Some data", StringComparison.Ordinal));
+                    Assert.Equal("from 'MyEntities' where exact(StringData = $p0)", query.ToString());
+                    var result = query.ToList();
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal("Some data", result.First().StringData);
                 }
             }
         }
@@ -165,11 +168,13 @@ namespace SlowTests.Tests.Linq
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<NotSupportedException>(() =>
-                        session.Query<MyEntity>()
+                    var query = session.Query<MyEntity>()
                         .Customize(customization => customization.WaitForNonStaleResults())
-                        .Count(o => "Some data".Equals(o.StringData, StringComparison.Ordinal)));
-
+                        .Where(o => "Some data".Equals(o.StringData, StringComparison.Ordinal));
+                    Assert.Equal("from 'MyEntities' where exact(StringData = $p0)", query.ToString());
+                    var result = query.ToList();
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal("Some data", result.First().StringData);
                 }
             }
         }
@@ -183,10 +188,13 @@ namespace SlowTests.Tests.Linq
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<NotSupportedException>(() =>
-                        session.Query<MyEntity>()
+                    var query = session.Query<MyEntity>()
                         .Customize(customization => customization.WaitForNonStaleResults())
-                        .Count(o => o.StringData.Equals("Some data", StringComparison.Ordinal)));
+                        .Where(o => o.StringData.Equals("Some data", StringComparison.Ordinal));
+                    Assert.Equal("from 'MyEntities' where exact(StringData = $p0)", query.ToString());
+                    var result = query.ToList();
+                    Assert.Equal(1, query.Count());
+                    Assert.Equal("Some data", query.First().StringData);
                 }
             }
         }

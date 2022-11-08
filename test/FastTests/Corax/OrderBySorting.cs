@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Corax.Queries;
 using Corax;
+using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
 using Voron;
@@ -76,7 +77,7 @@ namespace FastTests.Corax
         private void IndexEntries()
         {
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            var knownFields = CreateKnownFields(bsc);
+            using var knownFields = CreateKnownFields(bsc);
 
             {
                 using var indexWriter = new IndexWriter(Env, knownFields);
@@ -104,9 +105,10 @@ namespace FastTests.Corax
             Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(bsc, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            return new IndexFieldsMapping(bsc)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IndexId, idSlice)
                 .AddBinding(ContentId, contentSlice);
+            return builder.Build();
         }
 
         private class IndexSingleNumericalEntry<T>

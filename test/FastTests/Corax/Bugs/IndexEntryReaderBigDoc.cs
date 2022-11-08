@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Corax;
+using Corax.Mappings;
 using FastTests.Voron;
 using Newtonsoft.Json.Linq;
 using Parquet.Thrift;
@@ -33,9 +34,10 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
     {
         using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         var scope = new SingleEntryWriterScope(allocator);
-        var knownFields = new IndexFieldsMapping(allocator)
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, "id()")
             .AddBinding(1, "Badges");
+        using var knownFields = builder.Build();
         var indexEntryWriter = new IndexEntryWriter(allocator, knownFields);
 
         var enumerableWriterScope = new EnumerableWriterScope(new(), new(), new(), new(), new(), allocator);

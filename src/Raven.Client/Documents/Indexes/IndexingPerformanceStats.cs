@@ -31,7 +31,8 @@ namespace Raven.Client.Documents.Indexes
 
         public IndexingPerformanceBasicStats(TimeSpan duration)
         {
-            AllocatedBytes = new Size();
+            AllocatedManagedBytes = new Size();
+            AllocatedUnmanagedBytes = new Size();
             DurationInMs = Math.Round(duration.TotalMilliseconds, 2);
         }
 
@@ -47,7 +48,16 @@ namespace Raven.Client.Documents.Indexes
 
         public double DurationInMs { get; }
 
-        public Size AllocatedBytes { get; set; }
+        [Obsolete($"Use '{nameof(AllocatedManagedBytes)}' instead.")]
+        public Size AllocatedBytes
+        {
+            get { return AllocatedManagedBytes; }
+            set { AllocatedManagedBytes = value; }
+        }
+        
+        public Size AllocatedManagedBytes { get; set; }
+        
+        public Size AllocatedUnmanagedBytes { get; set; }
         
         public Size DocumentsSize { get; set; }
     }

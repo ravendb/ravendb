@@ -7,6 +7,8 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.NotificationCenter.Notifications;
@@ -277,6 +279,11 @@ internal static class BackupUtils
                 DelayPeriod = serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
             };
         }
+    }
+    
+    public static PathSetting GetBackupTempPath(RavenConfiguration configuration, string dir)
+    {
+        return (configuration.Backup.TempPath ?? configuration.Storage.TempPath ?? configuration.Core.DataDirectory).Combine(dir);
     }
 
     public class NextBackupOccurrenceParameters

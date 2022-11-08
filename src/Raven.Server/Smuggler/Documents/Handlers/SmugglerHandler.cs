@@ -115,9 +115,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/admin/smuggler/import-dir", "GET", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostImportDirectory()
         {
+            var extension = GetStringQueryString("extension", required: false) ?? "dump";
+
             var directory = GetQueryStringValueAndAssertIfSingleAndNotEmpty("dir");
             var files = new BlockingCollection<Func<Task<Stream>>>(new ConcurrentQueue<Func<Task<Stream>>>(
-                    Directory.GetFiles(directory, "*.dump")
+                    Directory.GetFiles(directory, $"*.{extension}")
                         .Select(x => (Func<Task<Stream>>)(() => Task.FromResult<Stream>(File.OpenRead(x)))))
             );
             files.CompleteAdding();

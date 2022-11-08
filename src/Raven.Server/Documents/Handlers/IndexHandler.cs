@@ -360,22 +360,5 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private static readonly int DefaultInputSizeForTestingJavaScriptIndex = 10;
-
-        private IEnumerable<Index> GetIndexesToReportOn()
-        {
-            IEnumerable<Index> indexes;
-            var names = HttpContext.Request.Query["name"];
-
-            if (names.Count == 0)
-                indexes = Database.IndexStore
-                    .GetIndexes();
-            else
-            {
-                indexes = Database.IndexStore
-                    .GetIndexes()
-                    .Where(x => names.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
-            }
-            return indexes;
-        }
     }
 }

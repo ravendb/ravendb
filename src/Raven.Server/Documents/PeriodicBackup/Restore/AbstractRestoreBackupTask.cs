@@ -29,6 +29,7 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -301,6 +302,27 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 });
+
+            long totalExecutedCommands = 0;
+
+            //when restoring from a backup, the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
+            while (true)
+            {
+                OperationCancelToken.Token.ThrowIfCancellationRequested();
+
+                using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
+                    var executed = await database.ExecuteClusterTransaction(serverContext, batchSize: 1);
+                    if (executed.Count == 0)
+                        break;
+
+                    totalExecutedCommands += executed.Sum(x => x.Commands.Length);
+                    Result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
+                    Progress.Invoke(Result.Progress);
+                }
+            }
         }
 
         protected async Task<long> SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string,
@@ -552,6 +574,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 var smuggler = SmugglerBase.GetDatabaseSmugglerForRestore(database, RestoreSettings.DatabaseRecord, source, destination,
                     database.Time, context, options, restoreResult, onProgress);
 
+                smuggler.BackupKind = BackupUtils.IsFullBackup(Path.GetExtension(filePath)) ? BackupKind.Full : BackupKind.Incremental;
                 smuggler.OnIndexAction = onIndexAction;
                 smuggler.OnDatabaseRecordAction = onDatabaseRecordAction;
 

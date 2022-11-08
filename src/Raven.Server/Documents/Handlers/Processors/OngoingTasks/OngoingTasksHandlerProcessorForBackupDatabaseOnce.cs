@@ -13,6 +13,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Utils;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
@@ -33,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 OperationId = operationId,
                 BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),
                 IsFullBackup = true,
-                TempBackupPath = (RequestHandler.Database.Configuration.Storage.TempPath ?? RequestHandler.Database.Configuration.Core.DataDirectory).Combine("OneTimeBackupTemp"),
+                TempBackupPath = BackupUtils.GetBackupTempPath(RequestHandler.Database.Configuration, "OneTimeBackupTemp"),
                 Name = backupName
             };
 

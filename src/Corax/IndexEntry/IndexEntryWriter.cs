@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Mappings;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;
@@ -192,11 +193,18 @@ public unsafe struct IndexEntryWriter : IDisposable
         if (FreeSpace < requiredSize)
             UnlikelyGrowAuxiliaryBuffer(requiredSize);
 
-        WriteDynamicFieldName(fieldNameStr, false);
-
+        var isEmpty = value.Length == 0;
+        
+        WriteDynamicFieldName(fieldNameStr, isEmpty);
         Span<byte> buffer = Buffer;
-        Unsafe.WriteUnaligned(ref buffer[_dataIndex], IndexEntryFieldType.Simple);
+        
+        ref var indexEntryField = ref Unsafe.AsRef<IndexEntryFieldType>(Unsafe.AsPointer(ref buffer[_dataIndex]));
+        indexEntryField = isEmpty ? IndexEntryFieldType.Empty : IndexEntryFieldType.Simple;
         _dataIndex += sizeof(IndexEntryFieldType);
+        
+        if (isEmpty) //Marker for empty is written, can exit
+            return;
+        
         _dataIndex += VariableSizeEncoding.Write(buffer, value.Length, _dataIndex);
         value.CopyTo(buffer[_dataIndex..]);
         _dataIndex += value.Length;

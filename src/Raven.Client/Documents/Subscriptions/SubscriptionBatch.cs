@@ -17,6 +17,16 @@ namespace Raven.Client.Documents.Subscriptions
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
         }
 
+
+        private bool _sessionOpened;
+
+        internal override string Initialize(BatchFromServer batch)
+        {
+            _sessionOpened = false;
+
+            return base.Initialize(batch);
+        }
+
         public IDocumentSession OpenSession()
         {
             return OpenSessionInternal(new SessionOptions
@@ -38,6 +48,11 @@ namespace Raven.Client.Documents.Subscriptions
 
         private IDocumentSession OpenSessionInternal(SessionOptions options)
         {
+            if (_sessionOpened)
+            {
+                ThrowSessionCanBeOpenedOnlyOnce();
+            }
+            _sessionOpened = true;
             var s = _store.OpenSession(options);
 
             LoadDataToSession((InMemoryDocumentSessionOperations)s);
@@ -66,11 +81,22 @@ namespace Raven.Client.Documents.Subscriptions
 
         private IAsyncDocumentSession OpenAsyncSessionInternal(SessionOptions options)
         {
+            if (_sessionOpened)
+            {
+                ThrowSessionCanBeOpenedOnlyOnce();
+            }
+            _sessionOpened = true;
+
             var s = _store.OpenAsyncSession(options);
 
             LoadDataToSession((InMemoryDocumentSessionOperations)s);
 
             return s;
+        }
+
+        private static void ThrowSessionCanBeOpenedOnlyOnce()
+        {
+            throw new InvalidOperationException("Session can only be opened once per each Subscription batch");
         }
 
         private static void ValidateSessionOptions(SessionOptions options)

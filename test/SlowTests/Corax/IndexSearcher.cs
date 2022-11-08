@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Corax;
+using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Server;
@@ -118,9 +119,10 @@ public class IndexSearcherTest : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-        return new IndexFieldsMapping(ctx)
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(IdIndex, idSlice, analyzer)
             .AddBinding(ContentIndex, contentSlice, analyzer);
+        return builder.Build();
     }
 
     private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntry> list, IndexFieldsMapping mapping)
@@ -135,5 +137,6 @@ public class IndexSearcherTest : StorageTest
         }
 
         indexWriter.Commit();
+        mapping.Dispose();
     }
 }

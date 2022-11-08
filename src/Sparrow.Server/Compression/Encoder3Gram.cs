@@ -48,7 +48,7 @@ namespace Sparrow.Server.Compression
         public Encoder3Gram(TEncoderState state)
         {
             _state = state;
-            _entries = NumberOfEntries;
+            _entries = ReadNumberOfEntries(state);
         }
 
         public static int GetDictionarySize(in TEncoderState state)
@@ -367,80 +367,75 @@ namespace Sparrow.Server.Compression
             }
         }
 
-        public int DecodeStochasticBug(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
-        {
-            Span<byte> buffer = outputBuffer;
-            fixed (Interval3Gram* table = EncodingTable)
-            {
-                var tree = BinaryTree<short>.Open(_state.DecodingTable);
-
-                var reader = new BitReader(data);
-                var endsWithNull = false;
-                while (reader.Length > 0 && endsWithNull == false)
-                {
-                    int length = Lookup(reader, ref buffer, table, tree, out endsWithNull);
-                    if (length < 0)
-                        throw new IOException("Invalid data stream.");
-
-                    // Advance the reader.
-                    reader.Skip(length);
-                }
-
-                return outputBuffer.Length - buffer.Length;
-            }
-        }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Decode(ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
-            Span<byte> buffer = outputBuffer;
-            fixed (Interval3Gram* table = EncodingTable)
-            {
-                var tree = BinaryTree<short>.Open(_state.DecodingTable);
-                var reader = new BitReader(data);
-                var endsWithNull = false;
-                while (reader.Length > 0 && endsWithNull == false)
-                {
-                    int length = Lookup(reader, ref buffer, table, tree, out endsWithNull);
-                    if (length < 0)
-                        throw new IOException("Invalid data stream.");
-
-                    // Advance the reader.
-                    reader.Skip(length);
-                }
-
-                return outputBuffer.Length - buffer.Length;
-            }
+            return Decode(data.Length * 8, data, outputBuffer);
         }
 
+        [SkipLocalsInit]
         public int Decode(int bits, ReadOnlySpan<byte> data, Span<byte> outputBuffer)
         {
-            fixed (Interval3Gram* table = EncodingTable)
+            ref Interval3Gram tableRef = ref EncodingTable[0];
+            ref byte symbolsPtrRef = ref outputBuffer[0];
+
+            var tree = BinaryTree<short>.Open(_state.DecodingTable);
+            ref byte dataRef = ref MemoryMarshal.GetReference(data);
+
+            int bitStreamLength = bits;
+            int readerBitIdx = 0;
+            bool endsWithNull = false;
+
+            byte* auxBuffer = stackalloc byte[4];
+            nuint offset = 0;
+            while (readerBitIdx < bitStreamLength && endsWithNull == false)
             {
-                var tree = BinaryTree<short>.Open(_state.DecodingTable);
-                var buffer = outputBuffer;
-                var reader = new BitReader(data);
-                var endsWithNull = false;
-                while (bits > 0 && endsWithNull == false)
+                readerBitIdx = tree.FindCommonPrefix(ref dataRef, data.Length, readerBitIdx, out var idx);
+                if (readerBitIdx == 0)
+                    goto Fail;
+
+                var p = Unsafe.AddByteOffset(ref tableRef, (IntPtr) (idx * Unsafe.SizeOf<Interval3Gram>()));
+
+                int prefixLength = p.PrefixLength;
+                *(uint*)auxBuffer = p.BufferAndLength;
+
+                if (prefixLength == 1)
                 {
-                    int length = Lookup(reader, ref buffer, table, tree, out endsWithNull);
-                    if (length < 0)
-                        throw new IOException("Invalid data stream.");
-
-                    // Advance the reader.
-                    reader.Skip(length);
-
-                    bits -= length;
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
+                }
+                else if (prefixLength == 2)
+                {
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+1), auxBuffer[1]);
+                }
+                else
+                {
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset), auxBuffer[0]);
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+1), auxBuffer[1]);
+                    Unsafe.WriteUnaligned(ref Unsafe.AddByteOffset(ref symbolsPtrRef, offset+2), auxBuffer[2]);
                 }
 
-                return outputBuffer.Length - buffer.Length;
+                endsWithNull = auxBuffer[prefixLength - 1] == 0;
+                offset += (nuint)prefixLength;
             }
+
+            return (int)offset;
+
+            Fail:
+            throw new IOException("Invalid data stream.");
         }
 
         public int NumberOfEntries
         {
-            get { return MemoryMarshal.Read<int>(_state.EncodingTable); }
+            get { return ReadNumberOfEntries(_state); }
             set { MemoryMarshal.Write(_state.EncodingTable, ref value);}
-        } 
+        }
+
+        private static int ReadNumberOfEntries(in TEncoderState encoderState)
+        {
+            return MemoryMarshal.Read<int>(encoderState.EncodingTable);
+        }
+
         public int MemoryUse => NumberOfEntries * Unsafe.SizeOf<Interval3Gram>();
 
         public int MaxBitSequenceLength
@@ -536,8 +531,7 @@ namespace Sparrow.Server.Compression
                 maxBitSequenceLength = Math.Max(maxBitSequenceLength, entry.Code.Length);
                 minBitSequenceLength = Math.Min(minBitSequenceLength, entry.Code.Length);
 
-                var reader = new TypedBitReader<uint>(codeValue, entry.Code.Length);
-                tree.Add(ref reader, (short)i);
+                tree.Add(codeValue, entry.Code.Length, (short)i);
             }
 
             _entries = dictSize;

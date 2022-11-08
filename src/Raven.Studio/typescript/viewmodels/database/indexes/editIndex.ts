@@ -45,6 +45,9 @@ import database from "models/resources/database";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import viewModelBase from "viewmodels/viewModelBase";
 import configurationConstants from "configuration";
+import mergedIndexesStorage from "common/storage/mergedIndexesStorage";
+import database = require("models/resources/database");
+import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
 
 class editIndex extends shardViewModelBase {
     
@@ -54,6 +57,7 @@ class editIndex extends shardViewModelBase {
     static readonly ContainerSelector = ".edit-index";
 
     isEditingExistingIndex = ko.observable<boolean>(false);
+    indexesToDeleteAfterMerge = ko.observableArray<string>([]); // represents index merge mode
     editedIndex = ko.observable<indexDefinition>();
     isAutoIndex = ko.observable<boolean>(false);
 
@@ -239,8 +243,29 @@ class editIndex extends shardViewModelBase {
                 const db = this.db;
 
                 if (indexToEditName) {
-                    this.isEditingExistingIndex(true);
                     const canActivateResult = $.Deferred<canActivateResultDto>();
+                    
+                    // before loading index from server check if it isn't merge suggestion
+                    try {
+                        const merged = mergedIndexesStorage.getMergedIndex(db, indexToEditName);
+                        if (merged) {
+                            this.indexesToDeleteAfterMerge(merged.indexesToDelete);
+                            this.editedIndex(new indexDefinition(merged.definition));
+                            this.initIndex();
+                            this.originalIndexName = indexToEditName;
+                            
+                            canActivateResult.resolve({ can: true });
+                            return canActivateResult;
+                        }
+                    } catch (e) {
+                        messagePublisher.reportError("Could not load " + indexToEditName + " index");
+                        canActivateResult.resolve({ redirect: appUrl.forIndexes(db) });
+                        
+                        return canActivateResult;
+                    }
+                    
+                    this.isEditingExistingIndex(true);
+                    
                     this.fetchIndexToEdit(indexToEditName)
                         .done(() => canActivateResult.resolve({ can: true }))
                         .fail(() => {
@@ -519,7 +544,7 @@ class editIndex extends shardViewModelBase {
         new getIndexFieldsFromMapCommand(this.db, map, additionalSourcesDto, additionalAssembliesDto)
             .execute()
             .done((fields: resultsDto<string>) => {
-                this.fieldNames(fields.Results);
+                this.fieldNames(fields.Results.filter(x => !index.FieldsToHideOnUi.includes(x)));
             });
     }
 
@@ -712,20 +737,26 @@ class editIndex extends shardViewModelBase {
         return new getIndexDefinitionCommand(indexName, this.db, this.db.getFirstLocation(this.localNodeTag))
             .execute()
             .done(result => {
-
                 if (result.Type.startsWith("Auto")) {
-                    // Auto Index
-                    this.isAutoIndex(true);
                     this.editedIndex(new autoIndexDefinition(result));
                 } else {
-                    // Regular Index
                     this.editedIndex(new indexDefinition(result));
+                }
+
+                this.initIndex();
+            });
+    }
+    
+    private initIndex() {
+        if (this.editedIndex() instanceof autoIndexDefinition) {
+            this.isAutoIndex(true);    
+        } else {
+            // regular index
                     this.updateIndexFields();
                 }
 
                 this.originalIndexName = this.editedIndex().name();
                 this.editedIndex().hasReduce(!!this.editedIndex().reduce());
-            });
     }
 
     private validate(): boolean {
@@ -839,6 +870,7 @@ class editIndex extends shardViewModelBase {
         }
 
         const db = this.db;
+        const indexName = this.editedIndex().name();
         
         return new detectIndexTypeCommand(indexDto, db)
             .execute()
@@ -848,9 +880,35 @@ class editIndex extends shardViewModelBase {
                     .execute()
                     .done(() => {
                         this.resetDirtyFlag();
-                        router.navigate(appUrl.forIndexes(db, this.editedIndex().name()));
+                        
+                        if (this.indexesToDeleteAfterMerge().length) {
+                            mergedIndexesStorage.deleteMergedIndex(db, this.originalIndexName);
+                            this.confirmAfterMergeDeletion(db, indexName, this.indexesToDeleteAfterMerge());
+                        } else {
+                            editIndex.navigateToIndexesList(db, indexName);    
+                        }
                     });
             });
+    }
+    
+    private confirmAfterMergeDeletion(db: database, mergedIndexName: string, toDelete: string[]) {
+        return new getIndexesDefinitionsCommand(db, 0, 1024 * 1024)
+            .execute()
+            .done((indexDefinitions) => {
+                const matchedIndexes = indexDefinitions.filter(x => toDelete.includes(x.Name)).map(x => new indexDefinition(x));
+
+                const deleteViewModel = new deleteIndexesConfirm(matchedIndexes, db);
+                deleteViewModel.deleteTask.done((done) => {
+                    if (done) {
+                        editIndex.navigateToIndexesList(db, mergedIndexName);
+                    }
+                });
+                app.showBootstrapDialog(deleteViewModel);
+            });
+    }
+    
+    private static navigateToIndexesList(db: database, indexToHighlight: string) {
+        router.navigate(appUrl.forIndexes(db, indexToHighlight));
     }
     
     private resetDirtyFlag() {

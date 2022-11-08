@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Utils;
 using Sparrow;
@@ -283,8 +284,8 @@ namespace Corax.Queries
                 var maxDistance = provider._distance;
 
                 // We get the actual field tree. 
-                var fields = provider._searcher.Transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-                var fieldTree = fields.CompactTreeFor(provider._binding.FieldName);
+                var fields = provider._searcher.Transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+                var fieldTree = fields?.CompactTreeFor(provider._binding.FieldName);
                 if (fieldTree == null)
                     goto NoResults;
 

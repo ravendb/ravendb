@@ -485,6 +485,20 @@ namespace Raven.Client.Documents.Linq
                     ExpressionInfo expressionMemberInfo = null;
                     Expression argument = null;
                     var exact = _insideExact |methodCallExpression.Method.Name == nameof(string.CompareOrdinal);
+
+                    var isSimpleCompare = nameof(string.Compare) == methodCallExpression.Method.Name;
+                    var argumentsCount = methodCallExpression.Arguments.Count;
+                    
+                    if (isSimpleCompare == false && argumentsCount > 2)
+                        throw new NotSupportedException($"We do not support such overloads in '{methodCallExpression.Method.Name}'.");
+                    if (isSimpleCompare)
+                    {
+                        if (argumentsCount == 3 && exact == false)
+                            exact = ConvertStringComparisonToExact(methodCallExpression.Arguments[2]);
+                        else if (argumentsCount > 3)
+                            throw new NotSupportedException($"We do not support such overloads in '{methodCallExpression.Method.Name}'.");
+                    }
+                    
                     switch (methodCallExpression.Method.Name)
                     {
                         case nameof(string.Compare):
@@ -492,6 +506,7 @@ namespace Raven.Client.Documents.Linq
                             EnsureStringComparisonMethodComparedWithZero(expression, methodCallExpression);
                             expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
                             argument = methodCallExpression.Arguments[1];
+                            
                             break;
                         case nameof(string.CompareTo):
                             EnsureStringComparisonMethodComparedWithZero(expression, methodCallExpression);
@@ -765,7 +780,7 @@ namespace Raven.Client.Documents.Linq
 
         private void VisitEquals(MethodCallExpression expression)
         {
-            GetEqualsArgumentsFromExpression(expression, out var firstArg, out var secondArg, out var comparisonArg);
+            GetStringComparisonArgumentsFromExpression(expression, out var firstArg, out var secondArg, out var comparisonArg);
 
             ExpressionInfo fieldInfo;
             Expression constant;
@@ -791,35 +806,45 @@ namespace Raven.Client.Documents.Linq
                                                 $"`{firstArg}` and `{secondArg}` are both constants, so cannot convert {expression} to a proper query.");
             }
 
-            if (comparisonArg != null
-                && comparisonArg.NodeType == ExpressionType.Constant
-                && comparisonArg.Type == typeof(StringComparison))
-            {
-                var comparisonType = ((ConstantExpression)comparisonArg).Value;
-                switch ((StringComparison)comparisonType)
-                {
-                    case StringComparison.CurrentCulture:
-                    case StringComparison.Ordinal:
-                        throw new NotSupportedException(
-                            "RavenDB queries case sensitivity is dependent on the index, not the query. If you need case sensitive queries, use a static index and an NotAnalyzed field for that.");
-                    case StringComparison.CurrentCultureIgnoreCase:
-                    case StringComparison.OrdinalIgnoreCase:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
+            bool exact = _insideExact ? true : ConvertStringComparisonToExact(comparisonArg);
 
             DocumentQuery.WhereEquals(new WhereParams
             {
                 FieldName = fieldInfo.Path,
                 Value = GetValueFromExpression(constant, GetMemberType(fieldInfo)),
                 AllowWildcards = false,
-                Exact = _insideExact
+                Exact = exact
             });
         }
 
-        private static void GetEqualsArgumentsFromExpression(MethodCallExpression expression, out Expression firstArg, out Expression secondArg, out Expression comparisonArg)
+        private static bool ConvertStringComparisonToExact(Expression comparisonArg)
+        {
+            if (comparisonArg != null
+                    && comparisonArg.NodeType == ExpressionType.Constant
+                    && comparisonArg.Type == typeof(StringComparison))
+            {
+                var comparisonType = ((ConstantExpression)comparisonArg).Value;
+                switch ((StringComparison)comparisonType)
+                {
+                    case StringComparison.InvariantCulture:
+                    case StringComparison.CurrentCulture:
+                    case StringComparison.Ordinal:
+                        return true;
+
+                    case StringComparison.InvariantCultureIgnoreCase:
+                    case StringComparison.CurrentCultureIgnoreCase:
+                    case StringComparison.OrdinalIgnoreCase:
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException("value", comparisonType, "Unsupported string comparison type.");
+                }
+            }
+
+            return false;
+        }
+
+        private static void GetStringComparisonArgumentsFromExpression(MethodCallExpression expression, out Expression firstArg, out Expression secondArg, out Expression comparisonArg)
         {
             comparisonArg = null;
             if (expression.Object == null)
@@ -846,20 +871,28 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void VisitStartsWith(MethodCallExpression expression)
         {
+            GetStringComparisonArgumentsFromExpression(expression, out var firstArg, out var secondArg, out var comparisonArg);
+
             var memberInfo = GetMember(expression.Object);
+
+            bool exact = _insideExact ? true : ConvertStringComparisonToExact(comparisonArg);
 
             DocumentQuery.WhereStartsWith(
                 memberInfo.Path,
-                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)), _insideExact);
+                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)), exact);
         }
 
         private void VisitEndsWith(MethodCallExpression expression)
         {
+            GetStringComparisonArgumentsFromExpression(expression, out var firstArg, out var secondArg, out var comparisonArg);
+
             var memberInfo = GetMember(expression.Object);
+
+            bool exact = _insideExact ? true : ConvertStringComparisonToExact(comparisonArg);
 
             DocumentQuery.WhereEndsWith(
                 memberInfo.Path,
-                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)), _insideExact);
+                GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)), exact);
         }
 
         private void VisitIsNullOrEmpty(MethodCallExpression expression, bool notEquals)
@@ -1106,7 +1139,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     return false;
             }
 
-            bool checkValidComparison(MethodCallExpression methodCall, Expression compareExpression)
+            bool CheckValidComparison(MethodCallExpression methodCall, Expression compareExpression)
             {
                 // non-static string compare: x => x.CompareTo("Dave") > 0
                 if (methodCall.Object != null)
@@ -1135,7 +1168,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 if (leftMethodCall.Method.Name == nameof(string.CompareTo) || leftMethodCall.Method.Name == nameof(string.Compare))
                 {
-                    if (!checkValidComparison(leftMethodCall, expression.Right))
+                    if (CheckValidComparison(leftMethodCall, expression.Right) == false)
                         return false;
 
                     return true;
@@ -1145,7 +1178,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 if (rightMethodCall.Method.Name == nameof(string.CompareTo) || rightMethodCall.Method.Name == nameof(string.Compare))
                 {
-                    if (!checkValidComparison(rightMethodCall, expression.Left))
+                    if (CheckValidComparison(rightMethodCall, expression.Left) == false)
                         return false;
 
                     return true;
@@ -3635,14 +3668,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
         }
         private bool NeedToAddFromAliasToField(string field)
         {
-            return _addedDefaultAlias &&
-                   field.StartsWith($"{FromAlias}.") == false &&
-                   field.StartsWith("id(") == false &&
-                   field.StartsWith("counter(") == false &&
-                   field.StartsWith("counterRaw(") == false &&
-                   field.StartsWith("cmpxchg(") == false;
+            return _addedDefaultAlias && FieldTypeAllowToAddAlias(field);
         }
 
+        private bool FieldTypeAllowToAddAlias(string field)
+        {
+            return field.StartsWith($"{FromAlias}.") == false &&
+                field.StartsWith("id(") == false &&
+                field.StartsWith("counter(") == false &&
+                field.StartsWith("counterRaw(") == false &&
+                field.StartsWith("cmpxchg(") == false;
+        }
+        
         private void AddFromAliasToFieldToFetch(ref string field, ref string alias, bool quote = false)
         {
             if (field == alias)
@@ -3650,11 +3687,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 alias = null;
             }
 
-            if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-            {
-                field = $"id({FromAlias})";
+            if (FieldTypeAllowToAddAlias(field) == false)
                 return;
-            }
 
             field = quote
                 ? $"{FromAlias}.'{field}'"
@@ -3667,11 +3701,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             AddFromAlias(fromAlias);
             foreach (var fieldToFetch in FieldsToFetch)
             {
-                if (fieldToFetch.Name == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                {
-                    fieldToFetch.Name = $"id({fromAlias})";
-                }
-                else
+                if (FieldTypeAllowToAddAlias(fieldToFetch.Name))
                 {
                     fieldToFetch.Name = $"{fromAlias}.{fieldToFetch.Name}";
                 }

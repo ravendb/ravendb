@@ -42,7 +42,8 @@ namespace Raven.Server.Documents.Indexes
                 SuccessCount = Stats.MapSuccesses + Stats.MapReferenceSuccesses,
                 FailedCount = Stats.MapErrors + Stats.MapReferenceErrors,
                 OutputCount = Stats.IndexingOutputs,
-                AllocatedBytes = Stats.AllocatedBytes,
+                AllocatedManagedBytes = Stats.AllocatedManagedBytes,
+                AllocatedUnmanagedBytes = Stats.AllocatedUnmanagedBytes,
                 DocumentsSize = new Size(Stats.DocumentsSize)
             };
         }
@@ -88,7 +89,8 @@ namespace Raven.Server.Documents.Indexes
                 FailedCount = Stats.MapErrors + Stats.MapReferenceErrors,
                 OutputCount = Stats.IndexingOutputs,
                 DocumentsSize = new Size(Stats.DocumentsSize),
-                AllocatedBytes = Stats.AllocatedBytes
+                AllocatedManagedBytes = Stats.AllocatedManagedBytes,
+                AllocatedUnmanagedBytes = Stats.AllocatedUnmanagedBytes
             };
         }
     }
@@ -123,9 +125,14 @@ namespace Raven.Server.Documents.Indexes
 
         public int TombstoneDeleteSuccesses => _stats.TombstoneDeleteSuccesses;
 
-        public void AddAllocatedBytes(long sizeInBytes)
+        public void SetAllocatedManagedBytes(long sizeInBytes)
         {
-            _stats.AllocatedBytes = new Size(sizeInBytes);
+            _stats.AllocatedManagedBytes = new Size(sizeInBytes);
+        }
+        
+        public void SetAllocatedUnmanagedBytes(long sizeInBytes)
+        {
+            _stats.AllocatedUnmanagedBytes = new Size(sizeInBytes);
         }
 
         public void AddCorruptionError(Exception e)

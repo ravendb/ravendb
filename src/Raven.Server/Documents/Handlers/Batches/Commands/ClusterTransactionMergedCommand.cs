@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands;
@@ -61,12 +62,16 @@ public class ClusterTransactionMergedCommand : TransactionMergedCommand
                         case CommandType.PUT:
                             if (current < count)
                             {
-                                // delete the document to avoid exception if we put new document in a different collection.
-                                // TODO: document this behavior
-                                using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                // if the document came from a full backup it must have the same collection
+                                // the only thing that we update is the change vector
+                                if (cmd.FromBackup is not BackupKind.Full)
                                 {
-                                    Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
-                                        nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+                                    // delete the document to avoid exception if we put new document in a different collection.
+                                    using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                    {
+                                        Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
+                                            nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+                                    }
                                 }
 
                                 var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector,

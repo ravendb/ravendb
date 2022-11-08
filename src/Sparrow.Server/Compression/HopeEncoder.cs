@@ -90,11 +90,6 @@ namespace Sparrow.Server.Compression
             return _encoder.Decode(data, outputBuffer);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int Decode(int bits, in ReadOnlySpan<byte> data, in Span<byte> outputBuffer)
-        {
-            return _encoder.Decode(bits, data, outputBuffer);
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetMaxEncodingBytes(int keySize)

@@ -2,9 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.Extensions.Primitives;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Indexes;
@@ -16,6 +13,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
@@ -364,7 +362,7 @@ namespace Raven.Server.Web.Studio
                 if (json == null)
                     throw new BadRequestException("No JSON was posted.");
 
-                if (json.TryGet(nameof(FormattedExpression.Expression), out string expressionAsString) == false)
+                if (json.TryGet(nameof(SourceCodeBeautifier.FormattedExpression.Expression), out string expressionAsString) == false)
                     throw new BadRequestException("'Expression' property was not found.");
 
                 if (string.IsNullOrWhiteSpace(expressionAsString))
@@ -373,42 +371,7 @@ namespace Raven.Server.Web.Studio
                     return;
                 }
 
-                var type = IndexDefinitionHelper.DetectStaticIndexType(expressionAsString, reduce: null);
-
-                FormattedExpression formattedExpression;
-                switch (type)
-                {
-                    case IndexType.Map:
-                    case IndexType.MapReduce:
-                        using (var workspace = new AdhocWorkspace())
-                        {
-                            var expression = SyntaxFactory
-                                .ParseExpression(expressionAsString)
-                                .NormalizeWhitespace();
-
-                            var result = Formatter.Format(expression, workspace);
-
-                            if (result.ToString().IndexOf("Could not format:", StringComparison.Ordinal) > -1)
-                                throw new BadRequestException();
-
-                            formattedExpression = new FormattedExpression
-                            {
-                                Expression = result.ToString()
-                            };
-                        }
-                        break;
-
-                    case IndexType.JavaScriptMap:
-                    case IndexType.JavaScriptMapReduce:
-                        formattedExpression = new FormattedExpression
-                        {
-                            Expression = JSBeautify.Apply(expressionAsString)
-                        };
-                        break;
-
-                    default:
-                        throw new NotSupportedException($"Unknown index type '{type}'.");
-                }
+                SourceCodeBeautifier.FormattedExpression formattedExpression = SourceCodeBeautifier.FormatIndex(expressionAsString);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -471,19 +434,6 @@ namespace Raven.Server.Web.Studio
             public DateTime Utc { get; set; }
 
             public DateTime ServerTime { get; set; }
-        }
-
-        public class FormattedExpression : IDynamicJson
-        {
-            public string Expression { get; set; }
-
-            public DynamicJsonValue ToJson()
-            {
-                return new DynamicJsonValue
-                {
-                    [nameof(Expression)] = Expression
-                };
-            }
         }
 
         public enum ItemType

@@ -70,6 +70,7 @@ using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes.Debugging;
+using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
@@ -279,6 +280,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(PutIndexResult));
             scripter.AddType(typeof(IndexStats));
+            scripter.AddType(typeof(IndexMergeResults));
             scripter.AddType(typeof(IndexingStatus));
             scripter.AddType(typeof(IndexPerformanceStats));
             scripter.AddType(typeof(IndexDefinition));
@@ -286,7 +288,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexProgress));
             scripter.AddType(typeof(IndexesProgress));
             scripter.AddType(typeof(IndexErrors));
-            scripter.AddType(typeof(StudioTasksHandler.FormattedExpression));
+            scripter.AddType(typeof(Raven.Server.Documents.Indexes.IndexMerging.SourceCodeBeautifier.FormattedExpression));
             scripter.AddType(typeof(IndexTypeInfo));
             scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
             scripter.AddType(typeof(IndexDefaults));

@@ -1,9 +1,18 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
+using Raven.Server.Documents.Operations;
+using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -110,6 +119,55 @@ namespace Raven.Server.Documents.Handlers.Admin
             void IOperationProgress.MergeWith(IOperationProgress progress)
             {
                 throw new System.NotImplementedException();
+            }
+        }
+
+        [RavenAction("/databases/*/admin/indexes/optimize", "POST", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
+        public async Task OptimizeIndex()
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Major, "Implement for sharding");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+                var index = Database.IndexStore.GetIndex(name);
+                if (index == null)
+                    IndexDoesNotExistException.ThrowFor(name);
+
+                var token = CreateOperationToken();
+                var result = new IndexOptimizeResult(index.Name);
+                var operationId = Database.Operations.GetNextOperationId();
+                var t = Database.Operations.AddLocalOperation(
+                    operationId,
+                    OperationType.LuceneOptimizeIndex,
+                    "Optimizing index: " + index.Name,
+                    detailedDescription: null,
+                    taskFactory: _ => Task.Run(() =>
+                    {
+                        try
+                        {
+                            using (token)
+                            using (Database.PreventFromUnloadingByIdleOperations())
+                            using (var indexCts = CancellationTokenSource.CreateLinkedTokenSource(token.Token, Database.DatabaseShutdown))
+                            {
+                                index.Optimize(result, indexCts.Token);
+                                return Task.FromResult((IOperationResult)result);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations("Optimize process failed", e);
+
+                            throw;
+                        }
+                    }, token.Token),
+                    token: token);
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+                }
             }
         }
     }

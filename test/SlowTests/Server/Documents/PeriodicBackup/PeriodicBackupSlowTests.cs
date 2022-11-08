@@ -576,7 +576,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
                 config.SnapshotSettings = new SnapshotSettings { CompressionLevel = CompressionLevel.Fastest, ExcludeIndexes = false };
                 await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
-                
+
                 // check that backup file consist Indexes folder
                 var backupLocation = Directory.GetDirectories(backupPath).First();
                 using (ReadOnly(backupLocation))
@@ -591,7 +591,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 config.SnapshotSettings.ExcludeIndexes = true;
                 await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
-                
+
                 backupLocation = Directory.GetDirectories(backupPath).First();
                 using (ReadOnly(backupLocation))
                 {
@@ -2986,6 +2986,72 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var user = await session.LoadAsync<User>(docId);
                     Assert.Null(user);
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task can_backup_and_restore_cluster_transactions_with_document_collection_change()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                const string id = "users/1";
+                const string country = "Israel";
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Grisha"
+                    }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new Address
+                    {
+                        Country = country
+                    }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: 4);
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (Backup.RestoreDatabase(store,
+                           new RestoreBackupConfiguration
+                           {
+                               BackupLocation = Directory.GetDirectories(backupPath).First(),
+                               DatabaseName = databaseName
+                           }))
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var address = await session.LoadAsync<Address>(id);
+                        Assert.NotNull(address);
+                        Assert.Equal(country, address.Country);
+                    }
                 }
             }
         }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Server.Binary;
@@ -20,6 +21,7 @@ namespace Sparrow.Server.Collections.Persistent
 
             public ushort LeftChild
             {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get { return (ushort)(_leftChild & ValueMask); }
                 set
                 {
@@ -30,6 +32,7 @@ namespace Sparrow.Server.Collections.Persistent
 
             public ushort RightChild
             {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get { return (ushort)(_rightChild & ValueMask); }
                 set
                 {
@@ -40,13 +43,14 @@ namespace Sparrow.Server.Collections.Persistent
 
             public bool HasValue
             {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get { return (_leftChild & HasValueMask) != 0; }
                 set { _leftChild = (ushort)(value.ToInt32() << 15 | LeftChild); }
             } 
         }
 
         private readonly Span<byte> _storage;
-        private readonly Span<Node> Nodes => MemoryMarshal.Cast<byte, Node>(_storage[2..]);
+        private readonly Span<Node> _nodes;
 
         private ushort FreeNodes
         {
@@ -54,15 +58,16 @@ namespace Sparrow.Server.Collections.Persistent
             set { MemoryMarshal.Write(_storage, ref value); }
         }
 
-        public int MaxNodes => Nodes.Length - 1;
-        public int AvailableNodes => Nodes.Length - FreeNodes - 1;
+        public int MaxNodes => _nodes.Length - 1;
+        public int AvailableNodes => _nodes.Length - FreeNodes - 1;
         public int MemoryUsed => (MaxNodes - AvailableNodes) * Unsafe.SizeOf<Node>() + sizeof(ushort);
 
         public BinaryTree(Span<byte> storage)
         {
             _storage = storage;
+            _nodes = MemoryMarshal.Cast<byte, Node>(_storage[2..]);
 
-            if (Nodes.Length > short.MaxValue)
+            if (_nodes.Length > short.MaxValue)
             {
                 // We are going to be using 1 bit from the Left Child
                 // therefore the max amount of nodes available are
@@ -85,15 +90,15 @@ namespace Sparrow.Server.Collections.Persistent
 
         public void Initialize()
         {
-            Nodes[0]._leftChild = Invalid;
-            Nodes[0]._rightChild = Invalid;
+            _nodes[0]._leftChild = Invalid;
+            _nodes[0]._rightChild = Invalid;
 
             FreeNodes = 1;
         }
 
         public void Add(ref BitReader key, T value)
         {
-            Span<Node> nodes = Nodes;
+            Span<Node> nodes = _nodes;
 
             ref Node u = ref nodes[0];
 
@@ -137,17 +142,20 @@ namespace Sparrow.Server.Collections.Persistent
             //Console.WriteLine($",{u.Value}");
         }
 
-        public void Add<KeyReader>(ref KeyReader key, T value)
-            where KeyReader : IBitReader
+        public void Add(uint key, int length, T value)
         {
-            Span<Node> nodes = Nodes;
+            Span<Node> nodes = _nodes;
 
             ref Node u = ref nodes[0];
 
-            while (key.Length != 0)
+            while (length > 0)
             {
-                Bit b = key.Read();
-                if (b.IsSet)
+                length--;
+
+                uint b = key >> (sizeof(uint) * 8 - 1);
+                key <<= 1;
+
+                if (b == 1)
                 {
                     if (u.RightChild == Invalid)
                     {
@@ -183,10 +191,9 @@ namespace Sparrow.Server.Collections.Persistent
 
             //Console.WriteLine($",{u.Value}");
         }
-
         public bool Find(ref BitReader key, out T value)
         {
-            Span<Node> nodes = Nodes;
+            Span<Node> nodes = _nodes;
 
             ref Node u = ref nodes[0];
 
@@ -219,33 +226,67 @@ namespace Sparrow.Server.Collections.Persistent
             return u.HasValue;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly int FindCommonPrefix(ref byte key, int length, int currentBit, out T value)
+        {
+            ref Node nodeRef = ref MemoryMarshal.GetReference(_nodes);
+
+            // The key length is the current available bytes starting from the current bit.
+            int keyLength = length * 8 - currentBit;
+
+            ref Node currentNode = ref nodeRef;
+            while (!currentNode.HasValue)
+            {
+                // PERF: We want to always take to improve the predictability of the method.
+                if (keyLength != 0)
+                {
+                    // We can easily find the the current byte by a simple shift, which is what divided by 8 will be translated to. 
+                    ref byte currentByte = ref Unsafe.AddByteOffset(ref key, (IntPtr)(currentBit / 8));
+
+                    // PERF: There are 2 ways to do this. The first involve shifting the bits to leave the current bit as the last bit
+                    // in the byte. However, for that we need to find the number of bits subtracting from the total amount of 
+                    // of bits available. The alternative is to create a mask that we can use the output of the modulus directly 
+                    // to position the mask in the right place. And then, if the value is different than 0, then we know the bit is set.
+                    // In this way we just need 2 instructions to do so. 
+                    var current = currentByte & (0b1000_0000 >> (currentBit % 8));
+
+                    int u = current <= 0 ? currentNode.LeftChild : currentNode.RightChild;
+                    currentNode = ref Unsafe.AddByteOffset(ref nodeRef, (IntPtr)(u * Unsafe.SizeOf<Node>()));
+
+                    keyLength--;
+                    currentBit++;
+                    continue;
+                }
+
+                Unsafe.SkipInit(out value);
+                return 0;
+            }
+
+            // If we haven't found a value in here, all this work was useless and we have an issue in the data stream. Therefore, 
+            // we will return 0 which is a totally anomalous result.
+            value = currentNode.Value;
+            return currentBit;
+        }
+
         public readonly bool FindCommonPrefix(ref BitReader key, out T value)
         {
-            Span<Node> nodes = Nodes;
+            Span<Node> nodes = _nodes;
 
-            ref Node u = ref nodes[0];
-
-            while (!u.HasValue)
+            int u = 0;
+            while (!nodes[u].HasValue)
             {
                 if (key.Length == 0)
                     break;
 
                 var current = key.Read();
-                if (current.IsSet)
-                {
-                    //Console.Write("R");
-                    u = ref nodes[u.RightChild];
-                }
-                else
-                {
-                    //Console.Write("L");
-                    u = ref nodes[u.LeftChild];
-                }
+
+                u = current.IsSet ?
+                    nodes[u].RightChild :
+                    nodes[u].LeftChild;
             }
 
-            //Console.Write($",{u.Value}");
-            value = u.Value;
-            return u.HasValue;
+            value = nodes[u].Value;
+            return nodes[u].HasValue;
         }
     }
 }

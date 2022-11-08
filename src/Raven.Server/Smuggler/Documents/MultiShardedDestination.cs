@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
@@ -97,8 +98,8 @@ namespace Raven.Server.Smuggler.Documents
         public ISubscriptionActions Subscriptions() => throw new NotImplementedException();
         public IReplicationHubCertificateActions ReplicationHubCertificates() => throw new NotImplementedException();
 
-        public ICompareExchangeActions CompareExchange(JsonOperationContext context) =>
-            new ShardedCompareExchangeActions(_databaseContext, _destinations.Select(d => d.CompareExchange(context)).ToArray(), _options);
+        public ICompareExchangeActions CompareExchange(JsonOperationContext context, BackupKind? backupKind, bool withDocuments) =>
+            new ShardedCompareExchangeActions(_databaseContext, _destinations.Select(d => d.CompareExchange(context, backupKind, withDocuments)).ToArray(), _options);
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context) =>
             new ShardedCompareExchangeActions(_databaseContext, _destinations.Select(d => d.CompareExchangeTombstones(context)).ToArray(), _options);
@@ -171,17 +172,17 @@ namespace Raven.Server.Smuggler.Documents
             {
             }
 
-            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
+            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
             {
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
                     var bucket = ShardHelper.GetBucket(docId);
                     var shardNumber = DatabaseContext.GetShardNumber(bucket);
-                    await _actions[shardNumber].WriteKeyValueAsync(key, value);
+                    await _actions[shardNumber].WriteKeyValueAsync(key, value, existingDocument);
                     return;
                 }
 
-                await _last.WriteKeyValueAsync(key, value);
+                await _last.WriteKeyValueAsync(key, value, existingDocument);
             }
 
             public async ValueTask WriteTombstoneKeyAsync(string key)

@@ -82,9 +82,12 @@ unsafe partial class CompactTree
 
         _ = GetEncodedEntry(current.Page, current.EntriesOffsets[0], out var lastEncodedKey, out var l);
 
+        Span<byte> lastDecodedKey = new byte[dictionary.GetMaxDecodingBytes(lastEncodedKey.Length)];
 
-        Span<byte> lastDecodedKey = new byte[dictionary.GetMaxDecodingBytes(lastEncodedKey)];
-        dictionary.Decode(lastEncodedKey, ref lastDecodedKey);
+        if (lastEncodedKey.Length != 0)
+        {
+            dictionary.Decode(lastEncodedKey, ref lastDecodedKey);
+        }
 
         for (int i = 1; i < current.Header->NumberOfEntries; i++)
         {
@@ -94,13 +97,13 @@ unsafe partial class CompactTree
             if (lastEncodedKey.SequenceCompareTo(encodedKey) >= 0)
                 VoronUnrecoverableErrorException.Raise(_llt, "Last encoded key does not follow lexicographically.");
 
-            Span<byte> decodedKey = new byte[dictionary.GetMaxDecodingBytes(encodedKey)];
+            Span<byte> decodedKey = new byte[dictionary.GetMaxDecodingBytes(encodedKey.Length)];
             dictionary.Decode(encodedKey, ref decodedKey);
 
-            Span<byte> reencodedKey = new byte[dictionary.GetMaxEncodingBytes(decodedKey)];
+            Span<byte> reencodedKey = new byte[dictionary.GetMaxEncodingBytes(decodedKey.Length)];
             dictionary.Encode(decodedKey, ref reencodedKey);
 
-            Span<byte> decodedKey1 = new byte[dictionary.GetMaxDecodingBytes(reencodedKey)];
+            Span<byte> decodedKey1 = new byte[dictionary.GetMaxDecodingBytes(reencodedKey.Length)];
             dictionary.Decode(encodedKey, ref decodedKey1);
 
             if (decodedKey1.SequenceCompareTo(decodedKey) != 0)
@@ -112,7 +115,7 @@ unsafe partial class CompactTree
             {
                 Console.WriteLine($"{Encoding.UTF8.GetString(lastDecodedKey)} - {Encoding.UTF8.GetString(decodedKey)}");
 
-                decodedKey = new byte[dictionary.GetMaxDecodingBytes(encodedKey)];
+                decodedKey = new byte[dictionary.GetMaxDecodingBytes(encodedKey.Length)];
                 dictionary.Decode(encodedKey, ref decodedKey);
 
                 dictionary.Decode(lastEncodedKey, ref lastDecodedKey);

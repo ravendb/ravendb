@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax;
+using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Server;
@@ -154,6 +155,7 @@ public class DeleteTest : StorageTest
         }
 
         indexWriter.Commit();
+        knownFields.Dispose();
     }
 
     private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
@@ -169,9 +171,10 @@ public class DeleteTest : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-        return new IndexFieldsMapping(ctx)
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(IndexId, idSlice)
             .AddBinding(ContentId, contentSlice);
+        return builder.Build();
     }
 
     private class IndexSingleNumericalEntry<T>
@@ -183,6 +186,7 @@ public class DeleteTest : StorageTest
     public override void Dispose()
     {
         _bsc.Dispose();
+        _analyzers?.Dispose();
         base.Dispose();
     }
 }

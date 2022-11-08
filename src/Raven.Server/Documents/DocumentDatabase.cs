@@ -495,7 +495,13 @@ namespace Raven.Server.Documents
                     using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        await ExecuteClusterTransaction(context);
+                        const int batchSize = 256;
+                        var executed = await ExecuteClusterTransaction(context, batchSize: batchSize);
+                        if (executed.Count == batchSize)
+                        {
+                            // we might have more to execute
+                            _hasClusterTransaction.Set();
+                        }
                     }
                 }
                 catch (Exception e)
@@ -549,15 +555,15 @@ namespace Raven.Server.Documents
             return batchCollector;
         }
 
-        public async Task ExecuteClusterTransaction(TransactionOperationContext context)
+        public async Task<ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand>> ExecuteClusterTransaction(TransactionOperationContext context, int batchSize)
         {
-            const int takeCount = 256;
-            using var batchCollector = CollectCommandsBatch(context, takeCount);
-
-            if (batchCollector.Count == 0)
-                return;
+            using var batchCollector = CollectCommandsBatch(context, batchSize);
 
             var batch = batchCollector.GetData();
+
+            if (batchCollector.Count == 0)
+                return batch;
+
             var mergedCommands = new ClusterTransactionMergedCommand(this, batch);
             try
             {
@@ -574,10 +580,13 @@ namespace Raven.Server.Documents
                 if (await ExecuteClusterTransactionOneByOne(batch))
                     batchCollector.AllCommandsBeenProcessed = true;
             }
+
             foreach (var command in batch)
             {
                 OnClusterTransactionCompletion(command, mergedCommands);
             }
+
+            return batch;
         }
 
         private async Task<bool> ExecuteClusterTransactionOneByOne(ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
@@ -628,7 +637,7 @@ namespace Raven.Server.Documents
                 {
                     indexTask = BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(this, options.WaitForIndexesTimeout.Value,
                         options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                        mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                            mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
                 }
 
                 var result = new ClusterTransactionCompletionResult

@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax;
+using Corax.Mappings;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -48,7 +49,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         Dictionary<string, Dictionary<string, FacetValues>> facetsByName = new();
         Dictionary<string, Dictionary<string, FacetValues>> facetsByRange = new();
 
-        var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, null, null, query, _index, query.QueryParameters, _queryBuilderFactories,
+        var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, query.QueryParameters, _queryBuilderFactories,
             _fieldMappings, null, null, -1, null);
         var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out var isBinary);
         var coraxPageSize = CoraxGetPageSize(_indexSearcher, facetQuery.Query.PageSize, query, isBinary);
@@ -159,9 +160,9 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
                     while (iterator.ReadNext())
                     {
-                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmptyCollection || iterator.IsNull))
                         {
-                            var value = iterator.IsEmpty ? Constants.EmptyStringSlice : Constants.NullValueSlice;
+                            var value = iterator.IsEmptyCollection ? Constants.EmptyStringSlice : Constants.NullValueSlice;
                             isMatching |= range.IsMatch(value);
                             continue;
                         }
@@ -178,9 +179,9 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
                     while (tupleIterator.ReadNext())
                     {
-                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmpty || tupleIterator.IsNull))
+                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmptyCollection || tupleIterator.IsNull))
                         {
-                            var value = tupleIterator.IsEmpty ? Constants.EmptyStringSlice : Constants.NullValueSlice;
+                            var value = tupleIterator.IsEmptyCollection ? Constants.EmptyStringSlice : Constants.NullValueSlice;
                             isMatching |= range.IsMatch(value);
                             continue;
                         }
@@ -270,7 +271,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
                 while (iterator.ReadNext())
                 {
-                    if (iterator.IsNull || iterator.IsEmpty)
+                    if (iterator.IsNull || iterator.IsEmptyCollection)
                     {
                         facetValues[iterator.IsNull ? Constants.NullValue : Constants.EmptyString].IncrementCount(1);
                         continue;
@@ -329,7 +330,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
     private void GetFieldReader(ref IndexEntryReader reader, in string name, out IndexEntryReader.FieldReader fieldReader)
     {
-        if (_fieldMappings.TryGetByFieldName(name, out var binding))
+        if (_fieldMappings.TryGetByFieldName(_allocator, name, out var binding))
         {
             // In this case we've to check if field is dynamic also
             fieldReader = reader.GetReaderFor(binding.FieldId);
@@ -363,7 +364,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
                     while (tupleIterator.ReadNext())
                     {
-                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmpty || tupleIterator.IsNull))
+                        if ((fieldReader.Type & IndexEntryFieldType.HasNulls) != 0 && (tupleIterator.IsEmptyCollection || tupleIterator.IsNull))
                         {
                             continue;
                         }
