@@ -1290,37 +1290,37 @@ namespace Corax
                 {
                     throw new InvalidDataException($"Got term '{Encodings.Utf8.GetString(termsSpan)}' with NULL character at the end for field {indexedField.Name}. This is a bug.");
                 }
-                
-                if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var scope) == false)
+
+                bool found = fieldTree.TryGetNextValue(termsSpan, out var existing, out var scope);
+                if (entries.TotalAdditions > 0 && found == false)
                 {
                     if (entries.TotalRemovals != 0)
-                    {
                         throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {indexedField.Name}! This is a bug.");
-                    }
 
                     AddNewTerm(entries, tmpBuf, out termId);
 
                     dumper.WriteAddition(term, termId);
                     fieldTree.Add(termsSpan, termId, scope.Key);
-                    scope.Dispose();
-                    continue;
+                }
+                else
+                {
+                    switch (AddEntriesToTerm(tmpBuf, existing, ref entries, out termId))
+                    {
+                        case AddEntriesToTermResult.UpdateTermId:
+                            dumper.WriteAddition(term, termId);
+                            fieldTree.Add(termsSpan, termId, scope.Key);
+                            break;
+                        case AddEntriesToTermResult.RemoveTermId:
+                            if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
+                            {
+                                dumper.WriteRemoval(term, termId);
+                                throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
+                            }
+                            dumper.WriteRemoval(term, ttt);
+                            break;
+                    }
                 }
 
-                switch (AddEntriesToTerm(tmpBuf, existing, ref entries, out termId))
-                {
-                    case AddEntriesToTermResult.UpdateTermId:
-                        dumper.WriteAddition(term, termId);
-                        fieldTree.Add(termsSpan, termId, scope.Key);
-                        break;
-                    case AddEntriesToTermResult.RemoveTermId:
-                        if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
-                        {
-                            dumper.WriteRemoval(term, termId);
-                            throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
-                        }
-                        dumper.WriteRemoval(term, ttt);
-                        break;
-                }
                 scope.Dispose();
             }
         }
@@ -1496,9 +1496,8 @@ namespace Corax
                 var localEntry = entries;
 
                 long termId;
-
                 using var _ = fieldTree.Read(term, out var result);
-                if (result.HasValue == false)
+                if (localEntry.TotalAdditions > 0 && result.HasValue == false)
                 {
                     Debug.Assert(localEntry.TotalRemovals == 0, "entries.TotalRemovals == 0");
                     AddNewTerm(localEntry, tmpBuf, out termId);
@@ -1529,11 +1528,10 @@ namespace Corax
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
                 // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
                 var localEntry = entries;
-
                 using var _ = fieldTree.Read(term, out var result);
 
                 long termId;
-                if (result.Size == 0) // no existing value
+                if (localEntry.TotalAdditions > 0 && result.Size == 0) // no existing value
                 {
                     Debug.Assert(localEntry.TotalRemovals == 0, "entries.TotalRemovals == 0");
                     AddNewTerm(localEntry, tmpBuf, out termId);
@@ -1562,6 +1560,7 @@ namespace Corax
             {
                 int pos = ZigZagEncoding.Encode(tmpBufferPtr, additions.Length);
                 pos += ZigZagEncoding.Encode(tmpBufferPtr, additions[0], pos);
+
                 for (int i = 1; i < additions.Length; i++)
                 {
                     if (pos + ZigZagEncoding.MaxEncodedSize >= tmpBuf.Length)
