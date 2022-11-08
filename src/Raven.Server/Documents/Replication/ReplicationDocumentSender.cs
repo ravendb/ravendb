@@ -783,6 +783,13 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info($"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag:#,#;;0}");
 
+            if (_parent.ForTestingPurposes?.OnMissingAttachmentStream != null &&
+                 _parent.MissingAttachmentsRetries.Count > 0)
+            {
+                var replicaAttachmentStreams = _replicaAttachmentStreams;
+                _parent.ForTestingPurposes?.OnMissingAttachmentStream?.Invoke(replicaAttachmentStreams);
+            }
+
             var sw = Stopwatch.StartNew();
             var headerJson = new DynamicJsonValue
             {
@@ -819,10 +826,16 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
                 _log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag:#,#;;0}");
 
-            var (type, _) = _parent.HandleServerResponse();
+            var (type, reply) = _parent.HandleServerResponse(getFullResponse: true);
             if (type == ReplicationMessageReply.ReplyType.MissingAttachments)
             {
                 MissingAttachmentsInLastBatch = true;
+
+                if (_parent.MissingAttachmentsRetries.ContainsKey(reply.Exception) == false)
+                    _parent.MissingAttachmentsRetries.Add(reply.Exception, 1);
+                else
+                    _parent.MissingAttachmentsRetries[reply.Exception]++;
+                
                 return;
             }
             _parent._lastSentDocumentEtag = _lastEtag;

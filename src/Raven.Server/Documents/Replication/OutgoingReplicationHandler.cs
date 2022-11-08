@@ -8,8 +8,8 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using JetBrains.Annotations;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
@@ -21,7 +21,9 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -36,6 +38,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -356,6 +359,10 @@ namespace Raven.Server.Documents.Replication
                 _parent.ForTestingPurposes?.OnOutgoingReplicationStart?.Invoke(this);
                 replicationAction();
             }
+            catch (MissingAttachmentException e)
+            {
+                HandleException(e);
+            }
             catch (AggregateException e)
             {
                 if (e.InnerExceptions.Count == 1)
@@ -432,6 +439,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public long NextReplicateTicks;
+        public Dictionary<string, int> MissingAttachmentsRetries = new();
 
         private void Replicate()
         {
@@ -513,6 +521,7 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 OnSuccessfulReplication();
+                MissingAttachmentsRetries.Clear();
 
                 //if this returns false, this means either timeout or canceled token is activated
                 while (WaitForChanges(_parent.MinimalHeartbeatInterval, _cts.Token) == false)
@@ -1162,6 +1171,15 @@ namespace Raven.Server.Documents.Replication
                     throw new InvalidOperationException(
                         $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
                 case ReplicationMessageReply.ReplyType.MissingAttachments:
+                    
+                    foreach (var kvp in MissingAttachmentsRetries)
+                    {
+                        if (kvp.Value <= 1) 
+                            continue;
+
+                        RaiseAlertAndThrowMissingAttachmentException(kvp.Key);
+                    }
+
                     if (_log.IsInfoEnabled)
                     {
                         _log.Info(
@@ -1176,6 +1194,28 @@ namespace Raven.Server.Documents.Replication
             }
 
             return replicationBatchReply;
+        }
+
+        private void RaiseAlertAndThrowMissingAttachmentException(string error)
+        {
+            var start = error.IndexOf("Document", StringComparison.OrdinalIgnoreCase);
+            var end = error.IndexOf("storage", start, StringComparison.OrdinalIgnoreCase) + 7;
+            var msg = "Destination reported missing attachments for same document more than once. " + error.Substring(start, end - start);
+
+            if (_log.IsInfoEnabled)
+            {
+                _log.Info(
+                    $"Received reply for replication batch from {Destination.FromString()}. Error string received = {msg}");
+            }
+
+            _parent._server.NotificationCenter.Add(AlertRaised.Create(
+                _database.Name,
+                "Replication delay due to a missing attachments loop",
+                msg,
+                AlertType.Replication,
+                NotificationSeverity.Error));
+
+            throw new MissingAttachmentException(msg);
         }
 
         private void OnDocumentChange(DocumentChange change)
@@ -1281,6 +1321,8 @@ namespace Raven.Server.Documents.Replication
         internal class TestingStuff
         {
             public Action OnDocumentSenderFetchNewItem;
+
+            public Action<Dictionary<Slice, AttachmentReplicationItem>> OnMissingAttachmentStream;
         }
     }
 
