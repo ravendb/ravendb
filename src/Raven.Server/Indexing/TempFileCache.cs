@@ -266,7 +266,7 @@ namespace Raven.Server.Indexing
 
         public Stream CreateReaderStream()
         {
-            return new FileStream(InnerStream.Name, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 4096);
+            return SafeFileStream.Create(InnerStream.SafeFileHandle, FileAccess.Read);
         }
     }
 }

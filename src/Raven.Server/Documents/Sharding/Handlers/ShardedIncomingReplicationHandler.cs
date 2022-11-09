@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Nito.AsyncEx.Synchronous;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
@@ -175,7 +174,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             _lastAcceptedChangeVector = ChangeVectorUtils.MergeVectorsDown(cvs);
             _lastAcceptedEtag = minEtag;
-
         }
 
         private ReplicationBatches PrepareReplicationDataForShards(TransactionOperationContext context, DataForReplicationCommand dataForReplicationCommand)
@@ -224,6 +222,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             }
                         };
 
+                        attachmentStream.Stream.Seek(0, SeekOrigin.Begin);
                         batches[shard].Attachments[attachment.Key] = attachmentStream;
                     }
                 }
@@ -262,7 +261,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     throw new NotSupportedInShardingException("TODO: implement for sharding"); // revision tombstones doesn't contain any info about the doc. The id here is the change-vector of the deleted revision
                 default:
                     throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}");
-
             }
         }
 
@@ -284,6 +282,18 @@ namespace Raven.Server.Documents.Sharding.Handlers
             });
 
             base.DisposeInternal();
+
+            if (_batches?.Streams != null)
+            {
+                foreach (var stream in _batches.Streams)
+                {
+                    if (stream is MemoryStream ms)
+                        _tempFileCache.ReturnMemoryStream(ms);
+                    else
+                        _tempFileCache.ReturnFileStream(stream);
+                }
+                _batches.Streams.Clear();
+            }
             _tempFileCache.Dispose();
         }
 
@@ -304,18 +314,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     batch.Dispose();
                 }
-                foreach (Stream stream in Streams)
-                {
-                    if (stream is MemoryStream ms)
-                    {
-                        _parent._tempFileCache.ReturnMemoryStream(ms);
-                    }
-                    else
-                    {
-                        _parent._tempFileCache.ReturnFileStream(stream);
-                    }
-                }
-                Streams.Clear();
             }
         }
     }
