@@ -11,6 +11,7 @@
     <PackageTags>storage;acid;corax;ravendb;nosql</PackageTags>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
     <Configurations>Debug;Release;Validate</Configurations>
+    <LangVersion>preview</LangVersion>
     <EnablePreviewFeatures>True</EnablePreviewFeatures>
     <GenerateRequiresPreviewFeaturesAttribute>True</GenerateRequiresPreviewFeaturesAttribute>
   </PropertyGroup>
