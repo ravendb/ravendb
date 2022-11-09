@@ -138,8 +138,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
-
                     Debug.Assert(e.InnerException is not KeyNotFoundException,
                         $"Got a '{nameof(KeyNotFoundException)}' while analyzing maintenance stats on node {_nodeTag} : {e}");
 
@@ -213,9 +211,9 @@ namespace Raven.Server.ServerWide.Maintenance
                                 ObserverIteration = _iteration
                             };
 
-                            var updateReason = _orchestratorTopologyUpdater.Update(context, state, ref deletions);
-                            deletions = null; // database deletions are irrelevant in orchestrator topology changes
-
+                            List<DeleteDatabaseCommand> unneededDeletions = null; // database deletions are irrelevant in orchestrator topology changes
+                            var updateReason = _orchestratorTopologyUpdater.Update(context, state, ref unneededDeletions);
+                            
                             if (updateReason != null)
                             {
                                 _observerLogger.AddToDecisionLog(databaseName, updateReason, _iteration);
@@ -225,7 +223,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                     Topology = topology,
                                     RaftCommandIndex = etag,
                                 };
-                                Console.WriteLine(updateReason);
+                                
                                 updateCommands.Add((cmd, updateReason));
                             }
 

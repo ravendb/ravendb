@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using NetTopologySuite.Utilities;
 using Nito.AsyncEx;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
@@ -135,6 +136,12 @@ namespace Raven.Server.Documents
                                 // and upon migration completion
                                 var databaseContext = GetOrAddShardedDatabaseContext(databaseName, rawRecord);
                                 databaseContext.UpdateDatabaseRecord(rawRecord, index);
+                            }
+                            else
+                            {
+                                using (ShardedDatabasesCache.RemoveLockAndReturn(databaseName, (databaseContext) => databaseContext.Dispose(), out var _))
+                                {
+                                }
                             }
                         }
                         else
