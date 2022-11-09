@@ -24,7 +24,7 @@ namespace Raven.Server.Integrations.PostgreSQL
     public class RqlQuery : PgQuery
     {
         protected readonly DocumentDatabase DocumentDatabase;
-        private readonly QueryOperationContext _queryOperationContext;
+        private QueryOperationContext _queryOperationContext;
         private List<Document> _result;
         private readonly int? _limit;
         private bool _queryWasRun;
@@ -32,13 +32,10 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         ~RqlQuery()
         {
-            Logger.Info($"Query '{this.QueryString}' wasn't disposed properly.\n" +
-                        $"Query was run: {_queryWasRun}\n" +
-                        $"Are transactions still opened: {_queryOperationContext.AreTransactionsOpened()}\n");
+            Logger.Operations($"Query '{this.QueryString}' wasn't disposed properly.\n" +
+                            $"Query was run: {_queryWasRun}\n" +
+                            $"Are transactions still opened: {_queryOperationContext.AreTransactionsOpened()}\n");
 
-            // Force the dispose
-            IsNamedStatement = false;
-            
             Dispose();
         }
         
@@ -46,7 +43,6 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             DocumentDatabase = documentDatabase;
 
-            _queryOperationContext = QueryOperationContext.Allocate(DocumentDatabase);
             _result = null;
             _limit = limit;
         }
@@ -63,6 +59,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public async Task<List<Document>> RunRqlQuery(string forcedQueryToRun = null)
         {
+            _queryOperationContext ??= QueryOperationContext.Allocate(DocumentDatabase);
             var parameters = DynamicJsonValue.Convert(Parameters);
             var queryParameters = _queryOperationContext.Documents.ReadObject(parameters, "query/parameters");
 
@@ -191,90 +188,99 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public override async Task Execute(MessageBuilder builder, PipeWriter writer, CancellationToken token)
         {
-            if (IsEmptyQuery)
-            {
-                await writer.WriteAsync(builder.EmptyQueryResponse(), token);
-                return;
-            }
-
-            if (_result == null)
-                throw new InvalidOperationException("RqlQuery.Execute was called when _results = null");
-
-            if (_limit == 0 || _result == null || _result.Count == 0)
-            {
-                await writer.WriteAsync(builder.CommandComplete($"SELECT 0"), token);
-                return;
-            }
-
-            BlittableJsonReaderObject.PropertyDetails prop = default;
-            var row = ArrayPool<ReadOnlyMemory<byte>?>.Shared.Rent(Columns.Count);
-
             try
             {
-                short? idIndex = null;
-                if (Columns.TryGetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out var col))
+                if (IsEmptyQuery)
                 {
-                    idIndex = col.ColumnIndex;
+                    await writer.WriteAsync(builder.EmptyQueryResponse(), token);
+                    return;
                 }
 
-                var jsonIndex = Columns[Constants.Documents.Querying.Fields.PowerBIJsonFieldName].ColumnIndex;
+                if (_result == null)
+                    throw new InvalidOperationException("RqlQuery.Execute was called when _results = null");
 
-                foreach (var result in _result)
+                if (_limit == 0 || _result == null || _result.Count == 0)
                 {
-                    var jsonResult = result.Data;
+                    await writer.WriteAsync(builder.CommandComplete($"SELECT 0"), token);
+                    return;
+                }
 
-                    Array.Clear(row, 0, row.Length);
+                BlittableJsonReaderObject.PropertyDetails prop = default;
+                var row = ArrayPool<ReadOnlyMemory<byte>?>.Shared.Rent(Columns.Count);
 
-                    if (idIndex != null && result.Id != null)
+                try
+                {
+                    short? idIndex = null;
+                    if (Columns.TryGetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out var col))
                     {
-                        row[idIndex.Value] = Encoding.UTF8.GetBytes(result.Id.ToString());
+                        idIndex = col.ColumnIndex;
                     }
 
-                    jsonResult.Modifications = new DynamicJsonValue(jsonResult);
+                    var jsonIndex = Columns[Constants.Documents.Querying.Fields.PowerBIJsonFieldName].ColumnIndex;
 
-                    if (jsonResult.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject _))
+                    foreach (var result in _result)
                     {
-                        // remove @metadata
-                        jsonResult.Modifications.Remove(Constants.Documents.Metadata.Key);
-                    }
+                        var jsonResult = result.Data;
 
-                    foreach (var (columnName, pgColumn) in Columns)
-                    {
-                        var index = jsonResult.GetPropertyIndex(columnName);
-                        if (index == -1)
-                            continue;
+                        Array.Clear(row, 0, row.Length);
 
-                        jsonResult.GetPropertyByIndex(index, ref prop);
-
-                        var value = GetValueByType(prop, prop.Value, pgColumn);
-
-                        row[pgColumn.ColumnIndex] = value;
-
-                        HandleSpecialColumnsIfNeeded(columnName, prop, prop.Value, ref row);
-                        
-                        jsonResult.Modifications.Remove(columnName);
-                    }
-
-
-                    if (jsonResult.Modifications.Removals.Count != jsonResult.Count)
-                    {
-                        using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                        using (context.OpenReadTransaction())
+                        if (idIndex != null && result.Id != null)
                         {
-                            var modified = context.ReadObject(jsonResult, "renew");
-                            row[jsonIndex] = Encoding.UTF8.GetBytes(modified.ToString());
+                            row[idIndex.Value] = Encoding.UTF8.GetBytes(result.Id.ToString());
                         }
-                    }
 
-                    await writer.WriteAsync(builder.DataRow(row[..Columns.Count]), token);
+                        jsonResult.Modifications = new DynamicJsonValue(jsonResult);
+
+                        if (jsonResult.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject _))
+                        {
+                            // remove @metadata
+                            jsonResult.Modifications.Remove(Constants.Documents.Metadata.Key);
+                        }
+
+                        foreach (var (columnName, pgColumn) in Columns)
+                        {
+                            var index = jsonResult.GetPropertyIndex(columnName);
+                            if (index == -1)
+                                continue;
+
+                            jsonResult.GetPropertyByIndex(index, ref prop);
+
+                            var value = GetValueByType(prop, prop.Value, pgColumn);
+
+                            row[pgColumn.ColumnIndex] = value;
+
+                            HandleSpecialColumnsIfNeeded(columnName, prop, prop.Value, ref row);
+                            
+                            jsonResult.Modifications.Remove(columnName);
+                        }
+
+
+                        if (jsonResult.Modifications.Removals.Count != jsonResult.Count)
+                        {
+                            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                            using (context.OpenReadTransaction())
+                            {
+                                var modified = context.ReadObject(jsonResult, "renew");
+                                row[jsonIndex] = Encoding.UTF8.GetBytes(modified.ToString());
+                            }
+                        }
+
+                        await writer.WriteAsync(builder.DataRow(row[..Columns.Count]), token);
+                    }
                 }
+                finally
+                {
+                    ArrayPool<ReadOnlyMemory<byte>?>.Shared.Return(row);
+                }
+
+                await writer.WriteAsync(builder.CommandComplete($"SELECT {_result.Count}"), token);
             }
             finally
             {
-                ArrayPool<ReadOnlyMemory<byte>?>.Shared.Return(row);
+                _queryOperationContext?.Dispose();
+                _queryOperationContext = null;
             }
-
-            await writer.WriteAsync(builder.CommandComplete($"SELECT {_result.Count}"), token);
+            
         }
 
         protected virtual void HandleSpecialColumnsIfNeeded(string columnName, BlittableJsonReaderObject.PropertyDetails property, object value, ref ReadOnlyMemory<byte>?[] row)
@@ -352,9 +358,8 @@ namespace Raven.Server.Integrations.PostgreSQL
         public override void Dispose()
         {
             GC.SuppressFinalize(this);
-            if (IsNamedStatement)
-                return;
             _queryOperationContext?.Dispose();
+            _queryOperationContext = null;
         }
     }
 }
