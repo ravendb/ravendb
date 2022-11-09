@@ -48,13 +48,13 @@ namespace Sparrow.Server.Compression
         public Encoder3Gram(TEncoderState state)
         {
             _state = state;
-            _entries = NumberOfEntries;
+            _entries = ReadNumberOfEntries(state);
         }
 
         public static int GetDictionarySize(in TEncoderState state)
         {
             int entries = MemoryMarshal.Cast<byte, int>(state.EncodingTable.Slice(0, 4))[0];
-            return ( entries * Unsafe.SizeOf<Interval3Gram>() + 8 ) * 2; // The encoding and the decoding table size.
+            return (entries * Unsafe.SizeOf<Interval3Gram>() + 8) * 2; // The encoding and the decoding table size.
         }
 
         public static int GetEntriesTableSize(in TEncoderState state)
@@ -68,7 +68,7 @@ namespace Sparrow.Server.Compression
             var symbolSelector = new Encoder3GramSymbolSelector<TSampleEnumerator>();
             var frequencyList = symbolSelector.SelectSymbols(enumerator, dictionarySize);
 
-            var codeAssigner = new HuTuckerCodeAssigner();            
+            var codeAssigner = new HuTuckerCodeAssigner();
             var symbolCodes = codeAssigner.AssignCodes(frequencyList);
 
             BuildDictionary(symbolCodes);
@@ -207,10 +207,10 @@ namespace Sparrow.Server.Compression
 
                 for (int i = 0; i < data.Length; i++)
                 {
-                    Span<byte> buffer =  outputBuffers[i];
+                    Span<byte> buffer = outputBuffers[i];
                     var reader = new BitReader(data[i]);
                     int bits = reader.Length;
-                    var endsWithNull = false; 
+                    var endsWithNull = false;
                     while (bits > 0 && endsWithNull == false)
                     {
                         int length = Lookup(reader, ref buffer, table, tree, out endsWithNull);
@@ -280,8 +280,8 @@ namespace Sparrow.Server.Compression
             intBuf[0] = 0;
             int intBufLen = 0;
 
-            fixed(Interval3Gram* table = EncodingTable)
-            fixed(byte* fixedKey = key)
+            fixed (Interval3Gram* table = EncodingTable)
+            fixed (byte* fixedKey = key)
             {
                 var numberOfEntries = _entries;
 
@@ -438,9 +438,15 @@ namespace Sparrow.Server.Compression
 
         public int NumberOfEntries
         {
-            get { return MemoryMarshal.Read<int>(_state.EncodingTable); }
-            set { MemoryMarshal.Write(_state.EncodingTable, ref value);}
-        } 
+            get { return ReadNumberOfEntries(_state); }
+            set { MemoryMarshal.Write(_state.EncodingTable, ref value); }
+        }
+
+        private static int ReadNumberOfEntries(in TEncoderState encoderState)
+        {
+            return MemoryMarshal.Read<int>(encoderState.EncodingTable);
+        }
+
         public int MemoryUse => NumberOfEntries * Unsafe.SizeOf<Interval3Gram>();
 
         public int MaxBitSequenceLength
@@ -484,7 +490,7 @@ namespace Sparrow.Server.Compression
                     _state.Grow(dictSize);
                 else
                     throw new InsufficientMemoryException("Not enough memory for the table and the table supplied does not support growing.");
-            }                
+            }
 
             int maxBitSequenceLength = 1;
             int minBitSequenceLength = int.MaxValue;
@@ -532,7 +538,7 @@ namespace Sparrow.Server.Compression
                 entry.Code = symbolCodeList[i].Code;
 
                 uint codeValue = (uint)entry.Code.Value << (sizeof(int) * 8 - entry.Code.Length);
-                
+
                 maxBitSequenceLength = Math.Max(maxBitSequenceLength, entry.Code.Length);
                 minBitSequenceLength = Math.Min(minBitSequenceLength, entry.Code.Length);
 
