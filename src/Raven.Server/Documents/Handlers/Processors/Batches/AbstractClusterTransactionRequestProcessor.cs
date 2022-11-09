@@ -76,6 +76,12 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
                 using var timeout = new CancellationTokenSource(RequestHandler.ServerStore.Engine.OperationTimeout);
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(timeout.Token, RequestHandler.HttpContext.RequestAborted);
                 var databaseResult = await RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.WaitForResults(taskId, cts.Token);
+
+                if (databaseResult.IndexTask != null)
+                {
+                    await databaseResult.IndexTask;
+                }
+
                 result = databaseResult.Array;
             }
             else
