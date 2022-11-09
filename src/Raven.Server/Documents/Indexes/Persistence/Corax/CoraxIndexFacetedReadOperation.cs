@@ -276,14 +276,14 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                         facetValues[iterator.IsNull ? Constants.NullValue : Constants.EmptyString].IncrementCount(1);
                         continue;
                     }
-                    InsertTerm(iterator.Sequence, ref entryReader);
+                    //InsertTerm(iterator.Sequence, ref entryReader);
                 }
         
                 break;
             case IndexEntryFieldType.Tuple:
             case IndexEntryFieldType.Simple:
-                if (fieldReader.Read(out var source))
-                    InsertTerm(source, ref entryReader);
+                //if (fieldReader.Read(out var source))
+                //    InsertTerm(source, ref entryReader);
                 break;
             case IndexEntryFieldType.Null:
                 break;
