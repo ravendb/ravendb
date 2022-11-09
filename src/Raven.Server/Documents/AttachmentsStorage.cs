@@ -11,6 +11,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -487,17 +488,20 @@ namespace Raven.Server.Documents
             var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
             var existingStream = tree.ReadStream(base64Hash);
             if (existingStream == null)
+            {
                 tree.AddStream(base64Hash, stream, tag: key);
-
+                UpdateBucketStatsOnPutOrDeleteStream(context, key, stream.Length);
+            }
             _documentDatabase.Metrics.Attachments.BytesPutsPerSec.MarkSingleThreaded(stream.Length);
         }
 
-        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, int expectedCount = 1)
+        private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash, Slice key, int expectedCount = 1)
         {
             if (GetCountOfAttachmentsForHash(context, hash) == expectedCount)
             {
                 var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                tree.DeleteStream(hash);
+                var size = tree.DeleteStream(hash).Size;
+                UpdateBucketStatsOnPutOrDeleteStream(context, key, -size);
             }
         }
 
@@ -1234,7 +1238,7 @@ namespace Raven.Server.Documents
 
             // we are running just before the delete, so we may still have 1 entry there, the one just
             // about to be deleted
-            DeleteAttachmentStream(context, hash);
+            DeleteAttachmentStream(context, hash, key);
         }
 
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice)
@@ -1361,6 +1365,35 @@ namespace Raven.Server.Documents
         {
             return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
                 (int)AttachmentsTable.Etag, ref tvr, out slice);
+        }
+
+        private void UpdateBucketStatsOnPutOrDeleteStream(DocumentsOperationContext context, Slice attachmentKey, long sizeChange)
+        {
+            if (_documentDatabase is not ShardedDocumentDatabase)
+                return;
+
+            using (GetBucketFromAttachmentKey(context, attachmentKey, out var bucketSlice))
+            {
+                ShardedDocumentsStorage.UpdateBucketStats(context.Transaction.InnerTransaction, bucketSlice, oldSize : 0, newSize : sizeChange);
+            }
+        }
+
+        private static ByteStringContext.Scope GetBucketFromAttachmentKey(DocumentsOperationContext context, Slice attachmentKey, out Slice bucketSlice)
+        {
+            int sizeOfDocId = 0;
+            for (; sizeOfDocId < attachmentKey.Size; sizeOfDocId++)
+            {
+                if (attachmentKey[sizeOfDocId] == SpecialChars.RecordSeparator)
+                    break;
+            }
+
+            var bucket = ShardHelper.GetBucket(attachmentKey.Content.Ptr, sizeOfDocId);
+            var scope = context.Allocator.Allocate(sizeof(int), out var buffer);
+            *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
+
+            bucketSlice = new Slice(buffer);
+
+            return scope;
         }
     }
 }

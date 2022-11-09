@@ -201,7 +201,7 @@ namespace Voron.Data.Tables
 
             public delegate ByteStringContext.Scope IndexEntryKeyGenerator(ByteStringContext context, ref TableValueReader value, out Slice slice);
 
-            public delegate void OnIndexEntryChangedDelegate(Transaction tx, Slice key, int oldSize, int newSize);
+            public delegate void OnIndexEntryChangedDelegate(Transaction tx, Slice key, long oldSize, long newSize);
 
             public OnIndexEntryChangedDelegate OnEntryChanged;
 
@@ -227,7 +227,7 @@ namespace Voron.Data.Tables
             }
 
             // need to test with doc compression enabled
-            public void OnIndexEntryChanged(Transaction tx, Slice key, int oldSize, int newSize)
+            public void OnIndexEntryChanged(Transaction tx, Slice key, long oldSize, long newSize)
             {
                 OnEntryChanged?.Invoke(tx, key, oldSize, newSize);
             }

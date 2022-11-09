@@ -80,7 +80,6 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, RevisionsTombstones, ByteStringType.Immutable, out RevisionsTombstonesSlice);
                 Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Revisions), ByteStringType.Immutable, out RevisionsPrefix);
 
-
                 DefineIndexesForRevisionsSchema(RevisionsSchemaBase, changeVectorSlice);
                 DefineIndexesForRevisionsSchema(CompressedRevisionsSchemaBase, changeVectorSlice);
 
