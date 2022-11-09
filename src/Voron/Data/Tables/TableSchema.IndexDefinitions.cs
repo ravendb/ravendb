@@ -226,7 +226,6 @@ namespace Voron.Data.Tables
                 }
             }
 
-            // need to test with doc compression enabled
             public void OnIndexEntryChanged(Transaction tx, Slice key, long oldSize, long newSize)
             {
                 OnEntryChanged?.Invoke(tx, key, oldSize, newSize);

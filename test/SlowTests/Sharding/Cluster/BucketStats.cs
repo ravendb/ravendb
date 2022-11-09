@@ -4,7 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
@@ -576,6 +578,64 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-19530 : bucket stats counts the RawSize of the value instead of the CompressedSize")]
+        public async Task BucketStatsWithDocumentsCompression()
+        {
+            const string id = "companies/1";
+            var bucket = ShardHelper.GetBucket(id);
+
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var arr = new string[10_000];
+                    for (int i = 0; i < arr.Length; i++)
+                    {
+                        arr[i] = "6";
+                    }
+
+                    await session.StoreAsync(new Company { Array = arr }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+
+                var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
+
+                long originalSize;
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                    Assert.Equal(bucket, stats.Bucket);
+                    Assert.Equal(1, stats.NumberOfDocuments);
+
+                    originalSize = stats.Size;
+                }
+
+                // turn on compression and modify the document
+                var documentsCompression = new DocumentsCompressionConfiguration(true, true);
+                await store.Maintenance.SendAsync(new UpdateDocumentsCompressionConfigurationOperation(documentsCompression));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company = await session.LoadAsync<Company>(id);
+                    company.Array[0] = "5";
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                    Assert.Equal(1, stats.NumberOfDocuments);
+
+                    Assert.True(stats.Size < originalSize);
+                }
+            }
+        }
 
         private static void AssertStats(DocumentDatabase db, int bucket, int expectedSize, int expectedDocs = 1)
         {
@@ -586,6 +646,11 @@ namespace SlowTests.Sharding.Cluster
                 Assert.Equal(expectedSize, stats.Size);
                 Assert.Equal(expectedDocs, stats.NumberOfDocuments);
             }
+        }
+
+        private class Company
+        {
+            public string[] Array { get; set; }
         }
     }
 }
