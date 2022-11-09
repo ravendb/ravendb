@@ -166,7 +166,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         return scope;
     }
 
-    internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, int oldSize, int newSize)
+    internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, long oldSize, long newSize)
     {
         int numOfDocsChanged = 0;
         if (oldSize == 0)
@@ -177,12 +177,12 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         UpdateBucketStats(tx, key, oldSize, newSize, numOfDocsChanged);
     }
 
-    internal static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize)
+    internal static void UpdateBucketStats(Transaction tx, Slice key, long oldSize, long newSize)
     {
         UpdateBucketStats(tx, key, oldSize, newSize, numOfDocsChanged: 0);
     }
 
-    private static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize, int numOfDocsChanged)
+    private static void UpdateBucketStats(Transaction tx, Slice key, long oldSize, long newSize, int numOfDocsChanged)
     {
         if (tx.Owner is not ShardedDocumentDatabase documentDatabase)
             return;

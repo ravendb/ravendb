@@ -80,7 +80,7 @@ namespace Voron.Data.BTrees
                 _parent = parent;
                 _numberOfPagesPerChunk = 1;
                 _tree = _parent.FixedTreeFor(key, ChunkDetails.SizeOf);
-                _version = _parent.DeleteStream(key);
+                _version = _parent.DeleteStream(key).Version;
                 _numberOfPagesPerChunk = initialNumberOfPagesPerChunk ?? 1;
                 _tag = tag;
             }
@@ -421,17 +421,21 @@ namespace Voron.Data.BTrees
         public int DeleteStream(string key)
         {
             using (Slice.From(_tx.Allocator, key, out Slice str))
-                return DeleteStream(str);
+                return DeleteStream(str).Version;
         }
 
-        public int DeleteStream(Slice key)
+        public (int Version, long Size) DeleteStream(Slice key)
         {
             int version = 0;
+            long size = 0;
 
             var info = GetStreamInfo(key, writable: false);
 
             if (info != null)
+            {
                 version = info->Version;
+                size = info->TotalSize;
+            }
 
             var llt = _tx.LowLevelTransaction;
 
@@ -446,7 +450,7 @@ namespace Voron.Data.BTrees
 
             DeleteFixedTreeFor(key, ChunkDetails.SizeOf);
 
-            return version;
+            return (version, size);
         }
 
         internal List<long> GetStreamPages(FixedSizeTree chunksTree, StreamInfo* info)

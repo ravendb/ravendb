@@ -13,6 +13,8 @@ using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
+using Voron;
+using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -314,7 +316,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Advanced.Attachments.Store(id, "my_file", fileStream);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 939;
+                    expectedSize = 944;
                 }
 
                 AssertStats(db, bucket, expectedSize);
@@ -335,7 +337,7 @@ namespace SlowTests.Sharding.Cluster
                     user.Name = "b";
                     await session.SaveChangesAsync();
 
-                    expectedSize = 2469;
+                    expectedSize = 2474;
                 }
 
                 AssertStats(db, bucket, expectedSize);
@@ -355,7 +357,7 @@ namespace SlowTests.Sharding.Cluster
                     }, id3);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 3535;
+                    expectedSize = 3540;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -372,7 +374,7 @@ namespace SlowTests.Sharding.Cluster
 
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4821;
+                    expectedSize = 4826;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -384,7 +386,7 @@ namespace SlowTests.Sharding.Cluster
 
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4932;
+                    expectedSize = 4937;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -394,7 +396,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id3);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4916;
+                    expectedSize = 4921;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 2);
@@ -404,7 +406,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id2);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4013;
+                    expectedSize = 4018;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 1);
@@ -414,7 +416,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 3305;
+                    expectedSize = 3310;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 0);
@@ -440,6 +442,140 @@ namespace SlowTests.Sharding.Cluster
                 AssertStats(db, bucket, expectedSize, expectedDocs: 0);
             }
         }
+
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task BucketStatsShouldTakeIntoAccountAttachmentStreamSize()
+        {
+            const string id = "users/1";
+            var bucket = ShardHelper.GetBucket(id);
+
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "a"
+                    }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+
+                var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var buffer = new byte[Constants.Size.Megabyte * 100];
+                    var rand = new Random();
+                    rand.NextBytes(buffer);
+
+                    await using (var fileStream = new MemoryStream(buffer))
+                    {
+                        session.Advanced.Attachments.Store(id, "big_file", fileStream);
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                string hash = default;
+
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                    Assert.Equal(104858139, stats.Size);
+                    Assert.Equal(1, stats.NumberOfDocuments);
+
+                    var attachmentMetadata = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocumentWithCounts(ctx, id).FirstOrDefault();
+                    Assert.NotNull(attachmentMetadata);
+                    Assert.Equal(1, attachmentMetadata.Count);
+                    hash = attachmentMetadata.Hash;
+                }
+
+                var configuration = new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false
+                    }
+                };
+
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    user.Name = "bb";
+                    await session.SaveChangesAsync();
+                }
+
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (Slice.From(ctx.Allocator, hash, out var slice))
+                {
+                    var count = AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
+                    Assert.Equal(3, count); // document attachment + 2 revision attachments
+
+                    var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                    Assert.Equal(104859331, stats.Size);
+                    Assert.Equal(1, stats.NumberOfDocuments);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (Slice.From(ctx.Allocator, hash, out var slice))
+                {
+                    var count = AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
+                    Assert.Equal(2, count); // 2 revision attachments
+
+                    var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                    Assert.Equal(104859015, stats.Size);
+                    Assert.Equal(0, stats.NumberOfDocuments);
+                }
+
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new DeleteRevisionsOperation.Parameters
+                {
+                    DocumentIds = new[] { id }
+                }));
+
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (Slice.From(ctx.Allocator, hash, out var slice))
+                {
+                    var count = AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
+                    Assert.Equal(0, count);
+
+                    var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                    Assert.Equal(81, stats.Size);
+                    Assert.Equal(0, stats.NumberOfDocuments);
+                }
+
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var tombsCount = db.DocumentsStorage.GetNumberOfTombstones(ctx);
+                    Assert.Equal(7, tombsCount);
+
+                    await db.TombstoneCleaner.ExecuteCleanup();
+                }
+
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                    Assert.Equal(0, stats.Size);
+                    Assert.Equal(0, stats.NumberOfDocuments);
+                }
+            }
+        }
+
 
         private static void AssertStats(DocumentDatabase db, int bucket, int expectedSize, int expectedDocs = 1)
         {
