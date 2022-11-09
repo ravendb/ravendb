@@ -98,8 +98,10 @@ namespace Raven.Server.Smuggler.Documents
         public ISubscriptionActions Subscriptions() => throw new NotImplementedException();
         public IReplicationHubCertificateActions ReplicationHubCertificates() => throw new NotImplementedException();
 
-        public ICompareExchangeActions CompareExchange(JsonOperationContext context, BackupKind? backupKind, bool withDocuments) =>
-            new ShardedCompareExchangeActions(_databaseContext, _destinations.Select(d => d.CompareExchange(context, backupKind, withDocuments)).ToArray(), _options);
+        public ICompareExchangeActions CompareExchange(JsonOperationContext context, BackupKind? backupKind, bool withDocuments)
+        {
+            return withDocuments ? null : new ShardedCompareExchangeActions(_databaseContext, _destinations.Select(d => d.CompareExchange(context, backupKind, withDocuments: false)).ToArray(), _options);
+        }
 
         public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context) =>
             new ShardedCompareExchangeActions(_databaseContext, _destinations.Select(d => d.CompareExchangeTombstones(context)).ToArray(), _options);
