@@ -315,10 +315,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 {
                     // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
                     var executed = await database.ExecuteClusterTransaction(serverContext, batchSize: 1);
-                    if (executed.Count == 0)
+                    if (executed.BatchSize == 0)
                         break;
 
-                    totalExecutedCommands += executed.Sum(x => x.Commands.Length);
+                    totalExecutedCommands += executed.CommandsCount;
                     Result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
                     Progress.Invoke(Result.Progress);
                 }
