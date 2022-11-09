@@ -283,7 +283,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
             case IndexEntryFieldType.Tuple:
             case IndexEntryFieldType.Simple:
                 //if (fieldReader.Read(out var source))
-                    //InsertTerm(source, ref entryReader);
+                //    InsertTerm(source, ref entryReader);
                 break;
             case IndexEntryFieldType.Null:
                 break;
