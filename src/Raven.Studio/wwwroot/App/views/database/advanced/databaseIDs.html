@@ -9,7 +9,6 @@
                                 <label class="control-label" data-bind="text: 'Used Database ID' + (usedIDs().length > 1 ? 's' : '')"></label>
                                 <div data-bind="foreach: usedIDs">
                                     <div class="form-control-static"><strong data-bind="text: $data"></strong></div>
-                                        (current node)
                                 </div>
                             </div>
                             <div class="form-group margin-top">
@@ -17,7 +16,7 @@
                                 <div class="margin-top flex-grow">
                                     <div data-bind="foreach: suggestedIDs">
                                         <div class="row container-fluid">
-                                                <div class="col-xs-7 badge margin-bottom margin-bottom-sm change-vector-entry padding padding-sm" data-bind="text: $data">
+                                            <div class="col-xs-7 badge margin-bottom margin-bottom-sm change-vector-entry" data-bind="text: $data">
                                             </div>
                                             <div class="col-xs-5">
                                                 <span class="has-disable-reason" data-placement="right"
@@ -29,12 +28,6 @@
                                                 </span>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
                                     </div>
                                 </div>
                             </div>

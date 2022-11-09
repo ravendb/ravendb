@@ -46,7 +46,6 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import viewModelBase from "viewmodels/viewModelBase";
 import configurationConstants from "configuration";
 import mergedIndexesStorage from "common/storage/mergedIndexesStorage";
-import database = require("models/resources/database");
 import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
 
 class editIndex extends shardViewModelBase {
@@ -544,7 +543,7 @@ class editIndex extends shardViewModelBase {
         new getIndexFieldsFromMapCommand(this.db, map, additionalSourcesDto, additionalAssembliesDto)
             .execute()
             .done((fields: resultsDto<string>) => {
-                this.fieldNames(fields.Results.filter(x => !index.FieldsToHideOnUi.includes(x)));
+                this.fieldNames(fields.Results.filter(x => !IndexUtils.FieldsToHideOnUi.includes(x)));
             });
     }
 

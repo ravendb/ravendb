@@ -3,7 +3,6 @@ import accessManager = require("common/shell/accessManager");
 import getDatabaseRecordCommand = require("commands/resources/getDatabaseRecordCommand");
 import saveUnusedDatabaseIDsCommand = require("commands/database/settings/saveUnusedDatabaseIDsCommand");
 import changeVectorUtils = require("common/changeVectorUtils");
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import getDatabaseStatsCommand from "commands/resources/getDatabaseStatsCommand";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
@@ -18,16 +17,14 @@ class databaseIDs extends shardViewModelBase {
     view = require("views/database/advanced/databaseIDs.html");
 
     unusedIDs = ko.observableArray<string>([]);
-    
+
     usedIDs = ko.observableArray<string>([]);
     idsFromCVs = ko.observableArray<string>();
-    
-    nonLocalDatabaseNodes: KnockoutComputed<string[]>; 
-    
-    inputDatabaseId = ko.observable<string>();
+
+    inputDatabaseID = ko.observable<string>();
 
     suggestedIDs: KnockoutComputed<string[]>;
-    
+
     isForbidden = ko.observable<boolean>(false);
     isSaveEnabled = ko.observable<boolean>();
 
@@ -37,19 +34,8 @@ class databaseIDs extends shardViewModelBase {
 
     constructor(db: database) {
         super(db);
-        this.bindToCurrentInstance("addToUnusedList", "removeFromUnusedList", "linkToUnusedDatabaseIds");
-        
-        this.nonLocalDatabaseNodes = ko.pureComputed(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return [];
+        this.bindToCurrentInstance("addToUnusedList", "removeFromUnusedList");
         this.initObservables();
-    }
-            const nodes = db.nodes();
-            const localNodeTag = clusterTopologyManager.default.localNodeTag();
-            
-            return nodes.filter(tag => tag !== localNodeTag);
-        });
     }
 
     private initObservables(): void {
@@ -65,21 +51,13 @@ class databaseIDs extends shardViewModelBase {
         return ko.pureComputed(() => this.unusedIDs().includes(dbId));
     }
 
-    linkToUnusedDatabaseIds(nodeTag: string) {
-        const link = appUrl.forDatabaseIDs(this.activeDatabase());
-        const nodeInfo = clusterTopologyManager.default.getClusterNodeByTag(nodeTag);
-
-        return appUrl.toExternalUrl(nodeInfo.serverUrl(), link);
-    }
-
-
     canActivate(args: any) {
         return $.when<any>(super.canActivate(args))
             .then(() => {
                 const deferred = $.Deferred<canActivateResultDto>();
 
                 this.isForbidden(!accessManager.default.isOperatorOrAbove());
-                
+
                 if (this.isForbidden()) {
                     deferred.resolve({ can: true });
                 } else {
@@ -91,27 +69,27 @@ class databaseIDs extends shardViewModelBase {
                 return deferred;
             });
     }
-    
+
     private async loadData(): Promise<void> {
         const fetchUnusedIDsTask = this.fetchUnusedDatabaseIDs();
 
         const nodeStats = await Promise.all(this.fetchAllStatsTasks());
-        
+
         const unusedIds = await fetchUnusedIDsTask;
-        
+
         const usedIdsSet = new Set(nodeStats.map(x => x.databaseId));
         const idsFromChangeVectors = new Set(nodeStats.flatMap(x => x.databaseIdsFromChangeVector));
-        
+
         this.unusedIDs(unusedIds);
         this.usedIDs(Array.from(usedIdsSet));
         this.idsFromCVs(Array.from(idsFromChangeVectors));
     }
-    
+
     activate(args: any) {
         super.activate(args);
-        
+
         this.dirtyFlag = new ko.DirtyFlag([this.unusedIDs]);
-        
+
         this.isSaveEnabled = ko.pureComputed<boolean>(() => {
             const dirty = this.dirtyFlag().isDirty();
             const saving = this.spinners.save();
@@ -127,14 +105,14 @@ class databaseIDs extends shardViewModelBase {
     private async fetchStats(location: databaseLocationSpecifier): Promise<NodeStats> {
         const stats = await new getDatabaseStatsCommand(this.db, location)
             .execute();
-        
+
         if (!stats.DatabaseChangeVector) {
             return {
                 databaseId: stats.DatabaseId,
                 databaseIdsFromChangeVector: []
             }
         }
-        
+
         const changeVector = stats.DatabaseChangeVector.split(",");
         const dbsFromCV = changeVector.map(cvEntry => changeVectorUtils.getDatabaseID(cvEntry));
 
@@ -143,7 +121,7 @@ class databaseIDs extends shardViewModelBase {
             databaseIdsFromChangeVector: dbsFromCV
         }
     }
-    
+
     private async fetchUnusedDatabaseIDs(): Promise<string[]> {
         const document = await new getDatabaseRecordCommand(this.db)
             .execute();
@@ -153,7 +131,7 @@ class databaseIDs extends shardViewModelBase {
 
     saveUnusedDatabaseIDs() {
         this.spinners.save(true);
-        
+
         new saveUnusedDatabaseIDsCommand(this.unusedIDs(), this.db.name)
             .execute()
             .done(() => this.dirtyFlag().reset())
@@ -163,18 +141,18 @@ class databaseIDs extends shardViewModelBase {
     addInputToUnusedList() {
         this.addWithBlink(this.inputDatabaseID());
     }
-    
+
     addToUnusedList(dbID: string) {
         this.addWithBlink(dbID);
     }
-    
+
     private addWithBlink(dbIdToAdd: string) {
         if (!this.unusedIDs().includes(dbIdToAdd)) {
             this.unusedIDs.unshift(dbIdToAdd);
             $(".collection-list li").first().addClass("blink-style");
         }
     }
-    
+
     removeFromUnusedList(dbId: string) {
         this.unusedIDs.remove(dbId);
     }
