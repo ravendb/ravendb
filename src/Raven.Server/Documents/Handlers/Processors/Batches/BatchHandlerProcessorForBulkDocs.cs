@@ -18,8 +18,6 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
-using static Raven.Server.Documents.TransactionCommands.JsonPatchCommand;
-using static Raven.Server.Utils.MetricCacher.Keys;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers.Processors.Batches;
