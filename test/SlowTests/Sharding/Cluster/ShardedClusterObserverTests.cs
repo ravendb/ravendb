@@ -113,6 +113,12 @@ namespace SlowTests.Sharding.Cluster
                 Assert.Equal(0, dbTopology.Promotables.Count);
                 Assert.Equal(0, dbTopology.Rehabs.Count);
 
+                await AssertWaitForValueAsync(() =>
+                {
+                    var shardedDatabaseContext = Servers.First(x => x.ServerStore.NodeTag == nodeInOrchestratorTopology);
+                    return Task.FromResult(shardedDatabaseContext.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(store.Database, out _));
+                }, false);
+                
                 //add node to orchestrator topology
                 store.Maintenance.Server.Send(new AddNodeToOrchestratorTopologyOperation(store.Database,
                     nodeInOrchestratorTopology));
@@ -129,16 +135,22 @@ namespace SlowTests.Sharding.Cluster
                     dbTopology = record.Sharding.Orchestrator.Topology;
                     return dbTopology.Members.Count == 2 && dbTopology.Promotables.Count == 0;
                 }, true);
+
+                await AssertWaitForValueAsync(() =>
+                {
+                    var shardedDatabaseContext = Servers.First(x => x.ServerStore.NodeTag == nodeInOrchestratorTopology);
+                    return Task.FromResult(shardedDatabaseContext.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(store.Database, out _));
+                }, true);
             }
         }
-
-
+        
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task DynamicNodeDistributionForOrchestrator()
         {
             DefaultClusterSettings = new Dictionary<string, string>
             {
-                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5"
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "5",
+                [RavenConfiguration.GetKey(x => x.Cluster.AddReplicaTimeout)] = "5"
             };
 
             var cluster = await CreateRaftCluster(3);
@@ -160,6 +172,7 @@ namespace SlowTests.Sharding.Cluster
                 }, 1);
                 
                 var top = record.Sharding.Orchestrator.Topology;
+                Assert.Equal(2, top.ReplicationFactor);
                 Assert.Equal(1, top.Members.Count);
                 Assert.Equal(1, top.Rehabs.Count);
                 Assert.Equal(result.NodeTag, top.Rehabs.First());
@@ -179,12 +192,17 @@ namespace SlowTests.Sharding.Cluster
                 top = record.Sharding.Orchestrator.Topology;
                 Assert.Equal(2, top.Members.Count);
                 Assert.DoesNotContain(result.NodeTag, top.Members);
-                Assert.Equal(1, top.Rehabs.Count);
-                Assert.Equal(2, top.DemotionReasons.Count);
+                Assert.Equal(0, top.Rehabs.Count);
+                Assert.Equal(2, top.ReplicationFactor);
+                Assert.Equal(0, top.DemotionReasons.Count);
+                Assert.Equal(0, top.PromotablesStatus.Count);
+
                 var newChosenNode = top.Members.First(x => x != stableNode);
-                Assert.Contains("Maintain the replication factor and create new replica instead of node", top.DemotionReasons[newChosenNode]);
-                Assert.Equal(2, top.PromotablesStatus.Count);
-                Assert.Equal(DatabasePromotionStatus.WaitingForFirstPromotion, top.PromotablesStatus[newChosenNode]);
+                await AssertWaitForValueAsync(() =>
+                {
+                    var shardedDatabaseContext = Servers.Single(x => x.ServerStore.NodeTag == newChosenNode);
+                    return Task.FromResult(shardedDatabaseContext.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(store.Database, out _));
+                }, true);
             }
         }
 

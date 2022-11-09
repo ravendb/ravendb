@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Server.Config.Categories;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Utils;
 
@@ -17,12 +20,19 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
         {
         }
 
-        protected override (bool Promote, string UpdateTopologyReason) TryGetMentorAndPromote(ClusterOperationContext context, ClusterObserver.DatabaseObservationState state, string promotable)
+        protected override (bool Promote, string UpdateTopologyReason) TryPromote(ClusterOperationContext context, ClusterObserver.DatabaseObservationState state, string promotable, ClusterNodeStatusReport nodeStats)
         {
-            return (true, $"Node {promotable} is ready to be promoted to orchestrator");
+            if (IsLastCommittedIndexCaughtUp(context, promotable, state.DatabaseTopology, nodeStats, state.ObserverIteration))
+            {
+                state.DatabaseTopology.PromotablesStatus.Remove(promotable);
+                state.DatabaseTopology.DemotionReasons.Remove(promotable);
+                return (true, $"Node {promotable} is ready to be promoted to orchestrator");
+            }
+
+            return (false, $"Node {promotable} is not ready to be promoted to orchestrator because its index is not caught up yet");
         }
 
-        protected override bool IsLastCommittedIndexCaughtUp(ClusterOperationContext context, string node, DatabaseTopology topology, ClusterNodeStatusReport nodeStats, long iteration)
+        private bool IsLastCommittedIndexCaughtUp(ClusterOperationContext context, string node, DatabaseTopology topology, ClusterNodeStatusReport nodeStats, long iteration)
         {
             var lastCommittedIndex = _engine.GetLastCommitIndex(context);
 
@@ -53,6 +63,22 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
             }
 
             return true;
+        }
+
+        protected override void RemoveOtherNodesIfNeeded(ClusterObserver.DatabaseObservationState state, ref List<DeleteDatabaseCommand> deletions)
+        {
+            if (state.DatabaseTopology.Members.Count < state.DatabaseTopology.ReplicationFactor)
+                return;
+
+            if (state.DatabaseTopology.Promotables.Count == 0 &&
+                state.DatabaseTopology.Rehabs.Count == 0)
+                return;
+
+            var nonMembers = state.DatabaseTopology.Promotables.Concat(state.DatabaseTopology.Rehabs).ToList();
+            foreach (var node in nonMembers)
+            {
+                state.DatabaseTopology.RemoveFromTopology(node);
+            }
         }
     }
 }

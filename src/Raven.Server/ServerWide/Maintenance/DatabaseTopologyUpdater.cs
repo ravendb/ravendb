@@ -208,7 +208,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var promotable in databaseTopology.Promotables)
             {
-                if (FailedDatabaseInstanceOrNode(promotable, state, out _) == DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(promotable, state, out var nodeStats) == DatabaseHealth.Bad)
                 {
                     // database distribution is off and the node is down
                     if (databaseTopology.DynamicNodesDistribution == false)
@@ -256,7 +256,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     return $"The promotable {promotable} is not responsive, replace it with a node {node}";
                 }
 
-                var tryPromote = TryGetMentorAndPromote(context, state, promotable);
+                var tryPromote = TryPromote(context, state, promotable, nodeStats);
 
                 if (tryPromote.Promote)
                 {
@@ -315,12 +315,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             // already tried to promote, so we just ignore and continue
                             continue;
                         }
-
-                        // this check is only relevant to orchestrator
-                        if(IsLastCommittedIndexCaughtUp(context, rehab, databaseTopology, nodeStats, state.ObserverIteration) == false)
-                            continue;
-                            
-                        var tryPromote = TryGetMentorAndPromote(context, state, rehab);
+                        
+                        var tryPromote = TryPromote(context, state, rehab, nodeStats);
 
                         if (tryPromote.Promote)
                         {
@@ -350,13 +346,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
             return null;
         }
-
-        protected virtual bool IsLastCommittedIndexCaughtUp(ClusterOperationContext context, string node, DatabaseTopology topology, ClusterNodeStatusReport nodeStats, long iteration)
-        {
-            return true;
-        }
-
-        protected virtual (bool Promote, string UpdateTopologyReason) TryGetMentorAndPromote(ClusterOperationContext context, DatabaseObservationState state, string promotable)
+        
+        protected virtual (bool Promote, string UpdateTopologyReason) TryPromote(ClusterOperationContext context, DatabaseObservationState state, string promotable, ClusterNodeStatusReport _)
         {
             if (TryGetMentorNode(state.Name, state.DatabaseTopology, state.ClusterTopology, promotable, out var mentorNode) == false)
                 return (false, null);
@@ -600,7 +591,7 @@ namespace Raven.Server.ServerWide.Maintenance
             topology.PromotablesStatus[member] = promotionStatus;
         }
 
-        private bool TryGetMentorNode(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology, string promotable, out string mentorNode)
+        protected bool TryGetMentorNode(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology, string promotable, out string mentorNode)
         {
             var url = clusterTopology.GetUrlFromTag(promotable);
             topology.PredefinedMentors.TryGetValue(promotable, out var mentor);
@@ -753,7 +744,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return (false, null);
         }
 
-        private void RemoveOtherNodesIfNeeded(DatabaseObservationState state, ref List<DeleteDatabaseCommand> deletions)
+        protected virtual void RemoveOtherNodesIfNeeded(DatabaseObservationState state, ref List<DeleteDatabaseCommand> deletions)
         {
             var topology = state.DatabaseTopology;
             var dbName = state.Name;
