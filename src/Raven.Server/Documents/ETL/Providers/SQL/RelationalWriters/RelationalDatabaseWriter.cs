@@ -548,7 +548,22 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
                                     if (fieldValue is IEnumerable<object> enumerableValue)
                                     {
-                                        colParam.Value = enumerableValue.Select(x => x.ToString()).ToArray();
+                                        Type detectedType = null;
+
+                                        colParam.Value = enumerableValue.Select(x =>
+                                        {
+                                            if (x is IConvertible)
+                                            {
+                                                detectedType ??= TryDetectCollectionType(dbTypeString, x);
+
+                                                if (detectedType != null)
+                                                    return Convert.ChangeType(x, detectedType);
+
+                                                return x.ToString();
+                                            }
+
+                                            return x.ToString();
+                                        }).ToArray();
                                     }
                                     else
                                     {
@@ -590,6 +605,38 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             void ThrowProviderNotSupported()
             {
                 throw new NotSupportedException($"Factory provider '{provider}' is not supported");
+            }
+
+            Type TryDetectCollectionType(string dbTypeString, object value)
+            {
+                Type detectedType = null;
+
+                string lowerFieldType = dbTypeString.ToLower();
+
+                if (value is LazyStringValue or LazyCompressedStringValue)
+                {
+                    if (lowerFieldType.Contains("time") || lowerFieldType.Contains("date"))
+                        detectedType = typeof(DateTime);
+                    else
+                        detectedType = typeof(string);
+                }
+                else if (value is LazyNumberValue or long or double)
+                {
+                    if (lowerFieldType.Contains("double"))
+                        detectedType = typeof(double);
+                    else if (lowerFieldType.Contains("decimal"))
+                        detectedType = typeof(decimal);
+                    else if (lowerFieldType.Contains("float"))
+                        detectedType = typeof(float);
+                    else if (lowerFieldType.Contains("bigint"))
+                        detectedType = typeof(long);
+                    else if (lowerFieldType.Contains("int"))
+                        detectedType = typeof(int);
+                    else if (lowerFieldType.Contains("decimal") || lowerFieldType.Contains("money") || lowerFieldType.Contains("numeric"))
+                        detectedType = typeof(decimal);
+                }
+
+                return detectedType;
             }
         }
 
