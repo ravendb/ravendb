@@ -439,7 +439,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public long NextReplicateTicks;
-        public Dictionary<string, int> MissingAttachmentsRetries = new();
+        public int MissingAttachmentsRetries;
 
         private void Replicate()
         {
@@ -521,7 +521,6 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 OnSuccessfulReplication();
-                MissingAttachmentsRetries.Clear();
 
                 //if this returns false, this means either timeout or canceled token is activated
                 while (WaitForChanges(_parent.MinimalHeartbeatInterval, _cts.Token) == false)
@@ -1172,13 +1171,9 @@ namespace Raven.Server.Documents.Replication
                         $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
                 case ReplicationMessageReply.ReplyType.MissingAttachments:
                     
-                    foreach (var kvp in MissingAttachmentsRetries)
-                    {
-                        if (kvp.Value <= 1) 
-                            continue;
-
-                        RaiseAlertAndThrowMissingAttachmentException(kvp.Key);
-                    }
+                    if (++MissingAttachmentsRetries > 1)
+                        RaiseAlertAndThrowMissingAttachmentException($"Failed to send batch successfully to {Destination.FromString()}. " +
+                                                                     $"Destination reported missing attachments {MissingAttachmentsRetries} times.");
 
                     if (_log.IsInfoEnabled)
                     {
@@ -1196,12 +1191,8 @@ namespace Raven.Server.Documents.Replication
             return replicationBatchReply;
         }
 
-        private void RaiseAlertAndThrowMissingAttachmentException(string error)
+        private void RaiseAlertAndThrowMissingAttachmentException(string msg)
         {
-            var start = error.IndexOf("Document", StringComparison.OrdinalIgnoreCase);
-            var end = error.IndexOf("storage", start, StringComparison.OrdinalIgnoreCase) + 7;
-            var msg = "Destination reported missing attachments for same document more than once. " + error.Substring(start, end - start);
-
             if (_log.IsInfoEnabled)
             {
                 _log.Info(
@@ -1306,7 +1297,11 @@ namespace Raven.Server.Documents.Replication
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
 
-        private void OnSuccessfulReplication() => SuccessfulReplication?.Invoke(this);
+        private void OnSuccessfulReplication()
+        {
+            SuccessfulReplication?.Invoke(this);
+            MissingAttachmentsRetries = 0;
+        } 
 
         internal TestingStuff ForTestingPurposes;
 

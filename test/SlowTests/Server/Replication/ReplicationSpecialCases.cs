@@ -747,7 +747,7 @@ namespace SlowTests.Server.Replication
                 Assert.True(delayNextTimeOut > defaultNextTimeOut);
 
                 if (info.Errors.TryDequeue(out var exception))
-                    Assert.True(exception.Message.Contains("Destination reported missing attachments for same document more than once."));
+                    Assert.True(exception.Message.Contains("Destination reported missing attachments"));
             }
         }
     }
