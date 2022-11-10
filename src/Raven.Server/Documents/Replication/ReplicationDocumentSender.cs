@@ -695,6 +695,13 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info($"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag:#,#;;0}");
 
+            if (_parent.ForTestingPurposes?.OnMissingAttachmentStream != null &&
+                _parent.MissingAttachmentsRetries > 0)
+            {
+                var replicaAttachmentStreams = _replicaAttachmentStreams;
+                _parent.ForTestingPurposes?.OnMissingAttachmentStream?.Invoke(replicaAttachmentStreams);
+            }
+
             var sw = Stopwatch.StartNew();
             var headerJson = new DynamicJsonValue
             {
