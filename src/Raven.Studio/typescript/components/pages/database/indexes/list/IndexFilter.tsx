@@ -5,25 +5,25 @@ import { IndexStatus, IndexFilterCriteria, IndexSharedInfo } from "../../../../m
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { DropdownPanel } from "../../../../common/DropdownPanel";
+import { Dropdown, DropdownItem, DropdownMenu, DropdownToggle, FormGroup, Input, Label, UncontrolledDropdown } from "reactstrap";
 
 interface IndexFilterStatusItemProps {
     label: string;
     toggleClass?: string;
     toggleStatus: () => void;
     checked: boolean;
+    children: any;
 }
 
 function IndexFilterStatusItem(props: IndexFilterStatusItemProps) {
     return (
-        <div className="flex-horizontal">
-            <div className="control-label flex-grow">{props.label}</div>
-            <div className="flex-noshrink">
-                <div className={classNames("toggle", props.toggleClass)}>
-                    <input type="checkbox" className="styled" checked={props.checked} onChange={props.toggleStatus} />
-                    <label />
-                </div>
-            </div>
-        </div>
+        <>
+            <FormGroup switch className="m-3 form-check-reverse {classNames(props.toggleClass)}">
+                <Input type="switch" role="switch" checked={props.checked} onChange={props.toggleStatus} />
+                <Label check>{props.label}</Label>
+            </FormGroup>
+            {props.children}
+        </>
     );
 }
 
@@ -174,6 +174,80 @@ export default function IndexFilter(props: IndexFilterProps) {
                 value={filter.searchText}
                 onChange={onSearchTextChange}
             />
+            <UncontrolledDropdown className="mr-1">
+                <DropdownToggle
+                    outline
+                    title="Set the indexing state for the selected indexes"
+                    className={classNames("btn btn-default dropdown-toggle", { active: hasAnyStateFilter(filter) })}>
+                    <span>Index Status</span>
+                </DropdownToggle>
+
+                <DropdownMenu>
+                    <IndexFilterStatusItem
+                        toggleStatus={() => toggleStatus("Normal")}
+                        checked={filter.status.includes("Normal")}
+                        label="Normal"
+                        toggleClass="toggle-success"
+                    />
+                    <IndexFilterStatusItem
+                        toggleStatus={() => toggleStatus("ErrorOrFaulty")}
+                        checked={filter.status.includes("ErrorOrFaulty")}
+                        label="Error / Faulty"
+                        toggleClass="toggle-danger"
+                    />
+                    <IndexFilterStatusItem
+                        toggleStatus={() => toggleStatus("Stale")}
+                        checked={filter.status.includes("Stale")}
+                        label="Stale"
+                        toggleClass="toggle-warning"
+                    />
+                    <IndexFilterStatusItem
+                        toggleStatus={() => toggleStatus("RollingDeployment")}
+                        checked={filter.status.includes("RollingDeployment")}
+                        label="Rolling deployment"
+                        toggleClass="toggle-warning"
+                    />
+                    <IndexFilterStatusItem
+                        toggleStatus={() => toggleStatus("Paused")}
+                        checked={filter.status.includes("Paused")}
+                        label="Paused"
+                        toggleClass="toggle-warning"
+                    />
+                    <IndexFilterStatusItem
+                        toggleStatus={() => toggleStatus("Disabled")}
+                        checked={filter.status.includes("Disabled")}
+                        label="Disabled"
+                        toggleClass="toggle-warning"
+                    />
+                    <IndexFilterStatusItem
+                        toggleStatus={() => toggleStatus("Idle")}
+                        checked={filter.status.includes("Idle")}
+                        label="Idle"
+                        toggleClass="toggle-warning"
+                    />
+                    <div className="bg-warning">
+                        <IndexFilterStatusItem
+                            toggleStatus={toggleIndexesWithErrors}
+                            checked={filter.showOnlyIndexesWithIndexingErrors}
+                            label="With indexing errors only"
+                            toggleClass="toggle-warning"
+                        />
+                    </div>
+                    <div className="bg-info">
+                        <IndexFilterStatusItem
+                            toggleStatus={toggleAutoRefresh}
+                            checked={filter.autoRefresh}
+                            label="Auto refresh"
+                            toggleClass="toggle-warning"
+                        >
+                        <small>
+                            Automatically refreshes the list of indexes. Might result in list flickering.
+                            </small>
+                        </IndexFilterStatusItem>
+                       
+                    </div>
+                </DropdownMenu>
+            </UncontrolledDropdown>
             <div className="dropdown dropdown-right">
                 <button
                     className={classNames("btn btn-default dropdown-toggle", { active: hasAnyStateFilter(filter) })}
@@ -186,12 +260,7 @@ export default function IndexFilter(props: IndexFilterProps) {
                 <DropdownPanel className="settings-menu">
                     <div className="settings-item">
                         <div className="margin-left margin-right margin-right-sm">
-                            <IndexFilterStatusItem
-                                toggleStatus={() => toggleStatus("Normal")}
-                                checked={filter.status.includes("Normal")}
-                                label="Normal"
-                                toggleClass="toggle-success"
-                            />
+                            
                             <IndexFilterStatusItem
                                 toggleStatus={() => toggleStatus("ErrorOrFaulty")}
                                 checked={filter.status.includes("ErrorOrFaulty")}
