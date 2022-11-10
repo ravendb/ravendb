@@ -240,7 +240,7 @@ namespace Raven.Client.Documents.Session
         {
             Debug.Assert(value != null, "value != null");
 
-            if (value.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix))
+            if (value.Key.StartsWith(Constants.CompareExchange.RvnAtomicPrefix, StringComparison.InvariantCultureIgnoreCase))
                 throw new InvalidOperationException($"'{value.Key}' is an atomic guard and you cannot load it via the session");
 
             if (_session.NoTracking)
