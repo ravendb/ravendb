@@ -20,6 +20,11 @@ public class ShardedDatabaseSmugglerFactory : AbstractDatabaseSmugglerFactory
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
+    public override DatabaseDestination CreateDestination(CancellationToken token = default)
+    {
+        return new ShardedDatabaseDestination(_database, token);
+    }
+
     public override SmugglerBase CreateForRestore(
         DatabaseRecord databaseRecord,
         ISmugglerSource source,

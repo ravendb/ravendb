@@ -1343,7 +1343,7 @@ namespace Raven.Server.Web.System
                                 await using (var stream = new GZipStream(reader, CompressionMode.Decompress))
                                 using (var source = new StreamSource(stream, context, database.Name))
                                 {
-                                    var destination = new DatabaseDestination(database);
+                                    var destination = database.Smuggler.CreateDestination();
                                     var smuggler = database.Smuggler.Create(source, destination, context, result: result, onProgress: onProgress, token: token.Token);
 
                                     await smuggler.ExecuteAsync();

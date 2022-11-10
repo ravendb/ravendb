@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using static Raven.Server.Utils.MetricCacher.Keys;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Smuggler.Migration
@@ -75,7 +76,7 @@ namespace Raven.Server.Smuggler.Migration
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(responseStream, context, Parameters.Database.Name))
             {
-                var destination = new DatabaseDestination(Parameters.Database);
+                var destination = Parameters.Database.Smuggler.CreateDestination();
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
 #pragma warning disable 618
@@ -93,7 +94,7 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task MigrateAttachments(string lastEtag, SmugglerResult parametersResult)
         {
-            var destination = new DatabaseDestination(Parameters.Database);
+            var destination = Parameters.Database.Smuggler.CreateDestination();
             var options = new DatabaseSmugglerOptionsServerSide
             {
                 OperateOnTypes = DatabaseItemType.Attachments,
@@ -247,7 +248,7 @@ namespace Raven.Server.Smuggler.Migration
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(indexesStream, context, Parameters.Database.Name))
             {
-                var destination = new DatabaseDestination(Parameters.Database);
+                var destination = Parameters.Database.Smuggler.CreateDestination();
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
                     RemoveAnalyzers = Options.RemoveAnalyzers,

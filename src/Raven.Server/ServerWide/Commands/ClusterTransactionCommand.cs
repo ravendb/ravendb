@@ -234,6 +234,40 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseCommandsCount = DatabaseCommands.Count;
         }
 
+        public ClusterTransactionCommand(
+            string databaseName,
+            char identityPartsSeparator,
+            ArraySegment<ClusterTransactionDataCommand> commandParsedCommands,
+            ClusterTransactionOptions options,
+            string uniqueRequestId) : base(uniqueRequestId)
+        {
+            AssertDatabaseName(databaseName);
+
+            DatabaseName = databaseName;
+            Options = options;
+            CommandCreationTicks = SystemTime.UtcNow.Ticks;
+
+            foreach (var command in commandParsedCommands)
+            {
+                ClusterCommandValidation(command, identityPartsSeparator);
+                switch (command.Type)
+                {
+                    case CommandType.PUT:
+                    case CommandType.DELETE:
+                        DatabaseCommands.Add(command);
+                        break;
+                    case CommandType.CompareExchangePUT:
+                    case CommandType.CompareExchangeDELETE:
+                        ClusterCommands.Add(command);
+                        break;
+                    default:
+                        throw new RachisApplyException($"The type '{command.Type}' is not supported in '{nameof(ClusterTransactionCommand)}.'");
+                }
+            }
+
+            DatabaseCommandsCount = DatabaseCommands.Count;
+        }
+
         private ClusterTransactionCommand(
             string databaseName,
             DatabaseTopology topology,

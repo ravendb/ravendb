@@ -3,8 +3,6 @@ using System.Threading;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -13,6 +11,8 @@ namespace Raven.Server.Documents.Smuggler;
 
 public abstract class AbstractDatabaseSmugglerFactory
 {
+    public abstract DatabaseDestination CreateDestination(CancellationToken token = default);
+
     public abstract SmugglerBase CreateForRestore(
         DatabaseRecord databaseRecord,
         ISmugglerSource source,

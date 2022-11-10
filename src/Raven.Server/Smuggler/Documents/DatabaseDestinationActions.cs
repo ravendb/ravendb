@@ -888,6 +888,13 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        protected virtual ClusterTransactionCommand CreateClusterTransactionCommand(string databaseName, char identityPartsSeparator, ArraySegment<ClusterTransactionCommand.ClusterTransactionDataCommand> parsedCommands, ClusterTransactionCommand.ClusterTransactionOptions options, string raftRequestId)
+        {
+            var topology = _serverStore.LoadDatabaseTopology(_databaseName);
+
+            return new ClusterTransactionCommand(_databaseName, _identityPartsSeparator, topology, parsedCommands, options, raftRequestId);
+        }
+
         protected virtual async ValueTask<bool> SendClusterTransactionsAsync()
         {
             if (_clusterTransactionCommands.Length == 0)
@@ -897,9 +904,8 @@ namespace Raven.Server.Smuggler.Documents
 
             var raftRequestId = RaftIdGenerator.NewId();
             var options = new ClusterTransactionCommand.ClusterTransactionOptions(string.Empty, disableAtomicDocumentWrites: false, ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
-            var topology = _serverStore.LoadDatabaseTopology(_databaseName);
 
-            var clusterTransactionCommand = new ClusterTransactionCommand(_databaseName, _identityPartsSeparator, topology, parsedCommands, options, raftRequestId);
+            var clusterTransactionCommand = CreateClusterTransactionCommand(_databaseName, _identityPartsSeparator, parsedCommands, options, raftRequestId);
             clusterTransactionCommand.FromBackup = true;
 
             var clusterTransactionResult = await _serverStore.SendToLeaderAsync(clusterTransactionCommand);

@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
@@ -43,7 +44,7 @@ namespace Raven.Server.Documents.Handlers
             await using (var stream = new ArrayStream(RequestBodyStream(), "Docs"))
             using (var source = new StreamSource(stream, smugglerContext, Database.Name))
             {
-                var destination = new DatabaseDestination(Database);
+                var destination = Database.Smuggler.CreateDestination();
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -68,7 +69,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/replicateAttachments", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task Attachments()
         {
-            var destination = new DatabaseDestination(Database);
+            var destination = Database.Smuggler.CreateDestination();
             var options = new DatabaseSmugglerOptionsServerSide
             {
                 OperateOnTypes = DatabaseItemType.Attachments,

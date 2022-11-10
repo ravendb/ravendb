@@ -16,6 +16,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Voron.Data.Tables;
@@ -226,7 +227,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         private async Task RestoreFromSmugglerFileAsync(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, JsonOperationContext context)
         {
-            var destination = new DatabaseDestination(database);
+            var destination = database.Smuggler.CreateDestination();
 
             var smugglerOptions = new DatabaseSmugglerOptionsServerSide
             {

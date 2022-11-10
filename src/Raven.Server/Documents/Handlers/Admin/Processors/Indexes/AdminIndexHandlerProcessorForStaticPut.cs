@@ -24,7 +24,7 @@ internal class AdminIndexHandlerProcessorForStaticPut : AbstractAdminIndexHandle
         await using (var stream = new ArrayStream(RequestHandler.RequestBodyStream(), nameof(DatabaseItemType.Indexes)))
         using (var source = new StreamSource(stream, jsonOperationContext, RequestHandler.DatabaseName))
         {
-            var destination = new DatabaseDestination(RequestHandler.Database);
+            var destination = RequestHandler.Database.Smuggler.CreateDestination();
             var options = new DatabaseSmugglerOptionsServerSide
             {
                 OperateOnTypes = DatabaseItemType.Indexes

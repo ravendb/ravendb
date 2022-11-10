@@ -33,6 +33,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
@@ -77,7 +78,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 using (var token = CreateOperationToken())
                 using (var source = new StreamSource(stream, context, Database.Name))
                 {
-                    var destination = new DatabaseDestination(Database);
+                    var destination = Database.Smuggler.CreateDestination();
 
                     var smuggler = Database.Smuggler.Create(source, destination, context, options, token: token.Token);
 
@@ -155,7 +156,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         await using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                         using (var source = new StreamSource(stream, context, Database.Name))
                         {
-                            var destination = new DatabaseDestination(Database);
+                            var destination = Database.Smuggler.CreateDestination();
 
                             var smuggler = Database.Smuggler.Create(source, destination, context);
 
@@ -593,7 +594,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
             using (var source = new CsvStreamSource(Database, stream, context, entity, csvConfig))
             {
-                var destination = new DatabaseDestination(Database);
+                var destination = Database.Smuggler.CreateDestination();
                 var smuggler = Database.Smuggler.Create(source, destination, context, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();
@@ -614,7 +615,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (token)
             using (var source = new StreamSource(stream, context, Database.Name))
             {
-                var destination = new DatabaseDestination(Database, token.Token);
+                var destination = Database.Smuggler.CreateDestination(token.Token);
                 var smuggler = Database.Smuggler.Create(source, destination, jsonOperationContext, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();

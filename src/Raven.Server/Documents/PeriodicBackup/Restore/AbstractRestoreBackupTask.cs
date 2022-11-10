@@ -25,6 +25,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
+using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -427,7 +428,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 #pragma warning restore 618
 
             var oldOperateOnTypes = Raven.Client.Documents.Smuggler.DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
-            var destination = new DatabaseDestination(database);
+            var destination = database.Smuggler.CreateDestination();
 
             for (var i = 0; i < FilesToRestore.Count - 1; i++)
             {

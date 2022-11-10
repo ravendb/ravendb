@@ -18,6 +18,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -36,8 +37,8 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class DatabaseDestination : ISmugglerDestination
     {
-        private readonly DocumentDatabase _database;
-        private readonly CancellationToken _token;
+        protected readonly DocumentDatabase _database;
+        protected readonly CancellationToken _token;
         internal DuplicateDocsHandler _duplicateDocsHandler;
 
         private readonly Logger _log;
@@ -99,7 +100,7 @@ namespace Raven.Server.Smuggler.Documents
         public ICompareExchangeActions CompareExchange(string databaseName, JsonOperationContext context, BackupKind? backupKind, bool withDocuments)
         {
             if (withDocuments == false)
-                return CreateActions();
+                return CreateCompareExchangeActions(databaseName, context, backupKind);
 
             switch (backupKind)
             {
@@ -108,15 +109,15 @@ namespace Raven.Server.Smuggler.Documents
                     return null; // do not optimize for Import
                 case BackupKind.Full:
                 case BackupKind.Incremental:
-                    return CreateActions();
+                    return CreateCompareExchangeActions(databaseName, context, backupKind);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(backupKind), backupKind, null);
             }
+        }
 
-            DatabaseCompareExchangeActions CreateActions()
-            {
-                return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind, _token);
-            }
+        protected virtual ICompareExchangeActions CreateCompareExchangeActions(string databaseName, JsonOperationContext context, BackupKind? backupKind)
+        {
+            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind, _token);
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(string databaseName, JsonOperationContext context)

@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                     var (index, _) = await database.ServerStore.SendToLeaderAsync(editRevisions);
                     await database.RachisLogIndexNotifications.WaitForIndexNotification(index, database.ServerStore.Engine.OperationTimeout);
 
-                    var destination = new DatabaseDestination(database);
+                    var destination = database.Smuggler.CreateDestination();
 
                     var smuggler = await (database.Smuggler.Create(source, destination, context, new DatabaseSmugglerOptionsServerSide
                     {
