@@ -690,10 +690,10 @@ namespace Raven.Client.Documents.BulkInsert
         private static void ValidateTimeSeriesName(string name)
         {
             if (string.IsNullOrEmpty(name))
-                throw new ArgumentException("Time Series name must contain at least one character");
+                throw new ArgumentException("Time series name cannot be null or empty,", nameof(name));
 
             if (name.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && name.Contains('@') == false)
-                throw new ArgumentException($"Time Series name cannot start with {Constants.Headers.IncrementalTimeSeriesPrefix} prefix");
+                throw new ArgumentException($"Time Series name cannot start with {Constants.Headers.IncrementalTimeSeriesPrefix} prefix,", nameof(name));
         }
 
         public struct CountersBulkInsert
