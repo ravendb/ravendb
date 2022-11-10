@@ -9,34 +9,41 @@ input {
 	}
 }
 
+@mixin check-variant($color) {
+	.form-check-input {
+		border-color: $color;
 
-// Color switches
+		&:focus {
+			box-shadow: 0 0 $input-btn-focus-blur $input-btn-focus-width rgba($color, $input-btn-focus-color-opacity);
+		}
 
-
-@mixin switch-variant($color) {
-	
-	$form-switch-focus-color:         $color;
-	$form-switch-focus-bg-image:      url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$form-switch-focus-color}'/></svg>") !default;
-
-	$form-switch-checked-color:       $color;
-	$form-switch-checked-bg-image:    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$form-switch-checked-color}'/></svg>") !default;
-
-
-	&:focus {
-		background-image: escape-svg($form-switch-focus-bg-image);
+		&:checked {
+			background-color: $color;
+			border-color: $color;
+		}		
 	}
 
-	&:checked {	
-		background-image: escape-svg($form-switch-checked-bg-image);
+	&.form-switch {
+		.form-check-input {
+			
+			background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{rgba($text-muted, .6)}'/></svg>"));
+			
+			&:focus {
+				background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$text-emphasis}'/></svg>"));
+			}
+	
+			&:checked {				
+				background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$text-emphasis}'/></svg>"));
+			}
+		}
 	}
 }
 
 @each $color, $value in $theme-colors {
-	.form-switch-#{$color} {
-	  @include switch-variant($value);
+	.form-check-#{$color} {
+		
+		@include check-variant($value);
+		
 	}
-  }
-
-// $form-switch-color:               rgba(0, 0, 0, .25) !default;
-// $form-switch-bg-image:            url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$form-switch-color}'/></svg>") !default;
+}
 

@@ -1,12 +1,14 @@
 ﻿
     // Required
     @import "../../../node_modules/boostrap5/scss/functions";
+    
     // Default variable overrides
     @import "../scss/colors";
     @import "../scss/sizes";
+
     //@import "../scss/variables";
     @import "../scss/bs5variables";
-    @import "../scss/legacy";
+    
     // Required
     @import "../../../node_modules/boostrap5/scss/variables";
     @import "../../../node_modules/boostrap5/scss/maps";
@@ -52,6 +54,9 @@
 
     // Pages
     @import "../scss/pages/stats.scss";
+
+    // Legacy fixes
+    @import "../scss/legacy";
 }
 
 // Custom Utilities

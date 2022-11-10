@@ -301,7 +301,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                     <UncontrolledDropdown>
                                         <DropdownToggle className="dropdown-toggle" />
 
-                                        <DropdownMenu right>
+                                        <DropdownMenu end>
                                             <DropdownItem href={termsUrl}> <i className="icon-terms" /> Terms </DropdownItem>
                                         </DropdownMenu>
                                     </UncontrolledDropdown>

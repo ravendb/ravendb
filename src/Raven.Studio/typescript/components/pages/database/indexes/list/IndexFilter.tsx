@@ -9,6 +9,7 @@ import { Dropdown, DropdownItem, DropdownMenu, DropdownToggle, FormGroup, Input,
 
 interface IndexFilterStatusItemProps {
     label: string;
+    color?: string;
     toggleClass?: string;
     toggleStatus: () => void;
     checked: boolean;
@@ -16,9 +17,12 @@ interface IndexFilterStatusItemProps {
 }
 
 function IndexFilterStatusItem(props: IndexFilterStatusItemProps) {
+    
+    const switchColor = `form-check-${props.color ?? 'secondary'}`;
+
     return (
         <>
-            <FormGroup switch className="m-3 form-check-reverse {classNames(props.toggleClass)}">
+            <FormGroup switch className={classNames("m-3 form-check-reverse", switchColor, props.toggleClass)}>
                 <Input type="switch" role="switch" checked={props.checked} onChange={props.toggleStatus} />
                 <Label check>{props.label}</Label>
             </FormGroup>
@@ -187,50 +191,50 @@ export default function IndexFilter(props: IndexFilterProps) {
                         toggleStatus={() => toggleStatus("Normal")}
                         checked={filter.status.includes("Normal")}
                         label="Normal"
-                        toggleClass="toggle-success"
+                        color="success"
                     />
                     <IndexFilterStatusItem
                         toggleStatus={() => toggleStatus("ErrorOrFaulty")}
                         checked={filter.status.includes("ErrorOrFaulty")}
                         label="Error / Faulty"
-                        toggleClass="toggle-danger"
+                        color="danger"
                     />
                     <IndexFilterStatusItem
                         toggleStatus={() => toggleStatus("Stale")}
                         checked={filter.status.includes("Stale")}
                         label="Stale"
-                        toggleClass="toggle-warning"
+                        color="warning"
                     />
                     <IndexFilterStatusItem
                         toggleStatus={() => toggleStatus("RollingDeployment")}
                         checked={filter.status.includes("RollingDeployment")}
                         label="Rolling deployment"
-                        toggleClass="toggle-warning"
+                        color="warning"
                     />
                     <IndexFilterStatusItem
                         toggleStatus={() => toggleStatus("Paused")}
                         checked={filter.status.includes("Paused")}
                         label="Paused"
-                        toggleClass="toggle-warning"
+                        color="warning"
                     />
                     <IndexFilterStatusItem
                         toggleStatus={() => toggleStatus("Disabled")}
                         checked={filter.status.includes("Disabled")}
                         label="Disabled"
-                        toggleClass="toggle-warning"
+                        color="warning"
                     />
                     <IndexFilterStatusItem
                         toggleStatus={() => toggleStatus("Idle")}
                         checked={filter.status.includes("Idle")}
                         label="Idle"
-                        toggleClass="toggle-warning"
+                        color="warning"
                     />
                     <div className="bg-warning">
                         <IndexFilterStatusItem
                             toggleStatus={toggleIndexesWithErrors}
                             checked={filter.showOnlyIndexesWithIndexingErrors}
                             label="With indexing errors only"
-                            toggleClass="toggle-warning"
+                            color="warning"
                         />
                     </div>
                     <div className="bg-info">
@@ -238,7 +242,7 @@ export default function IndexFilter(props: IndexFilterProps) {
                             toggleStatus={toggleAutoRefresh}
                             checked={filter.autoRefresh}
                             label="Auto refresh"
-                            toggleClass="toggle-warning"
+                            color="warning"
                         >
                         <small>
                             Automatically refreshes the list of indexes. Might result in list flickering.
