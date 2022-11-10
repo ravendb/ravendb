@@ -405,6 +405,8 @@ namespace Raven.Client
             {
             }
 
+            public const string RvnAtomicPrefix = "rvn-atomic/";
+
             public const string ObjectFieldName = "Object";
         }
 

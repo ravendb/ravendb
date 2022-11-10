@@ -830,7 +830,8 @@ namespace Raven.Server.ServerWide
                    e is SubscriptionException ||
                    e is DatabaseDoesNotExistException ||
                    e is AuthorizationException ||
-                   e is CompareExchangeKeyTooBigException;
+                   e is CompareExchangeKeyTooBigException ||
+                   e is CompareExchangeInvalidValueFormatException;
         }
 
         private void ClusterStateCleanUp(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
