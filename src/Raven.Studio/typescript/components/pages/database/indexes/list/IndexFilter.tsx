@@ -12,7 +12,7 @@ interface IndexFilterStatusItemProps {
     toggleClass?: string;
     toggleStatus: () => void;
     checked: boolean;
-    children: any;
+    children?: any;
 }
 
 function IndexFilterStatusItem(props: IndexFilterStatusItemProps) {
