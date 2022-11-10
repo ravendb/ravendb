@@ -250,14 +250,26 @@ $gradient: linear-gradient(180deg, rgba($white, .15), rgba($white, 0)) !default;
 
 // scss-docs-start spacer-variables-maps
 $spacer: $gutter !default;
-$spacer-ratio: .618 !default;
+$spacer-ratio: 1.618 !default;
+
+$spacer-sm: $spacer / $spacer-ratio;
+$spacer-xs: $spacer-sm / $spacer-ratio;
+$spacer-xxs: $spacer-xs / $spacer-ratio;
+
+$spacer-md: $spacer * $spacer-ratio;
+$spacer-lg: $spacer-md * $spacer-ratio;
+$spacer-xl: $spacer-lg * $spacer-ratio;
+
+
 $spacers: (
-  0: 0,
-  1: $spacer / $spacer-ratio / $spacer-ratio,
-  2: $spacer / $spacer-ratio,
-  3: $spacer,
-  4: $spacer * $spacer-ratio,
-  5: $spacer * $spacer-ratio * $spacer-ratio,
+  0: 0,  
+  1: $spacer-xxs,
+  2: $spacer-xs,
+  3: $spacer-sm,
+  4: $spacer,
+  5: $spacer-md,
+  6: $spacer-lg,
+  7: $spacer-xl,
 ) !default;
 
 $negative-spacers: if($enable-negative-margins, negativify-map($spacers), null) !default;
@@ -768,8 +780,8 @@ $form-check-inline-margin-end:    1rem !default;
 
 // scss-docs-start form-switch-variables
 $form-switch-color:               rgba(0, 0, 0, .25) !default;
-$form-switch-width:               2em !default;
-$form-switch-padding-start:       $form-switch-width + .5em !default;
+$form-switch-width:               $spacer !default;
+$form-switch-padding-start:       $form-switch-width + $spacer-sm !default;
 $form-switch-bg-image:            url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$form-switch-color}'/></svg>") !default;
 $form-switch-border-radius:       $form-switch-width !default;
 $form-switch-transition:          background-position .15s ease-in-out !default;

@@ -3,3 +3,8 @@
 	color: $text-color;
 }
 
+input {
+	&[type=checkbox], &[type=radio] {
+		cursor: pointer;
+	}
+}
