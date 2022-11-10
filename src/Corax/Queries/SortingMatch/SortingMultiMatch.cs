@@ -351,7 +351,7 @@ namespace Corax.Queries
             {
                 UnmanagedSpan matchIndexEntry = searcher.GetIndexEntryPointer(matches[i]);
                 var read = typeof(TComparer1) == typeof(BoostingComparer) || 
-                           Get(new IndexEntryReader(matchIndexEntry), fieldId, matches[i], out matchesKeys[i].Value, in _comparer1);
+                           Get(new IndexEntryReader(matchIndexEntry.Address, matchIndexEntry.Length), fieldId, matches[i], out matchesKeys[i].Value, in _comparer1);
                 matchesKeys[i].Key = read ? matches[i] : -matches[i];
                 matchesKeys[i].Entry = matchIndexEntry;
 
@@ -389,7 +389,7 @@ namespace Corax.Queries
                 for (int i = 0; i < bTotalMatches; i++)
                 {
                     UnmanagedSpan matchIndexEntry = searcher.GetIndexEntryPointer(matches[i]);
-                    var read = Get(new IndexEntryReader(matchIndexEntry), fieldId, bValues[i], out bKeys[i].Value, in _comparer1);
+                    var read = Get(new IndexEntryReader(matchIndexEntry.Address, matchIndexEntry.Length), fieldId, bValues[i], out bKeys[i].Value, in _comparer1);
                     bKeys[i].Key = read ? bValues[i] : -bValues[i];
                     bKeys[i].Entry = matchIndexEntry;
                     
@@ -530,10 +530,10 @@ namespace Corax.Queries
         where TComparer : ISpatialComparer, IMatchComparer
         {
             var comparer = (TComparer)GetComparer(ref current, comparerIdx);
-            var readerX = new IndexEntryReader(item1);
+            var readerX = new IndexEntryReader(item1.Address, item1.Length);
             var readX = readerX.GetReaderFor(comparer.FieldId).Read(out (double lat, double lon) resultX);
 
-            var readerY = new IndexEntryReader(item2);
+            var readerY = new IndexEntryReader(item2.Address, item2.Length);
             var readY = readerY.GetReaderFor(comparer.FieldId).Read(out (double lat, double lon) resultY);
 
             if (readX && readY)
@@ -559,8 +559,8 @@ namespace Corax.Queries
             where TComparer : IMatchComparer
         {
             var comparer = (TComparer)GetComparer(ref current, comparerIdx);
-            var comp1Reader = new IndexEntryReader(item1);
-            var comp2Reader = new IndexEntryReader(item2);
+            var comp1Reader = new IndexEntryReader(item1.Address, item1.Length);
+            var comp2Reader = new IndexEntryReader(item2.Address, item2.Length);
 
             bool read1 = comp1Reader.GetReaderFor(comparer.FieldId).Read(out var sv1);
             bool read2 = comp2Reader.GetReaderFor(comparer.FieldId).Read(out var sv2);
@@ -585,8 +585,8 @@ namespace Corax.Queries
             where TComparer : IMatchComparer
         {
             var comparer = (TComparer)GetComparer(ref current, comparerIdx);
-            var comp1Reader = new IndexEntryReader(item1);
-            var comp2Reader = new IndexEntryReader(item2);
+            var comp1Reader = new IndexEntryReader(item1.Address, item1.Length);
+            var comp2Reader = new IndexEntryReader(item2.Address, item2.Length);
 
             bool read1, read2;
 

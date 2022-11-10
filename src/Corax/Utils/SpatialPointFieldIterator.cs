@@ -1,34 +1,32 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Corax.Utils;
 using Sparrow;
 using Sparrow.Compression;
-using Sparrow.Server.Compression;
 
 namespace Corax;
 
-public ref struct SpatialPointFieldIterator
+public unsafe struct SpatialPointFieldIterator
 {
     //<type:byte><extended_type:byte><amount_of_items:int><geohashLevel:int><geohash_ptr:int>
     //<longitudes_ptr:int><latitudes_list:double[]><longtitudes_list:double[]><geohashes_list:bytes[]>
-
 
     public readonly IndexEntryFieldType Type;
     public readonly bool IsValid;
     public readonly int Count;
     private int _currentIdx;
 
-    private readonly ReadOnlySpan<byte> _buffer;
-    private int _geohashLevel;
+    private readonly byte* _buffer;
+    private readonly int _geohashLevel;
+
     private int _geohashOffset;
     private int _latitudeOffset;
     private int _longitudeOffset;
 
-    public SpatialPointFieldIterator(ReadOnlySpan<byte> buffer, int offset)
+    public SpatialPointFieldIterator(byte* buffer, int offset)
     {
         _buffer = buffer;
-        Type = MemoryMarshal.Read<IndexEntryFieldType>(buffer.Slice(offset));
+        Type = *(IndexEntryFieldType*)(buffer + offset);
         offset += sizeof(IndexEntryFieldType);
 
 
@@ -44,17 +42,17 @@ public ref struct SpatialPointFieldIterator
             return;
         }
 
-        Count = VariableSizeEncoding.Read<ushort>(_buffer, out var length, offset);
+        Count = VariableSizeEncoding.Read<ushort>(_buffer + offset, out var length);
         offset += length;
 
-        _geohashLevel = VariableSizeEncoding.Read<ushort>(_buffer, out length, offset);
+        _geohashLevel = VariableSizeEncoding.Read<ushort>(_buffer + offset, out length);
         offset += length;
 
 
-        _geohashOffset = MemoryMarshal.Read<int>(_buffer[offset..]);
+        _geohashOffset = *(int*)(_buffer + offset);
         offset += sizeof(int);
 
-        _longitudeOffset = MemoryMarshal.Read<int>(_buffer[offset ..]);
+        _longitudeOffset = *(int*)(_buffer + offset);
         offset += sizeof(int);
 
         _latitudeOffset = offset;
@@ -74,7 +72,7 @@ public ref struct SpatialPointFieldIterator
             if (_currentIdx >= Count)
                 throw new IndexOutOfRangeException();
 
-            return _buffer.Slice(_geohashOffset, _geohashLevel);
+            return new ReadOnlySpan<byte>(_buffer + _geohashOffset, _geohashLevel);
         }
     }
 
@@ -85,7 +83,7 @@ public ref struct SpatialPointFieldIterator
             if (_currentIdx >= Count)
                 throw new IndexOutOfRangeException();
 
-            return Unsafe.ReadUnaligned<double>(ref MemoryMarshal.GetReference(_buffer[_latitudeOffset..]));
+            return *(double*)(_buffer + _latitudeOffset);
         }
     }
 
@@ -96,7 +94,7 @@ public ref struct SpatialPointFieldIterator
             if (_currentIdx >= Count)
                 throw new IndexOutOfRangeException();
 
-            return Unsafe.ReadUnaligned<double>(ref MemoryMarshal.GetReference(_buffer[_longitudeOffset..]));
+            return *(double*)(_buffer + _longitudeOffset);
         }
     }
 

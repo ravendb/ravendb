@@ -17,7 +17,7 @@ using Xunit.Abstractions;
 
 namespace FastTests.Corax;
 
-public class DynamicFieldsTests : StorageTest
+public unsafe class DynamicFieldsTests : StorageTest
 {
     public DynamicFieldsTests(ITestOutputHelper output) : base(output)
     {
@@ -39,7 +39,7 @@ public class DynamicFieldsTests : StorageTest
         
         writer.WriteDynamic(fieldName, Encoding.UTF8.GetBytes(""));
         using var __ = writer.Finish(out ByteString element);
-        IndexEntryReader reader = new(element.ToSpan());
+        IndexEntryReader reader = new(element.Ptr, element.Length);
         
         var fieldReader = reader.GetReaderFor(Encoding.UTF8.GetBytes(fieldName));
         Assert.Equal(IndexEntryFieldType.Empty, fieldReader.Type);
@@ -74,7 +74,7 @@ public class DynamicFieldsTests : StorageTest
 
         using ByteStringContext<ByteStringMemoryCache>.InternalScope __ = writer.Finish(out ByteString element);
 
-        IndexEntryReader reader = new(element.ToSpan());
+        IndexEntryReader reader = new(element.Ptr, element.Length);
         reader.GetReaderFor(0).Read(out long longValue);
         Assert.Equal(1, longValue);
         reader.GetReaderFor(Encoding.UTF8.GetBytes("Name_123")).Read(out Span<byte> value);
@@ -214,7 +214,7 @@ public class DynamicFieldsTests : StorageTest
         entryBuilder.WriteSpatialDynamic("CoordinatesIndex", _points);
         using var _ = entryBuilder.Finish(out var buffer);
 
-        var reader = new IndexEntryReader(buffer.ToSpan());
+        var reader = new IndexEntryReader(buffer.Ptr, buffer.Length);
 
         var fieldReader = reader.GetReaderFor(Encoding.UTF8.GetBytes("CoordinatesIndex"));
 

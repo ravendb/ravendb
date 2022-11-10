@@ -20,7 +20,7 @@ public class RavenDB_19283 : StorageTest
     }
 
     [Fact]
-    public void CanReadAndWriteLargeEntries()
+    public unsafe void CanReadAndWriteLargeEntries()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
@@ -43,7 +43,7 @@ public class RavenDB_19283 : StorageTest
         writer.Write(0, Encoding.UTF8.GetBytes("users/1"));
         using var ___ = writer.Finish(out var element);
 
-        var reader = new IndexEntryReader(element.ToSpan());
+        var reader = new IndexEntryReader(element.Ptr, element.Length);
         reader.GetReaderFor(0).Read(out Span<byte> id);
         var it = reader.GetReaderFor(1).ReadMany();
         while (it.ReadNext())

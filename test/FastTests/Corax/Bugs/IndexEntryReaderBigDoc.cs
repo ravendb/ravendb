@@ -30,7 +30,7 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
     }
 
     [Fact]
-    public void CanCreateAndReadBigDocument()
+    public unsafe void CanCreateAndReadBigDocument()
     {
         using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         var scope = new SingleEntryWriterScope(allocator);
@@ -53,7 +53,7 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
 
         indexEntryWriter.Finish(out var output);
 
-        new IndexEntryReader(output.ToSpan()).GetReaderFor(0).Read(out var id);
+        new IndexEntryReader(output.Ptr, output.Length).GetReaderFor(0).Read(out var id);
     }
     
     private static JArray  ReadDocFromResource(string file)
