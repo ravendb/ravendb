@@ -115,7 +115,11 @@ var orderData = {
     Quantities: { 
         Type : 'Array | Double',
         Value : this.OrderLines.map(function(l) {return l.Quantity;})
-    }
+    },
+    Products: { 
+        Type : 'Array | Text',
+        Value : this.OrderLines.map(function(l) {return l.Product;})
+    },
 };
 loadToorders(orderData);
 
@@ -129,11 +133,11 @@ for (var i = 0; i < this.OrderLines.length; i++) {
         Cost: line.Cost
     });
 }";
-
-    [RetryTheory(delayBetweenRetriesMs: 1000)]
-    [RequiresNpgSqlInlineData]
-    public void CanReplicateToArraysInPostgresSQL(MigrationProvider provider)
+    
+    [RequiresNpgSqlFact]
+    public void CanReplicateToArraysInPostgresSQL()
     {
+        MigrationProvider provider = MigrationProvider.NpgSQL;
         using (var store = GetDocumentStore())
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, dataSet: null, includeData: false))
@@ -196,10 +200,10 @@ for (var i = 0; i < this.OrderLines.length; i++) {
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(5));
+                etlDone.Wait(TimeSpan.FromMinutes(1));
                 Assert.Equal(0, errors);
 
-                AssertCounts(connectionString, 1, 2, new[] { 3, 2 });
+                AssertCounts(connectionString, 1, 2, new[] { 3, 2 }, new[] { "Milk", "Bear" });
             }
         }
     }
@@ -235,14 +239,15 @@ CREATE TABLE orders
     ""OrderLinesCount"" int  NULL,
     ""TotalCost"" int NOT NULL,
     ""City"" text NULL,
-    ""Quantities"" int[] NULL
+    ""Quantities"" int[] NULL,
+    ""Products"" text[] NULL
 );";
                 dbCommand.ExecuteNonQuery();
             }
         }
     }
 
-    private static void AssertCounts(string connectionString, long ordersCount, long orderLineCounts, int[] orderQuantities = null)
+    private static void AssertCounts(string connectionString, long ordersCount, long orderLineCounts, int[] orderQuantities = null, string[] products = null)
     {
         using (var con = new NpgsqlConnection(connectionString))
         {
@@ -259,6 +264,13 @@ CREATE TABLE orders
                     dbCommand.CommandText = "SELECT \"Quantities\" FROM orders LIMIT 1";
                     var quantities = dbCommand.ExecuteScalar();
                     Assert.Equal(orderQuantities, (int[])quantities);
+                }
+
+                if (products != null)
+                {
+                    dbCommand.CommandText = "SELECT \"Products\" FROM orders LIMIT 1";
+                    var productNames = dbCommand.ExecuteScalar();
+                    Assert.Equal(products, (string[])productNames);
                 }
             }
         }
