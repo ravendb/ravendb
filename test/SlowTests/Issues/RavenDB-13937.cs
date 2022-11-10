@@ -48,7 +48,7 @@ namespace SlowTests.Issues
 
                     var destination = new DatabaseDestination(database);
 
-                    var smuggler = await (SmugglerBase.GetDatabaseSmuggler(database, source, destination, database.Time, context, new DatabaseSmugglerOptionsServerSide
+                    var smuggler = await (database.Smuggler.Create(source, destination, context, new DatabaseSmugglerOptionsServerSide
                     {
                         OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Attachments |
                                          DatabaseItemType.Indexes,

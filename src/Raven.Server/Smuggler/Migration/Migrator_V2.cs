@@ -84,7 +84,7 @@ namespace Raven.Server.Smuggler.Migration
                     TransformScript = Options.TransformScript,
                     OperateOnTypes = Options.OperateOnTypes
                 };
-                var smuggler = SmugglerBase.GetDatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
+                var smuggler = Parameters.Database.Smuggler.Create(source, destination, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 // since we will be migrating indexes as separate task don't ensureStepsProcessed at this point
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false);
@@ -252,7 +252,7 @@ namespace Raven.Server.Smuggler.Migration
                 {
                     RemoveAnalyzers = Options.RemoveAnalyzers,
                 };
-                var smuggler = SmugglerBase.GetDatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
+                var smuggler = Parameters.Database.Smuggler.Create(source, destination, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 await smuggler.ExecuteAsync();
             }

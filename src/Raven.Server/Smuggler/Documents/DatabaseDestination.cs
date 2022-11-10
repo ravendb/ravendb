@@ -96,7 +96,7 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseKeyValueActions(_database);
         }
 
-        public ICompareExchangeActions CompareExchange(JsonOperationContext context, BackupKind? backupKind, bool withDocuments)
+        public ICompareExchangeActions CompareExchange(string databaseName, JsonOperationContext context, BackupKind? backupKind, bool withDocuments)
         {
             if (withDocuments == false)
                 return CreateActions();
@@ -115,13 +115,13 @@ namespace Raven.Server.Smuggler.Documents
 
             DatabaseCompareExchangeActions CreateActions()
             {
-                return new DatabaseCompareExchangeActions(_database, context, backupKind, _token);
+                return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind, _token);
             }
         }
 
-        public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
+        public ICompareExchangeActions CompareExchangeTombstones(string databaseName, JsonOperationContext context)
         {
-            return new DatabaseCompareExchangeActions(_database, context, backupKind: null, _token);
+            return new DatabaseCompareExchangeActions(databaseName, _database, context, backupKind: null, _token);
         }
 
         public ICounterActions Counters(SmugglerResult result)

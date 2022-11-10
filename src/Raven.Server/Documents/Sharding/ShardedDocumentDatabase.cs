@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
-using Raven.Server.Documents.Handlers.Batches.Commands;
+using Raven.Server.Documents.Sharding.Smuggler;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -28,11 +26,13 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     public ShardedDatabaseContext DatabaseContext => ServerStore.DatabasesLandlord.GetShardedDatabaseContext(ShardedDatabaseName);
 
-    public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog) : 
-        base(name, configuration, serverStore, addToInitLog)
+    public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
+        : base(name, configuration, serverStore, addToInitLog)
     {
         ShardNumber = ShardHelper.GetShardNumber(name);
         ShardedDatabaseName = ShardHelper.ToDatabaseName(name);
+
+        Smuggler = new ShardedDatabaseSmugglerFactory(this);
     }
 
     protected override byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, ShardedDatabaseName);
@@ -92,10 +92,10 @@ public class ShardedDocumentDatabase : DocumentDatabase
     {
         var batchCollector = new ShardedClusterTransactionBatchCollector(this, take);
         var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, ShardedDatabaseName, fromCount: _nextClusterCommand, take: take);
-                
+
         foreach (var command in readCommands)
         {
-            batchCollector.MaxIndex = command.Index; 
+            batchCollector.MaxIndex = command.Index;
             batchCollector.MaxCommandCount = command.PreviousCount + command.Commands.Length;
             if (command.ShardNumber == ShardNumber)
                 batchCollector.Add(command);

@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
         {
             var destination = new DatabaseDestination(RequestHandler.Database);
 
-            var smuggler = SmugglerBase.GetDatabaseSmuggler(RequestHandler.Database, source, destination, RequestHandler.Database.Time, context,
+            var smuggler = RequestHandler.Database.Smuggler.Create(source, destination, context,
                 options: new DatabaseSmugglerOptionsServerSide
                 {
                     OperateOnTypes = operateOnTypes,

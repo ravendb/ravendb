@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                 await using (var outputStream = GetOutputStream(RequestHandler.ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source);
-                    var smuggler = SmugglerBase.GetDatabaseSmuggler(RequestHandler.Database, source, destination, RequestHandler.Database.Time,
+                    var smuggler = RequestHandler.Database.Smuggler.Create(source, destination,
                         jsonOperationContext, options, onProgress: onProgress, token: token.Token);
                     return await smuggler.ExecuteAsync();
                 }

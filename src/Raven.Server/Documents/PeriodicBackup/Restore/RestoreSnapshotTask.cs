@@ -21,6 +21,7 @@ using Sparrow.Json;
 using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
+using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
@@ -247,11 +248,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         await using (var uncompressed = new GZipStream(inputStream, CompressionMode.Decompress))
                         {
                             var source = new StreamSource(uncompressed, context, database.Name);
-                            var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
-                                database.Time, context, smugglerOptions, onProgress: onProgress, token: OperationCancelToken.Token)
-                            {
-                                BackupKind = BackupKind.Incremental
-                            };
+
+                            var smuggler = database.Smuggler.CreateForRestore(databaseRecord: null, source, destination, context, smugglerOptions, result: null, onProgress, OperationCancelToken.Token);
+                            smuggler.BackupKind = BackupKind.Incremental;
 
                             await smuggler.ExecuteAsync(ensureStepsProcessed: true, isLastFile: true);
                         }

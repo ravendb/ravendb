@@ -30,7 +30,7 @@ internal class AdminIndexHandlerProcessorForStaticPut : AbstractAdminIndexHandle
                 OperateOnTypes = DatabaseItemType.Indexes
             };
 
-            var smuggler = SmugglerBase.GetDatabaseSmuggler(RequestHandler.Database, source, destination, RequestHandler.Database.Time, jsonOperationContext, options);
+            var smuggler = RequestHandler.Database.Smuggler.Create(source, destination, jsonOperationContext, options);
             await smuggler.ExecuteAsync();
         }
     }

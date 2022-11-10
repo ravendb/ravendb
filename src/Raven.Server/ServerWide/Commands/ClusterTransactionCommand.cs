@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Raven.Client;
@@ -199,13 +200,15 @@ namespace Raven.Server.ServerWide.Commands
         }
 
         public ClusterTransactionCommand(
-            string databaseName, 
+            string databaseName,
             char identityPartsSeparator,
             ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
-            ClusterTransactionOptions options, 
+            ClusterTransactionOptions options,
             string uniqueRequestId) : base(uniqueRequestId)
         {
-            DatabaseName = ShardHelper.ToDatabaseName(databaseName);
+            AssertDatabaseName(databaseName);
+
+            DatabaseName = databaseName;
             Options = options;
             CommandCreationTicks = SystemTime.UtcNow.Ticks;
 
@@ -237,11 +240,20 @@ namespace Raven.Server.ServerWide.Commands
             ClusterTransactionOptions options,
             string uniqueRequestId) : base(uniqueRequestId)
         {
+            AssertDatabaseName(databaseName);
+
             DatabaseName = databaseName;
             DatabaseRecordId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
             ClusterTransactionId = topology.ClusterTransactionIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
             Options = options;
             CommandCreationTicks = SystemTime.UtcNow.Ticks;
+        }
+
+        [Conditional("DEBUG")]
+        private static void AssertDatabaseName(string databaseName)
+        {
+            if (ShardHelper.IsShardedName(databaseName))
+                throw new InvalidOperationException($"Cannot use '{nameof(ClusterTransactionCommand)}' with a sharded database ('{databaseName}').");
         }
 
         internal static void ValidateCommands(ArraySegment<BatchRequestParser.CommandData> parsedCommands)

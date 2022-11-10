@@ -5,7 +5,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -22,15 +22,15 @@ namespace Raven.Server.Smuggler.Documents
         private readonly int _index;
         private bool _processCompareExchange;
 
-        public SingleShardDatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, 
-            JsonOperationContext context, DatabaseSmugglerOptionsServerSide options, SmugglerResult result = null, 
-            Action<IOperationProgress> onProgress = null, CancellationToken token = default) : 
-            base(database, source, destination, time, context, options, result, onProgress, token)
+        public SingleShardDatabaseSmuggler(ShardedDocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time,
+            JsonOperationContext context, DatabaseSmugglerOptionsServerSide options, SmugglerResult result = null,
+            Action<IOperationProgress> onProgress = null, CancellationToken token = default) :
+            base(database.ShardedDatabaseName, database, source, destination, time, context, options, result, onProgress, token)
         {
             _serverContextPool = database.ServerStore.ContextPool;
             _shardedRecord = _source.GetShardedDatabaseRecordAsync().Result;
             _index = ShardHelper.GetShardNumber(database.Name);
-    
+
             Initialize();
         }
 

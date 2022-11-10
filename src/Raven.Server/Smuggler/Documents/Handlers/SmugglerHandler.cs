@@ -59,7 +59,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (var processor = new SmugglerHandlerProcessorForExport(this))
                 await processor.ExecuteAsync();
         }
-        
+
         [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetImport()
         {
@@ -79,7 +79,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 {
                     var destination = new DatabaseDestination(Database);
 
-                    var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, context, options, token: token.Token);
+                    var smuggler = Database.Smuggler.Create(source, destination, context, options, token: token.Token);
 
                     var result = await smuggler.ExecuteAsync();
 
@@ -157,7 +157,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         {
                             var destination = new DatabaseDestination(Database);
 
-                            var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, context);
+                            var smuggler = Database.Smuggler.Create(source, destination, context);
 
                             var result = await smuggler.ExecuteAsync();
                             results.Enqueue(result);
@@ -594,7 +594,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (var source = new CsvStreamSource(Database, stream, context, entity, csvConfig))
             {
                 var destination = new DatabaseDestination(Database);
-                var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, context, options, result, onProgress, token.Token);
+                var smuggler = Database.Smuggler.Create(source, destination, context, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();
             }
@@ -602,9 +602,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
         public async Task DoImportInternalAsync(
             JsonOperationContext jsonOperationContext,
-            Stream stream, 
+            Stream stream,
             DatabaseSmugglerOptionsServerSide options,
-            SmugglerResult result, 
+            SmugglerResult result,
             Action<IOperationProgress> onProgress,
             long operationId,
             OperationCancelToken token)
@@ -615,7 +615,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (var source = new StreamSource(stream, context, Database.Name))
             {
                 var destination = new DatabaseDestination(Database, token.Token);
-                var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options, result, onProgress, token.Token);
+                var smuggler = Database.Smuggler.Create(source, destination, jsonOperationContext, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();
             }

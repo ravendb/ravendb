@@ -181,7 +181,8 @@ namespace Raven.Server.Smuggler.Migration
                     OperateOnTypes = Options.OperateOnTypes,
                     OperateOnDatabaseRecordTypes = Options.OperateOnDatabaseRecordTypes
                 };
-                var smuggler = new Documents.DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
+
+                var smuggler = Parameters.Database.Smuggler.Create(source, destination, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 await smuggler.ExecuteAsync();
             }

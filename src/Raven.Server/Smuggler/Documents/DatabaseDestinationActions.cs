@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
@@ -666,10 +667,10 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly DocumentDatabase _database;
 
-        public DatabaseCompareExchangeActions(DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, CancellationToken token)
-            : base(database.ServerStore, database.Name, database.IdentityPartsSeparator, context, backupKind, token)
+        public DatabaseCompareExchangeActions([NotNull] string databaseName, [NotNull] DocumentDatabase database, JsonOperationContext context, BackupKind? backupKind, CancellationToken token)
+            : base(database.ServerStore, databaseName, database.IdentityPartsSeparator, context, backupKind, token)
         {
-            _database = database;
+            _database = database ?? throw new ArgumentNullException(nameof(database));
             _documentContextHolder = new DocumentContextHolder(database);
         }
 

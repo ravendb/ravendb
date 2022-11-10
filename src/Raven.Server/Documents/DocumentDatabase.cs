@@ -30,6 +30,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Smuggler;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
@@ -131,6 +132,7 @@ namespace Raven.Server.Documents
                     _fileLocker.TryAcquireWriteLock(_logger);
                 }
 
+                Smuggler = new DatabaseSmugglerFactory(this);
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications
                 {
@@ -308,6 +310,8 @@ namespace Raven.Server.Documents
         public readonly QueryMetadataCache QueryMetadataCache;
 
         public long LastTransactionId => DocumentsStorage.Environment.CurrentReadTransactionId;
+
+        public AbstractDatabaseSmugglerFactory Smuggler { get; protected set; }
 
         protected virtual void InitializeSubscriptionStorage()
         {
@@ -1204,20 +1208,22 @@ namespace Raven.Server.Documents
                     using (var outputStream = GetOutputStream(zipStream))
                     {
                         var smugglerSource = new DatabaseSource(this, 0, 0, _logger);
-                        using (DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
+                        using (DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
-                            var smugglerDestination = new StreamDestination(outputStream, jsonOperationContext, smugglerSource);
+                            var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource);
                             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
                             {
                                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
                             };
-                            var smuggler = SmugglerBase.GetDatabaseSmugglerForBackup(this,
+
+                            var smuggler = Smuggler.Create(
                                 smugglerSource,
                                 smugglerDestination,
-                                Time,
-                                jsonOperationContext,
-                                options: databaseSmugglerOptionsServerSide,
+                                context,
+                                databaseSmugglerOptionsServerSide,
+                                result: null,
+                                onProgress: null,
                                 token: cancellationToken);
 
                             smugglerResult = smuggler.ExecuteAsync().Result;

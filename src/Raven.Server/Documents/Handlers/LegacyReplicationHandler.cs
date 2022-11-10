@@ -39,9 +39,9 @@ namespace Raven.Server.Documents.Handlers
         public async Task Documents()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext smugglerContext))
             await using (var stream = new ArrayStream(RequestBodyStream(), "Docs"))
-            using (var source = new StreamSource(stream, jsonOperationContext, Database.Name))
+            using (var source = new StreamSource(stream, smugglerContext, Database.Name))
             {
                 var destination = new DatabaseDestination(Database);
                 var options = new DatabaseSmugglerOptionsServerSide
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
                     OperateOnTypes = DatabaseItemType.Documents
                 };
 
-                var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options);
+                var smuggler = Database.Smuggler.Create(source, destination, smugglerContext, options);
                 var result = await smuggler.ExecuteAsync();
 
                 var replicationSource = GetSourceReplicationInformation(context, GetRemoteServerInstanceId(), out var documentId);

@@ -560,9 +560,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         protected async Task ImportSingleBackupFileAsync(DocumentDatabase database,
-            Action<IOperationProgress> onProgress, RestoreResult restoreResult,
-            string filePath, JsonOperationContext context,
-            DatabaseDestination destination, DatabaseSmugglerOptionsServerSide options, bool isLastFile,
+            Action<IOperationProgress> onProgress,
+            RestoreResult restoreResult,
+            string filePath, 
+            JsonOperationContext context,
+            DatabaseDestination destination, 
+            DatabaseSmugglerOptionsServerSide options, 
+            bool isLastFile,
             Action<IndexDefinitionAndType> onIndexAction = null,
             Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
@@ -571,8 +575,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             await using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
             using (var source = new StreamSource(gzipStream, context, database.Name))
             {
-                var smuggler = SmugglerBase.GetDatabaseSmugglerForRestore(database, RestoreSettings.DatabaseRecord, source, destination,
-                    database.Time, context, options, restoreResult, onProgress);
+                var smuggler = database.Smuggler.CreateForRestore(RestoreSettings.DatabaseRecord, source, destination, context, options, restoreResult, onProgress);
 
                 smuggler.BackupKind = BackupUtils.IsFullBackup(Path.GetExtension(filePath)) ? BackupKind.Full : BackupKind.Incremental;
                 smuggler.OnIndexAction = onIndexAction;

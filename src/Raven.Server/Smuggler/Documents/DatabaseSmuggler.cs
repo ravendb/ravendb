@@ -35,8 +35,8 @@ namespace Raven.Server.Smuggler.Documents
             return id.Contains(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
         }
 
-        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context, DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default) : 
-            base(source, destination, time, context, options, result, onProgress, token)
+        public DatabaseSmuggler(string databaseName, DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context, DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default) :
+            base(databaseName, source, destination, time, context, options, result, onProgress, token)
         {
             _database = database;
             Debug.Assert((source is DatabaseSource && destination is DatabaseDestination) == false,
@@ -46,10 +46,10 @@ namespace Raven.Server.Smuggler.Documents
 
         public override SmugglerPatcher CreatePatcher() => new DatabaseSmugglerPatcher(_options, _database);
 
-        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result)
+        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result, string databaseName)
         {
             result.CompareExchange.Start();
-            await using (var actions = _destination.CompareExchange(_context, BackupKind, withDocuments: false))
+            await using (var actions = _destination.CompareExchange(databaseName, _context, BackupKind, withDocuments: false))
             {
                 await foreach (var kvp in _source.GetCompareExchangeValuesAsync())
                 {
@@ -60,11 +60,11 @@ namespace Raven.Server.Smuggler.Documents
             return result.CompareExchange;
         }
 
-        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result)
+        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result, string databaseName)
         {
             result.CompareExchangeTombstones.Start();
 
-            await using (var actions = _destination.CompareExchangeTombstones(_context))
+            await using (var actions = _destination.CompareExchangeTombstones(databaseName, _context))
             {
                 await foreach (var key in _source.GetCompareExchangeTombstonesAsync())
                 {
@@ -188,13 +188,13 @@ namespace Raven.Server.Smuggler.Documents
 
             try
             {
-                        await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value, null);
+                await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value, null);
                 result.CompareExchange.LastEtag = kvp.Index;
             }
             catch (Exception e)
             {
                 result.CompareExchange.ErroredCount++;
-                        result.AddError($"Could not write compare exchange with key: '{kvp.Key.Key}': {e.Message}");
+                result.AddError($"Could not write compare exchange with key: '{kvp.Key.Key}': {e.Message}");
             }
         }
 
@@ -219,7 +219,7 @@ namespace Raven.Server.Smuggler.Documents
                 result.AddError($"Could not write compare exchange '{key}: {e.Message}");
             }
         }
-        
+
         protected async ValueTask WriteIndexAsync(SmugglerResult result, IndexDefinition indexDefinition, IIndexActions actions)
         {
             try

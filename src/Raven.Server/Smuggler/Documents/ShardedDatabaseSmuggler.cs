@@ -13,8 +13,6 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.Sharding;
-using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -41,7 +39,7 @@ namespace Raven.Server.Smuggler.Documents
             SmugglerResult result,
             Action<IOperationProgress> onProgress = null,
             CancellationToken token = default) :
-            base(source, destination, server.Server.Time, jsonOperationContext, options, result, onProgress, token)
+            base(databaseRecord.DatabaseName, source, destination, server.Server.Time, jsonOperationContext, options, result, onProgress, token)
         {
             _databaseRecord = databaseRecord;
             _server = server;
@@ -214,11 +212,11 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result)
+        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result, string databaseName)
         {
             result.CompareExchange.Start();
 
-            await using (var destinationActions = _destination.CompareExchange(_context, BackupKind, withDocuments: false))
+            await using (var destinationActions = _destination.CompareExchange(databaseName, _context, BackupKind, withDocuments: false))
             await using (var actions = new ShardedDatabaseCompareExchangeActions(_server, _databaseRecord, _context, BackupKind, _token))
             {
                 await foreach (var kvp in _source.GetCompareExchangeValuesAsync())
@@ -259,9 +257,9 @@ namespace Raven.Server.Smuggler.Documents
             return result.CompareExchange;
         }
 
-        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result)
+        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result, string databaseName)
         {
-            await using (var destinationActions = _destination.CompareExchangeTombstones(_context))
+            await using (var destinationActions = _destination.CompareExchangeTombstones(databaseName, _context))
             await using (var actions = new ShardedDatabaseCompareExchangeActions(_server, _databaseRecord, _context, BackupKind, _token))
             {
                 await foreach (var kvp in _source.GetCompareExchangeTombstonesAsync())
