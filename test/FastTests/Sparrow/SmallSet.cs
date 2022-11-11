@@ -121,5 +121,93 @@ namespace FastTests.Sparrow
                 Assert.Equal(i, iv);
             }
         }
+
+        [Fact]
+        public void SetSingleItem()
+        {
+            var ilSet = new SmallSet<int, long>(16);
+            ilSet.Add(10, 10);
+            Assert.True(ilSet.TryGetValue(10, out var iv));
+            Assert.Equal(10, iv);
+
+
+            var llSet = new SmallSet<long, long>(16);
+            llSet.Add(10, 10);
+            Assert.True(llSet.TryGetValue(10, out var lv));
+            Assert.Equal(10, lv);
+        }
+
+        [Fact]
+        public void SetSingleLane()
+        {
+            var ilSet = new SmallSet<int, long>(128);
+
+            for (int i = 0; i < 8; i++)
+                ilSet.Add(i, i);
+
+            for (int i = 0; i < 8; i++)
+            {
+                Assert.True(ilSet.TryGetValue(i, out var iv));
+                Assert.Equal(i, iv);
+            }
+
+            var llSet = new SmallSet<long, long>(128);
+            for (int i = 0; i < 8; i++)
+                llSet.Add(i, i);
+
+            for (int i = 0; i < 8; i++)
+            {
+                Assert.True(llSet.TryGetValue(i, out var lv));
+                Assert.Equal(i, lv);
+            }
+        }
+
+        [Fact]
+        public void SetSingleLaneWithOverflow()
+        {
+            var ilSet = new SmallSet<int, long>(8);
+
+            for (int i = 0; i < 16; i++)
+                ilSet.Add(i, i);
+
+            for (int i = 0; i < 16; i++)
+            {
+                Assert.True(ilSet.TryGetValue(i, out var iv));
+                Assert.Equal(i, iv);
+            }
+
+            var llSet = new SmallSet<long, long>(8);
+            for (int i = 0; i < 16; i++)
+                llSet.Add(i, i);
+
+            for (int i = 0; i < 16; i++)
+            {
+                Assert.True(llSet.TryGetValue(i, out var lv));
+                Assert.Equal(i, lv);
+            }
+        }
+
+        [Fact]
+        public void SetDuplicateItems()
+        {
+            var ilSet = new SmallSet<int, long>();
+            for (int i = 0; i < 8; i++)
+                ilSet.Add(i, i);
+
+            Assert.True(ilSet.TryGetValue(7, out var iv));
+            Assert.Equal(7, iv);
+
+            for (int i = 0; i < 8; i++)
+                ilSet.Add(7, -1);
+
+            for (int i = 0; i < 7; i++)
+            {
+                Assert.True(ilSet.TryGetValue(i, out iv));
+                Assert.Equal(i, iv);
+            }
+
+            Assert.True(ilSet.TryGetValue(7, out iv));
+            Assert.Equal(-1, iv);
+        }
     }
 }
