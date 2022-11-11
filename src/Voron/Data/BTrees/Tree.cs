@@ -31,8 +31,8 @@ namespace Voron.Data.BTrees
 
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private Dictionary<Slice, FixedSizeTree<double>> _fixedSizeTreesForDouble;
-        private Dictionary<Slice, CompactTree> _compactTrees;
-        private WeakSliceSmallSet<CompactTree> _compactTreesLocator;
+
+        private SliceSmallSet<CompactTree> _compactTreesLocator;
 
         public event Action<long, PageFlags> PageModified;
         public event Action<long, PageFlags> PageFreed;
@@ -1304,9 +1304,9 @@ namespace Voron.Data.BTrees
 
         internal void PrepareForCommit()
         {
-            if (_compactTrees != null)
+            if (_compactTreesLocator != null)
             {
-                foreach (var ct in _compactTrees.Values)
+                foreach (var ct in _compactTreesLocator.Values)
                     ct.PrepareForCommit();
             }
         }
@@ -1407,14 +1407,13 @@ namespace Voron.Data.BTrees
         
         public CompactTree CompactTreeFor(Slice key)
         {
-            if (_compactTrees == null)
+            if (_compactTreesLocator == null)
             {
                 // Since the Weak Small Set will lose items if more than 128 items gets added,
                 // we will still be adding the compact trees to a dictionary; however, since
                 // the dictionary will get searched many times over the lifetime of the transaction
                 // the overhead caused by storing in two different data structures gets amortized.
-                _compactTrees = new Dictionary<Slice, CompactTree>(SliceComparer.Instance);
-                _compactTreesLocator = new WeakSliceSmallSet<CompactTree>(128);
+                _compactTreesLocator = new SliceSmallSet<CompactTree>(128);
             }
             
             if (_compactTreesLocator.TryGetValue(key, out var compactTree) == false)
@@ -1424,7 +1423,6 @@ namespace Voron.Data.BTrees
                     return null;
 
                 var keyClone = key.Clone(_llt.Allocator);
-                _compactTrees[keyClone] = compactTree;
                 _compactTreesLocator.Add(keyClone, compactTree);
             }
 
