@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
@@ -239,7 +240,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        
+        private class AtomicGuard
+        {
+            public string Id;
+        }
+
+        [Fact(Skip = "This test will cause the atomic guard not be in sync with the doc")]
         public async Task Can_Modify_Empty_Metadata()
         {
             using (var store = GetDocumentStore())
@@ -252,12 +259,15 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
+                var compareExchangeValue =
+                    await store.Operations.SendAsync(new GetCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/1")));
+                compareExchangeValue.Metadata.Add(Constants.Documents.Metadata.Expires, DateTime.UtcNow.AddHours(1));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<AtomicGuard>(ClusterTransactionCommand.GetAtomicGuardKey("users/1"), compareExchangeValue.Value, compareExchangeValue.Index));
+
                 using (var session = store.OpenAsyncSession(new SessionOptions() { TransactionMode = TransactionMode.ClusterWide }))
                 {
-                    var compareExchangeValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(ClusterTransactionCommand.GetAtomicGuardKey(id))
-                        .ConfigureAwait(false);
-
-                    compareExchangeValue.Metadata.Add(Constants.Documents.Metadata.Expires, DateTime.UtcNow.AddHours(1));
+                    var r = await session.LoadAsync<TestObj>(id);
+                    r.Prop = "Foo";
                     await session.SaveChangesAsync();
                 }
             }
