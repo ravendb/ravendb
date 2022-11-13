@@ -547,7 +547,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_options.IncludeArtificial == false && 
                         tombstone.Flags.Contain(DocumentFlags.Artificial) && 
-                        tombstone.Flags.Contain(DocumentFlags.FromIndex))
+                        tombstone.Flags.Contain(DocumentFlags.FromResharding) == false)
                     {
                         continue;
                     }

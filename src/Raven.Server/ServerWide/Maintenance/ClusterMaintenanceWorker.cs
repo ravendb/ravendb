@@ -247,7 +247,6 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             if (rawRecord.IsSharded)
                             {
-
                                 if (currentMigration != null)
                                 {
                                     if (report.ReportPerBucket.TryGetValue(currentMigration.Bucket, out var bucketReport) == false)
