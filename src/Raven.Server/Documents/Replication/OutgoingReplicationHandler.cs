@@ -1168,6 +1168,8 @@ namespace Raven.Server.Documents.Replication
             return replicationBatchReply;
         }
 
+        private AlertRaised _missingAttachmentsAlert;
+
         private void RaiseAlertAndThrowMissingAttachmentException(string msg)
         {
             if (_log.IsInfoEnabled)
@@ -1176,12 +1178,13 @@ namespace Raven.Server.Documents.Replication
                     $"Received reply for replication batch from {Destination.FromString()}. Error string received = {msg}");
             }
 
-            _parent._server.NotificationCenter.Add(AlertRaised.Create(
+            _missingAttachmentsAlert = AlertRaised.Create(
                 _database.Name,
                 "Replication delay due to a missing attachments loop",
                 msg,
                 AlertType.Replication,
-                NotificationSeverity.Error));
+                NotificationSeverity.Error);
+            _parent._server.NotificationCenter.Add(_missingAttachmentsAlert);
 
             throw new MissingAttachmentException(msg);
         }
@@ -1277,7 +1280,9 @@ namespace Raven.Server.Documents.Replication
         private void OnSuccessfulReplication()
         {
             SuccessfulReplication?.Invoke(this);
+            _parent._server.NotificationCenter.Dismiss(_missingAttachmentsAlert?.Id);
             MissingAttachmentsRetries = 0;
+            _missingAttachmentsAlert = null;
         }
 
         internal TestingStuff ForTestingPurposes;
