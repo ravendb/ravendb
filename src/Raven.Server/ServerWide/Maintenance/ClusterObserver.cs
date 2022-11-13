@@ -74,9 +74,10 @@ namespace Raven.Server.ServerWide.Maintenance
             _supervisorSamplePeriod = config.SupervisorSamplePeriod.AsTimeSpan;
             _stabilizationTime = config.StabilizationTime.AsTimeSpan;
             _stabilizationTimeMs = (long)config.StabilizationTime.AsTimeSpan.TotalMilliseconds;
-            
-            _databaseTopologyUpdater = new DatabaseTopologyUpdater(server, engine, config, clusterObserverStartTime: DateTime.UtcNow, _observerLogger);
-            _orchestratorTopologyUpdater = new OrchestratorTopologyUpdater(server, engine, config, clusterObserverStartTime: DateTime.UtcNow, _observerLogger);
+
+            var timenow = DateTime.UtcNow;
+            _databaseTopologyUpdater = new DatabaseTopologyUpdater(server, engine, config, clusterObserverStartTime: timenow, _observerLogger);
+            _orchestratorTopologyUpdater = new OrchestratorTopologyUpdater(server, engine, config, clusterObserverStartTime: timenow, _observerLogger);
 
             _observe = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
             {
@@ -211,6 +212,9 @@ namespace Raven.Server.ServerWide.Maintenance
                                 ObserverIteration = _iteration
                             };
 
+                            if (SkipAnalyzingDatabaseGroup(state, currentLeader, now))
+                                continue;
+                            
                             List<DeleteDatabaseCommand> unneededDeletions = null; // database deletions are irrelevant in orchestrator topology changes
                             var updateReason = _orchestratorTopologyUpdater.Update(context, state, ref unneededDeletions);
                             

@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -45,14 +47,13 @@ namespace Raven.Server.ServerWide.Commands
                 {
                     if (record.IsSharded == false)
                     {
-                        RemoveDatabaseFromSingleNode(record, record.Topology, node, string.Empty, deletionInProgressStatus);
+                        RemoveDatabaseFromSingleNode(record, record.Topology, node, shardNumber: null, deletionInProgressStatus);
                     }
                     else
                     {
                         for (int i = 0; i < record.Sharding.Shards.Length; i++)
                         {
-                            RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[i], node, $"${i}", deletionInProgressStatus);
-
+                            RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[i], node, i, deletionInProgressStatus); //TODO stav: might need to remove
                         }
                     }
                 }
@@ -61,39 +62,33 @@ namespace Raven.Server.ServerWide.Commands
             {
                 if (record.IsSharded == false)
                 {
-                    RemoveDatabaseFromAllNodes(record, record.Topology, string.Empty, deletionInProgressStatus);
+                    RemoveDatabaseFromAllNodes(record, record.Topology, shardNumber: null, deletionInProgressStatus);
                 }
                 else
                 {
                     for (var i = 0; i < record.Sharding.Shards.Length; i++)
                     {
-                        record.Sharding.Shards[i] = RemoveDatabaseFromAllNodes(record, record.Sharding.Shards[i], $"${i}", deletionInProgressStatus);
+                        record.Sharding.Shards[i] = RemoveDatabaseFromAllNodes(record, record.Sharding.Shards[i], i, deletionInProgressStatus);
                     }
-
-                    record.Sharding.Orchestrator.Topology = new OrchestratorTopology()
-                    {
-                        Stamp = record.Topology?.Stamp, 
-                        ReplicationFactor = 0
-                    };
                 }
             }
         }
 
         
-        private DatabaseTopology RemoveDatabaseFromAllNodes(DatabaseRecord record, DatabaseTopology topology, string shardNumber, DeletionInProgressStatus deletionInProgressStatus)
+        private DatabaseTopology RemoveDatabaseFromAllNodes(DatabaseRecord record, DatabaseTopology topology, int? shardNumber, DeletionInProgressStatus deletionInProgressStatus)
         {
             var allNodes = topology.AllNodes.Distinct();
 
             foreach (var node in allNodes)
             {
                 if (ClusterNodes.Contains(node))
-                    record.DeletionInProgress[node + shardNumber] = deletionInProgressStatus;
+                    record.DeletionInProgress[DatabaseTopology.GetKeyForDeletionInProgress(node, shardNumber)] = deletionInProgressStatus;
             }
 
             return new DatabaseTopology {Stamp = record.Topology?.Stamp, ReplicationFactor = 0};
         }
 
-        private void RemoveDatabaseFromSingleNode(DatabaseRecord record, DatabaseTopology topology, string node, string shardNumber, DeletionInProgressStatus deletionInProgressStatus)
+        private void RemoveDatabaseFromSingleNode(DatabaseRecord record, DatabaseTopology topology, string node, int? shardNumber, DeletionInProgressStatus deletionInProgressStatus)
         {
             if (topology.RelevantFor(node) == false)
             {
@@ -110,7 +105,7 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             if (ClusterNodes.Contains(node))
-                record.DeletionInProgress[node + shardNumber] = deletionInProgressStatus;
+                record.DeletionInProgress[DatabaseTopology.GetKeyForDeletionInProgress(node, shardNumber)] = deletionInProgressStatus;
         }
         public override void FillJson(DynamicJsonValue json)
         {

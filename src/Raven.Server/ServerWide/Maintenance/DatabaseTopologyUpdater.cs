@@ -186,7 +186,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     return $"None of '{dbName}' nodes are responding, promoting {node}";
                 }
 
-                if (databaseTopology.EntireDatabasePendingDeletion(deletionInProgress))
+                if (databaseTopology.EntireDatabasePendingDeletion(deletionInProgress, state.RawDatabase.Sharding?.Shards))
                 {
                     return null; // We delete the whole database.
                 }
@@ -521,7 +521,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         break;
 
                     case ClusterNodeStatusReport.ReportStatus.OutOfCredits:
-                        reason = $"Node in rehabilitation because it run out of CPU credits.{Environment.NewLine}";
+                        reason = $"Node in rehabilitation because it ran out of CPU credits.{Environment.NewLine}";
                         break;
 
                     case ClusterNodeStatusReport.ReportStatus.EarlyOutOfMemory:
@@ -555,7 +555,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 reason += $". {dbStats.Error}";
             }
 
-            RemoveNodeFromRehab(topology, member, reason, GetStatus(nodeStats));
+            MoveNodeToRehab(topology, member, reason, GetStatus(nodeStats));
 
             _logger.Log($"Node {member} of database '{dbName}': {reason}", iteration, database: dbName);
 
@@ -579,7 +579,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return DatabasePromotionStatus.NotResponding;
         }
 
-        private void RemoveNodeFromRehab(DatabaseTopology topology, string member, string reason, DatabasePromotionStatus promotionStatus)
+        private void MoveNodeToRehab(DatabaseTopology topology, string member, string reason, DatabasePromotionStatus promotionStatus)
         {
             if (topology.Rehabs.Contains(member) == false)
             {

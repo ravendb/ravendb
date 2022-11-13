@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.DirectoryServices.ActiveDirectory;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Routing;
@@ -16,7 +12,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 
 namespace Raven.Server.Web.System
 {
@@ -55,10 +50,9 @@ namespace Raven.Server.Web.System
                     if (topology.RelevantFor(node))
                         throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
 
-                    var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
-                                                databaseRecord.DeletionInProgress.TryGetValue(node, out var deletionInProgress) &&
-                                                deletionInProgress != DeletionInProgressStatus.No;
-                    if (databaseIsBeenDeleted)
+                    var databaseIsBeingDeleted = databaseRecord.DeletionInProgress != null && 
+                                                 topology.EntireDatabasePendingDeletion(databaseRecord.DeletionInProgress, databaseRecord.Sharding.Shards);
+                    if (databaseIsBeingDeleted)
                         throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because it is currently being deleted from node '{node}'");
 
                     var url = clusterTopology.GetUrlFromTag(node);

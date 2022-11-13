@@ -154,11 +154,30 @@ namespace Raven.Client.ServerWide
             NodesModifiedAt = topology.NodesModifiedAt;
         }
         
-        public override bool EntireDatabasePendingDeletion(Dictionary<string, DeletionInProgressStatus> deletionInProgress)
+        public override bool EntireDatabasePendingDeletion(Dictionary<string, DeletionInProgressStatus> deletionInProgress, DatabaseTopology[] shardsTopologies)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-                "Handle checking all shard databases are being deleted");
-            return false;
+            if (deletionInProgress.Count == 0)
+                return false;
+
+            if (shardsTopologies.Sum(x => x.Count) == 0)
+                return true;
+
+            int shard = 0;
+            foreach (var shardTopology in shardsTopologies)
+            {
+                foreach (var nodeWithShard in shardTopology.AllNodes)
+                {
+                    if (deletionInProgress.TryGetValue(GetKeyForDeletionInProgress(nodeWithShard, shard), out var deletionStatus) == false || deletionStatus == DeletionInProgressStatus.No)
+                    {
+                        return false;
+                    }
+                }
+
+                shard++;
+            }
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal,
+                "Handle case where shard numbers are not consecutive");
+            return true;
         }
     }
 
@@ -237,6 +256,14 @@ namespace Raven.Client.ServerWide
             return Members.Contains(nodeTag) ||
                    Rehabs.Contains(nodeTag) ||
                    Promotables.Contains(nodeTag);
+        }
+
+        public static string GetKeyForDeletionInProgress(string node, int? shard)
+        {
+            if (shard.HasValue == false)
+                return node;
+
+            return $"{node}${shard.Value}";
         }
 
         public List<ReplicationNode> GetDestinations(string myTag, string databaseName, Dictionary<string, DeletionInProgressStatus> deletionInProgress,
@@ -318,7 +345,7 @@ namespace Raven.Client.ServerWide
             return destinations;
         }
 
-        public virtual bool EntireDatabasePendingDeletion(Dictionary<string, DeletionInProgressStatus> deletionInProgress)
+        public virtual bool EntireDatabasePendingDeletion(Dictionary<string, DeletionInProgressStatus> deletionInProgress, DatabaseTopology[] _)
         {
             if (Count == 0)
                 return true;
@@ -327,7 +354,7 @@ namespace Raven.Client.ServerWide
             {
                 foreach (var node in AllNodes)
                 {
-                    if (deletionInProgress.ContainsKey(node) == false)
+                    if (deletionInProgress.TryGetValue(node, out var deletionStatus) == false || deletionStatus == DeletionInProgressStatus.No)
                         return false;
                 }
                 return true;
