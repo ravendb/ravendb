@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -391,13 +392,87 @@ namespace SlowTests.Sharding.Backup
                 var dirs = Directory.GetDirectories(backupPath).ToList();
                 Assert.Equal(cluster.Nodes.Count, dirs.Count);
 
-                var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backupTaskId));
+                var status = store.Maintenance.Send(new GetShardedPeriodicBackupStatusOperation(backupTaskId));
 
-                Assert.Equal(3, status.StatusPerShard.Length);
-                foreach (var shardBackupStatus in status.StatusPerShard)
+                Assert.Equal(3, status.Statuses.Length);
+                foreach (var shardBackupStatus in status.Statuses)
                 {
                     Assert.NotNull(shardBackupStatus);
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task ShouldThrowOnAttemptToGetShardedBackupStatusFromNonShardedDb()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new User(), $"users/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                var dirs = Directory.GetDirectories(backupPath).ToList();
+                Assert.Equal(cluster.Nodes.Count, dirs.Count);
+
+                var op = store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId));
+
+                var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await op);
+
+                Assert.Contains($"Database is sharded, can't use {nameof(GetPeriodicBackupStatusOperation)}, " +
+                                $"use {nameof(GetShardedPeriodicBackupStatusOperation)} instead", ex.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task ShouldThrowOnAttemptToGetNonShardedBackupStatusFromShardedDb()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                WaitForUserToContinueTheTest(store);
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new User(), $"users/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var waitHandles = await Backup.WaitForBackupToComplete(store);
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                var dirs = Directory.GetDirectories(backupPath).ToList();
+                Assert.Equal(1, dirs.Count);
+
+                var op = store.Maintenance.SendAsync(new GetShardedPeriodicBackupStatusOperation(backupTaskId));
+
+                var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () => await op);
+
+                Assert.Contains($"Database is not sharded, can't use {nameof(GetShardedPeriodicBackupStatusOperation)}, " +
+                                $"use {nameof(GetPeriodicBackupStatusOperation)} instead", ex.Message);
             }
         }
 
