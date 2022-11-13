@@ -72,45 +72,46 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
         var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
         var merged = context.GetChangeVector(string.Empty);
-        foreach (var result in GetItemsByBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], bucket, 0))
+
+        if (GetLastItemInBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], bucket, out var reader))
         {
-            var documentCv = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(documentCv, context);
+            var lastDocCv = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref reader);
+            merged = merged.MergeWith(lastDocCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, 0))
+        if (GetLastItemInBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, out reader))
         {
-            var tombstoneCv = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(tombstoneCv, context);
+            var lastTombstoneCv = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref reader);
+            merged = merged.MergeWith(lastTombstoneCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, 0))
+        if (GetLastItemInBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, out reader))
         {
-            var counterCv = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(counterCv, context);
+            var lastCounterCv = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref reader);
+            merged = merged.MergeWith(lastCounterCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, 0))
+        if (GetLastItemInBucket(context.Allocator, table, ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, out reader))
         {
-            var conflictCv = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(conflictCv, context);
+            var lastConflictCv = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref reader);
+            merged = merged.MergeWith(lastConflictCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, 0))
+        if (GetLastItemInBucket(context.Allocator, table, RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, out reader))
         {
-            var revisionCv = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(revisionCv, context);
+            var lastRevisionCv = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref reader);
+            merged = merged.MergeWith(lastRevisionCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndEtagSlice], bucket, 0))
+        if (GetLastItemInBucket(context.Allocator, table, AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndEtagSlice], bucket, out reader))
         {
-            var attachmentCv = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(attachmentCv, context);
+            var lastAttachmentCv = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref reader);
+            merged = merged.MergeWith(lastAttachmentCv, context);
+}
+        if (GetLastItemInBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, out reader))
+        {
+            var lastTimeSeriesCv = TableValueToChangeVector(context, (int)TimeSeriesTable.ChangeVector, ref reader);
+            merged = merged.MergeWith(lastTimeSeriesCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, 0))
+        if (GetLastItemInBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, out reader))
         {
-            var tsCv = TableValueToChangeVector(context, (int)TimeSeriesTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(tsCv, context);
-        }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, 0))
-        {
-            var deletedRangeCv = TableValueToChangeVector(context, (int)DeletedRangeTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(deletedRangeCv, context);
+            var lastDeleteRangeCv = TableValueToChangeVector(context, (int)DeletedRangeTable.ChangeVector, ref reader);
+            merged = merged.MergeWith(lastDeleteRangeCv, context);
         }
 
         return merged;
@@ -157,6 +158,23 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         }
     }
 
+    public static bool GetLastItemInBucket(ByteStringContext allocator, Table table,
+        TableSchema.DynamicKeyIndexDef dynamicIndex, int bucket, out TableValueReader reader)
+    {
+        reader = default;
+        using (GetBucketAndEtagByteString(allocator, bucket, etag : long.MaxValue, out var buffer))
+        using (Slice.External(allocator, buffer, buffer.Length, out var keySlice))
+        using (Slice.External(allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+        {
+            var holder = table.SeekOneBackwardFrom(dynamicIndex, prefix, keySlice);
+            if (holder == null)
+                return false;
+
+            reader = holder.Reader;
+            return true;
+        }
+    }
+
     public const long MaxDocumentsToDeleteInBucket = 1024;
 
     public long DeleteBucket(DocumentsOperationContext context, int bucket, ChangeVector upTo)
@@ -178,10 +196,10 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
             if (HasDocumentExtensionWithGreaterChangeVector(context, document.LowerId, upTo)) 
                 break;
             
-            Delete(context, document.Id, document.Flags | DocumentFlags.Artificial);
+            Delete(context, document.Id, flags: DocumentFlags.Artificial | DocumentFlags.FromResharding);
 
             // delete revisions for document
-            RevisionsStorage.DeleteRevisionsFor(context, document.Id, artificial: true);
+            RevisionsStorage.DeleteRevisionsFor(context, document.Id, flags: DocumentFlags.Artificial | DocumentFlags.FromResharding);
 
             numOfDeletions++;
         }
@@ -191,47 +209,73 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     private void MarkTombstonesAsArtificial(DocumentsOperationContext context, int bucket)
     {
+        long lastProcessedEtag = 0;
+        bool hasMore = true, collectionNamesUpdated = false;
+        var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache, StringComparer.OrdinalIgnoreCase);
         var readTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
-        foreach (var result in GetItemsByBucket(context.Allocator, readTable, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, etag: 0))
+        while (hasMore)
         {
-            var tombstone = TableValueToTombstone(context, ref result.Result.Reader);
-            if (tombstone.Flags.Contain(DocumentFlags.Artificial))
-                continue;
-
-            var collection = TableValueToId(context, (int)TombstoneTable.Collection, ref result.Result.Reader);
-            if (_collectionsCache.TryGetValue(collection, out var collectionName) == false)
+            hasMore = false;
+            foreach (var result in GetItemsByBucket(context.Allocator, readTable, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, etag: lastProcessedEtag))
             {
-                collectionName = new CollectionName(collection);
-                _collectionsCache.TryAdd(collection, collectionName);
-            }
-            
-            var writeTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                var tombstone = TableValueToTombstone(context, ref result.Result.Reader);
+                if (tombstone.Flags.Contain(DocumentFlags.Artificial) && tombstone.Flags.Contain(DocumentFlags.FromResharding))
+                    continue;
 
-            var newEtag = GenerateNextEtag();
-            var cv = ChangeVector.Merge(context.LastDatabaseChangeVector, context.GetChangeVector(tombstone.ChangeVector), context);
-            var flags = tombstone.Flags | DocumentFlags.Artificial;
+                var collection = TableValueToId(context, (int)TombstoneTable.Collection, ref result.Result.Reader);
+                if (collectionNames.TryGetValue(collection, out var collectionName) == false)
+                {
+                    collectionNames[collection] = collectionName = new CollectionName(collection);
+                    collectionNamesUpdated = true;
+                }
 
-            using (Slice.From(context.Allocator, cv, out var cvSlice))
-            using (Slice.External(context.Allocator, tombstone.LowerId, out var keySlice))
-            using (DocumentIdWorker.GetStringPreserveCase(context, collection, out Slice collectionSlice))
-            using (writeTable.Allocate(out TableValueBuilder tvb))
-            {
-                var clonedKey = keySlice.Clone(context.Allocator);
+                var writeTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
 
-                tvb.Add(clonedKey.Content.Ptr, clonedKey.Size);
-                tvb.Add(Bits.SwapBytes(newEtag));
-                tvb.Add(Bits.SwapBytes(tombstone.DeletedEtag));
-                tvb.Add(tombstone.TransactionMarker);
-                tvb.Add((byte)tombstone.Type);
-                tvb.Add(collectionSlice);
-                tvb.Add((int)flags);
-                tvb.Add(cvSlice.Content.Ptr, cvSlice.Size);
-                tvb.Add(tombstone.LastModified.Ticks);
+                var newEtag = GenerateNextEtag();
+                var cv = ChangeVector.Merge(context.LastDatabaseChangeVector, context.GetChangeVector(tombstone.ChangeVector), context);
+                var flags = tombstone.Flags | DocumentFlags.Artificial | DocumentFlags.FromResharding;
 
-                writeTable.Update(tombstone.StorageId, tvb);
+                using (Slice.From(context.Allocator, cv, out var cvSlice))
+                using (Slice.External(context.Allocator, tombstone.LowerId, out var keySlice))
+                using (DocumentIdWorker.GetStringPreserveCase(context, collection, out Slice collectionSlice))
+                using (writeTable.Allocate(out TableValueBuilder tvb))
+                {
+                    var clonedKey = keySlice.Clone(context.Allocator);
+
+                    tvb.Add(clonedKey.Content.Ptr, clonedKey.Size);
+                    tvb.Add(Bits.SwapBytes(newEtag));
+                    tvb.Add(Bits.SwapBytes(tombstone.DeletedEtag));
+                    tvb.Add(tombstone.TransactionMarker);
+                    tvb.Add((byte)tombstone.Type);
+                    tvb.Add(collectionSlice);
+                    tvb.Add((int)flags);
+                    tvb.Add(cvSlice.Content.Ptr, cvSlice.Size);
+                    tvb.Add(tombstone.LastModified.Ticks);
+
+                    writeTable.Update(tombstone.StorageId, tvb);
+                    context.Allocator.Release(ref clonedKey.Content);
+                }
+
+                // need to re open the read iterator after we modified the tree
+                lastProcessedEtag = tombstone.Etag;
+                hasMore = true;
+                break;
             }
         }
+
+        if (collectionNamesUpdated)
+        {
+            // Add to cache ONLY if the transaction was committed.
+            // this would prevent NREs next time a PUT is run,since if a transaction
+            // is not committed, DocsSchema and TombstonesSchema will not be actually created..
+            // has to happen after the commit, but while we are holding the write tx lock
+            context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
+            {
+                _collectionsCache = collectionNames;
+            };
+        }
+
     }
 
     private bool HasDocumentExtensionWithGreaterChangeVector(DocumentsOperationContext context, string documentId, ChangeVector upTo)
