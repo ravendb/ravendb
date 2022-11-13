@@ -174,15 +174,15 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         else if (newSize == 0)
             numOfDocsChanged = -1;
 
-        UpdateBucketStats(tx, key, oldSize, newSize, numOfDocsChanged);
+        UpdateBucketStatsInternal(tx, key, oldSize, newSize, numOfDocsChanged);
     }
 
     internal static void UpdateBucketStats(Transaction tx, Slice key, long oldSize, long newSize)
     {
-        UpdateBucketStats(tx, key, oldSize, newSize, numOfDocsChanged: 0);
+        UpdateBucketStatsInternal(tx, key, oldSize, newSize, numOfDocsChanged: 0);
     }
 
-    private static void UpdateBucketStats(Transaction tx, Slice key, long oldSize, long newSize, int numOfDocsChanged)
+    private static void UpdateBucketStatsInternal(Transaction tx, Slice key, long oldSize, long newSize, int numOfDocsChanged)
     {
         if (tx.Owner is not ShardedDocumentDatabase documentDatabase)
             return;
