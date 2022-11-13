@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -34,6 +35,9 @@ internal class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus : Abstra
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
+                    writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.IsSharded));
+                    writer.WriteBool(false);
+                    writer.WriteComma();
                     writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.Status));
                     writer.WriteObject(statusBlittable);
                     writer.WriteEndObject();
@@ -52,7 +56,10 @@ internal class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus : Abstra
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WriteArray(nameof(GetPeriodicBackupStatusOperationResult.StatusPerShard), statusPerShard);
+                writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.IsSharded));
+                writer.WriteBool(true);
+                writer.WriteComma();
+                writer.WriteArray(nameof(GetShardedPeriodicBackupStatusOperationResult.Statuses), statusPerShard);
                 writer.WriteEndObject();
             }
 

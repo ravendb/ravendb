@@ -1,5 +1,7 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
@@ -45,14 +47,20 @@ namespace Raven.Client.Documents.Operations.Backups
                     ThrowInvalidResponse();
 
                 Result = JsonDeserializationClient.GetPeriodicBackupStatusOperationResult(response);
+                if (Result.IsSharded)
+                    throw new InvalidOperationException($"Database is sharded, can't use {nameof(GetPeriodicBackupStatusOperation)}, " +
+                                                        $"use {nameof(GetShardedPeriodicBackupStatusOperation)} instead");
             }
         }
     }
 
-    public class GetPeriodicBackupStatusOperationResult
+    public abstract class AbstractGetPeriodicBackupStatusOperationResult
+    {
+        public bool IsSharded;
+    }
+
+    public class GetPeriodicBackupStatusOperationResult : AbstractGetPeriodicBackupStatusOperationResult
     {
         public PeriodicBackupStatus Status;
-
-        public PeriodicBackupStatus[] StatusPerShard;
     }
 }
