@@ -135,20 +135,18 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     using (stats.For(ReplicationOperation.Outgoing.AttachmentRead))
                     {
-                        using (var attachment = kvp.Value)
+                        var attachment = kvp.Value;
+                        try
                         {
-                            try
-                            {
-                                attachment.WriteStream(_stream, _tempBuffer);
-                                stats.RecordAttachmentOutput(attachment.Stream.Length);
-                            }
-                            catch
-                            {
-                                if (Logger.IsInfoEnabled)
-                                    Logger.Info($"Failed to write Attachment stream {FromToString}");
+                            attachment.WriteStream(_stream, _tempBuffer);
+                            stats.RecordAttachmentOutput(attachment.Stream.Length);
+                        }
+                        catch
+                        {
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Failed to write Attachment stream {FromToString}");
 
-                                throw;
-                            }
+                            throw;
                         }
                     }
                 }

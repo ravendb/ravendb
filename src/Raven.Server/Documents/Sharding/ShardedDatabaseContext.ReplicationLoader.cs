@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Sharding
             if (Attachments != null)
             {
                 foreach (var attachment in Attachments)
-                    attachment.Value.Dispose();
+                    attachment.Value?.Dispose();
 
                 Attachments.Clear();
             }

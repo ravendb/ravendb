@@ -14,6 +14,7 @@ using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -38,7 +39,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
             : base(tcpConnectionOptions, buffer, parent.Server, parent.DatabaseName, replicatedLastEtag, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
         {
             _parent = parent;
-            _tempFileCache = new TempFileCache(parent.Server.Configuration.Storage.TempPath?.FullPath ?? Path.GetTempPath(), encrypted: false); // TODO: figure out if the sharded db is encrypted
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "figure out if the sharded db is encrypted ('encrypted' parameter for 'TempFileCache')");
+            _tempFileCache = new TempFileCache(parent.Server.Configuration.Storage.TempPath?.FullPath ?? Path.GetTempPath(), encrypted: parent.Server.Configuration.Security.IsCertificateConfigured);
+            
             _attachmentStreamsTempFile = new StreamsTempFile("ShardedReplication" + Guid.NewGuid(), false);
             _handlers = new ShardedOutgoingReplicationHandler[_parent.Context.ShardCount];
             _batches = new ReplicationBatches(this)
@@ -147,33 +151,39 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override async Task HandleBatchAsync(TransactionOperationContext context, DataForReplicationCommand dataForReplicationCommand, long lastEtag)
         {
-            using var replicationBatches = PrepareReplicationDataForShards(context, dataForReplicationCommand);
-            var batches = replicationBatches.Batches;
-            var tasks = new Task[batches.Length];
-            for (int i = 0; i < batches.Length; i++)
+            using (var replicationBatches = PrepareReplicationDataForShards(context, dataForReplicationCommand))
             {
-                batches[i].LastSentEtagFromSource = _lastDocumentEtag;
-                tasks[i] = _handlers[i].SendBatch(batches[i]);
+                var batches = replicationBatches.Batches;
+                var tasks = new Task[batches.Length];
+                for (int i = 0; i < batches.Length; i++)
+                {
+                    batches[i].LastSentEtagFromSource = _lastDocumentEtag;
+                    tasks[i] = _handlers[i].SendBatch(batches[i]);
+                }
+
+                await Task.WhenAll(tasks);
+
+                foreach (ShardedOutgoingReplicationHandler handler in _handlers)
+                {
+                    if (handler.MissingAttachmentsInLastBatch)
+                    {
+                        replicationBatches.DisposeStreams = false;
+                        throw new MissingAttachmentException(handler.MissingAttachmentMessage);
+                    }
+                }
+
+                var cvs = new List<string>();
+                var minEtag = long.MaxValue;
+                foreach (ReplicationBatch replicationBatch in batches)
+                {
+                    cvs.Add(replicationBatch.LastAcceptedChangeVector);
+                    minEtag = Math.Min(minEtag, replicationBatch.LastEtagAccepted);
+                }
+
+                _lastAcceptedChangeVector = ChangeVectorUtils.MergeVectorsDown(cvs);
+                _lastAcceptedEtag = minEtag;
+                replicationBatches.DisposeStreams = true;
             }
-
-            await Task.WhenAll(tasks);
-
-            foreach (ShardedOutgoingReplicationHandler handler in _handlers)
-            {
-                if (handler.MissingAttachmentsInLastBatch)
-                    throw new MissingAttachmentException(handler.MissingAttachmentMessage);
-            }
-
-            var cvs = new List<string>();
-            var minEtag = long.MaxValue;
-            foreach (ReplicationBatch replicationBatch in batches)
-            {
-                cvs.Add(replicationBatch.LastAcceptedChangeVector);
-                minEtag = Math.Min(minEtag, replicationBatch.LastEtagAccepted);
-            }
-
-            _lastAcceptedChangeVector = ChangeVectorUtils.MergeVectorsDown(cvs);
-            _lastAcceptedEtag = minEtag;
         }
 
         private ReplicationBatches PrepareReplicationDataForShards(TransactionOperationContext context, DataForReplicationCommand dataForReplicationCommand)
@@ -196,11 +206,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 foreach (var attachment in dataForReplicationCommand.ReplicatedAttachmentStreams)
                 {
-                    var stream = attachment.Value.Size > _tempFileCache.MemoryStreamCapacity /* TODO: Make configurable */
-                        ? _tempFileCache.RentFileStream()
-                        : _tempFileCache.RentMemoryStream();
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Make '_tempFileCache.MemoryStreamCapacity' configurable");
+                    var stream = attachment.Value.Size > _tempFileCache.MemoryStreamCapacity
+                            ? _tempFileCache.RentFileStream()
+                            : _tempFileCache.RentMemoryStream();
 
-                    _batches.Streams.Add(stream);
+                    _batches.Streams.Add(attachment.Key, stream);
 
                     attachment.Value.Stream.Seek(0, SeekOrigin.Begin);
                     attachment.Value.Stream.CopyTo(stream);
@@ -210,25 +221,61 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         if (batches[shard].Attachments?.ContainsKey(attachment.Key) != true)
                             continue;
 
-                        var attachmentStream = new AttachmentReplicationItem
+                        AddAttachmentStreamItemToBatch(batches[shard], attachment.Key, stream);
+                    }
+                }
+            }
+            else
+            {
+                foreach (var batch in batches)
+                {
+                    if (batch.Attachments != null)
+                    {
+                        foreach (var attachment in batch.Attachments)
                         {
-                            Type = ReplicationBatchItem.ReplicationItemType.AttachmentStream,
-                            Base64Hash = attachment.Key,
-                            Stream = stream switch
+                            if (attachment.Value == null && _batches.Streams.ContainsKey(attachment.Key))
                             {
-                                MemoryStream ms => new MemoryStream(ms.GetBuffer(), 0, (int)ms.Length),
-                                TempFileStream tmp => tmp.CreateReaderStream(),
-                                _ => throw new NotSupportedException("Cannot understand how to clone stream: " + stream)
+                                var stream = _batches.Streams[attachment.Key];
+                                AddAttachmentStreamItemToBatch(batch, attachment.Key, stream);
                             }
-                        };
-
-                        attachmentStream.Stream.Seek(0, SeekOrigin.Begin);
-                        batches[shard].Attachments[attachment.Key] = attachmentStream;
+                            else
+                            {
+                                batch.Attachments.Remove(attachment.Key);
+                            }
+                        }
                     }
                 }
             }
 
             return _batches;
+        }
+
+        private void AddAttachmentStreamItemToBatch(ReplicationBatch batch, Slice attachmentKey, Stream stream)
+        {
+            Stream readerStream;
+            switch (stream)
+            {
+                case MemoryStream ms:
+                    readerStream = new MemoryStream(ms.GetBuffer(), 0, (int)ms.Length);
+                    break;
+                case TempCryptoStream:
+                case TempFileStream:
+                    TempFileStream tmp = stream is TempCryptoStream tcs ? (TempFileStream)tcs.InnerStream : (TempFileStream)stream;
+                    readerStream = tmp.CreateReaderStream();
+                    break;
+                default:
+                    throw new NotSupportedException("Cannot understand how to clone stream: " + stream);
+            }
+
+            var attachmentStream = new AttachmentReplicationItem
+            {
+                Type = ReplicationBatchItem.ReplicationItemType.AttachmentStream,
+                Base64Hash = attachmentKey,
+                Stream = readerStream
+            };
+
+            attachmentStream.Stream.Seek(0, SeekOrigin.Begin);
+            batch.Attachments[attachmentKey] = attachmentStream;
         }
 
         public override LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
@@ -281,31 +328,27 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 }
             });
 
-            base.DisposeInternal();
-
-            if (_batches?.Streams != null)
+            if (_batches != null)
             {
-                foreach (var stream in _batches.Streams)
-                {
-                    if (stream is MemoryStream ms)
-                        _tempFileCache.ReturnMemoryStream(ms);
-                    else
-                        _tempFileCache.ReturnFileStream(stream);
-                }
-                _batches.Streams.Clear();
+                _batches.DisposeStreams = true;
+                _batches.Dispose();
             }
             _tempFileCache.Dispose();
+
+            base.DisposeInternal();
         }
 
         public class ReplicationBatches : IDisposable
         {
             private readonly ShardedIncomingReplicationHandler _parent;
             public ReplicationBatch[] Batches;
-            public List<Stream> Streams = new();
+            public Dictionary<Slice, Stream> Streams = new();
+            public bool DisposeStreams;
 
             public ReplicationBatches(ShardedIncomingReplicationHandler parent)
             {
                 _parent = parent;
+                DisposeStreams = true;
             }
 
             public void Dispose()
@@ -313,6 +356,18 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 foreach (var batch in Batches)
                 {
                     batch.Dispose();
+                }
+
+                if (DisposeStreams && Streams != null)
+                {
+                    foreach (var stream in Streams.Values)
+                    {
+                        if (stream is MemoryStream ms)
+                            _parent._tempFileCache.ReturnMemoryStream(ms);
+                        else
+                            _parent._tempFileCache.ReturnFileStream(stream);
+                    }
+                    Streams.Clear();
                 }
             }
         }
