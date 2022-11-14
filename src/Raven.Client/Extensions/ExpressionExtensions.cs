@@ -114,7 +114,7 @@ namespace Raven.Client.Extensions
 
             protected override Expression VisitMember(MemberExpression node)
             {
-                string convertedName = _conventions.PropertyNameConverter(node.Member);
+                string convertedName = _conventions.GetConvertedPropertyNameFor(node.Member);
                 if (IsDictionaryProperty(node, out string propertyName))
                 {
                     if (string.IsNullOrEmpty(propertyName) == false)
