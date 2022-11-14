@@ -157,16 +157,17 @@ namespace FastTests
 
         public static void AssertEqualRespectingNewLines(string expected, string actual)
         {
-            var converted = ConvertRespectingNewLines(expected);
-
-            Assert.Equal(converted, actual);
+            var convertedExpected = ConvertRespectingNewLines(expected);
+            var convertedActual = ConvertRespectingNewLines(actual);
+            Assert.Equal(convertedExpected, convertedActual);
         }
 
         public static void AssertStartsWithRespectingNewLines(string expected, string actual)
         {
-            var converted = ConvertRespectingNewLines(expected);
-
-            Assert.StartsWith(converted, actual);
+            var convertedExpected = ConvertRespectingNewLines(expected);
+            var convertedActual = ConvertRespectingNewLines(actual);
+            
+            Assert.StartsWith(convertedExpected, convertedActual);
         }
 
         public static void AreEquivalent<T>(IEnumerable<T> expected, IEnumerable<T> actual)
