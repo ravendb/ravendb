@@ -1523,6 +1523,7 @@ namespace Raven.Client.Documents.Indexes
             var isDictionaryObject = false;
             var isDictionaryReturn = false;
             var isConvertToDictionary = false;
+            var isDictionaryReturnMethodExtension = false;
 
             if (node.Object != null)
             {
@@ -1541,7 +1542,12 @@ namespace Raven.Client.Documents.Indexes
             if (node.Method.ReturnType.IsGenericType)
             {
                 if (node.Method.ReturnType.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
+                {
                     isDictionaryReturn = true;
+
+                    if (IsExtensionMethod(node) == false)
+                        isDictionaryReturnMethodExtension = true;
+                }
             }
 
             var shouldConvertToDynamicEnumerable = node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node);
@@ -1595,7 +1601,7 @@ namespace Raven.Client.Documents.Indexes
                 }
                 Out(".");
             }
-            else if (isDictionaryReturn)
+            else if (isDictionaryReturn && isDictionaryReturnMethodExtension == false)
             {
                 if (isExtension)
                 {
