@@ -1,20 +1,20 @@
 ﻿
-    // Required
-    @import "../../../node_modules/boostrap5/scss/functions";
-    
-    // Default variable overrides
-    @import "../scss/colors";
-    @import "../scss/sizes";
+// Required
+@import "../../../node_modules/boostrap5/scss/functions";
 
-    //@import "../scss/variables";
-    @import "../scss/bs5variables";
-    
-    // Required
-    @import "../../../node_modules/boostrap5/scss/variables";
-    @import "../../../node_modules/boostrap5/scss/maps";
-    @import "../../../node_modules/boostrap5/scss/mixins";
-    @import "../../../node_modules/boostrap5/scss/utilities";
-    @import "../../../node_modules/boostrap5/scss/root";
+// Default variable overrides
+@import "../scss/colors";
+@import "../scss/sizes";
+
+//@import "../scss/variables";
+@import "../scss/bs5variables";
+
+// Required
+@import "../../../node_modules/boostrap5/scss/variables";
+@import "../../../node_modules/boostrap5/scss/maps";
+@import "../../../node_modules/boostrap5/scss/mixins";
+@import "../../../node_modules/boostrap5/scss/utilities";
+@import "../../../node_modules/boostrap5/scss/root";
 
 .bs5 {
     // Optional Bootstrap components

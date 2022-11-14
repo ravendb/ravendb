@@ -23,7 +23,16 @@ import {
     RichPanelSelect,
 } from "../../../../common/RichPanel";
 import { Checkbox } from "../../../../common/Checkbox";
-import { Button, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
+import {
+    Button,
+    ButtonGroup,
+    Dropdown,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
+    Spinner,
+    UncontrolledDropdown,
+} from "reactstrap";
 
 interface IndexPanelProps {
     database: database;
@@ -173,7 +182,6 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         <div className="flex-horizontal">
                             {!IndexUtils.isSideBySide(index) && (
                                 <UncontrolledDropdown className="margin-right">
-
                                     <DropdownToggle outline color="info" disabled={!canReadWriteDatabase(database)}>
                                         {updatingLocalPriority && <Spinner size="sm" className="margin-right-xs" />}
                                         {index.priority === "Normal" && (
@@ -207,7 +215,6 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                             <i className="icon-force" /> <span>High Priority</span>
                                         </DropdownItem>
                                     </DropdownMenu>
-
                                 </UncontrolledDropdown>
                             )}
 
@@ -215,7 +222,6 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 index.type !== "AutoMapReduce" &&
                                 !IndexUtils.isSideBySide(index) && (
                                     <UncontrolledDropdown className="margin-right">
-
                                         <DropdownToggle outline color="info" disabled={!canReadWriteDatabase(database)}>
                                             {updatingLockMode && <Spinner size="sm" className="margin-right-xs" />}
                                             {index.lockMode === "Unlock" && (
@@ -239,21 +245,26 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                         </DropdownToggle>
 
                                         <DropdownMenu>
-                                            <DropdownItem onClick={(e) => setLockMode(e, "Unlock")}
-                                                title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
+                                            <DropdownItem
+                                                onClick={(e) => setLockMode(e, "Unlock")}
+                                                title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes()."
+                                            >
                                                 <i className="icon-unlock" /> <span>Unlock</span>
                                             </DropdownItem>
                                             <DropdownItem divider />
-                                            <DropdownItem onClick={(e) => setLockMode(e, "LockedIgnore")}
-                                                title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
+                                            <DropdownItem
+                                                onClick={(e) => setLockMode(e, "LockedIgnore")}
+                                                title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored."
+                                            >
                                                 <i className="icon-lock" /> <span>Lock</span>
                                             </DropdownItem>
-                                            <DropdownItem onClick={(e) => setLockMode(e, "LockedError")}
-                                                title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
+                                            <DropdownItem
+                                                onClick={(e) => setLockMode(e, "LockedError")}
+                                                title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it."
+                                            >
                                                 <i className="icon-lock-error" /> <span>Lock (Error)</span>
                                             </DropdownItem>
                                         </DropdownMenu>
-
                                     </UncontrolledDropdown>
                                 )}
                         </div>
@@ -263,31 +274,31 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         <div className="btn-toolbar pull-right-sm" role="toolbar">
                             {!IndexUtils.hasAnyFaultyNode(index) && (
                                 <UncontrolledDropdown>
-
-                                        <DropdownToggle data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
+                                    <DropdownToggle
+                                        data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
                                            enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
-                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }">
-                                            {updatingState && <Spinner size="sm" className="margin-right-xs" />}
-                                            <span>Set State</span>
-                                        </DropdownToggle>
+                                           requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }"
+                                    >
+                                        {updatingState && <Spinner size="sm" className="margin-right-xs" />}
+                                        <span>Set State</span>
+                                    </DropdownToggle>
 
-                                        <DropdownMenu>
-                                            <DropdownItem onClick={enableIndexing} title="Enable indexing">
-                                                <i className="icon-play" /> <span>Enable indexing</span>
-                                            </DropdownItem>
-                                            <DropdownItem onClick={disableIndexing} title="Disable indexing">
-                                                <i className="icon-cancel text-danger" /> <span>Disable indexing</span>
-                                            </DropdownItem>
-                                            <DropdownItem divider />
-                                            <DropdownItem onClick={resumeIndexing} title="Resume indexing">
-                                                <i className="icon-play" /> <span>Resume indexing</span>
-                                            </DropdownItem>
-                                            <DropdownItem onClick={pauseIndexing} title="Pause until restart">
-                                                <i className="icon-pause text-warning" /> <span>Pause indexing until restart</span>
-                                            </DropdownItem>
-                                            
-                                        </DropdownMenu>
-
+                                    <DropdownMenu>
+                                        <DropdownItem onClick={enableIndexing} title="Enable indexing">
+                                            <i className="icon-play" /> <span>Enable indexing</span>
+                                        </DropdownItem>
+                                        <DropdownItem onClick={disableIndexing} title="Disable indexing">
+                                            <i className="icon-cancel text-danger" /> <span>Disable indexing</span>
+                                        </DropdownItem>
+                                        <DropdownItem divider />
+                                        <DropdownItem onClick={resumeIndexing} title="Resume indexing">
+                                            <i className="icon-play" /> <span>Resume indexing</span>
+                                        </DropdownItem>
+                                        <DropdownItem onClick={pauseIndexing} title="Pause until restart">
+                                            <i className="icon-pause text-warning" />{" "}
+                                            <span>Pause indexing until restart</span>
+                                        </DropdownItem>
+                                    </DropdownMenu>
                                 </UncontrolledDropdown>
                             )}
 
@@ -302,11 +313,12 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                         <DropdownToggle className="dropdown-toggle" />
 
                                         <DropdownMenu end>
-                                            <DropdownItem href={termsUrl}> <i className="icon-terms" /> Terms </DropdownItem>
+                                            <DropdownItem href={termsUrl}>
+                                                {" "}
+                                                <i className="icon-terms" /> Terms{" "}
+                                            </DropdownItem>
                                         </DropdownMenu>
                                     </UncontrolledDropdown>
-
-
                                 </ButtonGroup>
                             )}
 
@@ -324,7 +336,10 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             </ButtonGroup>
 
                             {inlineDetails && isFaulty && (
-                                <Button onClick={() => openFaulty(index.nodesInfo[0].location)} className="margin-left-xxs">
+                                <Button
+                                    onClick={() => openFaulty(index.nodesInfo[0].location)}
+                                    className="margin-left-xxs"
+                                >
                                     Open faulty index
                                 </Button>
                             )}

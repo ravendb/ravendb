@@ -39,9 +39,9 @@ import {
     PopoverBody,
     Offcanvas,
     OffcanvasBody,
-    OffcanvasHeader
+    OffcanvasHeader,
 } from "reactstrap";
-import PropTypes from 'prop-types';
+import PropTypes from "prop-types";
 
 const items = [
     {
@@ -146,98 +146,71 @@ function Example({ direction, ...args }: any) {
 
     return (
         <div>
-        <div className="d-flex p-5">
-            <Dropdown isOpen={dropdownOpen} toggle={toggle} direction={direction}>
-                <DropdownToggle caret>Dropdown</DropdownToggle>
-                <DropdownMenu {...args}>
-                    <DropdownItem header>Header</DropdownItem>
-                    <DropdownItem>Some Action</DropdownItem>
-                    <DropdownItem text>Dropdown Item Text</DropdownItem>
-                    <DropdownItem disabled>Action (disabled)</DropdownItem>
-                    <DropdownItem divider />
-                    <DropdownItem>Foo Action</DropdownItem>
-                    <DropdownItem>Bar Action</DropdownItem>
-                    <DropdownItem>Quo Action</DropdownItem>
-                </DropdownMenu>
-            </Dropdown>
+            <div className="d-flex p-5">
+                <Dropdown isOpen={dropdownOpen} toggle={toggle} direction={direction}>
+                    <DropdownToggle caret>Dropdown</DropdownToggle>
+                    <DropdownMenu {...args}>
+                        <DropdownItem header>Header</DropdownItem>
+                        <DropdownItem>Some Action</DropdownItem>
+                        <DropdownItem text>Dropdown Item Text</DropdownItem>
+                        <DropdownItem disabled>Action (disabled)</DropdownItem>
+                        <DropdownItem divider />
+                        <DropdownItem>Foo Action</DropdownItem>
+                        <DropdownItem>Bar Action</DropdownItem>
+                        <DropdownItem>Quo Action</DropdownItem>
+                    </DropdownMenu>
+                </Dropdown>
 
-            <Dropdown isOpen={dropdownOpen} color="dark" toggle={toggle} direction={direction}>
-                <DropdownToggle caret>Dropdown</DropdownToggle>
-                <DropdownMenu {...args}>
-                    <DropdownItem header>Header</DropdownItem>
-                    <DropdownItem>Some Action</DropdownItem>
-                    <DropdownItem text>Dropdown Item Text</DropdownItem>
-                    <DropdownItem disabled>Action (disabled)</DropdownItem>
-                    <DropdownItem divider />
-                    <DropdownItem>Foo Action</DropdownItem>
-                    <DropdownItem>Bar Action</DropdownItem>
-                    <DropdownItem>Quo Action</DropdownItem>
-                </DropdownMenu>
+                <Dropdown isOpen={dropdownOpen} color="dark" toggle={toggle} direction={direction}>
+                    <DropdownToggle caret>Dropdown</DropdownToggle>
+                    <DropdownMenu {...args}>
+                        <DropdownItem header>Header</DropdownItem>
+                        <DropdownItem>Some Action</DropdownItem>
+                        <DropdownItem text>Dropdown Item Text</DropdownItem>
+                        <DropdownItem disabled>Action (disabled)</DropdownItem>
+                        <DropdownItem divider />
+                        <DropdownItem>Foo Action</DropdownItem>
+                        <DropdownItem>Bar Action</DropdownItem>
+                        <DropdownItem>Quo Action</DropdownItem>
+                    </DropdownMenu>
                 </Dropdown>
             </div>
 
             <div>
                 <h1>Tooltip</h1>
                 <p>
-                    Somewhere in here is a{' '}
-                    <a
-                        href="https://example.com"
-                        target="_blank"
-                        rel="noreferrer"
-                        id="TooltipExample"
-                    >
+                    Somewhere in here is a{" "}
+                    <a href="https://example.com" target="_blank" rel="noreferrer" id="TooltipExample">
                         tooltip
                     </a>
                     .
                 </p>
-                <Tooltip
-                    {...args}
-                    isOpen={tooltipOpen}
-                    target="TooltipExample"
-                    toggle={toggleTooltip}
-                    className="bs5"
-                >
+                <Tooltip {...args} isOpen={tooltipOpen} target="TooltipExample" toggle={toggleTooltip} className="bs5">
                     Hello world!
                 </Tooltip>
             </div>
             <div className="margin-bottom">
                 <h1>Popover</h1>
-                <Button
-                    id="Popover1"
-                    type="button"
-                >
+                <Button id="Popover1" type="button">
                     Launch Popover
                 </Button>
-                <Popover
-                    flip
-                    target="Popover1"
-                    toggle={function noRefCheck() { }}
-                    className="bs5"
-                >
-                    <PopoverHeader>
-                        Popover Title
-                    </PopoverHeader>
+                <Popover flip target="Popover1" toggle={function noRefCheck() {}} className="bs5">
+                    <PopoverHeader>Popover Title</PopoverHeader>
                     <PopoverBody>
-                        Sed posuere consectetur est at lobortis. Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum.
+                        Sed posuere consectetur est at lobortis. Aenean eu leo quam. Pellentesque ornare sem lacinia
+                        quam venenatis vestibulum.
                     </PopoverBody>
                 </Popover>
             </div>
             <div className="margin-bottom">
                 <div>
-                    <Button
-                        color="primary"
-                        onClick={function noRefCheck() { }}
-                    >
+                    <Button color="primary" onClick={function noRefCheck() {}}>
                         Open Offcanvas
                     </Button>
-                    <Offcanvas toggle={function noRefCheck() { }}>
-                        <OffcanvasHeader toggle={function noRefCheck() { }}>
-                            Offcanvas
-                        </OffcanvasHeader>
+                    <Offcanvas toggle={function noRefCheck() {}}>
+                        <OffcanvasHeader toggle={function noRefCheck() {}}>Offcanvas</OffcanvasHeader>
                         <OffcanvasBody>
-                            <strong>
-                                This is the Offcanvas body.
-                            </strong>
+                            <strong>This is the Offcanvas body.</strong>
                         </OffcanvasBody>
                     </Offcanvas>
                 </div>
@@ -453,9 +426,8 @@ function AlertExample() {
     );
 }
 
-function AccordionExample(props:any) {
-    const [open, setOpen] = useState('1');
-    
+function AccordionExample(props: any) {
+    const [open, setOpen] = useState("1");
 
     return (
         <div>
@@ -464,37 +436,33 @@ function AccordionExample(props:any) {
                     <AccordionHeader targetId="1">Accordion Item 1</AccordionHeader>
                     <AccordionBody accordionId="1">
                         <strong>This is the first item&#39;s accordion body.</strong>
-                        You can modify any of this with custom CSS or overriding our default
-                        variables. It&#39;s also worth noting that just about any HTML can
-                        go within the <code>.accordion-body</code>, though the transition
-                        does limit overflow.
+                        You can modify any of this with custom CSS or overriding our default variables. It&#39;s also
+                        worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the
+                        transition does limit overflow.
                     </AccordionBody>
                 </AccordionItem>
                 <AccordionItem>
                     <AccordionHeader targetId="2">Accordion Item 2</AccordionHeader>
                     <AccordionBody accordionId="2">
                         <strong>This is the second item&#39;s accordion body.</strong>
-                        You can modify any of this with custom CSS or overriding our default
-                        variables. It&#39;s also worth noting that just about any HTML can
-                        go within the <code>.accordion-body</code>, though the transition
-                        does limit overflow.
+                        You can modify any of this with custom CSS or overriding our default variables. It&#39;s also
+                        worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the
+                        transition does limit overflow.
                     </AccordionBody>
                 </AccordionItem>
                 <AccordionItem>
                     <AccordionHeader targetId="3">Accordion Item 3</AccordionHeader>
                     <AccordionBody accordionId="3">
                         <strong>This is the third item&#39;s accordion body.</strong>
-                        You can modify any of this with custom CSS or overriding our default
-                        variables. It&#39;s also worth noting that just about any HTML can
-                        go within the <code>.accordion-body</code>, though the transition
-                        does limit overflow.
+                        You can modify any of this with custom CSS or overriding our default variables. It&#39;s also
+                        worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the
+                        transition does limit overflow.
                     </AccordionBody>
                 </AccordionItem>
             </Accordion>
         </div>
     );
 }
-
 
 export function BootstrapPlaygroundPage() {
     const myHTML = `<h1>Range</h1>
@@ -1020,7 +988,3 @@ To edit settings, press <kbd><kbd>ctrl</kbd> + <kbd>,</kbd></kbd>
         </div>
     );
 }
-
-
-
-

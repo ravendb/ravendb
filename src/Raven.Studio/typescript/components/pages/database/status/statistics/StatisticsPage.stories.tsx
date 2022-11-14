@@ -1,4 +1,4 @@
-import { withStorybookContexts } from "../../../../../test/storybookTestUtils";
+import { withBootstrap5, withStorybookContexts } from "../../../../../test/storybookTestUtils";
 import { ComponentMeta } from "@storybook/react";
 import { StatisticsPage } from "./StatisticsPage";
 import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";

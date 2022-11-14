@@ -237,7 +237,7 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
     return (
         <section className="margin-top-lg">
             <h2 className="on-base-background">Indexes Stats</h2>
-            
+
             {noData && (
                 <div className="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                     <i className="icon-xl icon-empty-set text-muted"></i>
@@ -248,7 +248,6 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
             {indexStats &&
                 indexStats.map((group) => (
                     <div className="panel padding" key={group.type}>
-                        
                         <h3>{group.type} Indexes</h3>
                         <div>
                             {group.indexes.map((index) => {
@@ -274,176 +273,178 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
 
                                 return (
                                     <>
-                                    <h4 className="text-elipsis margin-top-md">
-                                        <a href={performanceUrl} title={index.name}>
-                                            {index.name}
-                                        </a>
-                                    </h4>
-                                    <table className="table table-striped table-condensed" key={index.name}>
-                                        <tbody>
-                                            <tr>
-                                                <td style={{ width: "200px" }}>Staleness</td>
-                                                <DetailsBlock index={index}>
-                                                    {(data, location) =>
-                                                        data.isStale ? (
-                                                            <a
-                                                                href="#"
-                                                                title="Show stale reason"
-                                                                className="flex-noshrink badge badge-warning"
-                                                                onClick={withPreventDefault(() =>
-                                                                    showStaleReasons(index, location)
-                                                                )}
-                                                            >
-                                                                Stale
-                                                            </a>
-                                                        ) : (
-                                                            <div title="Index up to date">
-                                                                <i className="icon-check text-success" />
-                                                            </div>
-                                                        )
-                                                    }
-                                                </DetailsBlock>
-                                            </tr>
-                                            <tr>
-                                                <td style={{ width: "200px" }}>Node Tag</td>
-                                                <DetailsBlock index={index} alwaysRenderValue>
-                                                    {(data, location) => <>{location.nodeTag}</>}
-                                                </DetailsBlock>
-                                            </tr>
-                                            {sharded && (
+                                        <h4 className="text-elipsis margin-top-md">
+                                            <a href={performanceUrl} title={index.name}>
+                                                {index.name}
+                                            </a>
+                                        </h4>
+                                        <table className="table table-striped table-condensed" key={index.name}>
+                                            <tbody>
                                                 <tr>
-                                                    <td>Shard #</td>
+                                                    <td style={{ width: "200px" }}>Staleness</td>
+                                                    <DetailsBlock index={index}>
+                                                        {(data, location) =>
+                                                            data.isStale ? (
+                                                                <a
+                                                                    href="#"
+                                                                    title="Show stale reason"
+                                                                    className="flex-noshrink badge badge-warning"
+                                                                    onClick={withPreventDefault(() =>
+                                                                        showStaleReasons(index, location)
+                                                                    )}
+                                                                >
+                                                                    Stale
+                                                                </a>
+                                                            ) : (
+                                                                <div title="Index up to date">
+                                                                    <i className="icon-check text-success" />
+                                                                </div>
+                                                            )
+                                                        }
+                                                    </DetailsBlock>
+                                                </tr>
+                                                <tr>
+                                                    <td style={{ width: "200px" }}>Node Tag</td>
                                                     <DetailsBlock index={index} alwaysRenderValue>
-                                                        {(data, location) => <>{location.shardNumber}</>}
+                                                        {(data, location) => <>{location.nodeTag}</>}
                                                     </DetailsBlock>
                                                 </tr>
-                                            )}
-                                            <tr>
-                                                <td>Entries Count</td>
-                                                <DetailsBlock index={index}>
-                                                    {(data) => <>{data.entriesCount.toLocaleString()}</>}
-                                                </DetailsBlock>
-                                            </tr>
-                                            {showErrorCounts && (
-                                                <tr>
-                                                    <td>Errors Count</td>
-                                                    <DetailsBlock index={index}>
-                                                        {(data) => <>{data.errorsCount.toLocaleString()}</>}
-                                                    </DetailsBlock>
-                                                </tr>
-                                            )}
-                                            <tr>
-                                                <td>Map Attempts</td>
-                                                <DetailsBlock index={index}>
-                                                    {(data) => <>{data.mapAttempts.toLocaleString()}</>}
-                                                </DetailsBlock>
-                                            </tr>
-                                            <tr>
-                                                <td>Map Successes</td>
-                                                <DetailsBlock index={index}>
-                                                    {(data) => <>{data.mapSuccesses.toLocaleString()}</>}
-                                                </DetailsBlock>
-                                            </tr>
-                                            {showMapErrors && (
-                                                <tr>
-                                                    <td>Map Errors</td>
-                                                    <DetailsBlock index={index}>
-                                                        {(data) => <>{data.mapErrors.toLocaleString()}</>}
-                                                    </DetailsBlock>
-                                                </tr>
-                                            )}
-                                            {showMapReferenceSection && (
-                                                <>
+                                                {sharded && (
                                                     <tr>
-                                                        <td>Map Reference Attempts</td>
-                                                        <DetailsBlock index={index}>
-                                                            {(data) => (
-                                                                <>{data.mapReferenceAttempts.toLocaleString()}</>
-                                                            )}
+                                                        <td>Shard #</td>
+                                                        <DetailsBlock index={index} alwaysRenderValue>
+                                                            {(data, location) => <>{location.shardNumber}</>}
                                                         </DetailsBlock>
                                                     </tr>
+                                                )}
+                                                <tr>
+                                                    <td>Entries Count</td>
+                                                    <DetailsBlock index={index}>
+                                                        {(data) => <>{data.entriesCount.toLocaleString()}</>}
+                                                    </DetailsBlock>
+                                                </tr>
+                                                {showErrorCounts && (
                                                     <tr>
-                                                        <td>Map Reference Successes</td>
+                                                        <td>Errors Count</td>
                                                         <DetailsBlock index={index}>
-                                                            {(data) => (
-                                                                <>{data.mapReferenceSuccesses.toLocaleString()}</>
-                                                            )}
+                                                            {(data) => <>{data.errorsCount.toLocaleString()}</>}
                                                         </DetailsBlock>
                                                     </tr>
-                                                    {showMapReferenceErrors && (
+                                                )}
+                                                <tr>
+                                                    <td>Map Attempts</td>
+                                                    <DetailsBlock index={index}>
+                                                        {(data) => <>{data.mapAttempts.toLocaleString()}</>}
+                                                    </DetailsBlock>
+                                                </tr>
+                                                <tr>
+                                                    <td>Map Successes</td>
+                                                    <DetailsBlock index={index}>
+                                                        {(data) => <>{data.mapSuccesses.toLocaleString()}</>}
+                                                    </DetailsBlock>
+                                                </tr>
+                                                {showMapErrors && (
+                                                    <tr>
+                                                        <td>Map Errors</td>
+                                                        <DetailsBlock index={index}>
+                                                            {(data) => <>{data.mapErrors.toLocaleString()}</>}
+                                                        </DetailsBlock>
+                                                    </tr>
+                                                )}
+                                                {showMapReferenceSection && (
+                                                    <>
                                                         <tr>
-                                                            <td>Map Reference Errors</td>
+                                                            <td>Map Reference Attempts</td>
                                                             <DetailsBlock index={index}>
                                                                 {(data) => (
-                                                                    <>{data.mapReferenceErrors.toLocaleString()}</>
+                                                                    <>{data.mapReferenceAttempts.toLocaleString()}</>
                                                                 )}
                                                             </DetailsBlock>
                                                         </tr>
-                                                    )}
-                                                </>
-                                            )}
-                                            {showMappedPerSecondRate && (
-                                                <tr>
-                                                    <td>Mapped Per Second Rate</td>
-                                                    <DetailsBlock index={index}>
-                                                        {(data) => (
-                                                            <>
-                                                                {data.mappedPerSecondRate > 1
-                                                                    ? genUtils.formatNumberToStringFixed(
-                                                                          data.mappedPerSecondRate,
-                                                                          2
-                                                                      )
-                                                                    : ""}
-                                                            </>
+                                                        <tr>
+                                                            <td>Map Reference Successes</td>
+                                                            <DetailsBlock index={index}>
+                                                                {(data) => (
+                                                                    <>{data.mapReferenceSuccesses.toLocaleString()}</>
+                                                                )}
+                                                            </DetailsBlock>
+                                                        </tr>
+                                                        {showMapReferenceErrors && (
+                                                            <tr>
+                                                                <td>Map Reference Errors</td>
+                                                                <DetailsBlock index={index}>
+                                                                    {(data) => (
+                                                                        <>{data.mapReferenceErrors.toLocaleString()}</>
+                                                                    )}
+                                                                </DetailsBlock>
+                                                            </tr>
                                                         )}
-                                                    </DetailsBlock>
-                                                </tr>
-                                            )}
+                                                    </>
+                                                )}
+                                                {showMappedPerSecondRate && (
+                                                    <tr>
+                                                        <td>Mapped Per Second Rate</td>
+                                                        <DetailsBlock index={index}>
+                                                            {(data) => (
+                                                                <>
+                                                                    {data.mappedPerSecondRate > 1
+                                                                        ? genUtils.formatNumberToStringFixed(
+                                                                              data.mappedPerSecondRate,
+                                                                              2
+                                                                          )
+                                                                        : ""}
+                                                                </>
+                                                            )}
+                                                        </DetailsBlock>
+                                                    </tr>
+                                                )}
 
-                                            {index.isReduceIndex && (
-                                                <>
-                                                    <tr>
-                                                        <td>Reduce Attempts</td>
-                                                        <DetailsBlock index={index}>
-                                                            {(data) => <>{data.reduceAttempts.toLocaleString()}</>}
-                                                        </DetailsBlock>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>Reduce Successes</td>
-                                                        <DetailsBlock index={index}>
-                                                            {(data) => <>{data.reduceSuccesses.toLocaleString()}</>}
-                                                        </DetailsBlock>
-                                                    </tr>
-                                                    {showReduceErrors && (
+                                                {index.isReduceIndex && (
+                                                    <>
                                                         <tr>
-                                                            <td>Reduce Errors</td>
+                                                            <td>Reduce Attempts</td>
                                                             <DetailsBlock index={index}>
-                                                                {(data) => <>{data.reduceErrors.toLocaleString()}</>}
+                                                                {(data) => <>{data.reduceAttempts.toLocaleString()}</>}
                                                             </DetailsBlock>
                                                         </tr>
-                                                    )}
-                                                    {showReducedPerSecondRate && (
                                                         <tr>
-                                                            <td>Reduced Per Second Rate</td>
+                                                            <td>Reduce Successes</td>
                                                             <DetailsBlock index={index}>
-                                                                {(data) => (
-                                                                    <>
-                                                                        {data.reducedPerSecondRate > 1
-                                                                            ? genUtils.formatNumberToStringFixed(
-                                                                                  data.reducedPerSecondRate,
-                                                                                  2
-                                                                              )
-                                                                            : ""}
-                                                                    </>
-                                                                )}
+                                                                {(data) => <>{data.reduceSuccesses.toLocaleString()}</>}
                                                             </DetailsBlock>
                                                         </tr>
-                                                    )}
-                                                </>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </>
+                                                        {showReduceErrors && (
+                                                            <tr>
+                                                                <td>Reduce Errors</td>
+                                                                <DetailsBlock index={index}>
+                                                                    {(data) => (
+                                                                        <>{data.reduceErrors.toLocaleString()}</>
+                                                                    )}
+                                                                </DetailsBlock>
+                                                            </tr>
+                                                        )}
+                                                        {showReducedPerSecondRate && (
+                                                            <tr>
+                                                                <td>Reduced Per Second Rate</td>
+                                                                <DetailsBlock index={index}>
+                                                                    {(data) => (
+                                                                        <>
+                                                                            {data.reducedPerSecondRate > 1
+                                                                                ? genUtils.formatNumberToStringFixed(
+                                                                                      data.reducedPerSecondRate,
+                                                                                      2
+                                                                                  )
+                                                                                : ""}
+                                                                        </>
+                                                                    )}
+                                                                </DetailsBlock>
+                                                            </tr>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </>
                                 );
                             })}
                         </div>
