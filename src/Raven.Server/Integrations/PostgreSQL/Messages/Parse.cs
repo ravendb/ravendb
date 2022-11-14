@@ -82,7 +82,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             {
                 if (transaction.Session.NamedStatements.TryAdd(StatementName, transaction._currentQuery) == false)
                     throw new ArgumentException($"Failed to store statement under the name '{StatementName}', there is already a statement with such name.");
-
+                transaction._currentQuery.IsNamedStatement = true;
             }
             await writer.WriteAsync(messageBuilder.ParseComplete(), token);
         }
