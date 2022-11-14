@@ -13,7 +13,10 @@ namespace Voron.Impl
     // The concept of the weak small set is about an optimized set that can lose elements when it gets filled.
     // In a sense it behaves like a forgetful LRU cache, but will not track the read accesses. This version of the SmallSet
     // is specially designed to deal with sequence values stored in byte pointers. The main difference with a
-    // dictionary is that the small set will calculate the hash ONLY if there are strong candidates that match already. 
+    // dictionary is that the small set will calculate the hash ONLY if there are strong candidates that match already.
+    // IMPORTANT: This implementation is intended to be used where either identity semantics is irrelevant (doesn't matter)
+    // or the fallback method to acquire the object if it falls off the cache deals with that accordingly. If you need
+    // identity semantics use `SliceSmallSet<TValue>` instead.
     public sealed class WeakSliceSmallSet<TValue> : IDisposable
     {
         private const int Invalid = -1;
@@ -27,7 +30,7 @@ namespace Voron.Impl
 
         public WeakSliceSmallSet(int size = 0)
         {
-            _length = size > Vector<long>.Count ? size - size % Vector<long>.Count : Vector<long>.Count;
+            _length = size > Vector<long>.Count ? (size - size % Vector<long>.Count) : Vector<long>.Count;
             _keySizes = ArrayPool<int>.Shared.Rent(_length);
             _keyHashes = ArrayPool<ulong>.Shared.Rent(_length);
             _keys = ArrayPool<Slice>.Shared.Rent(_length);
@@ -163,7 +166,7 @@ namespace Voron.Impl
 
         public SliceSmallSet(int size = 0)
         {
-            _length = size > Vector<long>.Count ? size - size % Vector<long>.Count : Vector<long>.Count;
+            _length = size > Vector<long>.Count ? (size - size % Vector<long>.Count) : Vector<long>.Count;
             _keySizes = ArrayPool<int>.Shared.Rent(_length);
             _keyHashes = ArrayPool<ulong>.Shared.Rent(_length);
             _keys = ArrayPool<Slice>.Shared.Rent(_length);
@@ -284,35 +287,24 @@ namespace Voron.Impl
             // PERF: We put this into another method call to shrink the size of TryGetValue in the cases
             // where the inliner would decide to inline the method. Given this method will be rarely executed
             // as if it happens, probably this data structure is not the correct answer; the inliner will 
-            // most likely not inline this method ever. 
+            // not inline this method ever. 
+            [MethodImpl(MethodImplOptions.NoInlining)]
             bool TryGetValueFromOverflowUnlikely(out TValue value)
             {
-                if (_overflowStorage.TryGetValue(key, out value))
-                {
-                    _currentIdx++;
-
-                    // We are updating the LRU
-                    var bucket = _currentIdx % _length;
-                    _keys[bucket] = key;
-                    _values[bucket] = value;
-                    return true;
-                }
-
-                return false;
+                return _overflowStorage.TryGetValue(key, out value);
             }
 
             int idx = FindKey(key);
             if (idx == Invalid)
             {
-                // If we have overflowed, then we will gonna try to find it there. 
-                if (_overflowStorage != null)
+                if (_overflowStorage == null)
                 {
-                    if (TryGetValueFromOverflowUnlikely(out value))
-                        return true;
+                    Unsafe.SkipInit(out value);
+                    return false;
                 }
 
-                Unsafe.SkipInit(out value);
-                return false;
+                // If we have overflowed, then we will gonna try to find it there. 
+                return TryGetValueFromOverflowUnlikely(out value);
             }
 
             value = _values[idx];

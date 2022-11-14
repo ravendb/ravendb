@@ -14,6 +14,9 @@ namespace Sparrow.Server.Collections
     // set is based on SIMD instructions (unless they are not available on the platform) the cost is linear on the size and
     // cost may become too high. For small sets this is much more efficient than a full blown dictionary as a cache,
     // but it can degenerate fast. 
+    // IMPORTANT: This implementation is intended to be used where either identity semantics is irrelevant (doesn't matter)
+    // or the fallback method to acquire the object if it falls off the cache deals with that accordingly. If you need
+    // identity semantics use `SmallSet<TKey, TValue>` instead.
     public sealed class WeakSmallSet<TKey, TValue> : IDisposable 
         where TKey : unmanaged
     {
@@ -26,12 +29,11 @@ namespace Sparrow.Server.Collections
 
         public WeakSmallSet(int size = 0)
         {
-            _length = size > Vector<TKey>.Count ? size - size % Vector<TKey>.Count : Vector<TKey>.Count;
+            _length = size > Vector<TKey>.Count ? (size - size % Vector<TKey>.Count) : Vector<TKey>.Count;
             _keys = ArrayPool<TKey>.Shared.Rent(_length);
             _values = ArrayPool<TValue>.Shared.Rent(_length);
             _currentIdx = -1;
         }
-
 
         public void Add(TKey key, TValue value)
         {
@@ -141,7 +143,7 @@ namespace Sparrow.Server.Collections
 
         public SmallSet(int size = 0)
         {
-            _length = size > Vector<TKey>.Count ? size - size % Vector<TKey>.Count : Vector<TKey>.Count;
+            _length = size > Vector<TKey>.Count ? (size - size % Vector<TKey>.Count) : Vector<TKey>.Count;
             _keys = ArrayPool<TKey>.Shared.Rent(_length);
             _values = ArrayPool<TValue>.Shared.Rent(_length);
             _overflowStorage = null;
@@ -229,19 +231,12 @@ namespace Sparrow.Server.Collections
             // PERF: We put this into another method call to shrink the size of TryGetValue in the cases
             // where the inliner would decide to inline the method. Given this method will be rarely executed
             // as if it happens, probably this data structure is not the correct answer; the inliner will 
-            // most likely not inline this method ever. 
+            // not inline this method ever. 
+            [MethodImpl(MethodImplOptions.NoInlining)]
             bool TryGetValueFromOverflowUnlikely(out TValue value)
             {
                 if (_overflowStorage.TryGetValue(key, out value))
-                {
-                    _currentIdx++;
-
-                    // We are updating the LRU
-                    var bucket = _currentIdx % _length;
-                    _keys[bucket] = key;
-                    _values[bucket] = value;
                     return true;
-                }
 
                 return false;
             }
@@ -249,15 +244,14 @@ namespace Sparrow.Server.Collections
             int idx = FindKey(key);
             if (idx == Invalid)
             {
-                // If we have overflowed, then we will gonna try to find it there. 
-                if (_overflowStorage != null)
+                if (_overflowStorage == null)
                 {
-                    if (TryGetValueFromOverflowUnlikely(out value))
-                        return true;
+                    Unsafe.SkipInit(out value);
+                    return false;
                 }
 
-                Unsafe.SkipInit(out value);
-                return false;
+                // If we have overflowed, then we will gonna try to find it there. 
+                return TryGetValueFromOverflowUnlikely(out value);
             }
 
             value = _values[idx];
