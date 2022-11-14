@@ -1408,14 +1408,8 @@ namespace Voron.Data.BTrees
         public CompactTree CompactTreeFor(Slice key)
         {
             if (_compactTreesLocator == null)
-            {
-                // Since the Weak Small Set will lose items if more than 128 items gets added,
-                // we will still be adding the compact trees to a dictionary; however, since
-                // the dictionary will get searched many times over the lifetime of the transaction
-                // the overhead caused by storing in two different data structures gets amortized.
                 _compactTreesLocator = new SliceSmallSet<CompactTree>(128);
-            }
-            
+
             if (_compactTreesLocator.TryGetValue(key, out var compactTree) == false)
             {
                 compactTree = CompactTree.InternalCreate(this, key);
