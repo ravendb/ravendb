@@ -32,10 +32,10 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         ~RqlQuery()
         {
-            Logger.Operations($"Query '{this.QueryString}' wasn't disposed properly.\n" +
-                            $"Query was run: {_queryWasRun}\n" +
-                            $"Are transactions still opened: {_queryOperationContext.AreTransactionsOpened()}\n");
-
+            if(Logger.IsOperationsEnabled)
+                Logger.Operations($"Query '{QueryString}' wasn't disposed properly.{Environment.NewLine}" +
+                                $"Query was run: {_queryWasRun}{Environment.NewLine}" +
+                                $"Are transactions still opened: {_queryOperationContext.AreTransactionsOpened()}{Environment.NewLine}");
             Dispose();
         }
         
