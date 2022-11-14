@@ -23,6 +23,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         public Dictionary<string, object> Parameters;
         protected readonly Dictionary<string, PgColumn> Columns;
         private short[] _resultColumnFormatCodes;
+        public bool IsNamedStatement { get; set; } = false;
 
         protected PgQuery(string queryString, int[] parametersDataTypes)
         {
