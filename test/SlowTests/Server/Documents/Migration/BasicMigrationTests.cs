@@ -21,7 +21,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
@@ -72,7 +72,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
@@ -136,7 +136,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
@@ -198,7 +198,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
@@ -249,7 +249,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
@@ -313,7 +313,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateLinkOnChild(MigrationProvider provider)
@@ -384,7 +384,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
@@ -465,7 +465,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
@@ -541,7 +541,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
@@ -595,7 +595,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
@@ -652,7 +652,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
@@ -692,7 +692,7 @@ namespace SlowTests.Server.Documents.Migration
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]

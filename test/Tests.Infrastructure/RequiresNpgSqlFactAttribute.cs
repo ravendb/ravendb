@@ -1,4 +1,5 @@
 ﻿using System;
+using FastTests;
 using Npgsql;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
@@ -9,7 +10,10 @@ namespace Tests.Infrastructure
     {
         public RequiresNpgSqlFactAttribute()
         {
-            if (NpgSqlConnectionString.Instance.CanConnect() == false)
+            if (RavenTestHelper.IsRunningOnCI)
+                return;
+
+            if (NpgSqlConnectionString.Instance.CanConnect == false)
                 Skip = "Test requires NpgSQL database";
         }
     }

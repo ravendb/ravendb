@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ namespace SlowTests.Server.Documents.ETL
         {
         }
 
-        [Fact]
+        [RequiresMsSqlFact]
         public void CanAddAndRemoveConnectionStrings()
         {
             using (var store = GetDocumentStore())
@@ -34,7 +35,7 @@ namespace SlowTests.Server.Documents.ETL
                 var sqlConnectionString = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
                 };
 
                 var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -73,7 +74,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RequiresMsSqlFact]
         public void CanUpdateConnectionStrings()
         {
             using (var store = GetDocumentStore())
@@ -90,7 +91,7 @@ namespace SlowTests.Server.Documents.ETL
                 var sqlConnectionString = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
                 };
 
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -124,7 +125,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RequiresMsSqlFact]
         public void CanGetAllConnectionStrings()
         {
             using (var store = GetDocumentStore())
@@ -142,7 +143,7 @@ namespace SlowTests.Server.Documents.ETL
                     var sqlConnectionStr = new SqlConnectionString
                     {
                         Name = $"SqlConnectionString{i}",
-                        ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                        ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
                     };
 
                     ravenConnectionStrings.Add(ravenConnectionStr);
@@ -170,7 +171,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RequiresMsSqlFact]
         public void CanGetConnectionStringByName()
         {
             using (var store = GetDocumentStore())
@@ -187,7 +188,7 @@ namespace SlowTests.Server.Documents.ETL
                 var sqlConnectionStr = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
                 };
 
                 ravenConnectionStrings.Add(ravenConnectionStr);
