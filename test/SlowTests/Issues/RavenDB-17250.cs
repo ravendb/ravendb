@@ -395,7 +395,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
     private List<DateAndTimeOnly> CreateDatabaseData(IDocumentStore store)
     {
         TimeOnly timeOnly = new TimeOnly(0, 0, 0, 234);
-        DateOnly dateOnly;
+        DateOnly dateOnly = default;
         var database =
             Enumerable.Range(0, 1000)
                 .Select(i => new DateAndTimeOnly() {TimeOnly = timeOnly.AddMinutes(i), DateOnly = dateOnly.AddDays(i), DateTime = DateTime.Now}).ToList();
