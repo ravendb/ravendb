@@ -114,12 +114,13 @@ namespace Raven.Client.Extensions
 
             protected override Expression VisitMember(MemberExpression node)
             {
+                string convertedName = _conventions.PropertyNameConverter(node.Member);
                 if (IsDictionaryProperty(node, out string propertyName))
                 {
                     if (string.IsNullOrEmpty(propertyName) == false)
                     {
                         AddPropertySeparator();
-                        Results.Push("$" + node.Member.Name);
+                        Results.Push("$" + convertedName);
                     }
 
                     return base.VisitMember(node);
@@ -127,14 +128,14 @@ namespace Raven.Client.Extensions
 
                 if (_isFirst == false && node.Expression != null && node.Member.IsField())
                 {
-                    Results.Push(node.Member.Name);
+                    Results.Push(convertedName);
                     AddPropertySeparator();
                     Results.Push(node.Expression.ToString());
                     return base.VisitMember(node);
                 }
 
                 AddPropertySeparator();
-                Results.Push(node.Member.Name);
+                Results.Push(convertedName);
                 return base.VisitMember(node);
             }
 
