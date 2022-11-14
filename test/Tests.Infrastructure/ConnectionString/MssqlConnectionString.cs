@@ -3,17 +3,17 @@ using System.Data.SqlClient;
 
 namespace Tests.Infrastructure.ConnectionString
 {
-    public class MssqlConnectionString : SqlConnectionString<SqlConnection>
+    public class MsSqlConnectionString : SqlConnectionString<SqlConnection>
     {
         private const string EnvironmentVariable = "RAVEN_MSSQL_CONNECTION_STRING";
 
-        public static readonly MssqlConnectionString Instance = new MssqlConnectionString();
+        public static readonly MsSqlConnectionString Instance = new MsSqlConnectionString();
 
-        private MssqlConnectionString() : base(EnvironmentVariable)
+        private MsSqlConnectionString() : base(EnvironmentVariable)
         {
         }
 
-        protected override string VerifiedConnectionStringFactor()
+        protected override string VerifiedConnectionStringFactory(string cs)
         {
             const string localConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
             if (TryConnect(localConnectionString, out var errorMessage))

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Reflection;
+using FastTests;
 using Raven.Server.SqlMigration;
 using Tests.Infrastructure.ConnectionString;
 using Xunit.Sdk;
@@ -10,7 +11,10 @@ namespace Tests.Infrastructure
     {
         public RequiresMySqlInlineData()
         {
-            if (MySqlConnectionString.Instance.CanConnect() == false)
+            if (RavenTestHelper.IsRunningOnCI)
+                return;
+
+            if (MySqlConnectionString.Instance.CanConnect == false)
                 Skip = "Test requires MySQL database";
         }
 

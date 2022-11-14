@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
 using Xunit;
@@ -19,6 +20,8 @@ namespace Tests.Infrastructure
         static AzureSasTokenFactAttribute()
         {
             var azureSettingsString = Environment.GetEnvironmentVariable(AzureCredentialEnvironmentVariable);
+            if (azureSettingsString == null)
+                return;
 
             try
             {
@@ -32,13 +35,16 @@ namespace Tests.Infrastructure
 
         public AzureSasTokenFactAttribute([CallerMemberName] string memberName = "")
         {
+            if (RavenTestHelper.IsRunningOnCI)
+                return;
+
             if (string.IsNullOrEmpty(ParsingError) == false)
             {
                 Skip = $"Failed to parse the Azure settings, error: {ParsingError}";
                 return;
             }
 
-            if (AzureSettings == null)
+            if (_azureSettings == null)
             {
                 Skip = $"S3 {memberName} tests missing Azure settings.";
                 return;
