@@ -61,7 +61,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly Logger _log;
         private BuildVersionType _buildType;
-        private static DatabaseSmugglerOptionsServerSide _options;
+        private DatabaseSmugglerOptionsServerSide _options;
 
         public DatabaseDestination(DocumentDatabase database, CancellationToken token = default)
         {
@@ -90,22 +90,22 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDocumentActions Documents(bool throwOnCollectionMismatchError = true)
         {
-            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError);
+            return new DatabaseDocumentActions(_database, _buildType, _options, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError);
         }
 
         public IDocumentActions RevisionDocuments()
         {
-            return new DatabaseDocumentActions(_database, _buildType, isRevision: true, _log, _duplicateDocsHandler, throwOnCollectionMismatchError: true);
+            return new DatabaseDocumentActions(_database, _buildType, _options, isRevision: true, _log, _duplicateDocsHandler, throwOnCollectionMismatchError: true);
         }
 
         public IDocumentActions Tombstones()
         {
-            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError: true);
+            return new DatabaseDocumentActions(_database, _buildType, _options, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError: true);
         }
 
         public IDocumentActions Conflicts()
         {
-            return new DatabaseDocumentActions(_database, _buildType, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError: true);
+            return new DatabaseDocumentActions(_database, _buildType, _options, isRevision: false, _log, _duplicateDocsHandler, throwOnCollectionMismatchError: true);
         }
 
         public IKeyValueActions<long> Identities()
@@ -255,6 +255,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             private readonly DocumentDatabase _database;
             private readonly BuildVersionType _buildType;
+            private readonly DatabaseSmugglerOptionsServerSide _options;
             private readonly bool _isRevision;
             private readonly Logger _log;
             private MergedBatchPutCommand _command;
@@ -275,10 +276,11 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DuplicateDocsHandler _duplicateDocsHandler;
             private bool _throwOnCollectionMismatchError;
 
-            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, bool isRevision, Logger log, DuplicateDocsHandler duplicateDocsHandler, bool throwOnCollectionMismatchError)
+            public DatabaseDocumentActions(DocumentDatabase database, BuildVersionType buildType, DatabaseSmugglerOptionsServerSide options, bool isRevision, Logger log, DuplicateDocsHandler duplicateDocsHandler, bool throwOnCollectionMismatchError)
             {
                 _database = database;
                 _buildType = buildType;
+                _options = options;
                 _isRevision = isRevision;
                 _log = log;
                 _enqueueThreshold = new Size(database.Is32Bits ? 2 : 32, SizeUnit.Megabytes);
