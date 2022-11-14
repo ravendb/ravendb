@@ -1280,9 +1280,13 @@ namespace Raven.Server.Documents.Replication
         private void OnSuccessfulReplication()
         {
             SuccessfulReplication?.Invoke(this);
-            _parent._server.NotificationCenter.Dismiss(_missingAttachmentsAlert?.Id);
+            if (_missingAttachmentsAlert != null)
+            {
+                _parent._server.NotificationCenter.Dismiss(_missingAttachmentsAlert.Id);
+                _missingAttachmentsAlert = null;
+            }
+         
             MissingAttachmentsRetries = 0;
-            _missingAttachmentsAlert = null;
         }
 
         internal TestingStuff ForTestingPurposes;
