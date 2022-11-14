@@ -197,7 +197,12 @@ namespace Raven.Server.Integrations.PostgreSQL
                 }
 
                 if (_result == null)
-                    throw new InvalidOperationException("RqlQuery.Execute was called when _results = null");
+                {
+                    if (IsNamedStatement)
+                        _result = await RunRqlQuery();
+                    else
+                        throw new InvalidOperationException("RqlQuery.Execute was called when _results = null");
+                }
 
                 if (_limit == 0 || _result == null || _result.Count == 0)
                 {
@@ -360,6 +365,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             GC.SuppressFinalize(this);
             _queryOperationContext?.Dispose();
             _queryOperationContext = null;
+            _result = null;
         }
     }
 }
