@@ -282,8 +282,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
             finally
             {
-                _queryOperationContext?.Dispose();
-                _queryOperationContext = null;
+                ReleaseQueryResources();
             }
             
         }
@@ -360,12 +359,17 @@ namespace Raven.Server.Integrations.PostgreSQL
             return null;
         }
 
-        public override void Dispose()
+        public void ReleaseQueryResources()
         {
-            GC.SuppressFinalize(this);
             _queryOperationContext?.Dispose();
             _queryOperationContext = null;
             _result = null;
+        }
+        
+        public override void Dispose()
+        {
+            GC.SuppressFinalize(this);
+            ReleaseQueryResources();
         }
     }
 }
