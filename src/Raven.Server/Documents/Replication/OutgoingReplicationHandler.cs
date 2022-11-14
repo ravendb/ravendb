@@ -36,6 +36,9 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Raven.Server.Exceptions;
+using Raven.Server.Documents.Replication.ReplicationItems;
+using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -356,6 +359,10 @@ namespace Raven.Server.Documents.Replication
                 _parent.ForTestingPurposes?.OnOutgoingReplicationStart?.Invoke(this);
                 replicationAction();
             }
+            catch (MissingAttachmentException e)
+            {
+                HandleException(e);
+            }
             catch (AggregateException e)
             {
                 if (e.InnerExceptions.Count == 1)
@@ -432,6 +439,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public long NextReplicateTicks;
+        public int MissingAttachmentsRetries;
 
         private void Replicate()
         {
@@ -1162,6 +1170,10 @@ namespace Raven.Server.Documents.Replication
                     throw new InvalidOperationException(
                         $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
                 case ReplicationMessageReply.ReplyType.MissingAttachments:
+                    if (++MissingAttachmentsRetries > 1)
+                        RaiseAlertAndThrowMissingAttachmentException($"Failed to send batch successfully to {Destination.FromString()}. " +
+                                                                     $"Destination reported missing attachments {MissingAttachmentsRetries} times.");
+
                     if (_log.IsInfoEnabled)
                     {
                         _log.Info(
@@ -1176,6 +1188,27 @@ namespace Raven.Server.Documents.Replication
             }
 
             return replicationBatchReply;
+        }
+
+        private AlertRaised _missingAttachmentsAlert;
+
+        private void RaiseAlertAndThrowMissingAttachmentException(string msg)
+        {
+            if (_log.IsInfoEnabled)
+            {
+                _log.Info(
+                    $"Received reply for replication batch from {Destination.FromString()}. Error string received = {msg}");
+            }
+
+            _missingAttachmentsAlert = AlertRaised.Create(
+                _database.Name,
+                "Replication delay due to a missing attachments loop",
+                msg,
+                AlertType.Replication,
+                NotificationSeverity.Error);
+            _parent._server.NotificationCenter.Add(_missingAttachmentsAlert);
+
+            throw new MissingAttachmentException(msg);
         }
 
         private void OnDocumentChange(DocumentChange change)
@@ -1266,7 +1299,17 @@ namespace Raven.Server.Documents.Replication
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
 
-        private void OnSuccessfulReplication() => SuccessfulReplication?.Invoke(this);
+        private void OnSuccessfulReplication()
+        {
+            SuccessfulReplication?.Invoke(this);
+            if (_missingAttachmentsAlert != null)
+            {
+                _parent._server.NotificationCenter.Dismiss(_missingAttachmentsAlert.Id);
+                _missingAttachmentsAlert = null;
+            }
+         
+            MissingAttachmentsRetries = 0;
+        }
 
         internal TestingStuff ForTestingPurposes;
 
@@ -1281,6 +1324,8 @@ namespace Raven.Server.Documents.Replication
         internal class TestingStuff
         {
             public Action OnDocumentSenderFetchNewItem;
+
+            public Action<Dictionary<Slice, AttachmentReplicationItem>> OnMissingAttachmentStream;
         }
     }
 

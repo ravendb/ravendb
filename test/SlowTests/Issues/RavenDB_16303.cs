@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -100,7 +100,7 @@ loadToTestGuidEtls(item);"
         }
 
         [NightlyBuildTheory]
-        [InlineData(MigrationProvider.MsSQL)]
+        [RequiresMsSqlInlineData]
         [RequiresMySqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]

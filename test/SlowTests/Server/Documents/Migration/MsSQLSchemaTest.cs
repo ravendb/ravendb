@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Schema;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Server.Documents.Migration
         {
         }
 
-        [Fact]
+        [RequiresMsSqlRetryFact(delayBetweenRetriesMs: 1000)]
         public void CanFetchSchema()
         {
             using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, includeData: false))
@@ -30,20 +31,20 @@ namespace SlowTests.Server.Documents.Migration
                 var noPkTable = tables.First(x => x.TableName == "NoPkTable");
                 Assert.NotNull(noPkTable);
 
-                Assert.Equal(new[] {"Id"}, noPkTable.Columns.Select(x => x.Name).ToList());
+                Assert.Equal(new[] { "Id" }, noPkTable.Columns.Select(x => x.Name).ToList());
                 Assert.Equal(0, noPkTable.PrimaryKeyColumns.Count);
 
                 // validate Order Table
                 var orderTable = tables.First(x => x.TableName == "Order");
 
                 Assert.Equal(4, orderTable.Columns.Count);
-                Assert.Equal(new[] {"Id", "OrderDate", "CustomerId", "TotalAmount"}, orderTable.Columns.Select(x => x.Name).ToList());
-                Assert.Equal(new[] {"Id"}, orderTable.PrimaryKeyColumns);
+                Assert.Equal(new[] { "Id", "OrderDate", "CustomerId", "TotalAmount" }, orderTable.Columns.Select(x => x.Name).ToList());
+                Assert.Equal(new[] { "Id" }, orderTable.PrimaryKeyColumns);
 
                 var orderReferences = orderTable.References;
                 Assert.Equal(1, orderReferences.Count);
                 Assert.Equal("OrderItem", orderReferences[0].Table);
-                Assert.Equal(new[] {"OrderId"}, orderReferences[0].Columns);
+                Assert.Equal(new[] { "OrderId" }, orderReferences[0].Columns);
 
                 // validate UnsupportedTable
 
@@ -53,11 +54,11 @@ namespace SlowTests.Server.Documents.Migration
                 // validate OrderItem (2 columns in PK)
 
                 var orderItemTable = tables.First(x => x.TableName == "OrderItem");
-                Assert.Equal(new[] {"OrderId", "ProductId"}, orderItemTable.PrimaryKeyColumns);
+                Assert.Equal(new[] { "OrderId", "ProductId" }, orderItemTable.PrimaryKeyColumns);
 
                 Assert.Equal(1, orderItemTable.References.Count);
                 Assert.Equal("Details", orderItemTable.References[0].Table);
-                Assert.Equal(new[] {"OrderId", "ProductId"}, orderItemTable.References[0].Columns);
+                Assert.Equal(new[] { "OrderId", "ProductId" }, orderItemTable.References[0].Columns);
 
                 // all types are supported (except UnsupportedTable)
                 Assert.True(tables.Where(x => x.TableName != "UnsupportedTable")

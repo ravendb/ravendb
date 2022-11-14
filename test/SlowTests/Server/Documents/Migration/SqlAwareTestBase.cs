@@ -147,9 +147,9 @@ namespace SlowTests.Server.Documents.Migration
         private static DisposableAction WithMsSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
             databaseName = "SqlTest_" + Guid.NewGuid();
-            connectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={databaseName}";
+            connectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={databaseName}";
 
-            using (var connection = new SqlConnection(MssqlConnectionString.Instance.VerifiedConnectionString.Value))
+            using (var connection = new SqlConnection(MsSqlConnectionString.Instance.VerifiedConnectionString.Value))
             {
                 connection.Open();
 
@@ -209,7 +209,7 @@ namespace SlowTests.Server.Documents.Migration
                 {
                     try
                     {
-                        using (var con = new SqlConnection(MssqlConnectionString.Instance.VerifiedConnectionString.Value))
+                        using (var con = new SqlConnection(MsSqlConnectionString.Instance.VerifiedConnectionString.Value))
                         {
                             con.Open();
 

@@ -24,7 +24,9 @@ public class CustomS3 : RestoreFromS3
 
         using (var client = new RavenAwsS3Client(settings, DefaultConfiguration))
         {
+#pragma warning disable CS0618
             Assert.Equal(customUrl, client.Config.DetermineServiceURL());
+#pragma warning restore CS0618
             Assert.Equal(customRegion, client.Config.RegionEndpoint.SystemName);
         }
     }
