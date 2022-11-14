@@ -1,49 +1,49 @@
 .panel {
-	background-color: $panel-bg-1;
-	color: $text-color;
+    background-color: $panel-bg-1;
+    color: $text-color;
 }
 
 input {
-	&[type=checkbox], &[type=radio] {
-		cursor: pointer;
-	}
+    &[type=checkbox], &[type=radio] {
+        cursor: pointer;
+    }
 }
 
 @mixin check-variant($color) {
-	.form-check-input {
-		border-color: $color;
+    .form-check-input {
+        border-color: $color;
 
-		&:focus {
-			box-shadow: 0 0 $input-btn-focus-blur $input-btn-focus-width rgba($color, $input-btn-focus-color-opacity);
-		}
+        &:focus {
+            box-shadow: 0 0 $input-btn-focus-blur $input-btn-focus-width rgba($color, $input-btn-focus-color-opacity);
+        }
 
-		&:checked {
-			background-color: $color;
-			border-color: $color;
-		}		
-	}
+        &:checked {
+            background-color: $color;
+            border-color: $color;
+        }
+    }
 
-	&.form-switch {
-		.form-check-input {
-			
-			background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{rgba($text-muted, .6)}'/></svg>"));
-			
-			&:focus {
-				background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$text-emphasis}'/></svg>"));
-			}
-	
-			&:checked {				
-				background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$text-emphasis}'/></svg>"));
-			}
-		}
-	}
+    &.form-switch {
+        .form-check-input {
+
+            background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{rgba($text-muted, .6)}'/></svg>"));
+
+            &:focus {
+                background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$text-emphasis}'/></svg>"));
+            }
+
+            &:checked {
+                background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$text-emphasis}'/></svg>"));
+            }
+        }
+    }
 }
 
 @each $color, $value in $theme-colors {
-	.form-check-#{$color} {
-		
-		@include check-variant($value);
-		
-	}
+    .form-check-#{$color} {
+
+        @include check-variant($value);
+
+    }
 }
 

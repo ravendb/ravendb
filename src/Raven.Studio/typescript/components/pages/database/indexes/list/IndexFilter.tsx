@@ -5,7 +5,16 @@ import { IndexStatus, IndexFilterCriteria, IndexSharedInfo } from "../../../../m
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { DropdownPanel } from "../../../../common/DropdownPanel";
-import { Dropdown, DropdownItem, DropdownMenu, DropdownToggle, FormGroup, Input, Label, UncontrolledDropdown } from "reactstrap";
+import {
+    Dropdown,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
+    FormGroup,
+    Input,
+    Label,
+    UncontrolledDropdown,
+} from "reactstrap";
 
 interface IndexFilterStatusItemProps {
     label: string;
@@ -17,8 +26,7 @@ interface IndexFilterStatusItemProps {
 }
 
 function IndexFilterStatusItem(props: IndexFilterStatusItemProps) {
-    
-    const switchColor = `form-check-${props.color ?? 'secondary'}`;
+    const switchColor = `form-check-${props.color ?? "secondary"}`;
 
     return (
         <>
@@ -182,7 +190,8 @@ export default function IndexFilter(props: IndexFilterProps) {
                 <DropdownToggle
                     outline
                     title="Set the indexing state for the selected indexes"
-                    className={classNames("btn btn-default dropdown-toggle", { active: hasAnyStateFilter(filter) })}>
+                    className={classNames("btn btn-default dropdown-toggle", { active: hasAnyStateFilter(filter) })}
+                >
                     <span>Index Status</span>
                 </DropdownToggle>
 
@@ -244,11 +253,8 @@ export default function IndexFilter(props: IndexFilterProps) {
                             label="Auto refresh"
                             color="warning"
                         >
-                        <small>
-                            Automatically refreshes the list of indexes. Might result in list flickering.
-                            </small>
+                            <small>Automatically refreshes the list of indexes. Might result in list flickering.</small>
                         </IndexFilterStatusItem>
-                       
                     </div>
                 </DropdownMenu>
             </UncontrolledDropdown>
@@ -264,7 +270,6 @@ export default function IndexFilter(props: IndexFilterProps) {
                 <DropdownPanel className="settings-menu">
                     <div className="settings-item">
                         <div className="margin-left margin-right margin-right-sm">
-                            
                             <IndexFilterStatusItem
                                 toggleStatus={() => toggleStatus("ErrorOrFaulty")}
                                 checked={filter.status.includes("ErrorOrFaulty")}

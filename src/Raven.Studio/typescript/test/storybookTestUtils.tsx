@@ -25,9 +25,5 @@ export function withStorybookContexts(storyFn: any) {
 }
 
 export function withBootstrap5(storyFn: any) {
-    return (
-        <div className="bs5">
-            {storyFn()}
-        </div>
-    );
+    return <div className="bs5">{storyFn()}</div>;
 }

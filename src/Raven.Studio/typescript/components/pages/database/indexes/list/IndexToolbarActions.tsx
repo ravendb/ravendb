@@ -3,7 +3,15 @@ import { useAppUrls } from "hooks/useAppUrls";
 import classNames from "classnames";
 import { withPreventDefault } from "../../../../utils/common";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
-import { Button, ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
+import {
+    Button,
+    ButtonGroup,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
+    Spinner,
+    UncontrolledDropdown,
+} from "reactstrap";
 
 interface IndexToolbarActionProps {
     selectedIndexes: string[];
@@ -59,7 +67,9 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
     return (
         <div className="indexesToolbar-actions flex-horizontal">
             <div
-                className={classNames("btn-group-label margin-right flex-horizontal", { active: selectedIndexes.length > 0 })}
+                className={classNames("btn-group-label margin-right flex-horizontal", {
+                    active: selectedIndexes.length > 0,
+                })}
                 data-label="Selection"
             >
                 <Button
@@ -72,12 +82,12 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
                     <span>Delete</span>
                 </Button>
                 <UncontrolledDropdown>
-
                     <DropdownToggle
                         className="margin-right-xxs"
                         title="Set the indexing state for the selected indexes"
                         disabled={selectedIndexes.length === 0}
-                        data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges()">
+                        data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges()"
+                    >
                         {globalLockChanges && <Spinner size="sm" className="margin-right-xs" />}
                         {!globalLockChanges && <i className="icon-play" />}
                         <span>Set indexing state...</span>
@@ -98,15 +108,14 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
                             <i className="icon-pause text-warning" /> <span>Pause</span>
                         </DropdownItem>
                     </DropdownMenu>
-
                 </UncontrolledDropdown>
 
                 <UncontrolledDropdown>
-
                     <DropdownToggle
                         title="Set the lock mode for the selected indexes"
                         disabled={selectedIndexes.length === 0}
-                        data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges()">
+                        data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges()"
+                    >
                         {globalLockChanges && <Spinner size="sm" className="margin-right-xs" />}
                         {!globalLockChanges && <i className="icon-lock" />}
                         <span>Set lock mode...</span>
@@ -124,7 +133,6 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
                             <i className="icon-lock-error" /> <span>Lock (Error)</span>
                         </DropdownItem>
                     </DropdownMenu>
-
                 </UncontrolledDropdown>
                 {/*<ButtonGroup>*/}
                 {/*    <button*/}
