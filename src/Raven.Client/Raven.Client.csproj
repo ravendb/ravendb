@@ -3,7 +3,7 @@
     <Version></Version>
     <Description>RavenDB Client is the client library for accessing RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFrameworks>net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net7.0;net6.0;net5.0;netcoreapp3.1;netstandard2.1;netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Client</AssemblyName>
@@ -75,6 +75,15 @@
       <PackagePath>lib/net6.0/</PackagePath>
       <Pack>true</Pack>
     </Content>
+    <!-- this is required for the nuget build to properly include the right files -->
+    <Content Include="..\Sparrow\bin\Release\net7.0\Sparrow.dll">
+      <PackagePath>lib/net7.0/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+    <Content Include="..\Sparrow\bin\Release\net7.0\Sparrow.xml">
+      <PackagePath>lib/net7.0/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\libs\libzstd\libzstd.win.x64.dll" Link="libzstd.win.x64.dll">
@@ -125,8 +134,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Lambda2Js.Signed" Version="3.1.4" />
-    <PackageReference Include="Microsoft.AspNetCore.JsonPatch" Version="6.0.11" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="6.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.JsonPatch" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="7.0.0" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
@@ -134,14 +143,13 @@
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
-    <PackageReference Include="System.Security.Cryptography.Cng" Version="5.0.0" />
   </ItemGroup>
-  
+
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.1" />
     <PackageReference Include="System.Buffers" Version="4.5.1" />
     <PackageReference Include="System.Memory" Version="4.5.5" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
   </ItemGroup>
-  
+
 </Project>
