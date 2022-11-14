@@ -11,6 +11,10 @@ namespace Tests.Infrastructure.ConnectionString
 
         public Lazy<string> ConnectionString { get; }
 
+        private readonly Lazy<bool> _canConnect;
+
+        public bool CanConnect => _canConnect.Value;
+
         private MongoDBConnectionString()
         {
             ConnectionString = new Lazy<string>(() =>
@@ -20,9 +24,11 @@ namespace Tests.Infrastructure.ConnectionString
                     ? string.Empty
                     : connectionString;
             });
+
+            _canConnect = new Lazy<bool>(CanConnectInternal);
         }
 
-        public bool CanConnect()
+        private bool CanConnectInternal()
         {
             try
             {

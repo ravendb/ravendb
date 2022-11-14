@@ -11,7 +11,7 @@ namespace Tests.Infrastructure
             if (RavenTestHelper.IsRunningOnCI)
                 return;
 
-            if (MongoDBConnectionString.Instance.CanConnect() == false)
+            if (MongoDBConnectionString.Instance.CanConnect == false)
                 Skip = "Test requires MongoDB";
         }
     }
