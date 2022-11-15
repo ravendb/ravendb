@@ -570,8 +570,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                             IncludeArtificial = true // we want to include artificial in backup
                         };
 
-                        options.OperateOnTypes |= DatabaseItemType.Tombstones;
-                        options.OperateOnTypes |= DatabaseItemType.CompareExchangeTombstones;
+                        if (_isFullBackup == false)
+                        {
+                            options.OperateOnTypes |= DatabaseItemType.Tombstones;
+                            options.OperateOnTypes |= DatabaseItemType.CompareExchangeTombstones;
+                        }
 
                         var currentBackupResult = CreateBackup(options, tempBackupFilePath, startEtag, startRaftIndex);
 
