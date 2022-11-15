@@ -8,9 +8,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Documents.Commands.Attachments;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -387,6 +385,7 @@ namespace Raven.Server.Documents
                 return UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr, null);
             }
         }
+
         public void DeleteAttachmentBeforeRevert(DocumentsOperationContext context, LazyStringValue lowerDocId)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
@@ -424,6 +423,7 @@ namespace Raven.Server.Documents
                 }
             }
         }
+
         public void PutAttachmentRevert(DocumentsOperationContext context, Document document, out bool hasAttachments)
         {
             hasAttachments = false;

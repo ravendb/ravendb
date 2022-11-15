@@ -418,7 +418,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var databaseRecord = RestoreSettings.DatabaseRecord;
 
             // restore the smuggler backup
-            var options = new DatabaseSmugglerOptionsServerSide { AuthorizationStatus = AuthorizationStatus.DatabaseAdmin, SkipRevisionCreation = true };
+            var options = new DatabaseSmugglerOptionsServerSide
+            {
+                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin, SkipRevisionCreation = true
+            };
 
             options.OperateOnTypes |= DatabaseItemType.LegacyDocumentDeletions;
             options.OperateOnTypes |= DatabaseItemType.LegacyAttachments;

@@ -12,6 +12,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Identities;
 using Raven.Client.Documents.Operations.Indexes;
@@ -24,11 +25,9 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -119,9 +118,10 @@ public partial class RavenTestBase
             return record.Sharding;
         }
 
-        public async Task<int> GetShardNumber(IDocumentStore store, string id)
+        public async Task<int> GetShardNumber(IDocumentStore store, string id, string database = null)
         {
-            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            database ??= store.Database;
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
             var bucket = ShardHelper.GetBucket(id);
             return ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
         }
@@ -310,6 +310,30 @@ public partial class RavenTestBase
                 //Index
                 await new Index().ExecuteAsync(store);
             }
+
+            public ShardedRestoreSettings GenerateShardRestoreSettings(IReadOnlyCollection<string> backupPaths, ShardingConfiguration sharding)
+            {
+                var settings = new ShardedRestoreSettings
+                {
+                    Shards = new SingleShardRestoreSetting[backupPaths.Count]
+                };
+
+                foreach (var dir in backupPaths)
+                {
+                    var shardIndexPosition = dir.LastIndexOf('$') + 1;
+                    var shardNumber = int.Parse(dir[shardIndexPosition].ToString());
+
+                    settings.Shards[shardNumber] = new SingleShardRestoreSetting
+                    {
+                        ShardNumber = shardNumber,
+                        FolderName = dir,
+                        NodeTag = sharding.Shards[shardNumber].Members[0]
+                    };
+                }
+
+                return settings;
+            }
+
 
             public async Task CheckData(IDocumentStore store, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, long expectedRevisionsCount = 28, string database = null)
             {
@@ -504,7 +528,6 @@ public partial class RavenTestBase
                 }
             }
 
-
             public IDisposable ReadOnly(string path)
             {
                 var allFiles = new List<string>();
@@ -595,7 +618,7 @@ public partial class RavenTestBase
 
                 await server.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
 
-                var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation));
+                var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation), timeout: 1000 * 1000);
                 Assert.True(exists, $"{id} wasn't found at shard {newLocation}");
             }
 
