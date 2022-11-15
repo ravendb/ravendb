@@ -4,7 +4,6 @@ using System.Buffers.Text;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Utils;
@@ -19,34 +18,31 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Threading;
-using Voron;
 using RavenConstants = Raven.Client.Constants;
 using CoraxConstants = Corax.Constants;
 using Encoding = System.Text.Encoding;
 using System.Diagnostics;
+using Corax.Mappings;
 using Raven.Client.Exceptions.Corax;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public abstract class CoraxDocumentConverterBase : ConverterBase
 {
-    private static readonly Memory<byte> _nullValue = Encoding.UTF8.GetBytes(RavenConstants.Documents.Indexing.Fields.NullValue);
-    private static readonly Memory<byte> _emptyString = Encoding.UTF8.GetBytes(RavenConstants.Documents.Indexing.Fields.EmptyString);
-    private static readonly Memory<byte> _trueLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("true"));
-    private static readonly Memory<byte> _falseLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("false"));
+    private static readonly Memory<byte> _trueLiteral = new(Encoding.UTF8.GetBytes("true"));
+    private static ReadOnlySpan<byte> TrueLiteral => _trueLiteral.Span;
 
-    public static ReadOnlySpan<byte> NullValue => _nullValue.Span;
-    public static ReadOnlySpan<byte> EmptyString => _emptyString.Span;
-    public static ReadOnlySpan<byte> TrueLiteral => _trueLiteral.Span;
-    public static ReadOnlySpan<byte> FalseLiteral => _falseLiteral.Span;
+    private static readonly Memory<byte> _falseLiteral = new(Encoding.UTF8.GetBytes("false"));
+    private static ReadOnlySpan<byte> FalseLiteral => _falseLiteral.Span;
 
-    private static readonly StandardFormat _standardFormat = new('g');
-    private static readonly StandardFormat _timeSpanFormat = new('c');
 
-    private ConversionScope Scope;
-    protected readonly Lazy<IndexFieldsMapping> _knownFieldsForReaders;
-    protected IndexFieldsMapping _knownFieldsForWriter;
-    protected readonly ByteStringContext _allocator;
+    private static readonly StandardFormat StandardFormat = new('g');
+    private static readonly StandardFormat TimeSpanFormat = new('c');
+
+    private readonly ConversionScope Scope;
+    private readonly Lazy<IndexFieldsMapping> _knownFieldsForReaders;
+    protected IndexFieldsMapping KnownFieldsForWriter;
+    protected readonly ByteStringContext Allocator;
 
     private const int InitialSizeOfEnumerableBuffer = 128;
 
@@ -71,16 +67,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         string storeValueFieldName, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
         keyFieldName, storeValueFieldName, fields)
     {
-        _allocator = new ByteStringContext(SharedMultipleUseFlag.None);       
+        Allocator = new ByteStringContext(SharedMultipleUseFlag.None);       
         
         Scope = new();
         _knownFieldsForReaders = new(() =>
         {
             try
             {
-                var map = CreateRawFieldsMapping(_allocator, _index, _keyFieldName, _storeValue, _storeValueFieldName);
-                map = CoraxIndexingHelpers.CreateMappingWithAnalyzers(_allocator, _index, _index.Definition, map, true);
-                return map;
+                return CoraxIndexingHelpers.CreateMappingWithAnalyzers(Allocator, _index, _index.Definition, _keyFieldName, storeValue, storeValueFieldName, true);
             }
             catch (Exception e)
             {
@@ -88,41 +82,16 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             }
         });
     }
-
-    private static IndexFieldsMapping CreateRawFieldsMapping(ByteStringContext allocator, Index index, string keyFieldName, bool storeValue, string storeValueFieldName)
-    {
-        var knownFields = new IndexFieldsMapping(allocator);
-        Slice.From(allocator, keyFieldName, ByteStringType.Immutable, out var value);
-        knownFields.AddBinding(0, value, null, hasSuggestion: false, fieldIndexingMode: FieldIndexingMode.Normal);
-        foreach (var field in index.Definition.IndexFields.Values)
-        {
-            Slice.From(allocator, field.Name, ByteStringType.Immutable, out value);
-            knownFields.AddBinding(field.Id, value, null, 
-                hasSuggestion: field.HasSuggestions, 
-                fieldIndexingMode: TranslateRavenFieldIndexingIntoCoraxFieldIndexingMode(field.Indexing),
-                field.Spatial is not null);
-        }
-        
-        if (storeValue)
-        {
-            Slice.From(allocator, storeValueFieldName, ByteStringType.Immutable, out var storedKey);
-            knownFields.AddBinding(knownFields.Count, storedKey, null, false, FieldIndexingMode.No);
-        }
-        
-
-        return knownFields;
-    }
-
+    
     public IndexFieldsMapping GetKnownFieldsForQuerying() => _knownFieldsForReaders.Value;
 
     private IndexFieldsMapping CreateKnownFieldsForWriter()
     {
-        if (_knownFieldsForWriter == null)
+        if (KnownFieldsForWriter == null)
         {
             try
             {
-                _knownFieldsForWriter = CreateRawFieldsMapping(_allocator, _index, _keyFieldName, _storeValue, _storeValueFieldName);
-                _knownFieldsForWriter = CoraxIndexingHelpers.CreateMappingWithAnalyzers(_allocator, _index, _index.Definition, _knownFieldsForWriter);
+                KnownFieldsForWriter = CoraxIndexingHelpers.CreateMappingWithAnalyzers(Allocator, _index, _index.Definition, _keyFieldName, _storeValue, _storeValueFieldName, false);
             }
             catch (Exception e)
             {
@@ -130,14 +99,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             }
         }
 
-        return _knownFieldsForWriter;
+        return KnownFieldsForWriter;
     }
 
     protected ref IndexEntryWriter GetEntriesWriter()
     {
         if (_indexEntryWriterInitialized == false)
         {
-            _indexEntryWriter = new IndexEntryWriter(_allocator, GetKnownFieldsForWriter());
+            _indexEntryWriter = new IndexEntryWriter(Allocator, GetKnownFieldsForWriter());
             _indexEntryWriterInitialized = true;
         }
         
@@ -147,7 +116,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IndexFieldsMapping GetKnownFieldsForWriter()
     {
-        return _knownFieldsForWriter ?? CreateKnownFieldsForWriter();
+        return KnownFieldsForWriter ?? CreateKnownFieldsForWriter();
     }
     
     protected void InsertRegularField(IndexField field, object value, JsonOperationContext indexContext, ref IndexEntryWriter entryWriter,
@@ -173,23 +142,23 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 }
                 else
                 {
-                    using (_allocator.Allocate(128, out var buffer))
+                    using (Allocator.Allocate(128, out var buffer))
                     {
                         var length = 0;
                         switch (value)
                         {
                             case double d:
-                                if (Utf8Formatter.TryFormat(d, buffer.ToSpan(), out length, _standardFormat) == false)
+                                if (Utf8Formatter.TryFormat(d, buffer.ToSpan(), out length, StandardFormat) == false)
                                     throw new Exception($"Cannot convert {field.Name} as double into bytes.");
                                 break;
 
                             case decimal dm:
-                                if (Utf8Formatter.TryFormat(dm, buffer.ToSpan(), out length, _standardFormat) == false)
+                                if (Utf8Formatter.TryFormat(dm, buffer.ToSpan(), out length, StandardFormat) == false)
                                     throw new Exception($"Cannot convert {field.Name} as decimal into bytes.");
                                 break;
 
                             case float f:
-                                if (Utf8Formatter.TryFormat(f, buffer.ToSpan(), out length, _standardFormat) == false)
+                                if (Utf8Formatter.TryFormat(f, buffer.ToSpan(), out length, StandardFormat) == false)
                                     throw new Exception($"Cannot convert {field.Name} as float into bytes.");
                                 break;
                         }
@@ -252,9 +221,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
             case ValueType.TimeSpan:
                 var timeSpan = (TimeSpan)value;
-                using (_allocator.Allocate(256, out var buffer))
+                using (Allocator.Allocate(256, out var buffer))
                 {
-                    if (Utf8Formatter.TryFormat(timeSpan, buffer.ToSpan(), out var bytesWritten, _timeSpanFormat) == false)
+                    if (Utf8Formatter.TryFormat(timeSpan, buffer.ToSpan(), out var bytesWritten, TimeSpanFormat) == false)
                         throw new Exception($"Cannot convert {field.Name} as double into bytes.");
                     buffer.Truncate(bytesWritten);
                     scope.Write(path, fieldId, buffer.ToSpan(), ref entryWriter);
@@ -441,21 +410,15 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             CoraxSpatialPointEntryListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
         }
         
-        return new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope, CoraxSpatialPointEntryListForEnumerableScope, BlittableJsonReaderObjectsListForEnumerableScope, _allocator);
+        return new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope, CoraxSpatialPointEntryListForEnumerableScope, BlittableJsonReaderObjectsListForEnumerableScope, Allocator);
     }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static FieldIndexingMode TranslateRavenFieldIndexingIntoCoraxFieldIndexingMode(FieldIndexing indexing) => indexing switch
-    {
-        FieldIndexing.No => FieldIndexingMode.No,
-        FieldIndexing.Exact => FieldIndexingMode.Exact,
-        FieldIndexing.Search => FieldIndexingMode.Search,
-        _ => FieldIndexingMode.Normal,
-    };
-    
+
     public override void Dispose()
     {
         _indexEntryWriter.Dispose();
+        if (_knownFieldsForReaders.IsValueCreated)
+            _knownFieldsForReaders.Value?.Dispose();
+        KnownFieldsForWriter?.Dispose();
         Scope?.Dispose();
     }
 }

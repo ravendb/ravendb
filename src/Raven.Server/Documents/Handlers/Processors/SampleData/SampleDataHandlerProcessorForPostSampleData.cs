@@ -14,12 +14,12 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
         public SampleDataHandlerProcessorForPostSampleData([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
-        
+
         protected override async ValueTask ExecuteSmugglerAsync(JsonOperationContext context, ISmugglerSource source, Stream sampleData, DatabaseItemType operateOnTypes)
         {
-            var destination = new DatabaseDestination(RequestHandler.Database);
+            var destination = RequestHandler.Database.Smuggler.CreateDestination();
 
-            var smuggler = SmugglerBase.GetDatabaseSmuggler(RequestHandler.Database, source, destination, RequestHandler.Database.Time, context,
+            var smuggler = RequestHandler.Database.Smuggler.Create(source, destination, context,
                 options: new DatabaseSmugglerOptionsServerSide
                 {
                     OperateOnTypes = operateOnTypes,

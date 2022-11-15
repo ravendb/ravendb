@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Corax;
+using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
 using Corax.Utils;
@@ -1465,9 +1466,10 @@ namespace FastTests.Corax
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
             var analyzer = Analyzer.Create<WhitespaceTokenizer, LowerCaseTransformer>();
-            var mapping = new IndexFieldsMapping(ctx)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IdIndex, idSlice, analyzer)
                 .AddBinding(ContentIndex, contentSlice, analyzer);
+            using var mapping = builder.Build();
 
             IndexEntries(ctx, entriesToIndex, mapping);
 
@@ -1522,9 +1524,10 @@ namespace FastTests.Corax
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
             var analyzer = Analyzer.Create<WhitespaceTokenizer, LowerCaseTransformer>();
-            var mapping = new IndexFieldsMapping(ctx)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IdIndex, idSlice, analyzer)
                 .AddBinding(ContentIndex, contentSlice, analyzer);
+            using var mapping = builder.Build();
 
             IndexEntries(ctx, new[] {entry}, mapping);
             using (var searcher = new IndexSearcher(Env, mapping))
@@ -1901,9 +1904,10 @@ namespace FastTests.Corax
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            return new IndexFieldsMapping(ctx)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IdIndex, idSlice, analyzer)
                 .AddBinding(ContentIndex, contentSlice, analyzer);
+            return builder.Build();
         }
 
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntry> list, IndexFieldsMapping mapping)
@@ -1916,8 +1920,8 @@ namespace FastTests.Corax
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
                 entry.IndexEntryId = indexWriter.Index(entry.Id, data.ToSpan());
             }
-
             indexWriter.Commit();
+            mapping.Dispose();
         }
 
         private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexSingleEntry> list, IndexFieldsMapping mapping)

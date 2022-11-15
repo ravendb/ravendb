@@ -18,6 +18,8 @@ public abstract class TransactionMergedCommand : TransactionOperationsMerger.Mer
 
     public long LastTombstoneEtag { get; set; }
 
+    public long LastDocumentEtag { get; set; }
+
     public bool IsClusterTransaction { get; set; }
 
     protected TransactionMergedCommand(DocumentDatabase database)
@@ -28,6 +30,7 @@ public abstract class TransactionMergedCommand : TransactionOperationsMerger.Mer
     protected void AddPutResult(DocumentsStorage.PutOperationResults putResult)
     {
         LastChangeVector = putResult.ChangeVector;
+        LastDocumentEtag = putResult.Etag;
         ModifiedCollections?.Add(putResult.Collection.Name);
 
         // Make sure all the metadata fields are always been add

@@ -120,17 +120,19 @@ namespace Voron.Data.Sets
             public Iterator(SetLeafPage parent)
             {
                 _parent = parent;
-                _rawValuesIndex = _parent.Header->NumberOfRawValues-1;
-                _compressedEntryIndex = 0;                
-                _hasDecoder = parent.Header->NumberOfCompressedPositions > 0;
-
+                _rawValuesIndex = parent.Header->NumberOfRawValues-1;
+                
+                _compressedEntryIndex = 0;
                 _compressIndex = _compressLength = 0;
-                _decoderState = default;
-                _compressedEntry = default;
+
                 _lastVal = long.MinValue;
                 _moveNextIndex = 0;
                 _moveNextLength = 0;
 
+                Unsafe.SkipInit(out _decoderState);
+                Unsafe.SkipInit(out _compressedEntry);
+
+                _hasDecoder = parent.Header->NumberOfCompressedPositions > 0;
                 if (_hasDecoder)
                     InitializeDecoder(0);
             }
@@ -146,7 +148,9 @@ namespace Voron.Data.Sets
             {
                 if (_moveNextIndex < _moveNextLength)
                 {
-                    l = _moveNextBuffer[_moveNextIndex++];
+                    l = _moveNextBuffer[_moveNextIndex++]; 
+
+                    _lastVal = l;
                     return true;
                 }
 
@@ -156,6 +160,8 @@ namespace Voron.Data.Sets
                     var hasResult =_moveNextLength > 0;
                     l = hasResult ? _moveNextBuffer[0] : -1; 
                     _moveNextIndex = 1; // we already consumed the first item
+                    
+                    _lastVal = l;
                     return hasResult;
                 }
             }

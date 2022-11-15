@@ -178,6 +178,24 @@ namespace Raven.Server.Web
             return false;
         }
 
+        public static void ValidateNodeForAddingToDb(string databaseName, string node, DatabaseRecord databaseRecord, ClusterTopology clusterTopology, string baseMessage = null)
+        {
+            baseMessage ??= "Can't execute the operation";
+
+            var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
+                                        databaseRecord.DeletionInProgress.TryGetValue(node, out var deletionInProgress) &&
+                                        deletionInProgress != DeletionInProgressStatus.No;
+            if (databaseIsBeenDeleted)
+                throw new InvalidOperationException($"{baseMessage}, because the database {databaseName} is currently being deleted from node {node} (which is in the new topology)");
+
+            var url = clusterTopology.GetUrlFromTag(node);
+            if (url == null)
+                throw new InvalidOperationException($"{baseMessage}, because node {node} (which is in the new topology) is not part of the cluster");
+
+            if (databaseRecord.Encrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                throw new InvalidOperationException($"{baseMessage}, because database {databaseName} is encrypted but node {node} (which is in the new topology) doesn't have an SSL certificate.");
+        }
+
         /// <summary>
         /// puts the given string in TrafficWatch property of HttpContext.Items
         /// puts the given type in TrafficWatchChangeType property of HttpContext.Items

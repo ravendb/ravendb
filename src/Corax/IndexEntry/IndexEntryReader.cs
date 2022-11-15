@@ -5,6 +5,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Mappings;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Compression;
@@ -541,7 +542,7 @@ public ref struct IndexEntryReader
     {
         if (ReadDynamicValueOffset(name, out var intOffset, out bool isTyped))
         {
-            var type = (IndexEntryFieldType)VariableSizeEncoding.Read<ushort>(_buffer, out _, intOffset);
+            var type = Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _buffer[intOffset]);
             if (isTyped == false)
                 intOffset += sizeof(IndexEntryFieldType);
             

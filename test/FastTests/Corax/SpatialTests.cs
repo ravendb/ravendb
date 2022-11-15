@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Corax;
+using Corax.Mappings;
 using Corax.Utils;
 using Assert = Xunit.Assert;
 using FastTests.Voron;
@@ -33,13 +34,14 @@ public class SpatialTests : StorageTest
     public SpatialTests(ITestOutputHelper output) : base(output)
     {
         using var _ = StorageEnvironment.GetStaticContext(out var ctx);
-
-        _fieldsMapping = new (ctx);
+        
         Slice.From(ctx, "Id", ByteStringType.Immutable, out var idSlice);
         Slice.From(ctx, "Coordinates", ByteStringType.Immutable, out var idCoordinates);
 
-        _fieldsMapping.AddBinding(IdIndex, idSlice);
-        _fieldsMapping.AddBinding(CoordinatesIndex, idCoordinates);
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
+            .AddBinding(IdIndex, idSlice)
+            .AddBinding(CoordinatesIndex, idCoordinates);
+        _fieldsMapping = builder.Build();
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
@@ -140,4 +142,9 @@ public class SpatialTests : StorageTest
         Assert.Empty(entriesInIndex);
     }
 
+    public override void Dispose()
+    {
+        base.Dispose();
+        _fieldsMapping?.Dispose();
+    }
 }

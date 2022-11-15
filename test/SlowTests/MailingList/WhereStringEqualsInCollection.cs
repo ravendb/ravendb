@@ -19,6 +19,7 @@ namespace SlowTests.MailingList
             using (var session = store.OpenSession())
             {
                 session.Store(new MyEntity { StringData = "Entity with collection", StringCollection = new List<string> { "CollectionItem1", "CollectionItem2" } });
+                session.Store(new MyEntity { StringData = "entity with collection", StringCollection = new List<string> { "collectionitem1", "collectionitem2" } });
                 session.SaveChanges();
             }
         }
@@ -36,7 +37,7 @@ namespace SlowTests.MailingList
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1")));
 
-                    Assert.Equal(1, count);
+                    Assert.Equal(2, count);
                 }
             }
         }
@@ -54,7 +55,7 @@ namespace SlowTests.MailingList
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.OrdinalIgnoreCase)));
 
-                    Assert.Equal(1, count);
+                    Assert.Equal(2, count);
                 }
             }
         }
@@ -68,9 +69,14 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<NotSupportedException>(() => session.Query<MyEntity>()
+                    var query = session.Query<MyEntity>()
                         .Customize(customization => customization.WaitForNonStaleResults())
-                        .Count(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.Ordinal))));
+                        .Where(o => o.StringCollection.Any(s => s.Equals("CollectionItem1", StringComparison.Ordinal)));
+
+                    Assert.Equal("from 'MyEntities' where exact(StringCollection = $p0)", query.ToString());
+                    var result = query.ToList();
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal("Entity with collection", result.First().StringData);
 
                 }
             }

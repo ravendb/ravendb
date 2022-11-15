@@ -27,6 +27,7 @@ public class CompactTreeAddAndRemove : StorageTest
 
     [RavenTheory(RavenTestCategory.Voron)]
     [InlineData("repro-2.log.gz")]
+    [InlineData("repro-4.log.gz")]
     public unsafe void AddAndRemoveValues(string filename)
     {
         using (var wtx = Env.WriteTransaction())

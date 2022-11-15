@@ -173,12 +173,12 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamKeyValueActions<long>(_writer, nameof(DatabaseItemType.Identities));
         }
 
-        public ICompareExchangeActions CompareExchange(JsonOperationContext context)
+        public ICompareExchangeActions CompareExchange(string databaseName, JsonOperationContext context, BackupKind? backupKind, bool withDocuments)
         {
-            return new StreamCompareExchangeActions(_writer, context, nameof(DatabaseItemType.CompareExchange));
+            return withDocuments ? null : new StreamCompareExchangeActions(_writer, context, nameof(DatabaseItemType.CompareExchange));
         }
 
-        public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context)
+        public ICompareExchangeActions CompareExchangeTombstones(string databaseName, JsonOperationContext context)
         {
             return new StreamCompareExchangeActions(_writer, context, nameof(DatabaseItemType.CompareExchangeTombstones));
         }
@@ -1362,7 +1362,7 @@ namespace Raven.Server.Smuggler.Documents
                 _context = context;
             }
 
-            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
+            public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
             {
                 using (value)
                 {

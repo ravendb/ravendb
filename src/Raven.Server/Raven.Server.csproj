@@ -168,9 +168,9 @@
     <PackageReference Include="Google.Api.Gax.Rest" Version="4.2.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.1.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
-    <PackageReference Include="Lucene.Net" Version="3.0.60003" />
-    <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60003" />
     <PackageReference Include="librdkafka.redist" Version="1.9.2" />
+    <PackageReference Include="Lucene.Net" Version="3.0.60004" />
+    <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.60004" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.1" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.1" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.3.1" />
@@ -217,6 +217,9 @@
     <Content Include="..\..\debug.Dockerfile">
       <Link>debug.Dockerfile</Link>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Documents\Sharding\Smuggler\" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>

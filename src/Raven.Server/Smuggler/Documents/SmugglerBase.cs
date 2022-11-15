@@ -5,13 +5,16 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
-using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
@@ -20,6 +23,7 @@ namespace Raven.Server.Smuggler.Documents
 {
     public abstract class SmugglerBase
     {
+        private readonly string _databaseName;
         internal readonly ISmugglerSource _source;
         internal readonly DatabaseSmugglerOptionsServerSide _options;
         internal readonly SmugglerResult _result;
@@ -29,13 +33,22 @@ namespace Raven.Server.Smuggler.Documents
         protected readonly JsonOperationContext _context;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
         public Action<IndexDefinitionAndType> OnIndexAction;
+        public BackupKind BackupKind = BackupKind.None;
         internal readonly ISmugglerDestination _destination;
         private SmugglerPatcher _patcher;
 
-        protected SmugglerBase(ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context,
-            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
+        protected SmugglerBase(
+            [NotNull] string databaseName,
+            ISmugglerSource source,
+            ISmugglerDestination destination,
+            SystemTime time,
+            JsonOperationContext context,
+            DatabaseSmugglerOptionsServerSide options = null,
+            SmugglerResult result = null,
+            Action<IOperationProgress> onProgress = null,
             CancellationToken token = default)
         {
+            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
             _source = source;
             _options = options ?? new DatabaseSmugglerOptionsServerSide();
             _result = result;
@@ -210,7 +223,7 @@ namespace Raven.Server.Smuggler.Documents
                     break;
 
                 case DatabaseItemType.CompareExchange:
-                    counts = await ProcessCompareExchangeAsync(result);
+                    counts = await ProcessCompareExchangeAsync(result, _databaseName);
                     break;
 #pragma warning disable 618
                 case DatabaseItemType.Counters:
@@ -223,7 +236,7 @@ namespace Raven.Server.Smuggler.Documents
                     break;
 
                 case DatabaseItemType.CompareExchangeTombstones:
-                    counts = await ProcessCompareExchangeTombstonesAsync(result);
+                    counts = await ProcessCompareExchangeTombstonesAsync(result, _databaseName);
                     break;
 
                 case DatabaseItemType.Subscriptions:
@@ -378,11 +391,12 @@ namespace Raven.Server.Smuggler.Documents
 
             var throwOnCollectionMismatchError = _options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) == false;
 
-            await using (var actions = _destination.Documents(throwOnCollectionMismatchError))
+            await using (var documentActions = _destination.Documents(throwOnCollectionMismatchError))
+            await using (var compareExchangeActions = _destination.CompareExchange(_databaseName, _context, BackupKind, withDocuments: true))
             {
                 List<LazyStringValue> legacyIdsToDelete = null;
 
-                await foreach (DocumentItem item in _source.GetDocumentsAsync(_options.Collections, actions))
+                await foreach (DocumentItem item in _source.GetDocumentsAsync(_options.Collections, documentActions))
                 {
                     _token.ThrowIfCancellationRequested();
 
@@ -452,10 +466,18 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (SkipDocument(buildType, isPreV4Revision, item, result, ref legacyIdsToDelete))
                         continue;
-                    await actions.WriteDocumentAsync(item, result.Documents);
+
+                    if (compareExchangeActions != null && item.Document.ChangeVector != null && item.Document.ChangeVector.Contains(ChangeVectorParser.TrxnTag))
+                    {
+                        var key = ClusterTransactionCommand.GetAtomicGuardKey(item.Document.Id);
+                        await compareExchangeActions.WriteKeyValueAsync(key, null, item.Document);
+                        continue;
+                    }
+
+                    await documentActions.WriteDocumentAsync(item, result.Documents);
                 }
 
-                await TryHandleLegacyDocumentTombstonesAsync(legacyIdsToDelete, actions, result);
+                await TryHandleLegacyDocumentTombstonesAsync(legacyIdsToDelete, documentActions, result);
             }
 
             if (buildType == BuildVersionType.V3 && result.RevisionDocuments.ReadCount > 0)
@@ -464,7 +486,7 @@ namespace Raven.Server.Smuggler.Documents
             return result.Documents;
         }
 
-        protected virtual Task<SmugglerProgressBase.DatabaseRecordProgress> ProcessDatabaseRecordAsync(SmugglerResult result) => 
+        protected virtual Task<SmugglerProgressBase.DatabaseRecordProgress> ProcessDatabaseRecordAsync(SmugglerResult result) =>
             ProcessDatabaseRecordInternalAsync(result, _destination.DatabaseRecord());
 
         protected virtual async Task<SmugglerProgressBase.Counts> ProcessRevisionDocumentsAsync(SmugglerResult result)
@@ -597,7 +619,7 @@ namespace Raven.Server.Smuggler.Documents
 
         protected abstract Task<SmugglerProgressBase.Counts> ProcessIndexesAsync(SmugglerResult result);
 
-        protected virtual Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType) => 
+        protected virtual Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType) =>
             ProcessIdentitiesInternalAsync(result, buildType, _destination.Identities());
 
         protected virtual async Task<SmugglerProgressBase.Counts> ProcessLegacyAttachmentsAsync(SmugglerResult result)
@@ -725,10 +747,10 @@ namespace Raven.Server.Smuggler.Documents
             return result.Counters;
         }
 
-        protected virtual Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result) => 
+        protected virtual Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result) =>
             ProcessSubscriptionsInternalAsync(result, _destination.Subscriptions());
 
-        protected virtual Task<SmugglerProgressBase.Counts> ProcessReplicationHubCertificatesAsync(SmugglerResult result) => 
+        protected virtual Task<SmugglerProgressBase.Counts> ProcessReplicationHubCertificatesAsync(SmugglerResult result) =>
             ProcessReplicationHubCertificatesInternalAsync(result, _destination.ReplicationHubCertificates());
 
         protected virtual async Task<SmugglerProgressBase.Counts> ProcessTimeSeriesAsync(SmugglerResult result)
@@ -756,7 +778,7 @@ namespace Raven.Server.Smuggler.Documents
 
             return result.TimeSeries;
         }
-        
+
         protected async Task<SmugglerProgressBase.DatabaseRecordProgress> ProcessDatabaseRecordInternalAsync(SmugglerResult result, IDatabaseRecordActions action)
         {
             result.DatabaseRecord.Start();
@@ -870,7 +892,7 @@ namespace Raven.Server.Smuggler.Documents
 
             return result.ReplicationHubCertificates;
         }
-        
+
         protected async Task TryHandleLegacyDocumentTombstonesAsync(List<LazyStringValue> legacyIdsToDelete, IDocumentActions actions, SmugglerResult result)
         {
             if (legacyIdsToDelete == null)
@@ -907,20 +929,20 @@ namespace Raven.Server.Smuggler.Documents
                 case BuildVersionType.V5:
                 case BuildVersionType.V6:
                 case BuildVersionType.GreaterThanCurrent:
-                {
-                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
-                        flags = flags.Strip(DocumentFlags.HasRevisions);
+                    {
+                        if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
+                            flags = flags.Strip(DocumentFlags.HasRevisions);
 
-                    // those flags will be re-added once counter/time-series is imported
-                    flags = flags.Strip(DocumentFlags.HasCounters);
-                    flags = flags.Strip(DocumentFlags.HasTimeSeries);
+                        // those flags will be re-added once counter/time-series is imported
+                        flags = flags.Strip(DocumentFlags.HasCounters);
+                        flags = flags.Strip(DocumentFlags.HasTimeSeries);
 
-                    // attachments are special because they are referenced
-                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
-                        flags = flags.Strip(DocumentFlags.HasAttachments);
+                        // attachments are special because they are referenced
+                        if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
+                            flags = flags.Strip(DocumentFlags.HasAttachments);
 
-                    break;
-                }
+                        break;
+                    }
             }
         }
 
@@ -1000,33 +1022,8 @@ namespace Raven.Server.Smuggler.Documents
             throw new InvalidDataException("Document does not contain an id.");
         }
 
-        public static SmugglerBase GetDatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context,
-            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
-            CancellationToken token = default)
-        {
-            return options?.IsShard == true ?
-                new SingleShardDatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token) :
-                new DatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token);
-        }
+        protected abstract Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result, string databaseName);
 
-        public static SmugglerBase GetDatabaseSmugglerForBackup(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context,
-            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
-            CancellationToken token = default)
-        {
-            return database is ShardedDocumentDatabase ?
-                new SingleShardDatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token) :
-                new DatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token);
-        }
-
-        public static SmugglerBase GetDatabaseSmugglerForRestore(DocumentDatabase database, DatabaseRecord databaseRecord, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context,
-            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default)
-        {
-            return database is ShardedDocumentDatabase ?
-                new ShardedDatabaseSmuggler(source, destination, context, databaseRecord, database.ServerStore, options, result, onProgress, token) :
-                new DatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token);
-        }
-
-        protected abstract Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result);
-        protected abstract Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result);
+        protected abstract Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result, string databaseName);
     }
 }

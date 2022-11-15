@@ -55,7 +55,8 @@ namespace FastTests.Issues
             var operationWithoutDetails = new HashSet<OperationType>
             {
                 OperationType.Setup, // it is in secured setup,
-                OperationType.DebugPackage
+                OperationType.DebugPackage,
+                OperationType.LuceneOptimizeIndex
             };
 
             var allKnownTypes = Enum.GetNames(typeof(OperationType)).ToHashSet();

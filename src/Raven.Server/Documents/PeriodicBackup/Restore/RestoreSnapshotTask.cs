@@ -16,11 +16,13 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Voron.Data.Tables;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
+using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
@@ -225,7 +227,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         private async Task RestoreFromSmugglerFileAsync(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, JsonOperationContext context)
         {
-            var destination = new DatabaseDestination(database);
+            var destination = database.Smuggler.CreateDestination();
 
             var smugglerOptions = new DatabaseSmugglerOptionsServerSide
             {
@@ -247,8 +249,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         await using (var uncompressed = new GZipStream(inputStream, CompressionMode.Decompress))
                         {
                             var source = new StreamSource(uncompressed, context, database.Name);
-                            var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
-                                database.Time, context, smugglerOptions, onProgress: onProgress, token: OperationCancelToken.Token);
+
+                            var smuggler = database.Smuggler.CreateForRestore(databaseRecord: null, source, destination, context, smugglerOptions, result: null, onProgress, OperationCancelToken.Token);
+                            smuggler.BackupKind = BackupKind.Incremental;
 
                             await smuggler.ExecuteAsync(ensureStepsProcessed: true, isLastFile: true);
                         }

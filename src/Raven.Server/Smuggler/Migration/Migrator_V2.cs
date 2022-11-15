@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using static Raven.Server.Utils.MetricCacher.Keys;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Smuggler.Migration
@@ -75,7 +76,7 @@ namespace Raven.Server.Smuggler.Migration
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(responseStream, context, Parameters.Database.Name))
             {
-                var destination = new DatabaseDestination(Parameters.Database);
+                var destination = Parameters.Database.Smuggler.CreateDestination();
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
 #pragma warning disable 618
@@ -84,7 +85,7 @@ namespace Raven.Server.Smuggler.Migration
                     TransformScript = Options.TransformScript,
                     OperateOnTypes = Options.OperateOnTypes
                 };
-                var smuggler = SmugglerBase.GetDatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
+                var smuggler = Parameters.Database.Smuggler.Create(source, destination, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 // since we will be migrating indexes as separate task don't ensureStepsProcessed at this point
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false);
@@ -93,7 +94,7 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task MigrateAttachments(string lastEtag, SmugglerResult parametersResult)
         {
-            var destination = new DatabaseDestination(Parameters.Database);
+            var destination = Parameters.Database.Smuggler.CreateDestination();
             var options = new DatabaseSmugglerOptionsServerSide
             {
                 OperateOnTypes = DatabaseItemType.Attachments,
@@ -247,12 +248,12 @@ namespace Raven.Server.Smuggler.Migration
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(indexesStream, context, Parameters.Database.Name))
             {
-                var destination = new DatabaseDestination(Parameters.Database);
+                var destination = Parameters.Database.Smuggler.CreateDestination();
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
                     RemoveAnalyzers = Options.RemoveAnalyzers,
                 };
-                var smuggler = SmugglerBase.GetDatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
+                var smuggler = Parameters.Database.Smuggler.Create(source, destination, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 await smuggler.ExecuteAsync();
             }

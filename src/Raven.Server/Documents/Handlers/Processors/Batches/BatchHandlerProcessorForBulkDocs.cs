@@ -46,10 +46,11 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
     protected override async ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag,
         HashSet<string> modifiedCollections)
     {
-        await WaitForIndexesAsync(RequestHandler.Database, options.WaitForIndexesTimeout, options.WaitForSpecificIndexes, options.ThrowOnTimeoutInWaitForIndexes, lastChangeVector, lastTombstoneEtag, modifiedCollections);
+        long lastEtag = ChangeVectorUtils.GetEtagById(lastChangeVector, RequestHandler.Database.DbBase64Id);
+        await WaitForIndexesAsync(RequestHandler.Database, options.WaitForIndexesTimeout, options.WaitForSpecificIndexes, options.ThrowOnTimeoutInWaitForIndexes, lastEtag, lastTombstoneEtag, modifiedCollections);
     }
 
-    public static async Task WaitForIndexesAsync(DocumentDatabase database, TimeSpan timeout, string[] specifiedIndexesQueryString, bool throwOnTimeout, string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections)
+    public static async Task WaitForIndexesAsync(DocumentDatabase database, TimeSpan timeout, string[] specifiedIndexesQueryString, bool throwOnTimeout, long lastDocumentEtag, long lastTombstoneEtag, HashSet<string> modifiedCollections)
     {
         // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
         // waitForSpecificIndex=specific index1 & waitForSpecificIndex=specific index 2
@@ -86,8 +87,7 @@ internal class BatchHandlerProcessorForBulkDocs : AbstractBatchHandlerProcessorF
             needsServerContext |= index.Definition.HasCompareExchange;
         }
 
-        var lastEtag = lastChangeVector != null ? ChangeVectorUtils.GetEtagById(lastChangeVector, database.DbBase64Id) : 0;
-        var cutoffEtag = Math.Max(lastEtag, lastTombstoneEtag);
+        var cutoffEtag = Math.Max(lastDocumentEtag, lastTombstoneEtag);
 
         while (true)
         {

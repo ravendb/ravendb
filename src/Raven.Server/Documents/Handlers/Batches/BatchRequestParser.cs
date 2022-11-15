@@ -825,14 +825,17 @@ namespace Raven.Server.Documents.Handlers.Batches
                         *(long*)(state.StringBuffer + sizeof(int)) == 7598543892411468136 &&
                         *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 26478)
                         return CommandPropertyName.PatchIfMissing;
+
                     if (*(int*)state.StringBuffer == 1970562386 &&
                         *(long*)(state.StringBuffer + sizeof(int)) == 7308626840221150834 &&
                         *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 29806)
                         return CommandPropertyName.ReturnDocument;
+
                     if (*(int*)state.StringBuffer == 1635021889 &&
                         *(long*)(state.StringBuffer + sizeof(int)) == 8742740794129868899 &&
                         *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 25968)
                         return CommandPropertyName.AttachmentType;
+
                     return CommandPropertyName.NoSuchProperty;
 
                 case 15:

@@ -17,6 +17,7 @@ using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Restore.Sharding;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -148,7 +149,7 @@ namespace SlowTests.Sharding.Backup
                     Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
                     Assert.NotNull(databaseRecord.Revisions);
 
-                    await Sharding.Backup.CheckData(store2, RavenDatabaseMode.Sharded, expectedRevisionsCount : 16, database: databaseName);
+                    await Sharding.Backup.CheckData(store2, RavenDatabaseMode.Sharded, expectedRevisionsCount: 18, database: databaseName);
                 }
             }
         }
@@ -210,7 +211,7 @@ namespace SlowTests.Sharding.Backup
                             Assert.True(shardNodes.Add(shardTopology.Members[0]));
                         }
 
-                        await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 16, database: databaseName);
+                        await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 18, database: databaseName);
                     }
                 }
             }
@@ -274,7 +275,7 @@ namespace SlowTests.Sharding.Backup
                             Assert.True(shardNodes.Add(shardTopology.Members[0]));
                         }
 
-                        await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 16, database: databaseName);
+                        await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 18, database: databaseName);
                     }
                 }
             }
@@ -337,7 +338,7 @@ namespace SlowTests.Sharding.Backup
                             Assert.True(shardNodes.Add(shardTopology.Members[0]));
                         }
 
-                        await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 16, database: databaseName);
+                        await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 18, database: databaseName);
                     }
                 }
             }
@@ -496,7 +497,7 @@ namespace SlowTests.Sharding.Backup
                         Assert.True(shardNodes.Add(shardTopology.Members[0]));
                     }
 
-                    await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 16, database: databaseName);
+                    await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 18, database: databaseName);
                 }
             }
         }
@@ -695,7 +696,7 @@ namespace SlowTests.Sharding.Backup
                             Assert.True(shardNodes.Add(shardTopology.Members[0]));
                         }
 
-                        await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 16, newDbName);
+                        await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 18, newDbName);
                     }
                 }
             }
@@ -770,7 +771,7 @@ namespace SlowTests.Sharding.Backup
                         Assert.True(shardNodes.Add(shardTopology.Members[0]));
                     }
 
-                    await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 16, database: databaseName);
+                    await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 18, database: databaseName);
                 }
             }
         }

@@ -4,8 +4,9 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
-using Raven.Server.Documents;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -18,19 +19,19 @@ namespace Raven.Server.Smuggler.Documents
     internal class SingleShardDatabaseSmuggler : DatabaseSmuggler
     {
         private readonly TransactionContextPool _serverContextPool;
-        private readonly DatabaseRecord _shardedRecord;
         private readonly int _index;
         private bool _processCompareExchange;
+        private readonly ShardingConfiguration _sharding;
 
-        public SingleShardDatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, 
-            JsonOperationContext context, DatabaseSmugglerOptionsServerSide options, SmugglerResult result = null, 
-            Action<IOperationProgress> onProgress = null, CancellationToken token = default) : 
-            base(database, source, destination, time, context, options, result, onProgress, token)
+        public SingleShardDatabaseSmuggler(ShardedDocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time,
+            JsonOperationContext context, DatabaseSmugglerOptionsServerSide options, SmugglerResult result = null,
+            Action<IOperationProgress> onProgress = null, CancellationToken token = default) :
+            base(database.ShardedDatabaseName, database, source, destination, time, context, options, result, onProgress, token)
         {
             _serverContextPool = database.ServerStore.ContextPool;
-            _shardedRecord = _source.GetShardedDatabaseRecordAsync().Result;
+            _sharding = database.ReadShardingState();
             _index = ShardHelper.GetShardNumber(database.Name);
-    
+
             Initialize();
         }
 
@@ -67,7 +68,7 @@ namespace Raven.Server.Smuggler.Documents
                 using (_serverContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     var bucket = ShardHelper.GetBucket(context, docId);
-                    var shardNumber = ShardHelper.GetShardNumber(_shardedRecord.Sharding.BucketRanges, bucket);
+                    var shardNumber = ShardHelper.GetShardNumber(_sharding.BucketRanges, bucket);
 
                     return shardNumber != _index;
                 }

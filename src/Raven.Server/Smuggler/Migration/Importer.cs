@@ -19,6 +19,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Smuggler.Migration
 {
@@ -174,14 +175,15 @@ namespace Raven.Server.Smuggler.Migration
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(stream, context, Parameters.Database.Name))
             {
-                var destination = new DatabaseDestination(Parameters.Database);
+                var destination = Parameters.Database.Smuggler.CreateDestination();
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
                     TransformScript = Options.TransformScript,
                     OperateOnTypes = Options.OperateOnTypes,
                     OperateOnDatabaseRecordTypes = Options.OperateOnDatabaseRecordTypes
                 };
-                var smuggler = new Documents.DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
+
+                var smuggler = Parameters.Database.Smuggler.Create(source, destination, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 await smuggler.ExecuteAsync();
             }

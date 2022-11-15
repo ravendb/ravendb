@@ -24,13 +24,13 @@ internal class AdminIndexHandlerProcessorForStaticPut : AbstractAdminIndexHandle
         await using (var stream = new ArrayStream(RequestHandler.RequestBodyStream(), nameof(DatabaseItemType.Indexes)))
         using (var source = new StreamSource(stream, jsonOperationContext, RequestHandler.DatabaseName))
         {
-            var destination = new DatabaseDestination(RequestHandler.Database);
+            var destination = RequestHandler.Database.Smuggler.CreateDestination();
             var options = new DatabaseSmugglerOptionsServerSide
             {
                 OperateOnTypes = DatabaseItemType.Indexes
             };
 
-            var smuggler = SmugglerBase.GetDatabaseSmuggler(RequestHandler.Database, source, destination, RequestHandler.Database.Time, jsonOperationContext, options);
+            var smuggler = RequestHandler.Database.Smuggler.Create(source, destination, jsonOperationContext, options);
             await smuggler.ExecuteAsync();
         }
     }

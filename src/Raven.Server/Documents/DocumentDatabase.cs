@@ -30,6 +30,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Smuggler;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
@@ -131,6 +132,7 @@ namespace Raven.Server.Documents
                     _fileLocker.TryAcquireWriteLock(_logger);
                 }
 
+                Smuggler = new DatabaseSmugglerFactory(this);
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications
                 {
@@ -308,6 +310,8 @@ namespace Raven.Server.Documents
         public readonly QueryMetadataCache QueryMetadataCache;
 
         public long LastTransactionId => DocumentsStorage.Environment.CurrentReadTransactionId;
+
+        public AbstractDatabaseSmugglerFactory Smuggler { get; protected set; }
 
         protected virtual void InitializeSubscriptionStorage()
         {
@@ -495,7 +499,13 @@ namespace Raven.Server.Documents
                     using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        await ExecuteClusterTransaction(context);
+                        const int batchSize = 256;
+                        var executed = await ExecuteClusterTransaction(context, batchSize: batchSize);
+                        if (executed.BatchSize == batchSize)
+                        {
+                            // we might have more to execute
+                            _hasClusterTransaction.Set();
+                        }
                     }
                 }
                 catch (Exception e)
@@ -549,13 +559,12 @@ namespace Raven.Server.Documents
             return batchCollector;
         }
 
-        public async Task ExecuteClusterTransaction(TransactionOperationContext context)
+        public async Task<(long BatchSize, long CommandsCount)> ExecuteClusterTransaction(TransactionOperationContext context, int batchSize)
         {
-            const int takeCount = 256;
-            using var batchCollector = CollectCommandsBatch(context, takeCount);
+            using var batchCollector = CollectCommandsBatch(context, batchSize);
 
             if (batchCollector.Count == 0)
-                return;
+                return (0, 0);
 
             var batch = batchCollector.GetData();
             var mergedCommands = new ClusterTransactionMergedCommand(this, batch);
@@ -574,10 +583,16 @@ namespace Raven.Server.Documents
                 if (await ExecuteClusterTransactionOneByOne(batch))
                     batchCollector.AllCommandsBeenProcessed = true;
             }
+
+            var commandsCount = 0;
             foreach (var command in batch)
             {
+                commandsCount += command.Commands.Length;
+
                 OnClusterTransactionCompletion(command, mergedCommands);
             }
+
+            return (batch.Count, commandsCount);
         }
 
         private async Task<bool> ExecuteClusterTransactionOneByOne(ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
@@ -628,7 +643,7 @@ namespace Raven.Server.Documents
                 {
                     indexTask = BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(this, options.WaitForIndexesTimeout.Value,
                         options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                        mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                            mergedCommands.LastDocumentEtag, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
                 }
 
                 var result = new ClusterTransactionCompletionResult
@@ -1193,20 +1208,22 @@ namespace Raven.Server.Documents
                     using (var outputStream = GetOutputStream(zipStream))
                     {
                         var smugglerSource = new DatabaseSource(this, 0, 0, _logger);
-                        using (DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
+                        using (DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
-                            var smugglerDestination = new StreamDestination(outputStream, jsonOperationContext, smugglerSource);
+                            var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource);
                             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
                             {
                                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
                             };
-                            var smuggler = SmugglerBase.GetDatabaseSmugglerForBackup(this,
+
+                            var smuggler = Smuggler.Create(
                                 smugglerSource,
                                 smugglerDestination,
-                                Time,
-                                jsonOperationContext,
-                                options: databaseSmugglerOptionsServerSide,
+                                context,
+                                databaseSmugglerOptionsServerSide,
+                                result: null,
+                                onProgress: null,
                                 token: cancellationToken);
 
                             smugglerResult = smuggler.ExecuteAsync().Result;

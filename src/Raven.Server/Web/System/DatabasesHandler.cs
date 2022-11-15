@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using CsvHelper;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -19,6 +22,7 @@ using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
@@ -77,6 +81,75 @@ namespace Raven.Server.Web.System
                         WriteDatabaseInfo(databaseName, dbDoc, context, w);
                     });
                     writer.WriteEndObject();
+                }
+            }
+        }
+
+        [RavenAction("/admin/databases/topology/modify", "POST", AuthorizationStatus.Operator)]
+        public async Task ModifyTopology()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
+            var raftRequestId = GetRaftRequestIdFromQuery();
+
+            await ServerStore.EnsureNotPassiveAsync();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var json = await context.ReadForDiskAsync(RequestBodyStream(), "Database Topology");
+                var databaseTopology = JsonDeserializationCluster.DatabaseTopology(json);
+
+                // Validate Database Name
+                DatabaseRecord databaseRecord;
+                ClusterTopology clusterTopology;
+                using (context.OpenReadTransaction())
+                {
+                    databaseRecord = ServerStore.Cluster.ReadDatabase(context, dbName, out var index);
+                    if (databaseRecord == null)
+                    {
+                        DatabaseDoesNotExistException.ThrowWithMessage(dbName, $"Database Record was not found when trying to modify database topology");
+                        return;
+                    }
+                    clusterTopology = ServerStore.GetClusterTopology(context);
+                }
+
+                if (LoggingSource.AuditLog.IsInfoEnabled)
+                {
+                    var clientCert = GetCurrentCertificate();
+
+                    var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
+                    auditLog.Info($"Database \'{dbName}\' topology is being modified by {clientCert?.Subject} ({clientCert?.Thumbprint})," +
+                                  $"Old topology: {databaseRecord.Topology} " +
+                                  $"New topology: {databaseTopology}.");
+                }
+
+                // Validate Topology
+                var databaseAllNodes = databaseTopology.AllNodes;
+                foreach (var node in databaseAllNodes)
+                {
+                    if (clusterTopology.Contains(node) == false)
+                        throw new ArgumentException($"Failed to modify database {dbName} topology, because we don't have node {node} (which is in the new topology) in the cluster.");
+
+                    if (databaseRecord.Topology.RelevantFor(node) == false)
+                    {
+                        ValidateNodeForAddingToDb(dbName, node, databaseRecord, clusterTopology, baseMessage: $"Can't modify database {dbName} topology");
+                    }
+                }
+                databaseTopology.ReplicationFactor = Math.Min(databaseTopology.Count, clusterTopology.AllNodes.Count);
+
+                // Update Topology
+                var update = new UpdateTopologyCommand(dbName, SystemTime.UtcNow, raftRequestId)
+                {
+                    Topology = databaseTopology
+                };
+
+                var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);
+
+                // Return Raft Index
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(ModifyDatabaseTopologyResult.RaftCommandIndex)] = newIndex
+                    });
                 }
             }
         }

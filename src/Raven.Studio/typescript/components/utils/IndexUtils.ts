@@ -10,6 +10,8 @@ export default class IndexUtils {
     static readonly AutoIndexPrefix = "Auto/";
     static readonly SideBySideIndexPrefix = "ReplacementOf/";
 
+    static readonly FieldsToHideOnUi = ["_", "__"];
+
     static isAutoIndex(index: IndexSharedInfo) {
         switch (index.type) {
             case "Map":

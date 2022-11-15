@@ -4,12 +4,13 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using Sparrow.Compression;
-using Sparrow.Server.Compression;
 
 namespace Corax
 {
     public ref struct IndexEntryFieldIterator
     {
+        private const int Invalid = -1;
+        
         public readonly IndexEntryFieldType Type;
         public readonly bool IsValid;
         public readonly int Count;
@@ -21,7 +22,8 @@ namespace Corax
         private int _nullTableOffset;
         private int _longOffset;
         private int _doubleOffset;
-
+        private int _stringLength;
+        
         internal IndexEntryFieldIterator(IndexEntryFieldType type)
         {
             Debug.Assert(type == IndexEntryFieldType.Invalid);
@@ -29,7 +31,7 @@ namespace Corax
             Count = 0;
             _buffer = ReadOnlySpan<byte>.Empty;
             IsValid = false;
-            _currentIdx = -1;
+            _currentIdx = Invalid;
 
             _spanOffset = 0;
             _nullTableOffset = 0;
@@ -37,6 +39,7 @@ namespace Corax
             _spanOffset = 0;
             _longOffset = 0;
             _doubleOffset = 0;
+            _stringLength = Invalid;
         }
 
         public IndexEntryFieldIterator(ReadOnlySpan<byte> buffer, int offset)
@@ -46,12 +49,12 @@ namespace Corax
             Type = MemoryMarshal.Read<IndexEntryFieldType>(buffer.Slice(offset));
             offset += sizeof(IndexEntryFieldType);
 
-            if (!Type.HasFlag(IndexEntryFieldType.List))
+            if (Type.HasFlag(IndexEntryFieldType.List) == false)
             {
                 IsValid = false;
                 Count = 0;
-                _currentIdx = -1;
-
+                _currentIdx = Invalid;
+                _stringLength = Invalid;
                 _spanOffset = 0;
                 _nullTableOffset = 0;
                 _spanTableOffset = 0;
@@ -99,8 +102,9 @@ namespace Corax
 
                 _spanOffset = (offset + sizeof(int));
             }
-
-            _currentIdx = -1;
+            
+            _stringLength = Invalid;
+            _currentIdx = Invalid;
             IsValid = true;
         }
 
@@ -127,17 +131,37 @@ namespace Corax
             }
         }
 
-        public bool IsEmpty
+        /// <summary>
+        /// Check if whole collection is empty.
+        /// </summary>
+        public bool IsEmptyCollection
         {
             get
             {
-                if (!IsValid)
-                    throw new InvalidOperationException($"Cannot call {nameof(IsEmpty)} on an invalid iterator.");
+                if (IsValid == false)
+                    throw new InvalidOperationException($"Cannot call {nameof(IsEmptyCollection)} on an invalid iterator.");
 
                 return Type.HasFlag(IndexEntryFieldType.Empty);
             }
         }
+        
+        /// <summary>
+        /// Check if current string is empty.
+        /// </summary>
+        public bool IsEmptyString
+        {
+            get
+            {
+                if (!IsValid)
+                    throw new InvalidOperationException($"Cannot call {nameof(IsEmptyString)} on an invalid iterator.");
+                
+                if (_stringLength == Invalid)
+                    _stringLength = VariableSizeEncoding.Read<int>(_buffer, out _, _spanTableOffset);
 
+                return _stringLength == 0;
+            }
+        }
+        
         public ReadOnlySpan<byte> Sequence
         {
             get
@@ -151,8 +175,10 @@ namespace Corax
                 if (_currentIdx < 0)
                     throw new InvalidOperationException($"Cannot call {nameof(IsNull)} before calling {nameof(ReadNext)}.");
 
-                int stringLength = VariableSizeEncoding.Read<int>(_buffer, out _, _spanTableOffset);
-                return _buffer.Slice(_spanOffset, stringLength);
+                if (_stringLength == Invalid)
+                    _stringLength = VariableSizeEncoding.Read<int>(_buffer, out _, _spanTableOffset);
+                
+                return _buffer.Slice(_spanOffset, _stringLength);
             }
         }
 
@@ -198,6 +224,8 @@ namespace Corax
         public bool ReadNext()
         {
             _currentIdx++;
+            _stringLength = Invalid;
+            
             if (_currentIdx >= Count)
                 return false;
 

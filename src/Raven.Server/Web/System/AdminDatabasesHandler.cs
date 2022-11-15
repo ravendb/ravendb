@@ -104,18 +104,7 @@ namespace Raven.Server.Web.System
                     if (databaseRecord.Topology.RelevantFor(node))
                         throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
 
-                    var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
-                                                databaseRecord.DeletionInProgress.TryGetValue(node, out var deletionInProgress) &&
-                                                deletionInProgress != DeletionInProgressStatus.No;
-                    if (databaseIsBeenDeleted)
-                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because it is currently being deleted from node '{node}'");
-
-                    var url = clusterTopology.GetUrlFromTag(node);
-                    if (url == null)
-                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because node {node} is not part of the cluster");
-
-                    if (databaseRecord.Encrypted && NotUsingHttps(url))
-                        throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
+                    ValidateNodeForAddingToDb(name, node, databaseRecord, clusterTopology, baseMessage: $"Can't add node {node} to database '{name}' topology");
                 }
 
                 //The case were we don't care where the database will be added to
@@ -1048,7 +1037,7 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-
+        
         [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task CompactDatabase()
         {
@@ -1129,7 +1118,7 @@ namespace Raven.Server.Web.System
                                             }
 
                                             // we want to send progress of entire operation (indexes and documents), but we should update stats only for index compaction
-                                            index.Compact(progress => onProgress(overallResult.Progress), indexCompactionResult, indexCts.Token);
+                                            index.Compact(progress => onProgress(overallResult.Progress), indexCompactionResult, compactSettings.SkipOptimizeIndexes, indexCts.Token);
                                             indexCompactionResult.Processed = true;
                                         }
                                     }
@@ -1354,9 +1343,8 @@ namespace Raven.Server.Web.System
                                 await using (var stream = new GZipStream(reader, CompressionMode.Decompress))
                                 using (var source = new StreamSource(stream, context, database.Name))
                                 {
-                                    var destination = new DatabaseDestination(database);
-                                    var smuggler = SmugglerBase.GetDatabaseSmuggler(database, source, destination, database.Time, context, result: result, onProgress: onProgress,
-                                        token: token.Token);
+                                    var destination = database.Smuggler.CreateDestination();
+                                    var smuggler = database.Smuggler.Create(source, destination, context, result: result, onProgress: onProgress, token: token.Token);
 
                                     await smuggler.ExecuteAsync();
                                 }

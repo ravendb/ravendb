@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Corax;
+using Corax.Mappings;
 using Corax.Pipeline;
 using Voron;
 
@@ -9,8 +10,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 internal class AnalyzersScope : IDisposable
 {
-    private readonly IndexDynamicFieldsMapping _dynamicFields;
     private readonly IndexFieldsMapping _knownFields;
+    private readonly bool _hasDynamics;
     private Token[] _tokensBuffer;
     private byte[] _outputBuffer;
     private readonly IndexSearcher _indexSearcher;
@@ -20,12 +21,9 @@ internal class AnalyzersScope : IDisposable
     {
         _indexSearcher = indexSearcher;
         _knownFields = fieldsMapping;
+        _hasDynamics = hasDynamics;
         _analyzersCache = new(SliceComparer.Instance);
-
-        if (hasDynamics)
-        {
-            _dynamicFields = fieldsMapping.CreateIndexMappingForDynamic();
-        }
+        
     }
 
     public void Execute(Slice fieldName, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens)
@@ -58,16 +56,16 @@ internal class AnalyzersScope : IDisposable
         }
         else
         {
-            if (_dynamicFields is null)
+            if (_hasDynamics is false)
                 ThrowWhenDynamicFieldNotFound(fieldName);
             var mode = _indexSearcher.GetFieldIndexingModeForDynamic(fieldName);
             
             analyzer = mode switch
             {
-                FieldIndexingMode.Normal => _dynamicFields!.DefaultAnalyzer,
-                FieldIndexingMode.Search => _dynamicFields!.DefaultSearchAnalyzer(fieldName.ToString()),
+                FieldIndexingMode.Normal => _knownFields!.DefaultAnalyzer,
+                FieldIndexingMode.Search => _knownFields!.SearchAnalyzer(fieldName.ToString()),
                 FieldIndexingMode.No => Analyzer.DefaultAnalyzer,
-                FieldIndexingMode.Exact => _dynamicFields!.DefaultExactAnalyzer(fieldName.ToString()),
+                FieldIndexingMode.Exact => _knownFields!.ExactAnalyzer(fieldName.ToString()),
                 _ => ThrowWhenAnalyzerModeNotFound(mode)
             };
         }

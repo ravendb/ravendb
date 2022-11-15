@@ -60,7 +60,7 @@ select {
 group by Company
 where count() > 5
 order by count() desc
-select count() as Count, key() as Companyd
+select count() as Count, key() as Company
 include Company`,
             html:
 `<span class="token keyword">from</span> <span class="token string">Orders</span>

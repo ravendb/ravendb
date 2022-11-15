@@ -9,7 +9,7 @@ class formatIndexCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Web.Studio.StudioTasksHandler.FormattedExpression> {
+    execute(): JQueryPromise<Raven.Server.Documents.Indexes.IndexMerging.SourceCodeBeautifier.FormattedExpression> {
         const url = endpoints.global.studioTasks.studioTasksFormat;
         const payload = {
             Expression: this.expression

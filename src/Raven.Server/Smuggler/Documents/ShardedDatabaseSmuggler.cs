@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -11,8 +12,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
-using Raven.Server.Documents.Sharding;
-using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -39,7 +39,7 @@ namespace Raven.Server.Smuggler.Documents
             SmugglerResult result,
             Action<IOperationProgress> onProgress = null,
             CancellationToken token = default) :
-            base(source, destination, server.Server.Time, jsonOperationContext, options, result, onProgress, token)
+            base(databaseRecord.DatabaseName, source, destination, server.Server.Time, jsonOperationContext, options, result, onProgress, token)
         {
             _databaseRecord = databaseRecord;
             _server = server;
@@ -212,12 +212,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result)
+        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result, string databaseName)
         {
             result.CompareExchange.Start();
 
-            await using (var destinationActions = _destination.CompareExchange(_context))
-            await using (var actions = new DatabaseCompareExchangeActions(_server, _databaseRecord, _context, new CancellationToken()))
+            await using (var destinationActions = _destination.CompareExchange(databaseName, _context, BackupKind, withDocuments: false))
+            await using (var actions = new ShardedDatabaseCompareExchangeActions(_server, _databaseRecord, _context, BackupKind, _token))
             {
                 await foreach (var kvp in _source.GetCompareExchangeValuesAsync())
                 {
@@ -236,11 +236,11 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         if (ClusterTransactionCommand.IsAtomicGuardKey(kvp.Key.Key, out _))
                         {
-                            await destinationActions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
+                            await destinationActions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value, existingDocument: null);
                         }
                         else
                         {
-                            await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
+                            await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value, existingDocument: null);
                         }
 
                         result.CompareExchange.LastEtag = kvp.Index;
@@ -257,10 +257,10 @@ namespace Raven.Server.Smuggler.Documents
             return result.CompareExchange;
         }
 
-        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result)
+        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result, string databaseName)
         {
-            await using (var destinationActions = _destination.CompareExchangeTombstones(_context))
-            await using (var actions = new DatabaseCompareExchangeActions(_server, _databaseRecord, _context, new CancellationToken()))
+            await using (var destinationActions = _destination.CompareExchangeTombstones(databaseName, _context))
+            await using (var actions = new ShardedDatabaseCompareExchangeActions(_server, _databaseRecord, _context, BackupKind, _token))
             {
                 await foreach (var kvp in _source.GetCompareExchangeTombstonesAsync())
                 {
@@ -277,7 +277,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         if (ClusterTransactionCommand.IsAtomicGuardKey(kvp.Key.Key, out _))
                         {
-                            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, 
+                            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
                                 "RavenDB-19201 : handle atomic guard tombstones import");
                             await destinationActions.WriteTombstoneKeyAsync(kvp.Key.Key);
                         }
@@ -299,7 +299,7 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result)
         {
-            await using(var actions = new SubscriptionActions(_server, _databaseRecord.DatabaseName))
+            await using (var actions = new SubscriptionActions(_server, _databaseRecord.DatabaseName))
             {
                 return await ProcessSubscriptionsInternalAsync(result, actions);
             }
@@ -310,6 +310,28 @@ namespace Raven.Server.Smuggler.Documents
             await using (var actions = new ReplicationHubCertificateActions(_server, _databaseRecord.DatabaseName))
             {
                 return await ProcessReplicationHubCertificatesInternalAsync(result, actions);
+            }
+        }
+
+        private class ShardedDatabaseCompareExchangeActions : AbstractDatabaseCompareExchangeActions
+        {
+            public ShardedDatabaseCompareExchangeActions(ServerStore serverStore, DatabaseRecord databaseRecord, JsonOperationContext context, BackupKind? backupKind, CancellationToken token) 
+                : base(serverStore, databaseRecord.DatabaseName, databaseRecord.Client?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator, context, backupKind, token)
+            {
+            }
+
+            protected override bool TryHandleAtomicGuard(string key, string documentId, BlittableJsonReaderObject value, Document existingDocument)
+            {
+                return false;
+            }
+
+            protected override async ValueTask WaitForIndexNotificationAsync(long? lastAddOrUpdateOrRemoveResultIndex, long? lastClusterTransactionIndex)
+            {
+                var index = Math.Max(lastAddOrUpdateOrRemoveResultIndex ?? 0, lastClusterTransactionIndex ?? 0);
+                if (index == 0)
+                    return;
+
+                await _serverStore.Cluster.WaitForIndexNotification(index);
             }
         }
     }

@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Client;
@@ -120,16 +121,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public override void Optimize()
+        public override void Optimize(CancellationToken token)
         {
             if (_writer != null)
             {
-                _writer.Optimize(_state);
+                _writer.Optimize(_state, token);
 
                 if (_hasSuggestions)
                 {
                     foreach (var item in _suggestionsWriters)
-                        item.Value.Optimize(_state);
+                        item.Value.Optimize(_state, token);
                 }
             }
         }

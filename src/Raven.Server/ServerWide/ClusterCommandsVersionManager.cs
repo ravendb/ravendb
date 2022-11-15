@@ -155,6 +155,10 @@ namespace Raven.Server.ServerWide
             [nameof(PutQueueConnectionStringCommand)] = 54_000,
             [nameof(RemoveQueueConnectionStringCommand)] = 54_000,
 
+            [nameof(PutDatabaseStudioConfigurationCommand)] = 54_001,
+            [nameof(PutDatabaseSettingsCommand)] = 54_001,
+            [nameof(PutDatabaseClientConfigurationCommand)] = 54_001,
+
             [nameof(StartBucketMigrationCommand)] = 60_000,
             [nameof(SourceMigrationSendCompletedCommand)] = 60_000,
             [nameof(DestinationMigrationConfirmCommand)] = 60_000,

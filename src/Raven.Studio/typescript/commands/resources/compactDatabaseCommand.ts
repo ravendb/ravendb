@@ -11,7 +11,8 @@ class compactDatabaseCommand extends commandBase {
         const payload: Raven.Client.ServerWide.CompactSettings = {
             DatabaseName: this.databaseName,
             Documents: this.compactDocuments,
-            Indexes: this.indexesToCompact
+            Indexes: this.indexesToCompact,
+            SkipOptimizeIndexes: false
         };
 
         const url = endpoints.global.adminDatabases.adminCompact;

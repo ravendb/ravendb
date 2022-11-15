@@ -1,17 +1,25 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration
 {
-    internal abstract class AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration<TOperationContext> : AbstractAdminConfigurationHandlerProcessor<TOperationContext>
+    internal abstract class AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext
+        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        protected AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration(AbstractDatabaseRequestHandler<TOperationContext> requestHandler) : base(requestHandler)
-        { }
+        protected AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration(TRequestHandler requestHandler)
+            : base(requestHandler)
+        {
+
+        }
+
+        protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
         public override async ValueTask ExecuteAsync()
         {
@@ -20,10 +28,11 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration
                 var studioConfigurationJson = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), Constants.Configuration.StudioId);
                 var studioConfiguration = JsonDeserializationServer.StudioConfiguration(studioConfigurationJson);
 
-                await UpdateDatabaseRecordAsync(context, (record, _) =>
-                {
-                    record.Studio = studioConfiguration;
-                }, RequestHandler.GetRaftRequestIdFromQuery(), RequestHandler.DatabaseName);
+                var command = new PutDatabaseStudioConfigurationCommand(studioConfiguration, RequestHandler.DatabaseName, RequestHandler.GetRaftRequestIdFromQuery());
+
+                long index = (await RequestHandler.Server.ServerStore.SendToLeaderAsync(command)).Index;
+
+                await WaitForIndexNotificationAsync(index);
             }
 
             RequestHandler.NoContentStatus(HttpStatusCode.Created);

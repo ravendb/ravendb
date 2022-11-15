@@ -750,15 +750,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (Stream fileStream = File.Open(backupFilePath, FileMode.CreateNew))
             using (var outputStream = GetOutputStream(fileStream))
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext smugglerContext))
             {
                 var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value, startRaftIndex.Value, _logger);
                 var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource);
-                var smuggler = SmugglerBase.GetDatabaseSmugglerForBackup(_database,
+                var smuggler = _database.Smuggler.Create(
                     smugglerSource,
                     smugglerDestination,
-                    _database.Time,
-                    jsonOperationContext,
+                    smugglerContext,
                     options: options,
                     result: _backupResult,
                     onProgress: _onProgress,

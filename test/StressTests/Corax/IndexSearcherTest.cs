@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Corax;
+using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
 using Corax.Utils;
@@ -37,9 +38,10 @@ public class IndexSearcherTest : StorageTest
         Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
         Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-        return new IndexFieldsMapping(ctx)
+        using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(IdIndex, idSlice, analyzer)
             .AddBinding(ContentIndex, contentSlice, analyzer);
+        return builder.Build();
     }
 
     private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexSingleEntry> list, IndexFieldsMapping mapping)
@@ -54,6 +56,7 @@ public class IndexSearcherTest : StorageTest
         }
 
         indexWriter.Commit();
+        mapping.Dispose();
     }
 
     private static ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
@@ -316,9 +319,10 @@ public class IndexSearcherTest : StorageTest
 
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
-            var mapping = new IndexFieldsMapping(ctx)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(IdIndex, idSlice)
                 .AddBinding(ContentIndex, contentSlice);
+            using var mapping = builder.Build();
 
             IndexEntries(ctx, list, mapping);
 

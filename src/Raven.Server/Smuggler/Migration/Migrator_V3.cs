@@ -115,7 +115,7 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<string> MigrateRavenFs(string lastEtag, SmugglerResult parametersResult)
         {
-            var destination = new DatabaseDestination(Parameters.Database);
+            var destination = Parameters.Database.Smuggler.CreateDestination();
             var options = new DatabaseSmugglerOptionsServerSide
             {
                 OperateOnTypes = DatabaseItemType.Attachments,
@@ -322,7 +322,7 @@ namespace Raven.Server.Smuggler.Migration
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(stream, context, Parameters.Database.Name))
             {
-                var destination = new DatabaseDestination(Parameters.Database);
+                var destination = Parameters.Database.Smuggler.CreateDestination();
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
 #pragma warning disable 618
@@ -333,7 +333,7 @@ namespace Raven.Server.Smuggler.Migration
                     OperateOnTypes = Options.OperateOnTypes
                 };
 
-                var smuggler = SmugglerBase.GetDatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
+                var smuggler = Parameters.Database.Smuggler.Create(source, destination, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 return await smuggler.ExecuteAsync();
             }

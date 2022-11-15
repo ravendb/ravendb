@@ -76,6 +76,7 @@ class appUrl {
         ioStats: ko.pureComputed(() => appUrl.forIoStats(appUrl.currentDatabase())),
 
         indexPerformance: ko.pureComputed(() => appUrl.forIndexPerformance(appUrl.currentDatabase())),
+        indexCleanup: ko.pureComputed(() => appUrl.forIndexCleanup(appUrl.currentDatabase())),
 
         about: ko.pureComputed(() => appUrl.forAbout()),
 
@@ -181,11 +182,11 @@ class appUrl {
     }
 
     static forGlobalStudioConfiguration(): string {
-        return "#admin/settings/serverSettings";
+        return "#admin/settings/studioConfiguration";
     }
 
     static forServerSettings(): string {
-        return "#admin/settings/studioConfiguration";
+        return "#admin/settings/serverSettings";
     }
 
     static forCertificates(): string {
@@ -313,6 +314,10 @@ class appUrl {
 
     static forIndexPerformance(db: database | databaseInfo | string, indexName?: string): string {
         return `#databases/indexes/performance?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
+    }
+    
+    static forIndexCleanup(db: database | databaseInfo | string): string {
+        return '#databases/indexes/cleanup?' + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusStorageReport(db: database | databaseInfo | string): string {

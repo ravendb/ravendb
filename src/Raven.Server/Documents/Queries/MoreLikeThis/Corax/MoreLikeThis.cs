@@ -67,7 +67,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
 
             foreach (var fieldName in _fieldNames)
             {
-                var fieldId = QueryBuilderHelper.GetFieldId(fieldName, _builderParameters.Index, _builderParameters.IndexFieldsMapping, _builderParameters.FieldsToFetch, _builderParameters.HasDynamics, _builderParameters.DynamicFields);
+                var fieldId = QueryBuilderHelper.GetFieldId(_builderParameters.Allocator, fieldName, _builderParameters.Index, _builderParameters.IndexFieldsMapping, _builderParameters.FieldsToFetch, _builderParameters.HasDynamics, _builderParameters.DynamicFields);
                 var freq = indexSearcher.TermAmount(fieldName, word, fieldId);
                 topField = freq > docFreq ? fieldName : topField;
                 docFreq = freq > docFreq ? freq : docFreq;
@@ -148,7 +148,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
     /// <summary> Adds term frequencies found by tokenizing text from reader into the Map words</summary>
     protected void AddTermFrequencies(ref IndexEntryReader entryReader, IDictionary<string, Int> termFreqMap, string fieldName)
     {
-        if (_builderParameters.IndexFieldsMapping.TryGetByFieldName(fieldName, out var binding) == false || binding.FieldIndexingMode is FieldIndexingMode.No)
+        if (_builderParameters.IndexFieldsMapping.TryGetByFieldName(_builderParameters.Allocator, fieldName, out var binding) == false || binding.FieldIndexingMode is FieldIndexingMode.No)
         {
             //We don't have such data in index so nothing to do
             return;
@@ -178,7 +178,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
                     {
                         InsertTerm(CoraxProj.Constants.NullValueSlice);
                     }
-                    else if (iterator.IsEmpty)
+                    else if (iterator.IsEmptyString)
                     {
                         throw new InvalidDataException("Tuple list cannot contain an empty string (otherwise, where did the numeric came from!)");
                     }
@@ -227,7 +227,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
                 {
                     Debug.Assert((fieldType & IndexEntryFieldType.Tuple) == 0, "(fieldType & IndexEntryFieldType.Tuple) == 0");
 
-                    if ((fieldType & IndexEntryFieldType.HasNulls) != 0 && (iterator.IsEmpty || iterator.IsNull))
+                    if (iterator.IsEmptyCollection || iterator.IsNull)
                     {
                         var fieldValue = iterator.IsNull ? CoraxProj.Constants.NullValueSlice : CoraxProj.Constants.EmptyStringSlice;
                         InsertTerm(fieldValue.AsReadOnlySpan());

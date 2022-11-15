@@ -34,7 +34,7 @@ namespace Voron.Data.Sets
 
             // PERF: We dont have the ability to dispose Set (because of how it is used) therefore,
             // we will just discard the memory as reclaiming it may be even more costly.  
-            _scope = llt.Allocator.Allocate(8 * sizeof(SetCursorState), out ByteString buffer);
+            _scope = llt.Allocator.AllocateDirect(8 * sizeof(SetCursorState), out ByteString buffer);
             _stk = new UnmanagedSpan<SetCursorState>(buffer.Ptr, buffer.Size);
         }
 
@@ -556,23 +556,26 @@ namespace Voron.Data.Sets
             _stk = newStk;
         }
 
-        private void FindSmallestValue()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private SetCursorState* FindSmallestValue()
         {
             _pos = -1;
             _len = 0;
             PushPage(_state.RootPage);
 
-            ref var state = ref _stk[_pos];
-            while (state.IsLeaf == false)
+            var state = _stk.GetAsPtr(_pos);
+            while (state->IsLeaf == false)
             {
-                var branch = new SetBranchPage(state.Page);
+                var branch = new SetBranchPage(state->Page);
 
                 // Until we hit a leaf, just take the left-most key and move on. 
-                (long _, long nextPage) = branch.GetByIndex(0);
+                long nextPage = branch.GetPageByIndex(0);
                 PushPage(nextPage);
 
-                state = ref _stk[_pos];
+                state = _stk.GetAsPtr(_pos);
             }
+
+            return state;
         }
 
         private void FindPageFor(long value)
@@ -607,7 +610,13 @@ namespace Voron.Data.Sets
                 ResizeCursorState();
 
             Page page = _llt.GetPage(nextPage);
-            _stk[++_pos] = new SetCursorState( page );
+            _pos++; 
+            
+            var state = _stk.GetAsPtr(_pos);
+            state->Page = page;
+            state->LastMatch = 0;
+            state->LastSearchPosition = 0;
+
             _len++;
         }
 
@@ -630,10 +639,9 @@ namespace Voron.Data.Sets
 
                 // We need to find the long.MinValue therefore the fastest way is to always
                 // take the left-most pointer on any branch node.
-                _parent.FindSmallestValue();
+                var state = _parent.FindSmallestValue();
 
-                ref var state = ref _parent._stk[_parent._pos];
-                var leafPage = new SetLeafPage(state.Page);
+                var leafPage = new SetLeafPage(state->Page);
                 _it = leafPage.GetIterator(_parent._llt);
             }
 

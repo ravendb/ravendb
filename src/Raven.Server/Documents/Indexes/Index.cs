@@ -2304,7 +2304,7 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             var current = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
-                            stats.AddAllocatedBytes((current - _initialManagedAllocations).GetValue(SizeUnit.Bytes));
+                            stats.SetAllocatedManagedBytes((current - _initialManagedAllocations).GetValue(SizeUnit.Bytes));
 
                             if (writeOperation.IsValueCreated)
                             {
@@ -4435,7 +4435,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var currentManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
                 var diff = currentManagedAllocations - _initialManagedAllocations;
-                parameters.Stats.AddAllocatedBytes(diff.GetValue(SizeUnit.Bytes));
+                parameters.Stats.SetAllocatedManagedBytes(diff.GetValue(SizeUnit.Bytes));
 
                 if (diff > Configuration.ManagedAllocationsBatchLimit.Value)
                 {
@@ -4587,6 +4587,8 @@ namespace Raven.Server.Documents.Indexes
                         break;
                 }
             }
+            
+            stats?.SetAllocatedUnmanagedBytes(threadAllocations + txAllocations);
 
             var allocatedForProcessing = threadAllocations + indexWriterAllocations +
                                          // we multiple it to take into account additional work
@@ -4636,13 +4638,12 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, CancellationToken token)
+        public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, bool shouldSkipOptimization, CancellationToken token)
         {
             if (IndexPersistence is CoraxIndexPersistence)
                 throw new NotImplementedInCoraxException($"{nameof(Compact)} is not implemented yet.");
 
-            if (_isCompactionInProgress)
-                throw new InvalidOperationException($"Index '{Name}' cannot be compacted because compaction is already in progress.");
+            AssertCompactionOrOptimizationIsNotInProgress(Name, nameof(Compact));
 
             result.SizeBeforeCompactionInMb = CalculateIndexStorageSize().GetValue(SizeUnit.Megabytes);
 
@@ -4668,7 +4669,15 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var storageEnvironmentOptions = _environment.Options;
 
-                    using (RestartEnvironment(onBeforeEnvironmentDispose: Optimize))
+                    using (RestartEnvironment(onBeforeEnvironmentDispose: () =>
+                    {
+                        if (shouldSkipOptimization)
+                            return;
+
+                        result.AddMessage($"Starting data optimization of index '{Name}'.");
+                        onProgress?.Invoke(result.Progress);
+                        OptimizeInternal(token);
+                    }))
                     {
                         DocumentDatabase.IndexStore?.ForTestingPurposes?.IndexCompaction?.Invoke();
 
@@ -4682,8 +4691,7 @@ namespace Raven.Server.Documents.Indexes
                             return;
                         }
 
-                        var environmentOptions =
-                                                (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
+                        var environmentOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
                         var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, environmentOptions.TempPath?.FullPath, null, DocumentDatabase.IoChanges,
                             DocumentDatabase.CatastrophicFailureNotification);
 
@@ -4736,24 +4744,62 @@ namespace Raven.Server.Documents.Indexes
 
                     _isCompactionInProgress = false;
                 }
+            }
+        }
 
-                void Optimize()
+        public void Optimize(IndexOptimizeResult result, CancellationToken token)
+        {
+            if (IndexPersistence is CoraxIndexPersistence)
+                throw new NotImplementedInCoraxException($"{nameof(Optimize)} is not implemented yet.");
+
+            AssertCompactionOrOptimizationIsNotInProgress(Name, nameof(Optimize));
+
+            try
+            {
+                _isCompactionInProgress = true;
+                using (DrainRunningQueries())
+                using (RestartEnvironment(onBeforeEnvironmentDispose: () =>
+                       {
+                           result.Message = $"Optimization of index {Name} started...";
+                           OptimizeInternal(token);
+                       }))
                 {
-                    result.AddMessage($"Starting data optimization of index '{Name}'.");
-                    onProgress?.Invoke(result.Progress);
-
-                    using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
-                    using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-                    using (CurrentIndexingScope.Current = new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
-                    using (var txw = indexContext.OpenWriteTransaction())
-                    using (var writer = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext))
-                    {
-                        writer.Optimize();
-
-                        txw.Commit();
-                    }
                 }
             }
+            finally
+            {
+                _isCompactionInProgress = false;
+            }
+        }
+
+        private void OptimizeInternal(CancellationToken token)
+        {
+            try
+            {
+                using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+                using (CurrentIndexingScope.Current = new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
+                using (var txw = indexContext.OpenWriteTransaction())
+                using (var writer = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext))
+                {
+                    writer.Optimize(token);
+
+                    txw.Commit();
+                }
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations("Unable to complete optimization, index is not usable and may require reset of the index to recover", e);
+
+                throw;
+            }
+        }
+
+        private void AssertCompactionOrOptimizationIsNotInProgress(string name, string operation)
+        {
+            if (_isCompactionInProgress)
+                throw new InvalidOperationException($"Index '{Name}' cannot be '{operation}' because compaction/optimization is already in progress.");
         }
 
         public IDisposable RestartEnvironment(Action onBeforeEnvironmentDispose = null)

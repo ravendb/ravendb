@@ -274,7 +274,7 @@ namespace FastTests.Client.Queries
                 await StoreAsync(session, 2);
                 await StoreAsync(session, 1);
                 await StoreAsync(session, 1);
-                await StoreAsync(session, 0);
+                await StoreAsync(session, 3);
                 await session.SaveChangesAsync();
             }
 

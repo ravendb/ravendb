@@ -2,18 +2,23 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 
-internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings<TOperationContext> : AbstractAdminConfigurationHandlerProcessor<TOperationContext>
-    where TOperationContext : JsonOperationContext 
+internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TOperationContext : JsonOperationContext
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
-    protected AbstractAdminConfigurationHandlerProcessorForPutSettings(AbstractDatabaseRequestHandler<TOperationContext> requestHandler)
+    protected AbstractAdminConfigurationHandlerProcessorForPutSettings(TRequestHandler requestHandler)
         : base(requestHandler)
     {
     }
+
+    protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
     public override async ValueTask ExecuteAsync()
     {
@@ -23,7 +28,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
         {
             var databaseSettingsJson = await context.ReadForDiskAsync(RequestHandler.RequestBodyStream(), Constants.DatabaseSettings.StudioId);
 
-            Dictionary<string, string> settings = new Dictionary<string, string>();
+            var settings = new Dictionary<string, string>();
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
             for (int i = 0; i < databaseSettingsJson.Count; i++)
@@ -32,7 +37,11 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForPutSettings
                 settings.Add(prop.Name, prop.Value?.ToString());
             }
 
-            await UpdateDatabaseRecordAsync(context, (record, _) => record.Settings = settings, RequestHandler.GetRaftRequestIdFromQuery(), RequestHandler.DatabaseName);
+            var command = new PutDatabaseSettingsCommand(settings, RequestHandler.DatabaseName, RequestHandler.GetRaftRequestIdFromQuery());
+
+            long index = (await RequestHandler.Server.ServerStore.SendToLeaderAsync(command)).Index;
+
+            await WaitForIndexNotificationAsync(index);
         }
 
         RequestHandler.NoContentStatus(HttpStatusCode.Created);

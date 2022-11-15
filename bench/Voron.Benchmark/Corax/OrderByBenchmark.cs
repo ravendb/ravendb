@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,6 +15,7 @@ using BenchmarkDotNet.Exporters;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Corax;
+using Corax.Mappings;
 using Sparrow.Server;
 using Sparrow.Threading;
 
@@ -121,11 +122,12 @@ namespace Voron.Benchmark.Corax
             Slice.From(bsc, "Age", ByteStringType.Immutable, out var ageSlice);
             Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
 
-            var fields = new IndexFieldsMapping(bsc)
+            using var builder = IndexFieldsMappingBuilder.CreateForWriter(false)
                 .AddBinding(0, nameSlice)
                 .AddBinding(1, familySlice)
                 .AddBinding(2, ageSlice)
                 .AddBinding(3, typeSlice);
+            using var fields = builder.Build();
             
             using (var writer = new IndexWriter(env, fields))
             {

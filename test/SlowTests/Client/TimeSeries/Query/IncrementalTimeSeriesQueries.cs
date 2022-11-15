@@ -1302,7 +1302,15 @@ select out(p)
                         var rand = random.Next(1, 10) / 10.0;
                         var even = i % 2 == 0;
                         var add = even ? rand : -rand;
-                        tsf.Increment(baseline.AddHours(i), new[] { 45.37 + add, 45.72 + add, 45.99 + add, 45.21 + add, 719.636 + add });
+                        var sp = new StockPrice
+                        {
+                            Open = 45.37 + add,
+                            Close = 45.72 + add,
+                            High = 45.99 + add,
+                            Low = 45.21 + add,
+                            Volume = 719.636 + add
+                        };
+                        tsf.Increment(baseline.AddHours(i), sp);
                     }
 
                     session.SaveChanges();
@@ -2596,9 +2604,9 @@ select out(p)")
 
                     Assert.Equal(3, heartrate.Length);
 
-                    Assert.Equal(159, heartrate[0].Value);
-                    Assert.Equal(179, heartrate[1].Value);
-                    Assert.Equal(169, heartrate[2].Value);
+                    Assert.Equal(159+259, heartrate[0].Value);
+                    Assert.Equal(179 + 279, heartrate[1].Value);
+                    Assert.Equal(169 + 269, heartrate[2].Value);
 
                     var stocks = result[0].Stocks;
 

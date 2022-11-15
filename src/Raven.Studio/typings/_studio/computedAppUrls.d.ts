@@ -51,6 +51,7 @@ interface computedAppUrls {
     csvImportUrl: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;
+    indexCleanup: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
     indexErrors: KnockoutComputed<string>;
     ongoingTasksStats: KnockoutComputed<string>;
