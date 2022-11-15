@@ -66,16 +66,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             {
                 _usingCustomServerUrl = true;
 
-                config = new CustomS3Config(s3Settings.CustomServerUrl)
+                config = new AmazonS3Config
                 {
                     ForcePathStyle = s3Settings.ForcePathStyle,
-                    UseHttp = true
+                    ServiceURL = s3Settings.CustomServerUrl
                 };
 
                 if (string.IsNullOrWhiteSpace(s3Settings.AwsRegionName) == false)
                 {
                     // region for custom server url isn't mandatory
-                    config.RegionEndpoint = RegionEndpoint.GetBySystemName(s3Settings.AwsRegionName);
+                    config.AuthenticationRegion = s3Settings.AwsRegionName;
                 }
             }
 
@@ -407,22 +407,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 case HttpStatusCode.Forbidden:
                     await AssertBucketPermissionsAsync();
                     break;
-            }
-        }
-
-        private class CustomS3Config : AmazonS3Config
-        {
-            private readonly string _customUrl;
-
-            public CustomS3Config(string customUrl)
-            {
-                _customUrl = customUrl;
-            }
-
-            [Obsolete("This operation is obsoleted because as of version 3.7.100 endpoint is resolved using a newer system that uses request level parameters to resolve the endpoint.")]
-            public override string DetermineServiceURL()
-            {
-                return _customUrl;
             }
         }
     }

@@ -1,4 +1,5 @@
-﻿using Raven.Server.Documents.PeriodicBackup.Aws;
+﻿using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Documents.PeriodicBackup.Aws;
 using SlowTests.Server.Documents.PeriodicBackup.Restore;
 using Tests.Infrastructure;
 using Xunit;
@@ -15,7 +16,7 @@ public class CustomS3 : RestoreFromS3
     [CustomS3Fact]
     public void can_use_custom_region()
     {
-        const string customUrl = "https://s3.pl-waw.scw.cloud";
+        const string customUrl = "https://s3.pl-waw.scw.cloud/";
         const string customRegion = "pl-waw";
 
         var settings = GetS3Settings();
@@ -24,10 +25,8 @@ public class CustomS3 : RestoreFromS3
 
         using (var client = new RavenAwsS3Client(settings, DefaultConfiguration))
         {
-#pragma warning disable CS0618
-            Assert.Equal(customUrl, client.Config.DetermineServiceURL());
-#pragma warning restore CS0618
-            Assert.Equal(customRegion, client.Config.RegionEndpoint.SystemName);
+            Assert.Equal(customUrl, client.Config.ServiceURL);
+            Assert.Equal(customRegion, client.Config.AuthenticationRegion);
         }
     }
 }
