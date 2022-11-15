@@ -32,10 +32,6 @@
     <EmbeddedResource Include="Data\CompactTrees\dictionary.bin" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Memory" Version="4.5.5" />
-    <PackageReference Include="System.Runtime.Experimental" Version="6.0.2" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Validate' ">
