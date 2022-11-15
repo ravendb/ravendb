@@ -29,7 +29,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
     {
         private readonly ShardedDatabaseContext.ShardedReplicationContext _parent;
         private readonly ShardedOutgoingReplicationHandler[] _handlers;
-        private readonly ReplicationBatches _batches;
         private readonly TempFileCache _tempFileCache;
         private string _lastAcceptedChangeVector;
         private long _lastAcceptedEtag;
@@ -45,15 +44,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
             
             _attachmentStreamsTempFile = new StreamsTempFile("ShardedReplication" + Guid.NewGuid(), false);
             _handlers = new ShardedOutgoingReplicationHandler[_parent.Context.ShardCount];
-            _batches = new ReplicationBatches(this)
-            {
-                Batches = new ReplicationBatch[parent.Context.ShardCount]
-            };
-            for (int i = 0; i < _batches.Batches.Length; i++)
-            {
-                _batches.Batches[i] = new ReplicationBatch();
-            }
-
             for (int i = 0; i < _handlers.Length; i++)
             {
                 var node = new ShardReplicationNode { Shard = i, Database = ShardHelper.ToShardName(_parent.DatabaseName, i) };
@@ -93,8 +83,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         protected override void HandleHeartbeatMessage(TransactionOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject)
         {
             blittableJsonReaderObject.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector);
-
-            using (var replicationBatches = _batches)
+            
+            using (var replicationBatches = new ReplicationBatches(this))
             {
                 var batches = replicationBatches.Batches;
                 var tasks = new Task[batches.Length];
@@ -191,16 +181,17 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private ReplicationBatches PrepareReplicationDataForShards(TransactionOperationContext context, DataForReplicationCommand dataForReplicationCommand)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Optimization possibility: instead of iterating over materialized batch, we can do it while reading from the stream");
-            var batches = _batches.Batches;
-
+            var replicationBatches = new ReplicationBatches(this);
+            var batches = replicationBatches.Batches;
+            
             foreach (var item in dataForReplicationCommand.ReplicatedItems)
             {
                 int shard = GetShardNumberForReplicationItem(context, item);
                 batches[shard].Items.Add(item);
                 if (item is AttachmentReplicationItem attachmentReplicationItem)
                 {
-                    batches[shard].Attachments ??= new(SliceComparer.Instance);
-                    batches[shard].Attachments.Add(attachmentReplicationItem.Base64Hash, null);
+                    batches[shard].AttachmentStreams ??= new(SliceComparer.Instance);
+                    batches[shard].AttachmentStreams.TryAdd(attachmentReplicationItem.Base64Hash, null);
                 }
             }
 
@@ -213,14 +204,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
                             ? _tempFileCache.RentFileStream()
                             : _tempFileCache.RentMemoryStream();
 
-                    _batches.Streams.Add(attachment.Key, stream);
+                    replicationBatches.Streams.Add(attachment.Key, stream);
 
                     attachment.Value.Stream.Seek(0, SeekOrigin.Begin);
                     attachment.Value.Stream.CopyTo(stream);
 
                     for (var shard = 0; shard < _parent.Context.ShardCount; shard++)
                     {
-                        if (batches[shard].Attachments?.ContainsKey(attachment.Key) != true)
+                        if (batches[shard].AttachmentStreams?.ContainsKey(attachment.Key) != true)
                             continue;
 
                         AddAttachmentStreamItemToBatch(batches[shard], attachment.Key, stream);
@@ -230,26 +221,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
             else
             {
                 foreach (var batch in batches)
-                {
-                    if (batch.Attachments != null)
-                    {
-                        foreach (var attachment in batch.Attachments)
-                        {
-                            if (attachment.Value == null && _batches.Streams.ContainsKey(attachment.Key))
-                            {
-                                var stream = _batches.Streams[attachment.Key];
-                                AddAttachmentStreamItemToBatch(batch, attachment.Key, stream);
-                            }
-                            else
-                            {
-                                batch.Attachments.Remove(attachment.Key);
-                            }
-                        }
-                    }
-                }
+                    batch.AttachmentStreams?.Clear();
             }
 
-            return _batches;
+            return replicationBatches;
         }
 
         private void AddAttachmentStreamItemToBatch(ReplicationBatch batch, Slice attachmentKey, Stream stream)
@@ -260,10 +235,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 case MemoryStream ms:
                     readerStream = new MemoryStream(ms.GetBuffer(), 0, (int)ms.Length);
                     break;
-                case TempCryptoStream:
-                case TempFileStream:
-                    TempFileStream tmp = stream is TempCryptoStream tcs ? (TempFileStream)tcs.InnerStream : (TempFileStream)stream;
+                case TempCryptoStream cryptoStream:
+                    var tmp = (TempFileStream)cryptoStream.InnerStream;
                     readerStream = tmp.CreateReaderStream();
+                    break;
+                case TempFileStream fileStream:
+                    readerStream = fileStream.CreateReaderStream();
                     break;
                 default:
                     throw new NotSupportedException("Cannot understand how to clone stream: " + stream);
@@ -277,7 +254,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             };
 
             attachmentStream.Stream.Seek(0, SeekOrigin.Begin);
-            batch.Attachments[attachmentKey] = attachmentStream;
+            batch.AttachmentStreams[attachmentKey] = attachmentStream;
         }
 
         public override LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
@@ -330,11 +307,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 }
             });
 
-            if (_batches != null)
-            {
-                _batches.DisposeStreams = true;
-                _batches.Dispose();
-            }
             _tempFileCache.Dispose();
 
             base.DisposeInternal();
@@ -351,15 +323,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 _parent = parent;
                 DisposeStreams = true;
+
+                Batches = new ReplicationBatch[parent._parent.Context.ShardCount];
+                for (int i = 0; i < Batches.Length; i++)
+                    Batches[i] = new ReplicationBatch();
             }
 
             public void Dispose()
             {
-                foreach (var batch in Batches)
-                {
-                    batch.Dispose();
-                }
-
                 if (DisposeStreams && Streams != null)
                 {
                     foreach (var stream in Streams.Values)
@@ -371,6 +342,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     }
                     Streams.Clear();
                 }
+
+                foreach (var batch in Batches)
+                {
+                    batch.Dispose();
+                }
+                Batches = null;
             }
         }
     }

@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Sharding
     public class ReplicationBatch : IDisposable
     {
         public List<ReplicationBatchItem> Items = new();
-        public Dictionary<Slice, AttachmentReplicationItem> Attachments;
+        public Dictionary<Slice, AttachmentReplicationItem> AttachmentStreams;
         public TaskCompletionSource BatchSent;
         public string LastAcceptedChangeVector;
         public long LastEtagAccepted;
@@ -146,12 +146,12 @@ namespace Raven.Server.Documents.Sharding
                 item.Dispose();
             }
 
-            if (Attachments != null)
+            if (AttachmentStreams != null)
             {
-                foreach (var attachment in Attachments)
+                foreach (var attachment in AttachmentStreams)
                     attachment.Value?.Dispose();
 
-                Attachments.Clear();
+                AttachmentStreams.Clear();
             }
 
             Items.Clear();

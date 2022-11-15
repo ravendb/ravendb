@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Documents,
                 [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastEtag,
                 [nameof(ReplicationMessageHeader.ItemsCount)] = batch.Items.Count,
-                [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = batch.Attachments?.Count ?? 0,
+                [nameof(ReplicationMessageHeader.AttachmentStreamsCount)] = batch.AttachmentStreams?.Count ?? 0,
             };
 
             WriteToServer(headerJson);
@@ -129,9 +129,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 _lastEtag = item.Etag;
             }
 
-            if (batch.Attachments != null)
+            if (batch.AttachmentStreams != null)
             {
-                foreach (var kvp in batch.Attachments)
+                foreach (var kvp in batch.AttachmentStreams)
                 {
                     using (stats.For(ReplicationOperation.Outgoing.AttachmentRead))
                     {

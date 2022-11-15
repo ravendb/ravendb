@@ -679,10 +679,10 @@ namespace SlowTests.Server.Replication
                         fooStream2.Seek(0, SeekOrigin.Begin);
                         session.Advanced.Attachments.Store(docId, "foo2.png", fooStream2, "image/png");
                         await session.SaveChangesAsync();
+
+                        Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo2.png", 30 * 1000));
                     }
                 }
-
-                await EnsureReplicatingAsync(source, destination);
 
                 buffer = new byte[3];
                 using (var session = destination.OpenAsyncSession())
@@ -784,10 +784,10 @@ namespace SlowTests.Server.Replication
                         fooStream2.Seek(0, SeekOrigin.Begin);
                         session.Advanced.Attachments.Store(docId, "foo2.png", fooStream2, "image/png");
                         await session.SaveChangesAsync();
+
+                        Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo2.png", 30 * 1000));
                     }
                 }
-
-                await EnsureReplicatingAsync(source, destination);
 
                 buffer = new byte[3];
                 using (var session = destination.OpenAsyncSession())
@@ -910,10 +910,10 @@ namespace SlowTests.Server.Replication
                         fooStream2.Seek(0, SeekOrigin.Begin);
                         session.Advanced.Attachments.Store(docId, "foo2.png", fooStream2, "image/png");
                         await session.SaveChangesAsync();
+
+                        Assert.NotNull(WaitForDocumentWithAttachmentToReplicate<User>(destination, docId, "foo2.png", 30 * 1000));
                     }
                 }
-
-                await EnsureReplicatingAsync(source, destination);
 
                 using (var session = destination.OpenAsyncSession())
                 {
