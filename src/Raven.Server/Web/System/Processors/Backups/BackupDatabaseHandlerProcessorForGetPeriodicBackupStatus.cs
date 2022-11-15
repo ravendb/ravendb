@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
@@ -7,6 +8,7 @@ using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System.Processors.Backups;
 
@@ -28,44 +30,38 @@ internal class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus : Abstra
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {
+            DynamicJsonValue result = new();
+            var statuses = new List<BlittableJsonReaderObject>();
             var dbRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, name);
-            if (dbRecord.IsSharded == false)
+
+            if (dbRecord.IsSharded)
             {
-                using (var statusBlittable = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value)))
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                for (int i = 0; i < dbRecord.Sharding.Shards.Length; i++)
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.IsSharded));
-                    writer.WriteBool(false);
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.Status));
-                    writer.WriteObject(statusBlittable);
-                    writer.WriteEndObject();
+                    var status = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(ShardHelper.ToShardName(name, i), taskId.Value));
+                    statuses.Add(status);
                 }
 
-                return;
+                result[nameof(GetShardedPeriodicBackupStatusOperationResult.IsSharded)] = true;
+                result[nameof(GetShardedPeriodicBackupStatusOperationResult.Statuses)] = statuses;
             }
-
-            var statusPerShard = new List<BlittableJsonReaderObject>(dbRecord.Sharding.Shards.Length);
-            for (int i = 0; i < dbRecord.Sharding.Shards.Length; i++)
+            else
             {
-                var statusBlittable = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(ShardHelper.ToShardName(name, i), taskId.Value));
-                statusPerShard.Add(statusBlittable);
+                var status = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value));
+                statuses.Add(status);
+
+                result[nameof(GetPeriodicBackupStatusOperationResult.IsSharded)] = false;
+                result[nameof(GetPeriodicBackupStatusOperationResult.Status)] = status;
             }
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-                writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.IsSharded));
-                writer.WriteBool(true);
-                writer.WriteComma();
-                writer.WriteArray(nameof(GetShardedPeriodicBackupStatusOperationResult.Statuses), statusPerShard);
-                writer.WriteEndObject();
+                context.Write(writer, result);
             }
 
-            foreach (var blittable in statusPerShard)
+            foreach (var status in statuses)
             {
-                blittable.Dispose();
+                status.Dispose();
             }
         }
     }

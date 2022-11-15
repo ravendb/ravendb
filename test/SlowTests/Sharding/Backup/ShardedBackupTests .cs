@@ -403,7 +403,7 @@ namespace SlowTests.Sharding.Backup
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
-        public async Task ShouldThrowOnAttemptToGetShardedBackupStatusFromNonShardedDb()
+        public async Task ShouldThrowOnAttemptToGetNonShardedBackupStatusFromShardedDb()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
@@ -441,12 +441,11 @@ namespace SlowTests.Sharding.Backup
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
-        public async Task ShouldThrowOnAttemptToGetNonShardedBackupStatusFromShardedDb()
+        public async Task ShouldThrowOnAttemptToGetShardedBackupStatusFromNonShardedDb()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 10; i++)
