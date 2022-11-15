@@ -703,13 +703,11 @@ export function IndexesPage(props: IndexesPageProps) {
                     <Row>
                         <Col>
                             {canReadWriteDatabase(database) && (
-                                <div
-                                    className="checkbox checkbox-primary checkbox-inline align-checkboxes"
+                                <CheckboxTriple
+                                    onChanged={toggleSelectAll}
+                                    state={indexesSelectionState()}
                                     title="Select all or none"
-                                >
-                                    <CheckboxTriple onChanged={toggleSelectAll} state={indexesSelectionState()} />
-                                    <label />
-                                </div>
+                                />
                             )}
                             <IndexFilter filter={filter} setFilter={setFilter} />
                         </Col>

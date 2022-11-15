@@ -30,6 +30,8 @@ import {
     DropdownItem,
     DropdownMenu,
     DropdownToggle,
+    FormGroup,
+    Input,
     Spinner,
     UncontrolledDropdown,
 } from "reactstrap";
@@ -168,7 +170,9 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                 <RichPanelHeader id={indexUniqueId(index)}>
                     <RichPanelSelect>
                         {canReadWriteDatabase(database) && (
-                            <Checkbox toggleSelection={toggleSelection} selected={selected} />
+                            <FormGroup check className="form-check-secondary">
+                                <Input type="checkbox" bsSize="lg" onClick={toggleSelection} checked={selected} />
+                            </FormGroup>
                         )}
                     </RichPanelSelect>
 
