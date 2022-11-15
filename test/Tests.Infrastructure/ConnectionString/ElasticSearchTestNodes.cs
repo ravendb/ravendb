@@ -13,6 +13,10 @@ namespace Tests.Infrastructure.ConnectionString
 
         public static ElasticSearchTestNodes Instance => _instance ??= new ElasticSearchTestNodes();
 
+        private readonly Lazy<bool> _canConnect;
+
+        public bool CanConnect => _canConnect.Value;
+
         private ElasticSearchTestNodes()
         {
             VerifiedNodes = new Lazy<string[]>(VerifiedNodesValueFactory);
@@ -25,13 +29,15 @@ namespace Tests.Infrastructure.ConnectionString
                     ? Array.Empty<string>()
                     : nodes.Split(new[] { ',', ';' }, StringSplitOptions.TrimEntries);
             });
+
+            _canConnect = new Lazy<bool>(CanConnectInternal);
         }
 
         private Lazy<string[]> Nodes { get; }
 
         public Lazy<string[]> VerifiedNodes { get; }
 
-        public bool CanConnect()
+        private bool CanConnectInternal()
         {
             try
             {
@@ -53,7 +59,6 @@ namespace Tests.Infrastructure.ConnectionString
 
             if (Nodes.Value.Length == 0)
                 throw new InvalidOperationException($"Environment variable {EnvironmentVariable} is empty");
-
 
             if (TryConnect(Nodes.Value, out pingResponse))
                 return Nodes.Value;

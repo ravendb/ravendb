@@ -1145,7 +1145,7 @@ namespace Raven.Server.Documents.Replication
                             case AttachmentReplicationItem attachment:
 
                                 var localAttachment = database.DocumentsStorage.AttachmentsStorage.GetAttachmentByKey(context, attachment.Key);
-                                if (_replicationInfo.ReplicatedAttachmentStreams?.TryGetValue(attachment.Base64Hash, out var attachmentStream) == true)
+                                if (_replicationInfo.ReplicatedAttachmentStreams != null && _replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachment.Base64Hash, out var attachmentStream))
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {

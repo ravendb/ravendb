@@ -37,7 +37,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             new ElasticSearchIndex {IndexName = UsersIndexName, DocumentIdProperty = "UserId"}
         };
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFact]
         public void SimpleScript()
         {
             using (var store = GetDocumentStore())
@@ -91,7 +91,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFact]
         public void SimpleScriptWithManyDocuments()
         {
             using (var store = GetDocumentStore())
@@ -200,7 +200,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFact]
         public void Can_get_document_id()
         {
             using (var store = GetDocumentStore())
@@ -278,7 +278,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFact]
         public void Can_Update_To_Be_No_Items_In_Child_TTable()
         {
             using (var store = GetDocumentStore())
@@ -332,7 +332,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFact]
         public void Update_of_disassembled_document()
         {
             using (var store = GetDocumentStore())
@@ -415,7 +415,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFact]
         public void Docs_from_two_collections_loaded_to_single_one()
         {
             using (var store = GetDocumentStore())
@@ -517,7 +517,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFact]
         public void Can_load_to_specific_collection_when_applying_to_all_docs()
         {
             using (var src = GetDocumentStore())
@@ -552,7 +552,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFact]
         public void Should_delete_existing_document_when_filtered_by_script()
         {
             using (var src = GetDocumentStore())
@@ -646,7 +646,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFact]
         public void Etl_from_encrypted_to_non_encrypted_db_will_work()
         {
             var certificates = Certificates.SetupServerAuthentication();
