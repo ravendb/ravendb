@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Corax.Mappings;
 using Sparrow;
 using Sparrow.Binary;
@@ -25,6 +26,8 @@ public unsafe struct IndexEntryReader
     private const int Invalid = unchecked((int)0xFFFF_FFFF);
     private readonly byte* _buffer;
     private readonly int _bufferLength;
+    private readonly IndexEntryTableEncoding _encoding;
+    private readonly int _locationOffset;
     private int _lastFieldAccessed;
     private int _lastFieldAccessedOffset;
     private bool _lastFieldAccessedIsTyped;
@@ -37,6 +40,16 @@ public unsafe struct IndexEntryReader
     {
         _buffer = buffer;
         _bufferLength = length;
+
+        var header = (IndexEntryHeader*)buffer;
+
+        ushort knownFieldsCount = (ushort)(header->KnownFieldCount >> 2);
+        _encoding = (IndexEntryTableEncoding)(header->KnownFieldCount & 0b11);
+
+        int encodeSize = TableEncodingLookupTable[(int)_encoding];
+        Debug.Assert(header->Length == (int)header->Length);
+        _locationOffset = (int)header->Length - (knownFieldsCount * encodeSize);
+
         _lastFieldAccessed = -1;
         Unsafe.SkipInit(out _lastFieldAccessedOffset);
         Unsafe.SkipInit(out _lastFieldAccessedIsTyped);
@@ -558,7 +571,7 @@ public unsafe struct IndexEntryReader
     [Pure]
     public FieldReader GetReaderFor(int field)
     {
-        var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
+        var intOffset = GetMetadataFieldLocation(_buffer, field, out var isTyped);
         IndexEntryFieldType type = IndexEntryFieldType.Invalid;
         if (intOffset != Invalid)
         {
@@ -572,7 +585,7 @@ public unsafe struct IndexEntryReader
 
     public IndexEntryFieldType GetFieldType(int field, out int intOffset)
     {
-        (intOffset, var isTyped) = GetMetadataFieldLocation(_buffer, field);
+        intOffset = GetMetadataFieldLocation(_buffer, field, out var isTyped);
         if (intOffset == Invalid)
             return IndexEntryFieldType.Invalid;
 
@@ -592,7 +605,7 @@ public unsafe struct IndexEntryReader
     //<longitudes_ptr:int><latitudes_list:double[]><longtitudes_list:double[]><geohashes_list:bytes[]>
     public SpatialPointFieldIterator ReadManySpatialPoint(int field)
     {
-        var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
+        var intOffset = GetMetadataFieldLocation(_buffer, field, out var isTyped);
         if (intOffset == Invalid || isTyped == false)
             return new SpatialPointFieldIterator();
 
@@ -600,18 +613,23 @@ public unsafe struct IndexEntryReader
     }
 
 
-    
-    private (int offset, bool isTyped) GetMetadataFieldLocation(byte* buffer, int field)
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    private int GetMetadataFieldLocation(byte* buffer, int field, out bool fieldIsTyped)
     {
         if (field == _lastFieldAccessed)
         {
-            return (_lastFieldAccessedOffset, _lastFieldAccessedIsTyped);
+            fieldIsTyped = _lastFieldAccessedIsTyped;
+            return _lastFieldAccessedOffset;
         }
         else
         {
-            (_lastFieldAccessedOffset, _lastFieldAccessedIsTyped) = GetMetadataFieldLocationUnlikely(buffer, field);
+            var offset = GetMetadataFieldLocationUnlikely(buffer, field, out fieldIsTyped);
+
             _lastFieldAccessed = field;
-            return (_lastFieldAccessedOffset, _lastFieldAccessedIsTyped);
+            _lastFieldAccessedOffset = offset;
+            _lastFieldAccessedIsTyped = fieldIsTyped;
+            return offset;
         }
     }
 
@@ -626,16 +644,11 @@ public unsafe struct IndexEntryReader
     };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static (int offset, bool isTyped) GetMetadataFieldLocationUnlikely(byte* buffer, int field)
+    private int GetMetadataFieldLocationUnlikely(byte* buffer, int field, out bool isTyped)
     {
-        var header = (IndexEntryHeader*) buffer;
-
-        ushort knownFieldsCount = (ushort)(header->KnownFieldCount >> 2);
-        IndexEntryTableEncoding encoding = (IndexEntryTableEncoding)(header->KnownFieldCount & 0b11);
-
+        var encoding = _encoding;
         int encodeSize = TableEncodingLookupTable[(int)encoding];
-        Debug.Assert(header->Length == (int)header->Length);
-        int locationOffset = (int)header->Length - (knownFieldsCount * encodeSize) + field * encodeSize;
+        var locationOffset = _locationOffset + field * encodeSize;
 
         int offset;
         switch (encoding)
@@ -661,17 +674,18 @@ public unsafe struct IndexEntryReader
                     goto Fail;
                 goto End;
             }
+            default: goto Fail;
         }
-        
-        Fail:
-        return (Invalid, false);
 
         End:
         int mask = 0x80 << ByteKnownFieldMaskShiftLookupTable[(int)encoding];
-        bool isTyped = (offset & mask) != 0;
+        isTyped = (offset & mask) != 0;
         offset &= ~mask;
-        
-        return (offset, isTyped);
+        return offset;
+
+        Fail:
+        isTyped = false;
+        return Invalid;
     }
 
     public string DebugDump(IndexFieldsMapping knownFields)
@@ -724,7 +738,7 @@ public unsafe struct IndexEntryReader
 
     public bool Read(int field, out IndexEntryFieldType type, out long longValue, out double doubleValue, out Span<byte> sequenceValue)
     {
-        var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
+        var intOffset = GetMetadataFieldLocation(_buffer, field, out var isTyped);
         if (intOffset == Invalid || isTyped == false)
             goto Fail;
 
