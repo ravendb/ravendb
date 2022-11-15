@@ -94,26 +94,28 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             blittableJsonReaderObject.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector);
 
-            using var replicationBatches = _batches;
-            var batches = replicationBatches.Batches;
-            var tasks = new Task[batches.Length];
-
-            for (int i = 0; i < batches.Length; i++)
+            using (var replicationBatches = _batches)
             {
-                batches[i].LastAcceptedChangeVector = changeVector ?? _lastAcceptedChangeVector;
-                batches[i].LastSentEtagFromSource = _lastAcceptedEtag;
-                tasks[i] = _handlers[i].SendBatch(batches[i]);
+                var batches = replicationBatches.Batches;
+                var tasks = new Task[batches.Length];
+
+                for (int i = 0; i < batches.Length; i++)
+                {
+                    batches[i].LastAcceptedChangeVector = changeVector ?? _lastAcceptedChangeVector;
+                    batches[i].LastSentEtagFromSource = _lastAcceptedEtag;
+                    tasks[i] = _handlers[i].SendBatch(batches[i]);
+                }
+
+                Task.WaitAll(tasks);
+
+                var cvs = new List<string>();
+                foreach (ReplicationBatch replicationBatch in batches)
+                {
+                    cvs.Add(replicationBatch.LastAcceptedChangeVector);
+                }
+
+                _lastAcceptedChangeVector = ChangeVectorUtils.MergeVectorsDown(cvs);
             }
-
-            Task.WaitAll(tasks);
-
-            var cvs = new List<string>();
-            foreach (ReplicationBatch replicationBatch in batches)
-            {
-                cvs.Add(replicationBatch.LastAcceptedChangeVector);
-            }
-
-            _lastAcceptedChangeVector = ChangeVectorUtils.MergeVectorsDown(cvs);
         }
 
         protected override DynamicJsonValue GetHeartbeatStatusMessage(TransactionOperationContext context, long lastDocumentEtag, string handledMessageType)

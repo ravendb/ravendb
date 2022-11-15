@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Indexing;
+using Sparrow.Global;
 using Sparrow.Server;
 using Voron;
 using Voron.Exceptions;
@@ -58,6 +59,45 @@ namespace SlowTests.Tests
                 using (var cache = new TempFileCache(environment.TempPath.FullPath, environment.Encryption.IsEnabled))
                 {
                 }
+            }
+        }
+
+        [Fact]
+        public void ShouldHaveSeparateFilePositionForDifferentReaders()
+        {
+            var buffer = new byte[128 * Constants.Size.Kilobyte + 1];
+            for (int i = 0; i < buffer.Length; i++)
+                buffer[i] = (byte)i;
+
+            var path = Server.Configuration.Storage.TempPath?.FullPath ?? Path.GetTempPath();
+            using (var cache = new TempFileCache(path, false))
+            {
+                var fileStream = cache.RentFileStream();
+                fileStream.Write(buffer);
+              
+                TempFileStream tmp = (TempFileStream)fileStream;
+                var reader1 = tmp.CreateReaderStream();
+                var reader2 = tmp.CreateReaderStream();
+
+                reader1.Seek(0, SeekOrigin.Begin);
+                reader2.Seek(0, SeekOrigin.Begin);
+
+                var buffer1 = new byte[10];
+                var buffer2 = new byte[10];
+
+                var read1 = reader1.Read(buffer1);
+                var read2 = reader2.Read(buffer2);
+
+                Assert.Equal(read1, read2);
+                Assert.Equal(reader1.Position, reader2.Position);
+                for (int i = 0; i < read1; i++)
+                    Assert.Equal(buffer1[i], buffer2[i]);
+               
+                reader1.Read(buffer1);
+                reader1.Read(buffer1);
+                reader2.Read(buffer2);
+                
+                Assert.NotEqual(reader1.Position, reader2.Position);
             }
         }
     }
