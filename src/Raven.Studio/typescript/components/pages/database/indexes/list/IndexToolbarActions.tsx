@@ -134,63 +134,6 @@ export default function IndexToolbarAction(props: IndexToolbarActionProps) {
                         </DropdownItem>
                     </DropdownMenu>
                 </UncontrolledDropdown>
-                {/*<ButtonGroup>*/}
-                {/*    <button*/}
-                {/*        type="button"*/}
-                {/*        className="btn btn-default dropdown-toggle"*/}
-                {/*        title="Set the indexing state for the selected indexes"*/}
-                {/*        disabled={selectedIndexes.length === 0}*/}
-                {/*        data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(),*/}
-                {/*                                       css: { 'btn-spinner': spinners.globalLockChanges() }"*/}
-                {/*        data-toggle="dropdown"*/}
-                {/*        aria-haspopup="true"*/}
-                {/*        aria-expanded="false"*/}
-                {/*    >*/}
-                {/*        <i className="icon-play" />*/}
-                {/*        <span>Set indexing state...</span>*/}
-                {/*        <span className="caret" />*/}
-                {/*        <span className="sr-only">Toggle Dropdown</span>*/}
-                {/*    </button>*/}
-                {/*</ButtonGroup>*/}
-
-                {/*<div className="btn-group">*/}
-                {/*    <button*/}
-                {/*        type="button"*/}
-                {/*        className="btn btn-default dropdown-toggle"*/}
-                {/*        disabled={selectedIndexes.length === 0}*/}
-                {/*        title="Set the lock mode for the selected indexes"*/}
-                {/*        data-bind="enable: selectedIndexesName().length && !spinners.globalLockChanges(), */}
-                {/*                                       css: { 'btn-spinner': spinners.globalLockChanges() }"*/}
-                {/*        data-toggle="dropdown"*/}
-                {/*        aria-haspopup="true"*/}
-                {/*        aria-expanded="false"*/}
-                {/*    >*/}
-                {/*        <i className="icon-lock" />*/}
-                {/*        <span>Set lock mode...</span>*/}
-                {/*        <span className="caret" />*/}
-                {/*        <span className="sr-only">Toggle Dropdown</span>*/}
-                {/*    </button>*/}
-                {/*    <ul className="dropdown-menu">*/}
-                {/*        <li>*/}
-                {/*            <a href="#" title="Unlock selected indexes" onClick={unlockSelectedIndexes}>*/}
-                {/*                <i className="icon-unlock" />*/}
-                {/*                <span>Unlock</span>*/}
-                {/*            </a>*/}
-                {/*        </li>*/}
-                {/*        <li>*/}
-                {/*            <a href="#" title="Lock selected indexes" onClick={lockSelectedIndexes}>*/}
-                {/*                <i className="icon-lock" />*/}
-                {/*                <span>Lock</span>*/}
-                {/*            </a>*/}
-                {/*        </li>*/}
-                {/*        <li>*/}
-                {/*            <a href="#" title="Lock (Error) selected indexes" onClick={lockErrorSelectedIndexes}>*/}
-                {/*                <i className="icon-lock-error" />*/}
-                {/*                <span>Lock (Error)</span>*/}
-                {/*            </a>*/}
-                {/*        </li>*/}
-                {/*    </ul>*/}
-                {/*</div>*/}
             </div>
 
             <Button color="primary" href={newIndexUrl}>
