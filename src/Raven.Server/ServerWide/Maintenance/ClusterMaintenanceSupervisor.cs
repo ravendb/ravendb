@@ -470,7 +470,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 Stream connection;
                 TcpClient tcpClient;
 
-                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 {
                     var result = await TcpUtils.ConnectSecuredTcpSocket(
                         tcpConnectionInfo,
