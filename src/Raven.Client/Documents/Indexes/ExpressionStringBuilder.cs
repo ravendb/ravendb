@@ -1021,15 +1021,18 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
 
+            if (type.IsEnum) // enum is known type
+                return true;
+            
+            if (type.Assembly == typeof(HashSet<>).Assembly) // System.Core
+                return true;
+            
             if (type.Assembly == typeof(object).Assembly) // mscorlib
                 return true;
 
             if (type.Assembly == typeof(Uri).Assembly) // System assembly
                 return true;
-
-            if (type.Assembly == typeof(HashSet<>).Assembly) // System.Core
-                return true;
-
+            
             if (type.Assembly == typeof(Regex).Assembly) // System.Text.RegularExpressions
                 return true;
 
