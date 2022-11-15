@@ -66,6 +66,9 @@ public class LuceneIndexQueryingScope : IndexQueryingScopeBase<string>
         if (search.ScoreDocs.Length <= _alreadyScannedForDuplicates)
             return;
 
+        if (search.ScoreDocs.Length <= _query.Start)
+            return;
+
         for (; _alreadyScannedForDuplicates < _query.Start; _alreadyScannedForDuplicates++)
         {
             var scoreDoc = search.ScoreDocs[_alreadyScannedForDuplicates];

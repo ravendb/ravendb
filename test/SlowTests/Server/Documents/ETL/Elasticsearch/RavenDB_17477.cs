@@ -16,7 +16,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         {
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFact]
         public async Task ShouldErrorAndAlertOnInvalidIndexSetupInElastic()
         {
             using (var store = GetDocumentStore())

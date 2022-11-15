@@ -82,8 +82,8 @@ namespace Raven.Server.Integrations.PostgreSQL
         public void Sync()
         {
             State = TransactionState.Idle;
-            _currentQuery = null;
             _currentQuery?.Dispose();
+            _currentQuery = null;
         }
 
         public void Dispose()

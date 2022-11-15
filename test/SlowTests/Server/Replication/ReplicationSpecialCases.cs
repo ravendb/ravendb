@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Attachments;
@@ -684,6 +686,68 @@ namespace SlowTests.Server.Replication
                         }
                     }
                 }
+            }
+        }
+
+        // RavenDB-19516
+        [Fact]
+        public async Task ShouldDelayReplicationOnMissingAttachmentsLoop()
+        {
+            using (var source = GetDocumentStore())
+            using (var destination = GetDocumentStore())
+            {
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    await session.StoreAsync(new User { Name = "Foo" }, "FoObAr/0");
+                    session.Advanced.Attachments.Store("FoObAr/0", "foo.png", fooStream, "image/png");
+                    await session.SaveChangesAsync();
+                }
+
+                var sourceDb = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database);
+                sourceDb.Configuration.Replication.RetryMaxTimeout = new TimeSetting((long)TimeSpan.FromMinutes(15).TotalMilliseconds, TimeUnit.Minutes);
+                sourceDb.ReplicationLoader.ForTestingPurposesOnly().OnOutgoingReplicationStart = (o) =>
+                {
+                    if (o.Destination.Database == destination.Database)
+                    {
+                        o.ForTestingPurposesOnly().OnMissingAttachmentStream = (replicaAttachmentStreams) =>
+                        {
+                            replicaAttachmentStreams.Clear();
+                        };
+                    }
+                };
+
+                await SetupReplicationAsync(source, destination);
+                await EnsureReplicatingAsync(source, destination);
+
+                var outgoingFailureInfo = sourceDb.ReplicationLoader.OutgoingFailureInfo.ToList();
+                Assert.Equal(1, outgoingFailureInfo.Count);
+                var defaultNextTimeOut = outgoingFailureInfo[0].Value.NextTimeout;
+
+                using (var session = destination.OpenAsyncSession())
+                {
+                    session.Delete("FoObAr/0");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = source.OpenAsyncSession())
+                using (var fooStream2 = new MemoryStream(new byte[] { 4, 5, 6 }))
+                {
+                    session.Advanced.Attachments.Store("FoObAr/0", "foo2.png", fooStream2, "image/png");
+                    await session.SaveChangesAsync();
+
+                    WaitForDocumentWithAttachmentToReplicate<User>(destination, "FoObAr/0", "foo2.png", 10_000);
+                }
+
+                outgoingFailureInfo = sourceDb.ReplicationLoader.OutgoingFailureInfo.ToList();
+                Assert.Equal(1, outgoingFailureInfo.Count);
+
+                var info = outgoingFailureInfo[0].Value;
+                var delayNextTimeOut = info.NextTimeout;
+                Assert.True(delayNextTimeOut > defaultNextTimeOut);
+
+                if (info.Errors.TryDequeue(out var exception))
+                    Assert.True(exception.Message.Contains("Destination reported missing attachments"));
             }
         }
     }

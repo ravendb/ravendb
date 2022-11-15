@@ -419,6 +419,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 _customUrl = customUrl;
             }
 
+            [Obsolete("This operation is obsoleted because as of version 3.7.100 endpoint is resolved using a newer system that uses request level parameters to resolve the endpoint.")]
             public override string DetermineServiceURL()
             {
                 return _customUrl;
