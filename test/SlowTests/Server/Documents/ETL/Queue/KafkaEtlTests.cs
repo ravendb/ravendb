@@ -25,7 +25,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
     {
     }
 
-    [RequiresKafkaFact]
+    [RequiresKafkaRetryFact]
     public void SimpleScript()
     {
         using (var store = GetDocumentStore())
@@ -65,7 +65,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         }
     }
     
-    [RequiresKafkaFact]
+    [RequiresKafkaRetryFact]
     public void TestAreHeadersPresent()
     {
         using (var store = GetDocumentStore())
@@ -106,7 +106,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         }
     }
 
-    [RequiresKafkaFact]
+    [RequiresKafkaRetryFact]
     public void SimpleScriptWithManyDocuments()
     {
         using var store = GetDocumentStore();
@@ -158,7 +158,7 @@ public class KafkaEtlTests : KafkaEtlTestBase
         }
     }
 
-    [RequiresKafkaFact()]
+    [RequiresKafkaRetryFact()]
     public void Docs_from_two_collections_loaded_to_single_one()
     {
         using var store = GetDocumentStore();
@@ -323,7 +323,7 @@ output('test output')"
         }
     }
 
-    [RequiresKafkaFact]
+    [RequiresKafkaRetryFact]
     public void CanPassAttributesToLoadToMethod()
     {
         using (var store = GetDocumentStore())
@@ -374,7 +374,7 @@ output('test output')"
         }
     }
 
-    [RequiresKafkaFact]
+    [RequiresKafkaRetryFact]
     public void ShouldDeleteDocumentsAfterProcessing()
     {
         using (var store = GetDocumentStore())

@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
 using Xunit;
@@ -42,6 +43,9 @@ namespace Tests.Infrastructure
 
         public CustomS3FactAttribute([CallerMemberName] string memberName = "")
         {
+            //if (RavenTestHelper.IsRunningOnCI)
+            //    return;
+
             if (EnvVariableMissing)
             {
                 Skip = $"Test is missing '{S3CredentialEnvironmentVariable}' environment variable.";

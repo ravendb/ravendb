@@ -96,8 +96,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                 var statementName = normalizedQuery.Split("\"")[1];
                 if (session.NamedStatements.TryRemove(statementName, out var statement) == false)
                     throw new InvalidOperationException($"Failed to remove prepared statement '{statementName}'");
-                statement.IsNamedStatement = false;
-                statement.Dispose();
+                statement.Dispose(); // precaution - query context should be already disposed
                 result = new PgTable();
             }
                 

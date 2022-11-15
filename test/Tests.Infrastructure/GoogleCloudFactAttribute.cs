@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Xunit;
 
@@ -23,6 +24,9 @@ namespace Tests.Infrastructure
 
         public GoogleCloudFactAttribute([CallerMemberName] string memberName = "")
         {
+            if (RavenTestHelper.IsRunningOnCI)
+                return;
+
             if (string.IsNullOrWhiteSpace(GoogleCloudSettings.BucketName))
             {
                 Skip = $"Google cloud {memberName} tests missing {BucketNameEnvironmentVariable} environment variable.";

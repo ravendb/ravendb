@@ -16,16 +16,26 @@ public class RabbitMqConnectionString
         VerifiedConnectionString = new Lazy<string>(VerifiedNodesValueFactory);
 
         ConnectionString = new Lazy<string>(() => Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty);
+
+        _canConnect = new Lazy<bool>(CanConnectInternal);
     }
 
     private Lazy<string> ConnectionString { get; }
 
     public Lazy<string> VerifiedConnectionString { get; }
 
-    public bool CanConnect()
+    private readonly Lazy<bool> _canConnect;
+
+    public bool CanConnect => _canConnect.Value;
+
+    private bool CanConnectInternal()
     {
         try
         {
+            var connectionString = ConnectionString.Value;
+            if (string.IsNullOrEmpty(connectionString))
+                return false;
+
             VerifiedNodesValueFactory();
             return true;
         }
