@@ -182,8 +182,6 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-
-
         private async Task AnalyzeLatestStats(
             Dictionary<string, ClusterNodeStatusReport> newStats,
             Dictionary<string, ClusterNodeStatusReport> prevStats)

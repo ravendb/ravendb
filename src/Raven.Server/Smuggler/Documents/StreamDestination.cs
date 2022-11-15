@@ -440,8 +440,6 @@ namespace Raven.Server.Smuggler.Documents
                             _writer.WriteEndObject();
                         }
 
-
-
                         break;
                 }
 

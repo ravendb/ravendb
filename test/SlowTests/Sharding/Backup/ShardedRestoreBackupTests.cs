@@ -75,7 +75,7 @@ namespace SlowTests.Sharding.Backup
                 Assert.Equal(cluster.Nodes.Count, dirs.Length);
 
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
-                var settings = GenerateShardRestoreSettings(dirs, sharding);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
 
                 // restore the database with a different name
                 var newDbName = $"restored_database-{Guid.NewGuid()}";
@@ -131,7 +131,7 @@ namespace SlowTests.Sharding.Backup
                 Assert.Equal(3, dirs.Length);
 
                 var sharding = await Sharding.GetShardingConfigurationAsync(store1);
-                var settings = GenerateShardRestoreSettings(dirs, sharding);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -184,7 +184,7 @@ namespace SlowTests.Sharding.Backup
 
                         Assert.Equal(3, cloudObjects.FileInfoDetails.Count);
 
-                        settings = GenerateShardRestoreSettings(cloudObjects.FileInfoDetails.Select(fileInfo => fileInfo.FullPath).ToList(), sharding);
+                        settings = Sharding.Backup.GenerateShardRestoreSettings(cloudObjects.FileInfoDetails.Select(fileInfo => fileInfo.FullPath).ToList(), sharding);
                     }
 
                     // restore the database with a different name
@@ -251,7 +251,7 @@ namespace SlowTests.Sharding.Backup
                         var folderNames = result.List.Select(item => item.Name).ToList();
                         Assert.Equal(3, folderNames.Count);
 
-                        settings = GenerateShardRestoreSettings(folderNames, sharding);
+                        settings = Sharding.Backup.GenerateShardRestoreSettings(folderNames, sharding);
                     }
 
                     // restore the database with a different name
@@ -314,7 +314,7 @@ namespace SlowTests.Sharding.Backup
                         var fileNames = result.Select(item => item.Name).ToList();
                         Assert.Equal(3, fileNames.Count);
 
-                        settings = GenerateShardRestoreSettings(fileNames, sharding);
+                        settings = Sharding.Backup.GenerateShardRestoreSettings(fileNames, sharding);
                     }
 
                     // restore the database with a different name
@@ -400,7 +400,7 @@ namespace SlowTests.Sharding.Backup
                 }
 
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
-                var settings = GenerateShardRestoreSettings(dirs, sharding);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -469,7 +469,7 @@ namespace SlowTests.Sharding.Backup
                 Assert.Equal(cluster.Nodes.Count, dirs.Length);
 
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
-                var settings = GenerateShardRestoreSettings(dirs, sharding);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -574,7 +574,7 @@ namespace SlowTests.Sharding.Backup
                             Assert.Equal(2, files.FileInfoDetails.Count);
                         }
 
-                        shardedRestoreSettings = GenerateShardRestoreSettings(folderNames, sharding);
+                        shardedRestoreSettings = Sharding.Backup.GenerateShardRestoreSettings(folderNames, sharding);
                     }
 
                     var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -667,7 +667,7 @@ namespace SlowTests.Sharding.Backup
                         Assert.Equal(3, cloudObjects.FileInfoDetails.Count);
 
                         var folderNames = cloudObjects.FileInfoDetails.Select(fileInfo => fileInfo.FullPath).ToList();
-                        shardedRestoreSettings = GenerateShardRestoreSettings(folderNames, sharding);
+                        shardedRestoreSettings = Sharding.Backup.GenerateShardRestoreSettings(folderNames, sharding);
                     }
 
                     var newDbName = $"restored_database-{Guid.NewGuid()}";
@@ -729,7 +729,7 @@ namespace SlowTests.Sharding.Backup
                 Assert.Equal(3, dirs.Length);
 
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
-                var settings = GenerateShardRestoreSettings(dirs, sharding);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -825,29 +825,6 @@ namespace SlowTests.Sharding.Backup
             Assert.Equal(0, shardedRestoreResults[2].Result.Subscriptions.ReadCount);
 
             Assert.Equal(sharding.Shards[2].Members[0], shardedRestoreResults[2].NodeTag);
-        }
-
-        private static ShardedRestoreSettings GenerateShardRestoreSettings(IReadOnlyCollection<string> backupPaths, ShardingConfiguration sharding)
-        {
-            var settings = new ShardedRestoreSettings
-            {
-                Shards = new SingleShardRestoreSetting[backupPaths.Count]
-            };
-
-            foreach (var dir in backupPaths)
-            {
-                var shardIndexPosition = dir.LastIndexOf('$') + 1;
-                var shardNumber = int.Parse(dir[shardIndexPosition].ToString());
-
-                settings.Shards[shardNumber] = new SingleShardRestoreSetting
-                {
-                    ShardNumber = shardNumber, 
-                    FolderName = dir, 
-                    NodeTag = sharding.Shards[shardNumber].Members[0]
-                };
-            }
-
-            return settings;
         }
 
         private S3Settings GetS3Settings([CallerMemberName] string caller = null)
