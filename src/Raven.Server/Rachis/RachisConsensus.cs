@@ -43,7 +43,6 @@ namespace Raven.Server.Rachis
         where TStateMachine : RachisStateMachine, new()
     {
         private readonly ServerStore _serverStore;
-        //internal ServerStore ServerStore => _serverStore;
 
         public RachisConsensus(ServerStore serverStore, int? seed = null) : base(serverStore.Server.CipherSuitesPolicy, seed)
         {

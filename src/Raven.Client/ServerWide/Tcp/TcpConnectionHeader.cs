@@ -66,10 +66,11 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int DropBaseLine = -2;
         public static readonly int ClusterBaseLine = 10;
         public static readonly int ClusterWithMultiTree = 52_000;
+        public static readonly int ClusterWithTcpCompression = 53_000;
         public static readonly int HeartbeatsBaseLine = 20;
         public static readonly int Heartbeats41200 = 41_200;
         public static readonly int Heartbeats42000 = 42_000;
-        public static readonly int Heartbeats53000 = 53_000;
+        public static readonly int HeartbeatsWithTcpCompression = 53_000;
         public static readonly int ReplicationBaseLine = 31;
         public static readonly int ReplicationAttachmentMissing = 40_300;
         public static readonly int ReplicationAttachmentMissingVersion41 = 41_300;
@@ -85,8 +86,8 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int SubscriptionTimeSeriesIncludes = 51_000;
         public static readonly int TestConnectionBaseLine = 50;
 
-        public static readonly int ClusterTcpVersion = TcpConnectionsWithCompression;
-        public static readonly int HeartbeatsTcpVersion = Heartbeats53000;
+        public static readonly int ClusterTcpVersion = ClusterWithTcpCompression;
+        public static readonly int HeartbeatsTcpVersion = HeartbeatsWithTcpCompression;
         public static readonly int ReplicationTcpVersion = ReplicationWithDeduplicatedAttachments;
         public static readonly int SubscriptionTcpVersion = TcpConnectionsWithCompression; 
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
@@ -305,7 +306,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Heartbeats] = new List<int>
                 {
-                    Heartbeats53000,
+                    HeartbeatsWithTcpCompression,
                     Heartbeats42000,
                     Heartbeats41200,
                     HeartbeatsBaseLine,
@@ -486,7 +487,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Heartbeats] = new Dictionary<int, SupportedFeatures>
                 {
-                    [Heartbeats53000] = new SupportedFeatures(Heartbeats53000)
+                    [HeartbeatsWithTcpCompression] = new SupportedFeatures(HeartbeatsWithTcpCompression)
                     {
                         DataCompression = true,
                         Heartbeats = new SupportedFeatures.HeartbeatsFeatures
