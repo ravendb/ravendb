@@ -20,24 +20,24 @@ namespace SlowTests.Issues
             using var store = GetDocumentStore();
             {
                 using var s = store.OpenSession();
-                s.Store(new People() {Email = "maciej"});
+                s.Store(new People() {Dict = "maciej"});
                 s.SaveChanges();
             }
             var index = new PeopleByEmail();
             index.Execute(store);
-
+            Indexes.WaitForIndexing(store);
             {
                 using var s = store.OpenSession();
-                var query = s.Query<People, PeopleByEmail>().Where(i => i.Email == "Maciej").ToList();
+                var query = s.Query<People, PeopleByEmail>().Where(i => i.Dict == "Maciej").ToList();
                 Assert.Equal(1, query.Count);
-                Assert.Equal(query.First().Email, "maciej");
+                Assert.Equal(query.First().Dict, "maciej");
             }
             
         }
 
         private class People
         {
-            public string Email { get; set; }
+            public string Dict { get; set; }
         }
 
         private class PeopleByEmail : AbstractIndexCreationTask<People>
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
             public PeopleByEmail()
             {
                 Map = people => from person in people
-                    select new {Dict = My.Crazy.Namespace.Util.CalculateDictionary(person.Email).Select(i => i.Value),};
+                    select new {Dict = My.Crazy.Namespace.Util.CalculateDictionary(person.Dict).Select(i => i.Value),};
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {

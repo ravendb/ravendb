@@ -1544,8 +1544,8 @@ namespace Raven.Client.Documents.Indexes
                 if (node.Method.ReturnType.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
                 {
                     isDictionaryReturn = true;
-
-                    if (IsExtensionMethod(node) == false)
+                    if (node.Method.ReflectedType?.Namespace?.StartsWith("System") == false &&
+                        node.Method.ReflectedType?.Namespace?.StartsWith("Microsoft") == false)
                         isDictionaryReturnMethodExtension = true;
                 }
             }
