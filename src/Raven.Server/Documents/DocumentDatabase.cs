@@ -851,7 +851,13 @@ namespace Raven.Server.Documents
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished dispose");
 
-            Debug.Assert(TombstoneCleaner.NumberOfSubscriptions == 0, $"Number of subscriptions: {TombstoneCleaner.NumberOfSubscriptions}");
+            var count = TombstoneCleaner.NumberOfSubscriptions;
+            if (count == 0)
+            {
+                var msg = $"Expected 0 subscriptions but got {count}";
+                Console.WriteLine(msg);
+                throw new InvalidOperationException(msg);
+            }
 
             exceptionAggregator.ThrowIfNeeded();
         }
