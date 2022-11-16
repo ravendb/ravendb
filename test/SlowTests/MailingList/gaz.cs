@@ -15,7 +15,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
+#pragma warning disable CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
     public class gaz : RavenTestBase
+#pragma warning restore CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
     {
         public gaz(ITestOutputHelper output) : base(output)
         {
