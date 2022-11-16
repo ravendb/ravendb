@@ -20,7 +20,44 @@ public class RavenDB_19544 : RavenTestBase
     }
 
     [Fact]
-    public async Task CanGetSpatialDistanceOnIndex()
+    public async Task CanGetSpatialDistanceOnIndex_MapReduce()
+    {
+        using (var store = GetDocumentStore())
+        {
+            await store.ExecuteIndexAsync(new MapReduceRestoIndex());
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Resto { Lat = 25.0676339, Lng = 55.141291 });
+
+                await session.SaveChangesAsync();
+            }
+
+            Indexes.WaitForIndexing(store);
+            using (var session = store.OpenAsyncSession())
+            {
+                var projection = 
+                    from result in session.Query<MapReduceRestoIndex.Result, MapReduceRestoIndex>()
+                        .Spatial(x => x.Location, c => c.WithinRadius(100000, 25, 55))
+                        .OrderByDistance(x => x.Location, 25, 55)
+                    select new
+                    {
+                        Distance = (double?)((IMetadataDictionary)RavenQuery.Metadata(result)["@spatial"])["Distance"]
+                    };
+
+                var items = await projection.ToArrayAsync();
+                Assert.NotEmpty(items);
+                foreach (var item in items)
+                {
+                    Assert.NotNull(item.Distance);
+                }
+            }
+        }
+    }
+
+    
+    [Fact]
+    public async Task CanGetSpatialDistanceOnIndex_Map()
     {
         using (var store = GetDocumentStore())
         {
@@ -55,9 +92,29 @@ public class RavenDB_19544 : RavenTestBase
         }
     }
 
+    private class RestoIndex : AbstractIndexCreationTask<Resto, RestoIndex.Result>
+    {
+        public class Result
+        {
+            public string Id { get; set; } = null!;
+
+            public object? Location { get; set; }
+        }
+
+        public RestoIndex()
+        {
+            Map = restaurants => from restaurant in restaurants
+                select new Result
+                {
+                    Id = restaurant.Id,
+                    Location = CreateSpatialField(restaurant.Lat, restaurant.Lng)
+                };
+        }
+    }
 
 
-    public class Resto
+
+    private class Resto
     {
         public string Id { get; set; }
 
@@ -66,7 +123,7 @@ public class RavenDB_19544 : RavenTestBase
         public double Lng { get; set; }
     }
 
-    public class RestoIndex : AbstractMultiMapIndexCreationTask<RestoIndex.Result>
+    private class MapReduceRestoIndex : AbstractMultiMapIndexCreationTask<MapReduceRestoIndex.Result>
     {
         public class Result
         {
@@ -79,7 +136,7 @@ public class RavenDB_19544 : RavenTestBase
             public object? Location { get; set; }
         }
 
-        public RestoIndex()
+        public MapReduceRestoIndex()
         {
             AddMap<Resto>(restaurants => from restaurant in restaurants
                 select new Result
