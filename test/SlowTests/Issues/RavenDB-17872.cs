@@ -243,7 +243,9 @@ namespace SlowTests.Issues
         
         private class AtomicGuard
         {
+#pragma warning disable CS0649
             public string Id;
+#pragma warning restore CS0649
         }
 
         [Fact(Skip = "This test will cause the atomic guard not be in sync with the doc")]

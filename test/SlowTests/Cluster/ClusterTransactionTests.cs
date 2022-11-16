@@ -1454,7 +1454,7 @@ namespace SlowTests.Cluster
                 using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue(GetAtomicGuardKey("users/2"), "foo");
-                    var ex = await Assert.ThrowsAsync<RavenException>(() => session.SaveChangesAsync());
+                    var ex = await Assert.ThrowsAsync<CompareExchangeInvalidKeyException>(() => session.SaveChangesAsync());
                     Assert.Contains($"You cannot manipulate the atomic guard 'rvn-atomic/users/2' via the cluster-wide session", ex.Message);
                 }
 
@@ -1465,9 +1465,11 @@ namespace SlowTests.Cluster
             }
         }
 
-        public class AtomicGuard
+        private class AtomicGuard
         {
+#pragma warning disable CS0649
             public string Id;
+#pragma warning restore CS0649
             public bool Locked;
         }
 

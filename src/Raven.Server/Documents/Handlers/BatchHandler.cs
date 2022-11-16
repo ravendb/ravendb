@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Handlers
                         if (disableAtomicDocumentWrites == false)
                         {
                             if (ClusterTransactionCommand.IsAtomicGuardKey(commandData.Id, out _))
-                                throw new InvalidOperationException($"You cannot manipulate the atomic guard '{commandData.Id}' via the cluster-wide session");
+                                throw new CompareExchangeInvalidKeyException($"You cannot manipulate the atomic guard '{commandData.Id}' via the cluster-wide session");
                         }
                         
                         break;

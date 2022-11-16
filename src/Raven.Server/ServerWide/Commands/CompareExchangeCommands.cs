@@ -334,9 +334,6 @@ namespace Raven.Server.ServerWide.Commands
         public AddOrUpdateCompareExchangeCommand(string database, string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult, string uniqueRequestId, bool fromBackup = false)
             : base(database, key, index, contextToReturnResult, uniqueRequestId, fromBackup)
         {
-            if (value?.TryGetMember(Constants.CompareExchange.ObjectFieldName, out object _) != true)
-                throw new CompareExchangeInvalidValueFormatException($"Invalid format for the compare exchange value of '{key}', the value expected to be wrapped in '{Constants.CompareExchange.ObjectFieldName}' property, but actually it is {value}");
-
             if (key.Length > MaxNumberOfCompareExchangeKeyBytes || Encoding.GetByteCount(key) > MaxNumberOfCompareExchangeKeyBytes)
                 ThrowCompareExchangeKeyTooBig(key);
             if (TryGetExpires(value, out long ticks))
