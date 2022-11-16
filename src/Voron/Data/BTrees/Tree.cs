@@ -683,8 +683,9 @@ namespace Voron.Data.BTrees
 
             return SearchForPage(key, allowCompressed, out cursor, out node);
         }
+
         [ThreadStatic]
-        private FastList<long> _cursorPathBuffer;
+        private static FastList<long> _cursorPathBuffer;
 
         private TreePage SearchForPage(Slice key, out TreeNodeHeader* node)
         {
