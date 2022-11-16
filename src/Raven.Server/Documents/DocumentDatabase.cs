@@ -348,7 +348,15 @@ namespace Raven.Server.Documents
 
                 ThreadPool.QueueUserWorkItem(_ =>
                 {
-                    NotifyFeaturesAndListenersAbout(record, index);
+                    try
+                    {
+                        NotifyFeaturesAboutStateChange(record, index);
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                    }
+                    catch (Exception e)
+                    {
+                        RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                    }
                 }, null);
 
                 Task.Run(async () =>
@@ -471,10 +479,11 @@ namespace Raven.Server.Documents
 
             if (batch.Count == 0)
             {
-                var record = _serverStore.Cluster.ReadDatabase(context, Name, out _);
                 var index = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, Name);
                 
-                NotifyFeaturesAndListenersAbout(record, index);
+                if (RachisLogIndexNotifications.LastModifiedIndex != index)
+                    RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+
                 return batch;
             }
 
@@ -1778,19 +1787,6 @@ namespace Raven.Server.Documents
             }
 
             return hash;
-        }
-
-        internal void NotifyFeaturesAndListenersAbout(DatabaseRecord record, long index)
-        {
-            try
-            {
-                NotifyFeaturesAboutStateChange(record, index);
-                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-            }
-            catch (Exception e)
-            {
-                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
-            }
         }
 
         internal TestingStuff ForTestingPurposesOnly()
