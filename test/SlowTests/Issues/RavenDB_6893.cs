@@ -162,14 +162,18 @@ namespace SlowTests.Issues
             public int que_win_count { get; set; }
         }
 
+#pragma warning disable CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
         private class entries
+#pragma warning restore CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
         {
             public int c { get; set; }
             public int role { get; set; }
             public int synergyC { get; set; }
         }
 
+#pragma warning disable CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
         private class players
+#pragma warning restore CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
         {
             public int cId { get; set; }
             public List<entries> entries { get; set; }

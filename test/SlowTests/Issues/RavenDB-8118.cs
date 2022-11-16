@@ -68,7 +68,9 @@ namespace SlowTests.Issues
         public double DoubleValue { get; set; }
     }
 
+#pragma warning disable CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
     public class doc : Doc
+#pragma warning restore CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
     {
 
     }

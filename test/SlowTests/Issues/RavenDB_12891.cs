@@ -118,7 +118,9 @@ select new {
             }
         }
 
+#pragma warning disable CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
         private class scope
+#pragma warning restore CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
         {
             public string localCustomerId { get; set; }
             public Guid localProjectId { get; set; }
@@ -127,14 +129,18 @@ select new {
             public string platformType { get; set; }
         }
 
+#pragma warning disable CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
         private class resource
+#pragma warning restore CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
         {
             public Guid id { get; set; }
             public scope scope { get; set; }
             public string type { get; set; }
         }
 
+#pragma warning disable CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
         private class traits
+#pragma warning restore CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
         {
             public int disk { get; set; }
             public int diskEphemeral { get; set; }
