@@ -324,7 +324,7 @@ namespace Raven.Client.ServerWide
             RollingIndexes?.Remove(name);
         }
 
-        public void DeletePeriodicBackupConfiguration(long backupTaskId)
+        public PeriodicBackupConfiguration DeletePeriodicBackupConfiguration(long backupTaskId)
         {
             Debug.Assert(backupTaskId != 0);
 
@@ -338,9 +338,11 @@ namespace Raven.Client.ServerWide
                                                             $"because it is a server-wide backup task. Please use a dedicated operation.");
 
                     PeriodicBackups.Remove(periodicBackup);
-                    break;
+                    return periodicBackup;
                 }
             }
+
+            return null;
         }
 
         public void EnsureTaskNameIsNotUsed(string taskName)

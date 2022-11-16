@@ -780,6 +780,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             var previousConfiguration = existingBackupState.Configuration;
             existingBackupState.Configuration = newConfiguration;
 
+            if (previousConfiguration.BackupType != newConfiguration.BackupType)
+            {
+                existingBackupState.BackupStatus = null;
+            }
+
             switch (taskState)
             {
                 case TaskStatus.Disabled:
