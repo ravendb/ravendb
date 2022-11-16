@@ -17,7 +17,7 @@ namespace Raven.Server.Web.System
 {
     public class ShardedAdminDatabaseHandler : ServerRequestHandler
     {
-        [RavenAction("/admin/orchestrator", "PUT", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/databases/orchestrator", "PUT", AuthorizationStatus.Operator)]
         public async Task AddNodeToOrchestratorTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
@@ -31,7 +31,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out var index);
+                var databaseRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name, out var index);
                 if (databaseRecord == null)
                 {
                     throw new DatabaseDoesNotExistException("Database Record not found when attempting to add a node to the database topology");
@@ -50,8 +50,8 @@ namespace Raven.Server.Web.System
                     if (topology.RelevantFor(node))
                         throw new InvalidOperationException($"Can't add node {node} to {name} topology because it is already part of it");
 
-                    var databaseIsBeingDeleted = databaseRecord.DeletionInProgress != null && 
-                                                 topology.EntireDatabasePendingDeletion(databaseRecord.DeletionInProgress, databaseRecord.Sharding.Shards);
+                    var databaseIsBeingDeleted = databaseRecord.DeletionInProgress != null &&
+                                                 databaseRecord.EntireDatabasePendingDeletion();
                     if (databaseIsBeingDeleted)
                         throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because it is currently being deleted from node '{node}'");
 
@@ -59,7 +59,7 @@ namespace Raven.Server.Web.System
                     if (url == null)
                         throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because node {node} is not part of the cluster");
 
-                    if (databaseRecord.Encrypted && AdminDatabasesHandler.NotUsingHttps(url))
+                    if (databaseRecord.IsEncrypted && AdminDatabasesHandler.NotUsingHttps(url))
                         throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
                 }
 
@@ -71,9 +71,9 @@ namespace Raven.Server.Web.System
                         .Concat(clusterTopology.Watchers.Keys)
                         .ToList();
 
-                    allNodes.RemoveAll(n => topology.AllNodes.Contains(n) || (databaseRecord.Encrypted && AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n))));
+                    allNodes.RemoveAll(n => topology.AllNodes.Contains(n) || (databaseRecord.IsEncrypted && AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n))));
 
-                    if (databaseRecord.Encrypted && allNodes.Count == 0)
+                    if (databaseRecord.IsEncrypted && allNodes.Count == 0)
                         throw new InvalidOperationException($"Database {name} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
 
                     if (allNodes.Count == 0)
@@ -111,7 +111,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/orchestrator", "DELETE", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/databases/orchestrator", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
@@ -126,7 +126,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out var index);
+                var databaseRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, name, out var index);
                 if (databaseRecord == null)
                 {
                     throw new DatabaseDoesNotExistException("Database Record not found when attempting to remove a node from the database topology");

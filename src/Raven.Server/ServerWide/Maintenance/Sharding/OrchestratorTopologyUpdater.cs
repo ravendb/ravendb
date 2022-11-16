@@ -35,11 +35,11 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
         private bool IsLastCommittedIndexCaughtUp(ClusterOperationContext context, string node, DatabaseTopology topology, ClusterNodeStatusReport nodeStats, long iteration)
         {
             var lastCommittedIndex = _engine.GetLastCommitIndex(context);
-
-            //heartbeat legacy
+            
             if (nodeStats.ServerReport.LastCommittedIndex == null)
             {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "Should handle mixed cluster of 5.x and 6?");
+                _logger.Log($"Expected to get the Last Committed Index in the node's server report but it is empty", iteration);
+                return false;
             }
 
             if (nodeStats.ServerReport.LastCommittedIndex < lastCommittedIndex)

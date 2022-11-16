@@ -60,7 +60,7 @@ namespace Raven.Server.ServerWide.Commands
         public string UpdateShardedDatabaseRecord(DatabaseRecord record, int shardNumber, long etag)
         {
             record.Sharding.Shards[shardNumber].RemoveFromTopology(NodeTag);
-            record.DeletionInProgress?.Remove(DatabaseTopology.GetKeyForDeletionInProgress(NodeTag, shardNumber));
+            record.DeletionInProgress?.Remove(DatabaseRecord.GetKeyForDeletionInProgress(NodeTag, shardNumber));
 
             if (DatabaseId == null)
                 return null;

@@ -458,6 +458,14 @@ namespace Raven.Client.ServerWide
             Debug.Assert(Sharding.Shards.All(s => s.ClusterTransactionIdBase64.Equals(Sharding.Shards[0].ClusterTransactionIdBase64)));
             return Sharding.Shards[0].ClusterTransactionIdBase64;
         }
+
+        internal static string GetKeyForDeletionInProgress(string node, int? shard)
+        {
+            if (shard.HasValue == false)
+                return node;
+
+            return $"{node}${shard.Value}";
+        }
     }
 
     public class IndexHistoryEntry

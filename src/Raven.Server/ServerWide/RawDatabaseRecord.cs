@@ -28,6 +28,7 @@ using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
 {
@@ -275,6 +276,53 @@ namespace Raven.Server.ServerWide
             for (var index = 0; index < array.Length; index++)
             {
                 yield return GetShardedDatabaseRecord(index);
+            }
+        }
+
+        public bool EntireDatabasePendingDeletion()
+        {
+            if (IsSharded)
+            {
+                if (DeletionInProgress.Count == 0)
+                    return false;
+
+                if (Sharding.Shards.Sum(x => x.Count) == 0)
+                    return true;
+
+                int shard = 0;
+                foreach (var shardTopology in Sharding.Shards)
+                {
+                    foreach (var nodeWithShard in shardTopology.AllNodes)
+                    {
+                        if (DeletionInProgress.TryGetValue(DatabaseRecord.GetKeyForDeletionInProgress(nodeWithShard, shard), out var deletionStatus) == false || deletionStatus == DeletionInProgressStatus.No)
+                        {
+                            return false;
+                        }
+                    }
+
+                    shard++;
+                }
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal,
+                    "Handle case where shard numbers are not consecutive");
+                return true;
+            }
+            else
+            {
+                if (Topology.Count == 0)
+                    return true;
+
+                if (DeletionInProgress?.Count > 0)
+                {
+                    foreach (var node in Topology.AllNodes)
+                    {
+                        if (DeletionInProgress.TryGetValue(node, out var deletionStatus) == false || deletionStatus == DeletionInProgressStatus.No)
+                            return false;
+                    }
+
+                    return true;
+                }
+
+                return false;
             }
         }
 

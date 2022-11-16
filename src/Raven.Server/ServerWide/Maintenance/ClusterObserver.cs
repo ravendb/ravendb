@@ -75,9 +75,9 @@ namespace Raven.Server.ServerWide.Maintenance
             _stabilizationTime = config.StabilizationTime.AsTimeSpan;
             _stabilizationTimeMs = (long)config.StabilizationTime.AsTimeSpan.TotalMilliseconds;
 
-            var timenow = DateTime.UtcNow;
-            _databaseTopologyUpdater = new DatabaseTopologyUpdater(server, engine, config, clusterObserverStartTime: timenow, _observerLogger);
-            _orchestratorTopologyUpdater = new OrchestratorTopologyUpdater(server, engine, config, clusterObserverStartTime: timenow, _observerLogger);
+            var now = DateTime.UtcNow;
+            _databaseTopologyUpdater = new DatabaseTopologyUpdater(server, engine, config, clusterObserverStartTime: now, _observerLogger);
+            _orchestratorTopologyUpdater = new OrchestratorTopologyUpdater(server, engine, config, clusterObserverStartTime: now, _observerLogger);
 
             _observe = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
             {
