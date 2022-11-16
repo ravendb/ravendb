@@ -459,12 +459,12 @@ namespace Raven.Client.ServerWide
             return Sharding.Shards[0].ClusterTransactionIdBase64;
         }
 
-        internal static string GetKeyForDeletionInProgress(string node, int? shard)
+        internal static string GetKeyForDeletionInProgress(string node, int? shardNumber)
         {
-            if (shard.HasValue == false)
+            if (shardNumber.HasValue == false)
                 return node;
 
-            return $"{node}${shard.Value}";
+            return $"{node}${shardNumber.Value}";
         }
     }
 
