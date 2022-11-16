@@ -58,8 +58,7 @@ namespace Raven.Server.ServerWide.Maintenance
             var current = state.Current;
             var previous = state.Previous;
             var dbName = state.Name;
-            var deletionInProgress = state.ReadDeletionInProgress();
-
+            
             var someNodesRequireMoreTime = false;
             var rotatePreferredNode = false;
 
@@ -186,7 +185,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     return $"None of '{dbName}' nodes are responding, promoting {node}";
                 }
 
-                if (databaseTopology.EntireDatabasePendingDeletion(deletionInProgress, state.RawDatabase.Sharding?.Shards))
+                if (state.RawDatabase.EntireDatabasePendingDeletion())
                 {
                     return null; // We delete the whole database.
                 }
@@ -275,7 +274,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             var goodMembers = GetNumberOfRespondingNodes(state);
-            var pendingDelete = GetPendingDeleteNodes(deletionInProgress);
+            var pendingDelete = GetPendingDeleteNodes(state);
             foreach (var rehab in databaseTopology.Rehabs)
             {
                 var health = FailedDatabaseInstanceOrNode(rehab, state, out var nodeStats);
@@ -794,10 +793,23 @@ namespace Raven.Server.ServerWide.Maintenance
             deletions.Add(deletionCmd);
         }
 
-        private static List<string> GetPendingDeleteNodes(Dictionary<string, DeletionInProgressStatus> deletionInProgress)
+        private static List<string> GetPendingDeleteNodes(DatabaseObservationState state)
         {
             var alreadyInDeletionProgress = new List<string>();
-            alreadyInDeletionProgress.AddRange(deletionInProgress?.Keys);
+            if (ShardHelper.TryGetShardNumber(state.Name, out var shardNumber))
+            {
+                foreach (var (tag, _) in state.RawDatabase.DeletionInProgress)
+                {
+                    if (tag.Contains($"${shardNumber}"))
+                    {
+                        alreadyInDeletionProgress.Add(tag.Replace($"${shardNumber}", ""));
+                    }
+                }
+
+                return alreadyInDeletionProgress;
+            }
+            
+            alreadyInDeletionProgress.AddRange(state.RawDatabase.DeletionInProgress?.Keys);
             return alreadyInDeletionProgress;
         }
 

@@ -17,6 +17,7 @@ namespace Raven.Client.ServerWide.Sharding
 
         public RemoveNodeFromOrchestratorTopologyOperation(string databaseName, string node, bool force = false)
         {
+            ResourceNameValidator.AssertValidDatabaseName(databaseName);
             _node = node;
             _databaseName = databaseName;
             _force = force;
@@ -48,7 +49,7 @@ namespace Raven.Client.ServerWide.Sharding
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/orchestrator?name={Uri.EscapeDataString(_databaseName)}&node={Uri.EscapeDataString(_node)}&force={_force}";
+                url = $"{node.Url}/admin/databases/orchestrator?name={Uri.EscapeDataString(_databaseName)}&node={Uri.EscapeDataString(_node)}&force={_force}";
                 
                 var request = new HttpRequestMessage
                 {

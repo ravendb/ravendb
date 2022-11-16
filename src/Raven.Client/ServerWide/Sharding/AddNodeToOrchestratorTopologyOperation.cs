@@ -14,8 +14,9 @@ namespace Raven.Client.ServerWide.Sharding
         private readonly string _databaseName;
         private readonly string _node;
         
-        internal AddNodeToOrchestratorTopologyOperation(string databaseName, string node = null)
+        public AddNodeToOrchestratorTopologyOperation(string databaseName, string node = null)
         {
+            ResourceNameValidator.AssertValidDatabaseName(databaseName);
             _databaseName = databaseName;
             _node = node;
         }
@@ -41,7 +42,7 @@ namespace Raven.Client.ServerWide.Sharding
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/orchestrator?name={Uri.EscapeDataString(_databaseName)}";
+                url = $"{node.Url}/admin/databases/orchestrator?name={Uri.EscapeDataString(_databaseName)}";
                 if (string.IsNullOrEmpty(_node) == false)
                 {
                     url += $"&node={Uri.EscapeDataString(_node)}";
