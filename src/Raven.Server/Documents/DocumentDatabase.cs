@@ -478,7 +478,14 @@ namespace Raven.Server.Documents
                 ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: batchSize));
 
             if (batch.Count == 0)
+            {
+                var index = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, Name);
+                
+                if (RachisLogIndexNotifications.LastModifiedIndex != index)
+                    RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+
                 return batch;
+            }
 
             var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
             try
