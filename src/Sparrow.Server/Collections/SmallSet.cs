@@ -113,8 +113,6 @@ namespace Sparrow.Server.Collections
 
         public void Clear()
         {
-            Array.Fill(_keys, (TKey)(object)-1);
-            Array.Fill(_values, default);
             _currentIdx = -1;
         }
 

@@ -633,7 +633,7 @@ namespace Voron.Data.Containers
             return (offset - PageHeader.SizeOf) / sizeof(ItemMetadata);
         }
 
-        public struct Item
+        public readonly struct Item
         {
             private readonly Page Page;
             private readonly int Offset;

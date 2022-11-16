@@ -4,7 +4,10 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
 using Corax.Mappings;
+using GeoAPI.Operation.Buffer;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Compression;
@@ -614,7 +617,7 @@ public unsafe struct IndexEntryReader
 
 
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int GetMetadataFieldLocation(byte* buffer, int field, out bool fieldIsTyped)
     {
         if (field == _lastFieldAccessed)
@@ -622,67 +625,61 @@ public unsafe struct IndexEntryReader
             fieldIsTyped = _lastFieldAccessedIsTyped;
             return _lastFieldAccessedOffset;
         }
+
+        int offset;
+        if (_encoding == IndexEntryTableEncoding.TwoBytes)
+        {
+            offset = *(ushort*)(buffer + _locationOffset + field * sizeof(ushort));
+            if (offset == 0xFFFF)
+                goto Fail;
+
+            int mask = 0x80 << ((sizeof(short) - 1) * 8);
+            fieldIsTyped = (offset & mask) != 0;
+            offset &= ~mask;
+        }
         else
         {
-            var offset = GetMetadataFieldLocationUnlikely(buffer, field, out fieldIsTyped);
-
-            _lastFieldAccessed = field;
-            _lastFieldAccessedOffset = offset;
-            _lastFieldAccessedIsTyped = fieldIsTyped;
-            return offset;
+            offset = GetMetadataFieldLocationUnlikely(buffer, field, out fieldIsTyped);
         }
+
+        _lastFieldAccessed = field;
+        _lastFieldAccessedOffset = offset;
+        _lastFieldAccessedIsTyped = fieldIsTyped;
+        return offset;
+
+        Fail:
+        fieldIsTyped = false;
+        return Invalid;
     }
 
     public static ReadOnlySpan<byte> TableEncodingLookupTable => new byte[] { 0, 1, 2, 4 };
 
-    private static ReadOnlySpan<byte> ByteKnownFieldMaskShiftLookupTable => new byte[]
-    {
-        0,
-        (sizeof(byte) - 1) * 8,
-        (sizeof(short) - 1) * 8,
-        (sizeof(int) - 1) * 8,
-    };
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int GetMetadataFieldLocationUnlikely(byte* buffer, int field, out bool isTyped)
     {
         var encoding = _encoding;
-        int encodeSize = TableEncodingLookupTable[(int)encoding];
-        var locationOffset = _locationOffset + field * encodeSize;
-
-        int offset;
-        switch (encoding)
+        if (encoding == IndexEntryTableEncoding.OneByte)
         {
-            case IndexEntryTableEncoding.OneByte:
-            {
-                offset = buffer[locationOffset];
-                if (offset == 0xFF)
-                    goto Fail;
-                goto End;
-            }
-            case IndexEntryTableEncoding.TwoBytes:
-            {
-                offset = *(ushort*)(buffer + locationOffset);
-                    if (offset == 0xFFFF)
-                    goto Fail;
-                goto End;
-            }
-            case IndexEntryTableEncoding.FourBytes:
-            {
-                offset = *(int*)(buffer + locationOffset);
-                if (offset == unchecked((int)0xFFFF_FFFF))
-                    goto Fail;
-                goto End;
-            }
-            default: goto Fail;
+            int offset = buffer[_locationOffset + field * sizeof(byte)];
+            if (offset == 0xFF)
+                goto Fail;
+
+            int mask = 0x80 << ((sizeof(byte) - 1) * 8);
+            isTyped = (offset & mask) != 0;
+            offset &= ~mask;
+            return offset;
         }
+        else if (encoding == IndexEntryTableEncoding.FourBytes)
+        {
+            int offset = *(int*)(buffer + _locationOffset + field * sizeof(uint));
+            if (offset == unchecked((int)0xFFFF_FFFF))
+                goto Fail;
 
-        End:
-        int mask = 0x80 << ByteKnownFieldMaskShiftLookupTable[(int)encoding];
-        isTyped = (offset & mask) != 0;
-        offset &= ~mask;
-        return offset;
-
+            int mask = 0x80 << ((sizeof(int) - 1) * 8);
+            isTyped = (offset & mask) != 0;
+            offset &= ~mask;
+            return offset;
+        }
+        
         Fail:
         isTyped = false;
         return Invalid;
