@@ -1812,6 +1812,9 @@ namespace Raven.Server.Documents.Indexes
 
                     if (batchCompleted)
                     {
+                        
+                        FlushAndSync(_environment, (int)Configuration.MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit.AsTimeSpan.TotalMilliseconds, tryCleanupRecycledJournals: true);
+
                         // this side-by-side index will be replaced in a second, notify about indexing success
                         // so we know that indexing batch is no longer in progress
                         NotifyAboutCompletedBatch(didWork);
