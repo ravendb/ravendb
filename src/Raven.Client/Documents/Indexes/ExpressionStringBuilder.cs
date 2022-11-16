@@ -1007,7 +1007,9 @@ namespace Raven.Client.Documents.Indexes
             return type.FullName;
         }
 
-        private bool TypeExistsOnServer(Type type)
+        private bool TypeExistsOnServer(Type type) => TypeExistsOnServer(type, false);
+        
+        private bool TypeExistsOnServer(Type type, bool isGenericArgument)
         {
             if (_insideWellKnownType)
                 return true;
@@ -1016,12 +1018,12 @@ namespace Raven.Client.Documents.Indexes
             {
                 foreach (Type genericArgument in type.GetGenericArguments())
                 {
-                    if (TypeExistsOnServer(genericArgument) == false)
+                    if (TypeExistsOnServer(genericArgument, true) == false)
                         return false;
                 }
             }
-
-            if (type.IsEnum) // enum is known type
+            
+            if (type.IsEnum && isGenericArgument) // enum is known type when it is a generic argument
                 return true;
             
             if (type.Assembly == typeof(HashSet<>).Assembly) // System.Core
