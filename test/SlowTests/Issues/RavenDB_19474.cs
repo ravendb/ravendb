@@ -7,6 +7,7 @@ using Raven.Client.Documents.Session;
 using System.Threading;
 using FastTests.Graph;
 using Raven.Client.Documents;
+using Microsoft.Azure.Documents.Spatial;
 
 namespace SlowTests.Issues;
 
@@ -33,11 +34,9 @@ public class RavenDB_19474 : RavenTestBase
         }
     }
 
-    internal async Task CreateCompareExchangeValue(DocumentStore store, string key, object value)
+    private async Task CreateCompareExchangeValue(DocumentStore store, string key, object value)
     {
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromSeconds(30));
-
+        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
         using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
         {
             session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, value);
