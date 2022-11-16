@@ -153,32 +153,6 @@ namespace Raven.Client.ServerWide
             PriorityOrder = topology.PriorityOrder;
             NodesModifiedAt = topology.NodesModifiedAt;
         }
-        
-        public override bool EntireDatabasePendingDeletion(Dictionary<string, DeletionInProgressStatus> deletionInProgress, DatabaseTopology[] shardsTopologies)
-        {
-            if (deletionInProgress.Count == 0)
-                return false;
-
-            if (shardsTopologies.Sum(x => x.Count) == 0)
-                return true;
-
-            int shard = 0;
-            foreach (var shardTopology in shardsTopologies)
-            {
-                foreach (var nodeWithShard in shardTopology.AllNodes)
-                {
-                    if (deletionInProgress.TryGetValue(DatabaseRecord.GetKeyForDeletionInProgress(nodeWithShard, shard), out var deletionStatus) == false || deletionStatus == DeletionInProgressStatus.No)
-                    {
-                        return false;
-                    }
-                }
-
-                shard++;
-            }
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal,
-                "Handle case where shard numbers are not consecutive");
-            return true;
-        }
     }
 
     public class DatabaseTopology
@@ -335,24 +309,6 @@ namespace Raven.Client.ServerWide
             }
 
             return destinations;
-        }
-
-        public virtual bool EntireDatabasePendingDeletion(Dictionary<string, DeletionInProgressStatus> deletionInProgress, DatabaseTopology[] shardTopologies)
-        {
-            if (Count == 0)
-                return true;
-
-            if (deletionInProgress?.Count > 0)
-            {
-                foreach (var node in AllNodes)
-                {
-                    if (deletionInProgress.TryGetValue(node, out var deletionStatus) == false || deletionStatus == DeletionInProgressStatus.No)
-                        return false;
-                }
-                return true;
-            }
-
-            return false;
         }
 
         public static (List<string> Members, List<string> Promotables, List<string> Rehabs) Reorder(DatabaseTopology topology, List<string> order)
