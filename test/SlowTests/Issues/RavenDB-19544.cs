@@ -1,11 +1,8 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -36,7 +33,7 @@ public class RavenDB_19544 : RavenTestBase
             Indexes.WaitForIndexing(store);
             using (var session = store.OpenAsyncSession())
             {
-                var projection = 
+                var projection =
                     from result in session.Query<MapReduceRestoIndex.Result, MapReduceRestoIndex>()
                         .Spatial(x => x.Location, c => c.WithinRadius(100000, 25, 55))
                         .OrderByDistance(x => x.Location, 25, 55)
@@ -55,7 +52,7 @@ public class RavenDB_19544 : RavenTestBase
         }
     }
 
-    
+
     [Fact]
     public async Task CanGetSpatialDistanceOnIndex_Map()
     {
@@ -73,7 +70,7 @@ public class RavenDB_19544 : RavenTestBase
             Indexes.WaitForIndexing(store);
             using (var session = store.OpenAsyncSession())
             {
-                var projection = 
+                var projection =
                     from result in session.Query<RestoIndex.Result, RestoIndex>()
                         .Spatial(x => x.Location, c => c.WithinRadius(100000, 25, 55))
                         .OrderByDistance(x => x.Location, 25, 55)
@@ -98,21 +95,19 @@ public class RavenDB_19544 : RavenTestBase
         {
             public string Id { get; set; } = null!;
 
-            public object? Location { get; set; }
+            public object Location { get; set; }
         }
 
         public RestoIndex()
         {
             Map = restaurants => from restaurant in restaurants
-                select new Result
-                {
-                    Id = restaurant.Id,
-                    Location = CreateSpatialField(restaurant.Lat, restaurant.Lng)
-                };
+                                 select new Result
+                                 {
+                                     Id = restaurant.Id,
+                                     Location = CreateSpatialField(restaurant.Lat, restaurant.Lng)
+                                 };
         }
     }
-
-
 
     private class Resto
     {
@@ -133,28 +128,31 @@ public class RavenDB_19544 : RavenTestBase
 
             public double LocationLongitude { get; set; }
 
-            public object? Location { get; set; }
+            public object Location { get; set; }
         }
 
         public MapReduceRestoIndex()
         {
             AddMap<Resto>(restaurants => from restaurant in restaurants
-                select new Result
-                {
-                    Id = restaurant.Id, LocationLatitude = (double)restaurant.Lat, LocationLongitude = (double)restaurant.Lng, Location = null,
-                });
+                                         select new Result
+                                         {
+                                             Id = restaurant.Id,
+                                             LocationLatitude = (double)restaurant.Lat,
+                                             LocationLongitude = (double)restaurant.Lng,
+                                             Location = null,
+                                         });
 
             Reduce = results => from result in results
-                group result by result.Id
+                                group result by result.Id
                 into g
-                let restaurant = g.FirstOrDefault()
-                select new Result
-                {
-                    Id = g.Key,
-                    LocationLatitude = restaurant.LocationLatitude,
-                    LocationLongitude = restaurant.LocationLongitude,
-                    Location = CreateSpatialField(restaurant.LocationLatitude, restaurant.LocationLongitude)
-                };
+                                let restaurant = g.FirstOrDefault()
+                                select new Result
+                                {
+                                    Id = g.Key,
+                                    LocationLatitude = restaurant.LocationLatitude,
+                                    LocationLongitude = restaurant.LocationLongitude,
+                                    Location = CreateSpatialField(restaurant.LocationLatitude, restaurant.LocationLongitude)
+                                };
 
             StoreAllFields(FieldStorage.Yes);
         }
