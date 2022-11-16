@@ -2,14 +2,19 @@
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
+using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 {
     public class UpdatePeriodicBackupCommand : UpdateDatabaseCommand
     {
         public PeriodicBackupConfiguration Configuration;
+        private bool _shouldRemoveBackupStatus;
 
         public UpdatePeriodicBackupCommand()
         {
@@ -34,7 +39,11 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             else
             {
                 // modified periodic backup, remove the old one
-                record.DeletePeriodicBackupConfiguration(Configuration.TaskId);
+                var previousBackupConfiguration = record.DeletePeriodicBackupConfiguration(Configuration.TaskId);
+                if (previousBackupConfiguration != null && previousBackupConfiguration.BackupType != Configuration.BackupType)
+                {
+                    _shouldRemoveBackupStatus = true;
+                }
             }
             
             if (string.IsNullOrEmpty(Configuration.Name))
@@ -50,6 +59,20 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             EnsureTaskNameIsNotUsed(record, Configuration.Name);
 
             record.PeriodicBackups.Add(Configuration);
+        }
+
+        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
+        {
+            if (_shouldRemoveBackupStatus == false)
+                return;
+
+            var taskName = PeriodicBackupStatus.GenerateItemName(DatabaseName, Configuration.TaskId);
+
+            using (Slice.From(ctx.Allocator, taskName, out Slice _))
+            using (Slice.From(ctx.Allocator, taskName.ToLowerInvariant(), out Slice keyNameLowered))
+            {
+                items.DeleteByKey(keyNameLowered);
+            }
         }
 
         public override void FillJson(DynamicJsonValue json)
