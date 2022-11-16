@@ -852,7 +852,7 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished dispose");
 
             var count = TombstoneCleaner.NumberOfSubscriptions;
-            if (count == 0)
+            if (count > 0)
             {
                 var msg = $"Expected 0 subscriptions but got {count}";
                 Console.WriteLine(msg);
