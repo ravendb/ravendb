@@ -64,6 +64,23 @@ namespace Raven.Server.Documents
             }
         }
 
+        public int NumberOfSubscriptions
+        {
+            get
+            {
+                _subscriptionsLocker.Wait();
+
+                try
+                {
+                    return _subscriptions.Count;
+                }
+                finally
+                {
+                    _subscriptionsLocker.Release();
+                }
+            }
+        }
+
         protected override async Task DoWork()
         {
             await WaitOrThrowOperationCanceled(_documentDatabase.Configuration.Tombstones.CleanupInterval.AsTimeSpan);
