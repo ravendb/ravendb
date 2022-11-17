@@ -29,6 +29,21 @@ namespace Raven.Client.ServerWide.Operations
                 _parameters.FromNodes = new[] { fromNode };
         }
 
+        public DeleteDatabasesOperation(string databaseName, bool hardDelete, string fromNode, int shard, TimeSpan? timeToWaitForConfirmation = null)
+        {
+            if (databaseName == null)
+                throw new ArgumentNullException(nameof(databaseName));
+
+            _parameters = new Parameters
+            {
+                DatabaseNames = new[] { ClientShardHelper.ToShardName(databaseName, shard) },
+                HardDelete = hardDelete,
+                TimeToWaitForConfirmation = timeToWaitForConfirmation
+            };
+
+            _parameters.FromNodes = new[] { fromNode };
+        }
+        
         public DeleteDatabasesOperation(Parameters parameters)
         {
             if (parameters == null)

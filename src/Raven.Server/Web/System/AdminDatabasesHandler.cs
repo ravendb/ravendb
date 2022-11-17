@@ -721,6 +721,12 @@ namespace Raven.Server.Web.System
                                 {
                                     throw new InvalidOperationException($"Database '{databaseName}' doesn't reside on node '{node}' so it can't be deleted from it");
                                 }
+
+                                if (ShardHelper.TryGetShardNumber(databaseName, out var shard) && topology.ReplicationFactor == 1)
+                                {
+                                    throw new InvalidOperationException($"Database {databaseName} cannot be deleted because it is the last copy of shard {shard}");
+                                }
+
                                 pendingDeletes.Add(node);
                                 topology.RemoveFromTopology(node);
                             }

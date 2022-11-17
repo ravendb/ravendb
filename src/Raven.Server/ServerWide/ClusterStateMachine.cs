@@ -1473,7 +1473,9 @@ namespace Raven.Server.ServerWide
                     if (rawRecord == null)
                         throw new DatabaseDoesNotExistException($"The database {databaseName} does not exists");
 
-                    if (rawRecord.Topology == null)
+                    DatabaseTopology topology = isSharded ? rawRecord.Sharding.Shards[shardNumber] : rawRecord.Topology;
+                    
+                    if (topology == null)
                     {
                         items.DeleteByKey(lowerKey);
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
@@ -1493,7 +1495,7 @@ namespace Raven.Server.ServerWide
                     }
 
 
-                    if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
+                    if (databaseRecord.DeletionInProgress.Count == 0 && topology.Count == 0)
                     {
                         DeleteDatabaseRecord(context, index, items, lowerKey, databaseRecord, serverStore);
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),

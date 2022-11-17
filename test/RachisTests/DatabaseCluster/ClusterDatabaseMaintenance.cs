@@ -7,11 +7,13 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
 using FastTests.Utils;
+using NuGet.Packaging;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -1067,6 +1069,140 @@ namespace RachisTests.DatabaseCluster
                 dbTopology = record.Sharding.Orchestrator.Topology;
                 Assert.Equal(nodeAmount, dbTopology.Members.Count());
                 Assert.Equal(0, dbTopology.Promotables.Count);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task Promote_immediately_for_shard()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 2);
+
+            using (var store = GetDocumentStore(options)) 
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var shardTopology = record.Sharding.Shards[0];
+                Assert.Equal(1, shardTopology.AllNodes.Count());
+                Assert.Equal(0, shardTopology.Promotables.Count);
+                Assert.Equal(1, shardTopology.ReplicationFactor);
+
+                var nodesInShardTopologies = new HashSet<string>();
+                foreach (var shardTop in record.Sharding.Shards)
+                {
+                    nodesInShardTopologies.AddRange(shardTop.AllNodes);
+                }
+
+                var nodeNotContainingShards = nodes.Single(x => nodesInShardTopologies.Contains(x.ServerStore.NodeTag) == false).ServerStore.NodeTag;
+
+                var serverWithNewShard = Servers.Single(x => x.ServerStore.NodeTag == nodeNotContainingShards);
+                Assert.False(serverWithNewShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(ShardHelper.ToShardName(store.Database, 0), out var _));
+
+                leader.ServerStore.Observer.Suspended = true;
+
+                //duplicate shard to node 0
+                var res = store.Maintenance.Server.Send(new AddDatabaseNodeOperation(store.Database, shard: 0, node: nodeNotContainingShards));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    shardTopology = record.Sharding.Shards[0];
+                    return shardTopology.Promotables.Count;
+                }, 1);
+
+                Assert.Equal(1, shardTopology.Members.Count);
+                Assert.Equal(1, shardTopology.Promotables.Count);
+                Assert.Equal(nodeNotContainingShards, shardTopology.Promotables[0]);
+
+                //promote immediately
+                await store.Maintenance.Server.SendAsync(new PromoteDatabaseNodeOperation(store.Database, 0, nodeNotContainingShards));
+                
+                await AssertWaitForValueAsync(async () =>
+                {
+                    var t = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
+                    shardTopology = t.Sharding.Shards[0];
+                    return shardTopology.Members.Count;
+                }, 2);
+                
+                Assert.Equal(2, shardTopology.Members.Count);
+                Assert.Equal(0, shardTopology.Promotables.Count);
+                Assert.Equal(2, shardTopology.ReplicationFactor);
+
+                serverWithNewShard = Servers.Single(x => x.ServerStore.NodeTag == nodeNotContainingShards);
+                Assert.True(serverWithNewShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(ShardHelper.ToShardName(store.Database, 0), out var _));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task RemoveShardFromNode()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 2, orchestratorReplicationFactor: 2);
+
+            using (var store = GetDocumentStore(options))
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var shardTopology = record.Sharding.Shards[0];
+                Assert.Equal(2, shardTopology.Members.Count);
+                Assert.Equal(0, shardTopology.Promotables.Count);
+                Assert.Equal(2, shardTopology.ReplicationFactor);
+
+                var nodeContainingShard0 = shardTopology.Members.First();
+
+                var serverWithNewShard = Servers.Single(x => x.ServerStore.NodeTag == nodeContainingShard0);
+                Assert.True(serverWithNewShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(ShardHelper.ToShardName(store.Database, 0), out var _));
+                
+                //remove shard from node 0
+                var res = store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, shard: 0, hardDelete: true, fromNode: nodeContainingShard0));
+                Assert.Equal(1, res.PendingDeletes.Length);
+                Assert.True(res.PendingDeletes.Contains(nodeContainingShard0));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    var t = record2.Sharding.Shards[0];
+                    return t.Members.Count;
+                }, 1);
+                
+                Assert.Equal(nodeContainingShard0, shardTopology.Members[0]);
+
+                serverWithNewShard = Servers.Single(x => x.ServerStore.NodeTag == nodeContainingShard0);
+                Assert.False(serverWithNewShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(ShardHelper.ToShardName(store.Database, 0), out var _));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task PreventRemovingLastShard()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 2);
+
+            using (var store = GetDocumentStore(options))
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var shardTopology = record.Sharding.Shards[0];
+                Assert.Equal(1, shardTopology.Members.Count);
+                Assert.Equal(0, shardTopology.Promotables.Count);
+                Assert.Equal(1, shardTopology.ReplicationFactor);
+
+                var nodeContainingShard0 = shardTopology.Members.First();
+                
+                //remove shard 0 from node
+                var error = Assert.ThrowsAny<RavenException>(() =>
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, shard: 0, hardDelete: true, fromNode: nodeContainingShard0)));
+
+                Assert.Contains($"Database {ShardHelper.ToShardName(store.Database, 0)} cannot be deleted because it is the last copy of shard", error.Message);
+
+                //topology should not change
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                shardTopology = record.Sharding.Shards[0];
+                Assert.Equal(1, shardTopology.Members.Count);
+                Assert.Equal(0, shardTopology.Promotables.Count);
+                Assert.Equal(1, shardTopology.ReplicationFactor);
+
+                var serverWithShard = Servers.Single(x => x.ServerStore.NodeTag == nodeContainingShard0);
+                Assert.True(serverWithShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(ShardHelper.ToShardName(store.Database, 0), out var _));
             }
         }
 
