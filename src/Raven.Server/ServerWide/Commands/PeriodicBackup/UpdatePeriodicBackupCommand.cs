@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -40,10 +41,9 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             {
                 // modified periodic backup, remove the old one
                 var previousBackupConfiguration = record.DeletePeriodicBackupConfiguration(Configuration.TaskId);
-                if (previousBackupConfiguration != null && previousBackupConfiguration.BackupType != Configuration.BackupType)
-                {
+                if (previousBackupConfiguration != null && BackupHelper.BackupTypeChanged(previousBackupConfiguration, Configuration))
                     _shouldRemoveBackupStatus = true;
-                }
+                
             }
             
             if (string.IsNullOrEmpty(Configuration.Name))

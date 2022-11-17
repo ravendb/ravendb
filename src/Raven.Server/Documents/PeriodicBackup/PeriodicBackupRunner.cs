@@ -780,8 +780,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             var previousConfiguration = existingBackupState.Configuration;
             existingBackupState.Configuration = newConfiguration;
 
-            if (previousConfiguration.BackupType != newConfiguration.BackupType)
+            if (BackupHelper.BackupTypeChanged(previousConfiguration, newConfiguration))
             {
+                // after deleting the periodic backup status we also clear the in-memory state backup status
                 existingBackupState.BackupStatus = null;
             }
 
