@@ -11,6 +11,8 @@ using GeoAPI.Operation.Buffer;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Compression;
+using static Voron.Data.CompactTrees.CompactTree;
+using Voron;
 
 namespace Corax;
 
@@ -143,14 +145,43 @@ public unsafe struct IndexEntryReader
 
             var buffer = _parent._buffer;
             var intOffset = _offset + sizeof(IndexEntryFieldType);
-            longValue = VariableSizeEncoding.Read<long>(buffer + intOffset, out int length); // Read
-            intOffset += length;
+
+            var entryPos = buffer + intOffset;
+            if (entryPos[0] < 0x80)
+            {
+                longValue = entryPos[0];
+                intOffset += 1;
+            }
+            else if (entryPos[1] < 0x80)
+            {
+                longValue = (entryPos[0] & 0x7F) | (entryPos[1] << 7);
+                intOffset += 2;
+            }
+            else
+            {
+                longValue = ReadValueUnlikely(entryPos, ref intOffset);
+            }
+
             doubleValue = Unsafe.ReadUnaligned<double>(ref buffer[intOffset]);
             intOffset += sizeof(double);
 
-            int stringLength = VariableSizeEncoding.Read<ushort>(buffer + intOffset, out length);
-            intOffset += length;
+            int stringLength;
+            entryPos = buffer + intOffset;
 
+            if (entryPos[0] < 0x80)
+            {
+                stringLength = entryPos[0];
+                intOffset += 1;
+            }
+            else if (entryPos[1] < 0x80)
+            {
+                stringLength = (entryPos[0] & 0x7F) | (entryPos[1] << 7);
+                intOffset += 2;
+            }
+            else
+            {
+                stringLength = (int)ReadValueUnlikely(entryPos, ref intOffset);
+            }
 
             sequenceValue = new Span<byte>(buffer + intOffset, stringLength);
             return true;
@@ -167,6 +198,15 @@ public unsafe struct IndexEntryReader
             Unsafe.SkipInit(out doubleValue);
             sequenceValue = Span<byte>.Empty;
             return true;
+
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            unsafe long ReadValueUnlikely(byte* buffer, ref int offset)
+            {
+                var value = VariableSizeEncoding.Read<long>(buffer, out int length);
+                offset += length; // Read
+                return value;
+            }
         }
 
         /// <summary>
