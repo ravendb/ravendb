@@ -10,7 +10,7 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
-    public class TimeSeriesSegmentObjectInstance : ObjectInstance
+    public sealed class TimeSeriesSegmentObjectInstance : ObjectInstance
     {
         private readonly DynamicTimeSeriesSegment _segment;
 
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 for (var i = 0; i < values.Length; i++)
                     values[i] = entry._entry.Values.Span[i];
 
-                var array = engine.Array.Construct(Arguments.Empty);
+                var array = engine.Array.Construct(values.Length);
                 engine.Array.PrototypeObject.Push(array, values);
 
                 value.Set(nameof(entry.Value), values[0]);

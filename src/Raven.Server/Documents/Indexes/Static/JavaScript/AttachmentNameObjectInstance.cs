@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
-    public class AttachmentNameObjectInstance : ObjectInstanceBase
+    public sealed class AttachmentNameObjectInstance : ObjectInstanceBase
     {
         private readonly Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
 

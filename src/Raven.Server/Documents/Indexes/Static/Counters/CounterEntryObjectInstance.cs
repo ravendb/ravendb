@@ -8,7 +8,7 @@ using Jint.Runtime.Descriptors;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
-    public class CounterEntryObjectInstance : ObjectInstance
+    public sealed class CounterEntryObjectInstance : ObjectInstance
     {
         private readonly DynamicCounterEntry _entry;
 
