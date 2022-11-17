@@ -1105,11 +1105,11 @@ $card-border-color:                 $border-color-light !default;
 $card-inner-border-radius:          subtract($card-border-radius, $card-border-width) !default;
 $card-cap-padding-y:                $card-spacer-y * .5 !default;
 $card-cap-padding-x:                $card-spacer-x !default;
-$card-cap-bg:                       rgba($text-color, .03) !default;
+$card-cap-bg:                       $panel-bg-2 !default;
 $card-cap-color:                    null !default;
 $card-height:                       null !default;
 $card-color:                        null !default;
-$card-bg:                           $panel-bg-2 !default;
+$card-bg:                           $panel-bg-1 !default;
 $card-img-overlay-padding:          $spacer !default;
 $card-group-margin:                 $grid-gutter-width * .5 !default;
 // scss-docs-end card-variables

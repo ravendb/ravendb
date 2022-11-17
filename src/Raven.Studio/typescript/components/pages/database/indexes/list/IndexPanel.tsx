@@ -170,8 +170,8 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                 <RichPanelHeader id={indexUniqueId(index)}>
                     <RichPanelSelect>
                         {canReadWriteDatabase(database) && (
-                            <FormGroup check className="form-check-secondary">
-                                <Input type="checkbox" bsSize="lg" onClick={toggleSelection} checked={selected} />
+                            <FormGroup check className="form-check-secondary form-check-lg">
+                                <Input type="checkbox" onClick={toggleSelection} checked={selected} />
                             </FormGroup>
                         )}
                     </RichPanelSelect>

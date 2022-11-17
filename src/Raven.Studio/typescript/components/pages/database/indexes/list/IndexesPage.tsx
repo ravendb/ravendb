@@ -702,14 +702,20 @@ export function IndexesPage(props: IndexesPageProps) {
                 {stats.indexes.length > 0 && (
                     <Row>
                         <Col>
-                            {canReadWriteDatabase(database) && (
-                                <CheckboxTriple
-                                    onChanged={toggleSelectAll}
-                                    state={indexesSelectionState()}
-                                    title="Select all or none"
-                                />
-                            )}
-                            <IndexFilter filter={filter} setFilter={setFilter} />
+                            <Row>
+                                <Col sm="auto">
+                                    {canReadWriteDatabase(database) && (
+                                        <CheckboxTriple
+                                            onChanged={toggleSelectAll}
+                                            state={indexesSelectionState()}
+                                            title="Select all or none"
+                                        />
+                                    )}
+                                </Col>
+                                <Col>
+                                    <IndexFilter filter={filter} setFilter={setFilter} />
+                                </Col>
+                            </Row>
                         </Col>
                         <Col sm="auto">
                             {canReadWriteDatabase(database) && (

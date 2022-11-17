@@ -1,6 +1,7 @@
 ﻿import React, { ReactNode } from "react";
 import "./RichPanel.scss";
 import classNames from "classnames";
+import { Card, CardBody, CardHeader } from "reactstrap";
 
 interface RichPanelProps {
     className?: string;
@@ -11,9 +12,9 @@ interface RichPanelProps {
 export function RichPanel(props: RichPanelProps) {
     const { children, className, innerRef } = props;
     return (
-        <div className={classNames("rich-panel-item", className)} ref={innerRef}>
+        <Card className={classNames("rich-panel-item", className)} ref={innerRef}>
             {children}
-        </div>
+        </Card>
     );
 }
 
@@ -25,9 +26,9 @@ interface RichPanelHeaderProps {
 export function RichPanelHeader(props: RichPanelHeaderProps) {
     const { children, ...rest } = props;
     return (
-        <div className="rich-panel-header" {...rest}>
+        <CardHeader className="rich-panel-header" {...rest}>
             {children}
-        </div>
+        </CardHeader>
     );
 }
 
@@ -38,9 +39,9 @@ interface RichPanelDetailsProps {
 export function RichPanelDetails(props: RichPanelDetailsProps) {
     const { children, ...rest } = props;
     return (
-        <div className="rich-panel-details" {...rest}>
+        <CardBody className="rich-panel-details" {...rest}>
             {children}
-        </div>
+        </CardBody>
     );
 }
 

@@ -9,11 +9,11 @@ interface CheckboxProps {
 }
 
 export function Checkbox(props: CheckboxProps) {
-    const { selected, toggleSelection, children, color, ...rest } = props;
+    const { selected, toggleSelection, children, color } = props;
     const colorClass = `form-check-${color ?? "secondary"}`;
     return (
         <FormGroup check>
-            <Input type="checkbox" checked={selected} onChange={toggleSelection} className={colorClass} {...rest} />
+            <Input type="checkbox" checked={selected} onChange={toggleSelection} className={colorClass} />
             <Label check>{children}</Label>
         </FormGroup>
     );
