@@ -19,14 +19,13 @@ export function CheckboxTriple(props: CheckboxTripleProps) {
     });
 
     return (
-        <FormGroup check className={colorClass}>
+        <FormGroup check className={colorClass + " form-check-lg"}>
             <Input
                 type="checkbox"
                 readOnly={state === "some_checked"}
                 checked={state === "checked"}
                 innerRef={inputEl}
                 onChange={onChanged}
-                bsSize="lg"
                 title={title}
             />
         </FormGroup>

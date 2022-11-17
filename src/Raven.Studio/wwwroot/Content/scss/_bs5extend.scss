@@ -46,4 +46,30 @@ input {
 
     }
 }
+@mixin check-size-variant($ratio, $name) {
 
+    .form-check-#{$name} {
+        min-height: $form-check-min-height * $ratio;
+        padding-left: $form-check-padding-start * $ratio;
+        margin-bottom: $form-check-margin-bottom * $ratio;
+
+        .form-check-input {
+            margin-left: $form-check-padding-start * -1 * $ratio;
+            width: $form-check-input-width * $ratio;
+            height: $form-check-input-width * $ratio;
+            //margin-top: ($line-height-base - $form-check-input-width) * .5  * $ratio;
+        }
+
+        &.form-check-reverse {
+            padding-right: $form-check-padding-start * $ratio;
+            
+        
+            .form-check-input {
+            margin-right: $form-check-padding-start * -1 * $ratio;
+            }
+        }
+    }
+}
+
+@include check-size-variant(1.61, "lg");
+@include check-size-variant(.61, "sm");
