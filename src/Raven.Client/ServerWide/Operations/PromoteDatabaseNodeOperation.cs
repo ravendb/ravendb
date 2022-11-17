@@ -20,6 +20,13 @@ namespace Raven.Client.ServerWide.Operations
             _node = node;
         }
 
+        public PromoteDatabaseNodeOperation(string databaseName, int shard, string node)
+        {
+            ResourceNameValidator.AssertValidDatabaseName(databaseName);
+            _databaseName = ClientShardHelper.ToShardName(databaseName, shard);
+            _node = node;
+        }
+
         public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new PromoteDatabaseNodeCommand(_databaseName, _node);

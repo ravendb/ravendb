@@ -347,7 +347,8 @@ namespace Raven.Server.Documents
 
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord, bool fromReplication = false)
         {
-            var tag = ShardHelper.TryGetShardNumber(dbName, out var shardNumber) ? $"{_serverStore.NodeTag}${shardNumber}" : _serverStore.NodeTag;
+            var shard = ShardHelper.TryGetShardNumber(dbName, out var shardNumber);
+            var tag = shard ? DatabaseRecord.GetKeyForDeletionInProgress(_serverStore.NodeTag, shardNumber) : _serverStore.NodeTag;
 
             var deletionInProgress = DeletionInProgressStatus.No;
             var directDelete = rawRecord.DeletionInProgress?.TryGetValue(tag, out deletionInProgress) == true &&
@@ -1113,9 +1114,9 @@ namespace Raven.Server.Documents
             if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
                 throw new DatabaseDisabledException(databaseName + " has been disabled");
 
-            var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null &&
-                            databaseRecord.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out DeletionInProgressStatus deletionInProgress) &&
-                            deletionInProgress != DeletionInProgressStatus.No;
+            var databaseIsBeenDeleted = databaseRecord.DeletionInProgress != null && 
+                                        TryGetDeletionInProgress(databaseRecord.DeletionInProgress, databaseName.ToString(), _serverStore.NodeTag, out var deletionInProgress) &&
+                                        deletionInProgress != DeletionInProgressStatus.No;
             if (ignoreBeenDeleted == false && databaseIsBeenDeleted)
                 throw new DatabaseDisabledException(databaseName + " is currently being deleted on " + _serverStore.NodeTag);
 
@@ -1124,6 +1125,16 @@ namespace Raven.Server.Documents
                 throw new DatabaseNotRelevantException(databaseName + " is not relevant for " + _serverStore.NodeTag);
 
             return CreateDatabaseConfiguration(_serverStore, databaseRecord.DatabaseName, databaseRecord.Settings);
+        }
+
+        private static bool TryGetDeletionInProgress(Dictionary<string, DeletionInProgressStatus> deletionInProgress, string databaseName, string nodeTag, out DeletionInProgressStatus status)
+        {
+            if (ShardHelper.TryGetShardNumberAndDatabaseName(ref databaseName, out int shardNumber))
+            {
+                return deletionInProgress.TryGetValue(DatabaseRecord.GetKeyForDeletionInProgress(nodeTag, shardNumber), out status);
+            }
+
+            return deletionInProgress.TryGetValue(DatabaseRecord.GetKeyForDeletionInProgress(nodeTag, shardNumber: null), out status);
         }
 
         public static RavenConfiguration CreateDatabaseConfiguration(ServerStore serverStore, string databaseName, Dictionary<string, string> settings)
