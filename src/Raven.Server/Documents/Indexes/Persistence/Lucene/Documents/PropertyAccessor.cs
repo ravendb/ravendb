@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public static IPropertyAccessor Create(Type type, object instance)
         {
-            if (type == typeof(ObjectInstance))
+            if (type == typeof(JsObject))
                 return new JintPropertyAccessor(null);
 
             if (instance is Dictionary<string, object> dict)
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, Dictionary<string, CompiledIndexField> groupByFields, bool isObjectInstance = false)
         {
-            if (isObjectInstance || type == typeof(ObjectInstance) || type.IsSubclassOf(typeof(ObjectInstance)))
+            if (isObjectInstance || type == typeof(JsObject) || type.IsSubclassOf(typeof(ObjectInstance)))
                 return new JintPropertyAccessor(groupByFields);
 
             if (instance is Dictionary<string, object> dict)
@@ -227,9 +227,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var arr = jsValue.AsArray();
                 var array = new object[arr.Length];
                 var i = 0;
-                foreach ((var key, var val) in arr.GetOwnPropertiesWithoutLength())
+                foreach (var val in arr)
                 {
-                    array[i++] = GetValue(val.Value);
+                    array[i++] = GetValue(val);
                 }
 
                 return array;

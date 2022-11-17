@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Globalization;
 using Jint;
 using Jint.Native;
-using Jint.Native.Array;
 using Jint.Native.Object;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
@@ -73,7 +72,7 @@ namespace Raven.Server.Documents.Patch
                 var prop = new BlittableObjectProperty(this, propertyName);
                 if (propertyIndex == -1)
                 {
-                    prop.Value = new ObjectInstance(Engine);
+                    prop.Value = new JsObject(Engine);
                 }
 
                 return prop;
@@ -249,11 +248,11 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private ArrayInstance GetArrayInstanceFromBlittableArray(Engine e, BlittableJsonReaderArray bjra, BlittableObjectInstance parent)
+            private JsArray GetArrayInstanceFromBlittableArray(Engine e, BlittableJsonReaderArray bjra, BlittableObjectInstance parent)
             {
                 bjra.NoCache = true;
 
-                PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
+                var items = new JsValue[bjra.Length];
                 for (var i = 0; i < bjra.Length; i++)
                 {
                     var json = bjra.GetValueTokenTupleByIndex(i);
@@ -267,12 +266,10 @@ namespace Raven.Server.Documents.Patch
                     {
                         item = TranslateToJs(parent, null, json.Item2, json.Item1);
                     }
-                    items[i] = new PropertyDescriptor(item, true, true, true);
+                    items[i] = item;
                 }
 
-                var jsArray = new ArrayInstance(e, items);
-                jsArray.SetPrototypeOf(e.Array.PrototypeObject);
-
+                var jsArray = new JsArray(e, items);
                 return jsArray;
             }
 
@@ -364,8 +361,6 @@ namespace Raven.Server.Documents.Patch
             ChangeVector = changeVector;
             Blittable = blittable;
             DocumentId = id;
-
-            SetPrototypeOf(engine.Object.PrototypeObject);
         }
 
         public BlittableObjectInstance(Engine engine,

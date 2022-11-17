@@ -562,9 +562,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 case Nodes.ObjectPattern:
                     VisitObjectPattern(node.As<ObjectPattern>());
                     break;
-                case Nodes.ArrowParameterPlaceHolder:
-                    VisitArrowParameterPlaceHolder(node.As<ArrowParameterPlaceHolder>());
-                    break;
                 case Nodes.MetaProperty:
                     VisitMetaProperty(node.As<MetaProperty>());
                     break;
@@ -696,10 +693,6 @@ namespace Raven.Server.Documents.Indexes.Static
         {
         }
 
-        public virtual void VisitArrowParameterPlaceHolder(ArrowParameterPlaceHolder arrowParameterPlaceHolder)
-        {
-        }
-
         public virtual void VisitObjectPattern(ObjectPattern objectPattern)
         {
         }
@@ -737,7 +730,6 @@ namespace Raven.Server.Documents.Indexes.Static
             switch (property.Kind)
             {
                 case PropertyKind.Init:
-                case PropertyKind.Data:
                     VisitExpression(property.Value.As<Expression>());
                     break;
                 case PropertyKind.None:

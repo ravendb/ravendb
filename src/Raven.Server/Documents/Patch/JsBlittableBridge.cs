@@ -74,11 +74,11 @@ namespace Raven.Server.Documents.Patch
                 else if (js.IsDate())
                 {
                     var jsDate = js.AsDate();
-                    if (double.IsNaN(jsDate.PrimitiveValue) ||
-                        jsDate.PrimitiveValue > MaxJsDateMs ||
-                        jsDate.PrimitiveValue < MinJsDateMs)
+                    if (double.IsNaN(jsDate.DateValue) ||
+                        jsDate.DateValue > MaxJsDateMs ||
+                        jsDate.DateValue < MinJsDateMs)
                         // not a valid Date. 'ToDateTime()' will throw
-                        throw new InvalidOperationException($"Invalid '{nameof(DateInstance)}' on property '{propertyName}'. Date value : '{jsDate.PrimitiveValue}'. " +
+                        throw new InvalidOperationException($"Invalid '{nameof(JsDate)}' on property '{propertyName}'. Date value : '{jsDate.DateValue}'. " +
                                                             "Note that JavaScripts 'Date' measures time as the number of milliseconds that have passed since the Unix epoch.");
 
                     _writer.WriteValue(jsDate.ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
@@ -131,14 +131,12 @@ namespace Raven.Server.Documents.Patch
             WriteValue(parent, isRoot, propertyName, value);
         }
 
-        private void WriteArray(ArrayInstance arrayInstance)
+        private void WriteArray(JsArray arrayInstance)
         {
             _writer.StartWriteArray();
             foreach (var property in arrayInstance.GetOwnPropertiesWithoutLength())
             {
-                JsValue propertyValue = SafelyGetJsValue(property.Value);
-
-                WriteJsonValue(arrayInstance, false, property.Key.AsString(), propertyValue);
+                WriteJsonValue(arrayInstance, false, property.Key, property.Value);
             }
             _writer.WriteArrayEnd();
         }
@@ -161,14 +159,14 @@ namespace Raven.Server.Documents.Patch
             {
                 WriteNumber(parent, propertyName, d);
             }
-            else if (value == null || ReferenceEquals(value, Null.Instance) || ReferenceEquals(value, Undefined.Instance))
+            else if (value == null || ReferenceEquals(value, JsValue.Null) || ReferenceEquals(value, JsValue.Undefined))
                 _writer.WriteValueNull();
-            else if (value is ArrayInstance jsArray)
+            else if (value is JsArray jsArray)
             {
                 _writer.StartWriteArray();
                 foreach (var property in jsArray.GetOwnPropertiesWithoutLength())
                 {
-                    WriteValue(jsArray, false, property.Key.AsString(), property.Value);
+                    WriteValue(jsArray, false, property.Key, property.Value);
                 }
                 _writer.WriteArrayEnd();
             }
@@ -215,11 +213,11 @@ namespace Raven.Server.Documents.Patch
                 }
                 else if (target is IEnumerable enumerable)
                 {
-                    var jsArray = (ArrayInstance)_scriptEngine.Array.Construct(Arguments.Empty);
+                    var jsArray = new JsArray(_scriptEngine);
                     foreach (var item in enumerable)
                     {
                         var jsItem = JsValue.FromObject(_scriptEngine, item);
-                        _scriptEngine.Array.PrototypeObject.Push(jsArray, Arguments.From(jsItem));
+                        jsArray.Push(jsItem);
                     }
                     WriteArray(jsArray);
                 }
@@ -457,17 +455,17 @@ namespace Raven.Server.Documents.Patch
                     {
                         modifiedProperties ??= new HashSet<string>();
 
-                        modifiedProperties.Add(prop.Name);
+                        modifiedProperties.Add(key);
                     }
 
-                    if (ShouldFilterProperty(filterProperties, prop.Name))
+                    if (ShouldFilterProperty(filterProperties, key))
                         continue;
 
                     _writer.WritePropertyName(prop.Name);
 
                     if (existInObject && modifiedValue.Changed)
                     {
-                        WriteJsonValue(obj, isRoot, prop.Name, modifiedValue.Value);
+                        WriteJsonValue(obj, isRoot, key, modifiedValue.Value);
                     }
                     else
                     {
@@ -486,15 +484,16 @@ namespace Raven.Server.Documents.Patch
                     continue;
 
                 var propertyName = modificationKvp.Key;
-                if (ShouldFilterProperty(filterProperties, propertyName))
+                var propertyNameAsString = propertyName;
+                if (ShouldFilterProperty(filterProperties, propertyNameAsString))
                     continue;
 
                 if (modificationKvp.Value.Changed == false)
                     continue;
 
-                _writer.WritePropertyName(propertyName);
+                _writer.WritePropertyName(propertyNameAsString);
                 var blittableObjectProperty = modificationKvp.Value;
-                WriteJsonValue(obj, isRoot, propertyName, blittableObjectProperty.Value);
+                WriteJsonValue(obj, isRoot, propertyNameAsString, blittableObjectProperty.Value);
             }
         }
 

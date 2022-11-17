@@ -100,17 +100,12 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
             throw new NotSupportedException();
         }
 
-        public override bool HasOwnProperty(JsValue property)
-        {
-            throw new NotSupportedException();
-        }
-
         public override bool HasProperty(JsValue property)
         {
             throw new NotSupportedException();
         }
 
-        public override JsValue PreventExtensions()
+        public override bool PreventExtensions()
         {
             throw new NotSupportedException();
         }

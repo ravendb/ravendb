@@ -10,7 +10,6 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         protected ObjectInstanceBase(Engine engine) : base(engine)
         {
-            SetPrototypeOf(engine.Object.PrototypeObject);
         }
     }
 }

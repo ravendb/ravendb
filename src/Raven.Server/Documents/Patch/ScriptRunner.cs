@@ -8,13 +8,16 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using Esprima.Ast;
 using JetBrains.Annotations;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
+using Jint.Native.Date;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime;
+using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -63,7 +66,7 @@ namespace Raven.Server.Documents.Patch
         private readonly ScriptRunnerCache _parent;
         internal readonly bool _enableClr;
         private readonly DateTime _creationTime;
-        public readonly List<string> ScriptsSource = new List<string>();
+        public readonly List<Script> ScriptsSource = new List<Script>();
 
         public int NumberOfCachedScripts => _cache.Count(x =>
             x.Value != null ||
@@ -101,7 +104,14 @@ namespace Raven.Server.Documents.Patch
 
         public void AddScript(string script)
         {
-            ScriptsSource.Add(script);
+            try
+            {
+                ScriptsSource.Add(Engine.PrepareScript(script));
+            }
+            catch (Exception e)
+            {
+                throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
+            }
         }
 
         public void AddTimeSeriesDeclaration(DeclaredFunction func)
@@ -240,7 +250,7 @@ namespace Raven.Server.Documents.Patch
             private const string _timeSeriesSignature = "timeseries(doc, name)";
             public const string GetMetadataMethod = "getMetadata";
 
-            public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
+            public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<Script> scriptsSource)
             {
                 _database = database;
                 _configuration = configuration;
@@ -267,23 +277,23 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, "output", OutputDebug));
 
                 //console.log
-                ObjectInstance consoleObject = new ObjectInstance(ScriptEngine);
-                consoleObject.FastAddProperty("log", new ClrFunctionInstance(ScriptEngine, "log", OutputDebug), false, false, false);
+                ObjectInstance consoleObject = new JsObject(ScriptEngine);
+                consoleObject.FastSetProperty("log", new PropertyDescriptor(new ClrFunctionInstance(ScriptEngine, "log", OutputDebug), false, false, false));
                 ScriptEngine.SetValue("console", consoleObject);
 
                 //spatial.distance
-                ObjectInstance spatialObject = new ObjectInstance(ScriptEngine);
+                ObjectInstance spatialObject = new JsObject(ScriptEngine);
                 var spatialFunc = new ClrFunctionInstance(ScriptEngine, "distance", Spatial_Distance);
-                spatialObject.FastAddProperty("distance", spatialFunc, false, false, false);
+                spatialObject.FastSetProperty("distance", new PropertyDescriptor(spatialFunc, false, false, false));
                 ScriptEngine.SetValue("spatial", spatialObject);
                 ScriptEngine.SetValue("spatial.distance", spatialFunc);
 
                 // includes
                 var includeDocumentFunc = new ClrFunctionInstance(ScriptEngine, "include", IncludeDoc);
-                ObjectInstance includesObject = new ObjectInstance(ScriptEngine);
-                includesObject.FastAddProperty("document", includeDocumentFunc, false, false, false);
-                includesObject.FastAddProperty("cmpxchg", new ClrFunctionInstance(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false);
-                includesObject.FastAddProperty("revisions", new ClrFunctionInstance(ScriptEngine, "revisions", IncludeRevisions), false, false, false);
+                ObjectInstance includesObject = new JsObject(ScriptEngine);
+                includesObject.FastSetProperty("document", new PropertyDescriptor(includeDocumentFunc, false, false, false));
+                includesObject.FastSetProperty("cmpxchg", new PropertyDescriptor(new ClrFunctionInstance(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false));
+                includesObject.FastSetProperty("revisions", new PropertyDescriptor(new ClrFunctionInstance(ScriptEngine, "revisions", IncludeRevisions), false, false, false));
                 ScriptEngine.SetValue("includes", includesObject);
 
                 // includes - backward compatibility
@@ -383,14 +393,14 @@ namespace Raven.Server.Documents.Patch
                 return jsArg.AsString();
             }
 
-            private void FillDoubleArrayFromJsArray(double[] array, ArrayInstance jsArray, string signature)
+            private void FillDoubleArrayFromJsArray(double[] array, JsArray jsArray, string signature)
             {
                 var i = 0;
-                foreach (var (key, value) in jsArray.GetOwnPropertiesWithoutLength())
+                foreach (var value in jsArray)
                 {
-                    if (value.Value.IsNumber() == false)
-                        throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {GetTypes(value.Value)} key({key}) value({value})");
-                    array[i] = value.Value.AsNumber();
+                    if (value.IsNumber() == false)
+                        throw new ArgumentException($"{signature}: The values argument must be an array of numbers, but got {GetTypes(value)} key({i}) value({value})");
+                    array[i] = value.AsNumber();
                     ++i;
                 }
             }
@@ -417,14 +427,14 @@ namespace Raven.Server.Documents.Patch
                 var getStats = new ClrFunctionInstance(ScriptEngine, "getStats", (thisObj, values) =>
                     GetStatsTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
-                var obj = new ObjectInstance(ScriptEngine);
-                obj.Set("append", append);
-                obj.Set("increment", increment);
-                obj.Set("delete", delete);
-                obj.Set("get", get);
-                obj.Set("doc", args[0]);
-                obj.Set("name", args[1]);
-                obj.Set("getStats", getStats);
+                var obj = new JsObject(ScriptEngine);
+                obj.FastSetDataProperty("append", append);
+                obj.FastSetDataProperty("increment", increment);
+                obj.FastSetDataProperty("delete", delete);
+                obj.FastSetDataProperty("get", get);
+                obj.FastSetDataProperty("doc", args[0]);
+                obj.FastSetDataProperty("name", args[1]);
+                obj.FastSetDataProperty("getStats", getStats);
 
                 return obj;
             }
@@ -437,10 +447,10 @@ namespace Raven.Server.Documents.Patch
                 var stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
                 Debug.Assert(stats == default || stats.Start.Kind == DateTimeKind.Utc);
 
-                var tsStats = new ObjectInstance(ScriptEngine);
-                tsStats.Set(nameof(stats.Start), ScriptEngine.Date.Construct(stats.Start));
-                tsStats.Set(nameof(stats.End), ScriptEngine.Date.Construct(stats.End));
-                tsStats.Set(nameof(stats.Count), stats.Count);
+                var tsStats = new JsObject(ScriptEngine);
+                tsStats.FastSetDataProperty(nameof(stats.Start), new JsDate(ScriptEngine, stats.Start));
+                tsStats.FastSetDataProperty(nameof(stats.End), new JsDate(ScriptEngine, stats.End));
+                tsStats.FastSetDataProperty(nameof(stats.Count), stats.Count);
 
                 return tsStats;
             }
@@ -532,7 +542,7 @@ namespace Raven.Server.Documents.Patch
                         ArrayPool<double>.Shared.Return(valuesBuffer);
                 }
 
-                return Undefined.Instance;
+                return JsValue.Undefined;
             }
 
             private JsValue IncrementTimeSeries(JsValue document, JsValue name, JsValue[] args)
@@ -612,7 +622,7 @@ namespace Raven.Server.Documents.Patch
                         ArrayPool<double>.Shared.Return(valuesBuffer);
                 }
 
-                return Undefined.Instance;
+                return JsValue.Undefined;
             }
 
             private void GetTimeSeriesValues(JsValue valuesArg, ref double[] valuesBuffer, string signature, out Memory<double> values)
@@ -730,17 +740,15 @@ namespace Raven.Server.Documents.Patch
                     var v = new JsValue[valuesSpan.Length];
                     for (int i = 0; i < valuesSpan.Length; i++)
                     {
-                        v[i] = valuesSpan[i];
+                        v[i] = JsNumber.Create(valuesSpan[i]);
                     }
-                    var jsValues = new ArrayInstance(ScriptEngine);
-                    jsValues.FastAddProperty("length", 0, true, false, false);
-                    ScriptEngine.Array.PrototypeObject.Push(jsValues, v);
+                    var jsValues = new JsArray(ScriptEngine, v);
 
-                    var entry = new ObjectInstance(ScriptEngine);
-                    entry.Set(nameof(TimeSeriesEntry.Timestamp), singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true));
-                    entry.Set(nameof(TimeSeriesEntry.Tag), singleResult.Tag?.ToString());
-                    entry.Set(nameof(TimeSeriesEntry.Values), jsValues);
-                    entry.Set(nameof(TimeSeriesEntry.IsRollup), singleResult.Type == SingleResultType.RolledUp);
+                    var entry = new JsObject(ScriptEngine);
+                    entry.FastSetDataProperty(nameof(TimeSeriesEntry.Timestamp), singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true));
+                    entry.FastSetDataProperty(nameof(TimeSeriesEntry.Tag), singleResult.Tag?.ToString());
+                    entry.FastSetDataProperty(nameof(TimeSeriesEntry.Values), jsValues);
+                    entry.FastSetDataProperty(nameof(TimeSeriesEntry.IsRollup), singleResult.Type == SingleResultType.RolledUp);
                     entries.Add(entry);
 
                     if (DebugMode)
@@ -766,7 +774,7 @@ namespace Raven.Server.Documents.Patch
                     });
                 }
 
-                return ScriptEngine.Array.Construct(entries.ToArray());
+                return new JsArray(ScriptEngine, entries.ToArray());
             }
 
             private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName] string caller = null)
@@ -851,10 +859,10 @@ namespace Raven.Server.Documents.Patch
                 if (args[0].IsArray())// recursive call ourselves
                 {
                     var array = args[0].AsArray();
-                    foreach (var pair in array.GetOwnPropertiesWithoutLength())
+                    foreach (var value in array)
                     {
-                        args[0] = pair.Value.Value;
-                        if (args[0].IsString())
+                        args[0] = value;
+                        if (value.IsString())
                             IncludeDoc(self, args);
                     }
                     return self;
@@ -883,10 +891,10 @@ namespace Raven.Server.Documents.Patch
                 if (args[0].IsArray())// recursive call ourselves
                 {
                     var array = args[0].AsArray();
-                    foreach (var pair in array.GetOwnPropertiesWithoutLength())
+                    foreach (var value in array)
                     {
-                        args[0] = pair.Value.Value;
-                        if (args[0].IsString())
+                        args[0] = value;
+                        if (value.IsString())
                             IncludeCompareExchangeValue(self, args);
                     }
                     return self;
@@ -924,7 +932,7 @@ namespace Raven.Server.Documents.Patch
                 if (args[0].AsObject() is BlittableObjectInstance doc)
                 {
                     if (doc.LastModified == null)
-                        return Undefined.Instance;
+                        return JsValue.Undefined;
 
                     // we use UTC because last modified is in UTC
                     var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -932,7 +940,7 @@ namespace Raven.Server.Documents.Patch
                         .TotalMilliseconds;
                     return jsTime;
                 }
-                return Undefined.Instance;
+                return JsValue.Undefined;
             }
 
             private JsValue Spatial_Distance(JsValue self, JsValue[] args)
@@ -943,7 +951,7 @@ namespace Raven.Server.Documents.Patch
                 for (int i = 0; i < 4; i++)
                 {
                     if (args[i].IsNumber() == false)
-                        return Undefined.Instance;
+                        return JsValue.Undefined;
                 }
 
                 var lat1 = args[0].AsNumber();
@@ -1027,7 +1035,7 @@ namespace Raven.Server.Documents.Patch
             {
                 if (args.Length != 2)
                     throw new InvalidOperationException("Raven_ExplodeArgs(this, args) - must be called with 2 arguments");
-                if (args[1].IsObject() && args[1].AsObject() is BlittableObjectInstance boi)
+                if (args[1] is BlittableObjectInstance boi)
                 {
                     _refResolver.ExplodeArgsOn(args[0], boi);
                     return self;
@@ -1237,14 +1245,14 @@ namespace Raven.Server.Documents.Patch
 
                     if (args[0].IsArray())
                     {
-                        var results = (ArrayInstance)ScriptEngine.Array.Construct(Array.Empty<JsValue>());
                         var arrayInstance = args[0].AsArray();
-                        foreach (var kvp in arrayInstance.GetOwnPropertiesWithoutLength())
+                        var results = new JsArray(ScriptEngine, arrayInstance.Length);
+                        foreach (var value in arrayInstance)
                         {
-                            if (kvp.Value.Value.IsString() == false)
-                                throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + kvp.Value.Value.Type + " - " + kvp.Value.Value);
-                            var result = LoadDocumentInternal(kvp.Value.Value.AsString());
-                            ScriptEngine.Array.PrototypeObject.Push(results, new[] { result });
+                            if (value.IsString() == false)
+                                throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + value.Type + " - " + value);
+                            var result = LoadDocumentInternal(value.AsString());
+                            results.Push(result);
                         }
                         return results;
                     }
@@ -1316,10 +1324,10 @@ namespace Raven.Server.Documents.Patch
                     return counterValue;
                 }
 
-                var rawValues = new ObjectInstance(ScriptEngine);
+                var rawValues = new JsObject(ScriptEngine);
                 foreach (var partialValue in _database.DocumentsStorage.CountersStorage.GetCounterPartialValues(_docsCtx, id, name))
                 {
-                    rawValues.FastAddProperty(partialValue.ChangeVector, partialValue.PartialValue, true, false, false);
+                    rawValues.FastSetProperty(partialValue.ChangeVector, new PropertyDescriptor(partialValue.PartialValue, true, false, false));
                 }
 
                 return rawValues;
@@ -1856,7 +1864,7 @@ namespace Raven.Server.Documents.Patch
 
                         if (propertyIndex == -1)
                         {
-                            return new ObjectInstance(selfInstance.Engine);
+                            return new JsObject(selfInstance.Engine);
                         }
 
                         BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -1952,8 +1960,8 @@ namespace Raven.Server.Documents.Patch
 
                 try
                 {
-                    var call = ScriptEngine.GetValue(method).TryCast<ICallable>();
-                    var result = call.Call(Undefined.Instance, _args);
+                    var call = (FunctionInstance) ScriptEngine.GetValue(method);
+                    var result = call.Call(JsValue.Undefined, _args);
                     return new ScriptRunnerResult(this, result);
                 }
                 catch (JavaScriptException e)
@@ -2010,7 +2018,7 @@ namespace Raven.Server.Documents.Patch
                 else
                     msg = e.Error.ToString();
 
-                msg = "At " + e.Column + ":" + e.LineNumber + " " + msg;
+                msg = "At " + e.Location.Start.Column + ":" + e.Location.Start.Line + " " + msg;
                 var javaScriptException = new Client.Exceptions.Documents.Patching.JavaScriptException(msg, e);
                 return javaScriptException;
             }
@@ -2038,14 +2046,14 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.ResetConstraints();
             }
 
-            public object Translate(JsonOperationContext context, object o)
+            public JsValue Translate(JsonOperationContext context, object o)
             {
                 return JavaScriptUtils.TranslateToJs(ScriptEngine, context, o);
             }
 
             public object CreateEmptyObject()
             {
-                return ScriptEngine.Object.Construct(Array.Empty<JsValue>());
+                return new JsObject(ScriptEngine);
             }
 
             public object Translate(ScriptRunnerResult result, JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)

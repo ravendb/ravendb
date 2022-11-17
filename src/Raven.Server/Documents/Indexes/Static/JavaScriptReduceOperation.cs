@@ -214,10 +214,10 @@ namespace Raven.Server.Documents.Indexes.Static
             var jsValues = ConstructValues();
             var jsKey = ConstructKey();
 
-            var result = new ObjectInstance(Engine);
+            var result = new JsObject(Engine);
 
-            result.Set("values", jsValues, false);
-            result.Set("key", jsKey, false);
+            result.FastSetDataProperty("values", jsValues);
+            result.FastSetDataProperty("key", jsKey);
 
             return result;
 
@@ -237,7 +237,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return JsValue.Null;
                 }
 
-                var key = new ObjectInstance(Engine);
+                var key = new JsObject(Engine);
 
                 foreach (var groupByField in _groupByFields)
                 {
@@ -270,9 +270,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 return key;
             }
 
-            ArrayInstance ConstructValues()
+            JsArray ConstructValues()
             {
-                var items = new PropertyDescriptor[values.Count];
+                var items = new JsValue[values.Count];
                 for (var i = 0; i < values.Count; i++)
                 {
                     var val = values[i];
@@ -280,11 +280,10 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (JavaScriptIndexUtils.GetValue(Engine, val, out var jsValue, isMapReduce: true) == false)
                         continue;
 
-                    items[i] = new PropertyDescriptor(jsValue, true, true, true);
+                    items[i] = jsValue;
                 }
 
-                var jsArray = new ArrayInstance(Engine, items);
-                jsArray.SetPrototypeOf(Engine.Array.PrototypeObject);
+                var jsArray = new JsArray(Engine, items);
                 jsArray.PreventExtensions();
 
                 return jsArray;

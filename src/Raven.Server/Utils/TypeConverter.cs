@@ -427,11 +427,11 @@ namespace Raven.Server.Utils
             throw new InvalidOperationException("Invalid type " + jsValue);
         }
 
-        private static IEnumerable<object> EnumerateArray(object root, ArrayInstance arr, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context)
+        private static IEnumerable<object> EnumerateArray(object root, JsArray arr, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context)
         {
-            foreach (var (key, val) in arr.GetOwnPropertiesWithoutLength())
+            foreach (var val in arr)
             {
-                yield return ToBlittableSupportedType(root, val.Value, flattenArrays, forIndexing, recursiveLevel, engine, context, out _);
+                yield return ToBlittableSupportedType(root, val, flattenArrays, forIndexing, recursiveLevel, engine, context, out _);
             }
         }
 
@@ -714,7 +714,7 @@ namespace Raven.Server.Utils
         {
             var type = value.GetType();
 
-            if (type == typeof(ObjectInstance)) // We don't cache JS types
+            if (type == typeof(JsObject)) // We don't cache JS types
                 return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields, true);
 
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries

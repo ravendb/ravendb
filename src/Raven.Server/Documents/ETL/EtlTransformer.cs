@@ -233,17 +233,17 @@ namespace Raven.Server.Documents.ETL
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsBlittableArray) == false)
             {
-                return DocumentScript.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                return new JsArray(DocumentScript.ScriptEngine);
             }
 
             var attachments = new JsValue[attachmentsBlittableArray.Length];
 
             for (int i = 0; i < attachmentsBlittableArray.Length; i++)
             {
-                attachments[i] = (JsValue)DocumentScript.Translate(Context, attachmentsBlittableArray[i]);
+                attachments[i] = DocumentScript.Translate(Context, attachmentsBlittableArray[i]);
             }
 
-            return DocumentScript.ScriptEngine.Array.Construct(attachments);
+            return new JsArray(DocumentScript.ScriptEngine, attachments);
         }
 
         private JsValue HasAttachment(JsValue self, JsValue[] args)
@@ -283,17 +283,17 @@ namespace Raven.Server.Documents.ETL
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray countersArray) == false)
             {
-                return DocumentScript.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                return new JsArray(DocumentScript.ScriptEngine);
             }
 
             var counters = new JsValue[countersArray.Length];
 
             for (int i = 0; i < countersArray.Length; i++)
             {
-                counters[i] = (JsValue)DocumentScript.Translate(Context, countersArray[i]);
+                counters[i] = DocumentScript.Translate(Context, countersArray[i]);
             }
 
-            return DocumentScript.ScriptEngine.Array.Construct(counters);
+            return new JsArray(DocumentScript.ScriptEngine, counters);
         }
 
         private JsValue HasCounter(JsValue self, JsValue[] args)
@@ -337,15 +337,15 @@ namespace Raven.Server.Documents.ETL
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesArray) == false)
             {
-                return DocumentScript.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                return new JsArray(DocumentScript.ScriptEngine);
             }
 
             var timeSeriesNames = new JsValue[timeSeriesArray.Length];
             for (int i = 0; i < timeSeriesArray.Length; i++)
             {
-                timeSeriesNames[i] = (JsValue)DocumentScript.Translate(Context, timeSeriesArray[i]);
+                timeSeriesNames[i] = DocumentScript.Translate(Context, timeSeriesArray[i]);
             }
-            return DocumentScript.ScriptEngine.Array.Construct(timeSeriesNames);
+            return new JsArray(DocumentScript.ScriptEngine, timeSeriesNames);
         }
 
         private JsValue HasTimeSeries(JsValue self, JsValue[] args)

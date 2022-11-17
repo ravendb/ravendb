@@ -18,8 +18,6 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             : base(engine)
         {
             _entry = entry ?? throw new ArgumentNullException(nameof(entry));
-
-            SetPrototypeOf(engine.Object.PrototypeObject);
         }
 
         public override bool Delete(JsValue property)

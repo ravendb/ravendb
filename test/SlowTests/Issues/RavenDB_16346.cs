@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Jint;
 using Jint.Native;
+using Jint.Native.Function;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -39,8 +40,8 @@ function execute(doc, args)
             args[0] = JsValue.FromObject(engine, user);
 
             engine.Execute(script);
-            var call = engine.GetValue("execute").TryCast<ICallable>();
-            call.Call(Undefined.Instance, args);
+            var call = (FunctionInstance) engine.GetValue("execute");
+            call.Call(JsValue.Undefined, args);
 
             Assert.Equal("ayende", user.Name);
         }

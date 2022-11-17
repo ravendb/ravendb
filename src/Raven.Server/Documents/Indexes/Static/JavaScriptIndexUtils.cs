@@ -4,6 +4,7 @@ using System.Linq;
 using Esprima.Ast;
 using Jint;
 using Jint.Native;
+using Jint.Native.Json;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
@@ -148,23 +149,12 @@ namespace Raven.Server.Documents.Indexes.Static
             return false;
         }
 
-        [ThreadStatic]
-        private static JsValue[] _oneItemArray;
-
         public static object StringifyObject(JsValue jsValue)
         {
-            if (_oneItemArray == null)
-                _oneItemArray = new JsValue[1];
-            _oneItemArray[0] = jsValue;
-            try
-            {
-                // json string of the object
-                return jsValue.AsObject().Engine.Json.Stringify(JsValue.Null, _oneItemArray);
-            }
-            finally
-            {
-                _oneItemArray[0] = null;
-            }
+            // json string of the object
+            Engine engine = jsValue.AsObject().Engine;
+            var serializer = new JsonSerializer(engine);
+            return serializer.Serialize(jsValue);
         }
     }
 }
