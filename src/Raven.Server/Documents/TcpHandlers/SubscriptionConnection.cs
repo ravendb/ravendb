@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.TcpHandlers
             // verify that the JS code parses
             try
             {
-                new JavaScriptParser(script).ParseScript();
+                new JavaScriptParser().ParseScript(script);
             }
             catch (Exception e)
             {

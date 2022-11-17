@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
@@ -163,7 +164,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                     metadata = value.AsObject();
                 else
                 {
-                    metadata = json.Engine.Object.Construct(Array.Empty<JsValue>());
+                    metadata = new JsObject(json.Engine);
                     json.Set(Constants.Documents.Metadata.Key, metadata, false);
                 }
 

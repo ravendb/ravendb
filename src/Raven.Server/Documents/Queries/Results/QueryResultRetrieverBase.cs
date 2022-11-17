@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
+using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
@@ -1220,7 +1221,7 @@ namespace Raven.Server.Documents.Queries.Results
                     metadata = value.AsObject();
                 else
                 {
-                    metadata = json.Engine.Object.Construct(Array.Empty<JsValue>());
+                    metadata = new JsObject(json.Engine);
                     json.Set(Constants.Documents.Metadata.Key, metadata, false);
                 }
 

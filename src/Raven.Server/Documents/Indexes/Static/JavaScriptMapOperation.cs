@@ -5,10 +5,8 @@ using System.Linq;
 using Esprima.Ast;
 using Jint;
 using Jint.Native;
-using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Runtime;
-using Jint.Runtime.Environments;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
@@ -68,9 +66,9 @@ namespace Raven.Server.Documents.Indexes.Static
                         if (jsItem.IsArray())
                         {
                             var array = jsItem.AsArray();
-                            foreach (var (prop, val) in array.GetOwnPropertiesWithoutLength())
+                            foreach (var val in array)
                             {
-                                yield return val.Value;
+                                yield return val;
                             }
                         }
                         else if (jsItem.IsObject())
@@ -146,7 +144,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         else if (CompareFields(oe) == false)
                         {
                             throw new InvalidOperationException($"Index {IndexName} contains different return structure from different code paths," +
-                                                                $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.Select(x => x.GetKey(engine)))}");
+                                                                $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.OfType<IProperty>().Select(x => x.GetKey(engine)))}");
                         }
 
                         break;
@@ -166,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
 
-            static bool IsBoostExpression(Expression expression)
+            static bool IsBoostExpression(Node expression)
             {
                 return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name == "boost";
             }
@@ -177,10 +175,13 @@ namespace Raven.Server.Documents.Indexes.Static
             var field = function.TryGetFieldFromSimpleLambdaExpression();
             if (field == null)
                 return null;
-            var properties = new List<Expression>
+
+            Identifier self = new Identifier("self");
+
+            var properties = new List<Node>
             {
-                new Property(PropertyKind.Data, new Identifier(field), false,
-                    new StaticMemberExpression(new Identifier("self"), new Identifier(field)), false, false)
+                new Property(PropertyKind.Init, new Identifier(field), false,
+                    new StaticMemberExpression(self, new Identifier(field), optional: false), false, false)
             };
 
             if (MoreArguments != null)
@@ -196,15 +197,15 @@ namespace Raven.Server.Documents.Indexes.Static
                     field = moreFuncAst.TryGetFieldFromSimpleLambdaExpression();
                     if (field != null)
                     {
-                        properties.Add(new Property(PropertyKind.Data, new Identifier(field), false,
-                        new StaticMemberExpression(new Identifier("self"), new Identifier(field)), false, false));
+                        properties.Add(new Property(PropertyKind.Init, new Identifier(field), false,
+                        new StaticMemberExpression(self, new Identifier(field), optional: false), false, false));
                     }
                 }
             }
 
             var functionExp = new FunctionExpression(
                 function.Id,
-                NodeList.Create(new List<Expression> { new Identifier("self") }),
+                NodeList.Create(new List<Node> { self }),
                 new BlockStatement(NodeList.Create(new List<Statement>
                 {
                     new ReturnStatement(new ObjectExpression(NodeList.Create(properties)))
@@ -212,16 +213,18 @@ namespace Raven.Server.Documents.Indexes.Static
                 generator: false,
                 function.Strict,
                 async: false);
+
             var functionObject = new ScriptFunctionInstance(
-                    engine,
-                    functionExp,
-                    LexicalEnvironment.NewDeclarativeEnvironment(engine, engine.ExecutionContext.LexicalEnvironment),
-                    function.Strict
-                );
+                engine,
+                functionExp,
+                engine.CreateNewDeclarativeEnvironment(),
+                function.Strict
+            );
+
             return (functionObject, functionExp);
         }
 
-        public ArrayInstance MoreArguments { get; set; }
+        public JsArray MoreArguments { get; set; }
         public string MapString { get; internal set; }
 
         private bool CompareFields(ObjectExpression oe)
@@ -230,10 +233,13 @@ namespace Raven.Server.Documents.Indexes.Static
                 return false;
             foreach (var p in oe.Properties)
             {
-                var key = p.GetKey(_engine);
-                var keyAsString = key.AsString();
-                if (Fields.Contains(keyAsString) == false)
-                    return false;
+                if (p is IProperty property)
+                {
+                    var key = property.GetKey(_engine);
+                    var keyAsString = key.AsString();
+                    if (Fields.Contains(keyAsString) == false)
+                        return false;
+                }
             }
 
             return true;

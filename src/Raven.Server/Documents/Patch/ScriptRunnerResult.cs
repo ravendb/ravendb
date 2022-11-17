@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Patch
             var o = parent.Get(property);
             if (o == null || o.IsUndefined() || o.IsNull())
             {
-                o = _parent.ScriptEngine.Object.Construct(Array.Empty<JsValue>());
+                o = new JsObject(_parent.ScriptEngine);
                 parent.Set(property, o, false);
             }
             return o.AsObject();

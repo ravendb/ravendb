@@ -8,6 +8,7 @@ using Jint.Native;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime;
+using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -75,8 +76,8 @@ function map(name, lambda) {
             collectionFunctions = new Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>>();
             for (int i = 0; i < maps.Length; i++)
             {
-                var mapObj = maps.Get(i.ToString());
-                if (mapObj.IsNull() || mapObj.IsUndefined() || mapObj.IsObject() == false)
+                var mapObj = maps[i];
+                if (mapObj.IsObject() == false)
                     ThrowIndexCreationException($"map function #{i} is not a valid object");
                 var map = mapObj.AsObject();
                 if (map.HasProperty(CollectionProperty) == false)
@@ -351,12 +352,12 @@ function map(name, lambda) {
 
         private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
-            var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
-            var program = javascriptParser.ParseScript();
+            var javascriptParser = new JavaScriptParser(DefaultParserOptions);
+            var program = javascriptParser.ParseScript(code);
             _engine.ExecuteWithReset(program);
             var loadVisitor = new EsprimaReferencedCollectionVisitor();
             if (string.IsNullOrEmpty(additionalSources) == false)
-                loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseScript());
+                loadVisitor.Visit(javascriptParser.ParseScript(additionalSources));
 
             loadVisitor.Visit(program);
             return new MapMetadata
@@ -374,8 +375,8 @@ function map(name, lambda) {
 
             var loadFunc = new ClrFunctionInstance(_engine, JavaScriptIndex.Load, LoadDocument);
 
-            ObjectInstance noTrackingObject = new ObjectInstance(_engine);
-            noTrackingObject.FastAddProperty(JavaScriptIndex.Load, loadFunc, false, false, false);
+            ObjectInstance noTrackingObject = new JsObject(_engine);
+            noTrackingObject.FastSetProperty(JavaScriptIndex.Load, new PropertyDescriptor(loadFunc, false, false, false));
             _engine.SetValue(JavaScriptIndex.NoTracking, noTrackingObject);
 
             _engine.SetValue(JavaScriptIndex.Load, loadFunc);
@@ -503,8 +504,7 @@ function map(name, lambda) {
                 if (keys.Length == 0)
                     return DynamicJsNull.ImplicitNull;
 
-                var values = _engine.Array.Construct(keys.Length);
-                var arrayArgs = new JsValue[1];
+                var values = new JsArray(_engine, keys.Length);
                 for (uint i = 0; i < keys.Length; i++)
                 {
                     var key = keys[i];
@@ -512,9 +512,7 @@ function map(name, lambda) {
                         ThrowInvalidType(key, Types.String);
 
                     object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, key.AsString());
-                    arrayArgs[0] = ConvertToJsValue(value);
-
-                    _engine.Array.PrototypeObject.Push(values, arrayArgs);
+                    values.Push(ConvertToJsValue(value));
                 }
 
                 return values;

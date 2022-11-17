@@ -5,6 +5,7 @@ using System.Text;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
+using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -244,8 +245,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 array = JsValue.FromObject(DocumentScript.ScriptEngine, args);
             }
 
-            var o = new ObjectInstance(DocumentScript.ScriptEngine);
-            o.FastAddProperty(PartitionKeys, array, false, true, false);
+            var o = new JsObject(DocumentScript.ScriptEngine);
+            o.FastSetProperty(PartitionKeys, new PropertyDescriptor(array, false, true, false));
 
             return o;
         }
@@ -257,8 +258,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
             if (_noPartition == null)
             {
-                _noPartition = new ObjectInstance(DocumentScript.ScriptEngine);
-                _noPartition.FastAddProperty(PartitionKeys, JsValue.Null, false, true, false);
+                _noPartition = new JsObject(DocumentScript.ScriptEngine);
+                _noPartition.FastSetProperty(PartitionKeys, new PropertyDescriptor(JsValue.Null, false, true, false));
             }
 
             return _noPartition;

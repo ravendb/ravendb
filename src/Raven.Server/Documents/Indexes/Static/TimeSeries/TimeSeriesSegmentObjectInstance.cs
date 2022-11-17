@@ -19,8 +19,6 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         public TimeSeriesSegmentObjectInstance(Engine engine, DynamicTimeSeriesSegment segment) : base(engine)
         {
             _segment = segment ?? throw new ArgumentNullException(nameof(segment));
-
-            SetPrototypeOf(engine.Object.PrototypeObject);
         }
 
         public override bool Delete(JsValue property)
@@ -51,10 +49,10 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 return new PropertyDescriptor(_segment.Count, writable: false, enumerable: false, configurable: false);
 
             if (property == nameof(DynamicTimeSeriesSegment.End))
-                return new PropertyDescriptor(_engine.Date.Construct(_segment.End), writable: false, enumerable: false, configurable: false);
+                return new PropertyDescriptor(new JsDate(_engine, _segment.End), writable: false, enumerable: false, configurable: false);
 
             if (property == nameof(DynamicTimeSeriesSegment.Start))
-                return new PropertyDescriptor(_engine.Date.Construct(_segment.Start), writable: false, enumerable: false, configurable: false);
+                return new PropertyDescriptor(new JsDate(_engine, _segment.Start), writable: false, enumerable: false, configurable: false);
 
             return PropertyDescriptor.Undefined;
         }
@@ -76,7 +74,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         private class TimeSeriesSegmentEntriesPropertyDescriptor : PropertyDescriptor
         {
-            private readonly ArrayInstance _value;
+            private readonly JsArray _value;
 
             public TimeSeriesSegmentEntriesPropertyDescriptor(Engine engine, DynamicTimeSeriesSegment segment)
                 : base(PropertyFlag.CustomJsValue | PropertyFlag.Writable | PropertyFlag.WritableSet | PropertyFlag.Enumerable | PropertyFlag.EnumerableSet)
@@ -97,7 +95,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 }
             }
 
-            private static ArrayInstance CreateValue(Engine engine, DynamicTimeSeriesSegment segment)
+            private static JsArray CreateValue(Engine engine, DynamicTimeSeriesSegment segment)
             {
                 var items = new PropertyDescriptor[segment._segmentEntry.Segment.NumberOfLiveEntries];
                 var i = 0;
@@ -107,9 +105,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                     i++;
                 }
 
-                var jsArray = new ArrayInstance(engine, items);
-                jsArray.SetPrototypeOf(engine.Array.PrototypeObject);
-
+                var jsArray = new JsArray(engine, items);
                 return jsArray;
             }
         }
@@ -139,22 +135,19 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
             private static ObjectInstance CreateValue(Engine engine, DynamicTimeSeriesSegment.DynamicTimeSeriesEntry entry)
             {
-                var value = new ObjectInstance(engine);
+                var value = new JsObject(engine);
 
-                value.Set(nameof(entry.Tag), entry._entry.Tag?.ToString());
-                value.Set(nameof(entry.Timestamp), engine.Date.Construct(entry._entry.Timestamp));
+                value.FastSetDataProperty(nameof(entry.Tag), entry._entry.Tag?.ToString());
+                value.FastSetDataProperty(nameof(entry.Timestamp), new JsDate(engine, entry._entry.Timestamp));
 
                 var values = new JsValue[entry._entry.Values.Length];
                 for (var i = 0; i < values.Length; i++)
                     values[i] = entry._entry.Values.Span[i];
 
-                var array = engine.Array.Construct(values.Length);
-                engine.Array.PrototypeObject.Push(array, values);
+                var array = new JsArray(engine, values);
 
-                value.Set(nameof(entry.Value), values[0]);
-                value.Set(nameof(entry.Values), array);
-
-                value.SetPrototypeOf(engine.Object.PrototypeObject);
+                value.FastSetDataProperty(nameof(entry.Value), values[0]);
+                value.FastSetDataProperty(nameof(entry.Values), array);
 
                 return value;
             }

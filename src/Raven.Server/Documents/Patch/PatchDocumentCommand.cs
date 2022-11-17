@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Jint;
 using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
@@ -130,7 +131,7 @@ namespace Raven.Server.Documents.Patch
                     id = originalDocument.Id; // we want to use the original Id casing
                     if (originalDocument.Data != null)
                     {
-                        documentInstance = (BlittableObjectInstance)((JsValue)run.Translate(context, originalDocument)).AsObject();
+                        documentInstance = (BlittableObjectInstance)run.Translate(context, originalDocument).AsObject();
                     }
                 }
 

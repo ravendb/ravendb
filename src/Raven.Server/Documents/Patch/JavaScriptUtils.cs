@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Patch
         internal JsValue GetMetadata(JsValue self, JsValue[] args)
         {
             if (args.Length != 1 && args.Length != 2 || //length == 2 takes into account Query Arguments that can be added to args
-                !(args[0].AsObject() is BlittableObjectInstance boi)) 
+                !(args[0].AsObject() is BlittableObjectInstance boi))
                 throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
             var modifiedMetadata = new DynamicJsonValue
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        internal JsValue AttachmentsFor(JsValue self, JsValue[] args)
+        internal JsArray AttachmentsFor(JsValue self, JsValue[] args)
         {
             if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstance boi))
                 throw new InvalidOperationException($"{nameof(AttachmentsFor)} must be called with a single entity argument");
@@ -96,15 +96,15 @@ namespace Raven.Server.Documents.Patch
             if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                 return EmptyArray(_scriptEngine);
 
-            JsValue[] attachmentsArray = new JsValue[attachments.Length];
+            var attachmentsArray = new JsValue[attachments.Length];
             for (var i = 0; i < attachments.Length; i++)
                 attachmentsArray[i] = new AttachmentNameObjectInstance(_scriptEngine, (BlittableJsonReaderObject)attachments[i]);
 
-            return _scriptEngine.Array.Construct(attachmentsArray);
+            return new JsArray(_scriptEngine, attachmentsArray);
 
-            static ArrayInstance EmptyArray(Engine engine)
+            static JsArray EmptyArray(Engine engine)
             {
-                return engine.Array.Construct(0);
+                return new JsArray(engine);
             }
         }
 
@@ -174,9 +174,7 @@ namespace Raven.Server.Documents.Patch
             for (var i = 0; i < values.Length; i++)
                 values[i] = new AttachmentObjectInstance(_scriptEngine, attachments[i]);
 
-            var array = _scriptEngine.Array.Construct(values.Length);
-            _scriptEngine.Array.PrototypeObject.Push(array, values);
-
+            var array = new JsArray(_scriptEngine, values);
             return array;
 
             void ThrowInvalidParameter()
@@ -201,9 +199,9 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            static ArrayInstance EmptyArray(Engine engine)
+            static JsArray EmptyArray(Engine engine)
             {
-                return engine.Array.Construct(0);
+                return new JsArray(engine);
             }
         }
 
@@ -217,7 +215,7 @@ namespace Raven.Server.Documents.Patch
             return GetNamesFor(self, args, Constants.Documents.Metadata.Counters, "counterNamesFor");
         }
 
-        private JsValue GetNamesFor(JsValue self, JsValue[] args, string metadataKey, string methodName)
+        private JsArray GetNamesFor(JsValue self, JsValue[] args, string metadataKey, string methodName)
         {
             if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstance boi))
                 throw new InvalidOperationException($"{methodName}(doc) must be called with a single entity argument");
@@ -228,15 +226,15 @@ namespace Raven.Server.Documents.Patch
             if (metadata.TryGet(metadataKey, out BlittableJsonReaderArray timeSeries) == false)
                 return EmptyArray(_scriptEngine);
 
-            JsValue[] timeSeriesArray = new JsValue[timeSeries.Length];
+            var timeSeriesArray = new JsValue[timeSeries.Length];
             for (var i = 0; i < timeSeries.Length; i++)
                 timeSeriesArray[i] = timeSeries[i]?.ToString();
 
-            return _scriptEngine.Array.Construct(timeSeriesArray);
+            return new JsArray(_scriptEngine, timeSeriesArray);
 
-            static ArrayInstance EmptyArray(Engine engine)
+            static JsArray EmptyArray(Engine engine)
             {
-                return engine.Array.Construct(0);
+                return new JsArray(engine);
             }
         }
 
@@ -313,40 +311,37 @@ namespace Raven.Server.Documents.Patch
             }
 
             if (o == null)
-                return Undefined.Instance;
+                return JsValue.Undefined;
             if (o is long lng)
                 return lng;
             if (o is BlittableJsonReaderArray bjra)
             {
-                var jsArray = engine.Array.Construct(bjra.Length);
                 var args = new JsValue[bjra.Length];
                 for (var i = 0; i < bjra.Length; i++)
                 {
                     args[i] = TranslateToJs(engine, context, bjra[i]);
                 }
-                engine.Array.PrototypeObject.Push(jsArray, args);
+                var jsArray = new JsArray(engine, args);
                 return jsArray;
             }
             if (o is List<object> list)
             {
-                var jsArray = engine.Array.Construct(list.Count);
                 var args = new JsValue[list.Count];
                 for (var i = 0; i < list.Count; i++)
                 {
                     args[i] = TranslateToJs(engine, context, list[i]);
                 }
-                engine.Array.PrototypeObject.Push(jsArray, args);
+                var jsArray = new JsArray(engine, args);
                 return jsArray;
             }
             if (o is List<Document> docList)
             {
-                var jsArray = engine.Array.Construct(docList.Count);
                 var args = new JsValue[docList.Count];
                 for (var i = 0; i < docList.Count; i++)
                 {
                     args[i] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i]);
                 }
-                engine.Array.PrototypeObject.Push(jsArray, args);
+                var jsArray = new JsArray(engine, args);
                 return jsArray;
             }
             // for admin

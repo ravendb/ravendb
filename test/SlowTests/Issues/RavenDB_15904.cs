@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                             }");
 
                     var ex = Assert.Throws<RavenException>(() => q.First());
-                    Assert.Contains("Invalid 'DateInstance' on property 'DateTime'. Date value : 'NaN'", ex.Message);
+                    Assert.Contains("Invalid 'JsDate' on property 'DateTime'. Date value : 'NaN'", ex.Message);
                     Assert.Contains("Note that JavaScripts 'Date' measures time as the number of milliseconds that have passed since the Unix epoch", ex.Message);
 
                 }
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
                             }").AddParameter("num", tooBig);
 
                     var ex = Assert.Throws<RavenException>(() => q.First());
-                    Assert.Contains($"Invalid 'DateInstance' on property 'DateTime'. Date value : '{tooBig}'", ex.Message);
+                    Assert.Contains($"Invalid 'JsDate' on property 'DateTime'. Date value : '{tooBig}'", ex.Message);
                 }
             }
         }

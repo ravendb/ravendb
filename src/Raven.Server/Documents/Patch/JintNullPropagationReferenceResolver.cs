@@ -1,5 +1,4 @@
-﻿using System;
-using Jint;
+﻿using Jint;
 using Jint.Native;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
@@ -12,6 +11,7 @@ namespace Raven.Server.Documents.Patch
     public abstract class JintNullPropagationReferenceResolver : IReferenceResolver
     {
         private static readonly JsNumber _numberPositiveZero = new(0);
+        private static readonly JsNumber _numberNegativeOne = new(-1);
 
         protected JsValue _selfInstance;
         protected BlittableObjectInstance _args;
@@ -29,7 +29,10 @@ namespace Raven.Server.Documents.Patch
             var name = referencedName.AsString();
             if (_args == null || name.StartsWith('$') == false)
             {
-                value = name == "length" ? _numberPositiveZero : JsValue.Null;
+                if (name == "length")
+                    value = _numberPositiveZero;
+                else
+                    value = reference.IsPropertyReference() ? JsValue.Undefined : JsValue.Null;
                 return true;
             }
 
@@ -54,7 +57,7 @@ namespace Raven.Server.Documents.Patch
             if (name == "reduce" &&
                 value.IsArray() && value.AsArray().Length == 0)
             {
-                value = Null.Instance;
+                value = JsValue.Null;
                 return true;
             }
 
@@ -88,28 +91,45 @@ namespace Raven.Server.Documents.Patch
                     switch (name)
                     {
                         case "reduce":
-                            value = new ClrFunctionInstance(engine, "reduce", static (thisObj, values) => values.At(1, JsValue.Null));
+                        case "reduceRight":
+                            value = new ClrFunctionInstance(engine, name, static (_, arguments) => arguments.At(1, JsValue.Null));
                             return true;
                         case "concat":
-                            value = new ClrFunctionInstance(engine, "concat", static (thisObj, values) => values.At(0));
+                            value = new ClrFunctionInstance(engine, name, static (_, arguments) => arguments.At(0));
                             return true;
                         case "some":
                         case "includes":
-                            value = new ClrFunctionInstance(engine, "some", static (thisObj, values) => JsBoolean.False);
+                            value = new ClrFunctionInstance(engine, name, static (_, _) => JsBoolean.False);
                             return true;
                         case "every":
-                            value = new ClrFunctionInstance(engine, "every", static (thisObj, values) => JsBoolean.True);
+                            value = new ClrFunctionInstance(engine, name, static (_, _) => JsBoolean.True);
                             return true;
-                        case "map":
+                        case "indexOf":
+                        case "lastIndexOf":
+                        case "findIndex":
+                        case "findLastIndex":
+                            value = new ClrFunctionInstance(engine, name, static (_, _) => _numberNegativeOne);
+                            return true;
                         case "filter":
+                        case "flatMap":
+                        case "flat":
+                        case "map":
                         case "reverse":
-                            value = new ClrFunctionInstance(engine, "map", (thisObj, values) => engine.Array.Construct(Array.Empty<JsValue>()));
+                        case "slice":
+                        case "sort":
+                        case "splice":
+                            value = new ClrFunctionInstance(engine, name, (_, _) => new JsArray(engine));
                             return true;
                     }
                 }
+                else if (baseValue.IsNull() == false)
+                {
+                    value = JsValue.Undefined;
+                    return false;
+                }
             }
 
-            value = new ClrFunctionInstance(engine, "function", static (thisObj, values) => thisObj);
+            value = new ClrFunctionInstance(engine, "function", static (_, _) => JsValue.Undefined);
             return true;
         }
 

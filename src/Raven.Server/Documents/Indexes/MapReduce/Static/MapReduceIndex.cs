@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Jint.Native.Json;
+using Jint.Native.Object;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
@@ -778,9 +780,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 private static void ThrowMissingGroupByFieldsInMapOutput(object output, Dictionary<string, CompiledIndexField> groupByFields, AbstractStaticIndexBase compiledIndex)
                 {
+                    string outputString;
+                    if (output is ObjectInstance oi)
+                    {
+                        var json = new JsonSerializer(oi.Engine);
+                        outputString = json.Serialize(oi).ToString();
+                    }
+                    else
+                    {
+                        outputString = output?.ToString();
+                    }
+
                     throw new InvalidOperationException(
                         $"The output of the mapping function does not contain all fields that the index is supposed to group by.{Environment.NewLine}" +
-                        $"Output: {output}{Environment.NewLine}" +
+                        $"Output: {outputString}{Environment.NewLine}" +
                         $"Group by fields: {string.Join(",", groupByFields.Select(x => x.Key))}{Environment.NewLine}" +
                         $"Compiled index def:{Environment.NewLine}{compiledIndex.Source}");
                 }

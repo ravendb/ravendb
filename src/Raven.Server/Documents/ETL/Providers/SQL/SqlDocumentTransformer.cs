@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using Jint;
 using Jint.Native;
+using Jint.Native.Object;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ETL;
@@ -212,11 +214,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             if (sizeSpecified && args[1].IsNumber() == false)
                 throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
 
-            var item = DocumentScript.ScriptEngine.Object.Construct(Arguments.Empty);
+            var item = new JsObject(DocumentScript.ScriptEngine);
 
-            item.Set(nameof(VarcharFunctionCall.Type), type, true);
-            item.Set(nameof(VarcharFunctionCall.Value), args[0], true);
-            item.Set(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : DefaultVarCharSize, true);
+            item.FastSetDataProperty(nameof(VarcharFunctionCall.Type), type);
+            item.FastSetDataProperty(nameof(VarcharFunctionCall.Value), args[0]);
+            item.FastSetDataProperty(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : DefaultVarCharSize);
 
             return item;
         }

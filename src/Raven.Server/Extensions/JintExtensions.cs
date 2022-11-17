@@ -5,35 +5,27 @@ using Esprima.Ast;
 using Jint;
 using Jint.Constraints;
 using Jint.Native;
-using Jint.Native.Array;
-using Jint.Runtime.Descriptors;
 using Raven.Client.Util;
 
 namespace Raven.Server.Extensions
 {
     public static class JintExtensions
     {
-        public static IEnumerable<KeyValuePair<JsValue, PropertyDescriptor>> GetOwnPropertiesWithoutLength(this ArrayInstance array)
+        public static IEnumerable<KeyValuePair<string, JsValue>> GetOwnPropertiesWithoutLength(this JsArray array)
         {
-            foreach (var kvp in array.GetOwnProperties())
-            {
-                if (kvp.Key == "length")
-                    continue;
-
-                yield return kvp;
-            }
+            return array.GetEntries();
         }
 
         public static IDisposable ChangeMaxStatements(this Engine engine, int value)
         {
-            var maxStatements = engine.FindConstraint<MaxStatements>();
+            var maxStatements = engine.FindConstraint<MaxStatementsConstraint>();
             if (maxStatements == null)
                 return null;
 
-            var oldMaxStatements = maxStatements.Max;
-            maxStatements.Change(value);
+            var oldMaxStatements = maxStatements.MaxStatements;
+            maxStatements.MaxStatements = value;
 
-            return new DisposableAction(() => maxStatements.Change(oldMaxStatements));
+            return new DisposableAction(() => maxStatements.MaxStatements = oldMaxStatements);
         }
 
         public static IDisposable DisableMaxStatements(this Engine engine)
@@ -69,17 +61,17 @@ namespace Raven.Server.Extensions
 
         public static string TryGetFieldFromSimpleLambdaExpression(this IFunction function)
         {
-            if (!(function.Params.FirstOrDefault() is Identifier identifier))
+            if (function.Params.Count == 0 || function.Params[0] is not Identifier identifier)
                 return null;
 
             var me = GetMemberExpression(function);
-            if (me == null)
+
+            if (me?.Property is not Identifier property)
                 return null;
 
-            if (!(me.Property is Identifier property))
+            if (me.Object is not Identifier reference || reference.Name != identifier.Name)
                 return null;
-            if ((!(me.Object is Identifier reference) || reference.Name != identifier.Name))
-                return null;
+
             return property.Name;
         }
 
