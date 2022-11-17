@@ -581,32 +581,31 @@ namespace Voron.Data.Containers
         {
             var pageNum = Math.DivRem(id, Constants.Storage.PageSize, out var offset);
             if(!page.IsValid || pageNum != page.PageNumber)
-            {
                 page = llt.GetPage(pageNum);
-                if (offset == 0)
-                {
-                    Debug.Assert(page.IsOverflow);
-                    return new Item(page, PageHeader.SizeOf, page.OverflowSize);
-                }
-            }
 
+            int size;
             if (offset == 0) // overflow
             {
                 if (page.IsOverflow == false)
                     throw new InvalidOperationException("Expected to get an overflow page " + page.PageNumber);
 
-                return new Item(page, PageHeader.SizeOf, page.OverflowSize);
+                size = page.OverflowSize;
+                offset = PageHeader.SizeOf;
+            }
+            else
+            {
+                var container = new Container(page);
+                container.ValidatePage();
+
+                ItemMetadata* metadata = (ItemMetadata*)(container._page.Pointer + offset);
+                if (metadata->Size == 0)
+                    throw new InvalidOperationException("Tried to read deleted entry: " + id);
+
+                size = metadata->Size;
+                offset = metadata->Offset;
             }
 
-            var container = new Container(page);
-            container.ValidatePage();
-            
-            ItemMetadata* metadata = (ItemMetadata*)(container._page.Pointer + offset);
-            if (metadata->Size == 0)
-            {
-                throw new InvalidOperationException("Tried to read deleted entry: " + id);
-            }
-            return new Item(page, metadata->Offset, metadata->Size);
+            return new Item(page, (int)offset, size);
         }
 
         [Conditional("DEBUG")]
