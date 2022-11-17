@@ -1,8 +1,19 @@
-﻿namespace Raven.Client.ServerWide.Sharding;
+﻿using Sparrow.Json.Parsing;
+
+namespace Raven.Client.ServerWide.Sharding;
 
 public class ShardBucketRange
 {
     public int BucketRangeStart;
 
     public int ShardNumber;
+
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(BucketRangeStart)] = BucketRangeStart, 
+            [nameof(ShardNumber)] = ShardNumber
+        };
+    }
 }

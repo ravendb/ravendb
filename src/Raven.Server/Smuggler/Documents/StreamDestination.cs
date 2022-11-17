@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -438,6 +439,20 @@ namespace Raven.Server.Smuggler.Documents
                             }
 
                             _writer.WriteEndObject();
+                        }
+
+                        if (databaseRecord.IsSharded)
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.Sharding));
+
+                            _writer.WriteStartObject();
+
+                            _writer.WritePropertyName(nameof(databaseRecord.Sharding.BucketRanges));
+                            _context.Write(_writer, new DynamicJsonArray(databaseRecord.Sharding.BucketRanges.Select(x => x.ToJson())));
+
+                            _writer.WriteEndObject();
+
                         }
 
                         break;
