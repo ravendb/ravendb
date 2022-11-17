@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                 var q1 = query.ToString();
                 var expected =
                     "from 'Users' as customer select { CustomerName : customer.GivenName+\" \"+customer.FamilyName, " +
-                    "Phone : Object.keys(customer.Phones).map(function(a){return{Key: a,Value:customer.Phones[a]};}).filter(function(phone){return phone.Key===\"Work\";}) }";
+                    "Phone : Object.keys(customer.Phones).map(a=>({Key: a,Value:customer.Phones[a]})).filter(phone=>phone.Key===\"Work\") }";
                 Assert.Equal(expected, q1);
 
                 var query2 =
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
                 var q2 = query2.ToString();
                 expected =
                     "from 'Users' as customer select { CustomerName : customer.GivenName+\" \"+customer.FamilyName, " +
-                    "Phone : Object.keys(customer.Phones2).map(function(a){return{Key: a,Value:customer.Phones2[a]};}).filter(function(phone){return phone.Key===\"Work\";}) }";
+                    "Phone : Object.keys(customer.Phones2).map(a=>({Key: a,Value:customer.Phones2[a]})).filter(phone=>phone.Key===\"Work\") }";
                 Assert.Equal(expected, q2);
 
                 var res1 = await query.ToArrayAsync();

@@ -39,17 +39,23 @@ namespace SlowTests.Issues
                                 {
                                     x.DateTime,
                                     DateTimeMinValue = DateTime.MinValue,
-                                    DateTimeMaxValue = DateTime.MaxValue
+                                    DateTimeMaxValue = DateTime.MaxValue,
+                                    DateTimeUtcNow = DateTime.UtcNow,
+                                    DateTimeToday = DateTime.Today
                                 };
 
-                    var expectedQuery =
-                        $"declare function output(x) {{{Environment.NewLine}\tvar test = 1;{Environment.NewLine}\treturn {{ DateTime : x.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402297199999) }};{Environment.NewLine}}}{Environment.NewLine}from 'Articles' as x select output(x)";
-
-                    Assert.Equal(expectedQuery, query.ToString());
+                    RavenTestHelper.AssertEqualRespectingNewLines(@"declare function output(x) {
+	var test = 1;
+	return { DateTime : x.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402297199999), DateTimeUtcNow : ((date) => new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds()))(new Date()), DateTimeToday : new Date(new Date().setHours(0,0,0,0)) };
+}
+from 'Articles' as x select output(x)", query.ToString());
 
                     var result = query.ToList();
 
                     Assert.Equal(DateTime.MinValue, result[0].DateTimeMinValue);
+
+                    Assert.Equal(DateTime.UtcNow, result[0].DateTimeUtcNow, TimeSpan.FromSeconds(5));
+                    Assert.Equal(DateTime.Today, result[0].DateTimeToday, TimeSpan.FromSeconds(5));
 
                     // Only missing 0.9999 ms, but with additional timezone
                     var epsilon = 1 + Math.Abs((DateTime.UtcNow - DateTime.Now).TotalSeconds); // Lower than 1 ms

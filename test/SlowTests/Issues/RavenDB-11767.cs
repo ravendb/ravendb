@@ -62,11 +62,11 @@ namespace SlowTests.Issues
 
                     Assert.Equal("from 'Orders' as o load o.CategoryListId as categoryList " +
                                  "select { Id : id(o), Items : o.OrderItems" +
-                                    ".map(function(i){return {i:i,cat:categoryList.Categories};})" +
-                                    ".map(function(__rvn0){return {__rvn0:__rvn0,id:__rvn0.i.CategoryId};})" +
-                                    ".map(function(__rvn1){return {__rvn1:__rvn1,first:__rvn1.__rvn0.cat.find(function(x){return id(x)===__rvn1.id;})};})" +
-                                    ".map(function(__rvn2){return {__rvn2:__rvn2,name:__rvn2.first.Name};})" +
-                                    ".map(function(__rvn3){return {CategoryName:__rvn3.name};}) }"
+                                    ".map(i=>({i:i,cat:categoryList.Categories}))" +
+                                    ".map(__rvn0=>({__rvn0:__rvn0,id:__rvn0.i.CategoryId}))" +
+                                    ".map(__rvn1=>({__rvn1:__rvn1,first:__rvn1.__rvn0.cat.find(x=>id(x)===__rvn1.id)}))" +
+                                    ".map(__rvn2=>({__rvn2:__rvn2,name:__rvn2.first.Name}))" +
+                                    ".map(__rvn3=>({CategoryName:__rvn3.name})) }"
                                 , queryable.ToString());
 
                     var result = queryable.ToList();

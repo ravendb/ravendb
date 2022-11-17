@@ -3261,7 +3261,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 JavascriptConversionExtensions.NullableSupport.Instance,
                 JavascriptConversionExtensions.NewSupport.Instance,
                 JavascriptConversionExtensions.ListInitSupport.Instance,
-                MemberInitAsJson.ForAllTypes,
+                CustomMemberInitAsJson.ForAllTypes,
                 new JavascriptConversionExtensions.TimeSeriesSupport<T>(this),
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
                 JavascriptConversionExtensions.DateOnlySupport.Instance
@@ -3279,7 +3279,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 extensions[newSize - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(DocumentQuery.Conventions, _typedParameterSupport?.Name);
             }
 
-            return expression.CompileToJavascript(new JavascriptCompilationOptions(extensions)
+            return expression.CompileToJavascript(new JavascriptCompilationOptions(ScriptVersion.ECMAScript2017, extensions)
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_conventions)
             });
