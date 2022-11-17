@@ -42,7 +42,7 @@ for (var i = 0; i < this.Lines.length; i++) {
 loadTo" + OrdersIndexName + @"(orderData);
 ";
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFact]
         public void CanOmitDocumentIdPropertyInJsonPassedToLoadTo()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -10,6 +11,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
@@ -22,6 +24,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Utils;
+using Voron;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
@@ -419,7 +422,11 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
         }
 
-        protected override void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
+        protected override void OnSuccessfulTwoWaysCommunication()
+        {
+            SuccessfulTwoWaysCommunication?.Invoke(this);
+            MissingAttachmentsRetries = 0;
+        }
 
         protected override void OnFailed(Exception e) => Failed?.Invoke(this, e);
 
@@ -438,6 +445,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
         internal class TestingStuff
         {
             public Action OnDocumentSenderFetchNewItem;
+
+            public Action<Dictionary<Slice, AttachmentReplicationItem>> OnMissingAttachmentStream;
         }
     }
 

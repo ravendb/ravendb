@@ -16,6 +16,7 @@ using Voron;
 using Xunit;
 using Xunit.Abstractions;
 using Sparrow.Threading;
+using System.Xml.Linq;
 
 namespace FastTests.Corax;
 
@@ -115,8 +116,7 @@ public class SpatialTests : StorageTest
             _points[i] = new CoraxSpatialPointEntry(lat[i], lon[i], Spatial4n.Util.GeohashUtils.EncodeLatLon(lat[i], lon[i], 9));
         entryBuilder.WriteSpatial(CoordinatesIndex, _points);
         using var _ = entryBuilder.Finish(out var buffer);
-
-        var reader = new IndexEntryReader(buffer.ToSpan());
+        var reader = new IndexEntryReader(buffer.Ptr, buffer.Length);
 
         Assert.True(reader.GetFieldType(CoordinatesIndex, out var intOffset).HasFlag(IndexEntryFieldType.SpatialPointList));
         var iterator = reader.ReadManySpatialPoint(CoordinatesIndex);

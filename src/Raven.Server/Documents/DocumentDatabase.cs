@@ -496,7 +496,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
                         const int batchSize = 256;
@@ -551,7 +551,7 @@ namespace Raven.Server.Documents
             public virtual void Dispose() => ArrayPool<ClusterTransactionCommand.SingleClusterDatabaseCommand>.Shared.Return(_data);
         }
 
-        protected virtual ClusterTransactionBatchCollector CollectCommandsBatch(TransactionOperationContext context, int take)
+        protected virtual ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, int take)
         {
             var batchCollector = new ClusterTransactionBatchCollector(take);
             var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take);
@@ -559,12 +559,18 @@ namespace Raven.Server.Documents
             return batchCollector;
         }
 
-        public async Task<(long BatchSize, long CommandsCount)> ExecuteClusterTransaction(TransactionOperationContext context, int batchSize)
+        public async Task<(long BatchSize, long CommandsCount)> ExecuteClusterTransaction(ClusterOperationContext context, int batchSize)
         {
             using var batchCollector = CollectCommandsBatch(context, batchSize);
 
             if (batchCollector.Count == 0)
+            {
+                var index = _serverStore.Cluster.GetLastCompareExchangeIndexForDatabase(context, Name);
+
+                if (RachisLogIndexNotifications.LastModifiedIndex != index)
+                    RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 return (0, 0);
+            }
 
             var batch = batchCollector.GetData();
             var mergedCommands = new ClusterTransactionMergedCommand(this, batch);

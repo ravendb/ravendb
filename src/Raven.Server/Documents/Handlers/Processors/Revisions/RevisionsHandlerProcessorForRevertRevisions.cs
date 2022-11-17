@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Revisions;
@@ -15,12 +16,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Revisions
 
         protected override void ScheduleRevertRevisions(long operationId, RevertRevisionsRequest configuration, OperationCancelToken token)
         {
+            var collections = configuration.Collections?.Length > 0 ? new HashSet<string>(configuration.Collections, StringComparer.OrdinalIgnoreCase) : null;
+
             var t = RequestHandler.Database.Operations.AddLocalOperation(
                 operationId,
                 OperationType.DatabaseRevert,
                 $"Revert database '{RequestHandler.Database.Name}' to {configuration.Time} UTC.",
                 detailedDescription: null,
-                onProgress => RequestHandler.Database.DocumentsStorage.RevisionsStorage.RevertRevisions(configuration.Time, TimeSpan.FromSeconds(configuration.WindowInSec), onProgress, token),
+                onProgress => RequestHandler.Database.DocumentsStorage.RevisionsStorage.RevertRevisions(configuration.Time, TimeSpan.FromSeconds(configuration.WindowInSec), onProgress, collections, token),
                 token: token);
 
             _ = t.ContinueWith(_ =>

@@ -121,7 +121,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
     
     private void CleanupExchangesAndQueues()
     {
-        if (_definedExchangesAndQueues.Count == 0 || RequiresRabbitMqFactAttribute.CanConnect == false)
+        if (_definedExchangesAndQueues.Count == 0 || RequiresRabbitMqRetryFactAttribute.CanConnect == false)
             return;
 
         using var channel = CreateRabbitMqChannel();

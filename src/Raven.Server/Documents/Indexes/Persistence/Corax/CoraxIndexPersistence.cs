@@ -106,7 +106,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
             var version = metadataTree?.ReadInt64(global::Corax.Constants.IndexWriter.IndexVersionSlice);
             if (version.HasValue)
             {
-                var currentCoraxVersion = global::Corax.Constants.IndexWriter.Version;
+                var currentCoraxVersion = global::Corax.Constants.IndexWriter.SchemaVersion;
                 if (version.Value != currentCoraxVersion)
                 {
                     
@@ -116,7 +116,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
             }
             else
             {
-                tx.CreateTree(global::Corax.Constants.IndexMetadataSlice).Add(global::Corax.Constants.IndexWriter.IndexVersionSlice, global::Corax.Constants.IndexWriter.Version);
+                tx.CreateTree(global::Corax.Constants.IndexMetadataSlice).Add(global::Corax.Constants.IndexWriter.IndexVersionSlice, global::Corax.Constants.IndexWriter.SchemaVersion);
                 tx.Commit();
             }
         }

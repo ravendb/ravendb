@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 OperationCancelToken.Token.ThrowIfCancellationRequested();
 
-                using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext serverContext))
                 using (serverContext.OpenReadTransaction())
                 {
                     // the commands are already batched (10k or 16MB), so we are executing only 1 at a time

@@ -20,7 +20,9 @@ using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Tcp.Sync;
@@ -32,6 +34,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using static Nest.JoinField;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
@@ -74,6 +77,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public long LastHeartbeatTicks;
         public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
+
+        public int MissingAttachmentsRetries;
 
         public string OutgoingReplicationThreadName
         {
@@ -395,6 +400,11 @@ namespace Raven.Server.Documents.Replication.Outgoing
                         Logger.Info(
                             $"Received reply for replication batch from {Destination.FromString()}. Destination is reporting missing attachments.");
                     }
+
+                    if (++MissingAttachmentsRetries > 1)
+                        RaiseAlertAndThrowMissingAttachmentException($"Failed to send batch successfully to {Destination.FromString()}. " +
+                                                                     $"Destination reported missing attachments {MissingAttachmentsRetries} times.");
+
                     break;
 
                 default:
@@ -404,6 +414,24 @@ namespace Raven.Server.Documents.Replication.Outgoing
             }
 
             return replicationBatchReply;
+        }
+
+        private void RaiseAlertAndThrowMissingAttachmentException(string msg)
+        {
+            if (Logger.IsInfoEnabled)
+            {
+                Logger.Info(
+                    $"Received reply for replication batch from {Destination.FromString()}. Error string received = {msg}");
+            }
+
+            Server.NotificationCenter.Add(AlertRaised.Create(
+                _databaseName,
+                "Replication delay due to a missing attachments loop",
+                msg,
+                AlertType.Replication,
+                NotificationSeverity.Error));
+
+            throw new MissingAttachmentException(msg);
         }
 
         protected virtual DynamicJsonValue GetInitialHandshakeRequest()
@@ -653,6 +681,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     }
                 }
 
+                HandleException(e);
+            }
+            catch (MissingAttachmentException e)
+            {
                 HandleException(e);
             }
             catch (OperationCanceledException e)

@@ -355,137 +355,140 @@ namespace Corax
             return entryId;
         }
 
-        private void UpdateModifiedTermsOnly(ByteStringContext context, ref IndexEntryReader oldEntryReader, Span<byte> newEntryData,
+        private unsafe void UpdateModifiedTermsOnly(ByteStringContext context, ref IndexEntryReader oldEntryReader, Span<byte> newEntryData,
             IndexFieldBinding fieldBinding, long entryId)
         {
-            var newEntryReader = new IndexEntryReader(newEntryData);
-
-            var oldType = oldEntryReader.GetFieldType(fieldBinding.FieldId, out var _);
-            var newType = newEntryReader.GetFieldType(fieldBinding.FieldId, out var _);
-
-            var indexedField = _knownFieldsTerms[fieldBinding.FieldId];
-            var newFieldReader = newEntryReader.GetReaderFor(fieldBinding.FieldId);
-            var oldFieldReader = oldEntryReader.GetReaderFor(fieldBinding.FieldId);
-            if (oldType != newType)
+            fixed (byte* newEntryDataPtr = newEntryData)
             {
-                RemoveSingleTerm(indexedField, oldFieldReader, entryId);
-                var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
-                indexer.InsertToken();
-                return;
-            }
+                var newEntryReader = new IndexEntryReader(newEntryDataPtr, newEntryData.Length);
 
-            switch (oldType)
-            {
-                case IndexEntryFieldType.Empty:
-                case IndexEntryFieldType.Null:
-                    // nothing _can_ change here
-                    break;
-                case IndexEntryFieldType.TupleListWithNulls:
-                case IndexEntryFieldType.TupleList:
-                case IndexEntryFieldType.ListWithNulls:
-                case IndexEntryFieldType.List:
+                var oldType = oldEntryReader.GetFieldType(fieldBinding.FieldId, out var _);
+                var newType = newEntryReader.GetFieldType(fieldBinding.FieldId, out var _);
+
+                var indexedField = _knownFieldsTerms[fieldBinding.FieldId];
+                var newFieldReader = newEntryReader.GetReaderFor(fieldBinding.FieldId);
+                var oldFieldReader = oldEntryReader.GetReaderFor(fieldBinding.FieldId);
+                if (oldType != newType)
                 {
-                    bool oldHasIterator = oldFieldReader.TryReadMany(out var oldIterator);
-                    bool newHasIterator = newFieldReader.TryReadMany(out var newIterator);
-                    bool areEqual = oldHasIterator == newHasIterator;
-                    while (true)
-                    {
-                        oldHasIterator = oldIterator.ReadNext();
-                        newHasIterator = newIterator.ReadNext();
-
-                        if (oldHasIterator != newHasIterator)
-                        {
-                            areEqual = false;
-                            break;
-                        }
-
-                        if (oldHasIterator == false)
-                            break;
-
-                        if (oldIterator.Type != newIterator.Type)
-                        {
-                            areEqual = false;
-                            break;
-                        }
-
-                        if (oldIterator.Sequence.SequenceEqual(newIterator.Sequence) == false)
-                        {
-                            areEqual = false;
-                            break;
-                        }
-                    }
-
-                    if (areEqual == false)
-                    {
-                        RemoveSingleTerm(indexedField, oldFieldReader, entryId);
-                        var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
-                        indexer.InsertToken();
-                    }
-                    break;
+                    RemoveSingleTerm(indexedField, oldFieldReader, entryId);
+                    var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
+                    indexer.InsertToken();
+                    return;
                 }
-                case IndexEntryFieldType.Tuple:
-                case IndexEntryFieldType.SpatialPoint:
-                case IndexEntryFieldType.Simple:
+
+                switch (oldType)
                 {
-                    bool hasOld = oldFieldReader.Read(out var oldVal);
-                    bool hasNew = newFieldReader.Read(out var newVal);
-                    if (hasOld != hasNew || hasOld && oldVal.SequenceEqual(newVal) == false)
-                    {
-                        RemoveSingleTerm(indexedField, oldFieldReader, entryId);
-                        var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
-                        indexer.InsertToken();
-                    }
-                    break;
-                }
-                case IndexEntryFieldType.Raw:
-                case IndexEntryFieldType.RawList:
-                case IndexEntryFieldType.Invalid:
-                    break;
-
-                case IndexEntryFieldType.SpatialPointList:
-                {
-                    bool oldHasIterator = oldFieldReader.TryReadManySpatialPoint(out var oldIterator);
-                    bool newHasIterator = newFieldReader.TryReadManySpatialPoint(out var newIterator);
-                    bool areEqual = oldHasIterator == newHasIterator;
-                    while (true)
-                    {
-                        oldHasIterator = oldIterator.ReadNext();
-                        newHasIterator = newIterator.ReadNext();
-
-                        if (oldHasIterator != newHasIterator)
+                    case IndexEntryFieldType.Empty:
+                    case IndexEntryFieldType.Null:
+                        // nothing _can_ change here
+                        break;
+                    case IndexEntryFieldType.TupleListWithNulls:
+                    case IndexEntryFieldType.TupleList:
+                    case IndexEntryFieldType.ListWithNulls:
+                    case IndexEntryFieldType.List:
                         {
-                            areEqual = false;
+                            bool oldHasIterator = oldFieldReader.TryReadMany(out var oldIterator);
+                            bool newHasIterator = newFieldReader.TryReadMany(out var newIterator);
+                            bool areEqual = oldHasIterator == newHasIterator;
+                            while (true)
+                            {
+                                oldHasIterator = oldIterator.ReadNext();
+                                newHasIterator = newIterator.ReadNext();
+
+                                if (oldHasIterator != newHasIterator)
+                                {
+                                    areEqual = false;
+                                    break;
+                                }
+
+                                if (oldHasIterator == false)
+                                    break;
+
+                                if (oldIterator.Type != newIterator.Type)
+                                {
+                                    areEqual = false;
+                                    break;
+                                }
+
+                                if (oldIterator.Sequence.SequenceEqual(newIterator.Sequence) == false)
+                                {
+                                    areEqual = false;
+                                    break;
+                                }
+                            }
+
+                            if (areEqual == false)
+                            {
+                                RemoveSingleTerm(indexedField, oldFieldReader, entryId);
+                                var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
+                                indexer.InsertToken();
+                            }
                             break;
                         }
-
-                        if (oldHasIterator == false)
-                            break;
-
-                        if (oldIterator.Type != newIterator.Type)
+                    case IndexEntryFieldType.Tuple:
+                    case IndexEntryFieldType.SpatialPoint:
+                    case IndexEntryFieldType.Simple:
                         {
-                            areEqual = false;
+                            bool hasOld = oldFieldReader.Read(out var oldVal);
+                            bool hasNew = newFieldReader.Read(out var newVal);
+                            if (hasOld != hasNew || hasOld && oldVal.SequenceEqual(newVal) == false)
+                            {
+                                RemoveSingleTerm(indexedField, oldFieldReader, entryId);
+                                var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
+                                indexer.InsertToken();
+                            }
                             break;
                         }
+                    case IndexEntryFieldType.Raw:
+                    case IndexEntryFieldType.RawList:
+                    case IndexEntryFieldType.Invalid:
+                        break;
 
-                        if (oldIterator.Geohash.SequenceEqual(newIterator.Geohash) == false)
+                    case IndexEntryFieldType.SpatialPointList:
                         {
-                            areEqual = false;
+                            bool oldHasIterator = oldFieldReader.TryReadManySpatialPoint(out var oldIterator);
+                            bool newHasIterator = newFieldReader.TryReadManySpatialPoint(out var newIterator);
+                            bool areEqual = oldHasIterator == newHasIterator;
+                            while (true)
+                            {
+                                oldHasIterator = oldIterator.ReadNext();
+                                newHasIterator = newIterator.ReadNext();
+
+                                if (oldHasIterator != newHasIterator)
+                                {
+                                    areEqual = false;
+                                    break;
+                                }
+
+                                if (oldHasIterator == false)
+                                    break;
+
+                                if (oldIterator.Type != newIterator.Type)
+                                {
+                                    areEqual = false;
+                                    break;
+                                }
+
+                                if (oldIterator.Geohash.SequenceEqual(newIterator.Geohash) == false)
+                                {
+                                    areEqual = false;
+                                    break;
+                                }
+                            }
+
+                            if (areEqual == false)
+                            {
+                                RemoveSingleTerm(indexedField, oldFieldReader, entryId);
+                                var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
+                                indexer.InsertToken();
+                            }
                             break;
                         }
-                    }
-
-                    if (areEqual == false)
-                    {
-                        RemoveSingleTerm(indexedField, oldFieldReader, entryId);
-                        var indexer = new TermIndexer(this, context, newFieldReader, indexedField, entryId);
-                        indexer.InsertToken();
-                    }
-                    break;
                 }
             }
         }
 
-        public long Index(Slice id, Span<byte> data)
+        public unsafe long Index(Slice id, Span<byte> data)
         {
             _numberOfModifications++;
             Span<byte> buf = stackalloc byte[10];
@@ -503,33 +506,37 @@ namespace Corax
             space.Clear();// clean any old data that may have already been there
 
             var context = Transaction.Allocator;
-            var entryReader = new IndexEntryReader(data);
 
-            foreach (var binding in _fieldsMapping)
+            fixed (byte* newEntryDataPtr = data)
             {
-                if (binding.FieldIndexingMode is FieldIndexingMode.No)
-                    continue;
+                var entryReader = new IndexEntryReader(newEntryDataPtr, data.Length);
 
-                var indexer = new TermIndexer(this, context, entryReader.GetReaderFor(binding.FieldId), _knownFieldsTerms[binding.FieldId], entryId);
-                indexer.InsertToken();
+                foreach (var binding in _fieldsMapping)
+                {
+                    if (binding.FieldIndexingMode is FieldIndexingMode.No)
+                        continue;
+
+                    var indexer = new TermIndexer(this, context, entryReader.GetReaderFor(binding.FieldId), _knownFieldsTerms[binding.FieldId], entryId);
+                    indexer.InsertToken();
+                }
+
+                var it = new IndexEntryReader.DynamicFieldEnumerator(entryReader);
+                while (it.MoveNext())
+                {
+                    var fieldReader = entryReader.GetReaderFor(it.CurrentFieldName);
+
+                    var indexedField = GetDynamicIndexedField(context, ref it);
+
+                    if (indexedField.FieldIndexingMode is FieldIndexingMode.No)
+                        continue;
+
+
+                    var indexer = new TermIndexer(this, context, fieldReader, indexedField, entryId);
+                    indexer.InsertToken();
+                }
+
+                return entryId;
             }
-
-            var it = new IndexEntryReader.DynamicFieldEnumerator(entryReader);
-            while (it.MoveNext())
-            {
-                var fieldReader = entryReader.GetReaderFor(it.CurrentFieldName);
-
-                var indexedField = GetDynamicIndexedField(context, ref it);
-                
-                if (indexedField.FieldIndexingMode is FieldIndexingMode.No)
-                    continue;
-                
-                
-                var indexer = new TermIndexer(this, context, fieldReader, indexedField, entryId);
-                indexer.InsertToken();
-            }
-
-            return entryId;
         }
 
         private IndexedField GetDynamicIndexedField(ByteStringContext context, ref IndexEntryReader.DynamicFieldEnumerator it)
@@ -1290,37 +1297,37 @@ namespace Corax
                 {
                     throw new InvalidDataException($"Got term '{Encodings.Utf8.GetString(termsSpan)}' with NULL character at the end for field {indexedField.Name}. This is a bug.");
                 }
-                
-                if (fieldTree.TryGetNextValue(termsSpan, out var existing, out var scope) == false)
+
+                bool found = fieldTree.TryGetNextValue(termsSpan, out var existing, out var scope);
+                if (entries.TotalAdditions > 0 && found == false)
                 {
                     if (entries.TotalRemovals != 0)
-                    {
                         throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {indexedField.Name}! This is a bug.");
-                    }
 
                     AddNewTerm(entries, tmpBuf, out termId);
 
                     dumper.WriteAddition(term, termId);
                     fieldTree.Add(termsSpan, termId, scope.Key);
-                    scope.Dispose();
-                    continue;
+                }
+                else
+                {
+                    switch (AddEntriesToTerm(tmpBuf, existing, ref entries, out termId))
+                    {
+                        case AddEntriesToTermResult.UpdateTermId:
+                            dumper.WriteAddition(term, termId);
+                            fieldTree.Add(termsSpan, termId, scope.Key);
+                            break;
+                        case AddEntriesToTermResult.RemoveTermId:
+                            if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
+                            {
+                                dumper.WriteRemoval(term, termId);
+                                throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
+                            }
+                            dumper.WriteRemoval(term, ttt);
+                            break;
+                    }
                 }
 
-                switch (AddEntriesToTerm(tmpBuf, existing, ref entries, out termId))
-                {
-                    case AddEntriesToTermResult.UpdateTermId:
-                        dumper.WriteAddition(term, termId);
-                        fieldTree.Add(termsSpan, termId, scope.Key);
-                        break;
-                    case AddEntriesToTermResult.RemoveTermId:
-                        if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
-                        {
-                            dumper.WriteRemoval(term, termId);
-                            throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
-                        }
-                        dumper.WriteRemoval(term, ttt);
-                        break;
-                }
                 scope.Dispose();
             }
         }
@@ -1496,9 +1503,8 @@ namespace Corax
                 var localEntry = entries;
 
                 long termId;
-
                 using var _ = fieldTree.Read(term, out var result);
-                if (result.HasValue == false)
+                if (localEntry.TotalAdditions > 0 && result.HasValue == false)
                 {
                     Debug.Assert(localEntry.TotalRemovals == 0, "entries.TotalRemovals == 0");
                     AddNewTerm(localEntry, tmpBuf, out termId);
@@ -1529,11 +1535,10 @@ namespace Corax
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
                 // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
                 var localEntry = entries;
-
                 using var _ = fieldTree.Read(term, out var result);
 
                 long termId;
-                if (result.Size == 0) // no existing value
+                if (localEntry.TotalAdditions > 0 && result.Size == 0) // no existing value
                 {
                     Debug.Assert(localEntry.TotalRemovals == 0, "entries.TotalRemovals == 0");
                     AddNewTerm(localEntry, tmpBuf, out termId);
@@ -1562,6 +1567,7 @@ namespace Corax
             {
                 int pos = ZigZagEncoding.Encode(tmpBufferPtr, additions.Length);
                 pos += ZigZagEncoding.Encode(tmpBufferPtr, additions[0], pos);
+
                 for (int i = 1; i < additions.Length; i++)
                 {
                     if (pos + ZigZagEncoding.MaxEncodedSize >= tmpBuf.Length)

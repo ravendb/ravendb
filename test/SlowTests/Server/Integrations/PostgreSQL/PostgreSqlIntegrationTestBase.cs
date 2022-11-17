@@ -28,7 +28,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         {
         }
 
-        private DataTable ExecuteSqlQuery( NpgsqlConnection connection, string query, Dictionary<string, (NpgsqlDbType, object)> namedArgs = null)
+        private DataTable ExecuteSqlQuery( NpgsqlConnection connection, string query, Dictionary<string, (NpgsqlDbType, object)> namedArgs = null, bool prepareExecute = false)
         {
             using var cmd = new NpgsqlCommand(query, connection);
 
@@ -40,22 +40,25 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                 }
             }
 
+            if (prepareExecute)
+                cmd.Prepare();
+               
             using var reader = cmd.ExecuteReader();
-
             var dt = new DataTable();
             dt.Load(reader);
 
             return dt;
         }
 
-        protected async Task<DataTable> Act(DocumentStore store, string query, RavenServer server, bool? forceSslMode = null, Dictionary<string, (NpgsqlDbType, object)> parameters = null)
+        protected async Task<DataTable> Act(DocumentStore store, string query, RavenServer server, bool? forceSslMode = null,
+            Dictionary<string, (NpgsqlDbType, object)> parameters = null, bool prepareExecute = false)
         {
             var connectionString = GetConnectionString(store, server, forceSslMode);
 
             await using var connection = new NpgsqlConnection(connectionString);
             await connection.OpenAsync();
 
-            var result = ExecuteSqlQuery(connection, query, parameters);
+            var result = ExecuteSqlQuery(connection, query, parameters, prepareExecute);
 
             await connection.CloseAsync();
             return result;

@@ -104,7 +104,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         rawSize = item.Length;
         int headerSize = size + len;
-        return new IndexEntryReader(new Span<byte>(item.Address + headerSize, item.Length - headerSize));
+        return new IndexEntryReader(item.Address + headerSize, item.Length - headerSize);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -118,7 +118,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         key = Encoding.UTF8.GetString(idSpan);
         
         int headerSize = size + len;
-        return new(new Span<byte>(item.Address + headerSize, item.Length - headerSize));
+        return new(item.Address + headerSize, item.Length - headerSize);
     }
 
     public string GetIdentityFor(long id)

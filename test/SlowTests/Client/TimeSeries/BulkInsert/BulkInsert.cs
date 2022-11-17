@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
@@ -1304,6 +1305,32 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
                         .Counters[0]?.TotalValue;
                     Assert.Equal(1, val);
                 }
+            }
+        }
+
+        [Fact]
+        public void CreateTimeSeriesWithInvalidNameShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var exception = Assert.Throws<ArgumentException>(() =>
+                {
+                    var baseline = RavenTestHelper.UtcToday.EnsureMilliseconds();
+
+                    const string documentId = "users/ayende";
+
+                    using (var bulkInsert = store.BulkInsert())
+                    {
+                        bulkInsert.Store(new { Name = "Oren" }, documentId);
+
+                        using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(documentId, "INC:Heartrate"))
+                        {
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+                        }
+                    }
+                });
+
+                Assert.True(exception.Message.Contains($"Time Series name cannot start with {Constants.Headers.IncrementalTimeSeriesPrefix} prefix"));
             }
         }
     }

@@ -17,7 +17,7 @@ using Xunit.Abstractions;
 
 namespace FastTests.Corax
 {
-    public class IndexEntryWriterTest : StorageTest
+    public unsafe class IndexEntryWriterTest : StorageTest
     {
         public IndexEntryWriterTest(ITestOutputHelper output) : base(output)
         {
@@ -71,7 +71,7 @@ namespace FastTests.Corax
             writer.Write(3, Encoding.UTF8.GetBytes("DDDDDDDDDD"));
             using var __ = writer.Finish(out var element);
 
-            var reader = new IndexEntryReader(element.ToSpan());
+            var reader = new IndexEntryReader(element.Ptr, element.Length);
             reader.GetReaderFor(0).Read(out long longValue);
             Assert.Equal(1, longValue);
             reader.GetReaderFor(0).Read(out int intValue);
@@ -145,7 +145,7 @@ namespace FastTests.Corax
             writer.Write(2, Encoding.UTF8.GetBytes(values[3]));
             using var ___ = writer.Finish(out var element);
 
-            var reader = new IndexEntryReader(element.ToSpan());
+            var reader = new IndexEntryReader(element.Ptr, element.Length);
 
             // Get the first
             Assert.True(reader.GetReaderFor(1).TryReadMany( out var fieldIterator));
@@ -220,7 +220,7 @@ namespace FastTests.Corax
             writer.Write(1, new StringArrayIterator(values), longValues, doubleValues);
             using var ___ = writer.Finish(out var element);
 
-            var reader = new IndexEntryReader(element.ToSpan());                        
+            var reader = new IndexEntryReader(element.Ptr, element.Length);                        
             
             // Get the first
             Assert.True(reader.GetReaderFor(1).TryReadMany( out var fieldIterator));
@@ -326,7 +326,7 @@ namespace FastTests.Corax
             writer.Write(1, new StringArrayIterator(values), longValues, doubleValues);
             using var ___ = writer.Finish(out var element);
 
-            var reader = new IndexEntryReader(element.ToSpan());
+            var reader = new IndexEntryReader(element.Ptr, element.Length);
 
             Assert.True(reader.GetReaderFor(1).Read(out var type, out var longValue, out var doubleValue, out var sequenceValue));
             Assert.True(type.HasFlag(IndexEntryFieldType.Empty));
@@ -338,7 +338,7 @@ namespace FastTests.Corax
             Assert.True(type.HasFlag(IndexEntryFieldType.List));
             Assert.Equal(0, sequenceValue.Length);
 
-            reader = new IndexEntryReader(element.ToSpan());
+            reader = new IndexEntryReader(element.Ptr, element.Length);
             Assert.True(reader.GetReaderFor(1).TryReadMany( out var iterator));
             type = reader.GetFieldType(1, out var offset);
             Assert.True(type.HasFlag(IndexEntryFieldType.Empty));
@@ -440,7 +440,7 @@ namespace FastTests.Corax
             writer.Write(3, new StringArrayIterator(values), longs, doubles);
             using var ___ = writer.Finish(out var element);
 
-            var reader = new IndexEntryReader(element.ToSpan());
+            var reader = new IndexEntryReader(element.Ptr, element.Length);
 
             var iterator = reader.GetReaderFor(0).ReadMany();
             Assert.True(iterator.IsValid);

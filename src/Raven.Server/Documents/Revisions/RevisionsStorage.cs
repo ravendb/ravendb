@@ -5,8 +5,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Amqp.Types;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
@@ -1354,17 +1356,55 @@ namespace Raven.Server.Documents.Revisions
 
         public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            var list = new List<Document>();
-            var result = new RevertResult();
+            return await RevertRevisions(before, window, onProgress, collections: null, token);
+        }
 
+        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, HashSet<string> collections, OperationCancelToken token)
+        {
+            var result = new RevertResult();
+            var etagBarrier = _documentsStorage.GenerateNextEtag(); // every change after this etag, will _not_ be reverted.
+            var minimalDate = before.Add(-window); // since the documents/revisions are not sorted by date, stop searching if we reached this date.
+
+            if (collections == null) // revert all collections
+            {
+                var list = new List<Document>();
+                await RevertRevisionsInternal(list, collection: null, before, minimalDate, etagBarrier, onProgress, result, token);
+            }
+            else
+            {
+                if (collections.Comparer != null && collections.Comparer.Equals(StringComparer.OrdinalIgnoreCase) == false )
+                {
+                    throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
+                }
+                foreach (var collection in collections)
+                {
+                    var list = new List<Document>();
+                    if (collection == null)
+                    {
+                        var msg = "Tried to revert revisions in collection that is null";
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(msg);
+                        result.WarnAboutFailedCollection(msg);
+                        continue;
+                    }
+
+                    await RevertRevisionsInternal(list, collection, before, minimalDate, etagBarrier, onProgress, result, token);
+                }
+            }
+
+            return result;
+        }
+
+        private async Task RevertRevisionsInternal(List<Document> list, string collection, DateTime before, DateTime minimalDate, long etagBarrier, Action<IOperationProgress> onProgress, RevertResult result, OperationCancelToken token)
+        {
             var parameters = new Parameters
             {
                 Before = before,
-                MinimalDate = before.Add(-window), // since the documents/revisions are not sorted by date, stop searching if we reached this date.
-                EtagBarrier = _documentsStorage.GenerateNextEtag(), // every change after this etag, will _not_ be reverted.
-                OnProgress = onProgress
+                MinimalDate = minimalDate,
+                EtagBarrier = etagBarrier,
+                OnProgress = onProgress,
+                LastScannedEtag = etagBarrier
             };
-            parameters.LastScannedEtag = parameters.EtagBarrier;
 
             // send initial progress
             parameters.OnProgress?.Invoke(result);
@@ -1376,12 +1416,10 @@ namespace Raven.Server.Documents.Revisions
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
                 {
-                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, token);
+                    hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, collection, token);
                     await WriteRevertedRevisions(list, token);
                 }
             }
-
-            return result;
         }
 
         private async Task WriteRevertedRevisions(List<Document> list, OperationCancelToken token)
@@ -1394,14 +1432,34 @@ namespace Raven.Server.Documents.Revisions
             list.Clear();
         }
 
-        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, OperationCancelToken token)
+        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, Parameters parameters, RevertResult result, List<Document> list, string collection, OperationCancelToken token)
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
             {
-                var revisions = new Table(RevisionsSchema, readCtx.Transaction.InnerTransaction);
-                foreach (var tvr in revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice],
-                    parameters.LastScannedEtag))
+                IEnumerable<Table.TableValueHolder> tvrs = null;
+                if (collection != null)
+                {
+                    var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+                    if (collectionName == null)
+                    {
+                        var msg = $"Tried to revert revisions in the collection '{collection}' which does not exist"; 
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(msg);
+                        result.WarnAboutFailedCollection(msg);
+                        return false;
+                    }
+                    var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
+                    var revisions = readCtx.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag);
+                }
+                else
+                {
+                    var revisions = new Table(RevisionsSchema, readCtx.Transaction.InnerTransaction);
+                    tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], parameters.LastScannedEtag);
+                }
+                
+                foreach (var tvr in tvrs)
                 {
                     token.ThrowIfCancellationRequested();
 

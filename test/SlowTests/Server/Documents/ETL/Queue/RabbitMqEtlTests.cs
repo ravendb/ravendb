@@ -25,7 +25,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
     {
     }
 
-    [RequiresRabbitMqFact]
+    [RequiresRabbitMqRetryFact]
     public void SimpleScript()
     {
         using (var store = GetDocumentStore())
@@ -70,7 +70,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         }
     }
 
-    [RequiresRabbitMqFact]
+    [RequiresRabbitMqRetryFact]
     public void CanUseRoutingKeyWithAutomaticDeclarations()
     {
         using var store = GetDocumentStore();
@@ -118,7 +118,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         Assert.Equal("James Smith", user.Name);
     }
 
-    [RequiresRabbitMqFact]
+    [RequiresRabbitMqRetryFact]
     public void CanUseRoutingKeyWithCustomDeclarations()
     {
         using var store = GetDocumentStore();
@@ -177,7 +177,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
     }
 
 
-    [RequiresRabbitMqFact]
+    [RequiresRabbitMqRetryFact]
     public void CanPushDirectlyToTheQueue()
     {
         using var store = GetDocumentStore();
@@ -213,7 +213,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         Assert.Equal("Joe Doe", user.Name);
     }
 
-    [RequiresRabbitMqFact]
+    [RequiresRabbitMqRetryFact]
     public void TestAreHeadersPresent()
     {
         using (var store = GetDocumentStore())
@@ -257,7 +257,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         }
     }
 
-    [RequiresRabbitMqFact]
+    [RequiresRabbitMqRetryFact]
     public void SimpleScriptWithManyDocuments()
     {
         using var store = GetDocumentStore();
@@ -308,7 +308,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         }
     }
 
-    [RequiresRabbitMqFact]
+    [RequiresRabbitMqRetryFact]
     public void Docs_from_two_collections_loaded_to_single_one()
     {
         using var store = GetDocumentStore();
@@ -499,7 +499,7 @@ output('test output')"
         }
     }
 
-    [RequiresRabbitMqFact]
+    [RequiresRabbitMqRetryFact]
     public void CanPassAttributesToLoadToMethod()
     {
         using (var store = GetDocumentStore())
@@ -546,7 +546,7 @@ output('test output')"
         }
     }
 
-    [RequiresRabbitMqFact]
+    [RequiresRabbitMqRetryFact]
     public void ShouldDeleteDocumentsAfterProcessing()
     {
         using (var store = GetDocumentStore())

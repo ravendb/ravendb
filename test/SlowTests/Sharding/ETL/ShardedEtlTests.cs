@@ -919,6 +919,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
+        [RequiresMsSqlFact]
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanGetConnectionStringByName()
         {
@@ -936,9 +937,8 @@ person.addCounter(loadCounter('down'));
                 var sqlConnectionStr = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
                 };
-
                 ravenConnectionStrings.Add(ravenConnectionStr);
                 sqlConnectionStrings.Add(sqlConnectionStr);
 
@@ -954,6 +954,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
+        [RequiresMsSqlFact]
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanGetAllConnectionStrings()
         {
@@ -972,7 +973,7 @@ person.addCounter(loadCounter('down'));
                     var sqlConnectionStr = new SqlConnectionString
                     {
                         Name = $"SqlConnectionString{i}",
-                        ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
+                        ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}"
                     };
 
                     ravenConnectionStrings.Add(ravenConnectionStr);
@@ -1000,6 +1001,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
+        [RequiresMsSqlFact]
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanAddAndRemoveConnectionStrings()
         {
@@ -1017,7 +1019,7 @@ person.addCounter(loadCounter('down'));
                 var sqlConnectionString = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
                 };
 
                 var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -1056,6 +1058,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
+        [RequiresMsSqlFact]
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanUpdateConnectionStrings()
         {
@@ -1073,7 +1076,7 @@ person.addCounter(loadCounter('down'));
                 var sqlConnectionString = new SqlConnectionString
                 {
                     Name = "SqlConnectionString",
-                    ConnectionString = MssqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
+                    ConnectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={store.Database}",
                 };
 
                 var result2 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
@@ -1587,7 +1590,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             }
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFactAttribute]
         public void ElasticEtl_SimpleScript()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1650,7 +1653,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             }
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchRetryFactAttribute]
         public void ElasticEtl__SimpleScriptWithManyDocuments()
         {
             using (var store = Sharding.GetDocumentStore())
