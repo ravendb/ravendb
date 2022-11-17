@@ -80,7 +80,7 @@ namespace Raven.Server.Documents
                 if (CancellationToken.IsCancellationRequested)
                     return numberOfTombstonesDeleted;
 
-                var state = GetStateInternal();
+                var state = GetState();
                 if (state.Tombstones.Count == 0)
                     return numberOfTombstonesDeleted;
 
@@ -106,33 +106,25 @@ namespace Raven.Server.Documents
             return numberOfTombstonesDeleted;
         }
 
-        internal Dictionary<string, StateHolder> GetState()
+        internal TombstonesState GetState(bool addInfoForDebug = false)
         {
-            return GetStateInternal().Tombstones;
-        }
-
-        private (Dictionary<string, StateHolder> Tombstones, long MinAllDocsEtag, long MinAllTimeSeriesEtag, long MinAllCountersEtag) GetStateInternal()
-        {
-            var minAllDocsEtag = long.MaxValue;
-            var minAllTimeSeriesEtag = long.MaxValue;
-            var minAllCountersEtag = long.MaxValue;
-            var tombstones = new Dictionary<string, StateHolder>(StringComparer.OrdinalIgnoreCase);
+            var result = new TombstonesState();
 
             if (CancellationToken.IsCancellationRequested)
-                return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag, minAllCountersEtag);
+                return result;
 
             var storageEnvironment = _documentDatabase?.DocumentsStorage?.Environment;
             if (storageEnvironment == null) // doc storage was disposed before us?
-                return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag, minAllCountersEtag);
+                return result;
 
             using (var tx = storageEnvironment.ReadTransaction())
             {
                 foreach (var tombstoneCollection in _documentDatabase.DocumentsStorage.GetTombstoneCollections(tx))
-                    tombstones[tombstoneCollection] = new StateHolder();
+                    result.Tombstones[tombstoneCollection] = new StateHolder();
             }
 
-            if (tombstones.Count == 0)
-                return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag, minAllCountersEtag);
+            if (result.Tombstones.Count == 0)
+                return result;
 
             _subscriptionsLocker.Wait();
 
@@ -150,25 +142,28 @@ namespace Raven.Server.Documents
 
                         foreach (var tombstone in subscriptionTombstones)
                         {
+                            if (addInfoForDebug)
+                                result.AddPerSubscriptionInfo(subscription.TombstoneCleanerIdentifier, tombstoneType, tombstone.Key, tombstone.Value);
+
                             if (tombstone.Key == Constants.Documents.Collections.AllDocumentsCollection)
                             {
-                                minAllDocsEtag = Math.Min(tombstone.Value, minAllDocsEtag);
+                                result.MinAllDocsEtag = Math.Min(tombstone.Value, result.MinAllDocsEtag);
                                 break;
                             }
 
                             if (tombstone.Key == Constants.TimeSeries.All)
                             {
-                                minAllTimeSeriesEtag = Math.Min(tombstone.Value, minAllTimeSeriesEtag);
+                                result.MinAllTimeSeriesEtag = Math.Min(tombstone.Value, result.MinAllTimeSeriesEtag);
                                 break;
                             }
 
                             if (tombstone.Key == Constants.Counters.All)
                             {
-                                minAllCountersEtag = Math.Min(tombstone.Value, minAllCountersEtag);
+                                result.MinAllCountersEtag = Math.Min(tombstone.Value, result.MinAllCountersEtag);
                                 break;
                             }
 
-                            var state = GetState(tombstones, tombstone.Key, tombstoneType);
+                            var state = GetStateInternal(result.Tombstones, tombstone.Key, tombstoneType);
                             if (tombstone.Value < state.Etag)
                             {
                                 state.Component = subscription.TombstoneCleanerIdentifier;
@@ -183,9 +178,9 @@ namespace Raven.Server.Documents
                 _subscriptionsLocker.Release();
             }
 
-            return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag, minAllCountersEtag);
+            return result;
 
-            static State GetState(Dictionary<string, StateHolder> results, string collection, ITombstoneAware.TombstoneType type)
+            static State GetStateInternal(Dictionary<string, StateHolder> results, string collection, ITombstoneAware.TombstoneType type)
             {
                 if (results.TryGetValue(collection, out var value) == false)
                     results[collection] = value = new StateHolder();
@@ -231,6 +226,50 @@ namespace Raven.Server.Documents
             public string Component;
 
             public long Etag;
+        }
+
+        internal class TombstonesState
+        {
+            public TombstonesState()
+            {
+                Tombstones = new Dictionary<string, StateHolder>(StringComparer.OrdinalIgnoreCase);
+                MinAllDocsEtag = long.MaxValue;
+                MinAllTimeSeriesEtag = long.MaxValue;
+                MinAllCountersEtag = long.MaxValue;
+            }
+
+            public Dictionary<string, StateHolder> Tombstones { get; set; }
+
+            public long MinAllDocsEtag { get; set; }
+
+            public long MinAllTimeSeriesEtag { get; set; }
+
+            public long MinAllCountersEtag { get; set; }
+
+            public List<SubscriptionInfo> PerSubscriptionInfo;
+
+            public void AddPerSubscriptionInfo(string identifier, ITombstoneAware.TombstoneType type, string collection, long etag)
+            {
+                PerSubscriptionInfo ??= new List<SubscriptionInfo>();
+                PerSubscriptionInfo.Add(new SubscriptionInfo
+                {
+                    Identifier = identifier,
+                    Type = type,
+                    Collection = collection,
+                    Etag = etag
+                });
+            }
+
+            public class SubscriptionInfo
+            {
+                public string Identifier { get; set; }
+
+                public ITombstoneAware.TombstoneType Type { get; set; }
+
+                public string Collection { get; set; }
+
+                public long Etag { get; set; }
+            }
         }
 
         internal class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand

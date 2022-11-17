@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using MySql.Data.MySqlClient;
+using NpgsqlTypes;
 using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Extensions.Streams;
@@ -35,6 +36,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         private readonly DbTransaction _tx;
 
         private readonly List<Func<DbParameter, string, bool>> _stringParserList;
+        private readonly SqlProvider _providerType;
 
         private const int LongStatementWarnThresholdInMs = 3000;
 
@@ -45,6 +47,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             _database = database;
             _logger = LoggingSource.Instance.GetLogger<RelationalDatabaseWriter>(_database.Name);
             _providerFactory = GetDbProviderFactory(etl.Configuration);
+            _providerType = SqlProviderParser.GetSupportedProvider(_etl.Configuration.Connection.FactoryName);
             _commandBuilder = _providerFactory.InitializeCommandBuilder();
             _connection = _providerFactory.CreateConnection();
             var connectionString = etl.Configuration.Connection.ConnectionString;
@@ -203,7 +206,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                             continue;
                         var colParam = cmd.CreateParameter();
                         colParam.ParameterName = GetParameterName(column.Id);
-                        SetParamValue(colParam, column, _stringParserList);
+                        SetParamValue(colParam, column, _stringParserList, _providerType);
                         cmd.Parameters.Add(colParam);
                         sb.Append(GetParameterName(column.Id)).Append(", ");
                     }
@@ -438,7 +441,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             return stats;
         }
 
-        public static void SetParamValue(DbParameter colParam, SqlColumn column, List<Func<DbParameter, string, bool>> stringParsers)
+        public static void SetParamValue(DbParameter colParam, SqlColumn column, List<Func<DbParameter, string, bool>> stringParsers, SqlProvider provider)
         {
             if (column.Value == null)
                 colParam.Value = DBNull.Value;
@@ -471,43 +474,101 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                             if (objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Type), out object dbType) &&
                                 objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Value), out object fieldValue))
                             {
-                                var type = (DbType)Enum.Parse(typeof(DbType), dbType.ToString(), ignoreCase: false);
-                                var value = fieldValue.ToString();
+                                var dbTypeString = dbType.ToString() ?? string.Empty;
 
-                                try
+                                bool useGenericDbType = Enum.TryParse(dbTypeString, ignoreCase: false, out DbType type);
+
+                                if (useGenericDbType)
                                 {
-                                    colParam.DbType = type;
-                                } catch
-                                {
-                                    if (type == DbType.Guid && Guid.TryParse(value, out var guid1) && colParam is OracleParameter oracleParameter)
+                                    var value = fieldValue.ToString();
+
+                                    try
                                     {
-                                        var arr = guid1.ToByteArray();
-                                        oracleParameter.Value = arr;
-                                        oracleParameter.OracleDbType = OracleDbType.Raw;
-                                        oracleParameter.Size = arr.Length;
-                                        break;
+                                        colParam.DbType = type;
+                                    }
+                                    catch
+                                    {
+                                        if (type == DbType.Guid && Guid.TryParse(value, out var guid1) && colParam is OracleParameter oracleParameter)
+                                        {
+                                            var arr = guid1.ToByteArray();
+                                            oracleParameter.Value = arr;
+                                            oracleParameter.OracleDbType = OracleDbType.Raw;
+                                            oracleParameter.Size = arr.Length;
+                                            break;
+                                        }
+
+                                        throw;
                                     }
 
-                                    throw;
-                                }
-
-                                if (colParam.DbType == DbType.Guid && Guid.TryParse(value, out var guid))
-                                {
-                                    if (colParam is Npgsql.NpgsqlParameter || colParam is SqlParameter)
-                                        colParam.Value = guid;
-
-                                    if (colParam is MySqlParameter mySqlParameter)
+                                    if (colParam.DbType == DbType.Guid && Guid.TryParse(value, out var guid))
                                     {
-                                        var arr = guid.ToByteArray();
-                                        mySqlParameter.Value = arr;
-                                        mySqlParameter.MySqlDbType = MySqlDbType.Binary;
-                                        mySqlParameter.Size = arr.Length;
-                                        break;
+                                        if (colParam is Npgsql.NpgsqlParameter || colParam is SqlParameter)
+                                            colParam.Value = guid;
+
+                                        if (colParam is MySqlParameter mySqlParameter)
+                                        {
+                                            var arr = guid.ToByteArray();
+                                            mySqlParameter.Value = arr;
+                                            mySqlParameter.MySqlDbType = MySqlDbType.Binary;
+                                            mySqlParameter.Size = arr.Length;
+                                            break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        colParam.Value = value;
                                     }
                                 }
                                 else
                                 {
-                                    colParam.Value = value;
+                                    // failed to parse db type - try to fallback to provider specific type
+
+                                    switch (provider)
+                                    {
+                                        case SqlProvider.SqlClient:
+                                            SqlDbType sqlDbType = ParseProviderSpecificParameterType<SqlDbType>(dbTypeString);
+                                            ((SqlParameter)colParam).SqlDbType = sqlDbType;
+                                            break;
+                                        case SqlProvider.Npgsql:
+                                            NpgsqlDbType npgsqlType = ParseProviderSpecificParameterType<NpgsqlDbType>(dbTypeString);
+                                            ((Npgsql.NpgsqlParameter)colParam).NpgsqlDbType = npgsqlType;
+                                            break;
+                                        case SqlProvider.MySqlClient:
+                                            MySqlDbType mySqlDbType = ParseProviderSpecificParameterType<MySqlDbType>(dbTypeString);
+                                            ((MySqlParameter)colParam).MySqlDbType = mySqlDbType;
+                                            break;
+                                        case SqlProvider.OracleClient:
+                                            OracleDbType oracleDbType = ParseProviderSpecificParameterType<OracleDbType>(dbTypeString);
+                                            ((OracleParameter)colParam).OracleDbType = oracleDbType;
+                                            break;
+                                        default:
+                                            ThrowProviderNotSupported();
+                                            break;
+                                    }
+
+                                    if (fieldValue is IEnumerable<object> enumerableValue)
+                                    {
+                                        Type detectedType = null;
+
+                                        colParam.Value = enumerableValue.Select(x =>
+                                        {
+                                            if (x is IConvertible)
+                                            {
+                                                detectedType ??= TryDetectCollectionType(dbTypeString, x);
+
+                                                if (detectedType != null)
+                                                    return Convert.ChangeType(x, detectedType);
+
+                                                return x.ToString();
+                                            }
+
+                                            return x.ToString();
+                                        }).ToArray();
+                                    }
+                                    else
+                                    {
+                                        colParam.Value = fieldValue.ToString();
+                                    }
                                 }
 
                                 if (objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Size), out object size))
@@ -539,6 +600,69 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                             throw new InvalidOperationException("Cannot understand how to save " + column.Type + " for " + colParam.ParameterName);
                         }
                 }
+            }
+
+            void ThrowProviderNotSupported()
+            {
+                throw new NotSupportedException($"Factory provider '{provider}' is not supported");
+            }
+
+            Type TryDetectCollectionType(string dbTypeString, object value)
+            {
+                Type detectedType = null;
+
+                string lowerFieldType = dbTypeString.ToLower();
+
+                if (value is LazyStringValue or LazyCompressedStringValue)
+                {
+                    if (lowerFieldType.Contains("time") || lowerFieldType.Contains("date"))
+                        detectedType = typeof(DateTime);
+                    else
+                        detectedType = typeof(string);
+                }
+                else if (value is LazyNumberValue or long or double)
+                {
+                    if (lowerFieldType.Contains("double"))
+                        detectedType = typeof(double);
+                    else if (lowerFieldType.Contains("decimal"))
+                        detectedType = typeof(decimal);
+                    else if (lowerFieldType.Contains("float"))
+                        detectedType = typeof(float);
+                    else if (lowerFieldType.Contains("bigint"))
+                        detectedType = typeof(long);
+                    else if (lowerFieldType.Contains("int"))
+                        detectedType = typeof(int);
+                    else if (lowerFieldType.Contains("decimal") || lowerFieldType.Contains("money") || lowerFieldType.Contains("numeric"))
+                        detectedType = typeof(decimal);
+                }
+
+                return detectedType;
+            }
+        }
+
+        private static T ParseProviderSpecificParameterType<T>(string dbTypeString) where T : struct, Enum, IConvertible
+        {
+            if (dbTypeString.Contains("|"))
+            {
+                var multipleTypes = dbTypeString.Split('|').Select(e =>
+                {
+                    if (Enum.TryParse(e.Trim(), ignoreCase: true, out T singleProviderSpecificType) == false)
+                        ThrowCouldNotParseDbType();
+
+                    return singleProviderSpecificType;
+                }).ToList();
+
+                return multipleTypes.Aggregate((a, b) => (T)Enum.ToObject(typeof(T), Convert.ToInt32(a) | Convert.ToInt32(b)));
+            }
+
+            if (Enum.TryParse(dbTypeString, ignoreCase: true, out T providerSpecificType) == false)
+                ThrowCouldNotParseDbType();
+
+            return providerSpecificType;
+
+            void ThrowCouldNotParseDbType()
+            {
+                throw new InvalidOperationException(string.Format($"Couldn't parse '{dbTypeString}' as db type."));
             }
         }
 

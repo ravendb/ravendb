@@ -88,7 +88,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
         }
     }
 
-    protected override ClusterTransactionBatchCollector CollectCommandsBatch(TransactionOperationContext context, int take)
+    protected override ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, int take)
     {
         var batchCollector = new ShardedClusterTransactionBatchCollector(this, take);
         var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, ShardedDatabaseName, fromCount: _nextClusterCommand, take: take);

@@ -1,4 +1,6 @@
 ﻿using System;
+using FastTests;
+using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
 using Xunit;
@@ -36,20 +38,27 @@ namespace Tests.Infrastructure
             }
         }
 
-        public override string Skip
+        public AzureTheoryAttribute([CallerMemberName] string memberName = "")
         {
-            get
+            if (RavenTestHelper.IsRunningOnCI)
+                return;
+
+            if (EnvVariableMissing)
             {
-                if (EnvVariableMissing)
-                    return $"Test is missing '{AzureCredentialEnvironmentVariable}' environment variable.";
+                Skip = $"Test is missing '{AzureCredentialEnvironmentVariable}' environment variable.";
+                return;
+            }
 
-                if (string.IsNullOrEmpty(ParsingError) == false)
-                    return $"Failed to parse the Azure settings, error: {ParsingError}";
+            if (string.IsNullOrEmpty(ParsingError) == false)
+            {
+                Skip = $"Failed to parse the Azure settings, error: {ParsingError}";
+                return;
+            }
 
-                if (_azureSettings == null)
-                    return $"Azure tests missing {nameof(AzureSettings)}.";
-
-                return null;
+            if (_azureSettings == null)
+            {
+                Skip = $"Azure {memberName} tests missing {nameof(AzureSettings)}.";
+                return;
             }
         }
     }

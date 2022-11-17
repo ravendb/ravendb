@@ -530,8 +530,7 @@ namespace Raven.Client.Documents.BulkInsert
             if (string.IsNullOrEmpty(id))
                 throw new ArgumentException("Document id cannot be null or empty", nameof(id));
 
-            if (string.IsNullOrEmpty(name))
-                throw new ArgumentException("Time series name cannot be null or empty", nameof(name));
+            ValidateTimeSeriesName(name);
 
             return new TimeSeriesBulkInsert(this, id, name);
         }
@@ -542,10 +541,18 @@ namespace Raven.Client.Documents.BulkInsert
                 throw new ArgumentException("Document id cannot be null or empty", nameof(id));
 
             var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>(_conventions);
-            if (string.IsNullOrEmpty(tsName))
-                throw new ArgumentException("Time series name cannot be null or empty", nameof(name));
+            ValidateTimeSeriesName(tsName);
 
             return new TypedTimeSeriesBulkInsert<TValues>(this, id, tsName);
+        }
+
+        private static void ValidateTimeSeriesName(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentException("Time series name cannot be null or empty,", nameof(name));
+
+            if (name.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && name.Contains('@') == false)
+                throw new ArgumentException($"Time Series name cannot start with {Constants.Headers.IncrementalTimeSeriesPrefix} prefix,", nameof(name));
         }
 
         public struct CountersBulkInsert

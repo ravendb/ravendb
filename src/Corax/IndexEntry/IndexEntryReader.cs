@@ -1,16 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Corax.Mappings;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Compression;
-using Sparrow.Server.Compression;
-using Sparrow.Utils;
 
 namespace Corax;
 
@@ -24,21 +20,23 @@ namespace Corax;
  *  tuple<long, double, string>: <length:variable_size><string_table_ptr:sizeof(int)><long_ptr:variable_size><double[X]:sizeof(double)>
  *                               <strings[X]:sequence><string_length_table[X]:var_int>
  */
-public ref struct IndexEntryReader
+public unsafe struct IndexEntryReader
 {
     private const int Invalid = unchecked((int)0xFFFF_FFFF);
-    private readonly Span<byte> _buffer;
+    private readonly byte* _buffer;
+    private readonly int _bufferLength;
     private int _lastFieldAccessed;
     private int _lastFieldAccessedOffset;
     private bool _lastFieldAccessedIsTyped;
 
-    public int Length => (int)MemoryMarshal.Read<uint>(_buffer);
+    public int Length => *(int*)_buffer;
 
-    public Span<byte> Buffer => _buffer;
+    public Span<byte> Buffer => new (_buffer, _bufferLength);
 
-    public IndexEntryReader(Span<byte> buffer)
+    public IndexEntryReader(byte* buffer, int length)
     {
         _buffer = buffer;
+        _bufferLength = length;
         _lastFieldAccessed = -1;
         Unsafe.SkipInit(out _lastFieldAccessedOffset);
         Unsafe.SkipInit(out _lastFieldAccessedIsTyped);
@@ -57,7 +55,6 @@ public ref struct IndexEntryReader
             _isTyped = isTyped;
             _offset = offset;
         }
-
 
         /// <summary>
         ///  Map binary format into IndexEntryFieldIterator
@@ -130,16 +127,16 @@ public ref struct IndexEntryReader
 
             var buffer = _parent._buffer;
             var intOffset = _offset + sizeof(IndexEntryFieldType);
-            longValue = VariableSizeEncoding.Read<long>(buffer, out int length, intOffset); // Read
+            longValue = VariableSizeEncoding.Read<long>(buffer + intOffset, out int length); // Read
             intOffset += length;
             doubleValue = Unsafe.ReadUnaligned<double>(ref buffer[intOffset]);
             intOffset += sizeof(double);
 
-            int stringLength = VariableSizeEncoding.Read<ushort>(buffer, out length, intOffset);
+            int stringLength = VariableSizeEncoding.Read<ushort>(buffer + intOffset, out length);
             intOffset += length;
 
 
-            sequenceValue = buffer.Slice(intOffset, stringLength);
+            sequenceValue = new Span<byte>(buffer + intOffset, stringLength);
             return true;
 
             Fail:
@@ -162,13 +159,13 @@ public ref struct IndexEntryReader
         /// <returns>Returns IndexEntryFieldIterator</returns>
         public IndexEntryFieldIterator ReadMany()
         {
-            Span<byte> buffer = _parent._buffer;
+            byte* buffer = _parent._buffer;
             if (_offset == Invalid)
                 return new IndexEntryFieldIterator(IndexEntryFieldType.Invalid);
             if (_isTyped == false)
                 throw new ArgumentException($"Field cannot be untyped.");
 
-            var type = (IndexEntryFieldType)VariableSizeEncoding.Read<ushort>(buffer, out var length, _offset);
+            var type = (IndexEntryFieldType)VariableSizeEncoding.Read<ushort>(buffer + _offset, out var length);
             if (type.HasFlag(IndexEntryFieldType.SpatialPointList))
                 throw new NotSupportedException(
                     $"{IndexEntryFieldType.SpatialPointList} is not supported inside {nameof(ReadMany)} Please call {nameof(ReadManySpatialPoint)} or {nameof(TryReadManySpatialPoint)}.");
@@ -196,7 +193,7 @@ public ref struct IndexEntryReader
         private bool ReadFromOffset<T>(int intOffset, out IndexEntryFieldType type, out T value) where T : unmanaged
         {
             var buffer = _parent._buffer;
-            type = (IndexEntryFieldType)VariableSizeEncoding.Read<ushort>(buffer, out _, _offset);
+            type = (IndexEntryFieldType)VariableSizeEncoding.Read<ushort>(buffer + _offset, out _);
 
             if (type == IndexEntryFieldType.Null)
                 goto IsNull;
@@ -205,7 +202,7 @@ public ref struct IndexEntryReader
 
             if ((type & IndexEntryFieldType.Tuple) != 0)
             {
-                var lResult = VariableSizeEncoding.Read<long>(buffer, out int length, intOffset);
+                var lResult = VariableSizeEncoding.Read<long>(buffer + intOffset, out int length);
                 if (typeof(long) == typeof(T))
                 {
                     value = (T)(object)lResult;
@@ -324,7 +321,7 @@ public ref struct IndexEntryReader
             var intOffset = _offset;
             if (_isTyped == false)
             {
-                stringLength = VariableSizeEncoding.Read<int>(buffer, out int readOffset, intOffset);
+                stringLength = VariableSizeEncoding.Read<int>(buffer + intOffset, out int readOffset);
                 intOffset += readOffset;
                 type = IndexEntryFieldType.Simple;
                 goto ReturnSuccessful;
@@ -347,7 +344,7 @@ public ref struct IndexEntryReader
 
             if (type.HasFlag(IndexEntryFieldType.List))
             {
-                int totalElements = VariableSizeEncoding.Read<ushort>(buffer, out int length, intOffset);
+                int totalElements = VariableSizeEncoding.Read<ushort>(buffer + intOffset, out int length);
                 if (elementIdx >= totalElements)
                     goto Fail;
 
@@ -364,7 +361,7 @@ public ref struct IndexEntryReader
 
                 if (type.HasFlag(IndexEntryFieldType.HasNulls))
                 {
-                    if (PtrBitVector.GetBitInSpan(buffer.Slice(spanTableOffset), elementIdx) == true)
+                    if (PtrBitVector.GetBitInPointer(buffer + spanTableOffset, elementIdx) == true)
                         goto HasNull;
 
                     int nullBitStreamSize = totalElements / (sizeof(byte) * 8) + (totalElements % (sizeof(byte) * 8) == 0 ? 0 : 1);
@@ -374,23 +371,23 @@ public ref struct IndexEntryReader
                 // Skip over the number of entries and jump to the string location.
                 for (int i = 0; i < elementIdx; i++)
                 {
-                    stringLength = VariableSizeEncoding.Read<int>(buffer, out length, spanTableOffset);
+                    stringLength = VariableSizeEncoding.Read<int>(buffer + spanTableOffset, out length);
                     intOffset += stringLength;
                     spanTableOffset += length;
                 }
 
-                stringLength = VariableSizeEncoding.Read<int>(buffer, out length, spanTableOffset);
+                stringLength = VariableSizeEncoding.Read<int>(buffer + spanTableOffset, out length);
             }
             else if ((type & IndexEntryFieldType.Raw) != 0)
             {
                 if (type.HasFlag(IndexEntryFieldType.HasNulls))
                 {
                     var spanTableOffset = Unsafe.ReadUnaligned<int>(ref buffer[intOffset]);
-                    if (PtrBitVector.GetBitInSpan(buffer.Slice(spanTableOffset), elementIdx) == true)
+                    if (PtrBitVector.GetBitInPointer(buffer + spanTableOffset, elementIdx) == true)
                         goto HasNull;
                 }
 
-                stringLength = VariableSizeEncoding.Read<int>(buffer, out int readOffset, intOffset);
+                stringLength = VariableSizeEncoding.Read<int>(buffer + intOffset, out int readOffset);
                 intOffset += readOffset;
                 type = IndexEntryFieldType.Raw;
             }
@@ -399,28 +396,28 @@ public ref struct IndexEntryReader
                 if (type.HasFlag(IndexEntryFieldType.HasNulls))
                 {
                     var spanTableOffset = Unsafe.ReadUnaligned<int>(ref buffer[intOffset]);
-                    if (PtrBitVector.GetBitInSpan(buffer.Slice(spanTableOffset), elementIdx) == true)
+                    if (PtrBitVector.GetBitInPointer(buffer + spanTableOffset, elementIdx) == true)
                         goto HasNull;
                 }
 
-                VariableSizeEncoding.Read<long>(buffer, out int length, intOffset); // Skip
+                VariableSizeEncoding.Read<long>(buffer + intOffset, out int length); // Skip
                 intOffset += length;
                 Unsafe.ReadUnaligned<double>(ref buffer[intOffset]);
                 intOffset += sizeof(double);
 
-                stringLength = VariableSizeEncoding.Read<int>(buffer, out int readOffset, intOffset);
+                stringLength = VariableSizeEncoding.Read<int>(buffer + intOffset, out int readOffset);
                 intOffset += readOffset;
             }
             else if ((type & IndexEntryFieldType.SpatialPoint) != 0)
             {
                 intOffset += 2 * sizeof(double);
-                stringLength = VariableSizeEncoding.Read<byte>(buffer, out var length, intOffset);
+                stringLength = VariableSizeEncoding.Read<byte>(buffer + intOffset, out var length);
                 intOffset += length;
             }
 
 
             ReturnSuccessful:
-            value = buffer.Slice(intOffset, stringLength);
+            value = new Span<byte>(buffer + intOffset, stringLength);
             return true;
 
             EmptyList:
@@ -467,26 +464,29 @@ public ref struct IndexEntryReader
 
     public DynamicFieldEnumerator GetEnumerator() => new(this);
 
-    public ref struct DynamicFieldEnumerator
+    public struct DynamicFieldEnumerator
     {
         private readonly IndexEntryReader _parent;
         private int _remaining;
         private int _position;
-        
-        public Span<byte> CurrentFieldName;
+
+        public Span<byte> CurrentFieldName => new (_parent._buffer + _currentValueStart, _currentValueLength);
+        public int _currentValueStart;
+        public int _currentValueLength;
         public int CurrentValueOffset;
         public bool HasType;
-        public IndexEntryFieldType CurrentFieldType => Unsafe.ReadUnaligned<IndexEntryFieldType>(ref _parent._buffer[CurrentValueOffset]);
 
         public DynamicFieldEnumerator(IndexEntryReader parent)
         {
             _parent = parent;
             var buffer = _parent._buffer;
-            ref var header = ref MemoryMarshal.AsRef<IndexEntryHeader>(buffer);
-            _position = checked((int)header.DynamicTable);
-            _remaining = VariableSizeEncoding.Read<int>(buffer, out var offset, _position);
+            var header = (IndexEntryHeader*)buffer;
+            _position = checked((int)header->DynamicTable);
+            _remaining = VariableSizeEncoding.Read<int>(buffer + _position, out var offset);
             _position += offset;
-            CurrentFieldName = default;
+            _currentValueLength = 0;
+            _currentValueStart = 0;
+
             CurrentValueOffset = default;
             HasType = false;
         }
@@ -495,19 +495,22 @@ public ref struct IndexEntryReader
         {
             if (_remaining == 0)
             {
-                CurrentFieldName = default;
+                _currentValueLength = 0;
                 return false;
             }
 
             _remaining--;
             
             var buffer = _parent._buffer;
-            int masked = VariableSizeEncoding.Read<int>(buffer, out var offset, _position);
+            int masked = VariableSizeEncoding.Read<int>(buffer + _position, out var offset);
             int dynamicEntryOffset = masked >>1;
             _position += offset;
-            var len = VariableSizeEncoding.Read<int>(buffer, out offset, dynamicEntryOffset);
-            CurrentFieldName = buffer[(dynamicEntryOffset + offset)..(dynamicEntryOffset + offset + len)];
-            CurrentValueOffset = dynamicEntryOffset + offset + len;
+
+            var len = VariableSizeEncoding.Read<int>(buffer + dynamicEntryOffset, out offset);
+            _currentValueStart = dynamicEntryOffset + offset;
+            _currentValueLength = len;
+            CurrentValueOffset = _currentValueStart + len;
+
             HasType = (masked & 1) != 0; 
             return true;
         }
@@ -598,7 +601,7 @@ public ref struct IndexEntryReader
 
 
     
-    private (int offset, bool isTyped) GetMetadataFieldLocation(Span<byte> buffer, int field)
+    private (int offset, bool isTyped) GetMetadataFieldLocation(byte* buffer, int field)
     {
         if (field == _lastFieldAccessed)
         {
@@ -623,37 +626,37 @@ public ref struct IndexEntryReader
     };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static (int offset, bool isTyped) GetMetadataFieldLocationUnlikely(Span<byte> buffer, int field)
+    private static (int offset, bool isTyped) GetMetadataFieldLocationUnlikely(byte* buffer, int field)
     {
-        ref var header = ref MemoryMarshal.AsRef<IndexEntryHeader>(buffer);
+        var header = (IndexEntryHeader*) buffer;
 
-        ushort knownFieldsCount = (ushort)(header.KnownFieldCount >> 2);
-        IndexEntryTableEncoding encoding = (IndexEntryTableEncoding)(header.KnownFieldCount & 0b11);
+        ushort knownFieldsCount = (ushort)(header->KnownFieldCount >> 2);
+        IndexEntryTableEncoding encoding = (IndexEntryTableEncoding)(header->KnownFieldCount & 0b11);
 
         int encodeSize = TableEncodingLookupTable[(int)encoding];
-        Debug.Assert(header.Length == (int)header.Length);
-        int locationOffset = (int)header.Length - (knownFieldsCount * encodeSize) + field * encodeSize;
+        Debug.Assert(header->Length == (int)header->Length);
+        int locationOffset = (int)header->Length - (knownFieldsCount * encodeSize) + field * encodeSize;
 
         int offset;
         switch (encoding)
         {
             case IndexEntryTableEncoding.OneByte:
             {
-                offset = Unsafe.ReadUnaligned<byte>(ref buffer[locationOffset]);
+                offset = buffer[locationOffset];
                 if (offset == 0xFF)
                     goto Fail;
                 goto End;
             }
             case IndexEntryTableEncoding.TwoBytes:
             {
-                offset = Unsafe.ReadUnaligned<ushort>(ref buffer[locationOffset]);
-                if (offset == 0xFFFF)
+                offset = *(ushort*)(buffer + locationOffset);
+                    if (offset == 0xFFFF)
                     goto Fail;
                 goto End;
             }
             case IndexEntryTableEncoding.FourBytes:
             {
-                offset = (int)Unsafe.ReadUnaligned<uint>(ref buffer[locationOffset]);
+                offset = *(int*)(buffer + locationOffset);
                 if (offset == unchecked((int)0xFFFF_FFFF))
                     goto Fail;
                 goto End;
@@ -756,16 +759,15 @@ public ref struct IndexEntryReader
             goto NullOrEmpty;
         }
 
-        longValue = VariableSizeEncoding.Read<long>(_buffer, out int length, intOffset); // Read
+        longValue = VariableSizeEncoding.Read<long>(_buffer + intOffset, out int length); // Read
         intOffset += length;
         doubleValue = Unsafe.ReadUnaligned<double>(ref _buffer[intOffset]);
         intOffset += sizeof(double);
 
-        int stringLength = VariableSizeEncoding.Read<ushort>(_buffer, out length, intOffset);
+        int stringLength = VariableSizeEncoding.Read<ushort>(_buffer + intOffset, out length);
         intOffset += length;
 
-
-        sequenceValue = _buffer.Slice(intOffset, stringLength);
+        sequenceValue = new Span<byte>(_buffer + intOffset, stringLength);
         return true;
 
 

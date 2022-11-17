@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using MySql.Data.MySqlClient;
+using NpgsqlTypes;
+using Oracle.ManagedDataAccess.Client;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
 
@@ -15,6 +19,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         private readonly SqlEtlConfiguration _configuration;
         private readonly DbProviderFactory _providerFactory;
         private readonly DbCommandBuilder _commandBuilder;
+        private readonly SqlProvider _providerType;
 
         public RelationalDatabaseWriterSimulator(SqlEtlConfiguration configuration) 
             : base(configuration.Connection.FactoryName)
@@ -22,6 +27,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             _configuration = configuration;
             _providerFactory = DbProviderFactories.GetFactory(configuration.Connection.FactoryName);
             _commandBuilder = _providerFactory.InitializeCommandBuilder();
+            _providerType = SqlProviderParser.GetSupportedProvider(configuration.Connection.FactoryName);
         }
 
         public IEnumerable<string> SimulateExecuteCommandText(SqlTableWithRecords records, CancellationToken token)
@@ -72,8 +78,27 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 {
                     if (column.Id == pkName)
                         continue;
-                     DbParameter param = new SqlParameter();
-                     RelationalDatabaseWriter.SetParamValue(param, column, null);
+                    DbParameter param;
+                    
+                    switch (_providerType)
+                    {
+                        case SqlProvider.SqlClient:
+                            param = new SqlParameter();
+                            break;
+                        case SqlProvider.Npgsql:
+                            param = new Npgsql.NpgsqlParameter();
+                            break;
+                        case SqlProvider.MySqlClient:
+                            param = new MySqlParameter();
+                            break;
+                        case SqlProvider.OracleClient:
+                            param = new OracleParameter();
+                            break;
+                        default:
+                            throw new NotSupportedException($"Factory provider '{_providerType}' is not supported");
+                    }
+                    
+                     RelationalDatabaseWriter.SetParamValue(param, column, null, _providerType);
 
                     sb.Append(TableQuerySummary.GetParameterValue(param)).Append(", ");
                 }

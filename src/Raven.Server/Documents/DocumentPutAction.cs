@@ -86,7 +86,7 @@ namespace Raven.Server.Documents
                     {
                         throw new ConcurrencyException(
                             $"Cannot PUT document '{id}' because its change vector's cluster transaction index is set to {indexFromChangeVector} " +
-                            $"but the compare exchange guard ('{ClusterTransactionCommand.GetAtomicGuardKey(id)}') is set to {indexFromCluster}")
+                            $"but the compare exchange guard ('{ClusterTransactionCommand.GetAtomicGuardKey(id)}') is {(val == null ? "missing" : $"set to {indexFromCluster}")}")
                         {
                             Id = id
                         };

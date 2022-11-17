@@ -6,45 +6,60 @@ namespace Tests.Infrastructure.ConnectionString
     public abstract class SqlConnectionString<T> where T : DbConnection, new()
     {
         private readonly string _environmentVariable;
-        private Lazy<string> ConnectionString { get;}
+        private Lazy<string> ConnectionString { get; }
 
         protected string AdditionFlags { private get; set; } = string.Empty;
-        
+
         public Lazy<string> VerifiedConnectionString { get; }
+
+        private readonly Lazy<bool> _canConnect;
+
+        public bool CanConnect => _canConnect.Value;
 
         protected SqlConnectionString(string environmentVariable)
         {
             _environmentVariable = environmentVariable;
-            VerifiedConnectionString = new Lazy<string>(VerifiedConnectionStringFactor);
-            
+
             ConnectionString = new Lazy<string>(() =>
             {
                 var connectionString = Environment.GetEnvironmentVariable(environmentVariable);
-                return string.IsNullOrEmpty(connectionString) 
+                return string.IsNullOrEmpty(connectionString)
                     ? string.Empty
                     : string.Join(';', connectionString, AdditionFlags);
             });
+
+            VerifiedConnectionString = new Lazy<string>(() =>
+            {
+                var connectionString = ConnectionString.Value;
+                return VerifiedConnectionStringFactory(connectionString);
+            });
+
+            _canConnect = new Lazy<bool>(CanConnectInternal);
         }
 
-        public bool CanConnect()
+        private bool CanConnectInternal()
         {
             try
             {
-                VerifiedConnectionStringFactor();
+                var connectionString = ConnectionString.Value;
+                if (string.IsNullOrEmpty(connectionString))
+                    return false;
+
+                VerifiedConnectionStringFactory(connectionString);
                 return true;
             }
-            catch(Exception)
+            catch (Exception)
             {
                 return false;
             }
         }
 
-        protected virtual string VerifiedConnectionStringFactor()
+        protected virtual string VerifiedConnectionStringFactory(string connectionString)
         {
-            if(string.IsNullOrEmpty(ConnectionString.Value))
+            if (string.IsNullOrEmpty(connectionString))
                 throw new InvalidOperationException($"Environment variable {_environmentVariable} is empty");
 
-            var connectionString = string.Join(";", ConnectionString.Value, $"{TimeOutParameter}=3");
+            connectionString = string.Join(";", connectionString, $"{TimeOutParameter}=3");
 
             try
             {
@@ -61,7 +76,7 @@ namespace Tests.Infrastructure.ConnectionString
                 throw new InvalidOperationException($"Can't connect to {nameof(T)}. Connection string is {connectionString}", e);
             }
         }
-        
+
         protected virtual string TimeOutParameter => "connection timeout";
     }
 }

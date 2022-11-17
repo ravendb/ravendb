@@ -212,35 +212,35 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
                     <tr>
                         <td>
                             <i className="icon-documents"></i>
-                            <span>Documents Count</span>
+                            <span>Documents</span>
                         </td>
                         <DetailsBlock>{(data) => <>{data.CountOfDocuments.toLocaleString()}</>}</DetailsBlock>
                     </tr>
                     <tr>
                         <td>
                             <i className="icon-new-counter"></i>
-                            <span>Counters Count</span>
+                            <span>Counters</span>
                         </td>
                         <DetailsBlock>{(data) => <>{data.CountOfCounterEntries.toLocaleString()}</>}</DetailsBlock>
                     </tr>
                     <tr>
                         <td>
                             <i className="icon-identities"></i>
-                            <span>Identities Count</span>
+                            <span>Identities</span>
                         </td>
                         <DetailsBlock>{(data) => <>{data.CountOfIdentities.toLocaleString()}</>}</DetailsBlock>
                     </tr>
                     <tr>
                         <td>
                             <i className="icon-indexing"></i>
-                            <span>Indexes Count</span>
+                            <span>Indexes</span>
                         </td>
                         <DetailsBlock>{(data) => <>{data.CountOfIndexes.toLocaleString()}</>}</DetailsBlock>
                     </tr>
                     <tr>
                         <td>
                             <i className="icon-revisions"></i>
-                            <span>Revisions Count</span>
+                            <span>Revisions</span>
                         </td>
                         <DetailsBlock>
                             {(data) => <>{(data.CountOfRevisionDocuments ?? 0).toLocaleString()}</>}
@@ -249,14 +249,14 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
                     <tr>
                         <td>
                             <i className="icon-conflicts"></i>
-                            <span>Conflicts Count</span>
+                            <span>Conflicts</span>
                         </td>
                         <DetailsBlock>{(data) => <>{data.CountOfDocumentsConflicts.toLocaleString()}</>}</DetailsBlock>
                     </tr>
                     <tr>
                         <td>
                             <i className="icon-attachment"></i>
-                            <span>Attachments Count</span>
+                            <span>Attachments</span>
                         </td>
                         <DetailsBlock>
                             {(data) => (
@@ -279,21 +279,21 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
                     <tr>
                         <td>
                             <i className="icon-cmp-xchg"></i>
-                            <span>Compare Exchange Count</span>
+                            <span>Compare Exchange</span>
                         </td>
                         <DetailsBlock>{(data) => <>{data.CountOfCompareExchange.toLocaleString()}</>}</DetailsBlock>
                     </tr>
                     <tr>
                         <td>
                             <i className="icon-zombie"></i>
-                            <span>Tombstones Count</span>
+                            <span>Tombstones</span>
                         </td>
                         <DetailsBlock>{(data) => <>{data.CountOfTombstones.toLocaleString()}</>}</DetailsBlock>
                     </tr>
                     <tr>
                         <td>
                             <i className="icon-timeseries-settings"></i>
-                            <span>Time Series Segments Count</span>
+                            <span>Time Series Segments</span>
                         </td>
                         <DetailsBlock>{(data) => <>{data.CountOfTimeSeriesSegments.toLocaleString()}</>}</DetailsBlock>
                     </tr>

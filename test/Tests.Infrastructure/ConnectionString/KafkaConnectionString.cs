@@ -11,21 +11,31 @@ public class KafkaConnectionString
 
     public static KafkaConnectionString Instance => _instance ??= new KafkaConnectionString();
 
-    private KafkaConnectionString()
-    {
-        VerifiedUrl = new Lazy<string>(VerifiedNodesValueFactory);
-
-        Url = new Lazy<string>(() => Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty);
-    }
+    private readonly Lazy<bool> _canConnect;
 
     private Lazy<string> Url { get; }
 
     public Lazy<string> VerifiedUrl { get; }
 
-    public bool CanConnect()
+    public bool CanConnect => _canConnect.Value;
+
+    private KafkaConnectionString()
+    {
+        VerifiedUrl = new Lazy<string>(VerifiedNodesValueFactory);
+
+        Url = new Lazy<string>(() => Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty);
+
+        _canConnect = new Lazy<bool>(CanConnectInternal);
+    }
+
+    private bool CanConnectInternal()
     {
         try
         {
+            var url = Url.Value;
+            if (string.IsNullOrEmpty(url))
+                return false;
+
             VerifiedNodesValueFactory();
             return true;
         }
@@ -57,8 +67,8 @@ public class KafkaConnectionString
             try
             {
                 var config = new AdminClientConfig() { BootstrapServers = url };
-                using var adminClient = new AdminClientBuilder(config).Build(); 
-                
+                using var adminClient = new AdminClientBuilder(config).Build();
+
                 adminClient.GetMetadata(TimeSpan.FromSeconds(2));
                 exception = null;
 

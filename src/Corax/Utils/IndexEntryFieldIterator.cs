@@ -1,13 +1,11 @@
 using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using Sparrow.Compression;
 
 namespace Corax
 {
-    public ref struct IndexEntryFieldIterator
+    public unsafe struct IndexEntryFieldIterator
     {
         private const int Invalid = -1;
         
@@ -16,10 +14,11 @@ namespace Corax
         public readonly int Count;
         private int _currentIdx;
 
-        private readonly ReadOnlySpan<byte> _buffer;
+        private readonly byte* _buffer;
+
         private int _spanOffset;
         private int _spanTableOffset;
-        private int _nullTableOffset;
+        private readonly int _nullTableOffset;
         private int _longOffset;
         private int _doubleOffset;
         private int _stringLength;
@@ -29,7 +28,7 @@ namespace Corax
             Debug.Assert(type == IndexEntryFieldType.Invalid);
             Type = IndexEntryFieldType.Invalid;
             Count = 0;
-            _buffer = ReadOnlySpan<byte>.Empty;
+            _buffer = null;
             IsValid = false;
             _currentIdx = Invalid;
 
@@ -42,11 +41,11 @@ namespace Corax
             _stringLength = Invalid;
         }
 
-        public IndexEntryFieldIterator(ReadOnlySpan<byte> buffer, int offset)
+        public IndexEntryFieldIterator(byte* buffer, int offset)
         {
             _buffer = buffer;
 
-            Type = MemoryMarshal.Read<IndexEntryFieldType>(buffer.Slice(offset));
+            Type = *(IndexEntryFieldType*)(buffer + offset);
             offset += sizeof(IndexEntryFieldType);
 
             if (Type.HasFlag(IndexEntryFieldType.List) == false)
@@ -64,13 +63,13 @@ namespace Corax
                 return;
             }
 
-            Count = VariableSizeEncoding.Read<ushort>(_buffer, out var length, offset);
+            Count = VariableSizeEncoding.Read<ushort>(_buffer + offset, out var length);
             offset += length;
 
-            _nullTableOffset = MemoryMarshal.Read<int>(_buffer[offset..]);
+            _nullTableOffset = *(int*)(_buffer + offset);
             if (Type.HasFlag(IndexEntryFieldType.Tuple) && !Type.HasFlag(IndexEntryFieldType.Empty))
             {
-                _longOffset = MemoryMarshal.Read<int>(_buffer[(offset + sizeof(int))..]);
+                _longOffset = *(int*)(_buffer + offset + sizeof(int));
                 _doubleOffset = (offset + 2 * sizeof(int)); // Skip the pointer from sequences and longs.
 
                 if (Type.HasFlag(IndexEntryFieldType.HasNulls))
@@ -121,13 +120,7 @@ namespace Corax
                 if (!Type.HasFlag(IndexEntryFieldType.HasNulls))
                     return false;
 
-                unsafe
-                {
-                    fixed (byte* nullTablePtr = _buffer)
-                    {
-                        return PtrBitVector.GetBitInPointer(nullTablePtr + _nullTableOffset, _currentIdx);
-                    }
-                }
+                return PtrBitVector.GetBitInPointer(_buffer + _nullTableOffset, _currentIdx);
             }
         }
 
@@ -156,7 +149,7 @@ namespace Corax
                     throw new InvalidOperationException($"Cannot call {nameof(IsEmptyString)} on an invalid iterator.");
                 
                 if (_stringLength == Invalid)
-                    _stringLength = VariableSizeEncoding.Read<int>(_buffer, out _, _spanTableOffset);
+                    _stringLength = VariableSizeEncoding.Read<int>(_buffer + _spanTableOffset, out _);
 
                 return _stringLength == 0;
             }
@@ -176,9 +169,9 @@ namespace Corax
                     throw new InvalidOperationException($"Cannot call {nameof(IsNull)} before calling {nameof(ReadNext)}.");
 
                 if (_stringLength == Invalid)
-                    _stringLength = VariableSizeEncoding.Read<int>(_buffer, out _, _spanTableOffset);
+                    _stringLength = VariableSizeEncoding.Read<int>(_buffer + _spanTableOffset, out _);
                 
-                return _buffer.Slice(_spanOffset, _stringLength);
+                return new ReadOnlySpan<byte>(_buffer + _spanOffset, _stringLength);
             }
         }
 
@@ -197,7 +190,7 @@ namespace Corax
                 if (_currentIdx < 0)
                     throw new InvalidOperationException($"Cannot call {nameof(IsNull)} before calling {nameof(ReadNext)}.");
 
-                return VariableSizeEncoding.Read<long>(_buffer, out _, _longOffset);
+                return VariableSizeEncoding.Read<long>(_buffer + _longOffset, out _);
             }
         }
 
@@ -217,7 +210,7 @@ namespace Corax
                 if (_currentIdx < 0)
                     throw new InvalidOperationException($"Cannot call {nameof(IsNull)} before calling {nameof(ReadNext)}.");
 
-                return Unsafe.ReadUnaligned<double>(ref MemoryMarshal.GetReference(_buffer[_doubleOffset..]));
+                return *(double*)(_buffer + _doubleOffset);
             }
         }
 
@@ -232,7 +225,7 @@ namespace Corax
             if (_currentIdx > 0)
             {
                 // This two have fixed size. 
-                _spanOffset += VariableSizeEncoding.Read<int>(_buffer, out var length, _spanTableOffset);
+                _spanOffset += VariableSizeEncoding.Read<int>(_buffer + _spanTableOffset, out var length);
                 _spanTableOffset += length;
 
                 if (Type.HasFlag(IndexEntryFieldType.Tuple))
@@ -240,11 +233,10 @@ namespace Corax
                     // This is a tuple, so we update these too.
                     _doubleOffset += sizeof(double);
 
-                    VariableSizeEncoding.Read<long>(_buffer, out length, _longOffset);
+                    VariableSizeEncoding.Read<long>(_buffer + _longOffset, out length);
                     _longOffset += length;
                 }
             }
-
 
             return true;
         }

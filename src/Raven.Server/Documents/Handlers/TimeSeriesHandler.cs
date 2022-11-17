@@ -313,14 +313,17 @@ namespace Raven.Server.Documents.Handlers
                 return changes;
             }
 
-            public void AddToDictionary(TimeSeriesItem item)
+            public bool AddToDictionary(TimeSeriesItem item)
             {
+                bool newItem = false;
                 if (_dictionary.TryGetValue(item.DocId, out var itemsList) == false)
                 {
                     _dictionary[item.DocId] = itemsList = new List<TimeSeriesItem>();
+                    newItem = true;
                 }
 
                 itemsList.Add(item);
+                return newItem;
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)

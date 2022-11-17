@@ -74,7 +74,7 @@ class replicationAccessBaseModel {
     }
     
     getSingleDocumentPatternWarning() {
-        return "Path patterns that do Not end with * (asterisk) will match only a single document";
+        return "Path patterns that do not end with * (asterisk) will match only a single document";
     }
 
     addHubToSinkInputPrefixWithBlink() {

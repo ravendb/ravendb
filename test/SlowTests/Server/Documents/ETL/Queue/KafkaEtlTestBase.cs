@@ -102,7 +102,7 @@ loadToOrders" + TopicSuffix + @"(orderData);
 
     private void CleanupTopic()
     {
-        if (_definedTopics.Count == 0 || RequiresKafkaFactAttribute.CanConnect == false)
+        if (_definedTopics.Count == 0 || RequiresKafkaRetryFactAttribute.CanConnect == false)
             return;
 
         var config = new AdminClientConfig { BootstrapServers = KafkaConnectionString.Instance.VerifiedUrl.Value };
