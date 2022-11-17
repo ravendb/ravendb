@@ -65,7 +65,7 @@ namespace FastTests.Client
                 "GetNextServerOperationIdCommand", "KillServerOperationCommand", "ModifyDatabaseTopologyCommand",
                 "PutDatabaseClientConfigurationCommand", "PutDatabaseSettingsCommand", "PutDatabaseStudioConfigurationCommand",
                 "GetNextServerOperationIdCommand", "KillServerOperationCommand",
-                "GetEssentialStatisticsCommand", "GetMultipleTimeSeriesRangesCommand",
+                "GetEssentialStatisticsCommand", "GetMultipleTimeSeriesRangesCommand", "GetShardedPeriodicBackupStatusCommand,"
                 "AddNodeToOrchestratorTopologyCommand", "RemoveNodeFromOrchestratorTopologyCommand"
             }.OrderBy(t => t);
 
