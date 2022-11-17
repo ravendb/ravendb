@@ -20,7 +20,7 @@ using Sparrow.Server.Json.Sync;
 namespace Raven.Server.Documents.Patch
 {
     [DebuggerDisplay("Blittable JS object")]
-    public class BlittableObjectInstance : ObjectInstance
+    public sealed class BlittableObjectInstance : ObjectInstance
     {
         public bool Changed;
         private readonly BlittableObjectInstance _parent;
@@ -31,8 +31,8 @@ namespace Raven.Server.Documents.Patch
         public readonly string ChangeVector;
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
-        public HashSet<JsValue> Deletes;
-        public Dictionary<JsValue, BlittableObjectProperty> OwnValues;
+        public HashSet<string> Deletes;
+        public Dictionary<string, BlittableObjectProperty> OwnValues;
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
         public IState LuceneState;
@@ -50,16 +50,16 @@ namespace Raven.Server.Documents.Patch
             _parent?.MarkChanged();
         }
 
-        public ObjectInstance GetOrCreate(JsValue key)
+        public ObjectInstance GetOrCreate(string key)
         {
             BlittableObjectProperty property = default;
             if (OwnValues?.TryGetValue(key, out property) == true &&
                 property != null)
                 return property.Value.AsObject();
 
-            property = GenerateProperty(key.AsString());
+            property = GenerateProperty(key);
 
-            OwnValues ??= new Dictionary<JsValue, BlittableObjectProperty>(Blittable.Count);
+            OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
 
             OwnValues[key] = property;
             Deletes?.Remove(key);
@@ -378,20 +378,33 @@ namespace Raven.Server.Documents.Patch
 
         public override bool Delete(JsValue property)
         {
-            if (Deletes == null)
-                Deletes = new HashSet<JsValue>();
+            if (property.IsString() == false)
+                return false;
 
-            var desc = GetOwnProperty(property);
+            string name = property.AsString();
+
+            if (Deletes == null)
+                Deletes = new HashSet<string>();
+
+            var desc = GetOwnProperty(name);
 
             if (desc == PropertyDescriptor.Undefined)
                 return true;
 
             MarkChanged();
-            Deletes.Add(property);
-            return OwnValues?.Remove(property) == true;
+            Deletes.Add(name);
+            return OwnValues?.Remove(name) == true;
         }
 
         public override PropertyDescriptor GetOwnProperty(JsValue property)
+        {
+            if (property.IsString() == false)
+                return PropertyDescriptor.Undefined;
+
+            return GetOwnProperty(property.AsString());
+        }
+
+        public PropertyDescriptor GetOwnProperty(string property)
         {
             BlittableObjectProperty val = default;
             if (OwnValues?.TryGetValue(property, out val) == true &&
@@ -400,7 +413,7 @@ namespace Raven.Server.Documents.Patch
 
             Deletes?.Remove(property);
 
-            val = new BlittableObjectProperty(this, property.AsString());
+            val = new BlittableObjectProperty(this, property);
 
             if (val.Value.IsUndefined() &&
                 DocumentId == null &&
@@ -409,7 +422,7 @@ namespace Raven.Server.Documents.Patch
                 return PropertyDescriptor.Undefined;
             }
 
-            OwnValues ??= new Dictionary<JsValue, BlittableObjectProperty>(Blittable.Count);
+            OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
 
             OwnValues[property] = val;
 
@@ -418,6 +431,15 @@ namespace Raven.Server.Documents.Patch
 
         public override bool Set(JsValue property, JsValue value, JsValue receiver)
         {
+            if (property.IsString() == false)
+                return false;
+
+            // check fast path for direct write
+            if (ReferenceEquals(receiver, this) && Extensible)
+            {
+                return SetDirect(property.AsString(), value);
+            }
+
             _set = true;
             try
             {
@@ -427,6 +449,29 @@ namespace Raven.Server.Documents.Patch
             {
                 _set = false;
             }
+        }
+
+        public override bool DefineOwnProperty(JsValue property, PropertyDescriptor desc)
+        {
+            if (property.IsString() == false)
+                return false;
+
+            return SetDirect(property.AsString(), desc.Value);
+        }
+
+        private bool SetDirect(string property, JsValue value)
+        {
+            OwnValues ??= new Dictionary<string, BlittableObjectProperty>(Blittable.Count);
+            Deletes?.Remove(property);
+
+            var val = new BlittableObjectProperty(this, property)
+            {
+                Value = value
+            };
+
+            OwnValues[property] = val;
+
+            return true;
         }
 
         public override IEnumerable<KeyValuePair<JsValue, PropertyDescriptor>> GetOwnProperties()
@@ -444,14 +489,13 @@ namespace Raven.Server.Documents.Patch
 
             foreach (var prop in Blittable.GetPropertyNames())
             {
-                JsValue key = prop;
-                if (Deletes?.Contains(key) == true)
+                if (Deletes?.Contains(prop) == true)
                     continue;
                 if (OwnValues?.ContainsKey(prop) == true)
                     continue;
                 yield return new KeyValuePair<JsValue, PropertyDescriptor>(
                     prop,
-                    GetOwnProperty(key)
+                    GetOwnProperty(prop)
                     );
             }
         }
@@ -471,10 +515,9 @@ namespace Raven.Server.Documents.Patch
 
             foreach (var prop in Blittable.GetPropertyNames())
             {
-                JsValue key = prop;
-                if (Deletes?.Contains(key) == true)
+                if (Deletes?.Contains(prop) == true)
                     continue;
-                if (OwnValues != null && OwnValues.ContainsKey(key))
+                if (OwnValues != null && OwnValues.ContainsKey(prop))
                     continue;
 
                 list.Add(prop);

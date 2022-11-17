@@ -10,7 +10,7 @@ using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
-    public class AttachmentObjectInstance : ObjectInstanceBase
+    public sealed class AttachmentObjectInstance : ObjectInstanceBase
     {
         private const string GetContentAsStringMethodName = "getContentAsString";
 

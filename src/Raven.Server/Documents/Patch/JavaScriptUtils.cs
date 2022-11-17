@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Patch
                     Context.ReadObject(metadata, boi.DocumentId);
                 
                 JsValue metadataJs = TranslateToJs(_scriptEngine, Context, metadata);
-                boi.Set(new JsString(Constants.Documents.Metadata.Key), metadataJs);
+                boi.Set(Constants.Documents.Metadata.Key, metadataJs);
 
                 return metadataJs;
             }
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Patch
             for (var i = 0; i < values.Length; i++)
                 values[i] = new AttachmentObjectInstance(_scriptEngine, attachments[i]);
 
-            var array = _scriptEngine.Array.Construct(Arguments.Empty);
+            var array = _scriptEngine.Array.Construct(values.Length);
             _scriptEngine.Array.PrototypeObject.Push(array, values);
 
             return array;
@@ -318,35 +318,35 @@ namespace Raven.Server.Documents.Patch
                 return lng;
             if (o is BlittableJsonReaderArray bjra)
             {
-                var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
-                var args = new JsValue[1];
+                var jsArray = engine.Array.Construct(bjra.Length);
+                var args = new JsValue[bjra.Length];
                 for (var i = 0; i < bjra.Length; i++)
                 {
-                    args[0] = TranslateToJs(engine, context, bjra[i]);
-                    engine.Array.PrototypeObject.Push(jsArray, args);
+                    args[i] = TranslateToJs(engine, context, bjra[i]);
                 }
+                engine.Array.PrototypeObject.Push(jsArray, args);
                 return jsArray;
             }
             if (o is List<object> list)
             {
-                var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
-                var args = new JsValue[1];
+                var jsArray = engine.Array.Construct(list.Count);
+                var args = new JsValue[list.Count];
                 for (var i = 0; i < list.Count; i++)
                 {
-                    args[0] = TranslateToJs(engine, context, list[i]);
-                    engine.Array.PrototypeObject.Push(jsArray, args);
+                    args[i] = TranslateToJs(engine, context, list[i]);
                 }
+                engine.Array.PrototypeObject.Push(jsArray, args);
                 return jsArray;
             }
             if (o is List<Document> docList)
             {
-                var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
-                var args = new JsValue[1];
+                var jsArray = engine.Array.Construct(docList.Count);
+                var args = new JsValue[docList.Count];
                 for (var i = 0; i < docList.Count; i++)
                 {
-                    args[0] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i]);
-                    engine.Array.PrototypeObject.Push(jsArray, args);
+                    args[i] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i]);
                 }
+                engine.Array.PrototypeObject.Push(jsArray, args);
                 return jsArray;
             }
             // for admin

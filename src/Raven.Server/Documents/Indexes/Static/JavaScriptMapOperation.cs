@@ -185,12 +185,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (MoreArguments != null)
             {
-                for (int i = 0; i < MoreArguments.Length; i++)
+                for (uint i = 0; i < MoreArguments.Length; i++)
                 {
-                    var arg = MoreArguments.Get(i.ToString()).As<FunctionInstance>();
+                    var arg = MoreArguments[i].As<FunctionInstance>();
 
-                    if (!(arg is ScriptFunctionInstance sfi))
+                    if (arg is not ScriptFunctionInstance sfi)
                         continue;
+
                     var moreFuncAst = sfi.FunctionDeclaration;
                     field = moreFuncAst.TryGetFieldFromSimpleLambdaExpression();
                     if (field != null)
