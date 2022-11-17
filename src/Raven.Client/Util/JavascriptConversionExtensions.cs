@@ -136,24 +136,23 @@ namespace Raven.Client.Util
 
             private void HandleMap(JavascriptConversionContext context, MethodCallExpression mce)
             {
-                if (mce.Arguments.Count < 2 || !(mce.Arguments[1] is LambdaExpression lambda))
+                if (mce.Arguments.Count < 2 || mce.Arguments[1] is not LambdaExpression lambda)
                     return;
 
                 _paramName = lambda.Parameters[0]?.Name;
 
                 context.PreventDefault();
                 var writer = context.GetWriter();
-                using (writer.Operation(lambda))
-                {
-                    writer.Write("Object.map(");
-                    context.Visitor.Visit(mce.Arguments[0]);
-                    writer.Write(", function(v, k){ return ");
-                    context.Visitor.Visit(lambda.Body);
-                    writer.Write(";})");
 
-                    _innerCallExpected = default;
-                    _paramName = string.Empty;
-                }
+                writer.Write("Object.map(");
+                context.Visitor.Visit(mce.Arguments[0]);
+                writer.Write(", (v, k) => ");
+                using (writer.Operation(lambda))
+                    context.Visitor.Visit(lambda.Body);
+                writer.Write(")");
+
+                _innerCallExpected = default;
+                _paramName = string.Empty;
             }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
@@ -242,24 +241,23 @@ namespace Raven.Client.Util
                         // Do not translate Key (we already have the keys here!)
                         if (currentCall != DictionaryInnerCall.Key)
                         {
-                            writer.Write(".map(function(a){");
+                            writer.Write(".map(a=>");
 
                             switch (currentCall)
                             {
                                 case DictionaryInnerCall.Value:
-                                    writer.Write("return ");
                                     context.Visitor.Visit(context.Node);
-                                    writer.Write("[a];");
+                                    writer.Write("[a]");
                                     break;
 
                                 case DictionaryInnerCall.KeyValue:
-                                    writer.Write("return{Key: a,Value:");
+                                    writer.Write("({Key: a,Value:");
                                     context.Visitor.Visit(context.Node);
-                                    writer.Write("[a]};");
+                                    writer.Write("[a]})");
                                     break;
                             }
 
-                            writer.Write("})");
+                            writer.Write(")");
                         }
                     }
                 }
@@ -355,8 +353,11 @@ namespace Raven.Client.Util
                         break;
 
                     case "IndexOf":
-                    case "Contains":
                         newName = "indexOf";
+                        break;
+
+                    case "Contains":
+                        newName = "includes";
                         break;
 
                     case "Cast":
@@ -415,7 +416,7 @@ namespace Raven.Client.Util
                             using (writer.Operation(methodCallExpression))
                             {
                                 context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                                writer.Write(".reduce(function(_obj, _cur) {");
+                                writer.Write(".reduce((_obj, _cur) => { ");
                                 writer.Write("_obj[");
                                 context.Visitor.Visit(methodCallExpression.Arguments[1]);
                                 writer.Write("(_cur)] = ");
@@ -430,8 +431,8 @@ namespace Raven.Client.Util
                                     writer.Write("_cur;");
                                 }
 
-                                writer.Write("return _obj;");
-                                writer.Write("}, {})");
+                                writer.Write(" return _obj; }");
+                                writer.Write(", {})");
                             }
                             return;
                         }
@@ -464,12 +465,11 @@ namespace Raven.Client.Util
                             {
                                 if (methodCallExpression.Arguments.Count > 1)
                                 {
-                                    writer.Write(".slice().reverse().find");
+                                    writer.Write(".findLast");
                                     context.Visitor.Visit(methodCallExpression.Arguments[1]);
                                     return;
                                 }
-                                // arrayExpr.slice([-1])[0] will get the last value
-                                writer.Write(".slice(-1)[0]");
+                                writer.Write(".at(-1)");
                                 return;
                             }
                         }
@@ -493,7 +493,7 @@ namespace Raven.Client.Util
                             var writer = context.GetWriter();
                             using (writer.Operation(methodCallExpression))
                             {
-                                writer.Write(".slice().reverse()");
+                                writer.Write(".toReversed()");
                                 return;
                             }
                         }
@@ -572,7 +572,7 @@ namespace Raven.Client.Util
                             var writer = context.GetWriter();
                             using (writer.Operation(methodCallExpression))
                             {
-                                writer.Write($"(function(arr){{return arr.length > 0 ? arr : [{defaultVal ?? "null"}]}})(");
+                                writer.Write($"(arr => arr.length > 0 ? arr : [{defaultVal ?? "null"}])(");
                                 context.Visitor.Visit(methodCallExpression.Arguments[0]);
                                 writer.Write(")");
                                 return;
@@ -588,8 +588,8 @@ namespace Raven.Client.Util
                             {
                                 if (IsDictionary(methodCallExpression.Arguments[0].Type))
                                 {
-                                    if (!(methodCallExpression.Arguments[1] is LambdaExpression lambda) ||
-                                        !(lambda.Body is MemberExpression member) ||
+                                    if (methodCallExpression.Arguments[1] is not LambdaExpression lambda ||
+                                        lambda.Body is not MemberExpression member ||
                                         member.Member.Name != "Key" && member.Member.Name != "Value")
                                         return;
 
@@ -601,21 +601,20 @@ namespace Raven.Client.Util
 
                                     if (member.Member.Name == "Value")
                                     {
-                                        writer.Write(".map(function(k){return ");
+                                        writer.Write(".map(k=>");
                                         context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                                        writer.Write("[k]})");
+                                        writer.Write("[k])");
                                     }
 
-                                    writer.Write(".reduce(function(a, b) { return a.concat(b);},[])");
+                                    writer.Write(".flat()");
                                 }
                                 else
                                 {
                                     context.PreventDefault();
 
                                     context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                                    writer.Write(".reduce(function(a, b) { return a.concat(");
+                                    writer.Write(".flatMap");
                                     context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                                    writer.Write("(b)); }, [])");
                                 }
 
                                 return;
@@ -691,12 +690,7 @@ namespace Raven.Client.Util
 
                 if (methodName == "Sum")
                 {
-                    javascriptWriter.Write(".reduce(function(a, b) { return a + b; }, 0)");
-                }
-
-                if (methodName == "Contains")
-                {
-                    javascriptWriter.Write(">=0");
+                    javascriptWriter.Write(".reduce((a, b) => a + b, 0)");
                 }
             }
 
@@ -731,7 +725,7 @@ namespace Raven.Client.Util
                     writer.Write(".sort(");
                     if (path != null)
                     {
-                        writer.Write("function (a, b){ return ");
+                        writer.Write("(a, b) => ");
 
                         if (isNumber)
                         {
@@ -745,7 +739,6 @@ namespace Raven.Client.Util
                                 ? $"((a.{path} < b.{path}) ? 1 : (a.{path} > b.{path})? -1 : 0)"
                                 : $"((a.{path} < b.{path}) ? -1 : (a.{path} > b.{path})? 1 : 0)");
                         }
-                        writer.Write(";}");
                     }
                     writer.Write(")");
                 }
@@ -778,7 +771,7 @@ namespace Raven.Client.Util
                         context.Visitor.Visit(methodCallExpression.Arguments[1]);
                     }
 
-                    writer.Write($".reduce(function(a, b) {{ return {maxOrMin}(a, b);}}");
+                    writer.Write($".reduce((a, b) => {maxOrMin}(a, b)");
                     writer.Write(")");
                 }
             }
@@ -854,7 +847,7 @@ namespace Raven.Client.Util
                     return;
                 }
 
-                if (!(context.Node is MemberExpression memberExpression) ||
+                if (context.Node is not MemberExpression memberExpression ||
                     memberExpression.Expression == null ||
                     memberExpression.Expression.Type.IsNullableType() == false)
                     return;
@@ -925,7 +918,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MethodCallExpression mce))
+                if (context.Node is not MethodCallExpression mce)
                     return;
 
                 if (LinqPathProvider.IsCounterCall(mce) == false)
@@ -1082,7 +1075,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is ParameterExpression parameterExpression) || JsReservedWords.Contains(parameterExpression.Name) == false)
+                if (context.Node is not ParameterExpression parameterExpression || JsReservedWords.Contains(parameterExpression.Name) == false)
                     return;
 
                 var writer = context.GetWriter();
@@ -1126,7 +1119,7 @@ namespace Raven.Client.Util
                     node = mce.Object; // check if mce.Object is a wrapped constant
                 }
 
-                if (!(node is MemberExpression memberExpression) ||
+                if (node is not MemberExpression memberExpression ||
                     IsWrappedConstantExpression(memberExpression) == false)
                     return;
 
@@ -1155,7 +1148,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MemberExpression memberExpression))
+                if (context.Node is not MemberExpression memberExpression)
                     return;
 
                 var jsonPropertyAttribute = memberExpression.Member.GetCustomAttributes()
@@ -1234,14 +1227,10 @@ namespace Raven.Client.Util
                     context.PreventDefault();
 
                     var writer = context.GetWriter();
+                    writer.Write(lambdaExpression.Parameters[0].Name.Replace(TransparentIdentifier, DefaultAliasPrefix));
+                    writer.Write("=>");
                     using (writer.Operation(lambdaExpression))
-                    {
-                        writer.Write("function(");
-                        writer.Write(lambdaExpression.Parameters[0].Name.Replace(TransparentIdentifier, DefaultAliasPrefix));
-                        writer.Write("){return ");
                         context.Visitor.Visit(lambdaExpression.Body);
-                        writer.Write(";}");
-                    }
 
                     _maxSuffixToNotIgnore = oldMaxSuffix;
 
@@ -1262,7 +1251,7 @@ namespace Raven.Client.Util
                     return;
                 }
 
-                if (!(context.Node is MemberExpression member))
+                if (context.Node is not MemberExpression member)
                     return;
 
                 if (member.Expression is MemberExpression innerMember
@@ -1341,7 +1330,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is InvocationExpression invocationExpression))
+                if (context.Node is not InvocationExpression invocationExpression)
                     return;
 
                 context.PreventDefault();
@@ -1412,7 +1401,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MethodCallExpression mce) ||
+                if (context.Node is not MethodCallExpression mce ||
                     mce.Method.Name != "ToString")
                     return;
 
@@ -1517,7 +1506,7 @@ namespace Raven.Client.Util
                     return;
                 }
 
-                if (!(context.Node is MemberExpression node))
+                if (context.Node is not MemberExpression node)
                     return;
 
                 if (node.Type == typeof(TDate) && node.Expression == null)
@@ -1652,7 +1641,7 @@ namespace Raven.Client.Util
 
                     case "UtcNow":
                         writer.Write(
-                            @"(function (date) { return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());})(new Date())");
+                            @"((date) => new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds()))(new Date())");
                         break;
 
                     case "Today":
@@ -1672,7 +1661,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is NewExpression newExp) || newExp.Type != typeof(TimeSpan))
+                if (context.Node is not NewExpression newExp || newExp.Type != typeof(TimeSpan))
                     return;
 
                 context.PreventDefault();
@@ -1725,7 +1714,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MemberExpression memberExpression) ||
+                if (context.Node is not MemberExpression memberExpression ||
                     IsWrappedConstantExpression(memberExpression) == false)
                     return;
 
@@ -1843,7 +1832,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is ConstantExpression nodeAsConst))
+                if (context.Node is not ConstantExpression nodeAsConst)
                     return;
 
                 var writer = context.GetWriter();
@@ -1910,23 +1899,16 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (context.Node.NodeType != ExpressionType.Coalesce || !(context.Node is BinaryExpression binaryExpression))
+                if (context.Node.NodeType != ExpressionType.Coalesce || context.Node is not BinaryExpression binaryExpression)
                     return;
 
                 context.PreventDefault();
 
-                var test = Expression.NotEqual(
-                        binaryExpression.Left,
-                        Expression.Constant(null, binaryExpression.Left.Type)
-                    );
-
-                var condition = Expression.Condition(test,
-                    binaryExpression.Left,
-                    Expression.Convert(binaryExpression.Right, binaryExpression.Left.Type));
-
                 var writer = context.GetWriter();
                 writer.Write('(');
-                context.Visitor.Visit(condition);
+                context.Visitor.Visit(binaryExpression.Left);
+                writer.Write("??");
+                context.Visitor.Visit(binaryExpression.Right);
                 writer.Write(')');
             }
         }
@@ -1980,7 +1962,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is ConstantExpression ce))
+                if (context.Node is not ConstantExpression ce)
                     return;
 
                 string toWrite = null;
@@ -2030,7 +2012,7 @@ namespace Raven.Client.Util
 
                         using (resultWriter.Operation(0))
                         {
-                            resultWriter.Write('{');
+                            resultWriter.Write("({");
 
                             var posStart = resultWriter.Length;
                             for (int itMember = 0; itMember < newExp.Members.Count; itMember++)
@@ -2055,7 +2037,7 @@ namespace Raven.Client.Util
                                 context.Visitor.Visit(newExp.Arguments[itMember]);
                             }
 
-                            resultWriter.Write('}');
+                            resultWriter.Write("})");
                         }
                     }
 
@@ -2159,7 +2141,7 @@ namespace Raven.Client.Util
                 }
             }
 
-            private void WriteStringLiteral(string str, JavascriptWriter writer)
+            private static void WriteStringLiteral(string str, JavascriptWriter writer)
             {
                 writer.Write('"');
                 writer.Write(
@@ -2185,7 +2167,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is BinaryExpression binaryExpression) ||
+                if (context.Node is not BinaryExpression binaryExpression ||
                     (binaryExpression.NodeType != ExpressionType.Equal &&
                      binaryExpression.NodeType != ExpressionType.NotEqual))
                     return;
@@ -2253,7 +2235,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MethodCallExpression mce) ||
+                if (context.Node is not MethodCallExpression mce ||
                     mce.Method.DeclaringType != typeof(string))
                     return;
 
@@ -2285,7 +2267,7 @@ namespace Raven.Client.Util
                         break;
 
                     case "Contains":
-                        newName = "indexOf";
+                        newName = "includes";
                         break;
 
                     case "Split":
@@ -2462,11 +2444,6 @@ namespace Raven.Client.Util
                             }
 
                             writer.Write(")");
-
-                            if (mce.Method.Name == "Contains")
-                            {
-                                writer.Write(" !== -1");
-                            }
                             break;
                     }
                 }
@@ -2483,7 +2460,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MethodCallExpression methodCallExpression))
+                if (context.Node is not MethodCallExpression methodCallExpression)
                     return;
 
                 if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery)
@@ -2558,7 +2535,7 @@ namespace Raven.Client.Util
             {
                 innerExpression = null;
 
-                if (!(expression is MemberExpression member) ||
+                if (expression is not MemberExpression member ||
                     conventions.GetIdentityProperty(member.Member.DeclaringType) != member.Member)
                     return false;
 
@@ -2568,7 +2545,7 @@ namespace Raven.Client.Util
                     return true;
                 }
 
-                if (!(member.Expression is MemberExpression innerMember))
+                if (member.Expression is not MemberExpression innerMember)
                     return false;
 
                 innerExpression = innerMember;
@@ -2591,7 +2568,7 @@ namespace Raven.Client.Util
                 if (context.Node is MemberInitExpression == false)
                     return;
 
-                MemberInitAsJson.ForAllTypes.ConvertToJavascript(context);
+                CustomMemberInitAsJson.ForAllTypes.ConvertToJavascript(context);
             }
         }
 
@@ -2606,7 +2583,7 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MethodCallExpression mce) ||
+                if (context.Node is not MethodCallExpression mce ||
                     LinqPathProvider.IsTimeSeriesCall(mce) == false)
                     return;
 
@@ -2635,11 +2612,11 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MemberExpression memberExpression) || 
-                    !(memberExpression.Expression is ParameterExpression parameter) ||
-                    parameter.Name != Name) 
+                if (context.Node is not MemberExpression memberExpression ||
+                    memberExpression.Expression is not ParameterExpression parameter ||
+                    parameter.Name != Name)
                     return;
-                
+
                 context.PreventDefault();
                 var writer = context.GetWriter();
                 using (writer.Operation(memberExpression))
@@ -2701,4 +2678,60 @@ namespace Raven.Client.Util
             return expression is ConstantExpression;
         }
     }
+
+    /// <summary>
+    /// Obeys parenthesis better.
+    /// The default MememberInitAsJson incorrectly produces var func = a => { Name: a.Name }; without parenthesis around object expression
+    /// </summary>
+    public sealed class CustomMemberInitAsJson : JavascriptConversionExtension
+    {
+        public static readonly CustomMemberInitAsJson ForAllTypes = new();
+
+        private CustomMemberInitAsJson()
+        {
+        }
+
+        public override void ConvertToJavascript(JavascriptConversionContext context)
+        {
+            if (context.Node is not MemberInitExpression initExpr)
+                return;
+
+            if (initExpr.NewExpression.Arguments.Count > 0)
+                return;
+
+            if (initExpr.Bindings.Any(mb => mb.BindingType != MemberBindingType.Assignment))
+                return;
+
+            context.PreventDefault();
+            var writer = context.GetWriter();
+            using (writer.Operation(JavascriptOperationTypes.NoOp))
+            {
+                writer.Write('{');
+
+                var posStart = writer.Length;
+                foreach (var assignExpr in initExpr.Bindings.Cast<MemberAssignment>())
+                {
+                    if (writer.Length > posStart)
+                        writer.Write(',');
+
+                    var metadataProvider = context.Options.GetMetadataProvider();
+                    var meta = metadataProvider.GetMemberMetadata(assignExpr.Member);
+                    var memberName = meta?.MemberName;
+
+                    Debug.Assert(!string.IsNullOrEmpty(memberName), "!string.IsNullOrEmpty(memberName)");
+
+                    if (Regex.IsMatch(memberName, @"^\w[\d\w]*$"))
+                        writer.Write(memberName);
+                    else
+                        writer.WriteLiteral(memberName);
+
+                    writer.Write(':');
+                    context.Visitor.Visit(assignExpr.Expression);
+                }
+
+                writer.Write('}');
+            }
+        }
+    }
 }
+

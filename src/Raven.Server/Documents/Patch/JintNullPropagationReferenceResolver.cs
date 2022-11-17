@@ -97,27 +97,31 @@ namespace Raven.Server.Documents.Patch
                         case "concat":
                             value = new ClrFunctionInstance(engine, name, static (_, arguments) => arguments.At(0));
                             return true;
-                        case "some":
                         case "includes":
+                        case "some":
                             value = new ClrFunctionInstance(engine, name, static (_, _) => JsBoolean.False);
                             return true;
                         case "every":
                             value = new ClrFunctionInstance(engine, name, static (_, _) => JsBoolean.True);
                             return true;
-                        case "indexOf":
-                        case "lastIndexOf":
                         case "findIndex":
                         case "findLastIndex":
+                        case "indexOf":
+                        case "lastIndexOf":
                             value = new ClrFunctionInstance(engine, name, static (_, _) => _numberNegativeOne);
                             return true;
                         case "filter":
-                        case "flatMap":
                         case "flat":
+                        case "flatMap":
                         case "map":
                         case "reverse":
                         case "slice":
                         case "sort":
                         case "splice":
+                        case "toReversed":
+                        case "toSorted":
+                        case "toSpliced":
+                        case "with":
                             value = new ClrFunctionInstance(engine, name, (_, _) => new JsArray(engine));
                             return true;
                     }

@@ -34,7 +34,7 @@ namespace SlowTests.Issues
 
                         let userGroups = RavenQuery
                             .Load<UserGroup>(membership.UserGroups)
-                            .Where(x => x.Organization == organizationId) 
+                            .Where(x => x.Organization == organizationId)
 
                         select new Projection
                         {
@@ -48,7 +48,7 @@ namespace SlowTests.Issues
 
                     Assert.Contains("Id : id(membership)", projectionString);
                     Assert.Contains("Organization : id(organization)", projectionString);
-                    Assert.Contains("UserGroups : userGroups.map(function(x){return id(x);})", projectionString);
+                    Assert.Contains("UserGroups : userGroups.map(x=>id(x))", projectionString);
 
                     var result = projection.First();
 

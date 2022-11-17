@@ -436,7 +436,7 @@ namespace SlowTests.Issues
                         @"declare function output(user) {
 	var first = user.name;
 	var last = user.lastName;
-	var format = function(){return first+"" ""+last;};
+	var format = ()=>first+"" ""+last;
 	return { FullName : format() };
 }
 from 'Users' as user select output(user)", queryAsString);

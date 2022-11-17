@@ -311,7 +311,7 @@ namespace SlowTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { Roles = u.Roles.Select(r => new { RoleName = r + "!" }) });
 
-                    Assert.Equal("from 'Users' as u select { Roles : u.Roles.map(function(r){return {RoleName:r+\"!\"};}) }", query.ToString());
+                    Assert.Equal("from 'Users' as u select { Roles : u.Roles.map(r=>({RoleName:r+\"!\"})) }", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -343,7 +343,7 @@ namespace SlowTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { Roles = u.Roles.Select(r => new { RoleName = r + "!" }) });
 
-                    Assert.Equal("from 'Users' as u select { Roles : u.Roles.map(function(r){return {RoleName:r+\"!\"};}) }", query.ToString());
+                    Assert.Equal("from 'Users' as u select { Roles : u.Roles.map(r=>({RoleName:r+\"!\"})) }", query.ToString());
 
                     var queryResult = await query.ToListAsync();
 
@@ -449,7 +449,7 @@ from 'Users' as u select output(u)", query.ToString());
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
-	var format = function(p){return p.Name+"" ""+p.LastName;};
+	var format = p=>p.Name+"" ""+p.LastName;
 	return { FullName : format(u) };
 }
 from 'Users' as u select output(u)", query.ToString());
@@ -484,7 +484,7 @@ from 'Users' as u select output(u)", query.ToString());
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
-	var format = function(p){return p.Name+"" ""+p.LastName;};
+	var format = p=>p.Name+"" ""+p.LastName;
 	return { FullName : format(u) };
 }
 from 'Users' as u select output(u)", query.ToString());
@@ -523,7 +523,7 @@ from 'Users' as u select output(u)", query.ToString());
                         @"declare function output(u) {
 	var space = "" "";
 	var last = u.LastName;
-	var format = function(p){return p.Name+space+last;};
+	var format = p=>p.Name+space+last;
 	return { FullName : format(u) };
 }
 from 'Users' as u select output(u)", query.ToString());
@@ -562,7 +562,7 @@ from 'Users' as u select output(u)", query.ToString());
                         @"declare function output(u) {
 	var space = "" "";
 	var last = u.LastName;
-	var format = function(p){return p.Name+space+last;};
+	var format = p=>p.Name+space+last;
 	return { FullName : format(u) };
 }
 from 'Users' as u select output(u)", query.ToString());
@@ -727,7 +727,7 @@ from 'Users' as u select output(u)", query.ToString());
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
-	var format = function(user){return user.Name+"" ""+user.LastName;};
+	var format = user=>user.Name+"" ""+user.LastName;
 	var detail = load(u.DetailId);
 	var friend = load(u.FriendId);
 	return { FullName : format(u), Friend : format(friend), Detail : detail.Number };
@@ -777,7 +777,7 @@ from 'Users' as u where u.Name != $p0 select output(u) include timings()",
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
-	var format = function(user){return user.Name+"" ""+user.LastName;};
+	var format = user=>user.Name+"" ""+user.LastName;
 	var detail = load(u.DetailId);
 	var friend = load(u.FriendId);
 	return { FullName : format(u), Friend : format(friend), Detail : detail.Number };
@@ -824,7 +824,7 @@ from 'Users' as u where u.Name != $p0 select output(u) include timings()",
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
-	var format = function(user){return user.Name+"" ""+u.LastName;};
+	var format = user=>user.Name+"" ""+u.LastName;
 	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
@@ -868,7 +868,7 @@ from 'Users' as u select output(u)", query.ToString());
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
-	var format = function(user){return user.Name+"" ""+u.LastName;};
+	var format = user=>user.Name+"" ""+u.LastName;
 	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
@@ -1085,7 +1085,7 @@ from 'Users' as u select output(u)", query.ToString());
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
 	var last = u.LastName;
-	var format = function(user){return user.Name+"" ""+last;};
+	var format = user=>user.Name+"" ""+last;
 	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
@@ -1130,7 +1130,7 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
 	var last = u.LastName;
-	var format = function(user){return user.Name+"" ""+last;};
+	var format = user=>user.Name+"" ""+last;
 	var detail = load(u.DetailId);
 	return { FullName : format(u), DetailNumber : detail.Number };
 }
@@ -1228,7 +1228,7 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
                         @"declare function output(user) {
 	var first = user.Name;
 	var last = user.LastName;
-	var format = function(){return first+"" ""+last;};
+	var format = ()=>first+"" ""+last;
 	return { FullName : format() };
 }
 from 'Users' as user select output(user)", query.ToString());
@@ -1397,7 +1397,7 @@ from 'Users' as u select output(u)", query.ToString());
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u, _doc_0) {
 	var friend = _doc_0.Name;
-	var details = load(u.DetailIds).map(function(x){return x.Number;});
+	var details = load(u.DetailIds).map(x=>x.Number);
 	return { FullName : u.Name+"" ""+u.LastName, Friend : friend, Details : details };
 }
 from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToString());
@@ -1471,8 +1471,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     var query = from u in session.Query<User>()
                                 select new { RolesList = u.Roles.Select(a => new { Id = a }).ToList(), RolesArray = u.Roles.Select(a => new { Id = a }).ToArray() };
 
-                    Assert.Equal("from 'Users' as u select { RolesList : u.Roles.map(function(a){return {Id:a};}), " +
-                                 "RolesArray : u.Roles.map(function(a){return {Id:a};}) }", query.ToString());
+                    Assert.Equal("from 'Users' as u select { RolesList : u.Roles.map(a=>({Id:a})), " +
+                                 "RolesArray : u.Roles.map(a=>({Id:a})) }", query.ToString());
 
                     var queryResult = query.ToList();
 
@@ -1509,7 +1509,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                                 select new { FirstName = u.Name, LastName = u.LastName ?? "Has no last name" };
 
                     Assert.Equal("from 'Users' as u select { FirstName : u.Name, " +
-                                 "LastName : (u.LastName!=null?u.LastName:\"Has no last name\") }"
+                                 "LastName : (u.LastName??\"Has no last name\") }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1694,7 +1694,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                                  "Trim : u.Name.trim(), " +
                                  "ToUpper : u.Name.toUpperCase(), " +
                                  "ToLower : u.Name.toLowerCase(), " +
-                                 "Contains : u.Name.indexOf(\"e\") !== -1, " +
+                                 "Contains : u.Name.includes(\"e\"), " +
                                  "Format : \"Name: \"+u.Name+\", LastName : \"+u.LastName, " +
                                  "Split : u.Name.split(new RegExp(\"r\", \"g\")), " +
                                  "SplitLimit : u.Name.split(new RegExp(\"r\", \"g\")), " +
@@ -1789,8 +1789,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
 
                     Assert.Equal("from 'UserGroups' as u select { " +
                                  "Name : u.Name, " +
-                                 "UsersByName : u.Users.reduce(function(_obj, _cur) {_obj[(function(a){return a.Name;})(_cur)] = _cur;return _obj;}, {}), " +
-                                 "UsersByNameLastName : u.Users.reduce(function(_obj, _cur) {_obj[(function(a){return a.Name;})(_cur)] = (function(a){return a.LastName;})(_cur);return _obj;}, {}) }",
+                                 "UsersByName : u.Users.reduce((_obj, _cur) => { _obj[(a=>a.Name)(_cur)] = _cur; return _obj; }, {}), " +
+                                 "UsersByNameLastName : u.Users.reduce((_obj, _cur) => { _obj[(a=>a.Name)(_cur)] = (a=>a.LastName)(_cur); return _obj; }, {}) }",
                         query.ToString());
 
                     var queryResult = query.ToList();
@@ -1842,9 +1842,9 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
 
                     Assert.Equal("from 'Users' as u load u.DetailIds as details[] " +
                                  "select { Name : u.Name, " +
-                                 "First : details.find(function(x){return x.Number>1;}).Number, " +
+                                 "First : details.find(x=>x.Number>1).Number, " +
                                  "FirstOrDefault : details[0], " +
-                                 "FirstOrDefaultWithPredicate : details.find(function(x){return x.Number<3;}) }"
+                                 "FirstOrDefaultWithPredicate : details.find(x=>x.Number<3) }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -1894,8 +1894,8 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                                 };
 
                     Assert.Equal("from 'Users' as u select { Name : u.Name, " +
-                                 "DetailNumbers : u.DetailIds.map(function(detailId){return {detailId:detailId,detail:load(detailId)};})" +
-                                 ".map(function(__rvn0){return {Number:__rvn0.detail.Number};}) }"
+                                 "DetailNumbers : u.DetailIds.map(detailId=>({detailId:detailId,detail:load(detailId)}))" +
+                                 ".map(__rvn0=>({Number:__rvn0.detail.Number})) }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -2562,7 +2562,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(o) {
-	var TotalSpentOnOrder = function(order){return order.Lines.map(function(l){return l.PricePerUnit*l.Quantity-l.Discount;}).reduce(function(a, b) { return a + b; }, 0);};
+	var TotalSpentOnOrder = order=>order.Lines.map(l=>l.PricePerUnit*l.Quantity-l.Discount).reduce((a, b) => a + b, 0);
 	return { Id : id(o), TotalMoneySpent : TotalSpentOnOrder(o) };
 }
 from 'Orders' as o select output(o)", complexLinqQuery.ToString());
@@ -2645,7 +2645,7 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
                                 select new { Total = order.Lines.Sum(l => l.PricePerUnit * l.Quantity * (1 - l.Discount)) };
 
                     Assert.Equal("from 'Orders' as 'order' " +
-                                 "select { Total : order.Lines.map(function(l){return l.PricePerUnit*l.Quantity*(1-l.Discount);}).reduce(function(a, b) { return a + b; }, 0) }"
+                                 "select { Total : order.Lines.map(l=>l.PricePerUnit*l.Quantity*(1-l.Discount)).reduce((a, b) => a + b, 0) }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -2730,19 +2730,19 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
                         });
 
                     Assert.Equal("from 'Users' as u select { " +
-                                 "LastOrDefault : u.Roles.slice(-1)[0], " +
-                                 "LastOrDefaultWithPredicate : u.Roles.slice().reverse().find(function(x){return x!==\"4\";}), " +
+                                 "LastOrDefault : u.Roles.at(-1), " +
+                                 "LastOrDefaultWithPredicate : u.Roles.findLast(x=>x!==\"4\"), " +
                                  "Take : u.Roles.slice(0, 2), " +
                                  "Skip : u.Roles.slice(2, u.Roles.length), " +
-                                 "Max : u.Roles.reduce(function(a, b) { return Raven_Max(a, b);}), " +
-                                 "MaxWithSelector : u.Details.map(function(d){return d.Number;}).reduce(function(a, b) { return Raven_Max(a, b);}), " +
-                                 "Min : u.Roles.reduce(function(a, b) { return Raven_Min(a, b);}), " +
-                                 "MinWithSelector : u.Details.map(function(d){return d.Number;}).reduce(function(a, b) { return Raven_Min(a, b);}), " +
-                                 "Reverse : u.Roles.slice().reverse(), " +
+                                 "Max : u.Roles.reduce((a, b) => Raven_Max(a, b)), " +
+                                 "MaxWithSelector : u.Details.map(d=>d.Number).reduce((a, b) => Raven_Max(a, b)), " +
+                                 "Min : u.Roles.reduce((a, b) => Raven_Min(a, b)), " +
+                                 "MinWithSelector : u.Details.map(d=>d.Number).reduce((a, b) => Raven_Min(a, b)), " +
+                                 "Reverse : u.Roles.toReversed(), " +
                                  "IndexOf : u.Roles.indexOf(\"3\"), " +
                                  "Concat : u.Roles.concat($p0), " +
                                  "Distinct : Array.from(new Set(u.Roles)), " +
-                                 "ElementAt : u.Details.map(function(x){return x.Number;})[2] }"
+                                 "ElementAt : u.Details.map(x=>x.Number)[2] }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -2949,7 +2949,7 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                     var query = session.Query<Node>().Select(node => new { Grandchildren = node.Children.SelectMany(x => x.Children).ToList() });
 
                     Assert.Equal("from 'Nodes' as node select " +
-                                 "{ Grandchildren : node.Children.reduce(function(a, b) { return a.concat((function(x){return x.Children;})(b)); }, []) }"
+                                 "{ Grandchildren : node.Children.flatMap(x=>x.Children) }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -3000,11 +3000,11 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                     Assert.Equal("from 'TestableDTOs' as item select { " +
                                  "Id : id(item), " +
                                  "data : item.Data, " +
-                                 "values : (function(arr){return arr.length > 0 ? arr : [null]})" +
+                                 "values : (arr => arr.length > 0 ? arr : [null])" +
                                  "(Object.getOwnPropertyNames(item.Data)" +
-                                 ".map(function(k){return item.Data[k]})" +
-                                 ".reduce(function(a, b) { return a.concat(b);},[])" +
-                                 ".map((function(n){return n;}))) }"
+                                 ".map(k=>item.Data[k])" +
+                                 ".flat()" +
+                                 ".map((n=>n))) }"
                         , query.ToString());
 
                     var first = await query.FirstAsync();
@@ -3411,7 +3411,7 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
 
                         Assert.Equal("from 'Documents' as d where (id() in ($p0)) and (d.Deleted = $p1) " +
                                      "select { Id : id(d), Deleted : d.Deleted, " +
-                                     "Values : d.SubDocuments.filter(function(x){return $p2.length===0||$p3.indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
+                                     "Values : d.SubDocuments.filter(x=>$p2.length===0||$p3.includes(x.TargetId)).map(x=>({TargetId:x.TargetId,TargetValue:x.TargetValue})) }"
                             , projection.ToString());
 
                         var result = projection.ToList();
@@ -3459,7 +3459,7 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
 
                         Assert.Equal("from 'Documents' as d where (id() in ($p0)) and (d.Deleted = $p1) " +
                                      "select { Id : id(d), Deleted : d.Deleted, " +
-                                     "Values : d.SubDocuments.filter(function(x){return $p2.length===0||$p3.indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
+                                     "Values : d.SubDocuments.filter(x=>$p2.length===0||$p3.includes(x.TargetId)).map(x=>({TargetId:x.TargetId,TargetValue:x.TargetValue})) }"
                             , projection.ToString());
 
                         var result = projection.ToList();
@@ -3506,7 +3506,7 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
 
                         Assert.Equal("from 'Documents' as d where (id() in ($p0)) and (d.Deleted = $p1) " +
                                      "select { Id : id(d), Deleted : d.Deleted, " +
-                                     "Values : d.SubDocuments.filter(function(x){return $p2==null||x.TargetId===$p3;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
+                                     "Values : d.SubDocuments.filter(x=>$p2==null||x.TargetId===$p3).map(x=>({TargetId:x.TargetId,TargetValue:x.TargetValue})) }"
                             , projection.ToString());
 
                         var result = projection.ToList();
