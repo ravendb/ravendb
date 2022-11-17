@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -19,6 +20,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Test()
         {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
@@ -31,44 +33,22 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = @"C:\RavenBackups"
-                    },
-
-                    //Full Backup period (Cron expression for a 3-hours period)
-                    FullBackupFrequency = "0 */3 * * *",
-
-                    //An incremental-backup will run every 20 minutes (Cron expression)
-                    IncrementalBackupFrequency = "*/20 * * * *",
-
-                    BackupType = BackupType.Backup,
-
-                    Name = "fullBackupTask",
-                };
-
+                var config = Backup.CreateBackupConfiguration(backupPath: backupPath, backupType: BackupType.Backup);
                 var operation = new UpdatePeriodicBackupOperation(config);
                 var result = await store.Maintenance.SendAsync(operation);
 
-                var backupStatus = await store.Maintenance.SendAsync(new StartBackupOperation(true, result.TaskId));
-                var x = await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+                await Backup.RunBackupAsync(Server, result.TaskId, store);
 
                 config.BackupType = BackupType.Snapshot;
                 config.TaskId = result.TaskId;
 
                 operation = new UpdatePeriodicBackupOperation(config);
-                var result2 = await store.Maintenance.SendAsync(operation);
+                await store.Maintenance.SendAsync(operation);
 
                 var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
                 documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
 
-                await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
-                {
-                    var backupStatus2 = await store.Maintenance.SendAsync(new StartBackupOperation(true, result2.TaskId));
-                    await backupStatus2.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-                });
+                await Backup.RunBackupAsync(Server, result.TaskId, store, opStatus: OperationStatus.Faulted);
 
                 documentDatabase.PeriodicBackupRunner._forTestingPurposes = null;
 
@@ -83,7 +63,6 @@ namespace SlowTests.Issues
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-
                 var status = documentDatabase.PeriodicBackupRunner.GetBackupStatus(config.TaskId);
                 var nextBackupDetails = documentDatabase.PeriodicBackupRunner.GetNextBackupDetails(record, record.PeriodicBackups.First(), status, Server.ServerStore.NodeTag);
                 
