@@ -25,7 +25,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
-using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -299,6 +298,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.ElasticSearchConnectionStrings = smugglerDatabaseRecord.ElasticSearchConnectionStrings;
                     databaseRecord.QueueEtls = smugglerDatabaseRecord.QueueEtls;
                     databaseRecord.QueueConnectionStrings = smugglerDatabaseRecord.QueueConnectionStrings;
+
+                    if (smugglerDatabaseRecord.IsSharded)
+                    {
+                        databaseRecord.Sharding.BucketRanges = smugglerDatabaseRecord.Sharding.BucketRanges;
+                    }
 
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);

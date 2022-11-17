@@ -744,6 +744,9 @@ namespace Raven.Server.Documents.PeriodicBackup
         private InternalBackupResult CreateBackup(
             DatabaseSmugglerOptionsServerSide options, string backupFilePath, long? startDocumentEtag, long? startRaftIndex)
         {
+            if (ShardHelper.TryGetShardNumber(_database.Name, out var number) && number > 0)
+                return new InternalBackupResult();
+
             // the last etag is already included in the last backup
             var currentBackupResults = new InternalBackupResult();
             startDocumentEtag = startDocumentEtag == null ? 0 : ++startDocumentEtag;
