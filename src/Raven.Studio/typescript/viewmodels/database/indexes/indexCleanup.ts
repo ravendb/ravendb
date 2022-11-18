@@ -1,5 +1,4 @@
-﻿import viewModelBase = require("viewmodels/viewModelBase");
-import appUrl = require("common/appUrl");
+﻿import appUrl = require("common/appUrl");
 import getIndexMergeSuggestionsCommand = require("commands/database/index/getIndexMergeSuggestionsCommand");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import moment = require("moment");
@@ -11,6 +10,8 @@ import indexDefinition from "models/database/index/indexDefinition";
 import eventsCollector = require("common/eventsCollector");
 import router = require("plugins/router");
 import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
 interface notQueriedIndexInfo {
     name: string;
@@ -41,13 +42,13 @@ interface mergeCandidateIndexItemInfo {
     lastIndexingTime?: string;
 }
 
-class indexCleanup extends viewModelBase {
+class indexCleanup extends shardViewModelBase {
 
     view = require("views/database/indexes/indexCleanup.html");
     
     appUrls: computedAppUrls;
     
-    indexStats: Raven.Client.Documents.Indexes.IndexStats[] = [];
+    indexStats: Map<string, indexStats> = new Map<string, indexStats>();
     
     mergeSuggestions = ko.observableArray<mergeCandidateIndexInfo>();
     surpassingSuggestions = ko.observableArray<surpassingIndexInfo>();
@@ -63,9 +64,9 @@ class indexCleanup extends viewModelBase {
         notQueried: ko.observable<boolean>(false),
         surpassing: ko.observable<boolean>(false)
     }
-    
-    constructor() {
-        super();
+
+    constructor(db: database, location: databaseLocationSpecifier) {
+        super(db, location);
         
         this.appUrls = appUrl.forCurrentDatabase();
 
@@ -97,8 +98,8 @@ class indexCleanup extends viewModelBase {
             .then(() => {
                 const deferred = $.Deferred();
                 this.reload()
-                    .done(() => deferred.resolve({ can: true }))
-                    .fail(() => deferred.resolve({ redirect: appUrl.forIndexes(this.activeDatabase()) }));
+                    .then(() => deferred.resolve({ can: true }))
+                    .catch(() => deferred.resolve({ redirect: appUrl.forIndexes(this.db) }));
 
                 return deferred;
             });
@@ -108,50 +109,65 @@ class indexCleanup extends viewModelBase {
         return this.fetchStats()
             .then(() => {
                 return this.fetchIndexMergeSuggestions();
-            }).done(() => {
+            }).then(() => {
                 this.selectedNotQueriedIndexes([]);
                 this.selectedSurpassingIndexes([]);
             });
     }
 
-    private fetchStats(): JQueryPromise<Raven.Client.Documents.Indexes.IndexStats[]> {
-        const db = this.activeDatabase();
-        if (db) {
-            return new getIndexesStatsCommand(db)
-                .execute()
-                .done(result => {
-                    this.indexStats = result;
-                    this.notQueriedForLastWeek(indexCleanup.findUnusedIndexes(result));
+    private async fetchStats(): Promise<void> {
+        const locations = this.db.getLocations();
+        const tasks = locations.map(location => new getIndexesStatsCommand(this.db, location).execute());
+        
+        const allStats = await Promise.all(tasks);
+        
+        const resultMap = new Map<string, indexStats>();
+        for (const nodeStat of allStats) {
+            for (const indexStat of nodeStat) {
+                const existing = resultMap.get(indexStat.Name);
+                const lastIndexingTime = indexCleanup.getNewer(existing?.lastIndexingTime, indexStat.LastIndexingTime);
+                const lastQueryTime = indexCleanup.getNewer(existing?.lastQueryTime, indexStat.LastQueryingTime);
+                
+                resultMap.set(indexStat.Name, {
+                    lastIndexingTime,
+                    lastQueryTime
                 });
+            }
         }
-
-        return null;
-    }
-
-    private findIndexStats(name: string): indexStats {
-        const matchedIndex = this.indexStats.find(x => x.Name === name);
-        return {
-            lastIndexingTime: matchedIndex?.LastIndexingTime,
-            lastQueryTime: matchedIndex?.LastQueryingTime
-        };
+        
+        this.indexStats = resultMap;
+        
+        this.notQueriedForLastWeek(indexCleanup.findUnusedIndexes(this.indexStats));
     }
     
-    private static findUnusedIndexes(stats: Raven.Client.Documents.Indexes.IndexStats[]): notQueriedIndexInfo[] {
+    private static getNewer(date1: string, date2: string) {
+        if (!date1) {
+            return date2;
+        }
+
+        if (!date2) {
+            return date1;
+        }
+        
+        return date1.localeCompare(date2) ? date1 : date2;
+    }
+    
+    private static findUnusedIndexes(stats: Map<string, indexStats>): notQueriedIndexInfo[] {
         const result: notQueriedIndexInfo[] = [];
 
         const now = moment();
         const milliSecondsInWeek = 1000 * 3600 * 24 * 7;
         
-        for (const stat of stats) {
-            if (stat.LastQueryingTime) {
-                const lastQueryDate = moment(stat.LastQueryingTime);
+        for (const [name, stat] of stats.entries()) {
+            if (stat.lastQueryTime) {
+                const lastQueryDate = moment(stat.lastQueryTime);
                 const agoInMs = now.diff(lastQueryDate);
                 
                 if (lastQueryDate.isValid() && agoInMs > milliSecondsInWeek) {
                     result.push({
-                        name: stat.Name,
-                        lastQueryTime: stat.LastQueryingTime ? generalUtils.toHumanizedDate(stat.LastQueryingTime) : null,
-                        lastIndexingTime: stat.LastIndexingTime ? generalUtils.toHumanizedDate(stat.LastIndexingTime) : null
+                        name,
+                        lastQueryTime: stat.lastQueryTime ? generalUtils.toHumanizedDate(stat.lastQueryTime) : null,
+                        lastIndexingTime: stat.lastIndexingTime ? generalUtils.toHumanizedDate(stat.lastIndexingTime) : null
                     });
                     
                     result.sort((a, b) => a.lastQueryTime.localeCompare(b.lastQueryTime));
@@ -163,8 +179,7 @@ class indexCleanup extends viewModelBase {
     }
 
     private fetchIndexMergeSuggestions() {
-        const db = this.activeDatabase();
-        return new getIndexMergeSuggestionsCommand(db)
+        return new getIndexMergeSuggestionsCommand(this.db)
             .execute()
             .done((results: Raven.Server.Documents.Indexes.IndexMerging.IndexMergeResults) => {
                 const suggestions = results.Suggestions;
@@ -175,7 +190,7 @@ class indexCleanup extends viewModelBase {
                     return {
                         mergedIndexDefinition: x.MergedIndex,
                         toMerge: x.CanMerge.map(m => {
-                            const stats = this.findIndexStats(m);
+                            const stats = this.indexStats.get(m);
                             return {
                                 name: m,
                                 lastQueryTime: stats.lastQueryTime ? generalUtils.toHumanizedDate(stats.lastQueryTime) : null,
@@ -191,7 +206,7 @@ class indexCleanup extends viewModelBase {
                 const surpassing: surpassingIndexInfo[] = [];
                 surpassingRaw.forEach(group => {
                     group.CanDelete.forEach(deleteCandidate => {
-                        const stats = this.findIndexStats(deleteCandidate);
+                        const stats = this.indexStats.get(deleteCandidate);
                         
                         surpassing.push({
                             toDelete: deleteCandidate,
@@ -252,13 +267,12 @@ class indexCleanup extends viewModelBase {
     }
     
     private deleteIndexes(names: string[]) {
-        const db = this.activeDatabase();
-        return new getIndexesDefinitionsCommand(db, 0, 1024 * 1024)
+        return new getIndexesDefinitionsCommand(this.db, 0, 1024 * 1024)
             .execute()
             .done((indexDefinitions) => {
                 const matchedIndexes = indexDefinitions.filter(x => names.includes(x.Name)).map(x => new indexDefinition(x));
                 
-                const deleteViewModel = new deleteIndexesConfirm(matchedIndexes, this.activeDatabase());
+                const deleteViewModel = new deleteIndexesConfirm(matchedIndexes, this.db);
                 deleteViewModel.deleteTask.done((done) => {
                     if (done) {
                         this.reload();
@@ -269,8 +283,7 @@ class indexCleanup extends viewModelBase {
     }
 
     navigateToMergeSuggestion(item: mergeCandidateIndexInfo) {
-        const db = this.activeDatabase();
-        const mergedIndexName = mergedIndexesStorage.saveMergedIndex(db, item.mergedIndexDefinition, item.toMerge.map(x => x.name));
+        const mergedIndexName = mergedIndexesStorage.saveMergedIndex(this.db, item.mergedIndexDefinition, item.toMerge.map(x => x.name));
         
         const targetUrl = this.appUrls.editIndex(mergedIndexName)();
         
