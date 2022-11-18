@@ -35,7 +35,7 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         Name = name;
         FieldId = fieldId;
         var ticks = default(long);
-        _isTime = term is not null && QueryBuilderHelper.TryGetTime(index, term, out ticks);
+        _isTime = term is not null && index.IndexFieldsPersistence.HasTimeValues(name) && QueryBuilderHelper.TryGetTime(index, term, out ticks);
         Term = _isTime ? ticks : term;
 
         Operation = operation;
@@ -63,7 +63,7 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         
         if (_isTime) //found time at `Term1`, lets check if second item also contains time
         {
-            if (term2 != null && QueryBuilderHelper.TryGetTime(index, term2, out var ticks))
+            if (term2 != null && index.IndexFieldsPersistence.HasTimeValues(name) && QueryBuilderHelper.TryGetTime(index, term2, out var ticks))
             {
                 Term2 = ticks;
             }
