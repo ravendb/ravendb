@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Microsoft.Azure.Documents.SystemFunctions;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using TimeOnly = System.TimeOnly;
@@ -16,11 +17,12 @@ public class RDBC_631 : RavenTestBase
     {
     }
 
-    [Fact]
-    public void CanProjectOnlyDateOnly()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanProjectOnlyDateOnly(Options options)
     {
         var datesOnly = new List<DateOnly>();
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         {
             using var bulkInsert = store.BulkInsert();
             foreach (var i in Enumerable.Range(0, 100))
@@ -32,21 +34,21 @@ public class RDBC_631 : RavenTestBase
         }
         new DateOnlyIndex().Execute(store);
         Indexes.WaitForIndexing(store);
-
         {
             using var session = store.OpenSession();
-            var datesFromRaven = session.Query<Mock<DateOnly>, DateOnlyIndex>().Select(i => i.Date).ToList();
+            var datesFromRaven = session.Query<Mock<DateOnly>, DateOnlyIndex>().Where(i => i.Date >= DateOnly.MinValue).Select(i => i.Date).ToList();
             datesOnly.Sort();
             datesFromRaven.Sort();
             Assert.True(datesFromRaven.SequenceEqual(datesOnly));
         }
     }
     
-    [Fact]
-    public void CanProjectOnlyTimeOnly()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanProjectOnlyTimeOnly(Options options)
     {
         var datesOnly = new List<TimeOnly>();
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         {
             using var bulkInsert = store.BulkInsert();
             foreach (var i in Enumerable.Range(0, 100))
@@ -61,7 +63,7 @@ public class RDBC_631 : RavenTestBase
 
         {
             using var session = store.OpenSession();
-            var datesFromRaven = session.Query<Mock<TimeOnly>, TimeOnlyIndex>().Select(i => i.Date).ToList();
+            var datesFromRaven = session.Query<Mock<TimeOnly>, TimeOnlyIndex>().Where(i => i.Date >= TimeOnly.MinValue).Select(i => i.Date).ToList();
             datesOnly.Sort();
             datesFromRaven.Sort();
             Assert.True(datesFromRaven.SequenceEqual(datesOnly));

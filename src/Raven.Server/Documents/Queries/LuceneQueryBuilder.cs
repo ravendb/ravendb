@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Queries
 
                                 exact |= valueType == ValueTokenType.Parameter;
 
-                                if (TryUseTime(index, fieldName, value, exact, out var ticks))
+                                if (QueryBuilderHelper.TryUseTime(index, fieldName, value, exact, out var ticks))
                                 {
                                     return TranslateDateRangeQuery(index, where, fieldName, ticks);
                                 }
@@ -486,7 +486,7 @@ namespace Raven.Server.Documents.Queries
                 case IndexFieldType.String:
                     exact = IsExact(index, exact, fieldName);
 
-                    if (TryUseTime(index, fieldName, valueFirst, valueSecond, exact, out var ticksFirst, out var ticksSecond))
+                    if (QueryBuilderHelper.TryUseTime(index, fieldName, valueFirst, valueSecond, exact, out var ticksFirst, out var ticksSecond))
                     {
                         luceneFieldName += Constants.Documents.Indexing.Fields.TimeFieldSuffix;
                         betweenQuery = index.Configuration.QueryClauseCacheDisabled
@@ -554,34 +554,7 @@ namespace Raven.Server.Documents.Queries
 
             return bq;
         }
-
-        private static bool TryUseTime(Index index, string fieldName, object valueFirst, object valueSecond, bool exact, out long ticksFirst, out long ticksSecond)
-        {
-            ticksFirst = -1;
-            ticksSecond = -1;
-
-            if (exact || index == null || valueFirst == null || valueSecond == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
-                return false;
-
-            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && QueryBuilderHelper.TryGetTime(index, valueFirst, out ticksFirst) && QueryBuilderHelper.TryGetTime(index, valueSecond, out ticksSecond))
-                return true;
-
-            return false;
-        }
-
-        private static bool TryUseTime(Index index, string fieldName, object value, bool exact, out long ticks)
-        {
-            ticks = -1;
-
-            if (exact || index == null || value == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
-                return false;
-
-            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && QueryBuilderHelper.TryGetTime(index, value, out ticks))
-                return true;
-
-            return false;
-        }
-
+        
         private static bool IsExact(Index index, bool exact, QueryFieldName fieldName)
         {
             if (exact)
