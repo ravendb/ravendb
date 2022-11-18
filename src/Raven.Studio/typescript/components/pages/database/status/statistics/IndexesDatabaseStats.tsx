@@ -12,6 +12,7 @@ import appUrl from "common/appUrl";
 import indexStalenessReasons from "viewmodels/database/indexes/indexStalenessReasons";
 import app from "durandal/app";
 import { useEventsCollector } from "hooks/useEventsCollector";
+import { Card, Table } from "reactstrap";
 
 interface IndexesDatabaseStatsProps {
     database: database;
@@ -235,19 +236,19 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
     };
 
     return (
-        <section className="margin-top-lg">
+        <section className="mt-6">
             <h2 className="on-base-background">Indexes Stats</h2>
 
             {noData && (
-                <div className="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+                <div className="text-center">
                     <i className="icon-xl icon-empty-set text-muted"></i>
-                    <h2 className="text-center text-muted">No indexes have been created for this database.</h2>
+                    <h2 className="text-muted">No indexes have been created for this database.</h2>
                 </div>
             )}
 
             {indexStats &&
                 indexStats.map((group) => (
-                    <div className="panel padding" key={group.type}>
+                    <Card className="p-4" key={group.type}>
                         <h3>{group.type} Indexes</h3>
                         <div>
                             {group.indexes.map((index) => {
@@ -273,12 +274,12 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
 
                                 return (
                                     <>
-                                        <h4 className="text-elipsis margin-top-md">
+                                        <h4 className="text-elipsis mt-4">
                                             <a href={performanceUrl} title={index.name}>
                                                 {index.name}
                                             </a>
                                         </h4>
-                                        <table className="table table-striped table-condensed" key={index.name}>
+                                        <Table responsive condensed striped key={index.name}>
                                             <tbody>
                                                 <tr>
                                                     <td style={{ width: "200px" }}>Staleness</td>
@@ -443,12 +444,12 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
                                                     </>
                                                 )}
                                             </tbody>
-                                        </table>
+                                        </Table>
                                     </>
                                 );
                             })}
                         </div>
-                    </div>
+                    </Card>
                 ))}
         </section>
     );

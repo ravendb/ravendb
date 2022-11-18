@@ -6,6 +6,7 @@ import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { DropdownPanel } from "../../../../common/DropdownPanel";
 import {
+    Badge,
     Dropdown,
     DropdownItem,
     DropdownMenu,
@@ -97,48 +98,54 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
 
     if (!filter.status.length) {
         return (
-            <div>
-                <small className="on-base-background">
-                    All <strong>Index Status</strong> options are unchecked. Please select options under{" "}
-                    <strong>&apos;Index Status&apos;</strong> to view indexes list.
-                </small>
+            <div className="on-base-background mt-2">
+                All <strong>Index Status</strong> options are unchecked. Please select options under{" "}
+                <strong>&apos;Index Status&apos;</strong> to view indexes list.
             </div>
         );
     }
 
     const indexingErrorsOnlyPart = filter.showOnlyIndexesWithIndexingErrors ? (
         <>
-            , with <strong>indexing errors only</strong>,
+            <Badge pill color="warning" className="mx-1">
+                indexing errors only
+            </Badge>{" "}
         </>
     ) : (
         ""
     );
 
-    const firstPart = indexesCount ? (
+    const firstPart = (
         <>
-            Displaying <strong>{indexesCount}</strong>{" "}
-            {pluralizeHelpers.pluralize(indexesCount, "index", "indexes", true)}
-            {indexingErrorsOnlyPart} that match Status Filter:
+            <span className="text-capital me-2">
+                <strong className="text-emphasis">{indexesCount}</strong>{" "}
+                {pluralizeHelpers.pluralize(indexesCount, "index", "indexes", true)}
+                {" found "}
+            </span>
+            {indexingErrorsOnlyPart}
         </>
-    ) : (
-        "No matching indexes for Status Filter: "
     );
 
     return (
-        <div>
-            <small className="on-base-background">
-                {firstPart}
-                <strong>{filter.status.map((x) => IndexUtils.formatStatus(x)).join(", ")}</strong>
-                {filter.searchText ? (
-                    <>
-                        , where name contains <strong>{filter.searchText}</strong>
-                    </>
-                ) : (
-                    ""
-                )}
-                . Auto refresh is <strong>{filter.autoRefresh ? "on" : "off"}</strong>.
-                {/* TODO: `Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;*/}
-            </small>
+        <div className="on-base-background mt-2">
+            {firstPart}
+            Status filter:
+            {filter.status.map((x) => (
+                <Badge color="secondary" className="ms-1" pill>
+                    {IndexUtils.formatStatus(x)}
+                </Badge>
+            ))}
+            {filter.searchText ? (
+                <span className="ms-2">
+                    Name contains: <em className="text-emphasis">"{filter.searchText}"</em>
+                </span>
+            ) : (
+                ""
+            )}
+            <span className="ms-2">
+                Auto refresh is <strong className="text-emphasis">{filter.autoRefresh ? "on" : "off"}</strong>.
+            </span>
+            {/* TODO: `Processing Speed: <strong>${Math.floor(totalProcessedPerSecond).toLocaleString()}</strong> docs / sec`;*/}
         </div>
     );
 }

@@ -15,6 +15,7 @@ import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.Periodic
 import { loadableData } from "../../../../models/common";
 import genUtils from "common/generalUtils";
 import moment from "moment";
+import { Button, Row } from "reactstrap";
 
 interface manualBackupListModel {
     backupType: Raven.Client.Documents.Operations.Backups.BackupType;
@@ -282,25 +283,33 @@ export function BackupsPage(props: BackupsPageProps) {
     const backups = tasks.tasks.filter((x) => x.shared.taskType === "Backup") as OngoingTaskPeriodicBackupInfo[];
 
     return (
-        <div className="row flex-row flex-grow flex-stretch-items absolute-fill">
-            <div className="col-sm-12 flex-vertical">
+        <div className="flex-grow flex-stretch-items">
+            <div className="flex-vertical">
                 {isAdminAccessOrAbove(database) && (
-                    <div>
-                        <button
-                            type="button"
+                    <div className="flex-noshrink mb-4">
+                        <Button
                             onClick={navigateToRestoreDatabase}
-                            className="btn btn-default margin-bottom"
+                            className=""
                             title="Navigate to creating a new database from a backup"
                         >
-                            <i className="icon-restore-backup"></i>
+                            <i className="icon-restore-backup" />
                             <span>Restore a database from a backup</span>
-                        </button>
+                        </Button>
                     </div>
                 )}
 
+                <div>
+                    <h1>Lorem ipsum dolor sit amet h1</h1>
+                    <h2>consectetur adipiscing elit</h2>
+                    <h3>Nunc interdum h3</h3>
+                    <h4>purus eget tempus dictum h4</h4>
+                    <h5>est lorem sollicitudin purus h5</h5>
+                    <h6>et sollicitudin nulla ante h6</h6>
+                </div>
+
                 <div className="flex-noshrink">
                     <div className="hr-title">
-                        <h5 className="tasks-list-item periodic-backup no-text-transform">
+                        <h5 className="tasks-list-item periodic-backup">
                             <i className="icon-backup"></i>
                             <span>Manual Backup</span>
                         </h5>

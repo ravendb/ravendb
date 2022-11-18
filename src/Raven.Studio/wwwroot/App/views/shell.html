@@ -293,7 +293,7 @@
         </button>
     </nav>
     <div id="page-host-root" class="content-container">
-        <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }" style="overflow-y: scroll"></div>
+        <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
     </div>
     <div class="notification-center-container bs3" data-bind="compose: notificationCenterView"></div>
 
@@ -401,7 +401,7 @@
         </div>
     </div>
     <div data-bind="if: displayUsageStatsInfo()">
-        <div data-bind="compose: usageStatsView"></div>
+        <div data-bind="compose: usageStatsView" class="bs3"></div>
     </div>
     <div class="graph-helper" data-bind="compose: $root.graphHelperView"></div>
 </div>

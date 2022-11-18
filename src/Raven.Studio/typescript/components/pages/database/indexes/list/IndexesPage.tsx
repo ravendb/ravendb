@@ -37,7 +37,7 @@ import messagePublisher from "common/messagePublisher";
 import "./IndexesPage.scss";
 import { useChanges } from "hooks/useChanges";
 import { delay } from "../../../../utils/common";
-import { Col, Row } from "reactstrap";
+import { Card, Col, Row } from "reactstrap";
 
 interface IndexesPageProps {
     database: database;
@@ -82,16 +82,14 @@ function NoIndexes(props: NoIndexesProps) {
     const { canReadWriteDatabase } = useAccessManager();
 
     return (
-        <div className="row">
-            <div className="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
-                <i className="icon-xl icon-empty-set text-muted" />
-                <h2 className="text-center text-muted">No indexes have been created for this database.</h2>
-                {canReadWriteDatabase(database) && (
-                    <p className="lead text-center text-muted">
-                        Go ahead and <a href={newIndexUrl}>create one now</a>.
-                    </p>
-                )}
-            </div>
+        <div className="text-center">
+            <i className="icon-xl icon-empty-set text-muted" />
+            <h2 className="text-center text-muted">No indexes have been created for this database.</h2>
+            {canReadWriteDatabase(database) && (
+                <p className="lead text-muted">
+                    Go ahead and <a href={newIndexUrl}>create one now</a>.
+                </p>
+            )}
         </div>
     );
 }
@@ -772,7 +770,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                         />
                                         {replacement && (
                                             <div className="sidebyside-actions">
-                                                <div className="panel panel-state panel-warning">
+                                                <Card className="panel panel-state panel-warning">
                                                     <div className="state state-swap">
                                                         <i className="icon-swap" />
                                                     </div>
@@ -789,7 +787,7 @@ export function IndexesPage(props: IndexesPageProps) {
                                                             <i className="icon-force" /> <span>Swap now</span>
                                                         </button>
                                                     </div>
-                                                </div>
+                                                </Card>
                                             </div>
                                         )}
                                         {replacement && (

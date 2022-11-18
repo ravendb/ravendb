@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import { forceStoryRerender, withStorybookContexts } from "../../../../../test/storybookTestUtils";
+import { withBootstrap5, forceStoryRerender, withStorybookContexts } from "../../../../../test/storybookTestUtils";
 import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
 import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
@@ -24,7 +24,7 @@ function tasksHolder(storyFn: any) {
 export default {
     title: "Pages/Backups",
     component: BackupsPage,
-    decorators: [withStorybookContexts, tasksHolder],
+    decorators: [withStorybookContexts, tasksHolder, withBootstrap5],
     excludeStories: /Template$/,
 } as ComponentMeta<typeof BackupsPage>;
 
