@@ -421,8 +421,9 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                     case IndexEntryFieldType.Tuple:
                         if (reader.GetReaderFor(comparer.FieldId).Read(out _, out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
                             goto NotMatch;
-
-                        isAccepted = IsAcceptedItem(comparer, valueInEntry, in lVal, in dVal);
+                        using (_searcher.ApplyAnalyzer(valueInEntry, comparer.FieldId, out var analyzedTerm))
+                            isAccepted = IsAcceptedItem(comparer, analyzedTerm, in lVal, in dVal);
+                        
                         if (isAccepted == false)
                             goto NotMatch;
 
@@ -449,16 +450,6 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                                 }
                                 else if (comparer.Type == MultiUnaryItem.DataType.Slice && comparer.CompareLiteral(fieldValue.AsReadOnlySpan()))
                                     break;
-                            }
-                            else if ((fieldType & IndexEntryFieldType.Tuple) != 0)
-                            {
-                                // Tuple guarantees there is [String, Long, Double]. Any exceptions? Nulls should be catch a layer before, right?
-                                isAccepted = IsAcceptedForIterator(comparer, in iterator);
-
-                                if (comparer.Mode == MultiUnaryItem.UnaryMode.Any && isAccepted)
-                                    break;
-                                if (comparer.Mode == MultiUnaryItem.UnaryMode.All && isAccepted == false)
-                                    goto NotMatch;
                             }
                             else
                             {
