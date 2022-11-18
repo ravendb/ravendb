@@ -298,15 +298,6 @@ export function BackupsPage(props: BackupsPageProps) {
                     </div>
                 )}
 
-                <div>
-                    <h1>Lorem ipsum dolor sit amet h1</h1>
-                    <h2>consectetur adipiscing elit</h2>
-                    <h3>Nunc interdum h3</h3>
-                    <h4>purus eget tempus dictum h4</h4>
-                    <h5>est lorem sollicitudin purus h5</h5>
-                    <h6>et sollicitudin nulla ante h6</h6>
-                </div>
-
                 <div className="flex-noshrink">
                     <div className="hr-title">
                         <h5 className="tasks-list-item periodic-backup">
