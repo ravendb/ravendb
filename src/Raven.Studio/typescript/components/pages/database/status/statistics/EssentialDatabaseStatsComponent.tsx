@@ -1,6 +1,7 @@
 ﻿import React from "react";
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 import { UncontrolledTooltip } from "../../../../common/UncontrolledTooltip";
+import { Card, Col, Row } from "reactstrap";
 
 interface EssentialDatabaseStatsComponentProps {
     stats: EssentialDatabaseStatistics;
@@ -10,9 +11,9 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
     const { stats } = props;
 
     return (
-        <div className="stats-list panel padding">
-            <div className="row">
-                <div className="col-sm-6 col-lg-4 col-xl-3">
+        <Card className="stats-list p-4">
+            <Row>
+                <Col sm="6" lg="4" xl="3">
                     <div className="stats-item">
                         <div className="name">
                             <i className="icon-documents"></i> <span>Documents Count</span>
@@ -21,8 +22,8 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <span>{stats.CountOfDocuments.toLocaleString()}</span>
                         </div>
                     </div>
-                </div>
-                <div className="col-sm-6 col-lg-4 col-xl-3">
+                </Col>
+                <Col sm="6" lg="4" xl="3">
                     <div className="stats-item">
                         <div className="name">
                             <i className="icon-new-counter"></i>
@@ -32,8 +33,8 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <span>{stats.CountOfCounterEntries.toLocaleString()}</span>
                         </div>
                     </div>
-                </div>
-                <div className="col-sm-6 col-lg-4 col-xl-3">
+                </Col>
+                <Col sm="6" lg="4" xl="3">
                     <div className="stats-item">
                         <div className="name">
                             <i className="icon-attachment"></i>
@@ -43,10 +44,10 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <span>{stats.CountOfAttachments.toLocaleString()}</span>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div className="row">
-                <div className="col-sm-6 col-lg-4 col-xl-3">
+                </Col>
+            </Row>
+            <Row>
+                <Col sm="6" lg="4" xl="3">
                     <div className="stats-item">
                         <div className="name">
                             <i className="icon-indexing"></i>
@@ -56,8 +57,8 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <span>{stats.CountOfIndexes.toLocaleString()}</span>
                         </div>
                     </div>
-                </div>
-                <div className="col-sm-6 col-lg-4 col-xl-3">
+                </Col>
+                <Col sm="6" lg="4" xl="3">
                     <div className="stats-item">
                         <div className="name">
                             <i className="icon-revisions"></i>
@@ -67,8 +68,8 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <span>{stats.CountOfRevisionDocuments.toLocaleString()}</span>
                         </div>
                     </div>
-                </div>
-                <div className="col-sm-6 col-lg-4 col-xl-3">
+                </Col>
+                <Col sm="6" lg="4" xl="3">
                     <div className="stats-item">
                         <div className="name">
                             <i className="icon-conflicts"></i>
@@ -78,10 +79,10 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <span>{stats.CountOfDocumentsConflicts.toLocaleString()}</span>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div className="row">
-                <div className="col-sm-6 col-lg-4 col-xl-3">
+                </Col>
+            </Row>
+            <Row>
+                <Col sm="6" lg="4" xl="3">
                     <div className="stats-item">
                         <div className="name">
                             <i className="icon-zombie"></i>
@@ -91,10 +92,10 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <span>{stats.CountOfTombstones.toLocaleString()}</span>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div className="row">
-                <div className="col-sm-6 col-lg-4 col-xl-3">
+                </Col>
+            </Row>
+            <Row>
+                <Col sm="6" lg="4" xl="3">
                     <div className="stats-item">
                         <div className="name">
                             <i className="icon-timeseries-settings"></i>
@@ -125,8 +126,8 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <span>{stats.CountOfTimeSeriesSegments}</span>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
+                </Col>
+            </Row>
+        </Card>
     );
 }

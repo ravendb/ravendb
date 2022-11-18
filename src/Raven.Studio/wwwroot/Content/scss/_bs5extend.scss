@@ -3,6 +3,15 @@
     color: $text-color;
 }
 
+.text-capital {
+    text-transform: uppercase;
+    letter-spacing: .1em;
+}
+
+.text-emphasis {
+    color: $text-emphasis;
+}
+
 input {
     &[type=checkbox], &[type=radio] {
         cursor: pointer;
@@ -73,3 +82,19 @@ input {
 
 @include check-size-variant(1.61, "lg");
 @include check-size-variant(.61, "sm");
+
+.hr-title {
+    display: flex;
+    align-items: center;
+    margin-bottom: $gutter-sm;
+
+    h1, h2, h3, h4, h5 {
+        //margin: 0 6px 1px 0;
+        text-transform: uppercase;
+    }
+
+    hr {
+        flex-grow: 1;
+        margin: 0;
+    }
+}
