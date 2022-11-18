@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax;
@@ -22,21 +22,22 @@ public readonly struct CoraxBooleanItem : IQueryMatch
     public readonly UnaryMatchOperation Operation;
     public readonly UnaryMatchOperation BetweenLeft;
     public readonly UnaryMatchOperation BetweenRight;
-
-    private const string IQueryMatchUsageException =
-        $"You tried to use {nameof(CoraxBooleanQuery)} as normal querying function. This class is only for type - relaxation inside {nameof(CoraxQueryBuilder)} to build big UnaryMatch stack";
-
     private readonly IQueryScoreFunction _scoreFunction;
     private readonly IndexSearcher _indexSearcher;
+    private readonly bool _isTime; 
+    public bool IsBoosting => _scoreFunction is not NullScoreFunction;
+
     public long Count { get; }
 
-    public CoraxBooleanItem(IndexSearcher searcher, string name, int fieldId, object term, UnaryMatchOperation operation,
-        IQueryScoreFunction scoreFunction = default)
+    public CoraxBooleanItem(IndexSearcher searcher, Index index, string name, int fieldId, object term, UnaryMatchOperation operation, IQueryScoreFunction scoreFunction = default)
     {
         _scoreFunction = scoreFunction;
         Name = name;
         FieldId = fieldId;
-        Term = term;
+        var ticks = default(long);
+        _isTime = term is not null && QueryBuilderHelper.TryGetTime(index, term, out ticks);
+        Term = _isTime ? ticks : term;
+
         Operation = operation;
         _indexSearcher = searcher;
 
@@ -56,26 +57,32 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         }
     }
 
-    public CoraxBooleanItem(IndexSearcher searcher, string name, int fieldId, object term1, object term2, UnaryMatchOperation operation, UnaryMatchOperation left,
-        UnaryMatchOperation right,
-        IQueryScoreFunction scoreFunction = default) : this(searcher, name, fieldId, term1, operation, scoreFunction)
+    public CoraxBooleanItem(IndexSearcher searcher, Index index, string name, int fieldId, object term1, object term2, UnaryMatchOperation operation, UnaryMatchOperation left, UnaryMatchOperation right, IQueryScoreFunction scoreFunction = default) : this(searcher, index, name, fieldId, term1, operation, scoreFunction)
     {
         //Between handler
-        Term2 = term2;
+        
+        if (_isTime) //found time at `Term1`, lets check if second item also contains time
+        {
+            if (term2 != null && QueryBuilderHelper.TryGetTime(index, term2, out var ticks))
+            {
+                Term2 = ticks;
+            }
+            else  //not found, lets revert Term1 
+            {
+                Term = term1;
+                Term2 = term2;
+                _isTime = false;
+            }
+        }
+        else
+        {
+            Term2 = term2;
+        }
+
         BetweenRight = right;
         BetweenLeft = left;
     }
-
-    public QueryCountConfidence Confidence => throw new InvalidOperationException(IQueryMatchUsageException);
-    public bool IsBoosting => _scoreFunction is not NullScoreFunction;
-    public int Fill(Span<long> matches) => throw new InvalidOperationException(IQueryMatchUsageException);
-
-    public int AndWith(Span<long> buffer, int matches) => throw new InvalidOperationException(IQueryMatchUsageException);
-
-    public void Score(Span<long> matches, Span<float> scores) => throw new InvalidOperationException(IQueryMatchUsageException);
-
-    public QueryInspectionNode Inspect() => throw new InvalidOperationException(IQueryMatchUsageException);
-
+    
     public static bool CanBeMerged(CoraxBooleanItem lhs, CoraxBooleanItem rhs)
     {
         return (lhs._scoreFunction, rhs._scoreFunction) switch
@@ -138,16 +145,42 @@ public readonly struct CoraxBooleanItem : IQueryMatch
 
         return baseMatch;
     }
+    
+    public QueryCountConfidence Confidence => throw new InvalidOperationException(IQueryMatchUsageException);
+    public int Fill(Span<long> matches) => throw new InvalidOperationException(IQueryMatchUsageException);
+
+    public int AndWith(Span<long> buffer, int matches) => throw new InvalidOperationException(IQueryMatchUsageException);
+
+    public void Score(Span<long> matches, Span<float> scores) => throw new InvalidOperationException(IQueryMatchUsageException);
+
+    public QueryInspectionNode Inspect() => throw new InvalidOperationException(IQueryMatchUsageException);
+    private const string IQueryMatchUsageException = $"You tried to use {nameof(CoraxBooleanQuery)} as normal querying function. This class is only for type - relaxation inside {nameof(CoraxQueryBuilder)} to build big UnaryMatch stack";
+
+    public override string ToString()
+    {
+        if (Operation is UnaryMatchOperation.Between or UnaryMatchOperation.NotBetween)
+        {
+            return $"Field name: '{Name}'{Environment.NewLine}" +
+                   $"Field id: '{FieldId}'{Environment.NewLine}" +
+                   $"Operation: '{Operation}'{Environment.NewLine}" +
+                   $"Between options:{Environment.NewLine}" +
+                   $"\tLeft operation: '{BetweenLeft}'{Environment.NewLine}" +
+                   $"\tRight operation: '{BetweenRight}'{Environment.NewLine}" +
+                   $"Left term: '{Term}'{Environment.NewLine}" +
+                   $"Right term: '{Term2}'{Environment.NewLine}";
+        }
+
+        return $"Field name: '{Name}'{Environment.NewLine}" +
+               $"Field id: '{FieldId}'{Environment.NewLine}" +
+               $"Term: '{Term}'{Environment.NewLine}" +
+               $"Operation: '{Operation}'{Environment.NewLine}";
+    }
 }
 
 public class CoraxBooleanQuery : IQueryMatch
 {
     private readonly List<CoraxBooleanItem> _queryStack;
     private readonly IQueryScoreFunction _scoreFunction;
-
-    private const string QueryMatchUsageException =
-        $"You tried to use {nameof(CoraxBooleanQuery)} as normal querying function. This class is only for type - relaxation inside {nameof(CoraxQueryBuilder)} to build big UnaryMatch stack";
-
     private MemoizationMatchProviderRef<AllEntriesMatch> _allEntries;
 
     private readonly IndexSearcher _indexSearcher;
@@ -156,6 +189,9 @@ public class CoraxBooleanQuery : IQueryMatch
     public CoraxBooleanQuery(IndexSearcher indexSearcher, MemoizationMatchProviderRef<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right,
         IQueryScoreFunction scoreFunction)
     {
+        if (CoraxBooleanItem.CanBeMerged(left, right) == false)
+            throw new InvalidDataException($"Cannot merge {nameof(CoraxBooleanItem)}. This is bug. {Environment.NewLine}Details:{Environment.NewLine} {left}{Environment.NewLine}{Environment.NewLine}{right}");
+        
         _indexSearcher = indexSearcher;
         _queryStack = new List<CoraxBooleanItem>() {left, right};
         _scoreFunction = scoreFunction;
@@ -167,6 +203,12 @@ public class CoraxBooleanQuery : IQueryMatch
         if (other._scoreFunction.GetType() != _scoreFunction.GetType())
             return false;
 
+        if (_scoreFunction is ConstantScoreFunction thisScore && other._scoreFunction is ConstantScoreFunction otherScore)
+        {
+            if (thisScore.Value.AlmostEquals(otherScore.Value) == false)
+                return false;
+        }
+        
         _queryStack.AddRange(other._queryStack);
         return true;
     }
@@ -180,30 +222,17 @@ public class CoraxBooleanQuery : IQueryMatch
 
         return true;
     }
-
+    
     public unsafe IQueryMatch Materialize()
     {
         Debug.Assert(_queryStack.Count > 0);
-
-        _queryStack.Sort(((firstUnaryItem, secondUnaryItem) =>
-        {
-            if (firstUnaryItem.Operation == UnaryMatchOperation.Equals && secondUnaryItem.Operation != UnaryMatchOperation.Equals)
-                return -1;
-            if (firstUnaryItem.Operation != UnaryMatchOperation.Equals && secondUnaryItem.Operation == UnaryMatchOperation.Equals)
-                return 1;
-            if (firstUnaryItem.Operation == UnaryMatchOperation.Between && secondUnaryItem.Operation != UnaryMatchOperation.Between)
-                return -1;
-            if (firstUnaryItem.Operation != UnaryMatchOperation.Between && secondUnaryItem.Operation == UnaryMatchOperation.Between)
-                return 1;
-            if (firstUnaryItem.Operation == UnaryMatchOperation.Between && secondUnaryItem.Operation == UnaryMatchOperation.Between)
-                return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
-
-            return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
-        }));
-
+        
         IQueryMatch baseMatch = null;
         var stack = CollectionsMarshal.AsSpan(_queryStack);
         int reduced = 0;
+        
+        _queryStack.Sort(CoraxBooleanItemComparer);
+        
         foreach (var query in stack)
         {
             //Out of TermMatches in our stack
@@ -355,7 +384,25 @@ public class CoraxBooleanQuery : IQueryMatch
             ? baseMatch
             : _indexSearcher.Boost(baseMatch, _scoreFunction);
     }
+    
+    private static int CoraxBooleanItemComparer(CoraxBooleanItem firstUnaryItem, CoraxBooleanItem secondUnaryItem)
+    {
+        if (firstUnaryItem.Operation == UnaryMatchOperation.Equals && secondUnaryItem.Operation != UnaryMatchOperation.Equals)
+            return -1;
+        if (firstUnaryItem.Operation != UnaryMatchOperation.Equals && secondUnaryItem.Operation == UnaryMatchOperation.Equals)
+            return 1;
+        if (firstUnaryItem.Operation == UnaryMatchOperation.Between && secondUnaryItem.Operation != UnaryMatchOperation.Between)
+            return -1;
+        if (firstUnaryItem.Operation != UnaryMatchOperation.Between && secondUnaryItem.Operation == UnaryMatchOperation.Between)
+            return 1;
+        if (firstUnaryItem.Operation == UnaryMatchOperation.Between && secondUnaryItem.Operation == UnaryMatchOperation.Between)
+            return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
 
+        return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
+    }
+    
+    private const string QueryMatchUsageException = $"You tried to use {nameof(CoraxBooleanQuery)} as normal querying function. This class is only for type - relaxation inside {nameof(CoraxQueryBuilder)} to build big UnaryMatch stack";
+    
     public long Count => throw new InvalidOperationException(QueryMatchUsageException);
 
     public QueryCountConfidence Confidence => throw new InvalidOperationException(QueryMatchUsageException);
@@ -370,51 +417,3 @@ public class CoraxBooleanQuery : IQueryMatch
     public QueryInspectionNode Inspect() => throw new InvalidOperationException(QueryMatchUsageException);
 }
 
-public class CostCounter
-{
-    private CoraxBooleanItem[] _list;
-
-    /// <summary>
-    /// Assumption: this is bigger than 0;
-    /// </summary>
-    private readonly long _numberOfEntries;
-
-    private double[] _ratio;
-
-    public CostCounter(IndexSearcher searcher, CoraxBooleanItem[] list)
-    {
-        _list = list;
-        _numberOfEntries = searcher.NumberOfEntries;
-        _ratio = ArrayPool<double>.Shared.Rent(list.Length);
-    }
-
-    // Main goal is to find smallest beginning set to perform operations on it.
-    // This class is not used for know.
-
-    public void Optimize()
-    {
-        // At very beginning lets find hit ratio of our term
-        for (int index = 0; index < _list.Length; index++)
-        {
-            CoraxBooleanItem item = _list[index];
-            ref var ratio = ref _ratio[index];
-
-            //Closer to 1 (or over) means we should avoid it. 
-            if (item.Operation == UnaryMatchOperation.Equals)
-                ratio = (double)item.Count / _numberOfEntries;
-            else if (item.Operation == UnaryMatchOperation.NotEquals)
-                ratio = (double)(_numberOfEntries - item.Count) / _numberOfEntries;
-            else
-            {
-                //This is ideal scenario IF they are ranged (not (-inf, X) or (X, inf)
-                //Values over 1 means duplications
-                var count = item.Materialize().Count;
-            }
-
-            //This is interesting part because we don't know how many items do we hit. Maybe should we go trough tree and calculate the cost first? 
-        }
-    }
-
-
-    public ReadOnlySpan<CoraxBooleanItem> GetStack() => _list.AsSpan();
-}
