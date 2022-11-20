@@ -24,6 +24,7 @@ using static Raven.Server.Documents.Schemas.Revisions;
 using static Raven.Server.Documents.Schemas.TimeSeries;
 using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage;
 
+
 namespace Raven.Server.Documents.Sharding;
 
 public unsafe class ShardedDocumentsStorage : DocumentsStorage
@@ -106,7 +107,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         {
                 Bucket = bucket,
                 Size = stats.Size,
-                NumberOfItems = stats.NumberOfDocuments,
+            NumberOfDocuments = stats.NumberOfDocuments,
             LastModified = new DateTime(stats.LastModifiedTicks, DateTimeKind.Utc)
             };
         }
@@ -233,7 +234,6 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
         _bucketStatistics = null;
     }
-
 
     public ChangeVector GetLastChangeVectorInBucket(DocumentsOperationContext context, int bucket)
     {
