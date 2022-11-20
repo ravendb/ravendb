@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Globalization;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -17,8 +17,9 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Sharding;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Utils;
@@ -206,9 +207,7 @@ namespace SlowTests.Sharding.Cluster
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User
-                    {
-                    }, "users/1-A");
+                    session.Store(new User(), "users/1-A");
                     session.SaveChanges();
                 }
 
@@ -216,9 +215,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     using (var session = store.OpenSession())
                     {
-                        session.Store(new User
-                        {
-                        }, $"num-{i}$users/1-A");
+                        session.Store(new User(), $"num-{i}$users/1-A");
                         session.SaveChanges();
                     }
                 }
@@ -367,6 +364,7 @@ namespace SlowTests.Sharding.Cluster
                     Equal(id.ToLower(), tomb.Id.ToString(CultureInfo.InvariantCulture));
                     Equal(ReplicationBatchItem.ReplicationItemType.DocumentTombstone, tomb.Type);
                     True(tomb.Flags.Contain(DocumentFlags.Artificial));
+                    True(tomb.Flags.Contain(DocumentFlags.FromResharding));
                 }
 
                 var newLocation = await Sharding.GetShardNumber(store, id);
@@ -438,6 +436,7 @@ namespace SlowTests.Sharding.Cluster
                         };
 
                         True(flags.Contain(DocumentFlags.Artificial));
+                        True(flags.Contain(DocumentFlags.FromResharding));
                     }
                 }
 
@@ -503,6 +502,7 @@ namespace SlowTests.Sharding.Cluster
                         var replicationItem = tomb as DocumentReplicationItem;
                         NotNull(replicationItem);
                         False(replicationItem.Flags.Contain(DocumentFlags.Artificial));
+                        False(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
                     }
                 }
 
@@ -525,6 +525,7 @@ namespace SlowTests.Sharding.Cluster
                         var replicationItem = tomb as DocumentReplicationItem;
                         NotNull(replicationItem);
                         True(replicationItem.Flags.Contain(DocumentFlags.Artificial));
+                        True(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
                     }
                 }
 
@@ -549,6 +550,7 @@ namespace SlowTests.Sharding.Cluster
                         var replicationItem = tomb as DocumentReplicationItem;
                         NotNull(replicationItem);
                         False(replicationItem.Flags.Contain(DocumentFlags.Artificial));
+                        False(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
                     }
                 }
             }
@@ -851,6 +853,7 @@ namespace SlowTests.Sharding.Cluster
                         var tombs = oldLocationShard.DocumentsStorage.GetTombstonesFrom(ctx, 0).ToList();
                         Equal(10, tombs.Count);
                         All(tombs, t => ((DocumentReplicationItem)t).Flags.Contain(DocumentFlags.Artificial));
+                        All(tombs, t => ((DocumentReplicationItem)t).Flags.Contain(DocumentFlags.FromResharding));
                     }
 
                     server = cluster.Nodes.Single(n => n.ServerStore.NodeTag == sharding.Shards[newLocation].Members[0]);
@@ -876,6 +879,111 @@ namespace SlowTests.Sharding.Cluster
                         }
                     }*/
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task ShouldHaveValidBucketStatsAfterBucketMigration()
+        {
+            DoNotReuseServer();
+
+            using (var store = Sharding.GetDocumentStore())
+            {
+                var suffix = "usa";
+                var id1 = $"users/1${suffix}";
+                var id2 = $"users/2${suffix}";
+                var id3 = $"users/3${suffix}";
+                var id4 = $"users/4${suffix}";
+
+                await InsertData(store);
+                var bucket = ShardHelper.GetBucket(id1);
+                var oldLocation = await Sharding.GetShardNumber(store, id1);
+
+                var originalShard = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation));
+                using (originalShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                    Equal(bucket, stats.Bucket);
+                    Equal(6969, stats.Size);
+                    Equal(4, stats.NumberOfDocuments);
+                }
+
+                await Sharding.Resharding.MoveShardForId(store, id1);
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, oldLocation)))
+                {
+                    var user = await session.LoadAsync<User>(id1);
+                    Null(user);
+
+                    user = await session.LoadAsync<User>(id2);
+                    Null(user);
+
+                    user = await session.LoadAsync<User>(id3);
+                    Null(user);
+
+                    user = await session.LoadAsync<User>(id4);
+                    Null(user);
+                }
+
+                using (originalShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                    Equal(bucket, stats.Bucket);
+                    Equal(344, stats.Size); // we still have 'artificial' tombstones on this shard
+                    Equal(0, stats.NumberOfDocuments);
+                }
+
+                using (originalShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombs = originalShard.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
+                    Equal(20, tombs.Count);
+
+                    foreach (var item in tombs)
+                    {
+                        DocumentFlags flags = item switch
+                        {
+                            DocumentReplicationItem documentReplicationItem => documentReplicationItem.Flags,
+                            AttachmentTombstoneReplicationItem attachmentTombstone => attachmentTombstone.Flags,
+                            RevisionTombstoneReplicationItem revisionTombstone => revisionTombstone.Flags,
+                            _ => DocumentFlags.None
+                        };
+
+                        True(flags.Contain(DocumentFlags.Artificial));
+                        True(flags.Contain(DocumentFlags.FromResharding));
+                    }
+
+                    await originalShard.TombstoneCleaner.ExecuteCleanup();
+                }
+
+                using (originalShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombsCount = originalShard.DocumentsStorage.GetNumberOfTombstones(context);
+                    Equal(0, tombsCount);
+
+                    var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(context, bucket);
+                    Equal(bucket, stats.Bucket);
+                    Equal(0, stats.Size);
+                    Equal(0, stats.NumberOfDocuments);
+                }
+
+                var newLocation = await Sharding.GetShardNumber(store, id1);
+                NotEqual(oldLocation, newLocation);
+
+                var newShard = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, newLocation));
+                using (newShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                    Equal(bucket, stats.Bucket);
+                    Equal(7706, stats.Size);
+                    Equal(4, stats.NumberOfDocuments);
+                }
+
+                await CheckData(store, database: ShardHelper.ToShardName(store.Database, newLocation), expectedRevisionsCount: 9);
             }
         }
 
