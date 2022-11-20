@@ -9,9 +9,9 @@ namespace Voron.Data
         public long Size;
 
         [FieldOffset(8)]
-        public long NumberOfItems;
+        public long NumberOfDocuments;
 
         [FieldOffset(16)]
-        public long LastAccessedTicks;
+        public long LastModifiedTicks;
     }
 }

@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Schemas
                 docsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = DocumentsStorage.GenerateBucketAndEtagIndexKeyForDocuments,
-                    IndexEntryChangedDelegate = ShardedDocumentsStorage.UpdateBucketStats,
+                    OnEntryChanged = DocumentsStorage.UpdateBucketStats,
                     IsGlobal = true,
                     Name = AllDocsBucketAndEtagSlice
                 });
