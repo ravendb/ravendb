@@ -14,7 +14,6 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.RawData;
 using Voron.Data.Sets;
-using BucketStats = Voron.Data.BucketStats;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl
@@ -27,17 +26,18 @@ namespace Voron.Impl
             get { return _lowLevelTransaction; }
         }
 
+        public object Owner;
+
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
         public IEnumerable<Tree> Trees => _trees?.Values ?? Enumerable.Empty<Tree>();
-
+        
         public IEnumerable<Table> Tables => _tables?.Values ?? Enumerable.Empty<Table>();
 
         public bool IsWriteTransaction => _lowLevelTransaction.Flags == TransactionFlags.ReadWrite;
 
         internal Dictionary<long, ByteString> CachedDecompressedBuffersByStorageId =>
             _cachedDecompressedBuffersByStorageId ??= new Dictionary<long, ByteString>();
-        internal Dictionary<int, BucketStats> BucketStatistics => _bucketStatistics ??= new Dictionary<int, BucketStats>();
 
         private LowLevelTransaction _lowLevelTransaction;
         private Dictionary<Slice, Set> _sets;
@@ -46,7 +46,6 @@ namespace Voron.Impl
         private Dictionary<Slice, FixedSizeTree> _globalFixedSizeTree;
         private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
         private Dictionary<long, ByteString> _cachedDecompressedBuffersByStorageId;
-        private Dictionary<int, BucketStats> _bucketStatistics;
 
         public Transaction(LowLevelTransaction lowLevelTransaction)
         {
@@ -276,22 +275,6 @@ namespace Voron.Impl
                 foreach (var participant in _tables.Values)
                 {
                     participant.PrepareForCommit();
-                }
-            }
-
-            if (_bucketStatistics != null)
-            {
-                var tree = ReadTree("BucketStats"); // TODO 
-                foreach ((int bucket, BucketStats stats) in _bucketStatistics)
-                {
-                    using (Allocator.Allocate(sizeof(int), out var keyBuffer))
-                    {
-                        *(int*)keyBuffer.Ptr = bucket;
-                        var keySlice = new Slice(keyBuffer);
-
-                        using (tree.DirectAdd(keySlice, sizeof(BucketStats), out byte* ptr))
-                            *(BucketStats*)ptr = stats;
-                    }
                 }
             }
 

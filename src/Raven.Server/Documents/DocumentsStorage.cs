@@ -17,6 +17,7 @@ using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
@@ -37,6 +38,7 @@ using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Collections;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
+using BucketStats = Raven.Server.Documents.BucketStats;
 
 namespace Raven.Server.Documents
 {
@@ -57,16 +59,20 @@ namespace Raven.Server.Documents
         public DocumentPutAction DocumentPut;
         public StorageEnvironment Environment { get; private set; }
 
-        internal static readonly Slice BucketStatsSlice;
+        protected Dictionary<string, CollectionName> _collectionsCache;
+        protected static readonly Slice BucketStatsSlice;
 
-        private readonly Action<string> _addToInitLog;
+        internal Dictionary<int, BucketStats> BucketStatistics => _bucketStatistics ??= new Dictionary<int, BucketStats>();
+        private Dictionary<int, BucketStats> _bucketStatistics;
+
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
         private static readonly Slice GlobalTreeSlice;
         private static readonly Slice GlobalChangeVectorSlice;
         private static readonly Slice GlobalFullChangeVectorSlice;
-        protected Dictionary<string, CollectionName> _collectionsCache;
+        private readonly Action<string> _addToInitLog;
+
         private readonly Logger _logger;
         private readonly string _name;
 
@@ -209,6 +215,7 @@ namespace Raven.Server.Documents
 
                 Environment.NewTransactionCreated += SetTransactionCache;
                 Environment.AfterCommitWhenNewTransactionsPrevented += UpdateDocumentTransactionCache;
+                Environment.OnBeforeCommit += UpdateBucketStatsTreeBeforeCommit;
 
                 using (var tx = Environment.WriteTransaction())
                 {
@@ -220,9 +227,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
-
                     tx.CreateTree(BucketStatsSlice);
-
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
@@ -2594,30 +2599,54 @@ namespace Raven.Server.Documents
 
         private static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize, int numOfDocsChanged)
         {
-            var nowTicks = DateTime.UtcNow.Ticks;
+            if (tx.Owner is not DocumentDatabase documentDatabase)
+                return;
+            
+            var nowTicks = documentDatabase.Time.GetUtcNow().Ticks;
             var bucket = *(int*)key.Content.Ptr;
 
-            tx.BucketStatistics.TryGetValue(bucket, out var bucketStats);
-            /*if (tx.BucketStatistics.TryGetValue(bucket, out var bucketStats) == false)
-            {
-                var bucketStatsTree = tx.ReadTree(BucketStatsSlice);
-
-                using (tx.Allocator.Allocate(sizeof(int), out var keyBuffer))
-                {
-                    *(int*)keyBuffer.Ptr = bucket;
-                    var keySlice = new Slice(keyBuffer);
-
-                    var readResult = bucketStatsTree.Read(keySlice);
-                    if (readResult != null)
-                        bucketStats = *(Voron.Data.BucketStats*)readResult.Reader.Base;
-                }
-            }*/
+            documentDatabase.DocumentsStorage.BucketStatistics.TryGetValue(bucket, out var bucketStats);
 
             bucketStats.Size += newSize - oldSize;
             bucketStats.NumberOfDocuments += numOfDocsChanged;
             bucketStats.LastModifiedTicks = nowTicks;
 
-            tx.BucketStatistics[bucket] = bucketStats;
+            documentDatabase.DocumentsStorage.BucketStatistics[bucket] = bucketStats;
+        }
+
+        private void UpdateBucketStatsTreeBeforeCommit(LowLevelTransaction llt)
+        {
+            if (_bucketStatistics == null) 
+                return;
+            
+            var tree = llt.Transaction.ReadTree(BucketStatsSlice);
+            foreach ((int bucket, BucketStats inMemoryStats) in _bucketStatistics)
+            {
+                using (llt.Allocator.Allocate(sizeof(int), out var keyBuffer))
+                {
+                    *(int*)keyBuffer.Ptr = bucket;
+                    var keySlice = new Slice(keyBuffer);
+                    var readResult = tree.Read(keySlice);
+
+                    BucketStats stats;
+                    if (readResult == null)
+                    {
+                        stats = inMemoryStats;
+                    }
+                    else
+                    {
+                        stats = *(BucketStats*)readResult.Reader.Base;
+                        stats.Size += inMemoryStats.Size;
+                        stats.NumberOfDocuments += inMemoryStats.NumberOfDocuments;
+                        stats.LastModifiedTicks = inMemoryStats.LastModifiedTicks;
+                    }
+
+                    using (tree.DirectAdd(keySlice, sizeof(BucketStats), out byte* ptr))
+                        *(BucketStats*)ptr = stats;
+                }
+            }
+
+            _bucketStatistics = null;
         }
 
         internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)

@@ -125,7 +125,6 @@ namespace Voron
             handler(this, new DataIntegrityErrorEventArgs(message, e));
         }
 
-
         public void InvokeNonDurableFileSystemError(object sender, string message, Exception e, string details)
         {
             var handler = OnNonDurableFileSystemError;
@@ -250,7 +249,6 @@ namespace Voron
 
             if (bool.TryParse(shouldForceEnvVar, out bool result))
                 ForceUsing32BitsPager = result;
-
 
             bool shouldConfigPagersRunInLimitedMemoryEnvironment = PlatformDetails.Is32Bits || ForceUsing32BitsPager;
             MaxLogFileSize = ((shouldConfigPagersRunInLimitedMemoryEnvironment ? 4 : 256) * Constants.Size.Megabyte);            

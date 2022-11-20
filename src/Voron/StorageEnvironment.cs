@@ -6,7 +6,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -22,8 +21,6 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
-using Voron.Data.Fixed;
-using Voron.Data.Sets;
 using Voron.Data.Tables;
 using Voron.Debugging;
 using Voron.Exceptions;
@@ -37,7 +34,6 @@ using Voron.Schema;
 using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Voron.Global.Constants;
-using Container = Voron.Data.Containers.Container;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron
@@ -730,6 +726,7 @@ namespace Voron
                     {
                         tx.CurrentTransactionHolder = _currentWriteTransactionHolder;
                         tx.AfterCommitWhenNewTransactionsPrevented += AfterCommitWhenNewTransactionsPrevented;
+                        tx.OnBeforeCommit += OnBeforeCommit;
                     }
 
                     ActiveTransactions.Add(tx);
@@ -898,6 +895,8 @@ namespace Voron
 
         public event Action<LowLevelTransaction> NewTransactionCreated;
         public event Action<LowLevelTransaction> AfterCommitWhenNewTransactionsPrevented;
+        public event Action<LowLevelTransaction> OnBeforeCommit;
+
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
             if (ActiveTransactions.Contains(tx) == false)
