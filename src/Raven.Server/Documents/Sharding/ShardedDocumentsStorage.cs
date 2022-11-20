@@ -49,108 +49,53 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         }
     }
 
-    public class BucketStatistics
+    public static IEnumerable<BucketStatistics> GetBucketStatistics(DocumentsOperationContext context, int start, int take = int.MaxValue)
     {
-        public int Bucket;
+        var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsSlice);
+        if (tree == null)
+            yield break;
 
-        public long Size;
-
-        public long NumberOfItems;
-
-        public DateTime LastAccessed;
-    }
-
-
-    internal static void UpdateBucketStats_old(Transaction tx, Slice key, int oldSize, int newSize)
+        using (GetBucketByteString(context.Allocator, start, out var buffer))
+        using (Slice.External(context.Allocator, buffer, buffer.Length, out var startSlice))
     {
-        if (tx.IsWriteTransaction == false)
-            return; // todo 
-
-        var nowTicks = DateTime.UtcNow.Ticks;
-        var bucket = Bits.SwapBytes(*(int*)key.Content.Ptr);
-
-        if (tx.BucketStatistics.TryGetValue(bucket, out var bucketStats) == false)
+            using (var it = tree.Iterate(prefetch: true))
         {
-            var bucketStatsTree = tx.ReadTree(BucketStatsSlice);
+                if (it.Seek(startSlice) == false)
+                    yield break;
 
-            using (tx.Allocator.Allocate(sizeof(int), out var keyBuffer))
-            using (tx.Allocator.Allocate(sizeof(long) * 3, out var statsBuffer))
+                do
             {
-                *(int*)keyBuffer.Ptr = bucket;
-                var keySlice = new Slice(keyBuffer);
+                    if (take-- <= 0)
+                        yield break;
 
-                var readResult = bucketStatsTree.Read(keySlice);
-                if (readResult != null)
-                {
-                    // we only need to read 'Size' and 'NumberOfItems', 'LastAccessedTicks' will be overriden  
-                    readResult.Reader.Read(statsBuffer.Ptr, sizeof(long) * 2);
-                }
-                else
-                {
-                    *(long*)statsBuffer.Ptr = 0; // size
-                    *(long*)(statsBuffer.Ptr + sizeof(long)) = 0; // number of items
-                }
+                    var reader = it.CreateReaderForCurrent();
+                    yield return ValueReaderToBucketStats(it.CurrentKey, ref reader);
 
-                bucketStats = *(Voron.Data.BucketStats*)statsBuffer.Ptr;
+                } while (it.MoveNext());
             }
         }
-
-        bucketStats.Size += (newSize - oldSize);
-
-        if (oldSize == 0)
-            bucketStats.NumberOfItems++;
-        else if (newSize == 0)
-            bucketStats.NumberOfItems--;
-
-        bucketStats.LastAccessedTicks = nowTicks;
-
-        tx.BucketStatistics[bucket] = bucketStats;
     }
 
-    internal static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize)
+    private static BucketStatistics ValueReaderToBucketStats(Slice key, ref ValueReader valueReader)
     {
-        if (tx.IsWriteTransaction == false)
-            return; // todo 
-
-        var nowTicks = DateTime.UtcNow.Ticks;
         var bucket = Bits.SwapBytes(*(int*)key.Content.Ptr);
-
-        if (tx.BucketStatistics.TryGetValue(bucket, out var bucketStats) == false)
+        var stats = *(Voron.Data.BucketStats*)valueReader.Base;
+        return new BucketStatistics
         {
-            var bucketStatsTree = tx.ReadTree(BucketStatsSlice);
-
-            using (tx.Allocator.Allocate(sizeof(int), out var keyBuffer))
-            {
-                *(int*)keyBuffer.Ptr = bucket;
-                var keySlice = new Slice(keyBuffer);
-
-                var readResult = bucketStatsTree.Read(keySlice);
-                if (readResult != null)
-                    bucketStats = *(Voron.Data.BucketStats*)readResult.Reader.Base;
+            Bucket = bucket,
+            Size = stats.Size,
+            NumberOfItems = stats.NumberOfDocuments,
+            LastModified = new DateTime(stats.LastModifiedTicks)
+        };
             }
-        }
 
-        bucketStats.Size += newSize - oldSize;
-
-        if (oldSize == 0)
-            bucketStats.NumberOfItems++;
-        else if (newSize == 0)
-            bucketStats.NumberOfItems--;
-
-        bucketStats.LastAccessedTicks = nowTicks;
-
-        tx.BucketStatistics[bucket] = bucketStats;
-    }
-
-    public static BucketStatistics GetBucketStatistics(DocumentsOperationContext context, int bucket)
+    public static BucketStatistics GetBucketStatisticsFor(DocumentsOperationContext context, int bucket)
     {
-        // todo throw if no read tx open 
-
         var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsSlice);
 
         using (context.Transaction.InnerTransaction.Allocator.Allocate(sizeof(int), out var keyBuffer))
         {
-            *(int*)keyBuffer.Ptr = bucket;
+            *(int*)keyBuffer.Ptr = Bits.SwapBytes(bucket);
             var readResult = tree.Read(new Slice(keyBuffer));
             if (readResult == null)
                 return null;
@@ -161,8 +106,8 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
             {
                 Bucket = bucket,
                 Size = stats.Size,
-                NumberOfItems = stats.NumberOfItems,
-                LastAccessed = new DateTime(stats.LastAccessedTicks)
+                NumberOfItems = stats.NumberOfDocuments,
+                LastModified = new DateTime(stats.LastModifiedTicks)
             };
         }
     }

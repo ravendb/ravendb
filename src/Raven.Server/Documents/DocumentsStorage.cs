@@ -2575,6 +2575,46 @@ namespace Raven.Server.Documents
             return GenerateBucketAndEtagIndexKey(context, idIndex: (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
         }
 
+        internal static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize)
+        {
+            UpdateBucketStats(tx, key, oldSize, newSize, isDocument: true);
+        }
+
+        internal static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize, bool isDocument)
+        {
+            var nowTicks = DateTime.UtcNow.Ticks;
+            var bucket = *(int*)key.Content.Ptr;
+
+            if (tx.BucketStatistics.TryGetValue(bucket, out var bucketStats) == false)
+            {
+                var bucketStatsTree = tx.ReadTree(BucketStatsSlice);
+
+                using (tx.Allocator.Allocate(sizeof(int), out var keyBuffer))
+                {
+                    *(int*)keyBuffer.Ptr = bucket;
+                    var keySlice = new Slice(keyBuffer);
+
+                    var readResult = bucketStatsTree.Read(keySlice);
+                    if (readResult != null)
+                        bucketStats = *(Voron.Data.BucketStats*)readResult.Reader.Base;
+                }
+            }
+
+            bucketStats.Size += newSize - oldSize;
+
+            if (isDocument)
+            {
+                if (oldSize == 0)
+                    bucketStats.NumberOfDocuments++;
+                else if (newSize == 0)
+                    bucketStats.NumberOfDocuments--;
+            }
+
+            bucketStats.LastModifiedTicks = nowTicks;
+
+            tx.BucketStatistics[bucket] = bucketStats;
+        }
+
         internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
         {
             var idPtr = tvr.Read(idIndex, out var size);

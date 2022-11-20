@@ -281,7 +281,7 @@ namespace Voron.Impl
 
             if (_bucketStatistics != null)
             {
-                var tree = ReadTree("BucketStats"); // todo 
+                var tree = ReadTree("BucketStats"); // TODO 
                 foreach ((int bucket, BucketStats stats) in _bucketStatistics)
                 {
                     using (Allocator.Allocate(sizeof(int), out var keyBuffer))
