@@ -8,7 +8,7 @@ public class BucketStats
 
     public long Size;
 
-    public long NumberOfItems;
+    public long NumberOfDocuments;
 
     public DateTime LastModified;
 }

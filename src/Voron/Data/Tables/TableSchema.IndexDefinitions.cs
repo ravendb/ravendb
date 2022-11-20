@@ -338,8 +338,6 @@ namespace Voron.Data.Tables
                 var @delegate = Delegate.CreateDelegate(typeof(IndexEntryKeyGenerator), method);
                 indexDef.GenerateKey = (IndexEntryKeyGenerator)@delegate;
 
-                //  TODO : read 'OnEntryChanged'
-
                 // read if this index has OnEntryChanged
                 currentPtr = input.Read(5, out currentSize);
                 var hasIndexEntryChangedDelegate = Convert.ToBoolean(*currentPtr);
@@ -364,9 +362,6 @@ namespace Voron.Data.Tables
 
                 if (method.IsStatic == false)
                     throw new InvalidDataException($"{nameof(OnEntryChanged)} must be a static method. method name : {methodName}");
-
-                //if (method.GetCustomAttribute<StorageIndexEntryKeyGeneratorAttribute>() == null)
-                //    throw new InvalidDataException($"{nameof(OnEntryChanged)} must be marked with custom attribute '{nameof(StorageIndexEntryKeyGeneratorAttribute)}'. method name : {methodName}");
 
                 var onIndexEntryChangedDelegate = Delegate.CreateDelegate(typeof(OnIndexEntryChangedDelegate), method);
                 indexDef.OnEntryChanged = (OnIndexEntryChangedDelegate)onIndexEntryChangedDelegate;
@@ -436,19 +431,14 @@ namespace Voron.Data.Tables
                 if (GenerateKey.Method.GetCustomAttribute<StorageIndexEntryKeyGeneratorAttribute>() == null)
                     throw new ArgumentOutOfRangeException(nameof(GenerateKey), $"{nameof(GenerateKey)} must be marked with custom attribute '{nameof(StorageIndexEntryKeyGeneratorAttribute)}'");
 
-                if (OnEntryChanged != null)
-                {
-                    if (OnEntryChanged.Method.DeclaringType == null)
-                        throw new ArgumentOutOfRangeException(nameof(OnEntryChanged), $"{nameof(OnEntryChanged)}.Method.DeclaringType cannot be null");
+                if (OnEntryChanged == null) 
+                    return;
 
-                    if (OnEntryChanged.Method.IsStatic == false)
-                        throw new ArgumentOutOfRangeException(nameof(OnEntryChanged), $"{nameof(OnEntryChanged)} must be a static method");
+                if (OnEntryChanged.Method.DeclaringType == null)
+                    throw new ArgumentOutOfRangeException(nameof(OnEntryChanged), $"{nameof(OnEntryChanged)}.Method.DeclaringType cannot be null");
 
-                    //if (OnEntryChanged.Method.GetCustomAttribute<StorageIndexEntryKeyGeneratorAttribute>() == null)
-                    //  throw new ArgumentOutOfRangeException(nameof(OnEntryChanged), $"{nameof(OnEntryChanged)} must be marked with custom attribute '{nameof(StorageIndexEntryKeyGeneratorAttribute)}'");
-
-
-                }
+                if (OnEntryChanged.Method.IsStatic == false)
+                    throw new ArgumentOutOfRangeException(nameof(OnEntryChanged), $"{nameof(OnEntryChanged)} must be a static method");
             }
         }
 
