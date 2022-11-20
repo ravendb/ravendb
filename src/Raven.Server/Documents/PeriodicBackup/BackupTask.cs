@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
@@ -210,15 +211,28 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 return _backupResult;
             }
-            catch (OperationCanceledException)
-            {
-                operationCanceled = TaskCancelToken.Token.IsCancellationRequested;
-                throw;
-            }
             catch (ObjectDisposedException)
             {
                 // shutting down, probably
                 operationCanceled = true;
+                throw;
+            }
+            catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
+            {
+                operationCanceled = TaskCancelToken.Token.IsCancellationRequested;
+
+                var backupStatus = _database.PeriodicBackupRunner.GetBackupStatus(runningBackupStatus.TaskId);
+                if (backupStatus.DelayUntil > DateTime.UtcNow)
+                {
+                    _database.NotificationCenter.Add(AlertRaised.Create(
+                        _database.Name,
+                        "The task was delayed",
+                        $"The backup task '{_taskName}' was delayed by user and will start again at {backupStatus.DelayUntil.Value.ToLocalTime():MMMM d, yyyy h:mm tt}.",
+                        AlertType.PeriodicBackup,
+                        NotificationSeverity.Info,
+                        details: new ExceptionDetails(oce)));
+                }
+                
                 throw;
             }
             catch (Exception e)

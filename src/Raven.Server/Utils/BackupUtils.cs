@@ -11,7 +11,6 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.LowMemory;
@@ -158,7 +157,7 @@ internal static class BackupUtils
         Debug.Assert(parameters.Configuration.TaskId != 0);
 
         var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag );
-        var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
+        var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus.DelayUntil);
         var nowLocalTime = SystemTime.UtcNow.ToLocalTime();
         var timeSpan = nextBackupTimeLocal - nowLocalTime;
 
@@ -216,18 +215,21 @@ internal static class BackupUtils
         }
     }
 
-    private static DateTime GetNextBackupDateTime(DateTime? nextFullBackup, DateTime? nextIncrementalBackup)
+    private static DateTime GetNextBackupDateTime(DateTime? nextFullBackup, DateTime? nextIncrementalBackup, DateTime? delayUntil)
     {
         Debug.Assert(nextFullBackup != null || nextIncrementalBackup != null);
+        DateTime? nextBackup;
 
         if (nextFullBackup == null)
-            return nextIncrementalBackup.Value;
+            nextBackup = nextIncrementalBackup;
+        else if (nextIncrementalBackup == null)
+            nextBackup = nextFullBackup;
+        else
+            nextBackup = nextFullBackup <= nextIncrementalBackup ? nextFullBackup.Value : nextIncrementalBackup.Value;
 
-        if (nextIncrementalBackup == null)
-            return nextFullBackup.Value;
-
-        var nextBackup = nextFullBackup <= nextIncrementalBackup ? nextFullBackup.Value : nextIncrementalBackup.Value;
-        return nextBackup;
+        return delayUntil != null && (delayUntil.Value.ToLocalTime() > nextBackup.Value) 
+            ? delayUntil.Value.ToLocalTime() 
+            : nextBackup.Value;
     }
 
     private static bool IsFullBackup(PeriodicBackupStatus backupStatus,

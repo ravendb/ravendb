@@ -438,6 +438,7 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateSubscriptionClientConnectionTime):
                     case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
                     case nameof(RemoveEtlProcessStateCommand):
+                    case nameof(DelayBackupCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
                         break;
 
@@ -534,7 +535,7 @@ namespace Raven.Server.ServerWide
                         var parameters = UpdateValue<ToggleServerWideTaskStateCommand.Parameters>(context, type, cmd, index, skipNotifyValueChanged: true);
                         ToggleServerWideTaskState(cmd, parameters, context, type, index);
                         break;
-
+                        
                     case nameof(PutCertificateWithSamePinningHashCommand):
                         PutCertificate(context, type, cmd, index, serverStore);
                         if (cmd.TryGet(nameof(PutCertificateWithSamePinningHashCommand.Name), out string thumbprint))
@@ -3952,7 +3953,7 @@ namespace Raven.Server.ServerWide
             // we don't mind indexForValueChanges for ServerWideExternalReplication
             ApplyDatabaseRecordUpdates(toUpdate, type, serverWideExternalReplication.TaskId, index, items, context);
         }
-
+        
         private static unsafe HashSet<string> GetAllSeverWideExternalReplicationNames(ClusterOperationContext context)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
