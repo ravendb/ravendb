@@ -4,25 +4,26 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using NCrontab.Advanced;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Json.Serialization;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
-using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 
@@ -31,7 +32,8 @@ namespace Raven.Server.Documents.PeriodicBackup
     public class PeriodicBackupRunner : ITombstoneAware, IDisposable
     {
         private readonly Logger _logger;
-
+        private readonly Logger _auditLog;
+        
         private readonly DocumentDatabase _database;
         private readonly ServerStore _serverStore;
         private readonly CancellationTokenSource _cancellationToken;
@@ -57,6 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _database = database;
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<PeriodicBackupRunner>(_database.Name);
+            _auditLog = LoggingSource.AuditLog.GetLogger("PeriodicBackupRunner", "Audit");
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             _tempBackupPath = BackupUtils.GetBackupTempPath(_database.Configuration, "PeriodicBackupTemp");
 
@@ -320,6 +323,47 @@ namespace Raven.Server.Documents.PeriodicBackup
             return CreateBackupTask(periodicBackup, isFullBackup, SystemTime.UtcNow);
         }
 
+        public async Task Delay(long taskId, TimeSpan? delayInHrs, X509Certificate2 clientCert)
+        {
+            foreach (var periodicBackup in _periodicBackups)
+            {
+                var runningTask = periodicBackup.Value.RunningTask;
+                if (runningTask == null || runningTask.Id != taskId)
+                    continue;
+
+                var delayUntil = DateTime.UtcNow.AddTicks(delayInHrs.Value.Ticks);
+
+                var command = new DelayBackupCommand(_database.Name, RaftIdGenerator.NewId())
+                {
+                    TaskId = periodicBackup.Key,
+                    DelayUntil = delayUntil
+                };
+
+                (long index, _) = await _database.ServerStore.SendToLeaderAsync(command);
+                await _database.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+
+                if (_auditLog.IsInfoEnabled)
+                    _logger.Info(clientCert == null
+                        ? $"Backup task with task id {taskId} was delayed until '{delayUntil}' UTC"
+                        : $"Backup task with task id {taskId} was delayed until '{delayUntil}' UTC by {clientCert.Subject} {clientCert.Thumbprint}");
+
+                _database.Operations.KillOperation(taskId);
+
+                try
+                {
+                    await runningTask.Task; // wait for the running task to complete
+                }
+                catch (TaskCanceledException)
+                {
+                    // ignore
+                }
+
+                return;
+            }
+
+            throw new ArgumentException($"Operation {taskId} was not registered");
+        }
+
         public DateTime? GetWakeDatabaseTimeUtc(string databaseName)
         {
             if (_periodicBackups.Count == 0)
@@ -513,8 +557,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     tcs.SetResult(backupResult);
                 }
             }
-            catch (OperationCanceledException oce)
+            catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
             {
+                runningBackupStatus.DelayUntil = GetBackupStatus(periodicBackup.BackupStatus.TaskId).DelayUntil;
+
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations($"Canceled the backup thread: '{periodicBackup.Configuration.Name}'", oce);
 

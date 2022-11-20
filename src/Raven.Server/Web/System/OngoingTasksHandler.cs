@@ -305,6 +305,15 @@ namespace Raven.Server.Web.System
             return taskInfo;
         }
 
+        [RavenAction("/databases/*/admin/backup-task/delay", "POST", AuthorizationStatus.Operator)]
+        public async Task DelayBackupTask()
+        {
+            var id = GetLongQueryString("taskId");
+            var delayInHrs = GetTimeSpanQueryString("duration");
+            
+            await Database.PeriodicBackupRunner.Delay(id, delayInHrs, GetCurrentCertificate());
+        }
+
         [RavenAction("/databases/*/admin/periodic-backup/config", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetConfiguration()
         {
@@ -337,7 +346,7 @@ namespace Raven.Server.Web.System
                 BackupDatabaseHandler.WriteEndOfTimers(writer, count);
             }
         }
-
+        
         [RavenAction("/databases/*/admin/periodic-backup", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdatePeriodicBackup()
         {
