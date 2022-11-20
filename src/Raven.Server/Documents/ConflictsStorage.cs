@@ -841,7 +841,7 @@ namespace Raven.Server.Documents
         [StorageIndexEntryKeyGenerator]
         internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForConflicts(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
         {
-            return GenerateBucketAndEtagIndexKey(context, idIndex: (int)ConflictsTable.LowerId, etagIndex: (int)ConflictsTable.Etag, ref tvr, out slice);
+            return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(context, idIndex: (int)ConflictsTable.LowerId, etagIndex: (int)ConflictsTable.Etag, ref tvr, out slice);
         }
     }
 }

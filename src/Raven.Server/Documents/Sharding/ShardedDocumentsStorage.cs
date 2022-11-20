@@ -5,9 +5,11 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 using static Raven.Server.Documents.AttachmentsStorage;
 using static Raven.Server.Documents.ConflictsStorage;
 using static Raven.Server.Documents.CountersStorage;
@@ -28,10 +30,14 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 {
     private readonly ShardedDocumentDatabase _documentDatabase;
 
+    internal Dictionary<int, Documents.BucketStats> BucketStatistics => _bucketStatistics ??= new Dictionary<int, Documents.BucketStats>();
+    private Dictionary<int, Documents.BucketStats> _bucketStatistics;
+
     public ShardedDocumentsStorage(ShardedDocumentDatabase documentDatabase, Action<string> addToInitLog) 
         : base(documentDatabase, addToInitLog)
     {
         _documentDatabase = documentDatabase;
+        OnBeforeCommit += UpdateBucketStatsTreeBeforeCommit;
     }
 
     protected override DocumentPutAction CreateDocumentPutAction()
@@ -109,6 +115,126 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
     {
         return Bits.SwapBytes(*(int*)key.Content.Ptr);
     }
+
+    [StorageIndexEntryKeyGenerator]
+    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+    {
+        return GenerateBucketAndEtagIndexKey(context, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
+    }
+
+    [StorageIndexEntryKeyGenerator]
+    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+    {
+        return GenerateBucketAndEtagIndexKey(context, idIndex: (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
+    }
+
+    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
+    {
+        var idPtr = tvr.Read(idIndex, out var size);
+        var etag = *(long*)tvr.Read(etagIndex, out _);
+
+        return GenerateBucketAndEtagSlice(context, idPtr, size, etag, out slice);
+    }
+
+    internal static ByteStringContext.Scope ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(ByteStringContext context, int keyIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
+    {
+        var keyPtr = tvr.Read(keyIndex, out var keySize);
+
+        int sizeOfDocId = 0;
+        for (; sizeOfDocId < keySize; sizeOfDocId++)
+        {
+            if (keyPtr[sizeOfDocId] == SpecialChars.RecordSeparator)
+                break;
+        }
+
+        var etag = *(long*)tvr.Read(etagIndex, out _);
+
+        return GenerateBucketAndEtagSlice(context, keyPtr, sizeOfDocId, etag, out slice);
+    }
+
+    private static ByteStringContext.Scope GenerateBucketAndEtagSlice(ByteStringContext context, byte* idPtr, int idSize, long etag, out Slice slice)
+    {
+        var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
+
+        var bucket = ShardHelper.GetBucket(idPtr, idSize);
+
+        *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
+        *(long*)(buffer.Ptr + sizeof(int)) = etag;
+
+        slice = new Slice(buffer);
+        return scope;
+    }
+
+    internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, int oldSize, int newSize)
+    {
+        int numOfDocsChanged = 0;
+        if (oldSize == 0)
+            numOfDocsChanged = 1;
+        else if (newSize == 0)
+            numOfDocsChanged = -1;
+
+        UpdateBucketStats(tx, key, oldSize, newSize, numOfDocsChanged);
+    }
+
+    internal static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize)
+    {
+        UpdateBucketStats(tx, key, oldSize, newSize, numOfDocsChanged: 0);
+    }
+
+    private static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize, int numOfDocsChanged)
+    {
+        if (tx.Owner is not ShardedDocumentDatabase documentDatabase)
+            return;
+
+        var nowTicks = documentDatabase.Time.GetUtcNow().Ticks;
+        var bucket = *(int*)key.Content.Ptr;
+
+        var inMemoryBucketStats = documentDatabase.ShardedDocumentsStorage.BucketStatistics;
+        inMemoryBucketStats.TryGetValue(bucket, out var bucketStats);
+
+        bucketStats.Size += newSize - oldSize;
+        bucketStats.NumberOfDocuments += numOfDocsChanged;
+        bucketStats.LastModifiedTicks = nowTicks;
+
+        inMemoryBucketStats[bucket] = bucketStats;
+    }
+
+    internal void UpdateBucketStatsTreeBeforeCommit(LowLevelTransaction llt)
+    {
+        if (_bucketStatistics == null)
+            return;
+
+        var tree = llt.Transaction.ReadTree(BucketStatsSlice);
+        foreach ((int bucket, Documents.BucketStats inMemoryStats) in _bucketStatistics)
+        {
+            using (llt.Allocator.Allocate(sizeof(int), out var keyBuffer))
+            {
+                *(int*)keyBuffer.Ptr = bucket;
+                var keySlice = new Slice(keyBuffer);
+                var readResult = tree.Read(keySlice);
+
+                Documents.BucketStats stats;
+                if (readResult == null)
+                {
+                    stats = inMemoryStats;
+                }
+                else
+                {
+                    stats = *(Documents.BucketStats*)readResult.Reader.Base;
+                    stats.Size += inMemoryStats.Size;
+                    stats.NumberOfDocuments += inMemoryStats.NumberOfDocuments;
+                    stats.LastModifiedTicks = inMemoryStats.LastModifiedTicks;
+                }
+
+                using (tree.DirectAdd(keySlice, sizeof(Documents.BucketStats), out byte* ptr))
+                    *(Documents.BucketStats*)ptr = stats;
+            }
+        }
+
+        _bucketStatistics = null;
+    }
+
+
     public ChangeVector GetLastChangeVectorInBucket(DocumentsOperationContext context, int bucket)
     {
         var table = new Table(DocsSchema, context.Transaction.InnerTransaction);

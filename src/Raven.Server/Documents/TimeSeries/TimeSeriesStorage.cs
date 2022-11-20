@@ -2753,14 +2753,14 @@ namespace Raven.Server.Documents.TimeSeries
         [StorageIndexEntryKeyGenerator]
         internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTimeSeries(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
         {
-            return DocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)TimeSeriesTable.TimeSeriesKey,
+            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)TimeSeriesTable.TimeSeriesKey,
                 etagIndex: (int)TimeSeriesTable.Etag, ref tvr, out slice);
         }
 
         [StorageIndexEntryKeyGenerator]
         internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDeletedRanges(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
         {
-            return DocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)DeletedRangeTable.RangeKey,
+            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)DeletedRangeTable.RangeKey,
                 etagIndex: (int)DeletedRangeTable.Etag, ref tvr, out slice);
         }
     }

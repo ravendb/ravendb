@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Changes;
 using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Voron.Impl;
@@ -30,7 +31,9 @@ namespace Raven.Server.Documents
         {
             _context = context;
             _changes = changes;
+
             transaction.Owner = _context.DocumentDatabase;
+            transaction.LowLevelTransaction.OnBeforeCommit += _context.DocumentDatabase.DocumentsStorage.OnBeforeCommit;
         }
 
         public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction(DocumentsOperationContext context)

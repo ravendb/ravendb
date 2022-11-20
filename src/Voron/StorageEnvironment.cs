@@ -726,7 +726,6 @@ namespace Voron
                     {
                         tx.CurrentTransactionHolder = _currentWriteTransactionHolder;
                         tx.AfterCommitWhenNewTransactionsPrevented += AfterCommitWhenNewTransactionsPrevented;
-                        tx.OnBeforeCommit += OnBeforeCommit;
                     }
 
                     ActiveTransactions.Add(tx);
@@ -895,7 +894,6 @@ namespace Voron
 
         public event Action<LowLevelTransaction> NewTransactionCreated;
         public event Action<LowLevelTransaction> AfterCommitWhenNewTransactionsPrevented;
-        public event Action<LowLevelTransaction> OnBeforeCommit;
 
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {

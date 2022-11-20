@@ -1,4 +1,5 @@
-﻿using Sparrow.Server;
+﻿using Raven.Server.Documents.Sharding;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -75,7 +76,7 @@ namespace Raven.Server.Documents.Schemas
                 AttachmentsSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = AttachmentsStorage.GenerateBucketAndEtagIndexKeyForAttachments,
-                    OnEntryChanged = DocumentsStorage.UpdateBucketStats,
+                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,
                     IsGlobal = true,
                     Name = AttachmentsBucketAndEtagSlice
                 });
