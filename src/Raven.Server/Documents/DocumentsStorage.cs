@@ -17,7 +17,6 @@ using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
@@ -38,7 +37,6 @@ using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Collections;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
-using BucketStats = Raven.Server.Documents.BucketStats;
 
 namespace Raven.Server.Documents
 {
@@ -59,12 +57,10 @@ namespace Raven.Server.Documents
         public DocumentPutAction DocumentPut;
         public StorageEnvironment Environment { get; private set; }
 
+        public Action<LowLevelTransaction> OnBeforeCommit { get; protected set; }
+
         protected Dictionary<string, CollectionName> _collectionsCache;
         protected static readonly Slice BucketStatsSlice;
-
-        internal Dictionary<int, BucketStats> BucketStatistics => _bucketStatistics ??= new Dictionary<int, BucketStats>();
-        private Dictionary<int, BucketStats> _bucketStatistics;
-
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
@@ -215,7 +211,6 @@ namespace Raven.Server.Documents
 
                 Environment.NewTransactionCreated += SetTransactionCache;
                 Environment.AfterCommitWhenNewTransactionsPrevented += UpdateDocumentTransactionCache;
-                Environment.OnBeforeCommit += UpdateBucketStatsTreeBeforeCommit;
 
                 using (var tx = Environment.WriteTransaction())
                 {
@@ -2566,124 +2561,6 @@ namespace Raven.Server.Documents
         {
             var ptr = tvr.Read(index, out int size);
             return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);
-        }
-
-        [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
-        {
-            return GenerateBucketAndEtagIndexKey(context, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
-        }
-
-        [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
-        {
-            return GenerateBucketAndEtagIndexKey(context, idIndex: (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
-        }
-
-        // TODO : use a dedicated attribute
-        internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, int oldSize, int newSize)
-        {
-            int numOfDocsChanged = 0;
-            if (oldSize == 0)
-                numOfDocsChanged = 1;
-            else if (newSize == 0)
-                numOfDocsChanged = -1;
-
-            UpdateBucketStats(tx, key, oldSize, newSize, numOfDocsChanged);
-        }
-
-        internal static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize)
-        {
-            UpdateBucketStats(tx, key, oldSize, newSize, numOfDocsChanged: 0);
-        }
-
-        private static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize, int numOfDocsChanged)
-        {
-            if (tx.Owner is not DocumentDatabase documentDatabase)
-                return;
-            
-            var nowTicks = documentDatabase.Time.GetUtcNow().Ticks;
-            var bucket = *(int*)key.Content.Ptr;
-
-            documentDatabase.DocumentsStorage.BucketStatistics.TryGetValue(bucket, out var bucketStats);
-
-            bucketStats.Size += newSize - oldSize;
-            bucketStats.NumberOfDocuments += numOfDocsChanged;
-            bucketStats.LastModifiedTicks = nowTicks;
-
-            documentDatabase.DocumentsStorage.BucketStatistics[bucket] = bucketStats;
-        }
-
-        private void UpdateBucketStatsTreeBeforeCommit(LowLevelTransaction llt)
-        {
-            if (_bucketStatistics == null) 
-                return;
-            
-            var tree = llt.Transaction.ReadTree(BucketStatsSlice);
-            foreach ((int bucket, BucketStats inMemoryStats) in _bucketStatistics)
-            {
-                using (llt.Allocator.Allocate(sizeof(int), out var keyBuffer))
-                {
-                    *(int*)keyBuffer.Ptr = bucket;
-                    var keySlice = new Slice(keyBuffer);
-                    var readResult = tree.Read(keySlice);
-
-                    BucketStats stats;
-                    if (readResult == null)
-                    {
-                        stats = inMemoryStats;
-                    }
-                    else
-                    {
-                        stats = *(BucketStats*)readResult.Reader.Base;
-                        stats.Size += inMemoryStats.Size;
-                        stats.NumberOfDocuments += inMemoryStats.NumberOfDocuments;
-                        stats.LastModifiedTicks = inMemoryStats.LastModifiedTicks;
-                    }
-
-                    using (tree.DirectAdd(keySlice, sizeof(BucketStats), out byte* ptr))
-                        *(BucketStats*)ptr = stats;
-                }
-            }
-
-            _bucketStatistics = null;
-        }
-
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
-        {
-            var idPtr = tvr.Read(idIndex, out var size);
-            var etag = *(long*)tvr.Read(etagIndex, out _);
-
-            return GenerateBucketAndEtagSlice(context, idPtr, size, etag, out slice);
-        }
-
-        internal static ByteStringContext.Scope ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(ByteStringContext context, int keyIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
-        {
-            var keyPtr = tvr.Read(keyIndex, out var keySize);
-
-            int sizeOfDocId = 0;
-            for (; sizeOfDocId < keySize; sizeOfDocId++)
-            {
-                if (keyPtr[sizeOfDocId] == SpecialChars.RecordSeparator)
-                    break;
-            }
-
-            var etag = *(long*)tvr.Read(etagIndex, out _);
-
-            return GenerateBucketAndEtagSlice(context, keyPtr, sizeOfDocId, etag, out slice);
-        }
-
-        private static ByteStringContext.Scope GenerateBucketAndEtagSlice(ByteStringContext context, byte* idPtr, int idSize, long etag, out Slice slice)
-        {
-            var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
-
-            var bucket = ShardHelper.GetBucket(idPtr, idSize);
-
-            *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
-            *(long*)(buffer.Ptr + sizeof(int)) = etag;
-
-            slice = new Slice(buffer);
-            return scope;
         }
     }
 

@@ -1,4 +1,5 @@
-﻿using Raven.Server.Documents.TimeSeries;
+﻿using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -77,7 +78,7 @@ namespace Raven.Server.Documents.Schemas
                 DeleteRangesSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForDeletedRanges,
-                    OnEntryChanged = DocumentsStorage.UpdateBucketStats,
+                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,
                     IsGlobal = true,
                     Name = DeletedRangesBucketAndEtagSlice
                 });

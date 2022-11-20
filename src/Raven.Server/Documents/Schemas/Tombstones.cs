@@ -1,4 +1,5 @@
-﻿using Sparrow.Server;
+﻿using Raven.Server.Documents.Sharding;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -80,8 +81,8 @@ namespace Raven.Server.Documents.Schemas
 
                 TombstonesSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
-                    GenerateKey = DocumentsStorage.GenerateBucketAndEtagIndexKeyForTombstones,
-                    OnEntryChanged = DocumentsStorage.UpdateBucketStats,
+                    GenerateKey = ShardedDocumentsStorage.GenerateBucketAndEtagIndexKeyForTombstones,
+                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,
                     IsGlobal = true,
                     Name = TombstonesBucketAndEtagSlice
                 });

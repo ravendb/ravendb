@@ -1,4 +1,5 @@
-﻿using Sparrow.Server;
+﻿using Raven.Server.Documents.Sharding;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -81,7 +82,7 @@ namespace Raven.Server.Documents.Schemas
                 CountersSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = CountersStorage.GenerateBucketAndEtagIndexKeyForCounters,
-                    OnEntryChanged = DocumentsStorage.UpdateBucketStats,
+                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,
                     IsGlobal = true,
                     Name = CountersBucketAndEtagSlice
                 });

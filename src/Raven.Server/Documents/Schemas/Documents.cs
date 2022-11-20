@@ -1,4 +1,5 @@
-﻿using Sparrow.Server;
+﻿using Raven.Server.Documents.Sharding;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -97,8 +98,8 @@ namespace Raven.Server.Documents.Schemas
 
                 docsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
-                    GenerateKey = DocumentsStorage.GenerateBucketAndEtagIndexKeyForDocuments,
-                    OnEntryChanged = DocumentsStorage.UpdateBucketStatsForDocument,
+                    GenerateKey = ShardedDocumentsStorage.GenerateBucketAndEtagIndexKeyForDocuments,
+                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStatsForDocument,
                     IsGlobal = true,
                     Name = AllDocsBucketAndEtagSlice
                 });
