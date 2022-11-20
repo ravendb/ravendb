@@ -30,6 +30,7 @@ namespace Raven.Server.Documents
         {
             _context = context;
             _changes = changes;
+            transaction.Owner = _context.DocumentDatabase;
         }
 
         public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction(DocumentsOperationContext context)

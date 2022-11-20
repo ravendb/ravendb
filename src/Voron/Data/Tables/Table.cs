@@ -850,6 +850,8 @@ namespace Voron.Data.Tables
                     using (dynamicKeyIndexDef.GetValue(_tx.Allocator, ref oldVer, out Slice oldVal))
                     using (dynamicKeyIndexDef.GetValue(_tx.Allocator, newVer, out Slice newVal))
                     {
+                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, key: newVal, oldSize: oldVer.Size, newSize: newVer.Size);
+
                         if (SliceComparer.AreEqual(oldVal, newVal) == false ||
                             forceUpdate)
                         {
@@ -859,8 +861,6 @@ namespace Voron.Data.Tables
                             fst = GetFixedSizeTree(indexTree, newVal.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
                             fst.Add(id);
                         }
-
-                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, key: newVal, oldSize: oldVer.Size, newSize: newVer.Size);
                     }
                 }
 
@@ -983,11 +983,11 @@ namespace Voron.Data.Tables
                 {
                     using (dynamicKeyIndexDef.GetValue(_tx.Allocator, ref value, out Slice val))
                     {
+                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldSize: 0, newSize: value.Size);
+
                         var indexTree = GetTree(dynamicKeyIndexDef);
                         var index = GetFixedSizeTree(indexTree, val, 0, dynamicKeyIndexDef.IsGlobal);
                         index.Add(id);
-
-                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldSize: 0, newSize: value.Size);
                     }
                 }
 

@@ -49,14 +49,13 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         }
     }
 
-    // fromBucket, toBucket, scale
-    public static IEnumerable<BucketStatistics> GetBucketStatistics(DocumentsOperationContext context, int start, int take = int.MaxValue)
+    public static IEnumerable<BucketStats> GetBucketStatistics(DocumentsOperationContext context, int fromBucket, int toBucket)
     {
         var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsSlice);
         if (tree == null)
             yield break;
 
-        using (GetBucketByteString(context.Allocator, start, out var buffer))
+        using (GetBucketByteString(context.Allocator, fromBucket, out var buffer))
         using (Slice.External(context.Allocator, buffer, buffer.Length, out var startSlice))
     {
             using (var it = tree.Iterate(prefetch: true))
@@ -66,31 +65,19 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
                 do
             {
-                    if (take-- <= 0)
+                    var bucket = GetBucketNumberFromBucketStatsKey(it.CurrentKey);
+                    if (bucket > toBucket)
                         yield break;
 
                     var reader = it.CreateReaderForCurrent();
-                    yield return ValueReaderToBucketStats(it.CurrentKey, ref reader);
+                    yield return ValueReaderToBucketStats(bucket, ref reader);
 
                 } while (it.MoveNext());
             }
         }
     }
 
-    private static BucketStatistics ValueReaderToBucketStats(Slice key, ref ValueReader valueReader)
-    {
-        var bucket = Bits.SwapBytes(*(int*)key.Content.Ptr);
-        var stats = *(Voron.Data.BucketStats*)valueReader.Base;
-        return new BucketStatistics
-        {
-            Bucket = bucket,
-            Size = stats.Size,
-            NumberOfItems = stats.NumberOfDocuments,
-            LastModified = new DateTime(stats.LastModifiedTicks)
-        };
-            }
-
-    public static BucketStatistics GetBucketStatisticsFor(DocumentsOperationContext context, int bucket)
+    public static BucketStats GetBucketStatisticsFor(DocumentsOperationContext context, int bucket)
     {
         var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsSlice);
 
@@ -101,16 +88,26 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
             if (readResult == null)
                 return null;
 
-            var stats = *(Voron.Data.BucketStats*)readResult.Reader.Base;
+            var reader = readResult.Reader;
+            return ValueReaderToBucketStats(bucket, ref reader);
+        }
+    }
 
-            return new BucketStatistics
+    private static BucketStats ValueReaderToBucketStats(int bucket, ref ValueReader valueReader)
             {
+        var stats = *(Documents.BucketStats*)valueReader.Base;
+        return new BucketStats
+        {
                 Bucket = bucket,
                 Size = stats.Size,
                 NumberOfItems = stats.NumberOfDocuments,
-                LastModified = new DateTime(stats.LastModifiedTicks)
+            LastModified = new DateTime(stats.LastModifiedTicks, DateTimeKind.Utc)
             };
         }
+
+    private static int GetBucketNumberFromBucketStatsKey(Slice key)
+    {
+        return Bits.SwapBytes(*(int*)key.Content.Ptr);
     }
     public ChangeVector GetLastChangeVectorInBucket(DocumentsOperationContext context, int bucket)
     {

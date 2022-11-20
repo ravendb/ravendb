@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Voron.Data
+namespace Raven.Server.Documents
 {
     [StructLayout(LayoutKind.Explicit)]
     internal struct BucketStats

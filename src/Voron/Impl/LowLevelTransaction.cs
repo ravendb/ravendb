@@ -125,6 +125,7 @@ namespace Voron.Impl
         /// </summary>
         public event Action<IPagerLevelTransactionState> OnRollBack;
         public event Action<LowLevelTransaction> AfterCommitWhenNewTransactionsPrevented;
+        public event Action<LowLevelTransaction> OnBeforeCommit;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         internal FixedSizeTree _freeSpaceTree;
@@ -969,6 +970,7 @@ namespace Voron.Impl
         internal void PrepareForCommit()
         {
             _root.PrepareForCommit();
+            OnBeforeCommit?.Invoke(this);
         }
 
         public void Commit()

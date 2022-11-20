@@ -550,7 +550,7 @@ namespace SlowTests.Sharding.Cluster
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    var stats = ShardedDocumentsStorage.GetBucketStatistics(ctx, start: 0).ToList();
+                    var stats = ShardedDocumentsStorage.GetBucketStatistics(ctx, fromBucket: 0, toBucket: int.MaxValue).ToList();
                     Assert.Equal(bucketsInShard0.Count, stats.Count);
 
                     foreach (var bucketStats in stats)

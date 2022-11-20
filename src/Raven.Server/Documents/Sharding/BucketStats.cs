@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.Sharding;
 
-public class BucketStatistics
+public class BucketStats
 {
     public int Bucket;
 

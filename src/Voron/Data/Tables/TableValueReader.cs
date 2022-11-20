@@ -8,7 +8,6 @@ using System;
 using System.Diagnostics;
 using System.Text;
 using Sparrow.Compression;
-using Sparrow.Json;
 
 namespace Voron.Data.Tables
 {

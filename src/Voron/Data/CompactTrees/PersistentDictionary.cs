@@ -73,7 +73,7 @@ namespace Voron.Data.CompactTrees
                 header->CurrentId = p.PageNumber;
                 header->PreviousId = 0;
 
-                // We retrieve the embeeded file from the assembly, copy and checksum the entire thing.             
+                // We retrieve the embedded file from the assembly, copy and checksum the entire thing.             
                 var embeddedFile = typeof(PersistentDictionary).Assembly.GetManifestResourceStream($"Voron.Data.CompactTrees.dictionary.bin");
                 if (embeddedFile == null)
                     VoronUnrecoverableErrorException.Raise(llt.Environment.Options, "The default dictionary has not been included in the build, the build process needs to be corrected.");
