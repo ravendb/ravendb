@@ -64,14 +64,14 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
         using (GetBucketByteString(context.Allocator, fromBucket, out var buffer))
         using (Slice.External(context.Allocator, buffer, buffer.Length, out var startSlice))
-    {
-            using (var it = tree.Iterate(prefetch: true))
         {
+            using (var it = tree.Iterate(prefetch: true))
+            {
                 if (it.Seek(startSlice) == false)
                     yield break;
 
                 do
-            {
+                {
                     var bucket = GetBucketNumberFromBucketStatsKey(it.CurrentKey);
                     if (bucket > toBucket)
                         yield break;
@@ -101,16 +101,16 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
     }
 
     private static BucketStats ValueReaderToBucketStats(int bucket, ref ValueReader valueReader)
-            {
+    {
         var stats = *(Documents.BucketStats*)valueReader.Base;
         return new BucketStats
         {
-                Bucket = bucket,
-                Size = stats.Size,
+            Bucket = bucket,
+            Size = stats.Size,
             NumberOfDocuments = stats.NumberOfDocuments,
             LastModified = new DateTime(stats.LastModifiedTicks, DateTimeKind.Utc)
-            };
-        }
+        };
+    }
 
     private static int GetBucketNumberFromBucketStatsKey(Slice key)
     {

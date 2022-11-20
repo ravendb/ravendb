@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.IO;
@@ -17,11 +16,9 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Utils;
@@ -322,9 +319,7 @@ namespace SlowTests.Sharding.Cluster
                 }
             }
         }
-                    }
-                }
-
+        
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task BucketDeletionShouldCreateArtificialTombstones()
         {
