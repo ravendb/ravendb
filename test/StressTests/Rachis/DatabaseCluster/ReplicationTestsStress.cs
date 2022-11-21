@@ -89,8 +89,7 @@ namespace StressTests.Rachis.DatabaseCluster
                     session.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(clusterSize + 15), true, clusterSize - 1);
                     Task saveChangesTask = session.SaveChangesAsync();
                     WaitForDocumentInExternalReplication(watchers, watcherUrls);
-                    await Assert.ThrowsAsync<RavenException>(() => saveChangesTask);
-                    Assert.IsType<TimeoutException>(saveChangesTask.Exception?.InnerException?.InnerException);
+                    await Assert.ThrowsAsync<RavenTimeoutException>(() => saveChangesTask);
                 }
             }
         }
