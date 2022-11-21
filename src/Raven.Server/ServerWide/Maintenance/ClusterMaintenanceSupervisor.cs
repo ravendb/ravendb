@@ -265,7 +265,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         using (var timeout = new CancellationTokenSource(tcpTimeout))
                         using (var combined = CancellationTokenSource.CreateLinkedTokenSource(_token, timeout.Token))
                         {
-                            tcpConnection = ReplicationUtils.GetTcpInfo(Url, null, "Supervisor", _parent._server.Server.Certificate.Certificate, combined.Token);
+                            tcpConnection = ReplicationUtils.GetTcpInfo(Url, null, "Supervisor", _parent._server.Server.Certificate.Certificate, _parent._server.NodeTag, combined.Token);
                             if (tcpConnection == null)
                             {
                                 continue;

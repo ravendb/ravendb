@@ -1474,7 +1474,7 @@ namespace Raven.Server.Documents.Replication
                             cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
                             return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
                                 "Replication",
-                        certificate, cts.Token);
+                        certificate, _server.NodeTag, cts.Token);
                         }
                     }
                     default:

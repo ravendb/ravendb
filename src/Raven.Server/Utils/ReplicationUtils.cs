@@ -14,27 +14,27 @@ namespace Raven.Server.Utils
 {
     internal static class ReplicationUtils
     {
-        public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, CancellationToken token)
+        public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
         {
-            return AsyncHelpers.RunSync(() => GetTcpInfoAsync(url, databaseName, databaseId, etag, tag, certificate, token));
+            return AsyncHelpers.RunSync(() => GetTcpInfoAsync(url, databaseName, databaseId, etag, tag, certificate, localNodeTag, token));
         }
 
-        public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string tag, X509Certificate2 certificate, CancellationToken token)
+        public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
         {
-            return AsyncHelpers.RunSync(() => GetTcpInfoAsync(url, databaseName, tag, certificate, token));
+            return AsyncHelpers.RunSync(() => GetTcpInfoAsync(url, databaseName, tag, certificate, localNodeTag, token));
         }
 
-        public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string tag, X509Certificate2 certificate, CancellationToken token)
+        public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
         {
-            return await GetTcpInfoAsync(url, databaseName, null, default, tag, certificate, token);
+            return await GetTcpInfoAsync(url, databaseName, null, default, tag, certificate, localNodeTag, token);
         }
 
-        public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, CancellationToken token)
+        public static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
         {
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate, DocumentConventions.DefaultForServer))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
-                var getTcpInfoCommand = databaseId == null ? new GetTcpInfoCommand(tag, databaseName) : new GetTcpInfoCommand(tag, databaseName, databaseId, etag);
+                var getTcpInfoCommand = databaseId == null ? new GetTcpInfoForReplicationCommand(localNodeTag, tag, databaseName) : new GetTcpInfoForReplicationCommand(localNodeTag, tag, databaseName, databaseId, etag);
                 await requestExecutor.ExecuteAsync(getTcpInfoCommand, context, token: token);
 
                 var tcpConnectionInfo = getTcpInfoCommand.Result;
