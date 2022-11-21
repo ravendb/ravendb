@@ -32,7 +32,7 @@ namespace SlowTests.Issues
 
             string remoteNodeUrl = remoteNode.ServerStore.GetNodeHttpServerUrl();
 
-            using (var connection = new ProxyWebSocketConnection(null, remoteNodeUrl, $"/admin/cluster-dashboard/remote/watch?thumbprint={clientCertificate.Thumbprint}", localNode.ServerStore.ContextPool, localNode.ServerStore.ServerShutdown))
+            using (var connection = new ProxyWebSocketConnection(null, localNode.ServerStore.NodeTag, remoteNodeUrl, $"/admin/cluster-dashboard/remote/watch?thumbprint={clientCertificate.Thumbprint}", localNode.ServerStore.ContextPool, localNode.ServerStore.ServerShutdown))
             {
                 await connection.Establish(Server.Certificate?.Certificate);
             }

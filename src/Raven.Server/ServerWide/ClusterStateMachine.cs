@@ -3607,7 +3607,7 @@ namespace Raven.Server.ServerWide
             {
                 cts.CancelAfter(_parent.TcpConnectionTimeout);
 
-                info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
+                info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, this._parent.Tag, cts.Token);
             }
             
             TcpClient tcpClient = null;

@@ -21,11 +21,12 @@ namespace Raven.Server.NotificationCenter.Handlers
         private readonly ClientWebSocket _remoteWebSocket;
         private readonly WebSocket _localWebSocket;
         private readonly string _nodeUrl;
+        private readonly string _localNodeTag;
         private readonly IMemoryContextPool _contextPool;
         private Task _localToRemote;
         private Task _remoteToLocal;
 
-        public ProxyWebSocketConnection(WebSocket localWebSocket, string nodeUrl, string websocketEndpoint, IMemoryContextPool contextPool, CancellationToken token)
+        public ProxyWebSocketConnection(WebSocket localWebSocket, string localNodeTag, string nodeUrl, string websocketEndpoint, IMemoryContextPool contextPool, CancellationToken token)
         {
             if (string.IsNullOrEmpty(nodeUrl))
                 throw new ArgumentException("Node url cannot be null or empty", nameof(nodeUrl));
@@ -42,13 +43,14 @@ namespace Raven.Server.NotificationCenter.Handlers
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             _remoteWebSocketUri = new Uri($"{nodeUrl.Replace("http", "ws", StringComparison.OrdinalIgnoreCase)}{websocketEndpoint}");
             _remoteWebSocket = new ClientWebSocket();
+            _localNodeTag = localNodeTag;
         }
 
         public Task Establish(X509Certificate2 certificate)
         {
             if (certificate != null)
             {
-                var tcpConnection = ReplicationUtils.GetTcpInfo(_nodeUrl, null, $"{nameof(ProxyWebSocketConnection)} to {_nodeUrl}", certificate, _cts.Token);
+                var tcpConnection = ReplicationUtils.GetTcpInfo(_nodeUrl, null, $"{nameof(ProxyWebSocketConnection)} to {_nodeUrl}", certificate, _localNodeTag, _cts.Token);
 
                 var expectedCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(tcpConnection.Certificate));
 
