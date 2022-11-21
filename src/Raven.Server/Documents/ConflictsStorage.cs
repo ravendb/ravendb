@@ -9,7 +9,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -27,7 +26,7 @@ using static Raven.Server.Documents.Schemas.Conflicts;
 
 namespace Raven.Server.Documents
 {
-    public unsafe class ConflictsStorage
+    public unsafe partial class ConflictsStorage
     {
         public static readonly TableSchema ConflictsSchema = Current;
         public long ConflictsCount;
@@ -138,17 +137,6 @@ namespace Raven.Server.Documents
                     return c;
                 }).ToList()
             };
-        }
-
-
-        public IEnumerable<DocumentConflict> GetConflictsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, etag))
-            {
-                yield return TableValueToConflictDocument(context, ref result.Result.Reader);
-            }
         }
 
         private static DocumentConflict TableValueToConflictDocument(DocumentsOperationContext context, ref TableValueReader tvr)
@@ -836,12 +824,6 @@ namespace Raven.Server.Documents
             }
 
             return collection;
-        }
-
-        [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForConflicts(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
-        {
-            return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(context, idIndex: (int)ConflictsTable.LowerId, etagIndex: (int)ConflictsTable.Etag, ref tvr, out slice);
         }
     }
 }

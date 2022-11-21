@@ -5,12 +5,9 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Amqp.Types;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -33,7 +30,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Revisions
 {
-    public class RevisionsStorage
+    public partial class RevisionsStorage
     {
         public static readonly TableSchema RevisionsSchema = Schemas.Revisions.Current;
         public static readonly TableSchema CompressedRevisionsSchema = Schemas.Revisions.CurrentCompressed;
@@ -1748,16 +1745,6 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public IEnumerable<Document> GetRevisionsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
-        {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, etag))
-            {
-                yield return TableValueToRevision(context, ref result.Result.Reader);
-            }
-        }
-
         public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, string collection, long etag, long take)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
@@ -1957,10 +1944,5 @@ namespace Raven.Server.Documents.Revisions
             return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
         }
 
-        [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForRevisions(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
-        {
-            return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(context, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, ref tvr, out slice);
-        }
     }
 }

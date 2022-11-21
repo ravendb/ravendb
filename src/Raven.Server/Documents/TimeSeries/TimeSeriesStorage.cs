@@ -12,7 +12,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -33,7 +32,7 @@ using static Raven.Server.Documents.Schemas.TimeSeries;
 
 namespace Raven.Server.Documents.TimeSeries
 {
-    public unsafe class TimeSeriesStorage
+    public unsafe partial class TimeSeriesStorage
     {
         public const int MaxSegmentSize = 2048;
         public readonly TimeSeriesStats Stats;
@@ -2245,16 +2244,6 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<TimeSeriesReplicationItem> GetSegmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
-        {
-            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
-
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, etag))
-            {
-                yield return CreateTimeSeriesSegmentItem(context, ref result.Result.Reader);
-            }
-        }
-
         internal TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
@@ -2320,16 +2309,6 @@ namespace Raven.Server.Documents.TimeSeries
             foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], fromEtag, 0))
             {
                 yield return CreateDeletedRangeItem(context, ref result.Reader);
-            }
-        }
-
-        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
-        {
-            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
-
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, etag))
-            {
-                yield return CreateDeletedRangeItem(context, ref result.Result.Reader);
             }
         }
 
@@ -2748,20 +2727,6 @@ namespace Raven.Server.Documents.TimeSeries
                     Debug.Assert(tss.EnsureNoOverlap(context, slicer.TimeSeriesKeySlice, collectionName, segment, baseline), "Segment is overlapping another segment");
                 }
             }
-        }
-
-        [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTimeSeries(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
-        {
-            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)TimeSeriesTable.TimeSeriesKey,
-                etagIndex: (int)TimeSeriesTable.Etag, ref tvr, out slice);
-        }
-
-        [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDeletedRanges(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
-        {
-            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)DeletedRangeTable.RangeKey,
-                etagIndex: (int)DeletedRangeTable.Etag, ref tvr, out slice);
         }
     }
 

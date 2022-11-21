@@ -9,7 +9,6 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -28,7 +27,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
 {
-    public unsafe class CountersStorage
+    public unsafe partial class CountersStorage
     {
         public const int DbIdAsBase64Size = 22;
         public const int MaxCounterDocumentSize = 2048;
@@ -122,16 +121,6 @@ namespace Raven.Server.Documents
                 // need to change the CounterGroup document to match 4.2 format
                 var converted = ConvertToCaseSensitiveFormat(context, countersItem);
                 yield return converted;
-            }
-        }
-
-        public IEnumerable<ReplicationBatchItem> GetCountersByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
-        {
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
-
-            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, etag))
-            {
-                yield return CreateReplicationBatchItem(context, ref result.Result.Reader);
             }
         }
 
@@ -2424,12 +2413,6 @@ namespace Raven.Server.Documents
                 return 0;
 
             return TableValueToEtag((int)CountersTable.Etag, ref result.Reader);
-        }
-
-        [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounters(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
-        {
-            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, (int)CountersTable.CounterKey, (int)CountersTable.Etag, ref tvr, out slice);
         }
 
         public class IndexingMethods

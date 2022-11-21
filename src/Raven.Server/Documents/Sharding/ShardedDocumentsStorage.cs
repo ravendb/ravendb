@@ -24,15 +24,24 @@ using static Raven.Server.Documents.Schemas.Revisions;
 using static Raven.Server.Documents.Schemas.TimeSeries;
 using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage;
 
-
 namespace Raven.Server.Documents.Sharding;
 
 public unsafe class ShardedDocumentsStorage : DocumentsStorage
 {
-    private readonly ShardedDocumentDatabase _documentDatabase;
+    public static readonly Slice BucketStatsSlice;
 
     internal Dictionary<int, Documents.BucketStats> BucketStatistics => _bucketStatistics ??= new Dictionary<int, Documents.BucketStats>();
+
     private Dictionary<int, Documents.BucketStats> _bucketStatistics;
+    private readonly ShardedDocumentDatabase _documentDatabase;
+
+    static ShardedDocumentsStorage()
+    {
+        using (StorageEnvironment.GetStaticContext(out var ctx))
+        {
+            Slice.From(ctx, "BucketStats", ByteStringType.Immutable, out BucketStatsSlice);
+        }
+    }
 
     public ShardedDocumentsStorage(ShardedDocumentDatabase documentDatabase, Action<string> addToInitLog) 
         : base(documentDatabase, addToInitLog)

@@ -17,6 +17,7 @@ using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
@@ -60,7 +61,6 @@ namespace Raven.Server.Documents
         public Action<LowLevelTransaction> OnBeforeCommit { get; protected set; }
 
         protected Dictionary<string, CollectionName> _collectionsCache;
-        protected static readonly Slice BucketStatsSlice;
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
@@ -91,7 +91,6 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
-                Slice.From(ctx, "BucketStats", ByteStringType.Immutable, out BucketStatsSlice);
             }
         }
 
@@ -222,7 +221,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
-                    tx.CreateTree(BucketStatsSlice);
+                    tx.CreateTree(ShardedDocumentsStorage.BucketStatsSlice);
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
