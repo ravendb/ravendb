@@ -120,16 +120,16 @@ namespace Raven.Server.Routing
 
                     if(hasChanges == false)
                     {
-                        DatabaseRecord record = null;
+                        DatabaseTopology topology = null;
                         
                         if (context.HttpContext.Request.Query.TryGetValue("nodetag", out var nodeTag))
                         {
                             using (context.RavenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                             using (ctx.OpenReadTransaction())
-                                record = context.RavenServer.ServerStore.Cluster.ReadDatabase(ctx, databaseName.ToString(), out var index);
+                                topology = context.RavenServer.ServerStore.Cluster.ReadDatabaseTopology(ctx, databaseName.ToString());
                         }
                     
-                        if (record != null && record.Topology.Rehabs.Contains(nodeTag))
+                        if (topology != null && topology.Rehabs.Contains(nodeTag))
                         {
                             hasChanges = true;
                         }
