@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private readonly IEnumerable<object> _inner;
 
+        private Lazy<JsonOperationContext> _context = new(() => CurrentIndexingScope.Current?.IndexContext);
+
         public DynamicArray(IEnumerable inner)
             : this(inner.Cast<object>())
         {
@@ -76,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var resultObject = _inner.ElementAt(i);
 
-            result = TypeConverter.ToDynamicType(resultObject);
+            result = TypeConverter.ToDynamicType(resultObject, _context.Value);
             return true;
         }
 
@@ -122,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public DynamicArrayIterator GetEnumerator()
         {
-            return new DynamicArrayIterator(_inner);
+            return new DynamicArrayIterator(_inner, _context.Value);
         }
 
         public int Count() => _inner.Count();
@@ -770,10 +772,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public struct DynamicArrayIterator : IEnumerator<object>
         {
+            private readonly JsonOperationContext _context;
             private readonly IEnumerator<object> _inner;
 
-            public DynamicArrayIterator(IEnumerable<object> items)
+            public DynamicArrayIterator(IEnumerable<object> items, JsonOperationContext context)
             {
+                _context = context;
                 _inner = items.GetEnumerator();
                 Current = null;
             }
@@ -784,7 +788,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return false;
 
 
-                Current = TypeConverter.ToDynamicType(_inner.Current);
+                Current = TypeConverter.ToDynamicType(_inner.Current, _context);
                 return true;
             }
 
