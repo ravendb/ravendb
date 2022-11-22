@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Documents.Sharding;
@@ -50,7 +49,6 @@ namespace Raven.Server.Smuggler.Documents
                 return;
 
             await base.InternalProcessCompareExchangeAsync(result, kvp, actions);
-
         }
 
         protected override async Task InternalProcessCompareExchangeTombstonesAsync(SmugglerResult result, (CompareExchangeKey Key, long Index) key, ICompareExchangeActions actions)

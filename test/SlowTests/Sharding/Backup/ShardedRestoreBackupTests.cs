@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Azure;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
@@ -829,7 +828,7 @@ namespace SlowTests.Sharding.Backup
                 var config = Backup.CreateBackupConfiguration(backupPath);
 
                 await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
-                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1666)));
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                 var dirs = Directory.GetDirectories(backupPath);
                 Assert.Equal(3, dirs.Length);
