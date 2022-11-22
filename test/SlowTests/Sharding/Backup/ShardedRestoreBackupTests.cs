@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
@@ -29,8 +30,8 @@ namespace SlowTests.Sharding.Backup
     public class ShardedRestoreBackupTests : ClusterTestBase
     {
         private readonly string _restoreFromS3TestsPrefix = $"sharding/tests/backup-restore/{nameof(ShardedRestoreBackupTests)}-{Guid.NewGuid()}";
-        private readonly string _azureTestsPrefix = $"sharding/tests/backup-restore/{nameof(ShardedRestoreBackupTests)}-{Guid.NewGuid()}";
-        private readonly string _googleCloudTestsPrefix = $"sharding/tests/backup-restore/{nameof(ShardedRestoreBackupTests)}-{Guid.NewGuid()}";
+        private readonly string _restoreFromAzureTestsPrefix = $"sharding/tests/backup-restore/{nameof(ShardedRestoreBackupTests)}-{Guid.NewGuid()}";
+        private readonly string _restoreFromGoogleCloudTestsPrefix = $"sharding/tests/backup-restore/{nameof(ShardedRestoreBackupTests)}-{Guid.NewGuid()}";
         private static readonly BackupConfiguration DefaultBackupConfiguration;
 
         static ShardedRestoreBackupTests()
@@ -776,6 +777,118 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task BackupAndRestoreShardedDatabase_ShouldPreserveBucketRanges()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                const string id = "users/1/$b";
+                var originalLocation = await Sharding.GetShardNumber(store, id);
+                Assert.Equal(0, originalLocation);
+
+                var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+                // change shard-0 bucket ranges to [0 , 100] 
+                databaseRecord.Sharding.BucketRanges[1].BucketRangeStart = 100;
+
+                store.Maintenance.Server.Send(new UpdateDatabaseOperation(databaseRecord, replicationFactor: 1, databaseRecord.Etag));
+
+                var newLocation = await Sharding.GetShardNumber(store, id);
+                Assert.Equal(1, newLocation);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        await session.StoreAsync(new User(), $"users/{i}/$b");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, originalLocation)))
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var doc = await session.LoadAsync<User>($"users/{i}/$b");
+                        Assert.Null(doc);
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, newLocation)))
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var doc = await session.LoadAsync<User>($"users/{i}/$b");
+                        Assert.NotNull(doc);
+                    }
+                }
+
+                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
+                var backupPath = NewDataPath(suffix: "BackupFolder");
+                var config = Backup.CreateBackupConfiguration(backupPath);
+
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1666)));
+
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(3, dirs.Length);
+
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
+
+                // restore the database with a different name
+                var restoredDatabaseName = $"restored_database-{Guid.NewGuid()}";
+                using (Sharding.Backup.ReadOnly(backupPath))
+                using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    DatabaseName = restoredDatabaseName,
+                    ShardRestoreSettings = settings
+
+                }, timeout: TimeSpan.FromSeconds(60)))
+                {
+                    var newDatabaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredDatabaseName));
+                    Assert.Equal(3, newDatabaseRecord.Sharding.Shards.Length);
+                    Assert.Equal(100, newDatabaseRecord.Sharding.BucketRanges[1].BucketRangeStart);
+
+                    using (var session = store.OpenAsyncSession(database: restoredDatabaseName))
+                    {
+                        // should go to 'newLocation' shard
+                        var newDocId = "users/10/$b";
+                        await session.StoreAsync(new User(), newDocId);
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store.OpenAsyncSession(database: restoredDatabaseName))
+                    {
+                        for (int i = 0; i <= 10; i++)
+                        {
+                            var doc = await session.LoadAsync<User>($"users/{i}/$b");
+                            Assert.NotNull(doc);
+                        }
+                    }
+
+                    using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(restoredDatabaseName, originalLocation)))
+                    {
+                        for (int i = 0; i <= 10; i++)
+                        {
+                            var doc = await session.LoadAsync<User>($"users/{i}/$b");
+                            Assert.Null(doc);
+                        }
+                    }
+
+                    using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(restoredDatabaseName, newLocation)))
+                    {
+                        for (int i = 0; i <= 10; i++)
+                        {
+                            var doc = await session.LoadAsync<User>($"users/{i}/$b");
+                            Assert.NotNull(doc);
+                        }
+                    }
+                }
+            }
+        }
+
         private static void ValidateRestoreResult(IOperationResult result, ShardingConfiguration sharding)
         {
             var shardedRestoreResults = ((ShardedRestoreResult)result).Results.OrderBy(r => r.ShardNumber).ToList();
@@ -852,7 +965,7 @@ namespace SlowTests.Sharding.Backup
             if (settings == null)
                 return null;
 
-            var remoteFolderName = _azureTestsPrefix;
+            var remoteFolderName = _restoreFromAzureTestsPrefix;
             if (string.IsNullOrEmpty(caller) == false)
                 remoteFolderName = $"{remoteFolderName}/{caller}";
 
@@ -871,7 +984,7 @@ namespace SlowTests.Sharding.Backup
             if (googleCloudSettings == null)
                 return null;
 
-            var remoteFolderName = _googleCloudTestsPrefix;
+            var remoteFolderName = _restoreFromGoogleCloudTestsPrefix;
             if (string.IsNullOrEmpty(caller) == false)
                 remoteFolderName = $"{remoteFolderName}/{caller}";
 
