@@ -496,13 +496,14 @@ namespace Raven.Server.Utils
             Type objectType = value.GetType();
             if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.String])
             {
-                if (TryConvertStringValue((string)value, out object result))
+                var valueAsString = (string)value;
+
+                if (TryConvertStringValue(valueAsString, out object result))
                     return result;
 
                 if (context == null)
-                    return value;
-
-                var valueAsString = (string)value;
+                    return valueAsString;
+                
                 return context.GetLazyString(valueAsString);
             }
 
