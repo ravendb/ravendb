@@ -109,10 +109,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
                     />
                 </div>
             </div>
-            <div
-                className="flex-grow scroll js-scroll-container"
-                data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length"
-            >
+            <div className="flex-grow scroll js-scroll-container">
                 <DatabasesCounter />
                 <div>
                     {filteredDatabases.map((db) => (
