@@ -1,0 +1,37 @@
+<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h3 class="modal-title">Optimize Index</h3>
+        </div>
+        <div class="modal-body">
+            <div class="padding">
+                <div class="bg-info padding">
+                    <small>
+                        <i class="icon-info"></i> Optimize is a method used to remove
+                        unnecessary data from the index and rewrite it to a more optimal form
+                    </small>
+                </div>
+            </div>
+            
+            <form class="flex-form" data-bind="submit: optimizeIndex" autocomplete="off">
+                <div class="form-group margin-top word-break">
+                    <label class="control-label">Index Name</label>
+                    <strong class="form-control-static" data-bind="text: indexName"></strong>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <div class="margin-top margin-top-lg margin-bottom">
+                <button class="btn btn-default" data-bind="click: close" title="Close this dialog">
+                    <i class="icon-cancel"></i><span>Close</span>
+                </button>
+                <button type="submit" class="btn btn-primary" data-bind="click: optimizeIndex">
+                    <i class="icon-compact"></i><span>Optimize index files</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

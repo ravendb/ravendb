@@ -65,7 +65,10 @@ class dumpDialog extends dialogViewModelBase {
         }
         
         new dumpIndexCommand(this.indexName(), this.activeDatabase(), this.directoryPath())
-            .execute();
+            .execute()
+            .done(() => {
+                dialog.close(this);
+            });
     }
 
     close() {
