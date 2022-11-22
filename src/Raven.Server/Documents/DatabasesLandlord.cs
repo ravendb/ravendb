@@ -6,7 +6,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using NetTopologySuite.Utilities;
 using Nito.AsyncEx;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;

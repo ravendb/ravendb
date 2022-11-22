@@ -277,7 +277,7 @@ namespace Raven.Server.Dashboard
             if (collectOngoingTasks)
             {
                 yield return databasesOngoingTasksInfo;
-        }
+            }
         }
 
         private static DatabaseOngoingTasksInfoItem GetOngoingTasksInfoItem(DocumentDatabase database, ServerStore serverStore, TransactionOperationContext context, out long ongoingTasksCount)
