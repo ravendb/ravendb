@@ -19,6 +19,10 @@ class backups extends shardViewModelBase {
         component: BackupsPage,
         props: this.props
     }));
+
+    isUsingBootstrap5() {
+        return true;
+    }
 }
 
 export = backups;

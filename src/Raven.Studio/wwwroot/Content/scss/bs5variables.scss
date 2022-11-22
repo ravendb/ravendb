@@ -6,19 +6,6 @@
 // consistent naming. Ex: $nav-link-disabled-color and $modal-content-box-shadow-xs.
 
 // Color system
-
-// scss-docs-start gray-color-variables
-$white:    #fff !default;
-$gray-100: #f8f9fa !default;
-$gray-200: #e9ecef !default;
-$gray-300: #dee2e6 !default;
-$gray-400: #ced4da !default;
-$gray-500: #adb5bd !default;
-$gray-600: #6c757d !default;
-$gray-700: #495057 !default;
-$gray-800: #343a40 !default;
-$gray-900: #212529 !default;
-$black:    #000 !default;
 // scss-docs-end gray-color-variables
 
 // fusv-disable
@@ -38,16 +25,16 @@ $grays: (
 // fusv-enable
 
 // scss-docs-start color-variables
-$blue:    #0d6efd !default;
-$indigo:  #6610f2 !default;
-$purple:  #6f42c1 !default;
-$pink:    #d63384 !default;
-$red:     #dc3545 !default;
-$orange:  #fd7e14 !default;
-$yellow:  #ffc107 !default;
-$green:   #198754 !default;
-$teal:    #20c997 !default;
-$cyan:    #0dcaf0 !default;
+$blue:    $color-4 !default;
+$indigo:  $color-4-2 !default;
+$purple:  $color-5!default;
+$pink:    $color-5-2 !default;
+$red:     $color-1 !default;
+$orange:  $color-1-2 !default;
+$yellow:  $color-2 !default;
+$green:   $color-3!default;
+$teal:    $color-3-2 !default;
+$cyan:    $color-3-1 !default;
 // scss-docs-end color-variables
 
 // scss-docs-start colors-map
@@ -68,17 +55,6 @@ $colors: (
 ) !default;
 // scss-docs-end colors-map
 
-// scss-docs-start theme-color-variables
-$primary:       $blue !default;
-$secondary:     $gray-600 !default;
-$success:       $green !default;
-$info:          $cyan !default;
-$warning:       $yellow !default;
-$danger:        $red !default;
-$light:         $gray-100 !default;
-$dark:          $gray-900 !default;
-// scss-docs-end theme-color-variables
-
 // scss-docs-start theme-colors-map
 $theme-colors: (
   "primary":    $primary,
@@ -89,6 +65,15 @@ $theme-colors: (
   "danger":     $danger,
   "light":      $light,
   "dark":       $dark
+) !default;
+
+$theme-colors-faded: (
+  "primary":    mix($body-bg, $primary, 80%),
+  "secondary":  mix($body-bg, $secondary, 80%),
+  "success":    mix($body-bg, $success, 80%),
+  "info":       mix($body-bg, $info, 80%),
+  "warning":    mix($body-bg, $warning, 80%),
+  "danger":     mix($body-bg, $danger, 80%)  
 ) !default;
 // scss-docs-end theme-colors-map
 
@@ -439,7 +424,7 @@ $font-family-code:            var(--#{$variable-prefix}font-monospace) !default;
 
 // $font-size-root affects the value of `rem`, which is used for as well font sizes, paddings, and margins
 // $font-size-base affects the font size of the body text
-$font-size-root:              null !default;
+$font-size-root:              14px !default;
 $font-size-base:              1rem !default; // Assumes the browser default, typically `16px`
 $font-size-sm:                $font-size-base * .875 !default;
 $font-size-lg:                $font-size-base * 1.25 !default;
@@ -456,12 +441,14 @@ $line-height-base:            $gutter-ratio !default;
 $line-height-sm:              1/$gutter-ratio !default;
 $line-height-lg:              $gutter-ratio * $gutter-ratio !default;
 
-$h1-font-size:                $font-size-base * math.pow($gutter-ratio, 2) !default;
-$h2-font-size:                $font-size-base * math.pow($gutter-ratio, 1.5) !default;
-$h3-font-size:                $font-size-base * math.pow($gutter-ratio, 1) !default;
-$h4-font-size:                $font-size-base * math.pow($gutter-ratio, .5) !default;
-$h5-font-size:                $font-size-base * math.pow($gutter-ratio, .2) !default;
-$h6-font-size:                $font-size-base !default;
+$heading-size-base: 10px;
+
+$h1-font-size:                $heading-size-base * math.pow($gutter-ratio, 3) !default;
+$h2-font-size:                $heading-size-base * math.pow($gutter-ratio, 2.33) !default;
+$h3-font-size:                $heading-size-base * math.pow($gutter-ratio, 1.66) !default;
+$h4-font-size:                $heading-size-base * math.pow($gutter-ratio, 1) !default;
+$h5-font-size:                $heading-size-base * math.pow($gutter-ratio, .33) !default;
+$h6-font-size:                $heading-size-base !default;
 // scss-docs-end font-variables
 
 // scss-docs-start font-sizes
@@ -479,7 +466,7 @@ $font-sizes: (
 $headings-margin-bottom:      $spacer / $gutter-ratio !default;
 $headings-font-family:        null !default;
 $headings-font-style:         null !default;
-$headings-font-weight:        600 !default;
+$headings-font-weight:        500 !default;
 $headings-line-height:        1.2 !default;
 $headings-color:              null !default;
 // scss-docs-end headings-variables
@@ -1016,7 +1003,7 @@ $dropdown-border-color:             $body-bg !default;
 $dropdown-border-radius:            $border-radius !default;
 $dropdown-border-width:             $border-width !default;
 $dropdown-inner-border-radius:      subtract($dropdown-border-radius, $dropdown-border-width) !default;
-$dropdown-divider-bg:               $border-color !default;
+$dropdown-divider-bg:               $border-color-light !default;
 $dropdown-divider-margin-y:         $spacer * .5 !default;
 $dropdown-box-shadow:               $box-shadow !default;
 

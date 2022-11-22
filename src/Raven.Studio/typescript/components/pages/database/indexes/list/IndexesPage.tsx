@@ -769,26 +769,23 @@ export function IndexesPage(props: IndexesPageProps) {
                                             ref={indexToHighlight === index.name ? highlightCallback : undefined}
                                         />
                                         {replacement && (
-                                            <div className="sidebyside-actions">
-                                                <Card className="panel panel-state panel-warning">
-                                                    <div className="state state-swap">
-                                                        <i className="icon-swap" />
+                                            <Card className="sidebyside-actions px-5 py-2 bg-faded-warning">
+                                                <div className="flex-horizontal">
+                                                    <div className="title me-4">
+                                                        <i className="icon-swap" /> Side by side
                                                     </div>
-                                                    <div className="padding-xs padding-left-sm flex-horizontal">
-                                                        <div className="title margin-right">Side by side</div>
-                                                        <button
-                                                            className={classNames("btn btn-sm btn-warning", {
-                                                                "btn-spinner": swapNowProgress.includes(index.name),
-                                                            })}
-                                                            disabled={swapNowProgress.includes(index.name)}
-                                                            onClick={() => confirmSwapSideBySide(index)}
-                                                            title="Click to replace the current index definition with the replacement index"
-                                                        >
-                                                            <i className="icon-force" /> <span>Swap now</span>
-                                                        </button>
-                                                    </div>
-                                                </Card>
-                                            </div>
+                                                    <button
+                                                        className={classNames("btn btn-sm btn-warning", {
+                                                            "btn-spinner": swapNowProgress.includes(index.name),
+                                                        })}
+                                                        disabled={swapNowProgress.includes(index.name)}
+                                                        onClick={() => confirmSwapSideBySide(index)}
+                                                        title="Click to replace the current index definition with the replacement index"
+                                                    >
+                                                        <i className="icon-force" /> <span>Swap now</span>
+                                                    </button>
+                                                </div>
+                                            </Card>
                                         )}
                                         {replacement && (
                                             <IndexPanel
