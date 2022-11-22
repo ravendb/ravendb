@@ -33,7 +33,8 @@ class configurationItem {
         "Indexing.TransactionSizeLimitInMb",
         "Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved",
         "Indexing.Lucene.UseCompoundFileInMerging",
-        "Indexing.Lucene.IndexInputType"
+        "Indexing.Lucene.IndexInputType",
+        "Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex"
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:
