@@ -26,6 +26,7 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using HttpMethods = Raven.Client.Util.HttpMethods;
 
 namespace Raven.Server.Routing
 {
@@ -227,8 +228,8 @@ namespace Raven.Server.Routing
             {
                 // CONNECT (https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/CONNECT)
                 // starting from .NET 7 can be used by WS connections to establish a communication
-                if (string.Equals(context.Request.Method, "CONNECT", StringComparison.OrdinalIgnoreCase))
-                    tryMatch = _trie.TryMatch("GET", context.Request.Path.Value);
+                if (string.Equals(context.Request.Method, HttpMethods.Connect.Method, StringComparison.OrdinalIgnoreCase))
+                    tryMatch = _trie.TryMatch(HttpMethods.Get.Method, context.Request.Path.Value);
 
                 if (tryMatch.Value == null)
                 {
