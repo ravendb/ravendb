@@ -61,16 +61,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             return DatabasesLandlord.CreateDatabaseConfiguration(ServerStore, DatabaseName, RestoreSettings.DatabaseRecord.Settings);
         }
 
-        protected override Task ImportLastBackupFileAsync(DocumentDatabase database, DatabaseDestination destination, JsonOperationContext context,
-            DatabaseSmugglerOptionsServerSide options, DatabaseRecord databaseRecord, string lastFilePath)
+        protected override void ConfigureSettingsForSmugglerRestore(DocumentDatabase database, SmugglerBase smuggler, string filePath, bool isLastFile)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, 
+            base.ConfigureSettingsForSmugglerRestore(database, smuggler, filePath, isLastFile);
+
+            if (isLastFile == false) 
+                return;
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
                 "RavenDB-19202 : consider using the most up-to-date database record");
-
             if (_shardNumber > 0)
-                options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
+                smuggler._options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
 
-            return base.ImportLastBackupFileAsync(database, destination, context, options, databaseRecord, lastFilePath);
+            smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord => 
+                RestoreSettings.DatabaseRecord.Sharding.BucketRanges = smugglerDatabaseRecord.Sharding?.BucketRanges;
         }
     }
 }

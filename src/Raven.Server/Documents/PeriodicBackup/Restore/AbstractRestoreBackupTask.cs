@@ -12,6 +12,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -234,102 +235,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Database.Initialize(Options);
         }
 
-        protected virtual async Task ImportLastBackupFileAsync(DocumentDatabase database, DatabaseDestination destination, JsonOperationContext context,
-    DatabaseSmugglerOptionsServerSide options, DatabaseRecord databaseRecord, string lastFilePath)
-        {
-            await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true,
-                onIndexAction: indexAndType =>
-                {
-                    if (RestoreConfiguration.SkipIndexes)
-                        return;
-
-                    databaseRecord.AutoIndexes ??= new Dictionary<string, AutoIndexDefinition>();
-                    databaseRecord.Indexes ??= new Dictionary<string, IndexDefinition>();
-
-                    switch (indexAndType.Type)
-                    {
-                        case IndexType.AutoMap:
-                        case IndexType.AutoMapReduce:
-                            var autoIndexDefinition = (AutoIndexDefinitionBaseServerSide)indexAndType.IndexDefinition;
-                            databaseRecord.AutoIndexes[autoIndexDefinition.Name] =
-                                PutAutoIndexCommand.GetAutoIndexDefinition(autoIndexDefinition, indexAndType.Type);
-                            break;
-                        case IndexType.Map:
-                        case IndexType.MapReduce:
-                        case IndexType.JavaScriptMap:
-                        case IndexType.JavaScriptMapReduce:
-                            var indexDefinition = (IndexDefinition)indexAndType.IndexDefinition;
-                            databaseRecord.Indexes[indexDefinition.Name] = indexDefinition;
-                            break;
-                        case IndexType.None:
-                        case IndexType.Faulty:
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                },
-                onDatabaseRecordAction: smugglerDatabaseRecord =>
-                {
-                    databaseRecord.ConflictSolverConfig = smugglerDatabaseRecord.ConflictSolverConfig;
-                    foreach (var setting in smugglerDatabaseRecord.Settings)
-                    {
-                        databaseRecord.Settings[setting.Key] = setting.Value;
-                    }
-
-                    databaseRecord.SqlEtls = smugglerDatabaseRecord.SqlEtls;
-                    databaseRecord.RavenEtls = smugglerDatabaseRecord.RavenEtls;
-                    databaseRecord.PeriodicBackups = smugglerDatabaseRecord.PeriodicBackups;
-                    databaseRecord.ExternalReplications = smugglerDatabaseRecord.ExternalReplications;
-                    databaseRecord.Sorters = smugglerDatabaseRecord.Sorters;
-                    databaseRecord.Analyzers = smugglerDatabaseRecord.Analyzers;
-                    databaseRecord.SinkPullReplications = smugglerDatabaseRecord.SinkPullReplications;
-                    databaseRecord.HubPullReplications = smugglerDatabaseRecord.HubPullReplications;
-                    databaseRecord.Revisions = smugglerDatabaseRecord.Revisions;
-                    databaseRecord.Expiration = smugglerDatabaseRecord.Expiration;
-                    databaseRecord.RavenConnectionStrings = smugglerDatabaseRecord.RavenConnectionStrings;
-                    databaseRecord.SqlConnectionStrings = smugglerDatabaseRecord.SqlConnectionStrings;
-                    databaseRecord.Client = smugglerDatabaseRecord.Client;
-                    databaseRecord.TimeSeries = smugglerDatabaseRecord.TimeSeries;
-                    databaseRecord.DocumentsCompression = smugglerDatabaseRecord.DocumentsCompression;
-                    databaseRecord.LockMode = smugglerDatabaseRecord.LockMode;
-                    databaseRecord.OlapConnectionStrings = smugglerDatabaseRecord.OlapConnectionStrings;
-                    databaseRecord.OlapEtls = smugglerDatabaseRecord.OlapEtls;
-                    databaseRecord.ElasticSearchEtls = smugglerDatabaseRecord.ElasticSearchEtls;
-                    databaseRecord.ElasticSearchConnectionStrings = smugglerDatabaseRecord.ElasticSearchConnectionStrings;
-                    databaseRecord.QueueEtls = smugglerDatabaseRecord.QueueEtls;
-                    databaseRecord.QueueConnectionStrings = smugglerDatabaseRecord.QueueConnectionStrings;
-
-                    if (smugglerDatabaseRecord.IsSharded)
-                    {
-                        databaseRecord.Sharding.BucketRanges = smugglerDatabaseRecord.Sharding.BucketRanges;
-                    }
-
-                    // need to enable revisions before import
-                    database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
-                });
-
-            long totalExecutedCommands = 0;
-
-            //when restoring from a backup, the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
-            while (true)
-            {
-                OperationCancelToken.Token.ThrowIfCancellationRequested();
-
-                using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext serverContext))
-                using (serverContext.OpenReadTransaction())
-                {
-                    // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
-                    var executed = await database.ExecuteClusterTransaction(serverContext, batchSize: 1);
-                    if (executed.BatchSize == 0)
-                        break;
-
-                    totalExecutedCommands += executed.CommandsCount;
-                    Result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
-                    Progress.Invoke(Result.Progress);
-                }
-            }
-        }
-
         protected async Task<long> SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string,
                     BlittableJsonReaderObject> databaseValues, RestoreResult restoreResult, Action<IOperationProgress> onProgress)
         {
@@ -419,8 +324,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (FilesToRestore.Count == 0)
                 return;
 
-            var databaseRecord = RestoreSettings.DatabaseRecord;
-
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptionsServerSide
             {
@@ -434,7 +337,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             options.OperateOnTypes |= DatabaseItemType.Counters;
 #pragma warning restore 618
 
-            var oldOperateOnTypes = Raven.Client.Documents.Smuggler.DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
+            var oldOperateOnTypes = Client.Documents.Smuggler.DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
             var destination = database.Smuggler.CreateDestination();
 
             for (var i = 0; i < FilesToRestore.Count - 1; i++)
@@ -443,12 +346,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 Progress.Invoke(Result.Progress);
 
                 var filePath = RestoreSource.GetBackupPath(FilesToRestore[i]);
-                await ImportSingleBackupFileAsync(database, Progress, Result, filePath, context, destination, options, isLastFile: false,
-                    onDatabaseRecordAction: smugglerDatabaseRecord =>
-                    {
-                        // need to enable revisions before import
-                        database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
-                    });
+                await ImportSingleBackupFileAsync(database, Progress, Result, filePath, context, destination, options, isLastFile: false);
             }
 
             options.OperateOnTypes = oldOperateOnTypes;
@@ -457,7 +355,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Result.AddInfo($"Restoring file {FilesToRestore.Count:#,#;;0}/{FilesToRestore.Count:#,#;;0}");
             Progress.Invoke(Result.Progress);
 
-            await ImportLastBackupFileAsync(database, destination, context, options, databaseRecord, lastFilePath);
+            await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true);
+
+            await ExecuteClusterTransactions(database);
         }
 
         protected Stream GetInputStream(Stream stream, byte[] databaseEncryptionKey)
@@ -574,9 +474,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             JsonOperationContext context,
             DatabaseDestination destination, 
             DatabaseSmugglerOptionsServerSide options, 
-            bool isLastFile,
-            Action<IndexDefinitionAndType> onIndexAction = null,
-            Action<DatabaseRecord> onDatabaseRecordAction = null)
+            bool isLastFile)
         {
             await using (var fileStream = await RestoreSource.GetStream(filePath))
             await using (var inputStream = GetInputStream(fileStream, database.MasterKey))
@@ -585,11 +483,110 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 var smuggler = database.Smuggler.CreateForRestore(RestoreSettings.DatabaseRecord, source, destination, context, options, restoreResult, onProgress);
 
-                smuggler.BackupKind = BackupUtils.IsFullBackup(Path.GetExtension(filePath)) ? BackupKind.Full : BackupKind.Incremental;
-                smuggler.OnIndexAction = onIndexAction;
-                smuggler.OnDatabaseRecordAction = onDatabaseRecordAction;
+                ConfigureSettingsForSmugglerRestore(database, smuggler, filePath, isLastFile);
 
                 await smuggler.ExecuteAsync(ensureStepsProcessed: false, isLastFile);
+            }
+        }
+
+        protected virtual void ConfigureSettingsForSmugglerRestore(DocumentDatabase database, SmugglerBase smuggler, string filePath, bool isLastFile)
+        {
+            smuggler.BackupKind = BackupUtils.IsFullBackup(Path.GetExtension(filePath)) ? BackupKind.Full : BackupKind.Incremental;
+
+            if (isLastFile)
+            {
+                var databaseRecord = RestoreSettings.DatabaseRecord;
+
+                smuggler.OnIndexAction = indexAndType =>
+                {
+                    if (RestoreConfiguration.SkipIndexes)
+                        return;
+
+                    databaseRecord.AutoIndexes ??= new Dictionary<string, AutoIndexDefinition>();
+                    databaseRecord.Indexes ??= new Dictionary<string, IndexDefinition>();
+
+                    switch (indexAndType.Type)
+                    {
+                        case IndexType.AutoMap:
+                        case IndexType.AutoMapReduce:
+                            var autoIndexDefinition = (AutoIndexDefinitionBaseServerSide)indexAndType.IndexDefinition;
+                            databaseRecord.AutoIndexes[autoIndexDefinition.Name] =
+                                PutAutoIndexCommand.GetAutoIndexDefinition(autoIndexDefinition, indexAndType.Type);
+                            break;
+                        case IndexType.Map:
+                        case IndexType.MapReduce:
+                        case IndexType.JavaScriptMap:
+                        case IndexType.JavaScriptMapReduce:
+                            var indexDefinition = (IndexDefinition)indexAndType.IndexDefinition;
+                            databaseRecord.Indexes[indexDefinition.Name] = indexDefinition;
+                            break;
+                        case IndexType.None:
+                        case IndexType.Faulty:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                };
+
+                smuggler.OnDatabaseRecordAction = smugglerDatabaseRecord =>
+                {
+                    databaseRecord.ConflictSolverConfig = smugglerDatabaseRecord.ConflictSolverConfig;
+                    foreach (var setting in smugglerDatabaseRecord.Settings)
+                    {
+                        databaseRecord.Settings[setting.Key] = setting.Value;
+                    }
+
+                    databaseRecord.SqlEtls = smugglerDatabaseRecord.SqlEtls;
+                    databaseRecord.RavenEtls = smugglerDatabaseRecord.RavenEtls;
+                    databaseRecord.PeriodicBackups = smugglerDatabaseRecord.PeriodicBackups;
+                    databaseRecord.ExternalReplications = smugglerDatabaseRecord.ExternalReplications;
+                    databaseRecord.Sorters = smugglerDatabaseRecord.Sorters;
+                    databaseRecord.Analyzers = smugglerDatabaseRecord.Analyzers;
+                    databaseRecord.SinkPullReplications = smugglerDatabaseRecord.SinkPullReplications;
+                    databaseRecord.HubPullReplications = smugglerDatabaseRecord.HubPullReplications;
+                    databaseRecord.Revisions = smugglerDatabaseRecord.Revisions;
+                    databaseRecord.Expiration = smugglerDatabaseRecord.Expiration;
+                    databaseRecord.RavenConnectionStrings = smugglerDatabaseRecord.RavenConnectionStrings;
+                    databaseRecord.SqlConnectionStrings = smugglerDatabaseRecord.SqlConnectionStrings;
+                    databaseRecord.Client = smugglerDatabaseRecord.Client;
+                    databaseRecord.TimeSeries = smugglerDatabaseRecord.TimeSeries;
+                    databaseRecord.DocumentsCompression = smugglerDatabaseRecord.DocumentsCompression;
+                    databaseRecord.LockMode = smugglerDatabaseRecord.LockMode;
+                    databaseRecord.OlapConnectionStrings = smugglerDatabaseRecord.OlapConnectionStrings;
+                    databaseRecord.OlapEtls = smugglerDatabaseRecord.OlapEtls;
+                    databaseRecord.ElasticSearchEtls = smugglerDatabaseRecord.ElasticSearchEtls;
+                    databaseRecord.ElasticSearchConnectionStrings = smugglerDatabaseRecord.ElasticSearchConnectionStrings;
+                    databaseRecord.QueueEtls = smugglerDatabaseRecord.QueueEtls;
+                    databaseRecord.QueueConnectionStrings = smugglerDatabaseRecord.QueueConnectionStrings;
+                };
+            }
+
+            smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord =>
+                // need to enable revisions before import
+                database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
+        }
+
+        private async Task ExecuteClusterTransactions(DocumentDatabase database)
+        {
+            long totalExecutedCommands = 0;
+
+            //when restoring from a backup, the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
+            while (true)
+            {
+                OperationCancelToken.Token.ThrowIfCancellationRequested();
+
+                using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
+                {
+                    // the commands are already batched (10k or 16MB), so we are executing only 1 at a time
+                    var executed = await database.ExecuteClusterTransaction(serverContext, batchSize: 1);
+                    if (executed.BatchSize == 0)
+                        break;
+
+                    totalExecutedCommands += executed.CommandsCount;
+                    Result.AddInfo($"Executed {totalExecutedCommands:#,#;;0} cluster transaction commands.");
+                    Progress.Invoke(Result.Progress);
+                }
             }
         }
 
