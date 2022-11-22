@@ -22,15 +22,14 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
@@ -637,6 +636,21 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         if (_log.IsInfoEnabled)
                             _log.Info("Wasn't able to import the PostgreSQL configuration from smuggler file. Skipping.", e);
+                    }
+                }
+
+
+                if (reader.TryGet(nameof(databaseRecord.Sharding), out BlittableJsonReaderObject sharding) &&
+                    sharding != null)
+                {
+                    try
+                    {
+                        databaseRecord.Sharding = JsonDeserializationCluster.ShardingConfiguration(sharding);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the Sharding configuration from smuggler file. Skipping.", e);
                     }
                 }
 
