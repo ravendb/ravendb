@@ -6,12 +6,15 @@ using Raven.Client.ServerWide;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Smuggler;
 
 public abstract class AbstractDatabaseSmugglerFactory
 {
     public abstract DatabaseDestination CreateDestination(CancellationToken token = default);
+
+    public abstract DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, Logger logger);
 
     public abstract SmugglerBase CreateForRestore(
         DatabaseRecord databaseRecord,

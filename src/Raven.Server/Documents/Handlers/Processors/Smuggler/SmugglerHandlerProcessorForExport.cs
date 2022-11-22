@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
             using (token)
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var source = new DatabaseSource(RequestHandler.Database, startDocumentEtag, startRaftIndex, Logger);
+                var source = RequestHandler.Database.Smuggler.CreateSource(startDocumentEtag, startRaftIndex, Logger);
                 await using (var outputStream = GetOutputStream(RequestHandler.ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source);

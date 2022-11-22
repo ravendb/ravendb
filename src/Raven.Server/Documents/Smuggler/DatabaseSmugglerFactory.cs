@@ -7,6 +7,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using Sparrow.Logging;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.Smuggler;
@@ -23,6 +24,11 @@ public class DatabaseSmugglerFactory : AbstractDatabaseSmugglerFactory
     public override DatabaseDestination CreateDestination(CancellationToken token = default)
     {
         return new DatabaseDestination(_database, token);
+    }
+
+    public override DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, Logger logger)
+    {
+        return new DatabaseSource(_database, startDocumentEtag, startRaftIndex, logger);
     }
 
     public override SmugglerBase CreateForRestore(

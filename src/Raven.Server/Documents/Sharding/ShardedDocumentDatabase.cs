@@ -88,15 +88,6 @@ public class ShardedDocumentDatabase : DocumentDatabase
         }
     }
 
-    public override DatabaseRecord ReadDatabaseRecord()
-    {
-        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-        using (context.OpenReadTransaction())
-        {
-            return ServerStore.Cluster.ReadDatabase(context, ShardedDatabaseName);
-        }
-    }
-
     protected override ClusterTransactionBatchCollector CollectCommandsBatch(ClusterOperationContext context, int take)
     {
         var batchCollector = new ShardedClusterTransactionBatchCollector(this, take);

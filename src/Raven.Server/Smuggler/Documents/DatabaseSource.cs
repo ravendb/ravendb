@@ -33,7 +33,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DocumentDatabase _database;
         private DocumentsOperationContext _context;
         private ClusterOperationContext _serverContext;
-
+        
         private readonly long _startDocumentEtag;
         private readonly long _startRaftIndex;
         private readonly Logger _logger;
@@ -138,7 +138,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public Task<DatabaseRecord> GetDatabaseRecordAsync()
         {
-            var databaseRecord = _database.ReadDatabaseRecord();
+            var databaseRecord = ReadDatabaseRecord();
 
             // filter server-wide backup tasks
             for (var i = databaseRecord.PeriodicBackups.Count - 1; i >= 0; i--)
@@ -197,6 +197,11 @@ namespace Raven.Server.Smuggler.Documents
                     Document = enumerator.Current
                 };
             }
+        }
+
+        protected virtual DatabaseRecord ReadDatabaseRecord()
+        {
+            return _database.ReadDatabaseRecord();
         }
 
         private IEnumerable<Document> GetDocumentsFromCollections(DocumentsOperationContext context, DocumentsIterationState state)

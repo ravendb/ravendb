@@ -29,7 +29,6 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
-using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -744,9 +743,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         private InternalBackupResult CreateBackup(
             DatabaseSmugglerOptionsServerSide options, string backupFilePath, long? startDocumentEtag, long? startRaftIndex)
         {
-            if (ShardHelper.TryGetShardNumber(_database.Name, out var number) && number > 0)
-                return new InternalBackupResult();
-
             // the last etag is already included in the last backup
             var currentBackupResults = new InternalBackupResult();
             startDocumentEtag = startDocumentEtag == null ? 0 : ++startDocumentEtag;
@@ -757,7 +753,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext smugglerContext))
             {
-                var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value, startRaftIndex.Value, _logger);
+                var smugglerSource = _database.Smuggler.CreateSource(startDocumentEtag.Value, startRaftIndex.Value, _logger);
                 var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource);
                 var smuggler = _database.Smuggler.Create(
                     smugglerSource,

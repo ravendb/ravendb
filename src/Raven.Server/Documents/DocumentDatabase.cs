@@ -1681,7 +1681,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public virtual DatabaseRecord ReadDatabaseRecord()
+        public DatabaseRecord ReadDatabaseRecord()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())

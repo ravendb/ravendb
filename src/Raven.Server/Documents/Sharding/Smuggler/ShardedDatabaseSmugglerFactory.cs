@@ -8,6 +8,7 @@ using Raven.Server.Documents.Smuggler;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Smuggler;
 
@@ -23,6 +24,11 @@ public class ShardedDatabaseSmugglerFactory : AbstractDatabaseSmugglerFactory
     public override DatabaseDestination CreateDestination(CancellationToken token = default)
     {
         return new ShardedDatabaseDestination(_database, token);
+    }
+
+    public override DatabaseSource CreateSource(long startDocumentEtag, long startRaftIndex, Logger logger)
+    {
+        return new ShardedDatabaseSource(_database, startDocumentEtag, startRaftIndex, logger);
     }
 
     public override SmugglerBase CreateForRestore(
