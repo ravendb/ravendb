@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -26,6 +25,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -445,14 +445,7 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.Sharding));
-
-                            _writer.WriteStartObject();
-
-                            _writer.WritePropertyName(nameof(databaseRecord.Sharding.BucketRanges));
-                            _context.Write(_writer, new DynamicJsonArray(databaseRecord.Sharding.BucketRanges.Select(x => x.ToJson())));
-
-                            _writer.WriteEndObject();
-
+                            WriteShardingConfiguration(databaseRecord.Sharding);
                         }
 
                         break;
@@ -898,6 +891,19 @@ namespace Raven.Server.Smuggler.Documents
                     return;
                 }
                 _context.Write(_writer, postgreSqlConfig.ToJson());
+            }
+
+            private void WriteShardingConfiguration(ShardingConfiguration shardingConfiguration)
+            {
+                _writer.WriteStartObject();
+
+                _writer.WritePropertyName(nameof(shardingConfiguration.Shards));
+                _context.Write(_writer, new DynamicJsonArray(shardingConfiguration.Shards.Select(x => x.ToJson())));
+
+                _writer.WritePropertyName(nameof(shardingConfiguration.BucketRanges));
+                _context.Write(_writer, new DynamicJsonArray(shardingConfiguration.BucketRanges.Select(x => x.ToJson())));
+
+                _writer.WriteEndObject();
             }
 
             public ValueTask DisposeAsync()
