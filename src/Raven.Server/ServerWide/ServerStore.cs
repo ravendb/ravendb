@@ -877,12 +877,12 @@ namespace Raven.Server.ServerWide
                         {
                             addDatabase.Record.Sharding.BucketRanges = new List<ShardBucketRange>();
                             var start = 0;
-                            var step = ShardHelper.NumberOfBuckets / addDatabase.Record.Sharding.Shards.Length;
-                            for (int i = 0; i < addDatabase.Record.Sharding.Shards.Length; i++)
+                            var step = ShardHelper.NumberOfBuckets / addDatabase.Record.Sharding.Shards.Count;
+                            foreach (var (shardNumber, shardTopology) in addDatabase.Record.Sharding.Shards)
                             {
                                 addDatabase.Record.Sharding.BucketRanges.Add(new ShardBucketRange
                                 {
-                                    ShardNumber = i,
+                                    ShardNumber = shardNumber,
                                     BucketRangeStart = start
                                 });
                                 start += step;
@@ -899,7 +899,7 @@ namespace Raven.Server.ServerWide
 
                         var index = 0;
                         var keys = pool.Keys.ToList();
-                        foreach (var shardTopology in addDatabase.Record.Sharding.Shards)
+                        foreach (var (shardNumber, shardTopology) in addDatabase.Record.Sharding.Shards)
                         {
                             while (shardTopology.ReplicationFactor > shardTopology.Count)
                             {
@@ -922,7 +922,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static Dictionary<string, int> GetNodesDistribution(ClusterTopology clusterTopology, DatabaseTopology[] shards)
+        private static Dictionary<string, int> GetNodesDistribution(ClusterTopology clusterTopology, Dictionary<int, DatabaseTopology> shards)
         {
             var total = 0;
             var pool = new Dictionary<string, int>(); // tag, number of occurrences
@@ -932,7 +932,7 @@ namespace Raven.Server.ServerWide
                 pool[node.Key] = 0;
             }
 
-            foreach (var shardTopology in shards)
+            foreach (var (shardNumber, shardTopology) in shards)
             {
                 total += shardTopology.ReplicationFactor;
             }
@@ -2850,7 +2850,7 @@ namespace Raven.Server.ServerWide
             {
                 InitializeTopology(record.Sharding.Orchestrator.Topology);
 
-                foreach (var shardTopology in record.Sharding.Shards)
+                foreach (var (shardNumber, shardTopology) in record.Sharding.Shards)
                 {
                     InitializeTopology(shardTopology);
                 }

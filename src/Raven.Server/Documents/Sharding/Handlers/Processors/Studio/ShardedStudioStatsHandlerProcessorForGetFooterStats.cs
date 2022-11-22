@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +9,7 @@ using Raven.Server.Documents.Handlers.Processors.Studio;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Studio;
 using Raven.Server.ServerWide.Context;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 {
@@ -36,14 +38,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 
             public HttpRequest HttpRequest => _httpContext.Request;
 
-            public FooterStatistics Combine(Memory<FooterStatistics> results)
+            public FooterStatistics Combine(Dictionary<int, ShardExecutionResult<FooterStatistics>> results)
             {
-                var span = results.Span;
-
                 var result = new FooterStatistics();
 
-                foreach (var stats in span)
-                    result.CombineWith(stats);
+                foreach (var stats in results.Values)
+                    result.CombineWith(stats.Result);
 
                 return result;
             }

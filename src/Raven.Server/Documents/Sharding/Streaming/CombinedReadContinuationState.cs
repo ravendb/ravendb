@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,7 +9,7 @@ public class CombinedReadContinuationState : IDisposable
 {
     private readonly ShardedDatabaseContext _databaseContext;
     private readonly CombinedStreamResult _combinedStream;
-    public ReadContinuationState[] States;
+    public Dictionary<int, ReadContinuationState> States;
     public CancellationToken CancellationToken;
 
     public CombinedReadContinuationState(ShardedDatabaseContext databaseContext, CombinedStreamResult combinedStream)
@@ -20,13 +21,13 @@ public class CombinedReadContinuationState : IDisposable
     public async ValueTask InitializeAsync(CancellationToken token)
     {
         var shards = _databaseContext.ShardCount;
-        States = new ReadContinuationState[shards];
-        for (int i = 0; i < shards; i++)
+        States = new Dictionary<int, ReadContinuationState>(shards);
+        foreach (var shardNumber in _databaseContext.ShardsTopology.Keys)
         {
-            var contextPool = _databaseContext.ShardExecutor.GetRequestExecutorAt(i).ContextPool;
-            var state = new ReadContinuationState(contextPool, _combinedStream.Results.Span[i], token);
+            var contextPool = _databaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber).ContextPool;
+            var state = new ReadContinuationState(contextPool, _combinedStream.Results[shardNumber].Result, token);
             await state.InitializeAsync();
-            States[i] = state;
+            States[shardNumber] = state;
         }
 
         CancellationToken = token;
@@ -34,7 +35,7 @@ public class CombinedReadContinuationState : IDisposable
 
     public void Dispose()
     {
-        foreach (var state in States)
+        foreach (var state in States.Values)
         {
             try
             {

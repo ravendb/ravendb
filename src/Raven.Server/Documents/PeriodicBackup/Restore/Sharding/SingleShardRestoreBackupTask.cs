@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
@@ -69,7 +70,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
                 "RavenDB-19202 : consider using the most up-to-date database record");
-            if (_shardNumber > 0)
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal,
+                "Should ensure the shard topologies are always sorted. Need this functionality here to check this is always the first element.");
+
+            if (databaseRecord.Sharding.Shards.ElementAtOrDefault(0).Key != _shardNumber)
                 smuggler._options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
 
             smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord =>

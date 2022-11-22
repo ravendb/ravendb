@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
@@ -7,6 +8,7 @@ using Raven.Server.Documents.Commands.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments;
 
@@ -33,16 +35,16 @@ internal class ShardedAttachmentHandlerProcessorForGetHashCount : AbstractAttach
             HttpRequest = httpRequest ?? throw new ArgumentNullException(nameof(httpRequest));
         }
 
-        public GetAttachmentHashCountCommand.Response Combine(Memory<GetAttachmentHashCountCommand.Response> results)
+        public GetAttachmentHashCountCommand.Response Combine(Dictionary<int, ShardExecutionResult<GetAttachmentHashCountCommand.Response>> results)
         {
             var response = new GetAttachmentHashCountCommand.Response
             {
                 Hash = _hash
             };
 
-            var responses = results.Span;
+            var responses = results.Values;
             foreach (var r in responses)
-                response.Count += r.Count;
+                response.Count += r.Result.Count;
 
             return response;
         }

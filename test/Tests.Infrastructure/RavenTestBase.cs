@@ -734,11 +734,11 @@ namespace FastTests
                             modifyRecord?.Invoke(record);
                             record.Sharding = new ShardingConfiguration
                             {
-                                Shards = new[]
+                                Shards = new Dictionary<int, DatabaseTopology>()
                                 {
-                                    new DatabaseTopology(),
-                                    new DatabaseTopology(),
-                                    new DatabaseTopology(),
+                                    {0, new DatabaseTopology()},
+                                    {1, new DatabaseTopology()},
+                                    {2, new DatabaseTopology()}
                                 }
                             };
                         };

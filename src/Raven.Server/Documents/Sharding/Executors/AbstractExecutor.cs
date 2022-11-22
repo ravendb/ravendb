@@ -97,42 +97,37 @@ public abstract class AbstractExecutor : IDisposable
         int position,
         CommandHolder<TResult>[] commands)
     {
-        TCombinedResult result;
-        TResult[] resultsArray = null;
-        RavenCommand<TResult>[] cmdResultsArray = null;
-        try
+        var results = new Dictionary<int, ShardExecutionResult<TResult>>();
+        
+        for (int i = 0; i < position; i++)
         {
-            resultsArray = ArrayPool<TResult>.Shared.Rent(position);
-            cmdResultsArray = ArrayPool<RavenCommand<TResult>>.Shared.Rent(position);
-
-            for (int i = 0; i < position; i++)
+            results[commands[i].ShardNumber] = new ShardExecutionResult<TResult>()
             {
-                cmdResultsArray[i] = commands[i].Command;
-            }
-
-            var commandsMemory = new Memory<RavenCommand<TResult>>(cmdResultsArray, 0, position);
-            var resultsMemory = new Memory<TResult>(resultsArray, 0, position);
-            result = operation.CombineCommands(commandsMemory, resultsMemory);
-
-            if (typeof(TCombinedResult) == typeof(BlittableJsonReaderObject))
-            {
-                if (result == null)
-                    return default;
-
-                var blittable = result as BlittableJsonReaderObject;
-                return (TCombinedResult)(object)blittable.Clone(operation.CreateOperationContext());
-            }
-
-            return result;
+                ShardNumber = commands[i].ShardNumber,
+                Command = commands[i].Command,
+                Result = commands[i].Command.Result
+            };
         }
-        finally
+        
+        var result = operation.CombineCommands(results);
+
+        if (typeof(TCombinedResult) == typeof(BlittableJsonReaderObject))
         {
-            if (resultsArray != null)
-                ArrayPool<TResult>.Shared.Return(resultsArray);
+            if (result == null)
+                return default;
 
-            if (cmdResultsArray != null)
-                ArrayPool<RavenCommand<TResult>>.Shared.Return(cmdResultsArray);
+            var blittable = result as BlittableJsonReaderObject;
+            return (TCombinedResult)(object)blittable.Clone(operation.CreateOperationContext());
         }
+
+        return result;
+    }
+
+    public class ShardExecutionResult<T>
+    {
+        public int ShardNumber;
+        public T Result;
+        public RavenCommand<T> Command;
     }
 
     private async Task<int> ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(
@@ -147,16 +142,16 @@ public abstract class AbstractExecutor : IDisposable
         int position;
         for (position = 0; position < shards.Span.Length; position++)
         {
-            int shard = shards.Span[position];
+            int shardNumber = shards.Span[position];
 
-            var cmd = operation.CreateCommandForShard(shard);
+            var cmd = operation.CreateCommandForShard(shardNumber);
             cmd.ModifyRequest = operation.ModifyHeaders;
             cmd.ModifyUrl = operation.ModifyUrl;
 
-            commands[position].Shard = shard;
+            commands[position].ShardNumber = shardNumber;
             commands[position].Command = cmd;
 
-            var executor = GetRequestExecutorAt(shard);
+            var executor = GetRequestExecutorAt(shardNumber);
             var release = executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
             commands[position].ContextReleaser = release;
 
@@ -190,7 +185,7 @@ public abstract class AbstractExecutor : IDisposable
                     throw;
 
                 _exceptions ??= new Dictionary<int, Exception>();
-                _exceptions[holder.Shard] = e;
+                _exceptions[holder.ShardNumber] = e;
             }
         }
 
@@ -199,7 +194,7 @@ public abstract class AbstractExecutor : IDisposable
 
     public struct CommandHolder<T>
     {
-        public int Shard;
+        public int ShardNumber;
         public RavenCommand<T> Command;
         public Task Task;
         public IDisposable ContextReleaser;

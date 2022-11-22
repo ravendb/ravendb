@@ -3,5 +3,5 @@
 public class ShardStreamItem<T>
 {
     public T Item;
-    public int Shard;
+    public int ShardNumber;
 }

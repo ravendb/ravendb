@@ -6,7 +6,7 @@ public class ShardingConfiguration
 {
     public OrchestratorConfiguration Orchestrator;
 
-    public DatabaseTopology[] Shards;
+    public Dictionary<int, DatabaseTopology> Shards;
 
     public List<ShardBucketRange> BucketRanges = new List<ShardBucketRange>();
 

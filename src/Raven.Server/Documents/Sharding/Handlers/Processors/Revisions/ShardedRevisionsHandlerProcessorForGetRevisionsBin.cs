@@ -15,6 +15,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
@@ -52,7 +53,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 
             public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
-            public BlittableJsonReaderObject[] Combine(Memory<BlittableArrayResult> results)
+            public BlittableJsonReaderObject[] Combine(Dictionary<int, ShardExecutionResult<BlittableArrayResult>> results)
             {
                 var list = new List<BlittableJsonReaderObject>();
                 

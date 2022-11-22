@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 var subscription = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, DatabaseContext.DatabaseName, name);
 
-                foreach (var topology in DatabaseContext.ShardsTopology)
+                foreach (var topology in DatabaseContext.ShardsTopology.Values)
                 {
                     var node = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, subscription, null);
                     if (node == null || node == ServerStore.NodeTag)

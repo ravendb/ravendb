@@ -107,13 +107,15 @@ public partial class ShardedDatabaseContext
             var t = token?.Token ?? default;
 
             var tasks = new Task[_context.ShardCount];
+            int i = 0;
             using (_context.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                for (var shardNumber = 0; shardNumber < tasks.Length; shardNumber++)
+                foreach (var shardNumber in _context.ShardsTopology.Keys)
                 {
                     var command = commandFactory(context, shardNumber);
 
-                    tasks[shardNumber] = ConnectAsync(command, shardNumber);
+                    tasks[i] = ConnectAsync(command, shardNumber);
+                    i++;
                 }
             }
 

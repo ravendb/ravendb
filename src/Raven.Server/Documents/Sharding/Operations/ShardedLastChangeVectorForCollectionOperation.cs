@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Net.Http;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Json;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations;
@@ -24,13 +26,13 @@ public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedO
 
     public HttpRequest HttpRequest => _shardedSubscriptionsHandler.HttpContext.Request;
 
-    public LastChangeVectorForCollectionCombinedResult Combine(Memory<LastChangeVectorForCollectionResult> results)
+    public LastChangeVectorForCollectionCombinedResult Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<LastChangeVectorForCollectionResult>> results)
     {
         var dic = new Dictionary<string, string>();
-        var array = results.Span;
-        for (var i = 0; i < array.Length; i++)
+        
+        foreach (var result in results.Values)
         {
-            dic.Add($"{_database}${i}", array[i].LastChangeVector);
+            dic.Add($"{ShardHelper.ToShardName(_database, result.ShardNumber)}", result.Result.LastChangeVector);
         }
 
         return new LastChangeVectorForCollectionCombinedResult

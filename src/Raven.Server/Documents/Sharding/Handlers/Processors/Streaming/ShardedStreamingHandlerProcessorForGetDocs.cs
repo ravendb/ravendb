@@ -7,6 +7,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Streaming;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Collections;
 using Raven.Server.Documents.Sharding.Operations;
@@ -104,7 +105,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 
         public string ExpectedEtag { get; }
 
-        public CombinedStreamResult CombineResults(Memory<StreamResult> results)
+        public CombinedStreamResult CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<StreamResult>> results)
         {
             return new CombinedStreamResult { Results = results };
         }

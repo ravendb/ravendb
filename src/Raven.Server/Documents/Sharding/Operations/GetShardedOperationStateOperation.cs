@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding.Executors;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Operations
@@ -23,22 +25,20 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-        public OperationState Combine(Memory<OperationState> results)
+        public OperationState Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<OperationState>> results)
         {
             var combined = new OperationState();
 
             OperationMultipleExceptionsResult operationExceptionsResult = null;
             BulkOperationResult bulkResult = null;
-
-            var span = results.Span;
-
+            
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "RavenDB-19082 We might get different operations states from different nodes e.g. two BulkOperationResults which succeeded and one OperationExceptionResult");
 
-            for (int i = 0; i < results.Length; i++)
+            foreach (var shardResult in results.Values)
             {
-                var result = span[i].Result;
+                var operationResult = shardResult.Result.Result;
 
-                switch (result)
+                switch (operationResult)
                 {
                     case OperationExceptionResult operationException:
                         if (operationExceptionsResult == null)
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
                         break;
                     default:
-                        throw new ArgumentException($"Not supported operation type result {result.GetType()}");
+                        throw new ArgumentException($"Not supported operation type result {operationResult.GetType()}");
                 }
             }
 

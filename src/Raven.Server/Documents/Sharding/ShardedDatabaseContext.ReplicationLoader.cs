@@ -163,15 +163,15 @@ namespace Raven.Server.Documents.Sharding
 
     public class ShardReplicationNode : ExternalReplication
     {
-        public int Shard;
+        public int ShardNumber;
 
         public ShardReplicationNode()
         {
         }
 
-        public ShardReplicationNode(string database, string connectionStringName, int shard) : base(database, connectionStringName)
+        public ShardReplicationNode(string database, string connectionStringName, int shardNumber) : base(database, connectionStringName)
         {
-            Shard = shard;
+            ShardNumber = shardNumber;
         }
     }
 }

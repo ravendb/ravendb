@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +9,7 @@ using Raven.Server.Documents.Handlers.Processors.Collections;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 {
@@ -46,16 +48,16 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 
         public HttpRequest HttpRequest => _httpContext?.Request;
 
-        public CollectionStatistics Combine(Memory<CollectionStatistics> results)
+        public CollectionStatistics Combine(Dictionary<int, ShardExecutionResult<CollectionStatistics>> results)
         {
             var stats = new CollectionStatistics();
-            var span = results.Span;
-            for (int i = 0; i < span.Length; i++)
+            
+            foreach (var shardResult in results.Values)
             {
-                var result = span[i];
-                stats.CountOfDocuments += result.CountOfDocuments;
-                stats.CountOfConflicts += result.CountOfConflicts;
-                foreach (var collectionInfo in result.Collections)
+                var shardStats = shardResult.Result;
+                stats.CountOfDocuments += shardStats.CountOfDocuments;
+                stats.CountOfConflicts += shardStats.CountOfConflicts;
+                foreach (var collectionInfo in shardStats.Collections)
                 {
                     stats.Collections[collectionInfo.Key] = stats.Collections.ContainsKey(collectionInfo.Key)
                         ? stats.Collections[collectionInfo.Key] + collectionInfo.Value
@@ -80,16 +82,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-        public DetailedCollectionStatistics Combine(Memory<DetailedCollectionStatistics> results)
+        public DetailedCollectionStatistics Combine(Dictionary<int, ShardExecutionResult<DetailedCollectionStatistics>> results)
         {
             var stats = new DetailedCollectionStatistics();
-            var span = results.Span;
-            for (int i = 0; i < span.Length; i++)
+            foreach (var result in results.Values)
             {
-                var result = span[i];
-                stats.CountOfDocuments += result.CountOfDocuments;
-                stats.CountOfConflicts += result.CountOfConflicts;
-                foreach (var collectionInfo in result.Collections)
+                stats.CountOfDocuments += result.Result.CountOfDocuments;
+                stats.CountOfConflicts += result.Result.CountOfConflicts;
+                foreach (var collectionInfo in result.Result.Collections)
                 {
                     if (stats.Collections.ContainsKey(collectionInfo.Key))
                     {

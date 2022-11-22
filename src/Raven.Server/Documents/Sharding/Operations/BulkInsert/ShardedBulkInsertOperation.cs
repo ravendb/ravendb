@@ -11,6 +11,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers.BulkInsert;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -24,7 +25,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
     private readonly ShardedBulkInsertHandler _requestHandler;
     private readonly ShardedDatabaseContext _databaseContext;
     private readonly TransactionOperationContext _context;
-    private readonly ShardedBulkInsertWriter[] _writers;
+    private readonly Dictionary<int, ShardedBulkInsertWriter> _writers;
     private readonly List<IDisposable> _returnContexts = new();
     private readonly Dictionary<int, BulkInsertOperation.BulkInsertCommand> _bulkInsertCommands = new();
 
@@ -38,9 +39,9 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
         _returnContexts.Add(contextPool.AllocateOperationContext(out _context));
 
-        _writers = new ShardedBulkInsertWriter[databaseContext.ShardCount];
+        _writers = new Dictionary<int, ShardedBulkInsertWriter>(databaseContext.ShardCount);
 
-        for (int shardNumber = 0; shardNumber < databaseContext.ShardCount; shardNumber++)
+        foreach (var shardNumber in databaseContext.ShardsTopology.Keys)
         {
             var returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
 
@@ -54,7 +55,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
     public CompressionLevel CompressionLevel { get; set; } = CompressionLevel.NoCompression;
 
     public HttpRequest HttpRequest => _requestHandler.HttpContext.Request;
-    public HttpResponseMessage Combine(Memory<HttpResponseMessage> results) => null;
+    public HttpResponseMessage Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<HttpResponseMessage>> results) => null;
 
     public RavenCommand<HttpResponseMessage> CreateCommandForShard(int shardNumber)
     {
@@ -94,7 +95,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
     {
         if (CompressionLevel != CompressionLevel.NoCompression)
         {
-            for (int shardNumber = 0; shardNumber < _databaseContext.ShardCount; shardNumber++)
+            foreach(var shardNumber in _databaseContext.ShardsTopology.Keys)
             {
                 _writers[shardNumber].StreamExposer.Headers.ContentEncoding.Add("gzip");
             }
@@ -102,11 +103,11 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
         BulkInsertExecuteTask = _databaseContext.ShardExecutor.ExecuteParallelForAllAsync(this);
 
-        await Task.WhenAll(_writers.Select(x => x.StreamExposer.OutputStream));
+        await Task.WhenAll(_writers.Select(x => x.Value.StreamExposer.OutputStream));
 
-        for (int shardNumber = 0; shardNumber < _databaseContext.ShardCount; shardNumber++)
+        foreach(var writer in _writers.Values)
         {
-            await _writers[shardNumber].EnsureStreamAsync(CompressionLevel);
+            await writer.EnsureStreamAsync(CompressionLevel);
         }
     }
 
@@ -146,9 +147,9 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
     {
         var disposeOperations = new ExceptionAggregator("Failed to dispose bulk insert operations opened per shard");
 
-        for (int shardNumber = 0; shardNumber < _databaseContext.ShardCount; shardNumber++)
+        foreach(var writer in _writers.Values)
         {
-            await disposeOperations.ExecuteAsync(_writers[shardNumber].DisposeAsync());
+            await disposeOperations.ExecuteAsync(writer.DisposeAsync());
         }
 
         if (BulkInsertExecuteTask != null)
@@ -165,7 +166,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
 
         var disposeRequests = new ExceptionAggregator("Failed to dispose bulk insert requests opened per shard");
 
-        for (int shardNumber = 0; shardNumber < _databaseContext.ShardCount; shardNumber++)
+        foreach(var shardNumber in _databaseContext.ShardsTopology.Keys)
         {
             disposeRequests.Execute(() => _writers?[shardNumber].DisposeRequestStream());
         }

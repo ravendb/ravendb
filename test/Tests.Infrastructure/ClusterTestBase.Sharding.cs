@@ -48,10 +48,10 @@ public partial class ClusterTestBase
             return _parent.CreateDatabaseInCluster(record, replicationFactor, tuple.Leader.WebUrl, certificate);
         }
 
-        private static DatabaseTopology[] GetDatabaseTopologyForShards(int replicationFactor, List<string> tags, int shards)
+        private static Dictionary<int, DatabaseTopology> GetDatabaseTopologyForShards(int replicationFactor, List<string> tags, int shards)
         {
             Assert.True(replicationFactor <= tags.Count);
-            var topology = new DatabaseTopology[shards];
+            var topology = new Dictionary<int, DatabaseTopology>(shards);
             for (int i = 0; i < shards; i++)
                 topology[i] = CreateTopology<DatabaseTopology>(replicationFactor, tags, i);
 
@@ -142,7 +142,7 @@ public partial class ClusterTestBase
             }, true, timeout: timeout, interval: 333);
         }
 
-        public async Task<DatabaseTopology[]> GetShards(DocumentStore store)
+        public async Task<Dictionary<int, DatabaseTopology>> GetShards(DocumentStore store)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             return record.Sharding?.Shards;

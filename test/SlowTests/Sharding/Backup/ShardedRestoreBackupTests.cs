@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using MySqlX.XDevAPI;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
@@ -88,15 +89,14 @@ namespace SlowTests.Sharding.Backup
                 {
                     var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                     Assert.Equal(DatabaseStateStatus.Normal, dbRec.DatabaseState);
-                    Assert.Equal(3, dbRec.Sharding.Shards.Length);
+                    Assert.Equal(3, dbRec.Sharding.Shards.Count);
 
                     var shardNodes = new HashSet<string>();
-                    for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                    foreach (var shardToTopology in dbRec.Sharding.Shards)
                     {
-                        var shardTopology = dbRec.Sharding.Shards[index];
-                        Assert.Equal(1, shardTopology.Members.Count);
-                        Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
-                        Assert.True(shardNodes.Add(shardTopology.Members[0]));
+                        Assert.Equal(1, shardToTopology.Value.Members.Count);
+                        Assert.Equal(sharding.Shards[shardToTopology.Key].Members[0], shardToTopology.Value.Members[0]);
+                        Assert.True(shardNodes.Add(shardToTopology.Value.Members[0]));
                     }
 
                     using (var session = store.OpenSession(newDbName))
@@ -145,7 +145,7 @@ namespace SlowTests.Sharding.Backup
                 {
                     var databaseRecord = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                     Assert.Equal(DatabaseStateStatus.Normal, databaseRecord.DatabaseState);
-                    Assert.Equal(3, databaseRecord.Sharding.Shards.Length);
+                    Assert.Equal(3, databaseRecord.Sharding.Shards.Count);
                     Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
                     Assert.NotNull(databaseRecord.Revisions);
 
@@ -198,16 +198,16 @@ namespace SlowTests.Sharding.Backup
                     {
                         var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
-                        Assert.Equal(3, databaseRecord.Sharding.Shards.Length);
+                        Assert.Equal(3, databaseRecord.Sharding.Shards.Count);
                         Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
                         Assert.NotNull(databaseRecord.Revisions);
 
                         var shardNodes = new HashSet<string>();
-                        for (var index = 0; index < databaseRecord.Sharding.Shards.Length; index++)
+                        foreach (var shardToTopology in databaseRecord.Sharding.Shards)
                         {
-                            var shardTopology = databaseRecord.Sharding.Shards[index];
+                            var shardTopology = shardToTopology.Value;
                             Assert.Equal(1, shardTopology.Members.Count);
-                            Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                            Assert.Equal(sharding.Shards[shardToTopology.Key].Members[0], shardTopology.Members[0]);
                             Assert.True(shardNodes.Add(shardTopology.Members[0]));
                         }
 
@@ -264,14 +264,14 @@ namespace SlowTests.Sharding.Backup
                     }, timeout: TimeSpan.FromSeconds(60)))
                     {
                         var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                        Assert.Equal(3, dbRec.Sharding.Shards.Length);
+                        Assert.Equal(3, dbRec.Sharding.Shards.Count);
 
                         var shardNodes = new HashSet<string>();
-                        for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                        foreach (var shardToTopology in dbRec.Sharding.Shards)
                         {
-                            var shardTopology = dbRec.Sharding.Shards[index];
+                            var shardTopology = shardToTopology.Value;
                             Assert.Equal(1, shardTopology.Members.Count);
-                            Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                            Assert.Equal(sharding.Shards[shardToTopology.Key].Members[0], shardTopology.Members[0]);
                             Assert.True(shardNodes.Add(shardTopology.Members[0]));
                         }
 
@@ -327,14 +327,14 @@ namespace SlowTests.Sharding.Backup
                     }, timeout: TimeSpan.FromSeconds(60)))
                     {
                         var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                        Assert.Equal(3, dbRec.Sharding.Shards.Length);
+                        Assert.Equal(3, dbRec.Sharding.Shards.Count);
 
                         var shardNodes = new HashSet<string>();
-                        for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                        foreach (var shardToTopology in dbRec.Sharding.Shards)
                         {
-                            var shardTopology = dbRec.Sharding.Shards[index];
+                            var shardTopology = shardToTopology.Value;
                             Assert.Equal(1, shardTopology.Members.Count);
-                            Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                            Assert.Equal(sharding.Shards[shardToTopology.Key].Members[0], shardTopology.Members[0]);
                             Assert.True(shardNodes.Add(shardTopology.Members[0]));
                         }
 
@@ -412,14 +412,14 @@ namespace SlowTests.Sharding.Backup
                 }, timeout: TimeSpan.FromSeconds(60)))
                 {
                     var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                    Assert.Equal(3, dbRec.Sharding.Shards.Length);
+                    Assert.Equal(3, dbRec.Sharding.Shards.Count);
 
                     var shardNodes = new HashSet<string>();
-                    for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                    foreach (var shardToTopology in dbRec.Sharding.Shards)
                     {
-                        var shardTopology = dbRec.Sharding.Shards[index];
+                        var shardTopology = shardToTopology.Value;
                         Assert.Equal(1, shardTopology.Members.Count);
-                        Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                        Assert.Equal(sharding.Shards[shardToTopology.Key].Members[0], shardTopology.Members[0]);
                         Assert.True(shardNodes.Add(shardTopology.Members[0]));
                     }
 
@@ -486,14 +486,14 @@ namespace SlowTests.Sharding.Backup
                 }, timeout: TimeSpan.FromSeconds(60)))
                 {
                     var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                    Assert.Equal(3, dbRec.Sharding.Shards.Length);
+                    Assert.Equal(3, dbRec.Sharding.Shards.Count);
 
                     var shardNodes = new HashSet<string>();
-                    for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                    foreach (var shardToTopology in dbRec.Sharding.Shards)
                     {
-                        var shardTopology = dbRec.Sharding.Shards[index];
+                        var shardTopology = shardToTopology.Value;
                         Assert.Equal(1, shardTopology.Members.Count);
-                        Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                        Assert.Equal(sharding.Shards[shardToTopology.Key].Members[0], shardTopology.Members[0]);
                         Assert.True(shardNodes.Add(shardTopology.Members[0]));
                     }
 
@@ -591,14 +591,14 @@ namespace SlowTests.Sharding.Backup
                     }))
                     {
                         var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                        Assert.Equal(3, dbRec.Sharding.Shards.Length);
+                        Assert.Equal(3, dbRec.Sharding.Shards.Count);
                         Assert.True(dbRec.Encrypted);
 
-                        for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                        foreach (var shardToTopology in dbRec.Sharding.Shards)
                         {
-                            var shardTopology = dbRec.Sharding.Shards[index];
+                            var shardTopology = shardToTopology.Value;
                             Assert.Equal(1, shardTopology.Members.Count);
-                            Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                            Assert.Equal(sharding.Shards[shardToTopology.Key].Members[0], shardTopology.Members[0]);
                         }
 
                         using (var session = store.OpenSession(databaseName))
@@ -684,15 +684,15 @@ namespace SlowTests.Sharding.Backup
                     }))
                     {
                         var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
-                        Assert.Equal(3, dbRec.Sharding.Shards.Length);
+                        Assert.Equal(3, dbRec.Sharding.Shards.Count);
                         Assert.True(dbRec.Encrypted);
 
                         var shardNodes = new HashSet<string>();
-                        for (var index = 0; index < dbRec.Sharding.Shards.Length; index++)
+                        foreach (var shardToTopology in dbRec.Sharding.Shards)
                         {
-                            var shardTopology = dbRec.Sharding.Shards[index];
+                            var shardTopology = shardToTopology.Value;
                             Assert.Equal(1, shardTopology.Members.Count);
-                            Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                            Assert.Equal(sharding.Shards[shardToTopology.Key].Members[0], shardTopology.Members[0]);
                             Assert.True(shardNodes.Add(shardTopology.Members[0]));
                         }
 
@@ -758,16 +758,16 @@ namespace SlowTests.Sharding.Backup
                     ValidateRestoreResult(result, sharding);
 
                     var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                    Assert.Equal(3, databaseRecord.Sharding.Shards.Length);
+                    Assert.Equal(3, databaseRecord.Sharding.Shards.Count);
                     Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
                     Assert.NotNull(databaseRecord.Revisions);
 
                     var shardNodes = new HashSet<string>();
-                    for (var index = 0; index < databaseRecord.Sharding.Shards.Length; index++)
+                    foreach (var shardToTopology in databaseRecord.Sharding.Shards)
                     {
-                        var shardTopology = databaseRecord.Sharding.Shards[index];
+                        var shardTopology = shardToTopology.Value;
                         Assert.Equal(1, shardTopology.Members.Count);
-                        Assert.Equal(sharding.Shards[index].Members[0], shardTopology.Members[0]);
+                        Assert.Equal(sharding.Shards[shardToTopology.Key].Members[0], shardTopology.Members[0]);
                         Assert.True(shardNodes.Add(shardTopology.Members[0]));
                     }
 

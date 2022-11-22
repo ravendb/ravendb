@@ -163,7 +163,8 @@ namespace Raven.Server.ServerWide
             [nameof(SourceMigrationSendCompletedCommand)] = 60_000,
             [nameof(DestinationMigrationConfirmCommand)] = 60_000,
             [nameof(SourceMigrationCleanupCommand)] = 60_000,
-            [nameof(PutShardedSubscriptionCommand)] = 60_000
+            [nameof(PutShardedSubscriptionCommand)] = 60_000,
+            [nameof(CreateNewShardCommand)] = 60_000,
         };
 
         public static bool CanPutCommand(string command)

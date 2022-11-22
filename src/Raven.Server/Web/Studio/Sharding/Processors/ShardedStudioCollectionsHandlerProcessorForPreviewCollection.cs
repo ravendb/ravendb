@@ -12,6 +12,7 @@ using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Operations;
@@ -174,7 +175,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         public string ExpectedEtag { get; }
 
-        public CombinedStreamResult CombineResults(Memory<StreamResult> results)
+        public CombinedStreamResult CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<StreamResult>> results)
         {
             return new CombinedStreamResult {Results = results};
         }

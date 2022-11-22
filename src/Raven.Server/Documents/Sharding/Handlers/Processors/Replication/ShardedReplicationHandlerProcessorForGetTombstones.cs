@@ -13,6 +13,7 @@ using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
             }
 
             public HttpRequest HttpRequest => _handler.HttpContext.Request;
-            public GetTombstonesPreviewResult Combine(Memory<GetTombstonesPreviewResult> results)
+            public GetTombstonesPreviewResult Combine(Dictionary<int, ShardExecutionResult<GetTombstonesPreviewResult>> results)
             {
                 var final = new GetTombstonesPreviewResult();
 

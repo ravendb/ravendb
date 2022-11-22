@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,22 +14,22 @@ namespace Raven.Server.Documents.Sharding.Executors
 {
     public class ShardExecutor : AbstractExecutor
     {
-        private readonly RequestExecutor[] _requestExecutors;
+        private readonly Dictionary<int, RequestExecutor> _requestExecutors;
         private readonly int[] _fullRange;
 
         public ShardExecutor(ServerStore store, ShardedDatabaseContext databaseContext) : base(store)
         {
             var record = databaseContext.DatabaseRecord;
-            _fullRange = Enumerable.Range(0, record.Sharding.Shards.Length).ToArray();
-
-            _requestExecutors = new RequestExecutor[record.Sharding.Shards.Length];
-            for (int i = 0; i < record.Sharding.Shards.Length; i++)
+            _fullRange = record.Sharding.Shards.Keys.ToArray();
+            
+            _requestExecutors = new Dictionary<int, RequestExecutor>(record.Sharding.Shards.Count);
+            foreach (var shardToTopology in record.Sharding.Shards)
             {
                 var allNodes = store.GetClusterTopology().AllNodes;
-                var urls = record.Sharding.Shards[i].AllNodes.Select(tag => allNodes[tag]).ToArray();
-                _requestExecutors[i] = RequestExecutor.CreateForServer(
+                var urls = record.Sharding.Shards[shardToTopology.Key].AllNodes.Select(tag => allNodes[tag]).ToArray();
+                _requestExecutors[shardToTopology.Key] = RequestExecutor.CreateForServer(
                     urls,
-                    ShardHelper.ToShardName(databaseContext.DatabaseName, i),
+                    ShardHelper.ToShardName(databaseContext.DatabaseName, shardToTopology.Key),
                     store.Server.Certificate.Certificate,
                     DocumentConventions.DefaultForServer);
             }
@@ -77,7 +78,7 @@ namespace Raven.Server.Documents.Sharding.Executors
 
         public override void Dispose()
         {
-            foreach (var executor in _requestExecutors)
+            foreach (var executor in _requestExecutors.Values)
             {
                 try
                 {

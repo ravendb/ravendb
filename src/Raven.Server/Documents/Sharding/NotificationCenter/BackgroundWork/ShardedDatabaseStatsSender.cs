@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -9,6 +10,7 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.NotificationCenter.BackgroundWork;
 
@@ -39,15 +41,13 @@ public class ShardedDatabaseStatsSender : AbstractDatabaseStatsSender
 
         public HttpRequest HttpRequest => null;
 
-        public NotificationCenterDatabaseStats Combine(Memory<NotificationCenterDatabaseStats> results)
+        public NotificationCenterDatabaseStats Combine(Dictionary<int, ShardExecutionResult<NotificationCenterDatabaseStats>> results)
         {
             var result = new NotificationCenterDatabaseStats();
 
-            for (var i = 0; i < results.Length; i++)
+            foreach (var shardStats in results.Values)
             {
-                var stats = results.Span[i];
-
-                result.CombineWith(stats, _context);
+                result.CombineWith(shardStats.Result, _context);
             }
 
             return result;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Raven.Server.Documents.Handlers.Processors.Stats;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Stats;
 
@@ -49,19 +51,19 @@ internal class ShardedStatsHandlerProcessorForEssentialStats : AbstractStatsHand
 
         public HttpRequest HttpRequest { get; }
 
-        public EssentialDatabaseStatistics Combine(Memory<EssentialDatabaseStatistics> results)
+        public EssentialDatabaseStatistics Combine(Dictionary<int, ShardExecutionResult<EssentialDatabaseStatistics>> results)
         {
             EssentialDatabaseStatistics result = null;
 
-            foreach (var stats in results.Span)
+            foreach (var stats in results.Values)
             {
                 if (result == null)
                 {
-                    result = stats;
+                    result = stats.Result;
                     continue;
                 }
 
-                MergeBasicDatabaseStatistics(result, stats);
+                MergeBasicDatabaseStatistics(result, stats.Result);
             }
 
             Debug.Assert(result != null, "result != null");

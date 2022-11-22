@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Sharding
         private readonly Logger _logger;
 
         public readonly ShardExecutor ShardExecutor;
-        public readonly AllNodesExecutor AllNodesExecutor;
+        public readonly AllOrchestratorNodesExecutor AllNodesExecutor;
         public DatabaseRecord DatabaseRecord => _record;
 
         public RavenConfiguration Configuration { get; internal set; }
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Sharding
             Indexes = new ShardedIndexesContext(this, serverStore);
 
             ShardExecutor = new ShardExecutor(ServerStore, this);
-            AllNodesExecutor = new AllNodesExecutor(ServerStore, this);
+            AllNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, this);
 
             NotificationCenter = new ShardedDatabaseNotificationCenter(this);
             NotificationCenter.Initialize();
@@ -97,9 +97,9 @@ namespace Raven.Server.Documents.Sharding
 
         public bool Encrypted => _record.Encrypted;
 
-        public int ShardCount => _record.Sharding.Shards.Length;
+        public int ShardCount => _record.Sharding.Shards.Count;
 
-        public DatabaseTopology[] ShardsTopology => _record.Sharding.Shards;
+        public Dictionary<int, DatabaseTopology> ShardsTopology => _record.Sharding.Shards;
 
         public int GetShardNumber(int shardBucket) => ShardHelper.GetShardNumber(_record.Sharding.BucketRanges, shardBucket);
 

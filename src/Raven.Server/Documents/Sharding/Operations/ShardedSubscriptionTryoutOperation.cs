@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
@@ -7,6 +8,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -33,14 +35,14 @@ public readonly struct ShardedSubscriptionTryoutOperation : IShardedOperation<Ge
 
     public HttpRequest HttpRequest => _httpContext.Request;
 
-    public GetDocumentsResult Combine(Memory<GetDocumentsResult> results)
+    public GetDocumentsResult Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<GetDocumentsResult>> results)
     {
         var getDocumentsResult = new GetDocumentsResult();
         var objList = new List<BlittableJsonReaderObject>();
 
-        foreach (var res in results.ToArray())
+        foreach (var shardResult in results.Values)
         {
-            foreach (BlittableJsonReaderObject obj in res.Results)
+            foreach (BlittableJsonReaderObject obj in shardResult.Result.Results)
             {
                 objList.Add(obj.Clone(_context));
             }

@@ -56,7 +56,7 @@ public partial class RavenTestBase
             Resharding = new ReshardingTestBase(_parent);
         }
 
-        public DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, DatabaseTopology[] shards = null)
+        public DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, Dictionary<int, DatabaseTopology> shards = null)
         {
             var shardedOptions = options ?? new Options();
             shardedOptions.ModifyDatabaseRecord += r =>
@@ -65,11 +65,11 @@ public partial class RavenTestBase
 
                 if (shards == null)
                 {
-                    r.Sharding.Shards = new[]
+                    r.Sharding.Shards = new Dictionary<int, DatabaseTopology>()
                     {
-                        new DatabaseTopology(),
-                        new DatabaseTopology(),
-                        new DatabaseTopology(),
+                        {0, new DatabaseTopology()},
+                        {1, new DatabaseTopology()},
+                        {2, new DatabaseTopology()},
                     };
                 }
                 else
@@ -88,7 +88,7 @@ public partial class RavenTestBase
                 {
                     r.Sharding = new ShardingConfiguration
                     {
-                        Shards = new DatabaseTopology[shards],
+                        Shards = new Dictionary<int, DatabaseTopology>(shards),
                         Orchestrator = new OrchestratorConfiguration
                         {
                             Topology = new OrchestratorTopology
@@ -99,9 +99,9 @@ public partial class RavenTestBase
                         }
                     };
 
-                    for (int i = 0; i < r.Sharding.Shards.Length; i++)
+                    for (int shardNumber = 0; shardNumber < shards ; shardNumber++)
                     {
-                        r.Sharding.Shards[i] = new DatabaseTopology
+                        r.Sharding.Shards[shardNumber] = new DatabaseTopology
                         {
                             ReplicationFactor = shardReplicationFactor
                         };
@@ -359,7 +359,7 @@ public partial class RavenTestBase
             {
                 var settings = new ShardedRestoreSettings
                 {
-                    Shards = new SingleShardRestoreSetting[backupPaths.Count]
+                    Shards = new Dictionary<int, SingleShardRestoreSetting>(backupPaths.Count)
                 };
 
                 foreach (var dir in backupPaths)
@@ -367,12 +367,12 @@ public partial class RavenTestBase
                     var shardIndexPosition = dir.LastIndexOf('$') + 1;
                     var shardNumber = int.Parse(dir[shardIndexPosition].ToString());
 
-                    settings.Shards[shardNumber] = new SingleShardRestoreSetting
+                    settings.Shards.Add(shardNumber, new SingleShardRestoreSetting
                     {
                         ShardNumber = shardNumber,
                         FolderName = dir,
                         NodeTag = sharding.Shards[shardNumber].Members[0]
-                    };
+                    });
                 }
 
                 return settings;
@@ -658,19 +658,46 @@ public partial class RavenTestBase
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var bucket = ShardHelper.GetBucket(id);
-                var location = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
-                var newLocation = (location + 1) % record.Sharding.Shards.Length;
+                var shardNumber = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+                var toShard = GetNextSortedShardNumber(record.Sharding.Shards, shardNumber);
 
-                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
                 {
                     var user = await session.Advanced.ExistsAsync(id);
                     Assert.NotNull(user);
                 }
 
-                await server.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
+                await server.Sharding.StartBucketMigration(store.Database, bucket, shardNumber, toShard);
 
-                var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation), timeout: 1000 * 1000);
-                Assert.True(exists, $"{id} wasn't found at shard {newLocation}");
+                var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard), timeout: 1000 * 1000);
+                Assert.True(exists, $"{id} wasn't found at shard {toShard}");
+            }
+
+            public static int GetNextSortedShardNumber(Dictionary<int, DatabaseTopology> shards, int shardNumber)
+            {
+                var shardsSorted = shards.Keys.OrderBy(x => x).ToArray();
+                var toShard = -1;
+                for (int i = 0; i < shardsSorted.Length; i++)
+                {
+                    if (shardsSorted[i] == shardNumber)
+                    {
+                        if (i + 1 < shardsSorted.Length)
+                        {
+                            toShard = shardsSorted[i + 1];
+                        }
+                        else
+                        {
+                            toShard = shardsSorted[0];
+                        }
+
+                        break;
+                    }
+                }
+
+                if (shardNumber == -1)
+                    throw new ArgumentException($"Shard number {shardNumber} doesn't exist in the database record.");
+
+                return toShard;
             }
 
             public async Task WaitForMigrationComplete(IDocumentStore store, string id)

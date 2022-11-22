@@ -12,6 +12,7 @@ using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Http;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 {
@@ -56,11 +57,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
 
             public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
-            public GetConflictsPreviewResult Combine(Memory<GetConflictsPreviewResult> results)
+            public GetConflictsPreviewResult Combine(Dictionary<int, ShardExecutionResult<GetConflictsPreviewResult>> results)
             {
                 var totalResults = 0L;
-                foreach (var conflictResult in results.Span)
-                    totalResults += conflictResult.TotalResults;
+                foreach (var conflictResult in results.Values)
+                    totalResults += conflictResult.Result.TotalResults;
                 
                 var final = new GetConflictsPreviewResult
                 {
@@ -77,7 +78,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
                     if (pageSize <= 0)
                         break;
 
-                    var shard = res.Shard;
+                    var shard = res.ShardNumber;
                     _token.Pages[shard].Start += (int)res.Item.ScannedResults;
                 }
 

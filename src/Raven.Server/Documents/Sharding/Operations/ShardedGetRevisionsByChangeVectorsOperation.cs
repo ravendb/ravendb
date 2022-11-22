@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Server.Documents.Sharding.Executors;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations
@@ -25,18 +27,16 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-        public string ExpectedEtag { get; }
+		public string ExpectedEtag { get; }
 
-        public BlittableJsonReaderObject[] CombineResults(Memory<BlittableArrayResult> results)
+        public BlittableJsonReaderObject[] CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<BlittableArrayResult>> results)
         {
-            var span = results.Span;
-
             int len = 0;
-            foreach (var s in span)
+            foreach (var s in results.Values)
             {
-                if (s != null)
+                if (s.Result != null)
                 {
-                    len = s.Results.Length;
+                    len = s.Result.Results.Length;
                 }
             }
 
@@ -48,12 +48,12 @@ namespace Raven.Server.Documents.Sharding.Operations
 
             for (int j = 0; j < len; j++)
             {
-                foreach (var s in span)
+                foreach (var s in results.Values)
                 {
-                    if (s == null)
+                    if (s.Result == null)
                         continue;
 
-                    if (s.Results[j] != null && s.Results[j] is BlittableJsonReaderObject rev)
+                    if (s.Result.Results[j] != null && s.Result.Results[j] is BlittableJsonReaderObject rev)
                     {
                         combined[j] = rev.Clone(_context);
                         break;

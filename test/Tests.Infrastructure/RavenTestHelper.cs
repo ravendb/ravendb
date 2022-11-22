@@ -139,9 +139,9 @@ namespace FastTests
 
             if (databaseRecord.IsSharded)
             {
-                for (var i = 0; i < databaseRecord.Sharding.Shards.Length; i++)
+                foreach (var shardNumber in databaseRecord.Sharding.Shards.Keys)
                 {
-                    var shardExecutor = executor.ForShard(i);
+                    var shardExecutor = executor.ForShard(shardNumber);
                     AssertNoIndexErrorsInternal(shardExecutor);
                 }
 

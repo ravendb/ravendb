@@ -4,6 +4,7 @@ using System.Net.Http;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands;
+using Raven.Server.Documents.Sharding.Executors;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Operations
         }
 
         public HttpRequest HttpRequest => null;
-        public object Combine(Memory<object> results) => throw new NotImplementedException();
+        public object Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<object>> results) => throw new NotImplementedException();
 
         public RavenCommand<object> CreateCommandForShard(int shardNumber) => new WaitForIndexNotificationCommand(_indexes);
     }

@@ -15,6 +15,7 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -443,6 +444,7 @@ namespace Raven.Server.ServerWide
                     case nameof(EditRefreshCommand):
                     case nameof(ModifyConflictSolverCommand):
                     case nameof(UpdateTopologyCommand):
+                    case nameof(CreateNewShardCommand):
                     case nameof(DeleteDatabaseCommand):
                     case nameof(UpdateExternalReplicationCommand):
                     case nameof(PromoteDatabaseNodeCommand):
@@ -946,7 +948,7 @@ namespace Raven.Server.ServerWide
                     throw DatabaseDoesNotExistException.CreateWithMessage(clusterTransaction.DatabaseName, $"Could not execute update command of type '{nameof(ClusterTransactionCommand)}'.");
 
                 if (rawRecord.IsSharded == false)
-                    //This function is used to set cluster & database id for backward compatibility so no need if for shard
+                    //This function is used to set cluster & database id for backward compatibility so no need if for shardNumber
                     UpdateDatabaseRecordId(context, rawRecord, index, clusterTransaction);
 
                 if (clusterTransaction.SerializedDatabaseCommands != null &&
@@ -1244,7 +1246,7 @@ namespace Raven.Server.ServerWide
                                 continue;
                             }
                         }
-
+                        //TODO stav: handle removal of cluster node with last shardNumber
                         if (record.IsSharded == false)
                         {
                             if (record.Topology.RelevantFor(removed))
@@ -1262,7 +1264,7 @@ namespace Raven.Server.ServerWide
                         else
                         {
                             bool emptyShardTypology = true;
-                            foreach (var shardTopology in record.Sharding.Shards)
+                            foreach (var (shardNumber, shardTopology) in record.Sharding.Shards)
                             {
                                 if (shardTopology.RelevantFor(removed))
                                 {
@@ -1472,9 +1474,18 @@ namespace Raven.Server.ServerWide
                     var rawRecord = ReadRawDatabaseRecord(context, shardedDatabaseName, out _);
                     if (rawRecord == null)
                         throw new DatabaseDoesNotExistException($"The database {databaseName} does not exists");
-                    
-                    DatabaseTopology topology = isShard ? rawRecord.Sharding.Shards[shardNumber] : rawRecord.Topology;
-                    
+
+                    DatabaseTopology topology;
+
+                    if (isShard)
+                    {
+                        rawRecord.Sharding.Shards.TryGetValue(shardNumber, out topology);
+                    }
+                    else
+                    {
+                        topology = rawRecord.Topology;
+                    }
+
                     if (topology == null)
                     {
                         if (isShard == false)
@@ -1576,7 +1587,7 @@ namespace Raven.Server.ServerWide
                         items.DeleteByPrimaryKeyPrefix(loweredKey);
                     }
 
-                    // shard can be idle when we are deleting it
+                    // shardNumber can be idle when we are deleting it
                     serverStore?.IdleDatabases.TryRemove(shard, out _);
                 }
             }
@@ -1848,21 +1859,28 @@ namespace Raven.Server.ServerWide
                 }
 
                 var changed = false;
-                for (int i = 0; i < remote.Length; i++)
+                foreach (var (remoteName, remoteTopology) in remote)
                 {
-                    var remoteTopology = remote[i];
-                    var localTopology = local[i];
-
-                    if (remoteTopology.Name != localTopology.Name)
+                    bool nameFound = false;
+                    bool topologyFound = false;
+                    foreach (var (localName, localTopology) in local)
                     {
-                        Debug.Assert(false, $"Same number of topologies {remote.Length}, but has different name at i={i}, remote: {remoteTopology.Name}, local: {localTopology.Name}");
+                        if (remoteName == localName)
+                            nameFound = true;
+                        if (remoteTopology.AllNodes.SequenceEqual(localTopology.AllNodes))
+                            topologyFound = true;
+                    }
+
+                    if (nameFound == false)
+                    {
+                        Debug.Assert(false, $"Same number of topologies {remote.Length}, but can't find remote topology {remoteName} in local topologies");
                         AddStampToAllRemotes(index, remote);
                         return true;
                     }
 
-                    if (remoteTopology.Topology.AllNodes.SequenceEqual(localTopology.Topology.AllNodes) == false)
+                    if (topologyFound == false)
                     {
-                        AddStampToRemote(index, remoteTopology.Topology);
+                        AddStampToRemote(index, remoteTopology);
                         changed = true;
                     }
                 }
@@ -3539,7 +3557,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public DatabaseTopology ReadDatabaseTopologyForShard<TTransaction>(TransactionOperationContext<TTransaction> context, string name, int shard)
+        public DatabaseTopology ReadDatabaseTopologyForShard<TTransaction>(TransactionOperationContext<TTransaction> context, string name, int shardNumber)
             where TTransaction : RavenTransaction
         {
             using (var databaseRecord = ReadRawDatabaseRecord(context, name))
@@ -3547,11 +3565,11 @@ namespace Raven.Server.ServerWide
                 if (databaseRecord.IsSharded == false)
                     throw new InvalidOperationException($"The database record '{name}' is not sharded.");
 
-                if (shard >= databaseRecord.Sharding.Shards.Length)
-                    throw new InvalidOperationException($"Requested invalid shard. " +
-                                                        $"Requested shard '{shard}', while the database record '{name}' has '{databaseRecord.Sharding.Shards.Length}' shards.");
+                if (databaseRecord.Sharding.Shards.ContainsKey(shardNumber) == false)
+                    throw new InvalidOperationException($"Requested invalid shardNumber. " +
+                                                        $"Requested shardNumber '{shardNumber}', but it does not exist in the database record '{name}'.");
 
-                var topology = databaseRecord.Sharding.Shards[shard];
+                var topology = databaseRecord.Sharding.Shards[shardNumber];
                 if (topology == null)
                     throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");
 

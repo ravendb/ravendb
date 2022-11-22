@@ -74,14 +74,14 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
         _databaseRecord ??= await _executor.Server.SendAsync(new GetDatabaseRecordOperation(_executor._databaseName));
         if (_databaseRecord.IsSharded)
         {
-            for (var i = 0; i < _databaseRecord.Sharding.Shards.Length; i++)
+            foreach (var shardNumber in _databaseRecord.Sharding.Shards.Keys)
             {
-                var shardTopology = _databaseRecord.Sharding.Shards[i];
+                var shardTopology = _databaseRecord.Sharding.Shards[shardNumber];
 
                 foreach (var (nKey, nExecutor) in GetExecutors(shardTopology))
                 {
-                    var shardKey = nKey.ForShard(i);
-                    var shardExecutor = nExecutor.ForShard(i);
+                    var shardKey = nKey.ForShard(shardNumber);
+                    var shardExecutor = nExecutor.ForShard(shardNumber);
 
                     yield return (shardKey, await shardExecutor.SendAsync(_factoryWithResult()));
                 }
@@ -101,14 +101,14 @@ public class MaintenanceOperationExecutorTester<TResult> : IMaintenanceOperation
         _databaseRecord ??= await _executor.Server.SendAsync(new GetDatabaseRecordOperation(_executor._databaseName));
         if (_databaseRecord.IsSharded)
         {
-            for (var i = 0; i < _databaseRecord.Sharding.Shards.Length; i++)
+            foreach (var shardToTopology in _databaseRecord.Sharding.Shards)
             {
-                var shardTopology = _databaseRecord.Sharding.Shards[i];
+                var shardTopology = shardToTopology.Value;
 
                 foreach (var (nKey, nExecutor) in GetExecutors(shardTopology))
                 {
-                    var shardKey = nKey.ForShard(i);
-                    var shardExecutor = nExecutor.ForShard(i);
+                    var shardKey = nKey.ForShard(shardToTopology.Key);
+                    var shardExecutor = nExecutor.ForShard(shardToTopology.Key);
 
                     yield return (shardKey, shardExecutor);
                 }

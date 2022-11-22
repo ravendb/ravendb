@@ -76,15 +76,15 @@ public class SessionTester
 
         if (_databaseRecord.IsSharded)
         {
-            for (var i = 0; i < _databaseRecord.Sharding.Shards.Length; i++)
+            foreach (var shardToTopology in _databaseRecord.Sharding.Shards)
             {
-                var shardTopology = _databaseRecord.Sharding.Shards[i];
+                var shardTopology = shardToTopology.Value;
 
                 foreach (string member in shardTopology.Members)
                 {
-                    var key = new UniqueDatabaseInstanceKey(member).ForShard(i);
+                    var key = new UniqueDatabaseInstanceKey(member).ForShard(shardToTopology.Key);
 
-                    var session = _documentStore.OpenSession(ShardHelper.ToShardName(_documentStore.Database, i));
+                    var session = _documentStore.OpenSession(ShardHelper.ToShardName(_documentStore.Database, shardToTopology.Key));
 
                     yield return (key, session);
                 }

@@ -1,13 +1,21 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Amazon.Runtime.Internal;
+using Nest;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -66,21 +74,7 @@ namespace Raven.Server.Web.System
                 //The case were we don't care where the database will be added to
                 else
                 {
-                    var allNodes = clusterTopology.Members.Keys
-                        .Concat(clusterTopology.Promotables.Keys)
-                        .Concat(clusterTopology.Watchers.Keys)
-                        .ToList();
-
-                    allNodes.RemoveAll(n => topology.AllNodes.Contains(n) || (databaseRecord.IsEncrypted && AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n))));
-
-                    if (databaseRecord.IsEncrypted && allNodes.Count == 0)
-                        throw new InvalidOperationException($"Database {name} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
-
-                    if (allNodes.Count == 0)
-                        throw new InvalidOperationException($"Database {name} already exists on all the nodes of the cluster");
-
-                    var rand = new Random().Next();
-                    node = allNodes[rand % allNodes.Count];
+                    node = FindFitNodeForDatabase(name, topology, databaseRecord.IsEncrypted, clusterTopology);
                 }
 
                 topology.Promotables.Add(node);
@@ -109,6 +103,30 @@ namespace Raven.Server.Web.System
                     });
                 }
             }
+        }
+
+        private static string FindFitNodeForDatabase(string databaseName, DatabaseTopology topology, bool isEncrypted, ClusterTopology clusterTopology)
+        {
+            var allNodes = clusterTopology.Members.Keys
+                .Concat(clusterTopology.Promotables.Keys)
+                .Concat(clusterTopology.Watchers.Keys)
+                .ToList();
+
+            allNodes.RemoveAll(n => topology.AllNodes.Contains(n));
+
+            if (allNodes.Count == 0)
+                throw new InvalidOperationException($"Looking for a fit node for database {databaseName} but all nodes in cluster are already taken");
+
+            allNodes.RemoveAll(n => isEncrypted && AdminDatabasesHandler.NotUsingHttps(clusterTopology.GetUrlFromTag(n)));
+            
+            if (isEncrypted && allNodes.Count == 0)
+                throw new InvalidOperationException($"Database {databaseName} is encrypted and requires a node which supports SSL. There is no such node available in the cluster.");
+
+            if (allNodes.Count == 0)
+                throw new InvalidOperationException($"Database {databaseName} already exists on all the nodes of the cluster");
+
+            var rand = new Random().Next();
+            return allNodes[rand % allNodes.Count];
         }
 
         [RavenAction("/admin/databases/orchestrator", "DELETE", AuthorizationStatus.Operator)]
@@ -176,8 +194,123 @@ namespace Raven.Server.Web.System
 
         public static void AssertNotAShardDatabaseName(string name)
         {
-            if (ShardHelper.IsShardedName(name))
+            if (ShardHelper.IsShardName(name))
                 throw new NotSupportedException($"Adding node to orchestrator is only valid for sharded databases. Instead got a shard {name}");
+        }
+
+        [RavenAction("/admin/databases/shard", "PUT", AuthorizationStatus.Operator)]
+        public async Task CreateNewShard()
+        {
+            var database = GetQueryStringValueAndAssertIfSingleAndNotEmpty("databaseName").Trim();
+            var shardNumber = GetIntValueQueryString("shardNumber", required: false);
+            var nodes = GetStringValuesQueryString("node", required: false);
+            var replicationFactor = GetIntValueQueryString("replicationFactor", required: false);
+            var raftRequestId = GetRaftRequestIdFromQuery();
+            
+            if (ShardHelper.IsShardName(database))
+            {
+                throw new NotSupportedException(
+                    $"Cannot add a new shard to an existing shard instance. To increase a shard's replication factor use the {nameof(AddDatabaseNodeOperation)}.");
+            }
+
+            var nodesList = new List<string>();
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                nodesList.Add(nodes[i].Trim());
+            }
+
+            await ServerStore.EnsureNotPassiveAsync();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var databaseRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, database, out var index);
+                if (databaseRecord == null)
+                {
+                    throw new DatabaseDoesNotExistException("Database Record not found when attempting to create a new shard.");
+                }
+
+                if (databaseRecord.IsSharded == false)
+                {
+                    throw new NotSupportedException($"Attempting to add a shard to database {database}, but it is not sharded.");
+                }
+
+                if (shardNumber.HasValue)
+                {
+                    if (shardNumber.Value < 0)
+                        throw new ArgumentException($"Cannot add a shard with a negative number {shardNumber.Value}.");
+
+                    if(databaseRecord.Sharding.Shards.ContainsKey(shardNumber.Value))
+                        throw new InvalidOperationException($"Cannot add shard {shardNumber.Value} to database {database} because it already exists.");
+                }
+
+                var clusterTopology = Server.ServerStore.GetClusterTopology(context);
+                foreach (var node in nodesList)
+                {
+                    var url = clusterTopology.GetUrlFromTag(node);
+                    if (url == null)
+                        throw new InvalidOperationException($"Can't create new shard on node {node} for database '{database}' because node {node} is not part of the cluster");
+
+                    if (databaseRecord.IsEncrypted && AdminDatabasesHandler.NotUsingHttps(url))
+                        throw new InvalidOperationException($"Can't create node {node} for database '{database}' because database {database} is encrypted but node {node} doesn't have an SSL certificate.");
+                }
+
+                if (databaseRecord.EntireDatabasePendingDeletion())
+                {
+                    throw new InvalidOperationException($"Can't add a new shard to database '{database}' because it is currently being deleted.");
+                }
+
+                var newShardTopology = new DatabaseTopology();
+
+                var newChosenShardNumber = shardNumber ?? 0;
+                var stillBeingDeleted = 0;
+                if (shardNumber.HasValue == false)
+                {
+                    newChosenShardNumber = 0;
+                    for (int i = 0; i < databaseRecord.Sharding.Shards.Count + 1 + stillBeingDeleted; i++)
+                    {
+                        // A shard might still be in the progress of deletion and removed from topology so we don't want to add it right now
+                        if (databaseRecord.IsShardBeingDeletedOnAnyNode(newChosenShardNumber))
+                        {
+                            newChosenShardNumber++;
+                            stillBeingDeleted++;
+                        }
+
+                        if (databaseRecord.Sharding.Shards.ContainsKey(newChosenShardNumber))
+                            newChosenShardNumber++;
+                    }
+                }
+
+                if (replicationFactor.HasValue && replicationFactor.Value > clusterTopology.AllNodes.Count)
+                    throw new InvalidOperationException($"Replication factor {replicationFactor.Value} cannot exceed the number of nodes in the cluster {clusterTopology.AllNodes.Count}.");
+
+                newShardTopology.ReplicationFactor = replicationFactor ?? (nodesList.Count > 0 ? nodesList.Count : databaseRecord.Sharding.Shards.ElementAt(0).Value.ReplicationFactor);
+                
+                for (int i = 0; i < newShardTopology.ReplicationFactor; i++)
+                {
+                    var node = nodesList.ElementAtOrDefault(i);
+                    node ??= FindFitNodeForDatabase(database, newShardTopology, databaseRecord.IsEncrypted, clusterTopology);
+                    newShardTopology.Members.Add(node);
+                }
+                
+                var update = new CreateNewShardCommand(database, newChosenShardNumber, newShardTopology, SystemTime.UtcNow, raftRequestId);
+
+                var (newIndex, _) = await ServerStore.SendToLeaderAsync(update);
+                await WaitForExecutionOnRelevantNodes(context, database, clusterTopology, newShardTopology.Members, newIndex);
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(CreateShardResult.DatabaseName)] = database,
+                        [nameof(CreateShardResult.NewShardNumber)] = newChosenShardNumber,
+                        [nameof(CreateShardResult.NewShardTopology)] = newShardTopology.ToJson(),
+                        [nameof(CreateShardResult.RaftCommandIndex)] = newIndex
+                    });
+                }
+            }
         }
     }
 }

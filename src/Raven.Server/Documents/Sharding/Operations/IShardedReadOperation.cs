@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using Raven.Client.Http;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Operations;
 
@@ -13,28 +15,26 @@ public interface IShardedReadOperation<TResult, TCombinedResult> : IShardedOpera
 {
     string ExpectedEtag { get; }
 
-    string CombineCommandsEtag(Memory<RavenCommand<TResult>> commands) => ComputeHttpEtags.CombineEtags(commands);
+    string CombineCommandsEtag(Dictionary<int, ShardExecutionResult<TResult>> results) => ComputeHttpEtags.CombineEtags(results);
 
-    ShardedReadResult<TCombinedResult> IShardedOperation<TResult, ShardedReadResult<TCombinedResult>>.Combine(Memory<TResult> results) => throw new NotSupportedException();
-    TCombinedResult CombineResults(Memory<TResult> results);
+    ShardedReadResult<TCombinedResult> IShardedOperation<TResult, ShardedReadResult<TCombinedResult>>.Combine(Dictionary<int, ShardExecutionResult<TResult>> results) => throw new NotSupportedException();
+    TCombinedResult CombineResults(Dictionary<int, ShardExecutionResult<TResult>> results);
 
-    ShardedReadResult<TCombinedResult> IShardedOperation<TResult, ShardedReadResult<TCombinedResult>>.CombineCommands(Memory<RavenCommand<TResult>> commands, Memory<TResult> results)
+    ShardedReadResult<TCombinedResult> IShardedOperation<TResult, ShardedReadResult<TCombinedResult>>.CombineCommands(Dictionary<int, ShardExecutionResult<TResult>> results)
     {
-        var actualEtag = CombineCommandsEtag(commands);
+        var actualEtag = CombineCommandsEtag(results);
 
         var result = new ShardedReadResult<TCombinedResult>
         {
             CombinedEtag = actualEtag
         };
 
-        var span = commands.Span;
-
         if (ExpectedEtag == result.CombinedEtag)
         {
             var allNotModified = true;
-            foreach (var cmd in span)
+            foreach (var (shardNumber, res) in results)
             {
-                if (cmd.StatusCode == HttpStatusCode.NotModified) 
+                if (res.Command.StatusCode == HttpStatusCode.NotModified) 
                     continue;
                 
                 allNotModified = false;
@@ -47,12 +47,7 @@ public interface IShardedReadOperation<TResult, TCombinedResult> : IShardedOpera
                 return result;
             }
         }
-
-        for (int i = 0; i < span.Length; i++)
-        {
-            results.Span[i] = span[i].Result;
-        }
-
+        
         result.Result = CombineResults(results);
         return result;
     }

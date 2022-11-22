@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Reflection.Metadata;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
@@ -9,6 +8,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Streaming;
 using Sparrow.Json;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
@@ -18,25 +18,19 @@ namespace Raven.Server.Documents.Sharding.Operations
 
     public interface IShardedOperation : IShardedOperation<object>
     {
-        object IShardedOperation<object, object>.Combine(Memory<object> results) => null;
+        object IShardedOperation<object, object>.Combine(Dictionary<int, ShardExecutionResult<object>> results) => null;
     }
 
     public interface IShardedOperation<TResult, out TCombinedResult>
     {
         HttpRequest HttpRequest { get; }
 
-        TCombinedResult Combine(Memory<TResult> results);
+        TCombinedResult Combine(Dictionary<int, ShardExecutionResult<TResult>> results);
 
         List<string> HeadersToCopy => ShardedDatabaseRequestHandler.HeadersToCopy;
 
-        TCombinedResult CombineCommands(Memory<RavenCommand<TResult>> commands, Memory<TResult> results)
+        TCombinedResult CombineCommands(Dictionary<int, ShardExecutionResult<TResult>> results)
         {
-            var span = commands.Span;
-            for (int i = 0; i < span.Length; i++)
-            {
-                results.Span[i] = span[i].Result;
-            }
-
             return Combine(results);
         }
 
@@ -69,7 +63,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
     public interface IShardedStreamableOperation : IShardedReadOperation<StreamResult, CombinedStreamResult>
     {
-        ShardedReadResult<CombinedStreamResult> IShardedOperation<StreamResult, ShardedReadResult<CombinedStreamResult>>.Combine(Memory<StreamResult> results) =>
+        ShardedReadResult<CombinedStreamResult> IShardedOperation<StreamResult, ShardedReadResult<CombinedStreamResult>>.Combine(Dictionary<int, ShardExecutionResult<StreamResult>> results) =>
             new() {Result = new CombinedStreamResult {Results = results}};
     }
 }

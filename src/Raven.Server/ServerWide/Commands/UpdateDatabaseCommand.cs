@@ -28,6 +28,12 @@ namespace Raven.Server.ServerWide.Commands
 
         }
 
+        protected static void SetLeaderStampForTopology(DatabaseTopology topology, long etag)
+        {
+            topology.Stamp ??= new LeaderStamp { Term = -1, LeadersTicks = -1, Index = -1 };
+            topology.Stamp.Index = etag;
+        }
+
         public abstract void FillJson(DynamicJsonValue json);
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)

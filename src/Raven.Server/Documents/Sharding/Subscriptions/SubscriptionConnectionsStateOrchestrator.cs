@@ -68,10 +68,10 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
 
     private void StartShardSubscriptionWorkers()
     {
-        for (int i = 0; i < _databaseContext.ShardCount; i++)
+        foreach (var shardNumber in _databaseContext.ShardsTopology.Keys)
         {
-            var re = _databaseContext.ShardExecutor.GetRequestExecutorAt(i);
-            var shard = ShardHelper.ToShardName(_databaseContext.DatabaseName, i);
+            var re = _databaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber);
+            var shard = ShardHelper.ToShardName(_databaseContext.DatabaseName, shardNumber);
             var worker = CreateShardedWorkerHolder(shard, re, lastErrorDateTime: null);
             _shardWorkers.Add(shard, worker);
         }

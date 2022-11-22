@@ -270,7 +270,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
                         }
 
-                        var cleanUp = mergedState.States.Min(s => CleanUpDatabaseValues(s) ?? -1);
+                        var cleanUp = mergedState.States.Min(s => CleanUpDatabaseValues(s.Value) ?? -1);
                         if (cleanUp > 0)
                         {
                             cleanUpState ??= new Dictionary<string, long>();
@@ -279,18 +279,18 @@ namespace Raven.Server.ServerWide.Maintenance
 
                         if (cleanupIndexes)
                         {
-                            foreach (var state in mergedState.States)
+                            foreach (var shardToState in mergedState.States)
                             {
-                                var cleanupCommandsForDatabase = GetUnusedAutoIndexes(state);
+                                var cleanupCommandsForDatabase = GetUnusedAutoIndexes(shardToState.Value);
                                 cleanUnusedAutoIndexesCommands.AddRange(cleanupCommandsForDatabase);
                             }
                         }
 
                         if (cleanupTombstones)
                         {
-                            foreach (var state in mergedState.States)
+                            foreach (var shardToState in mergedState.States)
                             {
-                                var cmd = GetCompareExchangeTombstonesToCleanup(state.Name, state, context, out var cleanupState);
+                                var cmd = GetCompareExchangeTombstonesToCleanup(shardToState.Value.Name, shardToState.Value, context, out var cleanupState);
                                 switch (cleanupState)
                                 {
                                     case CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState:
@@ -811,8 +811,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 RawDatabase = record;
                 _isShardedState = RawDatabase.IsSharded;
 
-                var length = _isShardedState ? RawDatabase.Sharding.Shards.Length : 1;
-                States = new DatabaseObservationState[length];
+                var length = _isShardedState ? RawDatabase.Sharding.Shards.Count : 1;
+                States = new Dictionary<int, DatabaseObservationState>(length);
             }
 
             public MergedDatabaseObservationState(RawDatabaseRecord record, DatabaseObservationState state) : this(record)
@@ -822,7 +822,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             private MergedDatabaseObservationState()
             {
-                States = new DatabaseObservationState[1];
+                States = new Dictionary<int, DatabaseObservationState>(1);
             }
 
             public void AddState(DatabaseObservationState state)
@@ -843,7 +843,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 States[shardNumber] = state;
             }
 
-            public readonly DatabaseObservationState[] States;
+            public readonly Dictionary<int, DatabaseObservationState> States;
             public readonly RawDatabaseRecord RawDatabase;
         }
 
