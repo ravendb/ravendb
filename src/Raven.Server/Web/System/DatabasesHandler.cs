@@ -228,7 +228,7 @@ namespace Raven.Server.Web.System
                         {
                             dbNodes = rawRecord.Sharding.Orchestrator.Topology.Members.Select(x =>
                                 TopologyNodeToJson(x, clusterTopology, name, ServerNode.Role.Member));
-                            stampIndex = rawRecord.Sharding.Shards.Max(x => x.Stamp?.Index ?? -1);
+                            stampIndex = rawRecord.Sharding.Shards.Max(x => x.Value.Stamp?.Index ?? -1);
                         }
                         else
                         {

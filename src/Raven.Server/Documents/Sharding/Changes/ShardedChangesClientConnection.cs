@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
@@ -52,7 +53,7 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     private readonly ShardedDatabaseContext _context;
     private readonly bool _throttleConnection;
-    private ShardedDatabaseChanges[] _changes;
+    private Dictionary<int, ShardedDatabaseChanges> _changes;
 
     private IDisposable _releaseQueueContext;
     private JsonOperationContext _queueContext;
@@ -70,12 +71,12 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
         if (_changes != null)
             return;
 
-        var tasks = new Task[_context.ShardCount];
-        _changes = new ShardedDatabaseChanges[_context.ShardCount];
-        for (var i = 0; i < _changes.Length; i++)
+        var tasks = new List<Task>(_context.ShardCount);
+        _changes = new Dictionary<int, ShardedDatabaseChanges>();
+        foreach (var shardToTopology in _context.ShardsTopology)
         {
-            _changes[i] = new ShardedDatabaseChanges(_context.ShardExecutor.GetRequestExecutorAt(i), ShardHelper.ToShardName(_context.DatabaseName, i), onDispose: null, nodeTag: null, _throttleConnection);
-            tasks[i] = _changes[i].EnsureConnectedNow();
+            _changes[shardToTopology.Key] = new ShardedDatabaseChanges(_context.ShardExecutor.GetRequestExecutorAt(shardToTopology.Key), ShardHelper.ToShardName(_context.DatabaseName, shardToTopology.Key), onDispose: null, nodeTag: null, _throttleConnection);
+            tasks.Add(_changes[shardToTopology.Key].EnsureConnectedNow());
         }
 
         await Task.WhenAll(tasks).WithCancellation(token);
@@ -316,8 +317,8 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
         if (_changes != null)
         {
-            foreach (var changes in _changes)
-                exceptionAggregator.Execute(changes);
+            foreach (var shardToChanges in _changes)
+                exceptionAggregator.Execute(shardToChanges.Value);
         }
 
         _changes = null;
@@ -333,14 +334,16 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
 
     private async Task<IDisposable> WatchInternalAsync(Func<ShardedDatabaseChanges, IChangesObservable<BlittableJsonReaderObject>> factory, CancellationToken token)
     {
-        var toDispose = new IDisposable[_changes.Length];
-        for (int i = 0; i < _changes.Length; i++)
+        var toDispose = new IDisposable[_changes.Count];
+        int i = 0;
+        foreach (var shardToChanges in _changes)
         {
-            var observable = factory(_changes[i]);
+            var observable = factory(shardToChanges.Value);
             toDispose[i] = observable
                 .Subscribe(this);
 
             await observable.EnsureSubscribedNow().WithCancellation(token);
+            i++;
         }
 
         return new MultiDispose(toDispose);

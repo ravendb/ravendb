@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Executors;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-        public DynamicJsonArray Combine(Memory<BlittableJsonReaderObject> results)
+        public DynamicJsonArray Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<BlittableJsonReaderObject>> results)
         {
             var reply = new object[_totalCommands];
             foreach (var c in _commands.Values)

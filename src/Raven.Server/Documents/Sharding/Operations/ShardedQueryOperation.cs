@@ -9,6 +9,7 @@ using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.ServerWide.Context;
@@ -47,11 +48,11 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
     public Dictionary<string, List<TimeSeriesRange>> MissingTimeSeriesIncludes { get; set; }
 
-    public string CombineCommandsEtag(Memory<RavenCommand<QueryResult>> commands)
+    public string CombineCommandsEtag(Dictionary<int, AbstractExecutor.ShardExecutionResult<QueryResult>> commands)
     {
         _combinedResultEtag = 0;
 
-        foreach (var cmd in commands.Span)
+        foreach (var cmd in commands.Values)
         {
             _combinedResultEtag = Hashing.Combine(_combinedResultEtag, cmd.Result.ResultEtag);
         }
@@ -59,7 +60,7 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         return CharExtensions.ToInvariantString(_combinedResultEtag);
     }
 
-    public ShardedQueryResult CombineResults(Memory<QueryResult> results)
+    public ShardedQueryResult CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<QueryResult>> results)
     {
         var result = new ShardedQueryResult
         {
@@ -74,24 +75,25 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         ShardedCompareExchangeValueInclude compareExchangeValueIncludes = null;
         ShardedTimeSeriesIncludes timeSeriesIncludes = null;
 
-        foreach (var cmdResult in results.Span)
+        foreach (var cmdResult in results.Values)
         {
-            result.TotalResults += cmdResult.TotalResults;
-            result.IsStale |= cmdResult.IsStale;
-            result.SkippedResults += cmdResult.SkippedResults;
-            result.IndexName = cmdResult.IndexName;
-            result.IncludedPaths = cmdResult.IncludedPaths;
+            var queryRes = cmdResult.Result;
+            result.TotalResults += queryRes.TotalResults;
+            result.IsStale |= queryRes.IsStale;
+            result.SkippedResults += queryRes.SkippedResults;
+            result.IndexName = queryRes.IndexName;
+            result.IncludedPaths = queryRes.IncludedPaths;
 
-            if (result.IndexTimestamp < cmdResult.IndexTimestamp) 
-                result.IndexTimestamp = cmdResult.IndexTimestamp;
+            if (result.IndexTimestamp < queryRes.IndexTimestamp) 
+                result.IndexTimestamp = queryRes.IndexTimestamp;
 
-            if (result.LastQueryTime < cmdResult.LastQueryTime) 
-                result.LastQueryTime = cmdResult.LastQueryTime;
+            if (result.LastQueryTime < queryRes.LastQueryTime) 
+                result.LastQueryTime = queryRes.LastQueryTime;
 
-            if (cmdResult.RaftCommandIndex.HasValue)
+            if (queryRes.RaftCommandIndex.HasValue)
             {
-                if (result.RaftCommandIndex == null || cmdResult.RaftCommandIndex > result.RaftCommandIndex)
-                    result.RaftCommandIndex = cmdResult.RaftCommandIndex;
+                if (result.RaftCommandIndex == null || queryRes.RaftCommandIndex > result.RaftCommandIndex)
+                    result.RaftCommandIndex = queryRes.RaftCommandIndex;
             }
 
             // For includes, we send the includes to all shards, then we merge them together. We do explicitly
@@ -99,44 +101,44 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
             // That means also recording the include() call from JS on missing values that we'll need to rerun on
             // other shards
 
-            if (cmdResult.Includes is { Count: > 0 })
+            if (queryRes.Includes is { Count: > 0 })
             {
                 result.Includes ??= new List<BlittableJsonReaderObject>();
 
-                HandleDocumentIncludes(cmdResult, ref result);
+                HandleDocumentIncludes(queryRes, ref result);
             }
 
-            if (cmdResult.RevisionIncludes is {Length: > 0})
+            if (queryRes.RevisionIncludes is {Length: > 0})
             {
                 revisionIncludes ??= new ShardedRevisionIncludes();
 
-                revisionIncludes.AddResults(cmdResult.RevisionIncludes, _context);
+                revisionIncludes.AddResults(queryRes.RevisionIncludes, _context);
             }
 
-            if (cmdResult.CounterIncludes != null)
+            if (queryRes.CounterIncludes != null)
             {
                 counterIncludes ??= new ShardedCounterIncludes();
 
-                counterIncludes.AddResults(cmdResult.CounterIncludes, cmdResult.IncludedCounterNames, _context);
+                counterIncludes.AddResults(queryRes.CounterIncludes, queryRes.IncludedCounterNames, _context);
             }
 
-            if (cmdResult.TimeSeriesIncludes != null)
+            if (queryRes.TimeSeriesIncludes != null)
             {
                 timeSeriesIncludes ??= new ShardedTimeSeriesIncludes(true);
 
-                timeSeriesIncludes.AddResults(cmdResult.TimeSeriesIncludes, _context);
+                timeSeriesIncludes.AddResults(queryRes.TimeSeriesIncludes, _context);
             }
 
-            if (cmdResult.CompareExchangeValueIncludes != null)
+            if (queryRes.CompareExchangeValueIncludes != null)
             {
                 compareExchangeValueIncludes ??= new ShardedCompareExchangeValueInclude();
 
-                compareExchangeValueIncludes.AddResults(cmdResult.CompareExchangeValueIncludes, _context);
+                compareExchangeValueIncludes.AddResults(queryRes.CompareExchangeValueIncludes, _context);
             }
 
             if (_sortingComparer == null)
             {
-                foreach (BlittableJsonReaderObject item in cmdResult.Results)
+                foreach (BlittableJsonReaderObject item in queryRes.Results)
                 {
                     result.Results.Add(item.Clone(_context));
                 }
@@ -167,9 +169,9 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
             using (var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(_sortingComparer))
             {
-                foreach (var cmdResult in results.Span)
+                foreach (var cmdResult in results.Values)
                 {
-                    mergedEnumerator.AddEnumerator(GetEnumerator(cmdResult.Results));
+                    mergedEnumerator.AddEnumerator(GetEnumerator(cmdResult.Result.Results));
                 }
 
                 while (mergedEnumerator.MoveNext())

@@ -30,8 +30,8 @@ namespace Raven.Server.ServerWide.Commands
             }
             else
             {
-                if (record.Sharding.Shards.Length <= ShardNumber)
-                    throw new RachisApplyException($"The request shard '{ShardNumber}' doesn't exists in '{record.DatabaseName}'");
+                if (record.Sharding.Shards.ContainsKey(ShardNumber.Value) == false)
+                    throw new RachisApplyException($"The requested shard '{ShardNumber.Value}' doesn't exists in '{record.DatabaseName}'");
 
                 topology = record.Sharding.Shards[ShardNumber.Value];
             }

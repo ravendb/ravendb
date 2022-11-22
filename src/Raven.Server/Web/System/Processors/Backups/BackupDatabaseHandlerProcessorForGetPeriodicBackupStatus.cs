@@ -36,9 +36,9 @@ internal class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus : Abstra
 
             if (dbRecord.IsSharded)
             {
-                for (int i = 0; i < dbRecord.Sharding.Shards.Length; i++)
+                foreach (var shardNumber in dbRecord.Sharding.Shards.Keys)
                 {
-                    var status = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(ShardHelper.ToShardName(name, i), taskId.Value));
+                    var status = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(ShardHelper.ToShardName(name, shardNumber), taskId.Value));
                     statuses.Add(status);
                 }
 

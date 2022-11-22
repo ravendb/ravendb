@@ -11,6 +11,7 @@ using Raven.Server.Documents.Handlers.Processors.Revisions;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 {
@@ -52,7 +53,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
 
         public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
-        public List<BlittableJsonReaderObject> Combine(Memory<ResolvedRevisions> results)
+        public List<BlittableJsonReaderObject> Combine(Dictionary<int, ShardExecutionResult<ResolvedRevisions>> results)
         {
             var combined = new List<BlittableJsonReaderObject>();
             var taken = 0;

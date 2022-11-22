@@ -2,10 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
+using Raven.Server.ServerWide.Context;
+using SlowTests.Core.Utils.Entities;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -32,7 +36,7 @@ namespace SlowTests.Sharding.Cluster
                 await AssertWaitForValueAsync(async () =>
                 {
                     var shards = await ShardingCluster.GetShards(store);
-                    return shards.Sum(s => s.Rehabs.Count);
+                    return shards.Sum(s => s.Value.Rehabs.Count);
                 }, 3);
 
                 await AssertWaitForValueAsync(async () =>
@@ -68,7 +72,7 @@ namespace SlowTests.Sharding.Cluster
                 await AssertWaitForValueAsync(async () =>
                 {
                     var shards = await ShardingCluster.GetShards(store);
-                    return shards?.Sum(s => s.Members.Count);
+                    return shards?.Sum(s => s.Value.Members.Count);
                 }, 9);
                 
                 await AssertWaitForValueAsync(async () =>
@@ -222,14 +226,14 @@ namespace SlowTests.Sharding.Cluster
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    var add = new AddDatabaseNodeOperation(database, shard: i);
+                    var add = new AddDatabaseNodeOperation(database, shardNumber: i);
                     await store.Maintenance.Server.SendAsync(add);
                 }
 
                 await AssertWaitForValueAsync(async () =>
                 {
                     var shards = await ShardingCluster.GetShards(store);
-                    return shards.Sum(s => s.Members.Count);
+                    return shards.Sum(s => s.Value.Members.Count);
                 }, 6);
             }
         }

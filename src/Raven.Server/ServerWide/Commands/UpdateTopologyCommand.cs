@@ -43,18 +43,11 @@ namespace Raven.Server.ServerWide.Commands
                 return;
             }
 
-            if (record.Sharding.Shards.Length <= ShardNumber)
-                throw new RachisApplyException($"The request shard '{ShardNumber}' doesn't exists in '{record.DatabaseName}'");
+            if (record.Sharding.Shards.ContainsKey(ShardNumber.Value) == false)
+                throw new RachisApplyException($"The requested shard '{ShardNumber.Value}' doesn't exists in '{record.DatabaseName}'");
 
             record.Sharding.Shards[ShardNumber.Value] = Topology;
         }
-
-        private static void SetLeaderStampForTopology(DatabaseTopology topology, long etag)
-        {
-            topology.Stamp ??= new LeaderStamp {Term = -1, LeadersTicks = -1, Index = -1};
-            topology.Stamp.Index = etag;
-        }
-
 
         public override void FillJson(DynamicJsonValue json)
         {

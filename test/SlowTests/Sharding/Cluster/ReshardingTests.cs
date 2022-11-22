@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Server.Replication;
 using Orders;
 using Raven.Client;
@@ -57,20 +58,20 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 var bucket = ShardHelper.GetBucket(id);
-                var location = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
-                var newLocation = (location + 1) % record.Sharding.Shards.Length;
-                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
+                var shardNumber = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+                var toShard = ShardingTestBase.ReshardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, shardNumber);
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
                 {
                     var user = await session.LoadAsync<User>(id);
                     NotNull(user);
                 }
 
-                var result = await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
+                var result = await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, shardNumber, toShard);
 
-                var exists = WaitForDocument<User>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation));
+                var exists = WaitForDocument<User>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard));
                 True(exists);
 
-                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, toShard)))
                 {
                     var user = await session.LoadAsync<User>(id);
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
@@ -88,7 +89,7 @@ namespace SlowTests.Sharding.Cluster
                     await session.SaveChangesAsync();
                 }
 
-                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
                 {
                     var user = await session.LoadAsync<User>(id);
                     Equal("Original shard", user.Name);
@@ -149,7 +150,7 @@ namespace SlowTests.Sharding.Cluster
                 var id = "foo/bar";
                 var bucket = ShardHelper.GetBucket(id);
                 var location = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
-                var newLocation = (location + 1) % record.Sharding.Shards.Length;
+                var newLocation = (location + 1) % record.Sharding.Shards.Count;
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = new User
@@ -840,7 +841,7 @@ namespace SlowTests.Sharding.Cluster
                 }, timeout: TimeSpan.FromSeconds(60)))
                 {
                     var dbRec = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredDatabaseName));
-                    Equal(3, dbRec.Sharding.Shards.Length);
+                    Equal(3, dbRec.Sharding.Shards.Count);
 
                     var server = cluster.Nodes.Single(n => n.ServerStore.NodeTag == sharding.Shards[oldLocation].Members[0]);
                     var oldLocationShard = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(restoredDatabaseName, oldLocation));

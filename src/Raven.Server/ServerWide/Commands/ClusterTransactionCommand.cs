@@ -287,7 +287,7 @@ namespace Raven.Server.ServerWide.Commands
         [Conditional("DEBUG")]
         private static void AssertDatabaseName(string databaseName)
         {
-            if (ShardHelper.IsShardedName(databaseName))
+            if (ShardHelper.IsShardName(databaseName))
                 throw new InvalidOperationException($"Cannot use '{nameof(ClusterTransactionCommand)}' with a sharded database ('{databaseName}').");
         }
 

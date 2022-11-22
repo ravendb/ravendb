@@ -49,14 +49,14 @@ public partial class RavenTestBase
 
                 if (databaseRecord.IsSharded)
                 {
-                    for (var i = 0; i < databaseRecord.Sharding.Shards.Length; i++)
+                    foreach (var shardToTopology in databaseRecord.Sharding.Shards)
                     {
-                        if (nonStaleShards.Contains(i))
+                        if (nonStaleShards.Contains(shardToTopology.Key))
                             continue;
 
-                        var shardStatus = StaleStatus(shardId: i);
+                        var shardStatus = StaleStatus(shardId: shardToTopology.Key);
                         if (shardStatus == IndexStaleStatus.NonStale)
-                            nonStaleShards.Add(i);
+                            nonStaleShards.Add(shardToTopology.Key);
 
                         staleStatus |= shardStatus;
                     }
@@ -81,9 +81,9 @@ public partial class RavenTestBase
             var files = new List<string>();
             if (databaseRecord.IsSharded)
             {
-                for (var i = 0; i < databaseRecord.Sharding.Shards.Length; i++)
+                foreach (var shardNumber in databaseRecord.Sharding.Shards.Keys)
                 {
-                    files.Add(OutputIndexInfo(i));
+                    files.Add(OutputIndexInfo(shardNumber));
                 }
             }
             else
@@ -136,9 +136,9 @@ public partial class RavenTestBase
 
             if (databaseRecord.IsSharded)
             {
-                for (var i = 0; i < databaseRecord.Sharding.Shards.Length; i++)
+                foreach (var shardNumber in databaseRecord.Sharding.Shards.Keys)
                 {
-                    var statistics = admin.ForShard(i).Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
+                    var statistics = admin.ForShard(shardNumber).Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
                     allIndexes.AddRange(statistics.Indexes);
                 }
             }
@@ -207,7 +207,7 @@ public partial class RavenTestBase
             var errors = new List<IndexErrors>();
             if (databaseRecord.IsSharded)
             {
-                List<string> shardNames = ShardHelper.GetShardNames(databaseName, databaseRecord.Sharding.Shards.Length).ToList();
+                List<string> shardNames = ShardHelper.GetShardNames(databaseName, databaseRecord.Sharding.Shards.Keys.AsEnumerable()).ToList();
                 foreach (var name in shardNames)
                 {
                     shardsDict.TryAdd(name, toWait.ToHashSet(StringComparer.OrdinalIgnoreCase));

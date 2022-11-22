@@ -288,7 +288,7 @@ internal abstract class AbstractOngoingTasksHandlerProcessorForGetOngoingTasks<T
     {
         if (ResourceNameValidator.IsValidResourceName(RequestHandler.DatabaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
         {
-            bool sharded = ShardHelper.IsShardedName(RequestHandler.DatabaseName);
+            bool sharded = ShardHelper.IsShardName(RequestHandler.DatabaseName);
             if (sharded == false)
                 throw new BadRequestException(errorMessage);
         }

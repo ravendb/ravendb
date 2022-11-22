@@ -10,13 +10,13 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
 {
     public static class BucketsMigrator
     {
-        public delegate bool MoveStrategy(DatabaseRecord record, ShardReport[] shards, MigrationPolicy policy, ref ShardMigrationResult result);
+        public delegate bool MoveStrategy(DatabaseRecord record, Dictionary<int, ShardReport> shards, MigrationPolicy policy, ref ShardMigrationResult result);
 
-        public static bool NeedBalanceForDatabase(DatabaseRecord record, ShardReport[] shards, MigrationPolicy policy, MoveStrategy moveStrategy, out ShardMigrationResult result)
+        public static bool NeedBalanceForDatabase(DatabaseRecord record, Dictionary<int, ShardReport> shards, MigrationPolicy policy, MoveStrategy moveStrategy, out ShardMigrationResult result)
         {
             result = null;
 
-            if (shards.Length < 1)
+            if (shards.Count < 1)
                 return false;
 
             if (record.Sharding.BucketMigrations.Any(b => b.Value.Status < MigrationStatus.OwnershipTransferred))
@@ -25,15 +25,13 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
             return moveStrategy(record, shards, policy, ref result);
         }
 
-        public static bool EdgeMove(DatabaseRecord record, ShardReport[] shards, MigrationPolicy policy, ref ShardMigrationResult result)
+        public static bool EdgeMove(DatabaseRecord record, Dictionary<int, ShardReport> shards, MigrationPolicy policy, ref ShardMigrationResult result)
         {
             ShardReport smallest = shards[0];
             ShardReport biggest = smallest;
 
-            for (int i = 1; i < shards.Length; i++)
+            foreach (var shard in shards.Values)
             {
-                var shard = shards[i];
-
                 if (shard.TotalSize > biggest.TotalSize)
                     biggest = shard;
 
@@ -92,15 +90,13 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
         }
 
         // Move the smallest bucket from the biggest shard to the smallest shard
-        public static bool NaiveMove(DatabaseRecord record, ShardReport[] shards, MigrationPolicy policy, ref ShardMigrationResult result)
+        public static bool NaiveMove(DatabaseRecord record, Dictionary<int, ShardReport> shards, MigrationPolicy policy, ref ShardMigrationResult result)
         {
-            ShardReport smallest = shards[0];
+            ShardReport smallest = shards.Values.First();
             ShardReport biggest = smallest;
 
-            for (int i = 1; i < shards.Length; i++)
+            foreach (var shard in shards.Values)
             {
-                var shard = shards[i];
-
                 if (shard.TotalSize > biggest.TotalSize)
                     biggest = shard;
 

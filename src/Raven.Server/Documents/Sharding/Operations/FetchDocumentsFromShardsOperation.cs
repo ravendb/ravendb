@@ -11,6 +11,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries.Revisions;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -58,9 +59,8 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public string ExpectedEtag { get; }
 
-        public GetShardedDocumentsResult CombineResults(Memory<GetDocumentsResult> results)
+        public GetShardedDocumentsResult CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<GetDocumentsResult>> results)
         {
-            var span = results.Span;
             var docs = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -70,17 +70,18 @@ namespace Raven.Server.Documents.Sharding.Operations
             ShardedTimeSeriesIncludes timeSeriesIncludes = null;
             ShardedCompareExchangeValueInclude compareExchangeValueIncludes = null;
 
-            foreach (var cmd in span)
+            foreach (var cmd in results.Values)
             {
-                if (cmd == null)
+                var docRes = cmd.Result;
+                if (docRes == null)
                     continue;
 
-                var cmdResults = cmd.Results;
-                var cmdIncludes = cmd.Includes;
-                var cmdCounterIncludes = cmd.CounterIncludes;
-                var cmdCompareExchangeValueIncludes = cmd.CompareExchangeValueIncludes;
-                var cmdRevisionIncludes = cmd.RevisionIncludes;
-                var cmdTimeSeriesIncludes = cmd.TimeSeriesIncludes;
+                var cmdResults = docRes.Results;
+                var cmdIncludes = docRes.Includes;
+                var cmdCounterIncludes = docRes.CounterIncludes;
+                var cmdCompareExchangeValueIncludes = docRes.CompareExchangeValueIncludes;
+                var cmdRevisionIncludes = docRes.RevisionIncludes;
+                var cmdTimeSeriesIncludes = docRes.TimeSeriesIncludes;
 
                 if (cmdIncludes != null)
                 {

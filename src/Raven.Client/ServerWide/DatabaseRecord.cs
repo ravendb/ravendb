@@ -133,7 +133,7 @@ namespace Raven.Client.ServerWide
         public HashSet<string> UnusedDatabaseIds = new HashSet<string>();
 
         [JsonIgnore]
-        public bool IsSharded => Sharding?.Shards?.Length > 0;
+        public bool IsSharded => Sharding?.Shards?.Count > 0;
 
         [JsonIgnore]
         internal IEnumerable<(string Name, DatabaseTopology Topology)> Topologies
@@ -142,9 +142,9 @@ namespace Raven.Client.ServerWide
             {
                 if (IsSharded)
                 {
-                    for (int i = 0; i < Sharding.Shards.Length; i++)
+                    foreach (var shardToConfig in Sharding.Shards)
                     {
-                        yield return ($"{DatabaseName}${i}", Sharding.Shards[i]);
+                        yield return ($"{ClientShardHelper.ToShardName(DatabaseName, shardToConfig.Key)}", Sharding.Shards[shardToConfig.Key]);
                     }
                     yield break;
                 }
@@ -449,7 +449,7 @@ namespace Raven.Client.ServerWide
             if (Topology != null && Topology.Count > 0)
                 return true;
 
-            return Sharding != null && Sharding.Shards != null && Sharding.Shards.All(shard => shard?.Count > 0);
+            return Sharding != null && Sharding.Shards != null && Sharding.Shards.All(shardToTopology => shardToTopology.Value?.Count > 0);
         }
 
         internal string GetClusterTransactionId()
@@ -457,8 +457,8 @@ namespace Raven.Client.ServerWide
             if (IsSharded == false)
                 return Topology.ClusterTransactionIdBase64;
 
-            Debug.Assert(Sharding.Shards.All(s => s.ClusterTransactionIdBase64.Equals(Sharding.Shards[0].ClusterTransactionIdBase64)));
-            return Sharding.Shards[0].ClusterTransactionIdBase64;
+            Debug.Assert(Sharding.Shards.All(s => s.Value.ClusterTransactionIdBase64.Equals(Sharding.Shards.ElementAt(0).Value.ClusterTransactionIdBase64)));
+            return Sharding.Shards.ElementAt(0).Value.ClusterTransactionIdBase64;
         }
 
         internal static string GetKeyForDeletionInProgress(string node, int? shardNumber)

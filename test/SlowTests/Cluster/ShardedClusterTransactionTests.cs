@@ -35,7 +35,8 @@ namespace SlowTests.Cluster
             options.ModifyDatabaseRecord = r =>
             {
                 r.Sharding ??= new ShardingConfiguration();
-                r.Sharding.Shards = Enumerable.Range(0, numberOfShards).Select(_ => new DatabaseTopology()).ToArray();
+                r.Sharding.Shards = Enumerable.Range(0, numberOfShards)
+                    .Select((shardNumber) => new KeyValuePair<int, DatabaseTopology>(shardNumber, new DatabaseTopology())).ToDictionary(x => x.Key, x => x.Value);
             };
 
             using var store = Sharding.GetDocumentStore(options);

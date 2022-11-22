@@ -6,7 +6,6 @@ using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -58,17 +57,14 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         if (ShardNumber.HasValue)
                         {
-                            if (record.Sharding.Shards.Length <= ShardNumber)
-                                throw new RachisApplyException($"The request shard '{ShardNumber}' doesn't exists in '{record.DatabaseName}'");
+                            if (record.Sharding.Shards.ContainsKey(ShardNumber.Value) == false)
+                                throw new RachisApplyException($"The requested shard '{ShardNumber}' doesn't exists in '{record.DatabaseName}'");
 
                             RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[ShardNumber.Value], node, shardNumber: ShardNumber, deletionInProgressStatus);
                             return;
                         }
 
-                        for (int i = 0; i < record.Sharding.Shards.Length; i++)
-                        {
-                            RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[i], node, i, deletionInProgressStatus);
-                        }
+                        throw new InvalidOperationException($"Deleting entire sharded database {DatabaseName} from a specific node is not allowed.");
                     }
                 }
             }
@@ -81,16 +77,15 @@ namespace Raven.Server.ServerWide.Commands
                 else
                 {
                     if (ShardNumber.HasValue)
-                        throw new InvalidOperationException($"Deleting an entire shard group (shard {ShardNumber.Value}) from the cluster is not allowed.");
+                        throw new InvalidOperationException($"Deleting an entire shard group (shard {ShardNumber.Value}) from the database is not allowed.");
 
-                    for (var i = 0; i < record.Sharding.Shards.Length; i++)
+                    foreach (var (shardNumber, topology) in record.Sharding.Shards)
                     {
-                        record.Sharding.Shards[i] = RemoveDatabaseFromAllNodes(record, record.Sharding.Shards[i], i, deletionInProgressStatus);
+                        record.Sharding.Shards[shardNumber] = RemoveDatabaseFromAllNodes(record, record.Sharding.Shards[shardNumber], shardNumber, deletionInProgressStatus);
                     }
                 }
             }
         }
-
         
         private DatabaseTopology RemoveDatabaseFromAllNodes(DatabaseRecord record, DatabaseTopology topology, int? shardNumber, DeletionInProgressStatus deletionInProgressStatus)
         {

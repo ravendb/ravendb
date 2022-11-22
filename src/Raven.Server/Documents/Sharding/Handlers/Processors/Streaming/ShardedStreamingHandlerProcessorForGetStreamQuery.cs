@@ -28,6 +28,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 {
@@ -194,16 +195,16 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 
         public string ExpectedEtag { get; }
 
-        public (IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics) Combine(Memory<StreamResult> results)
+        public (IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics) Combine(Dictionary<int, ShardExecutionResult<StreamResult>> results)
         {
             var queryStats = new StreamQueryStatistics();
 
             var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(_comparer);
 
-            foreach (var streamResult in results.Span)
+            foreach (var streamResult in results.Values)
             {
                 var qs = new StreamQueryStatistics();
-                var enumerator = new StreamOperation.YieldStreamResults(_allocateJsonContext, streamResult, isQueryStream: true, isTimeSeriesStream: false, isAsync: false, qs, _token);
+                var enumerator = new StreamOperation.YieldStreamResults(_allocateJsonContext, streamResult.Result, isQueryStream: true, isTimeSeriesStream: false, isAsync: false, qs, _token);
                 enumerator.Initialize();
                 queryStats.TotalResults += qs.TotalResults;
                 queryStats.IndexName = qs.IndexName;

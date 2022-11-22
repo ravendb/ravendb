@@ -109,6 +109,7 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, ModifySolverResult> ModifySolverResult = GenerateJsonDeserializationRoutine<ModifySolverResult>();
 
         public static readonly Func<BlittableJsonReaderObject, ModifyOrchestratorTopologyResult> ModifyOrchestratorTopologyResult = GenerateJsonDeserializationRoutine<ModifyOrchestratorTopologyResult>();
+        public static readonly Func<BlittableJsonReaderObject, CreateShardResult> CreateShardResult = GenerateJsonDeserializationRoutine<CreateShardResult>();
 
         public static readonly Func<BlittableJsonReaderObject, DisableDatabaseToggleResult> DisableResourceToggleResult = GenerateJsonDeserializationRoutine<DisableDatabaseToggleResult>();
 

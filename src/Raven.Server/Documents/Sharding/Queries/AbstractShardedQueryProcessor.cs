@@ -81,9 +81,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
             queryTemplates = new(_requestHandler.DatabaseContext.ShardCount);
 
-            for (int i = 0; i < _requestHandler.DatabaseContext.ShardCount; i++)
+            foreach (var shardNumber in _requestHandler.DatabaseContext.ShardsTopology.Keys)
             {
-                queryTemplates.Add(i, queryTemplate);
+                queryTemplates.Add(shardNumber, queryTemplate);
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
@@ -123,23 +124,8 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static bool TryGetShardNumberAndDatabaseName(string databaseName, out string shardedDatabaseName, out int shardNumber)
-        {
-            shardNumber = databaseName.IndexOf('$');
-
-            if (shardNumber != -1)
-            {
-                var slice = databaseName.AsSpan().Slice(shardNumber + 1);
-                shardedDatabaseName = databaseName.Substring(0, shardNumber);
-                if (int.TryParse(slice, out shardNumber) == false)
-                    throw new ArgumentException(nameof(shardedDatabaseName), "Unable to parse sharded database name: " + shardedDatabaseName);
-
-                return true;
-            }
-
-            shardedDatabaseName = databaseName;
-            return false;
-        }
+        public static bool TryGetShardNumberAndDatabaseName(string databaseName, out string shardedDatabaseName, out int shardNumber) =>
+            ClientShardHelper.TryGetShardNumberAndDatabaseName(databaseName, out shardedDatabaseName, out shardNumber);
 
         public static bool TryGetShardNumber(string shardedDatabaseName, out int shardNumber)
         {
@@ -173,24 +159,21 @@ namespace Raven.Server.Utils
 
         public static string ToShardName(string database, int shard) => ClientShardHelper.ToShardName(database, shard);
 
-        public static bool IsShardedName(string name)
-        {
-            return name.IndexOf('$') != -1;
-        }
+        public static bool IsShardName(string name) => ClientShardHelper.IsShardName(name);
 
         public static IEnumerable<string> GetShardNames(DatabaseRecord record)
         {
             var recordDatabaseName = record.DatabaseName;
-            var shardsLength = record.Sharding.Shards.Length;
+            var shards = record.Sharding.Shards.Keys.AsEnumerable();
 
-            return GetShardNames(recordDatabaseName, shardsLength);
+            return GetShardNames(recordDatabaseName, shards);
         }
 
-        public static IEnumerable<string> GetShardNames(string databaseName, int shardsCount)
+        public static IEnumerable<string> GetShardNames(string databaseName, IEnumerable<int> shards)
         {
-            for (int i = 0; i < shardsCount; i++)
+            foreach (var shardNumber in shards)
             {
-                yield return $"{databaseName}${i}";
+                yield return $"{databaseName}${shardNumber}";
             }
         }
 

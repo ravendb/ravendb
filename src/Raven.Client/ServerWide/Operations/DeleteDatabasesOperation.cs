@@ -29,19 +29,21 @@ namespace Raven.Client.ServerWide.Operations
                 _parameters.FromNodes = new[] { fromNode };
         }
 
-        public DeleteDatabasesOperation(string databaseName, bool hardDelete, string fromNode, int shard, TimeSpan? timeToWaitForConfirmation = null)
+        public DeleteDatabasesOperation(string databaseName, int shardNumber, bool hardDelete, string fromNode, TimeSpan? timeToWaitForConfirmation = null)
         {
             if (databaseName == null)
                 throw new ArgumentNullException(nameof(databaseName));
 
+            if (fromNode == null)
+                throw new ArgumentException(nameof(fromNode));
+            
             _parameters = new Parameters
             {
-                DatabaseNames = new[] { ClientShardHelper.ToShardName(databaseName, shard) },
+                DatabaseNames = new[] { ClientShardHelper.ToShardName(databaseName, shardNumber) },
                 HardDelete = hardDelete,
-                TimeToWaitForConfirmation = timeToWaitForConfirmation
+                TimeToWaitForConfirmation = timeToWaitForConfirmation,
+                FromNodes = new [] {fromNode}
             };
-
-            _parameters.FromNodes = new[] { fromNode };
         }
         
         public DeleteDatabasesOperation(Parameters parameters)
@@ -51,6 +53,23 @@ namespace Raven.Client.ServerWide.Operations
 
             if (parameters.DatabaseNames == null || parameters.DatabaseNames.Length == 0)
                 throw new ArgumentNullException(nameof(parameters.DatabaseNames));
+
+            foreach (var databaseName in parameters.DatabaseNames)
+            {
+                if (databaseName == null)
+                    throw new ArgumentNullException(nameof(databaseName));
+
+                var dbName = databaseName;
+                if (ClientShardHelper.IsShardName(databaseName))
+                {
+                    ClientShardHelper.TryGetShardNumberAndDatabaseName(databaseName, out dbName, out _);
+
+                    if (parameters.FromNodes == null)
+                        throw new ArgumentException($"Must specify node when deleting a shard.");
+                }
+
+                ResourceNameValidator.AssertValidDatabaseName(dbName);
+            }
 
             _parameters = parameters;
         }

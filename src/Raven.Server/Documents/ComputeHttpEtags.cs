@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.Http;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Sharding.Executors;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
 
@@ -152,13 +153,13 @@ namespace Raven.Server.Documents
             return str;
         }
 
-        public static string CombineEtags<T>(Memory<RavenCommand<T>> cmds) => CombineEtags(EnumerateEtags(cmds));
+        public static string CombineEtags<T>(Dictionary<int, AbstractExecutor.ShardExecutionResult<T>> cmds) => CombineEtags(EnumerateEtags(cmds));
 
-        public static IEnumerable<string> EnumerateEtags<T>(Memory<RavenCommand<T>> cmds)
+        public static IEnumerable<string> EnumerateEtags<T>(Dictionary<int, AbstractExecutor.ShardExecutionResult<T>> cmds)
         {
-            for (var index = 0; index < cmds.Length; index++)
+            foreach (var shardInfo in cmds.Values)
             {
-                var cmd = cmds.Span[index];
+                var cmd = shardInfo.Command;
                 string etag = cmd.Etag;
                 if (etag != null)
                     yield return etag;

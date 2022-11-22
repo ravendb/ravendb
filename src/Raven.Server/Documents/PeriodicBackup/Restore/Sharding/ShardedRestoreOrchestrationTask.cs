@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
             databaseRecord.Sharding = new ShardingConfiguration
             {
-                Shards = new DatabaseTopology[RestoreConfiguration.ShardRestoreSettings.Shards.Length],
+                Shards = new Dictionary<int, DatabaseTopology>(RestoreConfiguration.ShardRestoreSettings.Shards.Count),
                 Orchestrator = new OrchestratorConfiguration
                 {
                     Topology = new OrchestratorTopology
@@ -111,13 +111,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
             var clusterTransactionIdBase64 = Guid.NewGuid().ToBase64Unpadded();
             var nodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            for (var i = 0; i < RestoreConfiguration.ShardRestoreSettings.Shards.Length; i++)
+            foreach (var (_, shardRestoreSetting) in RestoreConfiguration.ShardRestoreSettings.Shards)
             {
-                var shardRestoreSetting = RestoreConfiguration.ShardRestoreSettings.Shards[i];
                 var shardNumber = shardRestoreSetting.ShardNumber;
-
-                Debug.Assert(shardNumber < databaseRecord.Sharding.Shards.Length, "invalid ShardRestoreSettings");
-
+                
                 databaseRecord.Sharding.Shards[shardNumber] = new DatabaseTopology
                 {
                     Members = new List<string>
@@ -141,9 +138,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
         private static RavenCommand<OperationIdResult> GenerateCommandForShard(int shardNumber, RestoreBackupConfigurationBase configuration)
         {
-            Debug.Assert(shardNumber < configuration.ShardRestoreSettings?.Shards.Length);
+            Debug.Assert(configuration.ShardRestoreSettings?.Shards.ContainsKey(shardNumber) ?? false);
 
-            var shardRestoreSetting = configuration.ShardRestoreSettings.Shards.Single(s => s.ShardNumber == shardNumber);
+            var shardRestoreSetting = configuration.ShardRestoreSettings.Shards.Single(s => s.Value.ShardNumber == shardNumber).Value;
             configuration.DatabaseName = ShardHelper.ToShardName(configuration.DatabaseName, shardNumber);
             configuration.ShardRestoreSettings = null;
 

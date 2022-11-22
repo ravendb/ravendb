@@ -9,6 +9,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Counters;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
 {
@@ -74,14 +75,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-        public CountersDetail Combine(Memory<CountersDetail> results)
+        public CountersDetail Combine(Dictionary<int, ShardExecutionResult<CountersDetail>> results)
         {
             var combined = new CountersDetail();
             var counterDetailsResult = new List<CounterDetail>();
 
-            foreach (var countersDetail in results.Span)
+            foreach (var countersDetail in results.Values)
             {
-                counterDetailsResult.AddRange(countersDetail.Counters);
+                counterDetailsResult.AddRange(countersDetail.Result.Counters);
             }
 
             combined.Counters = counterDetailsResult;

@@ -13,6 +13,7 @@ using Raven.Server.Documents.Sharding.Streaming.Comparers;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding
 {
@@ -26,10 +27,11 @@ namespace Raven.Server.Documents.Sharding
                 CombinedReadContinuationState combinedState,
                 string name)
             {
-                var combined = new ShardStreamItem<long>[combinedState.States.Length];
-                for (var index = 0; index < combinedState.States.Length; index++)
+                var combined = new ShardStreamItem<long>[combinedState.States.Count];
+                int index = 0;
+                foreach (var shardNumber in combinedState.States.Keys)
                 {
-                    var state = combinedState.States[index];
+                    var state = combinedState.States[shardNumber];
                     var property = state.ReadString();
                     if (property != name)
                         state.ThrowInvalidJson();
@@ -43,8 +45,9 @@ namespace Raven.Server.Documents.Sharding
                     combined[index] = new ShardStreamItem<long>
                     {
                         Item = state.ReadLong,
-                        Shard = index
+                        ShardNumber = shardNumber
                     };
+                    index++;
                 }
 
                 return new Memory<ShardStreamItem<long>>(combined);
@@ -55,10 +58,11 @@ namespace Raven.Server.Documents.Sharding
                 string name,
                 Func<BlittableJsonReaderObject, T> converter)
             {
-                var combined = new ShardStreamItem<T>[combinedState.States.Length];
-                for (var index = 0; index < combinedState.States.Length; index++)
+                var combined = new ShardStreamItem<T>[combinedState.States.Count];
+                int index = 0;
+                foreach (var shardNumber in combinedState.States.Keys)
                 {
-                    var state = combinedState.States[index];
+                    var state = combinedState.States[shardNumber];
                     var property = state.ReadString();
                     if (property != name)
                         state.ThrowInvalidJson();
@@ -67,8 +71,9 @@ namespace Raven.Server.Documents.Sharding
                     combined[index] = new ShardStreamItem<T>
                     {
                         Item = converter(result),
-                        Shard = index
+                        ShardNumber = shardNumber
                     };
+                    index++;
                 }
 
                 return new Memory<ShardStreamItem<T>>(combined);
@@ -79,10 +84,11 @@ namespace Raven.Server.Documents.Sharding
                 string name,
                 Func<BlittableJsonReaderArray, T> converter)
             {
-                var combined = new ShardStreamItem<T>[combinedState.States.Length];
-                for (var index = 0; index < combinedState.States.Length; index++)
+                var combined = new ShardStreamItem<T>[combinedState.States.Count];
+                int index = 0;
+                foreach (var shardNumber in combinedState.States.Keys)
                 {
-                    var state = combinedState.States[index];
+                    var state = combinedState.States[shardNumber];
                     var property = state.ReadString();
                     if (property != name)
                         state.ThrowInvalidJson();
@@ -91,8 +97,9 @@ namespace Raven.Server.Documents.Sharding
                     combined[index] = new ShardStreamItem<T>
                     {
                         Item = converter(result),
-                        Shard = index
+                        ShardNumber = shardNumber
                     };
+                    index++;
                 }
 
                 return new Memory<ShardStreamItem<T>>(combined);
@@ -104,20 +111,20 @@ namespace Raven.Server.Documents.Sharding
                 Func<BlittableJsonReaderObject, T> converter,
                 Comparer<ShardStreamItem<T>> comparer)
             {
-                var shards = combinedState.States.Length;
-                var iterators = new YieldShardStreamResults[shards];
-                for (int i = 0; i < shards; i++)
+                var shards = combinedState.States.Count;
+                var iterators = new Dictionary<int, YieldShardStreamResults>(shards);
+                foreach (var shardToState in combinedState.States)
                 {
-                    var it = new YieldShardStreamResults(combinedState.States[i], name);
+                    var it = new YieldShardStreamResults(shardToState.Value, name);
                     await it.InitializeAsync();
-                    iterators[i] = it;
+                    iterators[shardToState.Key] = it;
                 }
 
                 await using (var merged = new MergedAsyncEnumerator<ShardStreamItem<T>>(comparer))
                 {
-                    for (int i = 0; i < shards; i++)
+                    foreach (var shardToIterator in iterators)
                     {
-                        await merged.AddAsyncEnumerator(new YieldStreamArray<ShardStreamItem<T>, T>(iterators[i], converter, i, combinedState.CancellationToken));
+                        await merged.AddAsyncEnumerator(new YieldStreamArray<ShardStreamItem<T>, T>(shardToIterator.Value, converter, shardToIterator.Key, combinedState.CancellationToken));
                     }
 
                     while (await merged.MoveNextAsync(combinedState.CancellationToken))
@@ -141,9 +148,9 @@ namespace Raven.Server.Documents.Sharding
                     if (pageSize-- <= 0)
                         yield break;
 
-                    var shard = result.Shard;
+                    var shard = result.ShardNumber;
                     pagingContinuation.Pages[shard].Start++;
-
+                    
                     yield return result;
                 }
             }
@@ -209,7 +216,7 @@ namespace Raven.Server.Documents.Sharding
             }
             
             public IEnumerable<BlittableJsonReaderObject> PagedShardedItemDocumentsByLastModified<TInput>(
-                Memory<TInput> results,
+                Dictionary<int, ShardExecutionResult<TInput>> results,
                 Func<TInput, IEnumerable<BlittableJsonReaderObject>> selector,
                 ShardedPagingContinuation pagingContinuation)
             {
@@ -237,7 +244,7 @@ namespace Raven.Server.Documents.Sharding
             }
 
             public IEnumerable<T> PagedShardedItem<T, TInput>(
-                Memory<TInput> results,
+                Dictionary<int, ShardExecutionResult<TInput>> results,
                 Func<TInput, IEnumerable<T>> selector,
                 Comparer<ShardStreamItem<T>> comparer,
                 ShardedPagingContinuation pagingContinuation)
@@ -248,29 +255,27 @@ namespace Raven.Server.Documents.Sharding
                     if (pageSize-- <= 0)
                         yield break;
 
-                    var shard = result.Shard;
-                    pagingContinuation.Pages[shard].Start++;
+                    var shardNumber = result.ShardNumber;
+                    pagingContinuation.Pages[shardNumber].Start++;
 
                     yield return result.Item;
                 }
             }
 
             public IEnumerable<ShardStreamItem<T>> CombinedResults<T, TInput>(
-                Memory<TInput> results,
+                Dictionary<int, ShardExecutionResult<TInput>> results,
                 Func<TInput, IEnumerable<T>> selector,
                 Comparer<ShardStreamItem<T>> comparer)
             {
-                var shards = results.Span.Length;
-                using (var merged = new MergedEnumerator<ShardStreamItem<T>>(comparer))
+                using (var merged = new MergedEnumerator<ShardStreamItem<T>>(comparer)) 
                 {
-                    for (int i = 0; i < shards; i++)
+                    foreach (var (shardNumber, result) in results)
                     {
-                        var shardNumber = i;
-                        var r = selector(results.Span[i]);
+                        var r = selector(result.Result);
                         var it = r.Select(item => new ShardStreamItem<T>
                         {
                             Item = item,
-                            Shard = shardNumber
+                            ShardNumber = result.ShardNumber
                         });
                         merged.AddEnumerator(it.GetEnumerator());
                     }
@@ -298,7 +303,7 @@ namespace Raven.Server.Documents.Sharding
                     return (T)new ShardStreamItem<TInner>
                     {
                         Item = _converter(asyncEnumerator.Current),
-                        Shard = _shard
+                        ShardNumber = _shard
                     };
                 }
             }

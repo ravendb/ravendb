@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Amqp.Framing;
 using JetBrains.Annotations;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
@@ -84,9 +85,9 @@ public class RawShardingConfiguration
         }
     }
 
-    private DatabaseTopology[] _shards;
+    private Dictionary<int, DatabaseTopology> _shards;
 
-    public DatabaseTopology[] Shards
+    public Dictionary<int, DatabaseTopology> Shards
     {
         get
         {
@@ -96,18 +97,28 @@ public class RawShardingConfiguration
             if (_shards != null)
                 return _shards;
 
-            if (_sharding.TryGet(nameof(ShardingConfiguration.Shards), out BlittableJsonReaderArray array) == false || array == null)
+            if (_sharding.TryGet(nameof(ShardingConfiguration.Shards), out BlittableJsonReaderObject dictionary) == false || dictionary == null)
                 return null;
 
-            _shards = new DatabaseTopology[array.Length];
-            for (var index = 0; index < array.Length; index++)
+            _shards = new Dictionary<int, DatabaseTopology>(dictionary.Count);
+            for (var index = 0; index < dictionary.Count; index++)
             {
-                var shard = (BlittableJsonReaderObject)array[index];
-                _shards[index] = JsonDeserializationCluster.DatabaseTopology(shard);
+                var shardTopology = new BlittableJsonReaderObject.PropertyDetails();
+                dictionary.GetPropertyByIndex(index, ref shardTopology);
+                
+                _shards[GetShardNumberFromPropertyDetails(shardTopology)] = JsonDeserializationCluster.DatabaseTopology((BlittableJsonReaderObject)shardTopology.Value);
             }
-
+            
             return _shards;
         }
+    }
+
+    internal static int GetShardNumberFromPropertyDetails(BlittableJsonReaderObject.PropertyDetails propertyDetails)
+    {
+        if (int.TryParse(propertyDetails.Name.ToString(), out int sharNumber) == false)
+            throw new ArgumentException($"Error while trying to extract the shard number from the raw database record. Expected an int but got a {propertyDetails.Name}");
+
+        return sharNumber;
     }
 
     private List<ShardBucketRange> _shardBucketRanges;

@@ -964,7 +964,7 @@ namespace Raven.Server.Documents
 
         public static DocumentDatabase CreateDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         {
-            return ShardHelper.IsShardedName(name) ?
+            return ShardHelper.IsShardName(name) ?
                 new ShardedDocumentDatabase(name, configuration, serverStore, addToInitLog) :
                 new DocumentDatabase(name, configuration, serverStore, addToInitLog);
         }

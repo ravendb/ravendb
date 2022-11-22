@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Studio;
+using Raven.Server.Documents.Sharding.Executors;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Operations
@@ -26,24 +27,23 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-        public string ExpectedEtag { get; }
+		public string ExpectedEtag { get; }
 
-        public Dictionary<LazyStringValue, FieldType> CombineResults(Memory<BlittableJsonReaderObject> results)
+        public Dictionary<LazyStringValue, FieldType> CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<BlittableJsonReaderObject>> results)
         {
-            var span = results.Span;
             var combined = new Dictionary<LazyStringValue, FieldType>(LazyStringValueComparer.Instance);
-
-            foreach (var collectionFields in span)
+            
+            foreach (var collectionFields in results.Values)
             {
-                if (collectionFields == null)
+                if (collectionFields.Result == null)
                     continue;
 
                 var propDetails = new BlittableJsonReaderObject.PropertyDetails();
 
-                for (int i = 0; i < collectionFields.Count; i++)
+                for (int i = 0; i < collectionFields.Result.Count; i++)
                 {
-                    collectionFields.GetPropertyByIndex(i, ref propDetails);
-                    if (Enum.TryParse(propDetails.Value.ToString(), out FieldType type))
+                    collectionFields.Result.GetPropertyByIndex(i, ref propDetails);
+                    if(Enum.TryParse(propDetails.Value.ToString(), out FieldType type))
                         combined.TryAdd(propDetails.Name.Clone(_context), type);
                 }
             }

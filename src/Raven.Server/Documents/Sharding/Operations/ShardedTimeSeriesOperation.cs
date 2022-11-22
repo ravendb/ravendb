@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding.Executors;
 
 namespace Raven.Server.Documents.Sharding.Operations;
 
@@ -20,16 +21,16 @@ internal class ShardedTimeSeriesOperation : IShardedOperation<GetMultipleTimeSer
 
     public HttpRequest HttpRequest { get; }
 
-    public GetMultipleTimeSeriesRangesCommand.Response Combine(Memory<GetMultipleTimeSeriesRangesCommand.Response> results)
+    public GetMultipleTimeSeriesRangesCommand.Response Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<GetMultipleTimeSeriesRangesCommand.Response>> results)
     {
         GetMultipleTimeSeriesRangesCommand.Response result = new()
         {
             Results = new List<TimeSeriesDetails>()
         };
 
-        foreach (var cmdResult in results.Span)
+        foreach (var cmdResult in results.Values)
         {
-            result.Results.AddRange(cmdResult.Results);
+            result.Results.AddRange(cmdResult.Result.Results);
         }
 
         return result;

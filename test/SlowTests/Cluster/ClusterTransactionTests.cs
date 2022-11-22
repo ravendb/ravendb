@@ -376,20 +376,20 @@ namespace SlowTests.Cluster
                         }
                     };
 
-                    r.Sharding.Shards = new[]
+                    r.Sharding.Shards = new Dictionary<int, DatabaseTopology>()
                     {
-                        new DatabaseTopology
+                        {0, new DatabaseTopology
                         {
                             Members = members
-                        }, 
-                        new DatabaseTopology
+                        }},
+                        {1, new DatabaseTopology
                         {
                             Members = members
-                        }, 
-                        new DatabaseTopology
+                        }},
+                        {2, new DatabaseTopology
                         {
                             Members = members
-                        }
+                        }},
                     };
                 };
             }

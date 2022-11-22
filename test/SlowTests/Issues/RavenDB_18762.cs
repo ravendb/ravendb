@@ -30,20 +30,20 @@ public class RavenDB_18762 : ClusterTestBase
             {
                 Sharding = new ShardingConfiguration
                 {
-                    Shards = new[]
+                    Shards = new Dictionary<int, DatabaseTopology>()
                     {
-                        new DatabaseTopology
+                        {0, new DatabaseTopology
                         {
                             Members = new List<string> { "A", "B", "C" }
-                        },
-                        new DatabaseTopology
+                        }},
+                        {1, new DatabaseTopology
                         {
                             Members = new List<string> { "A", "B", "C" }
-                        },
-                        new DatabaseTopology
+                        }},
+                        {2, new DatabaseTopology
                         {
                             Members = new List<string> { "A", "B", "C" }
-                        }
+                        }},
                     }
                 }
             }, 3, cluster.Leader.WebUrl);

@@ -28,7 +28,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly ShardedDatabaseRequestHandler _handler;
         private readonly long _operationId;
         private readonly ISmugglerSource _source;
-        private readonly StreamDestination[] _destinations;
+        private readonly Dictionary<int, StreamDestination> _destinations;
         private DatabaseSmugglerOptionsServerSide _options;
 
         public MultiShardedDestination([NotNull] ISmugglerSource source, [NotNull] ShardedDatabaseContext databaseContext, [NotNull] ShardedDatabaseRequestHandler handler, long operationId)
@@ -37,46 +37,51 @@ namespace Raven.Server.Smuggler.Documents
             _databaseContext = databaseContext ?? throw new ArgumentNullException(nameof(databaseContext));
             _handler = handler ?? throw new ArgumentNullException(nameof(handler));
             _operationId = operationId;
-            _destinations = new StreamDestination[databaseContext.ShardCount];
+            _destinations = new Dictionary<int, StreamDestination>(databaseContext.ShardCount);
         }
 
         public async ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
             _options = options;
-            var holders = new StreamDestinationHolder[_databaseContext.ShardCount];
+            var holders = new Dictionary<int, StreamDestinationHolder>(_databaseContext.ShardCount);
+
+            foreach (var shardNumber in _databaseContext.ShardsTopology.Keys)
+            {
+                holders.Add(shardNumber, new StreamDestinationHolder());
+            }
 
             var importOperation = new ShardedImportOperation(_handler.HttpContext.Request, options, holders, _operationId);
             var t = _databaseContext.ShardExecutor.ExecuteParallelForAllAsync(importOperation);
 
-            await Task.WhenAll(importOperation.ExposedStreamTasks);
+            await Task.WhenAll(importOperation.ExposedStreamTasks.Values);
 
-            for (int i = 0; i < holders.Length; i++)
+            foreach (int shardNumber in holders.Keys)
             {
-                await PrepareShardStreamDestination(holders, i, result, buildVersion);
+                await PrepareShardStreamDestination(holders, shardNumber, result, buildVersion);
             }
 
             return new AsyncDisposableAction(async () =>
             {
-                for (int i = 0; i < holders.Length; i++)
+                foreach (var holder in holders.Values)
                 {
-                    await holders[i].DisposeAsync();
+                    await holder.DisposeAsync();
                 }
 
                 await t;
             });
         }
 
-        private async Task PrepareShardStreamDestination(StreamDestinationHolder[] holders, int shard, SmugglerResult result, long buildVersion)
+        private async Task PrepareShardStreamDestination(Dictionary<int, StreamDestinationHolder> holders, int shardNumber, SmugglerResult result, long buildVersion)
         {
-            var stream = ShardedSmugglerHandlerProcessorForImport.GetOutputStream(holders[shard].OutStream.OutputStream.Result, _options);
-            holders[shard].InputStream = stream;
-            holders[shard].ContextReturn = _handler.ContextPool.AllocateOperationContext(out JsonOperationContext context);
+            var stream = ShardedSmugglerHandlerProcessorForImport.GetOutputStream(holders[shardNumber].OutStream.OutputStream.Result, _options);
+            holders[shardNumber].InputStream = stream;
+            holders[shardNumber].ContextReturn = _handler.ContextPool.AllocateOperationContext(out JsonOperationContext context);
             var destination = new StreamDestination(stream, context, _source);
-            holders[shard].DestinationAsyncDisposable = await destination.InitializeAsync(_options, result, buildVersion);
-            _destinations[shard] = destination;
+            holders[shardNumber].DestinationAsyncDisposable = await destination.InitializeAsync(_options, result, buildVersion);
+            _destinations[shardNumber] = destination;
         }
 
-        internal struct StreamDestinationHolder : IAsyncDisposable
+        internal class StreamDestinationHolder : IAsyncDisposable
         {
             public Stream InputStream;
             public StreamExposerContent OutStream;
@@ -100,38 +105,38 @@ namespace Raven.Server.Smuggler.Documents
 
         public ICompareExchangeActions CompareExchange(string databaseName, JsonOperationContext context, BackupKind? backupKind, bool withDocuments)
         {
-            return withDocuments ? null : new ShardedCompareExchangeActions(_databaseContext, _destinations.Select(d => d.CompareExchange(databaseName, context, backupKind, withDocuments: false)).ToArray(), _options);
+            return withDocuments ? null : new ShardedCompareExchangeActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.CompareExchange(databaseName, context, backupKind, withDocuments: false)), _options);
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(string databaseName, JsonOperationContext context) =>
-            new ShardedCompareExchangeActions(_databaseContext, _destinations.Select(d => d.CompareExchangeTombstones(databaseName, context)).ToArray(), _options);
+            new ShardedCompareExchangeActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.CompareExchangeTombstones(databaseName, context)), _options);
 
         public IDocumentActions Documents(bool throwOnCollectionMismatchError = true) =>
-            new SharededDocumentActions(_databaseContext, _destinations.Select(d => d.Documents(throwOnDuplicateCollection: false)).ToArray(), _options);
+            new SharededDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Documents(throwOnDuplicateCollection: false)), _options);
 
         public IDocumentActions RevisionDocuments() =>
-            new SharededDocumentActions(_databaseContext, _destinations.Select(d => d.RevisionDocuments()).ToArray(), _options);
+            new SharededDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.RevisionDocuments()), _options);
 
         public IDocumentActions Tombstones() =>
-            new SharededDocumentActions(_databaseContext, _destinations.Select(d => d.Tombstones()).ToArray(), _options);
+            new SharededDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Tombstones()), _options);
 
         public IDocumentActions Conflicts() =>
-            new SharededDocumentActions(_databaseContext, _destinations.Select(d => d.Conflicts()).ToArray(), _options);
+            new SharededDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Conflicts()), _options);
 
         public ICounterActions Counters(SmugglerResult result) =>
-            new ShardedCounterActions(_databaseContext, _destinations.Select(d => d.Counters(result)).ToArray(), _options);
+            new ShardedCounterActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Counters(result)), _options);
 
         public ICounterActions LegacyCounters(SmugglerResult result) =>
-            new ShardedCounterActions(_databaseContext, _destinations.Select(d => d.LegacyCounters(result)).ToArray(), _options);
+            new ShardedCounterActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyCounters(result)), _options);
 
         public ITimeSeriesActions TimeSeries() =>
-            new ShardedTimeSeriesActions(_databaseContext, _destinations.Select(d => d.TimeSeries()).ToArray(), _options);
+            new ShardedTimeSeriesActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.TimeSeries()), _options);
 
         public ILegacyActions LegacyDocumentDeletions() =>
-            new ShardedLegacyActions(_databaseContext, _destinations.Select(d => d.LegacyDocumentDeletions()).ToArray(), _options);
+            new ShardedLegacyActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyDocumentDeletions()), _options);
 
         public ILegacyActions LegacyAttachmentDeletions() =>
-            new ShardedLegacyActions(_databaseContext, _destinations.Select(d => d.LegacyAttachmentDeletions()).ToArray(), _options);
+            new ShardedLegacyActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyAttachmentDeletions()), _options);
 
 
         private abstract class ShardedActions<T> : INewDocumentActions, INewCompareExchangeActions where T : IAsyncDisposable
@@ -140,14 +145,14 @@ namespace Raven.Server.Smuggler.Documents
             private readonly IDisposable _rtnCtx;
             private readonly DatabaseSmugglerOptionsServerSide _options;
             protected readonly ShardedDatabaseContext DatabaseContext;
-            protected readonly T[] _actions;
+            protected readonly Dictionary<int,T> _actions;
             protected readonly T _last;
 
-            protected ShardedActions(ShardedDatabaseContext databaseContext, T[] actions, DatabaseSmugglerOptionsServerSide options)
+            protected ShardedActions(ShardedDatabaseContext databaseContext, Dictionary<int, T> actions, DatabaseSmugglerOptionsServerSide options)
             {
                 DatabaseContext = databaseContext;
                 _actions = actions;
-                _last = _actions.Last();
+                _last = _actions.Last().Value;
                 _options = options;
                 _rtnCtx = DatabaseContext.AllocateContext(out _context);
             }
@@ -157,7 +162,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public virtual async ValueTask DisposeAsync()
             {
-                foreach (var action in _actions)
+                foreach (var action in _actions.Values)
                 {
                     await action.DisposeAsync();
                 }
@@ -170,7 +175,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private class ShardedCompareExchangeActions : ShardedActions<ICompareExchangeActions>, ICompareExchangeActions
         {
-            public ShardedCompareExchangeActions(ShardedDatabaseContext databaseContext, ICompareExchangeActions[] actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
+            public ShardedCompareExchangeActions(ShardedDatabaseContext databaseContext, Dictionary<int, ICompareExchangeActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
             }
 
@@ -206,7 +211,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             private readonly ByteStringContext _allocator;
 
-            public SharededDocumentActions(ShardedDatabaseContext databaseContext, IDocumentActions[] actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
+            public SharededDocumentActions(ShardedDatabaseContext databaseContext, Dictionary<int, IDocumentActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
                 _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             }
@@ -250,7 +255,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             private readonly ByteStringContext _allocator;
 
-            public ShardedCounterActions(ShardedDatabaseContext databaseContext, ICounterActions[] actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
+            public ShardedCounterActions(ShardedDatabaseContext databaseContext, Dictionary<int, ICounterActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
                 _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             }
@@ -282,7 +287,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private class ShardedTimeSeriesActions : ShardedActions<ITimeSeriesActions>, ITimeSeriesActions
         {
-            public ShardedTimeSeriesActions(ShardedDatabaseContext databaseContext, ITimeSeriesActions[] actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
+            public ShardedTimeSeriesActions(ShardedDatabaseContext databaseContext, Dictionary<int, ITimeSeriesActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
             }
 
@@ -296,7 +301,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private class ShardedLegacyActions : ShardedActions<ILegacyActions>, ILegacyActions
         {
-            public ShardedLegacyActions(ShardedDatabaseContext databaseContext, ILegacyActions[] actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
+            public ShardedLegacyActions(ShardedDatabaseContext databaseContext, Dictionary<int, ILegacyActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
             }
 

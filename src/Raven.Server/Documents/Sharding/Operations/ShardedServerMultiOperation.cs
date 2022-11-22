@@ -7,6 +7,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Operation = Raven.Client.Documents.Operations.Operation;
 
@@ -20,8 +21,8 @@ public class ShardedServerMultiOperation : AbstractShardedMultiOperation
 
     public override async ValueTask<TResult> ExecuteCommandForShard<TResult>(RavenCommand<TResult> command, int shardNumber, CancellationToken token)
     {
-        if (ShardedDatabaseContext.ShardCount < shardNumber || ShardedDatabaseContext.ShardsTopology[shardNumber].Members.Count == 0)
-            throw new InvalidOperationException($"Cannot execute command '{command.GetType()}' for Database '{ShardedDatabaseContext.DatabaseName}${shardNumber}', shard {shardNumber} doesn't exist or has no members.");
+        if (ShardedDatabaseContext.ShardsTopology.TryGetValue(shardNumber, out var topology) == false || topology.Members.Count == 0)
+            throw new InvalidOperationException($"Cannot execute command '{command.GetType()}' for Database '{ShardHelper.ToShardName(ShardedDatabaseContext.DatabaseName, shardNumber)}', shard {shardNumber} doesn't exist or has no members.");
         
         var nodeTag = ShardedDatabaseContext.ShardsTopology[shardNumber].Members[0];
         

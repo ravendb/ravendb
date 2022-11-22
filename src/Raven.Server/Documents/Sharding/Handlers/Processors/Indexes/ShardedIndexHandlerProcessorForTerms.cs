@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.ServerWide;
@@ -59,7 +60,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
 
             public string ExpectedEtag { get; }
 
-            public TermsQueryResultServerSide CombineResults(Memory<TermsQueryResultServerSide> results)
+            public TermsQueryResultServerSide CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<TermsQueryResultServerSide>> results)
             {
                 var pageSize = _pageSize;
                 var terms = new SortedSet<string>();
@@ -72,12 +73,12 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
                         break;
                 }
 
-                return new TermsQueryResultServerSide { IndexName = results.Span[0].IndexName, Terms = terms.ToList() };
+                return new TermsQueryResultServerSide { IndexName = results.First().Value.Result.IndexName, Terms = terms.ToList() };
             }
 
             public RavenCommand<TermsQueryResultServerSide> CreateCommandForShard(int shardNumber) => new GetIndexTermsCommand(indexName: _indexName, field: _field, _fromValue, _pageSize);
 
-            public string CombineCommandsEtag(Memory<RavenCommand<TermsQueryResultServerSide>> commands)
+            public string CombineCommandsEtag(Dictionary<int, AbstractExecutor.ShardExecutionResult<TermsQueryResultServerSide>> commands)
             {
                 var etags = ComputeHttpEtags.EnumerateEtags(commands);
 

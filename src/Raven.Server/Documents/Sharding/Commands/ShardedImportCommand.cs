@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -17,30 +19,30 @@ namespace Raven.Server.Documents.Sharding.Commands
 {
     internal readonly struct ShardedImportOperation : IShardedOperation<BlittableJsonReaderObject>
     {
-        private readonly MultiShardedDestination.StreamDestinationHolder[] _holders;
+        private readonly Dictionary<int, MultiShardedDestination.StreamDestinationHolder> _holders;
         private readonly long _operationId;
         private readonly DatabaseSmugglerOptionsServerSide _options;
-        public readonly Task<Stream>[] ExposedStreamTasks;
+        public readonly Dictionary<int, Task<Stream>> ExposedStreamTasks;
 
-        public ShardedImportOperation(HttpRequest httpRequest, DatabaseSmugglerOptionsServerSide options, MultiShardedDestination.StreamDestinationHolder[] holders, long operationId)
+        public ShardedImportOperation(HttpRequest httpRequest, DatabaseSmugglerOptionsServerSide options, Dictionary<int, MultiShardedDestination.StreamDestinationHolder> holders, long operationId)
         {
             HttpRequest = httpRequest;
             _holders = holders;
             _operationId = operationId;
             _options = options;
-            ExposedStreamTasks = new Task<Stream>[_holders.Length];
+            ExposedStreamTasks = new Dictionary<int, Task<Stream>>(_holders.Count);
 
-            for (int i = 0; i < _holders.Length; i++)
+            foreach (var shardNumber in holders.Keys)
             {
                 var stream = new StreamExposerContent();
-                _holders[i].OutStream = stream;
-                ExposedStreamTasks[i] = stream.OutputStream;
+                _holders[shardNumber].OutStream = stream;
+                ExposedStreamTasks[shardNumber] = stream.OutputStream;
             }
         }
 
         public HttpRequest HttpRequest { get; }
 
-        public BlittableJsonReaderObject Combine(Memory<BlittableJsonReaderObject> results) => null;
+        public BlittableJsonReaderObject Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<BlittableJsonReaderObject>> results) => null;
 
         public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => new ShardedImportCommand(_options, _holders[shardNumber].OutStream, _operationId);
 

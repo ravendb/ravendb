@@ -1,13 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
+using Raven.Server.Documents.Sharding.Executors;
 
 namespace Raven.Server.Documents.Sharding.Streaming;
 
 public class CombinedStreamResult
 {
-    public Memory<StreamResult> Results;
+    public Dictionary<int, AbstractExecutor.ShardExecutionResult<StreamResult>> Results;
 
     public async ValueTask<CombinedReadContinuationState> InitializeAsync(ShardedDatabaseContext databaseContext, CancellationToken token)
     {

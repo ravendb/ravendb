@@ -1,11 +1,12 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 
 public class ShardedPagingContinuation : ContinuationToken
 {
     public int PageSize;
-    public ShardPaging[] Pages;
+    public Dictionary<int, ShardPaging> Pages;
 
     public ShardedPagingContinuation()
     {
@@ -18,15 +19,24 @@ public class ShardedPagingContinuation : ContinuationToken
         var startPortion = start / shards;
         var remaining = start - startPortion * shards;
 
-        Pages = new ShardPaging[shards];
+        Pages = new Dictionary<int, ShardPaging>(shards);
 
-        for (var index = 0; index < Pages.Length; index++)
+        foreach (var shardToTopology in databaseContext.ShardsTopology)
         {
-            Pages[index].ShardNumber = index;
-            Pages[index].Start = startPortion;
-        }
+            var page = new ShardPaging()
+            {
+                ShardNumber = shardToTopology.Key,
+                Start = startPortion
+            };
 
-        Pages[0].Start += remaining;
+            if (remaining > 0)
+            {
+                page.Start++;
+                remaining--;
+            }
+
+            Pages.Add(shardToTopology.Key, page);
+        }
 
         PageSize = pageSize;
     }
@@ -35,12 +45,12 @@ public class ShardedPagingContinuation : ContinuationToken
     {
         return new DynamicJsonValue
         {
-            [nameof(Pages)] = new DynamicJsonArray(Pages), 
+            [nameof(Pages)] = DynamicJsonValue.Convert(Pages), 
             [nameof(PageSize)] = PageSize
         };
     }
 
-    public struct ShardPaging : IDynamicJson
+    public class ShardPaging : IDynamicJson
     {
         public int ShardNumber;
         public int Start;

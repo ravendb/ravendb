@@ -13,20 +13,20 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Executors;
 
-public class AllNodesExecutor : AbstractExecutor
+public class AllOrchestratorNodesExecutor : AbstractExecutor
 {
     private readonly ServerStore _store;
     private readonly ShardedDatabaseContext _database;
 
     private ClusterTopology _clusterTopology;
-        
+
     private readonly ConcurrentDictionary<string, RequestExecutor> _current = new ConcurrentDictionary<string, RequestExecutor>();
     private AllNodesExecutorState _state;
 
     // this executor will contact every single node in the cluster
-    public AllNodesExecutor(ServerStore store, ShardedDatabaseContext database) : base(store)
+    public AllOrchestratorNodesExecutor(ServerStore store, ShardedDatabaseContext database) : base(store)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, 
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
             "RavenDB-19065 We might want to kill this entire class and do it differently by returning an index to the client which he will pass on for the next request");
 
         _store = store;
@@ -88,14 +88,16 @@ public class AllNodesExecutor : AbstractExecutor
 
                 if (_current.TryGetValue(tag, out var requestExecutor) == false)
                 {
-                    _current[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _database.DatabaseName, _store.Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
+                    _current[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _database.DatabaseName, _store.Server.Certificate.Certificate,
+                        DocumentConventions.DefaultForServer);
                     continue;
                 }
 
                 if (string.Equals(requestExecutor.Url, url, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     disposables.Add(requestExecutor); // will dispose outside the lock
-                    _current[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _database.DatabaseName, _store.Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
+                    _current[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _database.DatabaseName, _store.Server.Certificate.Certificate,
+                        DocumentConventions.DefaultForServer);
                 }
             }
 
@@ -132,7 +134,7 @@ public class AllNodesExecutor : AbstractExecutor
                 // ignored
             }
         }
-         
+
         _current.Clear();
     }
 
@@ -142,6 +144,7 @@ public class AllNodesExecutor : AbstractExecutor
     }
 
     protected override Memory<int> GetAllPositions() => _state.FullRange;
+
     protected override void OnCertificateChange(object sender, EventArgs e)
     {
         Dispose();

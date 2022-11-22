@@ -55,11 +55,11 @@ namespace SlowTests.Sharding.BucketMigration
             return list;
         }
 
-        private ShardReport[] CreateShardReports(DatabaseRecord record, int? seed = null)
+        private Dictionary<int, ShardReport> CreateShardReports(DatabaseRecord record, int? seed = null)
         {
             var rnd = new Random(seed ?? 357);
 
-            var shards = new ShardReport[record.Sharding.Shards.Length];
+            var shards = new Dictionary<int, ShardReport>(record.Sharding.Shards.Count);
 
             for (int bucket = 0; bucket < ShardHelper.NumberOfBuckets; bucket++)
             {
@@ -87,29 +87,29 @@ namespace SlowTests.Sharding.BucketMigration
             {
                 Sharding = new ShardingConfiguration()
                 {
-                    Shards = new[]
+                    Shards = new Dictionary<int, DatabaseTopology>()
                     {
-                        new DatabaseTopology(),
-                        new DatabaseTopology(),
-                        new DatabaseTopology(),
-                        new DatabaseTopology(),
-                        new DatabaseTopology(),
-                        new DatabaseTopology(),
-                        new DatabaseTopology(),
-                        new DatabaseTopology(),
-                        new DatabaseTopology(),
-                        new DatabaseTopology(),
+                        {0, new DatabaseTopology()},
+                        {1, new DatabaseTopology()},
+                        {2, new DatabaseTopology()},
+                        {3, new DatabaseTopology()},
+                        {4, new DatabaseTopology()},
+                        {5, new DatabaseTopology()},
+                        {6, new DatabaseTopology()},
+                        {7, new DatabaseTopology()},
+                        {8, new DatabaseTopology()},
+                        {9, new DatabaseTopology()},
                     },
                     BucketMigrations = new Dictionary<int, ShardBucketMigration>()
                 }
             };
 
             //record.ShardAllocations = PopulateRanges(record.Shards.Length);
-            record.Sharding.BucketRanges = PopulateRangesEvenly(record.Sharding.Shards.Length);
+            record.Sharding.BucketRanges = PopulateRangesEvenly(record.Sharding.Shards.Count);
             var reports = CreateShardReports(record);
             var totalMovedBytes = 0L;
             Console.WriteLine($"Inital:");
-            Console.WriteLine(string.Join(Environment.NewLine, reports.Select(r => $"{r.Shard}:{new Size(r.TotalSize, SizeUnit.Bytes)}")));
+            Console.WriteLine(string.Join(Environment.NewLine, reports.Select(r => $"{r.Value.Shard}:{new Size(r.Value.TotalSize, SizeUnit.Bytes)}")));
 
             var policy = new MigrationPolicy { SizeThreshold = 10 * 1024 * 1024 };
             var moves = 0;
@@ -139,7 +139,7 @@ namespace SlowTests.Sharding.BucketMigration
                     Console.WriteLine($"After {moves} moves");
                     Console.WriteLine($"ranges: {record.Sharding.BucketRanges.Count}");
                     Console.WriteLine($"So far moved: {new Size(totalMovedBytes, SizeUnit.Bytes)}");
-                    Console.WriteLine(string.Join(Environment.NewLine, reports.Select(r => $"{r.Shard}:{new Size(r.TotalSize, SizeUnit.Bytes)}")));
+                    Console.WriteLine(string.Join(Environment.NewLine, reports.Select(r => $"{r.Value.Shard}:{new Size(r.Value.TotalSize, SizeUnit.Bytes)}")));
                 }
 
                 if (moves % 16 == 0)
