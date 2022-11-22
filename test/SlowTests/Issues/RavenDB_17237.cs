@@ -22,7 +22,10 @@ namespace SlowTests.Issues
         [Fact]
         public async Task MustNotDisableThrottlingTimerOnUpdatingIndexDefinitionOfThrottledIndex()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options()
+                   {
+                       ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "0"
+                   }))
             {
                 var indexDef = new Orders_ByOrderedAtAndShippedAt(storeFields: false)
                 {
