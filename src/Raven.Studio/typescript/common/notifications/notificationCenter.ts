@@ -53,6 +53,7 @@ import transactionCommandsDetails = require("viewmodels/common/notificationCente
 import dumpRawIndexDataDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/dumpRawIndexDataDetails");
 
 import studioSettings = require("common/settings/studioSettings");
+import optimizeIndexDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/optimizeIndexDetails");
 
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -142,6 +143,7 @@ class notificationCenter {
             replayTransactionCommandsDetails,
             transactionCommandsDetails,
             dumpRawIndexDataDetails,
+            optimizeIndexDetails,
             
             // virtual operations:
             virtualBulkInsertDetails,
@@ -490,7 +492,7 @@ class notificationCenter {
             }
         }
 
-        throw new Error("Unsupported notification: " + notification);
+        throw new Error("Unsupported notification: " + notification.type);
     }
 
     private shouldConsumeHideEvent(e: Event) {
