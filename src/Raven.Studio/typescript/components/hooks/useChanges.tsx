@@ -11,9 +11,13 @@ export interface ChangesProps {
 }
 
 export function useChanges(): ChangesProps {
-    const [serverNotifications, setServerNotifications] = useState<serverNotificationCenterClient>();
-    const [databaseNotifications, setDatabaseNotifications] = useState<databaseNotificationCenterClient>();
-    const [databaseChangesApi, setDatabaseChangesApi] = useState<changesApi>();
+    const [serverNotifications, setServerNotifications] = useState<serverNotificationCenterClient>(
+        changesContext.default.serverNotifications
+    );
+    const [databaseNotifications, setDatabaseNotifications] = useState<databaseNotificationCenterClient>(
+        changesContext.default.databaseNotifications
+    );
+    const [databaseChangesApi, setDatabaseChangesApi] = useState<changesApi>(changesContext.default.databaseChangesApi);
 
     useEffect(() => {
         const sub = changesContext.default.serverNotifications.subscribe(setServerNotifications);
