@@ -868,16 +868,14 @@ namespace SlowTests.Sharding.Cluster
                         Equal(0, tombs.Count);
                     }
 
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Major,
-                        "Preserve bucket ranges on backup and restore : https://issues.hibernatingrhinos.com/issue/RavenDB-19160/");
-                    /*using (var session = store.OpenSession(restoredDatabaseName))
+                    using (var session = store.OpenSession(restoredDatabaseName))
                     {
                         for (int i = 1; i <= 11; i++)
                         {
                             var doc = session.Load<User>($"users/{i}${suffix}");
                             NotNull(doc);
                         }
-                    }*/
+                    }
                 }
             }
         }
