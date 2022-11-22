@@ -64,6 +64,10 @@ namespace Raven.Server.Rachis
                 _engine.Log.Info($"{ToString()}: Entering steady state");
             }
 
+            AppendEntriesResponse lastAer = null;
+
+            var sw = Stopwatch.StartNew();
+
             while (true)
             {
                 entries.Clear();
@@ -203,13 +207,22 @@ namespace Raven.Server.Rachis
                         return;
                     }
                     _debugRecorder.Record("Processing entries is completed");
-                    _connection.Send(context, new AppendEntriesResponse
+                    var curAer = new AppendEntriesResponse { CurrentTerm = _term, LastLogIndex = lastAcknowledgedIndex, LastCommitIndex = lastCommit, Success = true };
+
+                    bool shouldLog = false;
+                    if (sw.Elapsed.TotalMilliseconds > 1000)
                     {
-                        CurrentTerm = _term,
-                        LastLogIndex = lastAcknowledgedIndex,
-                        LastCommitIndex = lastCommit,
-                        Success = true
-                    });
+                        shouldLog = true;
+                        sw.Restart();
+                    }
+                    else
+                    {
+                        shouldLog = curAer.Equals(lastAer) == false;
+                    }
+
+                    _connection.Send(context, curAer, shouldLog);
+                    lastAer = curAer;
+
 
                     if (sp.Elapsed > _engine.ElectionTimeout / 2)
                     {
