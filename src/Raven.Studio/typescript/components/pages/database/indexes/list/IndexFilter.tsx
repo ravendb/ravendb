@@ -31,13 +31,13 @@ function IndexFilterStatusItem(props: IndexFilterStatusItemProps) {
     const switchColor = `form-check-${props.color ?? "secondary"}`;
 
     return (
-        <div className="m-3">
+        <DropdownItem text>
             <FormGroup switch className={classNames("form-check-reverse", switchColor, props.toggleClass)}>
                 <Input type="switch" role="switch" checked={props.checked} onChange={props.toggleStatus} />
                 <Label check>{props.label}</Label>
             </FormGroup>
             {props.children}
-        </div>
+        </DropdownItem> //TODO: Fix buttons lag
     );
 }
 
@@ -246,7 +246,7 @@ export default function IndexFilter(props: IndexFilterProps) {
                         color="warning"
                     />
                     <DropdownItem divider />
-                    <div className="bg-warning">
+                    <div className="bg-faded-warning">
                         <IndexFilterStatusItem
                             toggleStatus={toggleIndexesWithErrors}
                             checked={filter.showOnlyIndexesWithIndexingErrors}
@@ -254,14 +254,18 @@ export default function IndexFilter(props: IndexFilterProps) {
                             color="warning"
                         />
                     </div>
-                    <div className="bg-info">
+                    <div className="bg-faded-info">
                         <IndexFilterStatusItem
                             toggleStatus={toggleAutoRefresh}
                             checked={filter.autoRefresh}
                             label="Auto refresh"
                             color="warning"
                         >
-                            <small>Automatically refreshes the list of indexes. Might result in list flickering.</small>
+                            <div className="fs-5">
+                                Automatically refreshes the list of indexes.
+                                <br />
+                                Might result in list flickering.
+                            </div>
                         </IndexFilterStatusItem>
                     </div>
                 </DropdownMenu>

@@ -98,3 +98,21 @@ input {
         margin: 0;
     }
 }
+
+$additional-utilities: 
+  (
+    "background-color": (
+      property: background-color,
+      class: bg,
+      values: map-merge(
+        $theme-colors-faded,
+        ()
+      )
+    ),
+  );
+
+
+
+@each $key, $utility in $additional-utilities {
+    @include generate-utility($utility, "-faded");
+}

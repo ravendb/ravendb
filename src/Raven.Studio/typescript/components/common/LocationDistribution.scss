@@ -34,7 +34,7 @@
             align-items: center;
 
             & + div {
-                border-top: 2px solid colors.$black;
+                border-top: 1px solid colors.$border-color-light;
             }
 
             &:first-of-type {
