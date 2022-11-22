@@ -9,14 +9,14 @@ namespace Raven.Client.Documents.Operations;
 public class DelayBackupOperation : IMaintenanceOperation<OperationState>
 {
     private readonly long _runningBackupTaskId;
-    private readonly TimeSpan? _duration;
+    private readonly TimeSpan _duration;
 
-    public DelayBackupOperation(long runningBackupTaskId, TimeSpan? duration)
+    public DelayBackupOperation(long runningBackupTaskId, TimeSpan duration)
     {
         _runningBackupTaskId = runningBackupTaskId;
         _duration = duration;
     }
-        
+
     public RavenCommand<OperationState> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new DelayBackupCommand(_runningBackupTaskId, _duration);
@@ -27,7 +27,7 @@ public class DelayBackupOperation : IMaintenanceOperation<OperationState>
         private readonly long _taskId;
         private readonly TimeSpan? _duration;
 
-        public DelayBackupCommand(long taskId, TimeSpan? duration)
+        public DelayBackupCommand(long taskId, TimeSpan duration)
         {
             _taskId = taskId;
             _duration = duration;

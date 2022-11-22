@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         NotificationSeverity.Info,
                         details: new ExceptionDetails(oce)));
                 }
-                
+
                 throw;
             }
             catch (Exception e)
@@ -278,7 +278,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         runningBackupStatus.Version = ++_previousBackupStatus.Version;
                         // save the backup status
                         AddInfo("Saving backup status");
-                        SaveBackupStatus(runningBackupStatus, _database, _logger, _backupResult);
+                        SaveBackupStatus(runningBackupStatus, _database, _logger, _backupResult, _forTestingPurposes);
                     }
                 }
             }
@@ -864,8 +864,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             _database.NotificationCenter.Dismiss(id);
         }
 
-        public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, BackupResult backupResult)
+        public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, BackupResult backupResult, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
+            if (forTestingPurposes != null && forTestingPurposes.SkipBackupStatusSaving)
+                return;
+
             try
             {
                 var command = new UpdatePeriodicBackupStatusCommand(documentDatabase.Name, RaftIdGenerator.NewId())

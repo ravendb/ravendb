@@ -139,7 +139,7 @@ namespace Raven.Server.ServerWide
 
             [nameof(EditLockModeCommand)] = 52_000,
             [nameof(PutRollingIndexCommand)] = 52_000,
-            [nameof(DelayBackupCommand)] = 52_000
+            [nameof(DelayBackupCommand)] = 52_001
         };
 
         public static bool CanPutCommand(string command)

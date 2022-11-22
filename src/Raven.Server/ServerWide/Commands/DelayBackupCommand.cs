@@ -8,7 +8,7 @@ namespace Raven.Server.ServerWide.Commands;
 public class DelayBackupCommand : UpdateValueForDatabaseCommand
 {
     public long TaskId;
-    public DateTime? DelayUntil;
+    public DateTime DelayUntil;
 
     // ReSharper disable once UnusedMember.Local
     private DelayBackupCommand()

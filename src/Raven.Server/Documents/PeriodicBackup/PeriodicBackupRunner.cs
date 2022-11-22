@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.PeriodicBackup
     {
         private readonly Logger _logger;
         private readonly Logger _auditLog;
-        
+
         private readonly DocumentDatabase _database;
         private readonly ServerStore _serverStore;
         private readonly CancellationTokenSource _cancellationToken;
@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return CreateBackupTask(periodicBackup, isFullBackup, SystemTime.UtcNow);
         }
 
-        public async Task Delay(long taskId, TimeSpan? delayInHrs, X509Certificate2 clientCert)
+        public async Task Delay(long taskId, TimeSpan delay, X509Certificate2 clientCert)
         {
             foreach (var periodicBackup in _periodicBackups)
             {
@@ -331,7 +331,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (runningTask == null || runningTask.Id != taskId)
                     continue;
 
-                var delayUntil = DateTime.UtcNow.AddTicks(delayInHrs.Value.Ticks);
+                var delayUntil = DateTime.UtcNow.AddTicks(delay.Ticks);
 
                 var command = new DelayBackupCommand(_database.Name, RaftIdGenerator.NewId())
                 {
@@ -339,13 +339,20 @@ namespace Raven.Server.Documents.PeriodicBackup
                     DelayUntil = delayUntil
                 };
 
+                periodicBackup.Value.BackupStatus.DelayUntil = delayUntil;
+
                 (long index, _) = await _database.ServerStore.SendToLeaderAsync(command);
                 await _database.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
 
                 if (_auditLog.IsInfoEnabled)
-                    _logger.Info(clientCert == null
-                        ? $"Backup task with task id {taskId} was delayed until '{delayUntil}' UTC"
-                        : $"Backup task with task id {taskId} was delayed until '{delayUntil}' UTC by {clientCert.Subject} {clientCert.Thumbprint}");
+                {
+                    var msg = $"Backup task with task id {taskId} was delayed until '{delayUntil}' UTC";
+
+                    if (clientCert != null)
+                        msg += $" by {clientCert.Subject} ({clientCert.Thumbprint})";
+
+                    _logger.Info(msg);
+                }
 
                 _database.Operations.KillOperation(taskId);
 
@@ -559,7 +566,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
             {
-                runningBackupStatus.DelayUntil = GetBackupStatus(periodicBackup.BackupStatus.TaskId).DelayUntil;
+                if (_periodicBackups.TryGetValue(periodicBackup.BackupStatus.TaskId, out PeriodicBackup inMemoryBackupStatus))
+                    runningBackupStatus.DelayUntil = inMemoryBackupStatus.BackupStatus.DelayUntil;
 
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations($"Canceled the backup thread: '{periodicBackup.Configuration.Name}'", oce);
@@ -693,7 +701,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             return GetBackupStatus(taskId, inMemoryBackupStatus);
         }
-
+        
         private PeriodicBackupStatus GetBackupStatus(long taskId, PeriodicBackupStatus inMemoryBackupStatus)
         {
             var backupStatus = GetBackupStatusFromCluster(_serverStore, _database.Name, taskId);
@@ -1032,8 +1040,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                           $"full backup frequency: {configuration.FullBackupFrequency}, " +
                           $"incremental backup frequency: {configuration.IncrementalBackupFrequency}";
             if (string.IsNullOrWhiteSpace(configuration.Name) == false)
-                    message += $", backup name: {configuration.Name}";
-            
+                message += $", backup name: {configuration.Name}";
+
             _database.NotificationCenter.Add(AlertRaised.Create(
                 _database.Name,
                 "Couldn't schedule next backup, this shouldn't happen",
@@ -1127,6 +1135,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             internal bool SimulateActiveByCurrentNode_UpdateConfigurations;
             internal bool SimulateDisableNodeStatus_UpdateConfigurations;
             internal bool SimulateFailedBackup;
+            internal bool SkipBackupStatusSaving;
 
             internal TaskCompletionSource<object> OnBackupTaskRunHoldBackupExecution;
         }
