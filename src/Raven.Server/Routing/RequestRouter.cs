@@ -225,9 +225,17 @@ namespace Raven.Server.Routing
             var tryMatch = _trie.TryMatch(context.Request.Method, context.Request.Path.Value);
             if (tryMatch.Value == null)
             {
-                var exception = new RouteNotFoundException($"There is no handler for path: {context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString}");
-                AssertClientVersion(context, exception);
-                throw exception;
+                // CONNECT (https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/CONNECT)
+                // starting from .NET 7 can be used by WS connections to establish a communication
+                if (string.Equals(context.Request.Method, "CONNECT", StringComparison.OrdinalIgnoreCase))
+                    tryMatch = _trie.TryMatch("GET", context.Request.Path.Value);
+
+                if (tryMatch.Value == null)
+                {
+                    var exception = new RouteNotFoundException($"There is no handler for path: {context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString}");
+                    AssertClientVersion(context, exception);
+                    throw exception;
+                }
             }
 
             reqCtx.RavenServer = _ravenServer;
