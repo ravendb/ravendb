@@ -309,9 +309,12 @@ namespace Raven.Server.Web.System
         public async Task DelayBackupTask()
         {
             var id = GetLongQueryString("taskId");
-            var delayInHrs = GetTimeSpanQueryString("duration");
-            
-            await Database.PeriodicBackupRunner.Delay(id, delayInHrs, GetCurrentCertificate());
+            var delay = GetTimeSpanQueryString("duration");
+
+            if (delay <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(delay));
+
+            await Database.PeriodicBackupRunner.Delay(id, delay.Value, GetCurrentCertificate());
         }
 
         [RavenAction("/databases/*/admin/periodic-backup/config", "GET", AuthorizationStatus.DatabaseAdmin)]
@@ -346,7 +349,7 @@ namespace Raven.Server.Web.System
                 BackupDatabaseHandler.WriteEndOfTimers(writer, count);
             }
         }
-        
+
         [RavenAction("/databases/*/admin/periodic-backup", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdatePeriodicBackup()
         {
@@ -728,7 +731,7 @@ namespace Raven.Server.Web.System
                     }
 
                     break;
-                
+
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
@@ -770,11 +773,11 @@ namespace Raven.Server.Web.System
             string etlConfigurationName = null;
 
             await DatabaseConfigurations((_, databaseName, etlConfiguration, guid) =>
-                {
-                    var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, guid);
-                    etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
-                    return task;
-                }, "etl-update",
+            {
+                var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration, guid);
+                etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
+                return task;
+            }, "etl-update",
                 GetRaftRequestIdFromQuery(),
                 beforeSetupConfiguration: AssertCanAddOrUpdateEtl,
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
@@ -886,7 +889,7 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-            
+
             if (databaseRecord.OlapEtls != null)
             {
                 foreach (var olapEtl in databaseRecord.OlapEtls)
@@ -1063,7 +1066,7 @@ namespace Raven.Server.Web.System
                                 Error = sqlEtlError
                             });
                             break;
-                        
+
                         case OngoingTaskType.OlapEtl:
 
                             var olapEtl = name != null ?
@@ -1075,7 +1078,7 @@ namespace Raven.Server.Web.System
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
-                            
+
                             await WriteResult(context, new OngoingTaskOlapEtlDetails
                             {
                                 TaskId = olapEtl.TaskId,
