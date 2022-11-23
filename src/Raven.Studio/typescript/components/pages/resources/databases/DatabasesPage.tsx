@@ -8,6 +8,7 @@ import { DatabasesCounter } from "./DatabasesCounter";
 import { NoDatabases } from "./NoDatabases";
 import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
 import { useChanges } from "hooks/useChanges";
+import { Col, Row } from "reactstrap";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -98,16 +99,20 @@ export function DatabasesPage(props: DatabasesPageProps) {
 
     return (
         <div>
-            <div className="flex-header">
-                <div className="databasesToolbar">
-                    <DatabasesToolbarActions />
-                    <DatabasesFilter
-                        filter={filter}
-                        setFilter={setFilter}
-                        selectionState={databasesSelectionState}
-                        toggleSelectAll={toggleSelectAll}
-                    />
-                </div>
+            <div className="sticky-header">
+                <Row className="databasesToolbar">
+                    <Col>
+                        <DatabasesFilter
+                            filter={filter}
+                            setFilter={setFilter}
+                            selectionState={databasesSelectionState}
+                            toggleSelectAll={toggleSelectAll}
+                        />
+                    </Col>
+                    <Col>
+                        <DatabasesToolbarActions />
+                    </Col>
+                </Row>
             </div>
             <div
                 className="flex-grow scroll js-scroll-container"

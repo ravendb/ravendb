@@ -20,6 +20,7 @@ import {
     RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
+    RichPanelName,
     RichPanelSelect,
 } from "../../../../common/RichPanel";
 import { Checkbox } from "../../../../common/Checkbox";
@@ -170,17 +171,15 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                 <RichPanelHeader id={indexUniqueId(index)}>
                     <RichPanelSelect>
                         {canReadWriteDatabase(database) && (
-                            <FormGroup check className="form-check-secondary form-check-lg">
-                                <Input type="checkbox" onClick={toggleSelection} checked={selected} />
-                            </FormGroup>
+                            <Input type="checkbox" onClick={toggleSelection} checked={selected} />
                         )}
                     </RichPanelSelect>
 
-                    <h3 className="index-name flex-grow">
+                    <RichPanelName>
                         <a href={editUrl} title={index.name}>
                             {index.name}
                         </a>
-                    </h3>
+                    </RichPanelName>
 
                     {!IndexUtils.hasAnyFaultyNode(index) && (
                         <div className="flex-horizontal">

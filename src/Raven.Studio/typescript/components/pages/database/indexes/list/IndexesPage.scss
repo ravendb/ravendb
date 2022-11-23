@@ -19,21 +19,6 @@
 }
 
 .indexes {
-    .sticky-header {
-        position: sticky;
-        top: 0;
-        margin: sizes.$gutter*-1;
-        margin-bottom: 0;
-        padding: sizes.$gutter sizes.$gutter sizes.$gutter-sm;
-        background-color: rgba(colors.$body-bg, .9);
-        z-index: 1000;
-        backdrop-filter: blur(2px);
-    }
-
-    h2 {
-        margin-top: sizes.$gutter;
-        margin-bottom: sizes.$gutter-sm;
-    }
 
     .indexes-list {
         .index-name {

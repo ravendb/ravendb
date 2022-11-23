@@ -2,6 +2,7 @@
 import { useAccessManager } from "../../../hooks/useAccessManager";
 import createDatabase from "viewmodels/resources/createDatabase";
 import app from "durandal/app";
+import { Button, ButtonGroup } from "reactstrap";
 
 export function DatabasesToolbarActions() {
     const { isOperatorOrAbove } = useAccessManager();
@@ -13,7 +14,7 @@ export function DatabasesToolbarActions() {
     }, []);
 
     return (
-        <div className="databasesToolbar-actions">
+        <div className="databasesToolbar-actions d-flex justify-content-end">
             {/*
             <div className="btn-group-label"
                  data-bind="css: { active: selectedDatabases().length }, visible: accessManager.canSetState || accessManager.canDelete"
@@ -83,11 +84,11 @@ export function DatabasesToolbarActions() {
             </div>
             */}
             {canCreateNewDatabase && (
-                <div className="btn-group">
-                    <button type="button" className="btn btn-primary" onClick={newDatabase}>
+                <ButtonGroup>
+                    <Button color="primary" onClick={newDatabase}>
                         <i className="icon-new-database" />
                         <span>New database</span>
-                    </button>
+                    </Button>
                     {/* TODO
                 <button type="button" className="btn btn-primary dropdown-toggle" data-toggle="dropdown"
                         aria-haspopup="true" aria-expanded="false">
@@ -107,7 +108,7 @@ export function DatabasesToolbarActions() {
                     </li>
                 </ul>
                 */}
-                </div>
+                </ButtonGroup>
             )}
         </div>
     );

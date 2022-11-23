@@ -1,6 +1,7 @@
 ﻿import React, { ChangeEvent, useCallback } from "react";
 import { DatabaseFilterCriteria } from "../../../models/databases";
 import { CheckboxTriple } from "../../../common/CheckboxTriple";
+import { Col, Input, InputGroup, Row } from "reactstrap";
 
 interface DatabasesFilterProps {
     filter: DatabaseFilterCriteria;
@@ -23,22 +24,22 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
     );
 
     return (
-        <div className="databasesToolbar-filter">
-            <div className="checkbox checkbox-primary checkbox-inline align-checkboxes" title="Select all or none">
-                <CheckboxTriple onChanged={toggleSelectAll} state={selectionState} />
-                <label />
-            </div>
-            <div className="input-group">
-                <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Filter"
-                    accessKey="/"
-                    title="Filter databases (Alt+/)"
-                    value={filter.searchText}
-                    onChange={onSearchTextChange}
-                />
-            </div>
+        <Row className="databasesToolbar-filter">
+            <Col sm="auto">
+                <CheckboxTriple onChanged={toggleSelectAll} state={selectionState} title="Select all or none" />
+            </Col>
+            <Col>
+                <InputGroup>
+                    <Input
+                        type="text"
+                        placeholder="Filter"
+                        accessKey="/"
+                        title="Filter databases (Alt+/)"
+                        value={filter.searchText}
+                        onChange={onSearchTextChange}
+                    />
+                </InputGroup>
+            </Col>
             {/* TODO <div className="btn-group">
                 <button type="button" className="btn btn-default dropdown-toggle" data-toggle="dropdown"
                         data-bind="css: { 'active': filters.requestedState() !== 'all' }"
@@ -97,6 +98,6 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
                     </li>
                 </ul>
             </div>*/}
-        </div>
+        </Row>
     );
 }
