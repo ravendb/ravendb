@@ -488,7 +488,7 @@ namespace Raven.Server.Utils
             BlittableJsonReaderArray = 4,
         }
 
-        public static dynamic ToDynamicType(object value, JsonOperationContext context = null)
+        public static dynamic ToDynamicType(object value)
         {
             if (value == null)
                 return DynamicNullObject.ExplicitNull;
@@ -501,10 +501,7 @@ namespace Raven.Server.Utils
                 if (TryConvertStringValue(valueAsString, out object result))
                     return result;
 
-                if (context == null)
-                    return valueAsString;
-                
-                return context.GetLazyString(valueAsString);
+                return valueAsString;
             }
 
             LazyStringValue lazyString = null;
