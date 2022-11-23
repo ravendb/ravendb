@@ -1057,7 +1057,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     progress.RavenConnectionStringsUpdated = true;
                 }
-                
+
                 if (databaseRecord.RavenEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RavenEtls))
                 {
                     if (_log.IsInfoEnabled)
@@ -1088,7 +1088,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     progress.SqlConnectionStringsUpdated = true;
                 }
-                
+
                 if (databaseRecord.SqlEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SqlEtls))
                 {
                     if (_log.IsInfoEnabled)
@@ -1231,7 +1231,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     progress.LockModeUpdated = true;
                 }
-                
+
                 if (databaseRecord.OlapConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.OlapConnectionStrings))
                 {
                     if (_log.IsInfoEnabled)
@@ -1262,7 +1262,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     progress.OlapEtlsUpdated = true;
                 }
-                
+
                 if (databaseRecord.ElasticSearchConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticSearchConnectionStrings))
                 {
                     if (_log.IsInfoEnabled)
@@ -1273,7 +1273,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     progress.ElasticSearchConnectionStringsUpdated = true;
                 }
-                
+
                 if (databaseRecord.ElasticSearchEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticSearchEtls))
                 {
                     if (_log.IsInfoEnabled)
@@ -1292,6 +1292,37 @@ namespace Raven.Server.Smuggler.Documents
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddElasticSearchEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
                     }
                     progress.ElasticSearchEtlsUpdated = true;
+                }
+
+                if (databaseRecord.QueueConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.QueueConnectionStrings))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring Queue ETL connection strings from smuggler");
+                    foreach (var connectionString in databaseRecord.QueueConnectionStrings)
+                    {
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutQueueConnectionStringCommand(connectionString.Value, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+                    progress.QueueConnectionStringsUpdated = true;
+                }
+
+                if (databaseRecord.QueueEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.QueueEtls))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring Queue ETLs configuration from smuggler");
+                    foreach (var etl in databaseRecord.QueueEtls)
+                    {
+                        currentDatabaseRecord?.QueueEtls.ForEach(x =>
+                        {
+                            if (x.Name.Equals(etl.Name, StringComparison.OrdinalIgnoreCase))
+                            {
+                                tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteOngoingTaskCommand(x.TaskId, OngoingTaskType.QueueEtl, _database.Name, RaftIdGenerator.DontCareId)));
+                            }
+                        });
+                        etl.TaskId = 0;
+                        etl.Disabled = true;
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddQueueEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+                    progress.QueueEtlsUpdated = true;
                 }
 
                 if (tasks.Count == 0)
@@ -2186,7 +2217,14 @@ namespace Raven.Server.Smuggler.Documents
 
             private void AddToBatch(TimeSeriesItem item)
             {
-                _cmd.AddToDictionary(item);
+                if (_cmd.AddToDictionary(item))
+                {
+                    // RavenDB-19504 - if we have a lot of _small_ updates, that can add up quickly, but it won't 
+                    // be accounted for that if we look at segment size alone. So we assume that any new item means
+                    // updating the whole segment. This is especially important for encrypted databases, where we need
+                    // to keep all the modified data in memory in one shot
+                    _segmentsSize.Add(2, SizeUnit.Kilobytes);
+                }
                 _segmentsSize.Add(item.Segment.NumberOfBytes, SizeUnit.Bytes);
             }
 
