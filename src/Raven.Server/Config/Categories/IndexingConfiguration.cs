@@ -447,7 +447,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex { get; protected set; }
         
         protected override void ValidateProperty(PropertyInfo property)
