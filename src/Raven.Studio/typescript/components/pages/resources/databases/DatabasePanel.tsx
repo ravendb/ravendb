@@ -10,6 +10,29 @@ import app from "durandal/app";
 import { useEventsCollector } from "../../../hooks/useEventsCollector";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { useServices } from "../../../hooks/useServices";
+import {
+    Badge,
+    Button,
+    ButtonGroup,
+    Card,
+    CardHeader,
+    Dropdown,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
+    FormGroup,
+    Input,
+    Spinner,
+    UncontrolledDropdown,
+} from "reactstrap";
+import {
+    RichPanel,
+    RichPanelDetailItem,
+    RichPanelDetails,
+    RichPanelHeader,
+    RichPanelName,
+    RichPanelSelect,
+} from "../../../common/RichPanel";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -155,64 +178,73 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     //TODO: createIsLocalDatabaseObservable -> relevant
     return (
-        <div
-            className={classNames("panel panel-hover panel-state database-item", badgeClass(db), {
+        <RichPanel
+            className={classNames("database-item", badgeClass(db), {
                 active: activeDatabase?.name === db.name,
                 relevant: true,
             })}
             data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), 
                            ) }"
         >
-            <div
-                className={classNames("state", badgeClass(db))}
-                data-state-text={badgeText(db)}
-                data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', 
+            {" "}
+            <div className="flex-horizontal">
+                <div
+                    className={classNames("state", "flex-shrink-0", badgeClass(db))}
+                    data-state-text={badgeText(db)}
+                    data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', 
     class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"
-            />
-            <div className="padding-sm">
-                <div className="database-header">
-                    <div className="info-container flex-horizontal">
-                        <div className="checkbox">
-                            <input type="checkbox" className="styled" checked={selected} onChange={toggleSelection} />
-                            <label />
-                        </div>
-                        <div className="name">
-                            {/* TODO <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()">
+                />
+                <div className="flex-grow-1">
+                    <RichPanelHeader className="database-header ">
+                        <div className="flex-horizontal align-items-center">
+                            {/* TODO .mb-3 class shows out of nowhere  */}
+                            <RichPanelSelect>
+                                <Input type="checkbox" checked={selected} onChange={toggleSelection} />
+                            </RichPanelSelect>
+
+                            <RichPanelName>
+                                {/* TODO <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()">
                                 <small><i
                                     data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }" /></small>
                                 <span>{db.name}</span>
                             </span>*/}
-                            <a
-                                data-bind="attr: {  target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' },
+                                <a
+                                    data-bind="attr: {  target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' },
                                               css: { 'link-disabled': isBeingDeleted }, visible: canNavigateToDatabase()"
-                                href={documentsUrl}
-                                title={db.name}
-                            >
-                                <small>
+                                    href={documentsUrl}
+                                    title={db.name}
+                                >
                                     <i
                                         className="icon-database-home"
                                         data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"
                                     />
-                                </small>
-                                <span>{db.name}</span>
-                            </a>
-                            {db.sharded && <span className="text-muted margin-left margin-left-sm">(sharded)</span>}
-                        </div>
-                        <div className="member">
-                            {/* ko foreach: _.slice(nodes(), 0, 5) */}
-                            <a
-                                data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank',
+
+                                    <span>{db.name}</span>
+                                </a>
+                            </RichPanelName>
+
+                            {db.sharded && (
+                                <Badge color="shard" pill className="me-4">
+                                    <i className="icon-sharding" />
+                                    <span>sharded</span>
+                                </Badge>
+                            )}
+
+                            <div className="member">
+                                {/* ko foreach: _.slice(nodes(), 0, 5) */}
+                                <a
+                                    data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank',
                                                       title: 'Click to navigate to this database on node ' + tag() },
                                               css: { 'link-disabled': $parent.isBeingDeleted }"
-                            >
-                                <small>
-                                    <i data-bind="attr: { class: cssIcon }" />
-                                    <span data-bind="text: 'Node ' + tag()" />
-                                </small>
-                            </a>
-                            {/* /ko --> */}
+                                >
+                                    <small>
+                                        <i data-bind="attr: { class: cssIcon }" />
+                                        <span data-bind="text: 'Node ' + tag()" />
+                                    </small>
+                                </a>
+                                {/* /ko --> */}
 
-                            {/* TODO: <!-- ko foreach: deletionInProgress -->
+                                {/* TODO: <!-- ko foreach: deletionInProgress -->
                             <div>
                                 <div title="Deletion in progress" className="text-warning pulse">
                                     <small><i className="icon-trash" /><span data-bind="text: 'Node ' + $data" /></small>
@@ -220,7 +252,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             </div>
                             <!-- /ko -->*/}
 
-                            {/* TODO
+                                {/* TODO
                             <div data-bind="visible: nodes().length > 5">
                                 <a href="#" data-bind="attr: { href: $root.createManageDbGroupUrlObsevable($data) }"
                                    data-toggle="more-nodes-tooltip">
@@ -228,25 +260,25 @@ export function DatabasePanel(props: DatabasePanelProps) {
     data-bind="text: nodes().length - 5"/> more</span></small>
                                 </a>
                             </div> */}
+                            </div>
                         </div>
-                    </div>
-                    <div className="actions-container flex-grow">
+
                         {/* TODO
                         <span data-bind="visible: isLoading">
                             <span className="global-spinner spinner-sm"/>&nbsp;&nbsp;&nbsp;&nbsp;
                         </span>
                         */}
-                        <div className="actions">
-                            <a
-                                className="btn btn-default"
+                        <div className="d-flex justify-content-end flex-grow-1">
+                            <Button
                                 href={manageGroupUrl}
                                 title="Manage the Database Group"
+                                className="me-1"
                                 data-bind="css: { 'disabled': !canNavigateToDatabase() || isBeingDeleted() }, 
                                               attr: { href: $root.createManageDbGroupUrlObsevable($data), target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' }"
                             >
-                                <i className="icon-manage-dbgroup" />
-                                <span>Manage group</span>
-                            </a>
+                                <i className="icon-manage-dbgroup me-2" />
+                                Manage group
+                            </Button>
 
                             {/* TODO <div className="btn-group">
                                 <button className="btn btn-default" data-bind="click: $root.toggleDatabase, visible: $root.accessManager.canDisableEnableDatabase,
@@ -306,9 +338,8 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     title="Refresh database statistics">
                                 <i className="icon-refresh-stats"/>
                             </button>*/}
-                            <div className="btn-group" data-bind="visible: $root.accessManager.canDelete">
-                                <button
-                                    type="button"
+                            <ButtonGroup data-bind="visible: $root.accessManager.canDelete">
+                                <Button
                                     onClick={deleteDatabase}
                                     title={
                                         db.lockMode === "Unlock"
@@ -324,6 +355,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     data-bind=" disable: isBeingDeleted() || lockMode() !== 'Unlock',
                                                                    css: { 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) }"
                                 >
+                                    {lockChanges && <Spinner size="sm" />}
                                     {db.lockMode === "Unlock" && <i className="icon-trash" />}
                                     {db.lockMode === "PreventDeletesIgnore" && (
                                         <i className="icon-trash-cutout icon-addon-cancel" />
@@ -331,53 +363,43 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     {db.lockMode === "PreventDeletesError" && (
                                         <i className="icon-trash-cutout icon-addon-exclamation" />
                                     )}
-                                </button>
-                                <button
-                                    type="button"
-                                    className={classNames("btn dropdown-toggle", {
-                                        "btn-danger": db.lockMode === "Unlock",
-                                        "btn-default": db.lockMode !== "Unlock",
-                                    })}
-                                    data-toggle="dropdown"
-                                    aria-haspopup="true"
-                                >
-                                    <span className="caret" />
-                                    <span className="sr-only">Toggle Dropdown</span>
-                                </button>
-                                <ul className="dropdown-menu dropdown-menu-right">
-                                    <li>
-                                        <a href="#" onClick={allowDatabaseDelete} title="Allow to delete database">
+                                </Button>
+                                <UncontrolledDropdown>
+                                    <DropdownToggle
+                                        caret
+                                        className={classNames("btn dropdown-toggle", {
+                                            "btn-danger": db.lockMode === "Unlock",
+                                            "btn-default": db.lockMode !== "Unlock",
+                                        })}
+                                    ></DropdownToggle>
+                                    <DropdownMenu>
+                                        <DropdownItem onClick={allowDatabaseDelete} title="Allow to delete database">
                                             <i className="icon-trash-cutout icon-addon-check" /> Allow database delete
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a
-                                            href="#"
+                                        </DropdownItem>
+                                        <DropdownItem
                                             onClick={preventDatabaseDelete}
                                             title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database."
                                         >
                                             <i className="icon-trash-cutout icon-addon-cancel" /> Prevent database
                                             delete
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a
-                                            href="#"
+                                        </DropdownItem>
+                                        <DropdownItem
                                             onClick={preventDatabaseDeleteWithError}
                                             title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database."
                                         >
                                             <i className="icon-trash-cutout icon-addon-exclamation" /> Prevent database
                                             delete (Error)
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
+                                        </DropdownItem>
+                                    </DropdownMenu>
+                                </UncontrolledDropdown>
+                            </ButtonGroup>
                         </div>
-                    </div>
+                    </RichPanelHeader>
+
+                    <ValidDatabasePropertiesPanel db={db} />
                 </div>
             </div>
-            <ValidDatabasePropertiesPanel db={db} />
-        </div>
+        </RichPanel>
     );
 }
 
@@ -389,26 +411,22 @@ function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) 
     const { db } = props;
 
     return (
-        <div
-            className="panel-addon"
-            data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.createIsLocalDatabaseObservable(name)"
-        >
-            <div className="padding-sm">
-                <div className="addons-container flex-wrap">
-                    <div className="database-properties">
-                        <div className="encryption">
-                            {db.encrypted && (
-                                <small title="This database is encrypted">
-                                    <i className="icon-key text-success" />
-                                </small>
-                            )}
-                            {!db.encrypted && (
-                                <small title="This database is not encrypted">
-                                    <i className="icon-unencrypted text-muted" />
-                                </small>
-                            )}
-                        </div>
-                        {/* TODO <div data-bind="if: databaseAccessText">
+        <RichPanelDetails data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.createIsLocalDatabaseObservable(name)">
+            <RichPanelDetailItem>
+                <div className="encryption">
+                    {db.encrypted && (
+                        <small title="This database is encrypted">
+                            <i className="icon-key text-success" />
+                        </small>
+                    )}
+                    {!db.encrypted && (
+                        <small title="This database is not encrypted">
+                            <i className="icon-unencrypted text-muted" />
+                        </small>
+                    )}
+                </div>
+            </RichPanelDetailItem>
+            {/* TODO <div data-bind="if: databaseAccessText">
                             <div className="database-access" title="Database access level">
                                 <i data-bind="attr: { class: databaseAccessColor() + ' ' + databaseAccessClass() }"/>
                                 <small data-bind="text: databaseAccessText"/>
@@ -460,8 +478,8 @@ function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) 
                                 </a>
                             </div>
                         </div>*/}
-                    </div>
-                    {/* TODO <div className="database-properties-right">
+
+            {/* TODO <div className="database-properties-right">
                         <div className="indexing-errors text-danger" data-bind="visible: indexingErrors()">
                             <small><i className="icon-exclamation"/></small>
                             <a className="set-size text-danger"
@@ -513,9 +531,7 @@ function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) 
                         </div>
                       
                     </div>*/}
-                </div>
-            </div>
-        </div>
+        </RichPanelDetails>
     );
 }
 

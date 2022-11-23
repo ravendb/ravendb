@@ -1,4 +1,4 @@
-﻿import { withStorybookContexts } from "../../../../test/storybookTestUtils";
+﻿import { withBootstrap5, withStorybookContexts } from "../../../../test/storybookTestUtils";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
@@ -9,7 +9,7 @@ import { DatabasesPage } from "./DatabasesPage";
 export default {
     title: "Pages/Databases",
     component: DatabasesPage,
-    decorators: [withStorybookContexts],
+    decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof DatabasesPage>;
 
 export const Sharded: ComponentStory<typeof DatabasesPage> = () => {

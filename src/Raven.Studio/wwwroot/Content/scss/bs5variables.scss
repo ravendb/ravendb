@@ -64,7 +64,10 @@ $theme-colors: (
   "warning":    $warning,
   "danger":     $danger,
   "light":      $light,
-  "dark":       $dark
+  "dark":       $dark,
+  "node":       $node-color,
+  "shard":      $shard-color,
+  "progress":   $progress-color
 ) !default;
 
 $theme-colors-faded: (

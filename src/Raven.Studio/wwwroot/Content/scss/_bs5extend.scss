@@ -1,10 +1,21 @@
+// TODO replace all panels widh cards -> remove css
 .panel {
     background-color: $panel-bg-1;
     color: $text-color;
 }
 
-.text-capital {
-    text-transform: uppercase;
+.sticky-header {
+    position: sticky;
+    top: 0;
+    margin: $gutter*-1;
+    margin-bottom: 0;
+    padding: $gutter $gutter $gutter-sm;
+    background-color: rgba($body-bg, .9);
+    z-index: 1000;
+    backdrop-filter: blur(2px);
+}
+
+.text-uppercase {    
     letter-spacing: .1em;
 }
 
@@ -12,11 +23,11 @@
     color: $text-emphasis;
 }
 
-input {
-    &[type=checkbox], &[type=radio] {
-        cursor: pointer;
-    }
-}
+// input {
+//     &[type=checkbox], &[type=radio] {
+//         cursor: pointer;
+//     }
+// }
 
 @mixin check-variant($color) {
     .form-check-input {
@@ -110,8 +121,6 @@ $additional-utilities:
       )
     ),
   );
-
-
 
 @each $key, $utility in $additional-utilities {
     @include generate-utility($utility, "-faded");
