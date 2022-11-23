@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var resultObject = _inner.ElementAt(i);
 
-            result = TypeConverter.ToDynamicType(resultObject, CurrentIndexingScope.Current?.IndexContext);
+            result = TypeConverter.ToDynamicType(resultObject);
             return true;
         }
 
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public DynamicArrayIterator GetEnumerator()
         {
-            return new DynamicArrayIterator(_inner, CurrentIndexingScope.Current?.IndexContext);
+            return new DynamicArrayIterator(_inner);
         }
 
         public int Count() => _inner.Count();
@@ -585,7 +585,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public IEnumerable<object> Distinct()
         {
-            return new DynamicArray(Enumerable.Distinct(this));
+            return new DynamicArray(Enumerable.Distinct(this, new LazyStringEqualityComparer(CurrentIndexingScope.Current?.IndexContext)));
         }
 
         public dynamic DefaultIfEmpty(object defaultValue = null)
@@ -770,12 +770,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public struct DynamicArrayIterator : IEnumerator<object>
         {
-            private readonly JsonOperationContext _context;
             private readonly IEnumerator<object> _inner;
 
-            public DynamicArrayIterator(IEnumerable<object> items, JsonOperationContext context)
+            public DynamicArrayIterator(IEnumerable<object> items)
             {
-                _context = context;
                 _inner = items.GetEnumerator();
                 Current = null;
             }
@@ -786,7 +784,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return false;
 
 
-                Current = TypeConverter.ToDynamicType(_inner.Current, _context);
+                Current = TypeConverter.ToDynamicType(_inner.Current);
                 return true;
             }
 
@@ -842,5 +840,62 @@ namespace Raven.Server.Documents.Indexes.Static
                 return GetEnumerator();
             }
         }
+
+        private class LazyStringEqualityComparer : IEqualityComparer<object>
+        {
+            private readonly JsonOperationContext _context;
+
+            public LazyStringEqualityComparer(JsonOperationContext context)
+            {
+                _context = context;
+            }
+
+            public new bool Equals(object x, object y)
+            {
+                if (_context == null)
+                    return EqualityComparer<object>.Default.Equals(x, y);
+
+                if (x is string xAsString && y is string yAsString)
+                    return xAsString.Equals(yAsString);
+
+                if (x is LazyStringValue xLsv && y is string yAsString2)
+                {
+                    using (var yInner = _context.GetLazyString(yAsString2))
+                        return xLsv.Equals(yInner);
+                }
+
+                if (x is LazyCompressedStringValue xLcsv && y is string yAsString3)
+                {
+                    using (var xInner = xLcsv.ToLazyStringValue())
+                    using (var yInner = _context.GetLazyString(yAsString3))
+                        return xInner.Equals(yInner);
+                }
+
+                if (x is string xAsString2 && y is LazyStringValue yLsv)
+                {
+                    using (var xInner = _context.GetLazyString(xAsString2))
+                        return xInner.Equals(yLsv);
+                }
+
+                if (x is string xAsString3 && y is LazyCompressedStringValue yLcsv)
+                {
+                    using (var yInner = yLcsv.ToLazyStringValue())
+                    using (var xInner = _context.GetLazyString(xAsString3))
+                        return xInner.Equals(yInner);
+                }
+
+                return EqualityComparer<object>.Default.Equals(x, y);
+            }
+
+            public int GetHashCode(object obj)
+            {
+                if (_context == null || obj is not string s)
+                    return EqualityComparer<object>.Default.GetHashCode(obj);
+
+                using (var lsv = _context.GetLazyString(s))
+                    return lsv.GetHashCode();
+            }
+        }
+
     }
 }
