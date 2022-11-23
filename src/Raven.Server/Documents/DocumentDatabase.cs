@@ -1165,6 +1165,15 @@ namespace Raven.Server.Documents
         {
             SmugglerResult smugglerResult;
 
+            long lastTombstoneEtag = 0;
+            using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                //TODO: add counters and time series
+                lastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(ctx.Transaction.InnerTransaction);
+            }
+
+            using (TombstoneCleaner.PreventTombstoneCleaning(lastTombstoneEtag))
             using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
             {

@@ -115,7 +115,7 @@ namespace SlowTests.Issues
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
                 await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
-                Assert.Equal(1, cleanedTombstones);
+                Assert.Equal(0, cleanedTombstones);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
