@@ -318,8 +318,12 @@ namespace Raven.Server.Documents.Replication
                             }
 
                             replicationState.Size += item.Size;
-
                             replicationState.NumberOfItemsSent++;
+
+                            if (replicationState.Size >= _parent._database.Configuration.Replication.MaxSizeToLoadFromStorage?.GetValue(SizeUnit.Bytes))
+                            {
+                                break;
+                            }
                         }
                     }
 
