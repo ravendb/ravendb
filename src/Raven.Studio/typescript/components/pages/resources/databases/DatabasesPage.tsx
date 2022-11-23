@@ -11,6 +11,10 @@ import { useChanges } from "hooks/useChanges";
 import { Col, Row } from "reactstrap";
 import { useActiveDatabase } from "hooks/useActiveDatabase";
 
+interface DatabasesPageProps {
+    activeDatabase?: string;
+}
+
 function filterDatabases(stats: DatabasesStatsState, criteria: DatabaseFilterCriteria) {
     if (criteria.searchText) {
         return stats.databases.filter((x) => x.name.toLowerCase().includes(criteria.searchText.toLowerCase()));
@@ -97,21 +101,17 @@ export function DatabasesPage() {
     }, [serverNotifications, fetchDatabases]);
 
     return (
-        <div className="databases flex-vertical absolute-fill content-margin">
-            <div className="sticky-header">
-                <Row className="databasesToolbar">
-                    <Col>
-                        <DatabasesFilter
-                            filter={filter}
-                            setFilter={setFilter}
-                            selectionState={databasesSelectionState}
-                            toggleSelectAll={toggleSelectAll}
-                        />
-                    </Col>
-                    <Col>
-                        <DatabasesToolbarActions />
-                    </Col>
-                </Row>
+        <div>
+            <div className="flex-header">
+                <div className="databasesToolbar">
+                    <DatabasesToolbarActions />
+                    <DatabasesFilter
+                        filter={filter}
+                        setFilter={setFilter}
+                        selectionState={databasesSelectionState}
+                        toggleSelectAll={toggleSelectAll}
+                    />
+                </div>
             </div>
             <div className="flex-grow scroll js-scroll-container">
                 <DatabasesCounter />

@@ -23,11 +23,11 @@
     color: $text-emphasis;
 }
 
-input {
-    &[type=checkbox], &[type=radio] {
-        cursor: pointer;
-    }
-}
+// input {
+//     &[type=checkbox], &[type=radio] {
+//         cursor: pointer;
+//     }
+// }
 
 @mixin check-variant($color) {
     .form-check-input {
