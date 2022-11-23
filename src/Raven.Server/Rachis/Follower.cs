@@ -210,7 +210,7 @@ namespace Raven.Server.Rachis
                     var curAer = new AppendEntriesResponse { CurrentTerm = _term, LastLogIndex = lastAcknowledgedIndex, LastCommitIndex = lastCommit, Success = true };
 
                     bool shouldLog = false;
-                    if (sw.Elapsed.TotalMilliseconds > 1000)
+                    if (sw.Elapsed.TotalMilliseconds > 10_000)
                     {
                         shouldLog = true;
                         sw.Restart();
