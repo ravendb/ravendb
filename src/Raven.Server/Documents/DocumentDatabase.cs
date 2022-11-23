@@ -1120,6 +1120,8 @@ namespace Raven.Server.Documents
                 switch (storageEnvironmentWithType.Type)
                 {
                     case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
+                        ForTestingPurposes?.BeforeSnapshotOfDocuments?.Invoke();
+
                         yield return new FullBackup.StorageEnvironmentInformation
                         {
                             Name = string.Empty,
@@ -1127,7 +1129,7 @@ namespace Raven.Server.Documents
                             Env = storageEnvironmentWithType.Environment
                         };
 
-                        ForTestingPurposes?.AfterSnapshotOfDocuments.Invoke();
+                        ForTestingPurposes?.AfterSnapshotOfDocuments?.Invoke();
 
                         break;
 
@@ -1878,6 +1880,9 @@ namespace Raven.Server.Documents
             internal Action AfterTxMergerDispose;
 
             internal Action BeforeExecutingClusterTransactions;
+
+            internal Action AfterSnapshotOfDocuments;
+            internal Action BeforeSnapshotOfDocuments;
 
             internal Action AfterSnapshotOfDocuments;
 
