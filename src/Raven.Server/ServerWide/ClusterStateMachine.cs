@@ -1494,7 +1494,7 @@ namespace Raven.Server.ServerWide
                         remove.UpdateShardedDatabaseRecord(databaseRecord, shardNumber, index);
                     }
 
-
+                    topology = isSharded ? databaseRecord.Sharding.Shards[shardNumber] : databaseRecord.Topology;
                     if (databaseRecord.DeletionInProgress.Count == 0 && topology.Count == 0)
                     {
                         DeleteDatabaseRecord(context, index, items, lowerKey, databaseRecord, serverStore);
