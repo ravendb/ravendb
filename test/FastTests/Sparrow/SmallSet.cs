@@ -1,4 +1,5 @@
-﻿using Sparrow.Server.Collections;
+﻿using System.Numerics;
+using Sparrow.Server.Collections;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,22 +29,24 @@ namespace FastTests.Sparrow
         [Fact]
         public void WeakSetSingleLane()
         {
-            var ilSet = new WeakSmallSet<int, long>(128);
+            var Ni = Vector<int>.Count;
+            var ilSet = new WeakSmallSet<int, long>(32 * Ni);
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < Ni; i++)
                 ilSet.Add(i, i);
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < Ni; i++)
             {
                 Assert.True(ilSet.TryGetValue(i, out var iv));
                 Assert.Equal(i, iv);
             }
 
-            var llSet = new WeakSmallSet<long, long>(128);
-            for (int i = 0; i < 4; i++)
+            var Nl = Vector<long>.Count;
+            var llSet = new WeakSmallSet<long, long>(32 * Nl);
+            for (int i = 0; i < Nl; i++)
                 llSet.Add(i, i);
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < Nl; i++)
             {
                 Assert.True(llSet.TryGetValue(i, out var lv));
                 Assert.Equal(i, lv);
@@ -53,7 +56,9 @@ namespace FastTests.Sparrow
         [Fact]
         public void WeakSetSingleSmallerThanVector()
         {
-            var llSet = new WeakSmallSet<long, long>(3);
+            var N = Vector<long>.Count;
+
+            var llSet = new WeakSmallSet<long, long>(N-1);
             llSet.Add(10, 10);
             Assert.True(llSet.TryGetValue(10, out var v));
             Assert.Equal(10, v);
@@ -62,45 +67,49 @@ namespace FastTests.Sparrow
         [Fact]
         public void WeakSetDuplicateItems()
         {
+            var N = Vector<int>.Count;
+
             var ilSet = new WeakSmallSet<int, long>();
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < N; i++)
                 ilSet.Add(i, i);
 
-            Assert.True(ilSet.TryGetValue(7, out var iv));
-            Assert.Equal(7, iv);
+            Assert.True(ilSet.TryGetValue(N - 1, out var iv));
+            Assert.Equal(N - 1, iv);
 
-            for (int i = 0; i < 8; i++)
-                ilSet.Add(7, -1);
+            for (int i = 0; i < N; i++)
+                ilSet.Add(N-1, -1);
 
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < N-1; i++)
             {
                 Assert.True(ilSet.TryGetValue(i, out iv));
                 Assert.Equal(i, iv);
             }
 
-            Assert.True(ilSet.TryGetValue(7, out iv));
+            Assert.True(ilSet.TryGetValue(N-1, out iv));
             Assert.Equal(-1, iv);
         }
 
         [Fact]
         public void WeakSetEviction()
         {
+            var N = Vector<int>.Count;
+
             var ilSet = new WeakSmallSet<int, long>();
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < N; i++)
                 ilSet.Add(i, i);
 
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < N - 1; i++)
             {
                 Assert.True(ilSet.TryGetValue(i, out var iv));
                 Assert.True(iv >= 0);
             }
 
-            for (int i = 0; i < 8; i++)
-                ilSet.Add(i + 8, -i);
+            for (int i = 0; i < N; i++)
+                ilSet.Add(i + N, -i);
 
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < N - 1; i++)
             {
-                Assert.True(ilSet.TryGetValue(i + 8, out var iv));
+                Assert.True(ilSet.TryGetValue(i + N, out var iv));
                 Assert.True(iv <= 0);
             }
         }
@@ -108,14 +117,16 @@ namespace FastTests.Sparrow
         [Fact]
         public void WeakMultipleChunks()
         {
-            var ilSet = new WeakSmallSet<int, long>(16);
-            for (int i = 0; i < 16; i++)
+            var N = 2 * Vector<int>.Count;
+
+            var ilSet = new WeakSmallSet<int, long>(N);
+            for (int i = 0; i < N; i++)
                 ilSet.Add(i, i);
 
-            Assert.True(ilSet.TryGetValue(15, out var iv));
-            Assert.Equal(15, iv);
+            Assert.True(ilSet.TryGetValue(N - 1, out var iv));
+            Assert.Equal(N - 1, iv);
 
-            for (int i = 0; i < 16; i++)
+            for (int i = 0; i < N; i++)
             {
                 Assert.True(ilSet.TryGetValue(i, out iv));
                 Assert.Equal(i, iv);
@@ -125,13 +136,15 @@ namespace FastTests.Sparrow
         [Fact]
         public void SetSingleItem()
         {
-            var ilSet = new SmallSet<int, long>(16);
+            var N = 2 * Vector<int>.Count;
+
+            var ilSet = new SmallSet<int, long>(N);
             ilSet.Add(10, 10);
             Assert.True(ilSet.TryGetValue(10, out var iv));
             Assert.Equal(10, iv);
 
 
-            var llSet = new SmallSet<long, long>(16);
+            var llSet = new SmallSet<long, long>(N);
             llSet.Add(10, 10);
             Assert.True(llSet.TryGetValue(10, out var lv));
             Assert.Equal(10, lv);
@@ -140,22 +153,25 @@ namespace FastTests.Sparrow
         [Fact]
         public void SetSingleLane()
         {
-            var ilSet = new SmallSet<int, long>(128);
+            var Ni = Vector<int>.Count;
 
-            for (int i = 0; i < 8; i++)
+            var ilSet = new SmallSet<int, long>(32 * Ni);
+
+            for (int i = 0; i < Ni; i++)
                 ilSet.Add(i, i);
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < Ni; i++)
             {
                 Assert.True(ilSet.TryGetValue(i, out var iv));
                 Assert.Equal(i, iv);
             }
 
+            var Nl = Vector<long>.Count;
             var llSet = new SmallSet<long, long>(128);
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < Nl; i++)
                 llSet.Add(i, i);
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < Nl; i++)
             {
                 Assert.True(llSet.TryGetValue(i, out var lv));
                 Assert.Equal(i, lv);
@@ -165,22 +181,23 @@ namespace FastTests.Sparrow
         [Fact]
         public void SetSingleLaneWithOverflow()
         {
-            var ilSet = new SmallSet<int, long>(8);
-
-            for (int i = 0; i < 16; i++)
+            var Ni = Vector<int>.Count;
+            var ilSet = new SmallSet<int, long>(Ni);
+            for (int i = 0; i < 2 * Ni; i++)
                 ilSet.Add(i, i);
 
-            for (int i = 0; i < 16; i++)
+            for (int i = 0; i < 2 * Ni; i++)
             {
                 Assert.True(ilSet.TryGetValue(i, out var iv));
                 Assert.Equal(i, iv);
             }
 
-            var llSet = new SmallSet<long, long>(8);
-            for (int i = 0; i < 16; i++)
+            var Nl = Vector<long>.Count;
+            var llSet = new SmallSet<long, long>(Nl);
+            for (int i = 0; i < 2 * Nl; i++)
                 llSet.Add(i, i);
 
-            for (int i = 0; i < 16; i++)
+            for (int i = 0; i < 2 * Nl; i++)
             {
                 Assert.True(llSet.TryGetValue(i, out var lv));
                 Assert.Equal(i, lv);
@@ -190,23 +207,24 @@ namespace FastTests.Sparrow
         [Fact]
         public void SetDuplicateItems()
         {
+            var N = Vector<int>.Count;
             var ilSet = new SmallSet<int, long>();
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < N; i++)
                 ilSet.Add(i, i);
 
-            Assert.True(ilSet.TryGetValue(7, out var iv));
-            Assert.Equal(7, iv);
+            Assert.True(ilSet.TryGetValue(N-1, out var iv));
+            Assert.Equal(N-1, iv);
 
-            for (int i = 0; i < 8; i++)
-                ilSet.Add(7, -1);
+            for (int i = 0; i < N; i++)
+                ilSet.Add(N-1, -1);
 
-            for (int i = 0; i < 7; i++)
+            for (int i = 0; i < N-1; i++)
             {
                 Assert.True(ilSet.TryGetValue(i, out iv));
                 Assert.Equal(i, iv);
             }
 
-            Assert.True(ilSet.TryGetValue(7, out iv));
+            Assert.True(ilSet.TryGetValue(N-1, out iv));
             Assert.Equal(-1, iv);
         }
     }
