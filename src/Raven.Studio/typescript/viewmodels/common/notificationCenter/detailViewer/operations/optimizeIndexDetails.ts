@@ -6,6 +6,9 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
 
 class optimizeIndexDetails extends abstractOperationDetails {
+
+    view = require("views/common/notificationCenter/detailViewer/operations/optimizeIndexDetails.html");
+
     progress: KnockoutObservable<Raven.Client.ServerWide.Operations.IndexOptimizeResult>;
 
     constructor(op: operation, notificationCenter: notificationCenter) {

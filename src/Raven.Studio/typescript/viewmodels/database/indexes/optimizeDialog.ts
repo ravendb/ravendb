@@ -4,6 +4,8 @@ import optimizeIndexCommand = require("commands/database/index/optimizeIndexComm
 
 class optimizeDialog extends dialogViewModelBase {
 
+    view = require("views/database/indexes/optimizeDialog.html");
+
     indexName = ko.observable<string>();
     
     constructor(indexName: string) {
