@@ -25,6 +25,7 @@ import {
 } from "../../../../common/RichPanel";
 import { Checkbox } from "../../../../common/Checkbox";
 import {
+    Badge,
     Button,
     ButtonGroup,
     Dropdown,
@@ -163,6 +164,36 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
     const termsUrl = urls.terms(index.name)();
     const editUrl = urls.editIndex(index.name)();
 
+    const priorityButtonColor = getPriorityColor();
+
+    function getPriorityColor() {
+        switch (index.priority) {
+            case "Normal":
+                return "light";
+            case "High":
+                return "warning";
+            case "Low":
+                return "info";
+            default:
+                "light";
+        }
+    }
+
+    const lockButtonColor = getLockColor();
+
+    function getLockColor() {
+        switch (index.lockMode) {
+            case "LockedIgnore":
+                return "warning";
+            case "LockedError":
+                return "warning";
+            case "Unlock":
+                return "light";
+            default:
+                "light";
+        }
+    }
+
     const [reduceOutputId] = useState(() => _.uniqueId("reduce-output-id"));
 
     return (
@@ -180,109 +211,116 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             {index.name}
                         </a>
                     </RichPanelName>
-
-                    {!IndexUtils.hasAnyFaultyNode(index) && (
-                        <div className="flex-horizontal">
-                            {!IndexUtils.isSideBySide(index) && (
-                                <UncontrolledDropdown className="margin-right">
-                                    <DropdownToggle outline color="info" disabled={!canReadWriteDatabase(database)}>
-                                        {updatingLocalPriority && <Spinner size="sm" className="margin-right-xs" />}
-                                        {index.priority === "Normal" && (
-                                            <span>
-                                                <i className="icon-check" />
-                                                <span>Normal Priority</span>
-                                            </span>
-                                        )}
-                                        {index.priority === "Low" && (
-                                            <span>
-                                                <i className="icon-coffee" />
-                                                <span>Low Priority</span>
-                                            </span>
-                                        )}
-                                        {index.priority === "High" && (
-                                            <span>
-                                                <i className="icon-force" />
-                                                <span>High Priority</span>
-                                            </span>
-                                        )}
-                                    </DropdownToggle>
-
-                                    <DropdownMenu>
-                                        <DropdownItem onClick={(e) => setPriority(e, "Low")} title="Low">
-                                            <i className="icon-coffee" /> <span>Low Priority</span>
-                                        </DropdownItem>
-                                        <DropdownItem onClick={(e) => setPriority(e, "Normal")} title="Normal">
-                                            <i className="icon-check" /> <span>Normal Priority</span>
-                                        </DropdownItem>
-                                        <DropdownItem onClick={(e) => setPriority(e, "High")} title="High">
-                                            <i className="icon-force" /> <span>High Priority</span>
-                                        </DropdownItem>
-                                    </DropdownMenu>
-                                </UncontrolledDropdown>
-                            )}
-
-                            {index.type !== "AutoMap" &&
-                                index.type !== "AutoMapReduce" &&
-                                !IndexUtils.isSideBySide(index) && (
-                                    <UncontrolledDropdown className="margin-right">
-                                        <DropdownToggle outline color="info" disabled={!canReadWriteDatabase(database)}>
-                                            {updatingLockMode && <Spinner size="sm" className="margin-right-xs" />}
-                                            {index.lockMode === "Unlock" && (
+                    <div className="flex-horizontal flex-grow-1 justify-content-end flex-wrap">
+                        {!IndexUtils.hasAnyFaultyNode(index) && (
+                            <>
+                                {!IndexUtils.isSideBySide(index) && (
+                                    <UncontrolledDropdown className="me-2">
+                                        <DropdownToggle
+                                            outline
+                                            color={priorityButtonColor}
+                                            disabled={!canReadWriteDatabase(database)}
+                                        >
+                                            {updatingLocalPriority && <Spinner size="sm" className="me-2" />}
+                                            {!updatingLocalPriority && index.priority === "Normal" && (
                                                 <span>
-                                                    <i className="icon-unlock" />
-                                                    <span>Unlocked</span>
+                                                    <i className="icon-check" />
+                                                    <span>Normal Priority</span>
                                                 </span>
                                             )}
-                                            {index.lockMode === "LockedIgnore" && (
+                                            {!updatingLocalPriority && index.priority === "Low" && (
                                                 <span>
-                                                    <i className="icon-lock" />
-                                                    <span>Locked</span>
+                                                    <i className="icon-coffee" />
+                                                    <span>Low Priority</span>
                                                 </span>
                                             )}
-                                            {index.lockMode === "LockedError" && (
+                                            {!updatingLocalPriority && index.priority === "High" && (
                                                 <span>
-                                                    <i className="icon-lock-error" />
-                                                    <span>Locked (Error)</span>
+                                                    <i className="icon-force" />
+                                                    <span>High Priority</span>
                                                 </span>
                                             )}
                                         </DropdownToggle>
 
                                         <DropdownMenu>
-                                            <DropdownItem
-                                                onClick={(e) => setLockMode(e, "Unlock")}
-                                                title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes()."
-                                            >
-                                                <i className="icon-unlock" /> <span>Unlock</span>
+                                            <DropdownItem onClick={(e) => setPriority(e, "Low")} title="Low">
+                                                <i className="icon-coffee" /> <span>Low Priority</span>
                                             </DropdownItem>
-                                            <DropdownItem divider />
-                                            <DropdownItem
-                                                onClick={(e) => setLockMode(e, "LockedIgnore")}
-                                                title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored."
-                                            >
-                                                <i className="icon-lock" /> <span>Lock</span>
+                                            <DropdownItem onClick={(e) => setPriority(e, "Normal")} title="Normal">
+                                                <i className="icon-check" /> <span>Normal Priority</span>
                                             </DropdownItem>
-                                            <DropdownItem
-                                                onClick={(e) => setLockMode(e, "LockedError")}
-                                                title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it."
-                                            >
-                                                <i className="icon-lock-error" /> <span>Lock (Error)</span>
+                                            <DropdownItem onClick={(e) => setPriority(e, "High")} title="High">
+                                                <i className="icon-force" /> <span>High Priority</span>
                                             </DropdownItem>
                                         </DropdownMenu>
                                     </UncontrolledDropdown>
                                 )}
-                        </div>
-                    )}
 
-                    <div className="actions">
-                        <div className="btn-toolbar pull-right-sm" role="toolbar">
+                                {index.type !== "AutoMap" &&
+                                    index.type !== "AutoMapReduce" &&
+                                    !IndexUtils.isSideBySide(index) && (
+                                        <UncontrolledDropdown className="me-3">
+                                            <DropdownToggle
+                                                outline
+                                                color={lockButtonColor}
+                                                disabled={!canReadWriteDatabase(database)}
+                                            >
+                                                {updatingLockMode && <Spinner size="sm" className="me-2" />}
+                                                {index.lockMode === "Unlock" && (
+                                                    <span>
+                                                        <i className="icon-unlock" />
+                                                        <span>Unlocked</span>
+                                                    </span>
+                                                )}
+                                                {index.lockMode === "LockedIgnore" && (
+                                                    <span>
+                                                        <i className="icon-lock" />
+                                                        <span>Locked</span>
+                                                    </span>
+                                                )}
+                                                {index.lockMode === "LockedError" && (
+                                                    <span>
+                                                        <i className="icon-lock-error" />
+                                                        <span>Locked (Error)</span>
+                                                    </span>
+                                                )}
+                                            </DropdownToggle>
+
+                                            <DropdownMenu>
+                                                <DropdownItem
+                                                    onClick={(e) => setLockMode(e, "Unlock")}
+                                                    title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes()."
+                                                >
+                                                    <i className="icon-unlock" /> <span>Unlock</span>
+                                                </DropdownItem>
+                                                <DropdownItem divider />
+                                                <DropdownItem
+                                                    onClick={(e) => setLockMode(e, "LockedIgnore")}
+                                                    title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored."
+                                                >
+                                                    <i className="icon-lock" /> <span>Lock</span>
+                                                </DropdownItem>
+                                                <DropdownItem
+                                                    onClick={(e) => setLockMode(e, "LockedError")}
+                                                    title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it."
+                                                >
+                                                    <i className="icon-lock-error" /> <span>Lock (Error)</span>
+                                                </DropdownItem>
+                                            </DropdownMenu>
+                                        </UncontrolledDropdown>
+                                    )}
+                            </>
+                        )}
+
+                        <div className="actions flex-horizontal" role="toolbar">
                             {!IndexUtils.hasAnyFaultyNode(index) && (
-                                <UncontrolledDropdown>
+                                <UncontrolledDropdown className="me-1">
                                     <DropdownToggle
                                         data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
                                            enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
                                            requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }"
                                     >
-                                        {updatingState && <Spinner size="sm" className="margin-right-xs" />}
+                                        {updatingState && <Spinner size="sm" className="me-2" />}
                                         <span>Set State</span>
                                     </DropdownToggle>
 
@@ -306,7 +344,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             )}
 
                             {!IndexUtils.hasAnyFaultyNode(index) && (
-                                <ButtonGroup className="margin-left-xxs">
+                                <ButtonGroup className="me-1">
                                     <Button variant="secondary" href={queryUrl}>
                                         <i className="icon-search" />
                                         <span>Query</span>
@@ -325,7 +363,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 </ButtonGroup>
                             )}
 
-                            <ButtonGroup className="margin-left-xxs">
+                            <ButtonGroup className="me-1">
                                 {!IndexUtils.isAutoIndex(index) && !canReadOnlyDatabase(database) && (
                                     <Button href={editUrl} title="Edit index">
                                         <i className="icon-edit" />
@@ -339,16 +377,13 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             </ButtonGroup>
 
                             {inlineDetails && isFaulty && (
-                                <Button
-                                    onClick={() => openFaulty(index.nodesInfo[0].location)}
-                                    className="margin-left-xxs"
-                                >
+                                <Button onClick={() => openFaulty(index.nodesInfo[0].location)} className="me-1">
                                     Open faulty index
                                 </Button>
                             )}
 
                             {canReadWriteDatabase(database) && (
-                                <ButtonGroup className="margin-left-xxs">
+                                <ButtonGroup className="me-1">
                                     <Button color="warning" onClick={resetIndex} title="Reset index (rebuild)">
                                         <i className="icon-reset-index" />
                                     </Button>
@@ -410,14 +445,14 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                     {(hasReplacement || isReplacement) && (
                         <RichPanelDetailItem>
                             {hasReplacement && (
-                                <span className="margin-left margin-left-sm">
-                                    <span className="label label-warning">OLD</span>
-                                </span>
+                                <Badge pill color="warning" className="ms-3">
+                                    OLD
+                                </Badge>
                             )}
                             {isReplacement && (
-                                <span className="margin-left margin-left-sm">
-                                    <span className="label label-warning">NEW</span>
-                                </span>
+                                <Badge pill color="warning" className="ms-3">
+                                    NEW
+                                </Badge>
                             )}
                         </RichPanelDetailItem>
                     )}

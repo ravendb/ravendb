@@ -47,7 +47,7 @@ export function RichPanelDetails(props: RichPanelDetailsProps) {
 }
 
 export function RichPanelSelect(props: { children: ReactNode | ReactNode[] }) {
-    return <FormGroup className="rich-panel-select form-check-secondary form-check-lg m-0">{props.children}</FormGroup>;
+    return <div className="rich-panel-select form-check-secondary form-check-lg m-0">{props.children}</div>;
 }
 
 interface RichPanelDetailItemProps {

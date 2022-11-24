@@ -737,7 +737,7 @@ export function IndexesPage(props: IndexesPageProps) {
                 {groups.map((group) => {
                     return (
                         <div key={"group-" + group.name}>
-                            <h2 className="on-base-background" title={"Collection: " + group.name}>
+                            <h2 className="on-base-background mt-4" title={"Collection: " + group.name}>
                                 {group.name}
                             </h2>
 

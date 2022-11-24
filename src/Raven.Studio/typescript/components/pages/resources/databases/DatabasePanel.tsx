@@ -356,11 +356,11 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                                                    css: { 'btn-spinner': isBeingDeleted() || _.includes($root.spinners.localLockChanges(), name) }"
                                 >
                                     {lockChanges && <Spinner size="sm" />}
-                                    {db.lockMode === "Unlock" && <i className="icon-trash" />}
-                                    {db.lockMode === "PreventDeletesIgnore" && (
+                                    {!lockChanges && db.lockMode === "Unlock" && <i className="icon-trash" />}
+                                    {!lockChanges && db.lockMode === "PreventDeletesIgnore" && (
                                         <i className="icon-trash-cutout icon-addon-cancel" />
                                     )}
-                                    {db.lockMode === "PreventDeletesError" && (
+                                    {!lockChanges && db.lockMode === "PreventDeletesError" && (
                                         <i className="icon-trash-cutout icon-addon-exclamation" />
                                     )}
                                 </Button>
