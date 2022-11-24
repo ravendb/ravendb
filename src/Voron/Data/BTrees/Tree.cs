@@ -31,7 +31,8 @@ namespace Voron.Data.BTrees
 
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private Dictionary<Slice, FixedSizeTree<double>> _fixedSizeTreesForDouble;
-        private Dictionary<Slice, CompactTree> _compactTrees;
+
+        private SliceSmallSet<CompactTree> _compactTreesLocator;
 
         public event Action<long, PageFlags> PageModified;
         public event Action<long, PageFlags> PageFreed;
@@ -683,19 +684,20 @@ namespace Voron.Data.BTrees
 
             return SearchForPage(key, allowCompressed, out cursor, out node);
         }
+
         [ThreadStatic]
-        private FastList<long> _cursorPathBuffer;
+        private static FastList<long> CursorPathBuffer;
 
         private TreePage SearchForPage(Slice key, out TreeNodeHeader* node)
         {
             var p = GetReadOnlyTreePage(State.RootPageNumber);
 
-            if (_cursorPathBuffer == null)
-                _cursorPathBuffer = new FastList<long>();
+            if (CursorPathBuffer == null)
+                CursorPathBuffer = new FastList<long>();
             else
-                _cursorPathBuffer.Clear();
+                CursorPathBuffer.Clear();
 
-            _cursorPathBuffer.Add(p.PageNumber);
+            CursorPathBuffer.Add(p.PageNumber);
 
             bool rightmostPage = true;
             bool leftmostPage = true;
@@ -724,7 +726,7 @@ namespace Voron.Data.BTrees
                 Debug.Assert(pageNode->PageNumber == p.PageNumber,
                     string.Format("Requested Page: #{0}. Got Page: #{1}", pageNode->PageNumber, p.PageNumber));
 
-                _cursorPathBuffer.Add(p.PageNumber);
+                CursorPathBuffer.Add(p.PageNumber);
             }
 
             if (p.IsLeaf == false)
@@ -735,7 +737,7 @@ namespace Voron.Data.BTrees
 
             node = p.Search(_llt, key); // will set the LastSearchPosition
 
-            AddToRecentlyFoundPages(_cursorPathBuffer, p, leftmostPage, rightmostPage);
+            AddToRecentlyFoundPages(CursorPathBuffer, p, leftmostPage, rightmostPage);
 
             return p;
         }
@@ -1302,9 +1304,9 @@ namespace Voron.Data.BTrees
 
         internal void PrepareForCommit()
         {
-            if (_compactTrees != null)
+            if (_compactTreesLocator != null)
             {
-                foreach (var ct in _compactTrees.Values)
+                foreach (var ct in _compactTreesLocator.Values)
                     ct.PrepareForCommit();
             }
         }
@@ -1328,6 +1330,7 @@ namespace Voron.Data.BTrees
             }
 
             DecompressionsCache?.Dispose();
+            _compactTreesLocator?.Dispose();
         }
 
         private bool TryOverwriteOverflowPages(TreeNodeHeader* updatedNode, int len, out byte* pos)
@@ -1404,33 +1407,23 @@ namespace Voron.Data.BTrees
         
         public CompactTree CompactTreeFor(Slice key)
         {
-            _compactTrees ??= new Dictionary<Slice, CompactTree>(SliceComparer.Instance);
+            if (_compactTreesLocator == null)
+                _compactTreesLocator = new SliceSmallSet<CompactTree>(128);
 
-            if (_compactTrees.TryGetValue(key, out var compactTree) == false)
+            if (_compactTreesLocator.TryGetValue(key, out var compactTree) == false)
             {
                 compactTree = CompactTree.InternalCreate(this, key);
                 if (compactTree == null) // missing value on read transaction
                     return null;
-                
-                _compactTrees[key.Clone(_llt.Allocator)] = compactTree;
+
+                var keyClone = key.Clone(_llt.Allocator);
+                _compactTreesLocator.Add(keyClone, compactTree);
             }
 
             State.Flags |= TreeFlags.CompactTrees;
 
             return compactTree;
         }
-
-        public long DeleteCompactTreeFor(Slice key)
-        {
-            var compactTree = CompactTreeFor(key);
-            var numberOfEntries = compactTree.NumberOfEntries;
-
-            CompactTree.Delete(compactTree, this);
-            _compactTrees.Remove(key);
-
-            return numberOfEntries;
-        }
-
 
         public FixedSizeTree FixedTreeFor(Slice key, byte valSize = 0)
         {

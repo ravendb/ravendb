@@ -709,7 +709,7 @@ namespace Corax
                             }
                             else
                             {
-                                ExactInsert(iterator.Sequence);
+                                Insert(iterator.Sequence);
                                 NumericInsert(iterator.Long, iterator.Double);
                             }
                         }
@@ -720,7 +720,7 @@ namespace Corax
                         if (_fieldReader.Read(out _, out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
                             break;
 
-                        ExactInsert(valueInEntry);
+                        Insert(valueInEntry);
                         NumericInsert(lVal, dVal);
                         break;
 

@@ -2,8 +2,8 @@
   <PropertyGroup>
     <Description>Voron - Low level storage engine</Description>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFramework>net6.0</TargetFramework>
-    <RuntimeFrameworkVersion>6.0.11</RuntimeFrameworkVersion>
+    <TargetFramework>net7.0</TargetFramework>
+    <RuntimeFrameworkVersion>7.0.0</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Voron</AssemblyName>
     <PackageId>Voron</PackageId>
@@ -30,10 +30,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\CompactTrees\dictionary.bin" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="System.Memory" Version="4.5.5" />
-    <PackageReference Include="System.Runtime.Experimental" Version="6.0.2" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />

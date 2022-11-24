@@ -262,9 +262,9 @@ internal static class CoraxQueryBuilder
 
                         var match = valueType switch
                         {
-                            ValueTokenType.Double => new CoraxBooleanItem(indexSearcher, fieldName.Value, fieldId, value, operation, scoreFunction),
-                            ValueTokenType.Long => new CoraxBooleanItem(indexSearcher, fieldName.Value, fieldId, value, operation, scoreFunction),
-                            ValueTokenType.True or
+                            ValueTokenType.Double => new CoraxBooleanItem(indexSearcher, index, fieldName.Value, fieldId, value, operation, scoreFunction),
+                            ValueTokenType.Long =>  new CoraxBooleanItem(indexSearcher, index, fieldName.Value, fieldId, value, operation, scoreFunction),
+                                ValueTokenType.True or
                                 ValueTokenType.False or
                                 ValueTokenType.Null or
                                 ValueTokenType.String or
@@ -292,10 +292,10 @@ internal static class CoraxQueryBuilder
                             if (value == null)
                             {
                                 if (operation is UnaryMatchOperation.Equals)
-                                    return new CoraxBooleanItem(indexSearcher, fieldName, fieldId, null, UnaryMatchOperation.Equals, scoreFunction);
+                                    return  new CoraxBooleanItem(indexSearcher, index, fieldName, fieldId, null, UnaryMatchOperation.Equals, scoreFunction);
                                 else if (operation is UnaryMatchOperation.NotEquals)
                                     //Please consider if we ever need to support this.
-                                    return new CoraxBooleanItem(indexSearcher, fieldName, fieldId, null, UnaryMatchOperation.NotEquals, scoreFunction);
+                                    return  new CoraxBooleanItem(indexSearcher, index, fieldName, fieldId, null, UnaryMatchOperation.NotEquals, scoreFunction);
                                 else
                                     throw new NotSupportedException($"Unhandled operation: {operation}");
                             }
@@ -304,7 +304,7 @@ internal static class CoraxQueryBuilder
                             if (highlightingTerm != null)
                                 highlightingTerm.Values = valueAsString;
 
-                            return new CoraxBooleanItem(indexSearcher, fieldName.Value, fieldId, valueAsString, operation, scoreFunction);
+                            return  new CoraxBooleanItem(indexSearcher, index, fieldName.Value, fieldId, valueAsString, operation, scoreFunction);
                         }
                     }
             }
@@ -590,7 +590,7 @@ internal static class CoraxQueryBuilder
         return (valueFirstType, valueSecondType) switch
         {
             (ValueTokenType.String, ValueTokenType.String) => HandleStringBetween(),
-            _ => new CoraxBooleanItem(builderParameters.IndexSearcher, fieldName, fieldId, valueFirst, valueSecond, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction)
+            _ => new CoraxBooleanItem(builderParameters.IndexSearcher, index, fieldName, fieldId, valueFirst, valueSecond, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction)
         };
 
         CoraxBooleanItem HandleStringBetween()
@@ -605,7 +605,7 @@ internal static class CoraxQueryBuilder
                 builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
             }
 
-            return new CoraxBooleanItem(builderParameters.IndexSearcher, fieldName, fieldId, valueFirstAsString, valueSecondAsString, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction);
+            return new CoraxBooleanItem(builderParameters.IndexSearcher, index, fieldName, fieldId, valueFirstAsString, valueSecondAsString, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction);
         }
     }
 

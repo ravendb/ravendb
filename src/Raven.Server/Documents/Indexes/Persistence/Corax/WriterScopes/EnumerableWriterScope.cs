@@ -82,11 +82,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 
         public void Write(string path, int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
         {
-            if (_count.Longs != 0 || _count.Doubles != 0)
-                throw new InvalidOperationException("Cannot mix tuples writes with straightforward writes");
-
             if (_isDynamic)
                 FlushWhenNecessary(path, field, ref entryWriter);
+            
+            if (_count.Longs != 0 || _count.Doubles != 0)
+                throw new InvalidOperationException("Cannot mix tuples writes with straightforward writes");
             
             // Copy the value to write into memory allocated and controlled by the scope.  
             _allocator.Allocate(value.Length, out var buffer);

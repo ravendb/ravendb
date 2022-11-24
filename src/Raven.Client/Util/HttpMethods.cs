@@ -10,6 +10,8 @@ namespace Raven.Client.Util
 {
     internal static class HttpMethods
     {
+        public static readonly HttpMethod Connect = new HttpMethod("CONNECT");
+
         public static readonly HttpMethod Reset = new HttpMethod("RESET");
 
         public static readonly HttpMethod Patch = new HttpMethod("PATCH");

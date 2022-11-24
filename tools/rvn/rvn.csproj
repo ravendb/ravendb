@@ -3,8 +3,8 @@
     <Description>rvn is a CLI utility for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <RuntimeFrameworkVersion>6.0.11</RuntimeFrameworkVersion>
+    <TargetFramework>net7.0</TargetFramework>
+    <RuntimeFrameworkVersion>7.0.0</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageTags>database;nosql;doc db</PackageTags>
     <PackageProjectUrl>https://ravendb.net</PackageProjectUrl>
@@ -155,11 +155,11 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="7.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="6.0.0" />
-    <PackageReference Include="System.ServiceProcess.ServiceController" Version="6.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="7.0.0" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="7.0.0" />
     <PackageReference Include="YamlDotNet" Version="12.0.2" />
   </ItemGroup>
   <ItemGroup>

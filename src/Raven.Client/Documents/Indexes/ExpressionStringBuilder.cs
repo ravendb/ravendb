@@ -1007,7 +1007,9 @@ namespace Raven.Client.Documents.Indexes
             return type.FullName;
         }
 
-        private bool TypeExistsOnServer(Type type)
+        private bool TypeExistsOnServer(Type type) => TypeExistsOnServer(type, false);
+        
+        private bool TypeExistsOnServer(Type type, bool isGenericArgument)
         {
             if (_insideWellKnownType)
                 return true;
@@ -1016,20 +1018,23 @@ namespace Raven.Client.Documents.Indexes
             {
                 foreach (Type genericArgument in type.GetGenericArguments())
                 {
-                    if (TypeExistsOnServer(genericArgument) == false)
+                    if (TypeExistsOnServer(genericArgument, true) == false)
                         return false;
                 }
             }
-
+            
+            if (type.IsEnum && isGenericArgument) // enum is known type when it is a generic argument
+                return true;
+            
+            if (type.Assembly == typeof(HashSet<>).Assembly) // System.Core
+                return true;
+            
             if (type.Assembly == typeof(object).Assembly) // mscorlib
                 return true;
 
             if (type.Assembly == typeof(Uri).Assembly) // System assembly
                 return true;
-
-            if (type.Assembly == typeof(HashSet<>).Assembly) // System.Core
-                return true;
-
+            
             if (type.Assembly == typeof(Regex).Assembly) // System.Text.RegularExpressions
                 return true;
 
@@ -1523,6 +1528,7 @@ namespace Raven.Client.Documents.Indexes
             var isDictionaryObject = false;
             var isDictionaryReturn = false;
             var isConvertToDictionary = false;
+            var isDictionaryReturnMethodExtension = false;
 
             if (node.Object != null)
             {
@@ -1541,7 +1547,12 @@ namespace Raven.Client.Documents.Indexes
             if (node.Method.ReturnType.IsGenericType)
             {
                 if (node.Method.ReturnType.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
+                {
                     isDictionaryReturn = true;
+                    if (node.Method.ReflectedType?.Namespace?.StartsWith("System") == false &&
+                        node.Method.ReflectedType?.Namespace?.StartsWith("Microsoft") == false)
+                        isDictionaryReturnMethodExtension = true;
+                }
             }
 
             var shouldConvertToDynamicEnumerable = node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node);
@@ -1595,7 +1606,7 @@ namespace Raven.Client.Documents.Indexes
                 }
                 Out(".");
             }
-            else if (isDictionaryReturn)
+            else if (isDictionaryReturn && isDictionaryReturnMethodExtension == false)
             {
                 if (isExtension)
                 {

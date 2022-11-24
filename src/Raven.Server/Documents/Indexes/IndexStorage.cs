@@ -1035,10 +1035,20 @@ namespace Raven.Server.Documents.Indexes
 
         internal HashSet<string> ReadIndexTimeFields()
         {
-            var fields = new HashSet<string>();
-
+            HashSet<string> fields;
+            var searchEngineType = ReadSearchEngineType(_index.Name, _environment);
             using (var tx = _environment.ReadTransaction())
             {
+                fields = searchEngineType == SearchEngineType.Corax 
+                    ? Corax.Utils.TimeFields.ReadTimeFieldsNames(tx) 
+                    : ReadLuceneTimeFields(tx);
+            }
+
+            return fields;
+
+            HashSet<string> ReadLuceneTimeFields(Transaction tx)
+            {
+                HashSet<string> container = new();
                 var fieldsTree = tx.ReadTree(IndexSchema.FieldsTree);
                 if (fieldsTree != null)
                 {
@@ -1048,22 +1058,29 @@ namespace Raven.Server.Documents.Indexes
                         {
                             do
                             {
-                                fields.Add(it.CurrentKey.ToString());
+                                container.Add(it.CurrentKey.ToString());
                             } while (it.MoveNext());
                         }
                     }
                 }
+                
+                return container;
             }
-
-            return fields;
         }
 
         internal void WriteIndexTimeFields(RavenTransaction tx, HashSet<string> timeFieldsToAdd)
         {
-            var fieldsTree = tx.InnerTransaction.CreateTree(IndexSchema.FieldsTree);
+            if (_index.SearchEngineType == SearchEngineType.Corax)
+            {
+                Corax.Utils.TimeFields.WriteTimeFieldsNames(tx.InnerTransaction, timeFieldsToAdd);
+            }
+            else
+            {
+                var fieldsTree = tx.InnerTransaction.CreateTree(IndexSchema.FieldsTree);
 
-            foreach (var fieldName in timeFieldsToAdd)
-                fieldsTree.MultiAdd(IndexSchema.TimeSlice, fieldName);
+                foreach (var fieldName in timeFieldsToAdd)
+                    fieldsTree.MultiAdd(IndexSchema.TimeSlice, fieldName);
+            }
         }
 
         internal class IndexSchema

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Collections;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
@@ -37,7 +38,7 @@ namespace Voron.Impl
         internal long DecompressedBufferBytes;
         internal TestingStuff _forTestingPurposes;
         
-        internal Dictionary<long, PersistentDictionary> PersistentDictionariesForCompactTrees; 
+        internal WeakSmallSet<long, PersistentDictionary> _persistentDictionariesForCompactTrees; 
 
         public object ImmutableExternalState;
 

@@ -443,6 +443,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Lucene.IndexInputType", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public LuceneIndexInputType LuceneIndexInput { get; set; }
         
+        [Description("Max time to wait when forcing the storage environment flush and sync when replacing side-by-side index.")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public TimeSetting MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex { get; protected set; }
+        
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

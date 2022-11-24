@@ -82,7 +82,7 @@ namespace SlowTests.Issues
                         ((LuceneIndexPersistence)newIndex.IndexPersistence).TempFileCache.SetMemoryStreamCapacity(1);
                         testingStuff.RunFakeIndex(newIndex);
 
-                        Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)), "Index wasn't replaced");
+                        Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)), "Index wasn't replaced");
 
                         Assert.True(SpinWait.SpinUntil(() => newIndex.Status == IndexRunningStatus.Running, TimeSpan.FromSeconds(10)),
                             "newIndex.Status == IndexRunningStatus.Running");

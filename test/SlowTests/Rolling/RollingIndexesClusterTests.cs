@@ -16,6 +16,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
+using Raven.Server.Config;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -47,6 +48,7 @@ namespace SlowTests.Rolling
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
             }))
@@ -144,6 +146,7 @@ namespace SlowTests.Rolling
             using (var store = GetDocumentStoreForRollingIndexes(
                        new Options
                        {
+                           ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                            Server = cluster.Leader,
                            ReplicationFactor = 3,
                        }))
@@ -218,6 +221,7 @@ namespace SlowTests.Rolling
             using (var store = GetDocumentStoreForRollingIndexes(
                        new Options
                        {
+                           ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                            Server = cluster.Leader,
                            ReplicationFactor = 3,
                        }))
@@ -325,12 +329,12 @@ namespace SlowTests.Rolling
 
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            using (var store = GetDocumentStoreForRollingIndexes(
-                       new Options
-                       {
-                           Server = cluster.Leader,
-                           ReplicationFactor = 3,
-                       }))
+            using (var store = GetDocumentStoreForRollingIndexes(new Options
+            {                           
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
+                Server = cluster.Leader,
+                ReplicationFactor = 3,
+            }))
             {
                 await CreateData(store);
                 await store.ExecuteIndexAsync(new MyRollingIndex() { DeploymentMode = IndexDeploymentMode.Parallel });
@@ -416,6 +420,7 @@ namespace SlowTests.Rolling
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 2,
             }))
@@ -491,6 +496,7 @@ namespace SlowTests.Rolling
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
             }))
@@ -530,6 +536,7 @@ namespace SlowTests.Rolling
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
             }))
@@ -558,6 +565,7 @@ namespace SlowTests.Rolling
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
             }))
@@ -594,6 +602,7 @@ namespace SlowTests.Rolling
             var cluster = await CreateRaftCluster(3);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
                 DeleteDatabaseOnDispose = false // we removing a node, which will break the infra deletion, because we will bootstrap the removed node
@@ -646,6 +655,7 @@ namespace SlowTests.Rolling
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
             }))
@@ -689,7 +699,8 @@ namespace SlowTests.Rolling
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
-            {
+            {                           
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
             }))
@@ -743,6 +754,7 @@ namespace SlowTests.Rolling
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
             }))
@@ -795,6 +807,7 @@ namespace SlowTests.Rolling
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
             }))
@@ -842,6 +855,7 @@ namespace SlowTests.Rolling
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
             }))
@@ -896,6 +910,7 @@ namespace SlowTests.Rolling
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStoreForRollingIndexes(new Options
             {
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex)] = "5",
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
             }))
