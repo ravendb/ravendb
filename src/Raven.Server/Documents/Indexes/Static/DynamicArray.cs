@@ -585,7 +585,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public IEnumerable<object> Distinct()
         {
-            return new DynamicArray(Enumerable.Distinct(this, new LazyStringEqualityComparer(CurrentIndexingScope.Current?.IndexContext)));
+            return new DynamicArray(Enumerable.Distinct(this, new LazyStringAwareEqualityComparerForDistinct(CurrentIndexingScope.Current?.IndexContext)));
         }
 
         public dynamic DefaultIfEmpty(object defaultValue = null)
@@ -841,11 +841,11 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private class LazyStringEqualityComparer : IEqualityComparer<object>
+        private class LazyStringAwareEqualityComparerForDistinct : IEqualityComparer<object>
         {
             private readonly JsonOperationContext _context;
 
-            public LazyStringEqualityComparer(JsonOperationContext context)
+            public LazyStringAwareEqualityComparerForDistinct(JsonOperationContext context)
             {
                 _context = context;
             }
