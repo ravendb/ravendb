@@ -1173,6 +1173,32 @@ namespace RachisTests.DatabaseCluster
         }
 
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task RemoveNonExistentShardFromNode()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 2, orchestratorReplicationFactor: 2);
+
+            using (var store = GetDocumentStore(options))
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var shardTopology = record.Sharding.Shards[0];
+                Assert.Equal(2, shardTopology.Members.Count);
+                Assert.Equal(0, shardTopology.Promotables.Count);
+                Assert.Equal(2, shardTopology.ReplicationFactor);
+
+                //remove non existent shard 5 from node
+                var error = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, shard: 5, hardDelete: true, fromNode: shardTopology.Members[0]));
+                });
+                Assert.Contains("Can't fetch topology of shard number 5 from the raw record because it does not exist.", error.Message);
+
+                var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.NotNull(record2);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task PreventRemovingLastShard()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);

@@ -17,7 +17,7 @@ namespace Raven.Server.ServerWide.Commands
         public bool HardDelete;
         public string[] FromNodes;
         public bool UpdateReplicationFactor = true;
-        public int? Shard = null;
+        public int? ShardNumber = null;
 
         public DeleteDatabaseCommand()
         {
@@ -27,8 +27,8 @@ namespace Raven.Server.ServerWide.Commands
         {
             ErrorOnDatabaseDoesNotExists = false;
 
-            if (ShardHelper.TryGetShardNumberAndDatabaseName(ref DatabaseName, out var shard))
-                Shard = shard;
+            if (ShardHelper.TryGetShardNumberAndDatabaseName(DatabaseName, out DatabaseName, out var shard))
+                ShardNumber = shard;
         }
 
         public override void Initialize(ServerStore serverStore, ClusterOperationContext context)
@@ -56,12 +56,12 @@ namespace Raven.Server.ServerWide.Commands
                     }
                     else
                     {
-                        if (Shard.HasValue)
+                        if (ShardNumber.HasValue)
                         {
-                            if (record.Sharding.Shards.Length <= Shard)
-                                throw new RachisApplyException($"The request shard '{Shard}' doesn't exists in '{record.DatabaseName}'");
+                            if (record.Sharding.Shards.Length <= ShardNumber)
+                                throw new RachisApplyException($"The request shard '{ShardNumber}' doesn't exists in '{record.DatabaseName}'");
 
-                            RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[Shard.Value], node, shardNumber: Shard, deletionInProgressStatus);
+                            RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[ShardNumber.Value], node, shardNumber: ShardNumber, deletionInProgressStatus);
                             return;
                         }
 
@@ -80,8 +80,8 @@ namespace Raven.Server.ServerWide.Commands
                 }
                 else
                 {
-                    if (Shard.HasValue)
-                        throw new InvalidOperationException($"Deleting an entire shard group (shard {Shard.Value}) from the cluster is not allowed.");
+                    if (ShardNumber.HasValue)
+                        throw new InvalidOperationException($"Deleting an entire shard group (shard {ShardNumber.Value}) from the cluster is not allowed.");
 
                     for (var i = 0; i < record.Sharding.Shards.Length; i++)
                     {
@@ -109,7 +109,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (topology.RelevantFor(node) == false)
             {
-                DatabaseDoesNotExistException.ThrowWithMessage(Shard.HasValue ? ShardHelper.ToShardName(record.DatabaseName, Shard.Value) : record.DatabaseName,
+                DatabaseDoesNotExistException.ThrowWithMessage(ShardNumber.HasValue ? ShardHelper.ToShardName(record.DatabaseName, ShardNumber.Value) : record.DatabaseName,
                     $"Request to delete database from node '{node}' failed because it does not exist on this node.");
             }
 
@@ -130,7 +130,7 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(HardDelete)] = HardDelete;
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
             json[nameof(UpdateReplicationFactor)] = UpdateReplicationFactor;
-            json[nameof(Shard)] = Shard;
+            json[nameof(ShardNumber)] = ShardNumber;
             if (FromNodes != null)
             {
               json[nameof(FromNodes)] = new DynamicJsonArray(FromNodes);

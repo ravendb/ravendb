@@ -1129,7 +1129,7 @@ namespace Raven.Server.Documents
 
         private static bool TryGetDeletionInProgress(Dictionary<string, DeletionInProgressStatus> deletionInProgress, string databaseName, string nodeTag, out DeletionInProgressStatus status)
         {
-            if (ShardHelper.TryGetShardNumberAndDatabaseName(ref databaseName, out int shardNumber))
+            if (ShardHelper.TryGetShardNumberAndDatabaseName(databaseName, out _, out int shardNumber))
             {
                 return deletionInProgress.TryGetValue(DatabaseRecord.GetKeyForDeletionInProgress(nodeTag, shardNumber), out status);
             }
