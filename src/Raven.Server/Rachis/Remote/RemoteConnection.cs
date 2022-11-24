@@ -364,9 +364,9 @@ namespace Raven.Server.Rachis.Remote
             }
         }
 
-        public void Send(JsonOperationContext context, AppendEntriesResponse aer)
+        public void Send(JsonOperationContext context, AppendEntriesResponse aer, bool shouldLog=true)
         {
-            if (_log.IsInfoEnabled)
+            if (_log.IsInfoEnabled && shouldLog)
             {
                 _log.Info(aer.ToString());
             }

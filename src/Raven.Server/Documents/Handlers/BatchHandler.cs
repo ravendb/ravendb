@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (command.IsClusterTransaction)
                 {
-                    ValidateCommandForClusterWideTransaction(command);
+                    ValidateCommandForClusterWideTransaction(command, disableAtomicDocumentWrites);
 
                     using (Database.ClusterTransactionWaiter.CreateTask(out var taskId))
                     {
@@ -160,31 +160,39 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static void ValidateCommandForClusterWideTransaction(MergedBatchCommand command)
+        private static void ValidateCommandForClusterWideTransaction(MergedBatchCommand command, bool disableAtomicDocumentWrites)
         {
-            foreach (var document in command.ParsedCommands)
+            foreach (var commandData in command.ParsedCommands)
             {
-                switch (document.Type)
+                switch (commandData.Type)
                 {
-                    case CommandType.PUT:
-                    case CommandType.DELETE:
                     case CommandType.CompareExchangePUT:
                     case CommandType.CompareExchangeDELETE:
-                        if (document.Type == CommandType.PUT)
+
+                        if (disableAtomicDocumentWrites == false)
                         {
-                            if (document.SeenAttachments)
-                                throw new NotSupportedException($"The document {document.Id} has attachments, this is not supported in cluster wide transaction.");
+                            if (ClusterTransactionCommand.IsAtomicGuardKey(commandData.Id, out _))
+                                throw new CompareExchangeInvalidKeyException($"You cannot manipulate the atomic guard '{commandData.Id}' via the cluster-wide session");
+                        }
+                        
+                        break;
+                    case CommandType.PUT:
+                    case CommandType.DELETE:
+                        if (commandData.Type == CommandType.PUT)
+                        {
+                            if (commandData.SeenAttachments)
+                                throw new NotSupportedException($"The document {commandData.Id} has attachments, this is not supported in cluster wide transaction.");
 
-                            if (document.SeenCounters)
-                                throw new NotSupportedException($"The document {document.Id} has counters, this is not supported in cluster wide transaction.");
+                            if (commandData.SeenCounters)
+                                throw new NotSupportedException($"The document {commandData.Id} has counters, this is not supported in cluster wide transaction.");
 
-                            if (document.SeenTimeSeries)
-                                throw new NotSupportedException($"The document {document.Id} has time series, this is not supported in cluster wide transaction.");
+                            if (commandData.SeenTimeSeries)
+                                throw new NotSupportedException($"The document {commandData.Id} has time series, this is not supported in cluster wide transaction.");
                         }
                         break;
 
                     default:
-                        throw new ArgumentOutOfRangeException($"The command type {document.Type} is not supported in cluster transaction.");
+                        throw new ArgumentOutOfRangeException($"The command type {commandData.Type} is not supported in cluster transaction.");
                 }
             }
         }

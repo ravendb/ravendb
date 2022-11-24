@@ -284,6 +284,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(Raven.Server.Documents.Indexes.IndexMerging.SourceCodeBeautifier.FormattedExpression));
             scripter.AddType(typeof(StudioIndexHandler.IndexTypeInfo));
             scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
+            scripter.AddType(typeof(IndexOptimizeResult));
             scripter.AddType(typeof(StudioDatabaseTasksHandler.IndexDefaults));
 
             // cluster
