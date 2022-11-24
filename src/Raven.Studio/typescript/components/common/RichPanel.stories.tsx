@@ -1,6 +1,13 @@
 ﻿import { ComponentMeta } from "@storybook/react";
 import { boundCopy } from "../utils/common";
-import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader, RichPanelSelect } from "./RichPanel";
+import {
+    RichPanel,
+    RichPanelDetailItem,
+    RichPanelDetails,
+    RichPanelHeader,
+    RichPanelName,
+    RichPanelSelect,
+} from "./RichPanel";
 import React from "react";
 import { Checkbox } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
@@ -21,7 +28,7 @@ const Template = (args: { withCheckbox: boolean }) => {
                         <Checkbox toggleSelection={toggle} selected={value} />
                     </RichPanelSelect>
                 )}
-                This is header
+                <RichPanelName>This is header</RichPanelName>
             </RichPanelHeader>
             <RichPanelDetails>
                 <RichPanelDetailItem>

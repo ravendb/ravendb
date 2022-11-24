@@ -6,11 +6,11 @@
 .rich-panel-item {
 
     & + .rich-panel-item {
-        margin-top: sizes.$gutter;
+        margin-top: sizes.$gutter-sm;
     }
 
     .rich-panel-header {        
-        padding: sizes.$gutter-sm;
+        padding: sizes.$gutter-xs sizes.$gutter-sm;
         display: flex;
         flex-wrap: wrap;
         align-items: center;

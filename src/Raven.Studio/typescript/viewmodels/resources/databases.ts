@@ -14,6 +14,10 @@ class databases extends viewModelBase {
             props
         });
     });
+
+    isUsingBootstrap5() {
+        return true;
+    }
 }
 
 export = databases;

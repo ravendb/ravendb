@@ -1,5 +1,5 @@
 ﻿import React, { ReactNode } from "react";
-import { FormGroup, Input, Label } from "reactstrap";
+import { FormGroup, Input, Label, Row } from "reactstrap";
 
 interface CheckboxProps {
     selected: boolean;
@@ -12,9 +12,9 @@ export function Checkbox(props: CheckboxProps) {
     const { selected, toggleSelection, children, color } = props;
     const colorClass = `form-check-${color ?? "secondary"}`;
     return (
-        <FormGroup check>
+        <div className="form-check">
             <Input type="checkbox" checked={selected} onChange={toggleSelection} className={colorClass} />
             <Label check>{children}</Label>
-        </FormGroup>
+        </div>
     );
 }
