@@ -2186,7 +2186,14 @@ namespace Raven.Server.Smuggler.Documents
 
             private void AddToBatch(TimeSeriesItem item)
             {
-                _cmd.AddToDictionary(item);
+                if (_cmd.AddToDictionary(item))
+                {
+                    // RavenDB-19504 - if we have a lot of _small_ updates, that can add up quickly, but it won't 
+                    // be accounted for that if we look at segment size alone. So we assume that any new item means
+                    // updating the whole segment. This is especially important for encrypted databases, where we need
+                    // to keep all the modified data in memory in one shot
+                    _segmentsSize.Add(2, SizeUnit.Kilobytes);
+                }
                 _segmentsSize.Add(item.Segment.NumberOfBytes, SizeUnit.Bytes);
             }
 

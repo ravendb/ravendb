@@ -336,7 +336,11 @@ namespace Raven.Server.ServerWide.Commands
                     case nameof(CommandType.PUT):
                         clusterTransactionDataCommand.Type = CommandType.CompareExchangePUT;
 
-                        var dynamicJsonValue = new DynamicJsonValue { ["Id"] = docId };
+                        var dynamicJsonValue = new DynamicJsonValue
+                        {
+                            [Constants.CompareExchange.ObjectFieldName] = new DynamicJsonValue { ["Id"] = docId }
+                        };
+
                         if (dbCmd.TryGet(nameof(ClusterTransactionDataCommand.Document), out BlittableJsonReaderObject document)
                             && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
                             && metadata.TryGet(Constants.Documents.Metadata.Expires, out LazyStringValue expires))
@@ -376,22 +380,21 @@ namespace Raven.Server.ServerWide.Commands
             return null;
         }
 
-        const string RvnAtomicPrefix = "rvn-atomic/";
         public static bool IsAtomicGuardKey(string id, out string docId)
         {
-            if (id.StartsWith(RvnAtomicPrefix) == false)
+            if (id.StartsWith(Constants.CompareExchange.RvnAtomicPrefix) == false)
             {
                 docId = null;
                 return false;
             }
 
-            docId = id.Substring(RvnAtomicPrefix.Length);
+            docId = id.Substring(Constants.CompareExchange.RvnAtomicPrefix.Length);
             return true;
         }
 
         public static string GetAtomicGuardKey(string docId)
         {
-            return RvnAtomicPrefix + docId;
+            return Constants.CompareExchange.RvnAtomicPrefix + docId;
         }
 
         public unsafe void SaveCommandsBatch(ClusterOperationContext context, long index)

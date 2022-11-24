@@ -39,6 +39,7 @@ import documentHelpers = require("common/helpers/database/documentHelpers");
 import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
 import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
 import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaultsCommand");
+import optimizeDialog = require("viewmodels/database/indexes/optimizeDialog");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
 
@@ -834,6 +835,11 @@ class editIndex extends viewModelBase {
     openDumpDialog() {
         eventsCollector.default.reportEvent("index", "dump-index");
         app.showBootstrapDialog(new dumpDialog(this.editedIndex().name()));
+    }
+
+    openOptimizeDialog() {
+        eventsCollector.default.reportEvent("index", "optimize");
+        app.showBootstrapDialog(new optimizeDialog(this.editedIndex().name()));
     }
 
     formatIndex(mapIndex: number) {
