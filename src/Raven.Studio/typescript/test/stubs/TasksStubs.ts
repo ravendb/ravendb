@@ -109,6 +109,7 @@ export class TasksStubs {
                     "A:8806-9igKNP9Qh0WWnuROUXOVjQ, A:2568-F9I6Egqwm0Kz+K0oFVIR9Q, A:13366-IG4VwBTOnkqoT/uwgm2OQg, A:2568-OSKWIRBEDEGoAxbEIiFJeQ",
                 IsEncrypted: false,
             },
+            IsSharded: false,
         };
     }
 
