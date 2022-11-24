@@ -84,7 +84,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         return total;
     }
 
-    protected override async ValueTask<bool> NotModified()
+    protected override async ValueTask<bool> NotModifiedAsync()
     {
         var changeVectors = new List<string>();
         if (IsAllDocsCollection)

@@ -58,7 +58,7 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
 
     protected abstract ValueTask<long> GetTotalResultsAsync();
 
-    protected abstract ValueTask<bool> NotModified();
+    protected abstract ValueTask<bool> NotModifiedAsync();
 
     protected abstract IAsyncEnumerable<Document> GetDocumentsAsync();
 
@@ -68,7 +68,7 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
     {
         await InitializeAsync();
 
-        if (await NotModified())
+        if (await NotModifiedAsync())
         {
             RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
             return;

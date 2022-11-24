@@ -58,7 +58,7 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         return ValueTask.FromResult(_totalResults);
     }
 
-    protected override ValueTask<bool> NotModified()
+    protected override ValueTask<bool> NotModifiedAsync()
     {
         string changeVector;
         string etag = null;
