@@ -7,6 +7,14 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
 {
     public static class DynamicEnumerable
     {
+        public static IEnumerable<dynamic> Distinct(IEnumerable source)
+        {
+            if (source is DynamicArray array)
+                return array.Distinct();
+
+            return new DynamicArray((IEnumerable<object>)source).Distinct();
+        }
+
         public static IEnumerable<dynamic> Union(object source, object other)
         {
             return new DynamicArray(((IEnumerable<object>)source).Union((IEnumerable<object>)other));
