@@ -909,3 +909,6 @@ interface taskInfo {
     icon: string;
     colorClass: string;
 }
+
+type TombstoneItem = Raven.Server.Documents.TombstoneCleaner.StateHolder & { Collection: string };
+type TombstonesStateOnWire = Omit<Raven.Server.Documents.TombstoneCleaner.TombstonesState, "Tombstones"> & { Results: TombstoneItem[] };

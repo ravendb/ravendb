@@ -53,6 +53,7 @@ using Raven.Server.Config;
 using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
@@ -534,6 +535,7 @@ namespace TypingsGenerator
             // debug
             scripter.AddType(typeof(ThreadsInfo));
             scripter.AddType(typeof(MemoryDebugHandler.MemoryInfo));
+            scripter.AddType(typeof(TombstoneCleaner.TombstonesState));
 
             // counters
             scripter.AddType(typeof(CounterBatch));

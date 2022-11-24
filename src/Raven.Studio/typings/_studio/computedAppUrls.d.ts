@@ -52,6 +52,7 @@ interface computedAppUrls {
     databaseSettings: KnockoutComputed<string>;
     databaseRecord: KnockoutComputed<string>;
     databaseIDs: KnockoutComputed<string>;
+    tombstonesState: KnockoutComputed<string>;
     revisions: KnockoutComputed<string>;
     revertRevisions: KnockoutComputed<string>;
     expiration: KnockoutComputed<string>;
