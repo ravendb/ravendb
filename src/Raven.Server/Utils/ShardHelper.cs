@@ -123,20 +123,21 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static bool TryGetShardNumberAndDatabaseName(ref string shardedDatabaseName, out int shardNumber)
+        public static bool TryGetShardNumberAndDatabaseName(string databaseName, out string shardedDatabaseName, out int shardNumber)
         {
-            shardNumber = shardedDatabaseName.IndexOf('$');
+            shardNumber = databaseName.IndexOf('$');
 
             if (shardNumber != -1)
             {
-                var slice = shardedDatabaseName.AsSpan().Slice(shardNumber + 1);
-                shardedDatabaseName = shardedDatabaseName.Substring(0, shardNumber);
+                var slice = databaseName.AsSpan().Slice(shardNumber + 1);
+                shardedDatabaseName = databaseName.Substring(0, shardNumber);
                 if (int.TryParse(slice, out shardNumber) == false)
                     throw new ArgumentException(nameof(shardedDatabaseName), "Unable to parse sharded database name: " + shardedDatabaseName);
 
                 return true;
             }
 
+            shardedDatabaseName = databaseName;
             return false;
         }
 

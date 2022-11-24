@@ -8,7 +8,7 @@ namespace Raven.Server.ServerWide.Commands
     public class PromoteDatabaseNodeCommand : UpdateDatabaseCommand
     {
         public string NodeTag;
-        public int? Shard;
+        public int? ShardNumber;
 
         public PromoteDatabaseNodeCommand()
         {
@@ -17,23 +17,23 @@ namespace Raven.Server.ServerWide.Commands
 
         public PromoteDatabaseNodeCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
-            if (ShardHelper.TryGetShardNumberAndDatabaseName(ref DatabaseName, out var shard))
-                Shard = shard;
+            if (ShardHelper.TryGetShardNumberAndDatabaseName(DatabaseName, out DatabaseName, out var shard))
+                ShardNumber = shard;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             DatabaseTopology topology;
-            if (Shard.HasValue == false)
+            if (ShardNumber.HasValue == false)
             {
                 topology = record.IsSharded ? record.Sharding.Orchestrator.Topology : record.Topology;
             }
             else
             {
-                if (record.Sharding.Shards.Length <= Shard)
-                    throw new RachisApplyException($"The request shard '{Shard}' doesn't exists in '{record.DatabaseName}'");
+                if (record.Sharding.Shards.Length <= ShardNumber)
+                    throw new RachisApplyException($"The request shard '{ShardNumber}' doesn't exists in '{record.DatabaseName}'");
 
-                topology = record.Sharding.Shards[Shard.Value];
+                topology = record.Sharding.Shards[ShardNumber.Value];
             }
 
             if (topology.Promotables.Contains(NodeTag) == false)
@@ -48,7 +48,7 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(NodeTag)] = NodeTag;
-            json[nameof(Shard)] = Shard;
+            json[nameof(ShardNumber)] = ShardNumber;
         }
     }
 }

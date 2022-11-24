@@ -1464,41 +1464,45 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 remove = JsonDeserializationCluster.RemoveNodeFromDatabaseCommand(cmd);
                 var databaseName = remove.DatabaseName;
-                var isSharded = ShardHelper.TryGetShardNumberAndDatabaseName(ref databaseName, out var shardNumber);
-                var databaseNameLowered = databaseName.ToLowerInvariant();
+                var isShard = ShardHelper.TryGetShardNumberAndDatabaseName(databaseName, out var shardedDatabaseName, out var shardNumber);
+                var databaseNameLowered = shardedDatabaseName.ToLowerInvariant();
                 using (Slice.From(context.Allocator, "db/" + databaseNameLowered, out Slice lowerKey))
-                using (Slice.From(context.Allocator, "db/" + databaseName, out Slice key))
+                using (Slice.From(context.Allocator, "db/" + shardedDatabaseName, out Slice key))
                 {
-                    var rawRecord = ReadRawDatabaseRecord(context, databaseName, out _);
+                    var rawRecord = ReadRawDatabaseRecord(context, shardedDatabaseName, out _);
                     if (rawRecord == null)
                         throw new DatabaseDoesNotExistException($"The database {databaseName} does not exists");
-
-                    DatabaseTopology topology = isSharded ? rawRecord.Sharding.Shards[shardNumber] : rawRecord.Topology;
+                    
+                    DatabaseTopology topology = isShard ? rawRecord.Sharding.Shards[shardNumber] : rawRecord.Topology;
                     
                     if (topology == null)
                     {
-                        items.DeleteByKey(lowerKey);
-                        NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
-                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
+                        if (isShard == false)
+                        {
+                            items.DeleteByKey(lowerKey);
+                            NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
+                                DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
+                        }
+                        
                         return;
                     }
 
                     var databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
 
-                    if (isSharded == false) // not sharded
+                    if (isShard == false) // not a shard
                     {
                         remove.UpdateDatabaseRecord(databaseRecord, index);
                     }
-                    else //sharded
+                    else //shard
                     {
                         remove.UpdateShardedDatabaseRecord(databaseRecord, shardNumber, index);
                     }
 
-                    topology = isSharded ? databaseRecord.Sharding.Shards[shardNumber] : databaseRecord.Topology;
+                    topology = isShard ? databaseRecord.Sharding.Shards[shardNumber] : databaseRecord.Topology;
                     if (databaseRecord.DeletionInProgress.Count == 0 && topology.Count == 0)
                     {
                         DeleteDatabaseRecord(context, index, items, lowerKey, databaseRecord, serverStore);
-                        NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
+                        NotifyDatabaseAboutChanged(context, shardedDatabaseName, index, nameof(RemoveNodeFromDatabaseCommand),
                             DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
                         return;
                     }
@@ -1508,7 +1512,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, lowerKey, key, updated);
                 }
 
-                NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
+                NotifyDatabaseAboutChanged(context, shardedDatabaseName, index, nameof(RemoveNodeFromDatabaseCommand),
                     DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
             }
             catch (Exception e)
@@ -3453,9 +3457,9 @@ namespace Raven.Server.ServerWide
         {
             BlittableJsonReaderObject databaseRecord;
 
-            if (ShardHelper.TryGetShardNumberAndDatabaseName(ref name, out var shardNumber))
+            if (ShardHelper.TryGetShardNumberAndDatabaseName(name, out var shardedDatabaseName, out var shardNumber))
             {
-                databaseRecord = BuildShardedDatabaseRecord(context, Read(context, Constants.Documents.Prefix + name.ToLowerInvariant(), out etag), shardNumber);
+                databaseRecord = BuildShardedDatabaseRecord(context, Read(context, Constants.Documents.Prefix + shardedDatabaseName.ToLowerInvariant(), out etag), shardNumber);
             }
             else
             {

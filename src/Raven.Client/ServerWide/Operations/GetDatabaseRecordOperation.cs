@@ -23,7 +23,7 @@ namespace Raven.Client.ServerWide.Operations
         {
             private readonly string _database;
 
-            public override bool IsReadRequest => true;
+            public override bool IsReadRequest => false;
 
             public GetDatabaseRecordCommand(string database)
             {

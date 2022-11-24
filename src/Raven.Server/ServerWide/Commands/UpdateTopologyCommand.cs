@@ -10,7 +10,7 @@ namespace Raven.Server.ServerWide.Commands
     {
         public DatabaseTopology Topology;
         public DateTime At;
-        public int? Shard;
+        public int? ShardNumber;
 
         public UpdateTopologyCommand()
         {
@@ -21,8 +21,8 @@ namespace Raven.Server.ServerWide.Commands
         {
             At = at;
 
-            if (ShardHelper.TryGetShardNumberAndDatabaseName(ref DatabaseName, out var shard))
-                Shard = shard;
+            if (ShardHelper.TryGetShardNumberAndDatabaseName(DatabaseName, out DatabaseName, out var shard))
+                ShardNumber = shard;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -30,7 +30,7 @@ namespace Raven.Server.ServerWide.Commands
             Topology.NodesModifiedAt = At;
             SetLeaderStampForTopology(Topology, etag);
 
-            if (Shard == null)
+            if (ShardNumber == null)
             {
                 if (record.IsSharded)
                 {
@@ -43,10 +43,10 @@ namespace Raven.Server.ServerWide.Commands
                 return;
             }
 
-            if (record.Sharding.Shards.Length <= Shard)
-                throw new RachisApplyException($"The request shard '{Shard}' doesn't exists in '{record.DatabaseName}'");
+            if (record.Sharding.Shards.Length <= ShardNumber)
+                throw new RachisApplyException($"The request shard '{ShardNumber}' doesn't exists in '{record.DatabaseName}'");
 
-            record.Sharding.Shards[Shard.Value] = Topology;
+            record.Sharding.Shards[ShardNumber.Value] = Topology;
         }
 
         private static void SetLeaderStampForTopology(DatabaseTopology topology, long etag)
@@ -61,7 +61,7 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(Topology)] = Topology.ToJson();
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
             json[nameof(At)] = At;
-            json[nameof(Shard)] = Shard;
+            json[nameof(ShardNumber)] = ShardNumber;
         }
     }
 }
