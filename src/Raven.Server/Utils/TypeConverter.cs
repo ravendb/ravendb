@@ -497,10 +497,12 @@ namespace Raven.Server.Utils
             Type objectType = value.GetType();
             if (objectType == DynamicRules[(int)DynamicRuleTypeLocation.String])
             {
-                if (TryConvertStringValue((string)value, out object result))
+                var valueAsString = (string)value;
+
+                if (TryConvertStringValue(valueAsString, out object result))
                     return result;
 
-                return value;
+                return valueAsString;
             }
 
             LazyStringValue lazyString = null;

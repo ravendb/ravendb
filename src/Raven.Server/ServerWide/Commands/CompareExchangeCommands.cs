@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Rachis;
