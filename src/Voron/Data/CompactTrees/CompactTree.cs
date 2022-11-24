@@ -10,6 +10,7 @@ using System.Text;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server;
+using Sparrow.Server.Collections;
 using Voron.Data.BTrees;
 using Voron.Debugging;
 using Voron.Exceptions;
@@ -1592,7 +1593,7 @@ namespace Voron.Data.CompactTrees
             Debug.Assert(state.Header->FreeSpace == (state.Header->Upper - state.Header->Lower));
 
             state.Header->DictionaryId = newDictionary.PageNumber;
-            _llt.PersistentDictionariesForCompactTrees[newDictionary.PageNumber] = newDictionary;
+            _llt._persistentDictionariesForCompactTrees.Add(newDictionary.PageNumber, newDictionary);
 
             return true;
 
@@ -1815,15 +1816,15 @@ namespace Voron.Data.CompactTrees
             [MethodImpl(MethodImplOptions.NoInlining)]
             PersistentDictionary GetEncodingDictionaryUnlikely()
             {
-                _llt.PersistentDictionariesForCompactTrees ??= new Dictionary<long, PersistentDictionary>();
-                if (_llt.PersistentDictionariesForCompactTrees.TryGetValue(dictionaryId, out var dictionary))
+                _llt._persistentDictionariesForCompactTrees ??= new WeakSmallSet<long, PersistentDictionary>(16);
+                if (_llt._persistentDictionariesForCompactTrees.TryGetValue(dictionaryId, out var dictionary))
                 {
                     _lastDictionary = dictionary;
                     return dictionary;
                 }
 
                 dictionary = new PersistentDictionary(_llt.GetPage(dictionaryId));
-                _llt.PersistentDictionariesForCompactTrees[dictionaryId] = dictionary;
+                _llt._persistentDictionariesForCompactTrees.Add(dictionaryId, dictionary);
                 _lastDictionary = dictionary;
                 return dictionary;
             }

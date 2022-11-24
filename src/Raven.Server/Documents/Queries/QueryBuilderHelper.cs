@@ -698,7 +698,34 @@ public static class QueryBuilderHelper
 
         return (SpatialUnits)su;
     }
+    
+    internal static bool TryUseTime(Index index, string fieldName, object valueFirst, object valueSecond, bool exact, out long ticksFirst, out long ticksSecond)
+    {
+        ticksFirst = -1;
+        ticksSecond = -1;
 
+        if (exact || index == null || valueFirst == null || valueSecond == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
+            return false;
+
+        if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(index, valueFirst, out ticksFirst) && TryGetTime(index, valueSecond, out ticksSecond))
+            return true;
+
+        return false;
+    }
+
+    internal static bool TryUseTime(Index index, string fieldName, object value, bool exact, out long ticks)
+    {
+        ticks = -1;
+
+        if (exact || index == null || value == null || index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.TimeTicks)
+            return false;
+
+        if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(index, value, out ticks))
+            return true;
+
+        return false;
+    }
+    
     internal static MethodExpression FindMoreLikeThisExpression(QueryExpression expression)
     {
         if (expression == null)

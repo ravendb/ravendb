@@ -11,7 +11,7 @@ using Voron.Global;
 
 namespace Voron.Impl.Journal
 {
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Explicit, Pack = 1)]
     public struct TransactionHeaderPageInfo
     {
         [FieldOffset(0)]

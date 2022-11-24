@@ -89,7 +89,7 @@ public class CoraxIndexedEntriesReader : IDisposable
                     else
                     {
                         
-                        AddBytesAsItemToContainer(iterator.Sequence, null);
+                        AddBytesAsItemToContainer(iterator.Sequence, analyzer);
                     }
                 }
 
@@ -97,7 +97,7 @@ public class CoraxIndexedEntriesReader : IDisposable
             case IndexEntryFieldType.Tuple:
                 if (fieldReader.Read(out _, out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
                     break;
-                AddBytesAsItemToContainer(valueInEntry, null);
+                AddBytesAsItemToContainer(valueInEntry, analyzer);
                 
                 break;
             case IndexEntryFieldType.SpatialPointList:

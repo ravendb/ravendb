@@ -446,7 +446,7 @@ namespace Raven.Server.Documents.Patch
                     obj.Blittable.GetPropertyByIndex(propIndex, ref prop);
 
                     BlittableObjectInstance.BlittableObjectProperty modifiedValue = default;
-                    JsValue key = prop.Name.ToString();
+                    string key = prop.Name.ToString();
                     var existInObject = obj.OwnValues?
                         .TryGetValue(key, out modifiedValue) == true;
 
@@ -482,20 +482,19 @@ namespace Raven.Server.Documents.Patch
             foreach (var modificationKvp in obj.OwnValues)
             {
                 //We already iterated through those properties while iterating the original properties set.
-                if (modifiedProperties != null && modifiedProperties.Contains(modificationKvp.Key.AsString()))
+                if (modifiedProperties != null && modifiedProperties.Contains(modificationKvp.Key))
                     continue;
 
                 var propertyName = modificationKvp.Key;
-                var propertyNameAsString = propertyName.AsString();
-                if (ShouldFilterProperty(filterProperties, propertyNameAsString))
+                if (ShouldFilterProperty(filterProperties, propertyName))
                     continue;
 
                 if (modificationKvp.Value.Changed == false)
                     continue;
 
-                _writer.WritePropertyName(propertyNameAsString);
+                _writer.WritePropertyName(propertyName);
                 var blittableObjectProperty = modificationKvp.Value;
-                WriteJsonValue(obj, isRoot, propertyNameAsString, blittableObjectProperty.Value);
+                WriteJsonValue(obj, isRoot, propertyName, blittableObjectProperty.Value);
             }
         }
 

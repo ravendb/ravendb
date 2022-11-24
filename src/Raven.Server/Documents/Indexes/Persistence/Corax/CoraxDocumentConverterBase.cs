@@ -210,13 +210,15 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
             case ValueType.DateTime:
                 var dateTime = (DateTime)value;
                 var dateAsBytes = dateTime.GetDefaultRavenFormat();
-                scope.Write(path, fieldId, dateAsBytes, ref entryWriter);
+                scope.Write(path, fieldId, dateAsBytes, dateTime.Ticks, dateTime.Ticks, ref entryWriter);
+                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
                 return;
 
             case ValueType.DateTimeOffset:
                 var dateTimeOffset = (DateTimeOffset)value;
                 var dateTimeOffsetBytes = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
-                scope.Write(path, fieldId, dateTimeOffsetBytes, ref entryWriter);
+                scope.Write(path, fieldId, dateTimeOffsetBytes, dateTimeOffset.UtcDateTime.Ticks, dateTimeOffset.UtcDateTime.Ticks, ref entryWriter);
+                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
                 return;
 
             case ValueType.TimeSpan:
@@ -226,19 +228,27 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     if (Utf8Formatter.TryFormat(timeSpan, buffer.ToSpan(), out var bytesWritten, TimeSpanFormat) == false)
                         throw new Exception($"Cannot convert {field.Name} as double into bytes.");
                     buffer.Truncate(bytesWritten);
-                    scope.Write(path, fieldId, buffer.ToSpan(), ref entryWriter);
+                    scope.Write(path, fieldId, buffer.ToSpan(), timeSpan.Ticks, timeSpan.Ticks, ref entryWriter);
+                    _index.IndexFieldsPersistence.MarkHasTimeValue(path);
                 }
 
                 return;
             
             case ValueType.DateOnly:
-                var dateOnly = ((DateOnly)value).ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
-                scope.Write(path, fieldId, dateOnly, ref entryWriter);
+                var dateOnly = ((DateOnly)value);
+                var dateOnlyTextual = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                var ticks = dateOnly.DayNumber * TimeSpan.TicksPerDay;
+                
+                scope.Write(path, fieldId, dateOnlyTextual, ticks, ticks, ref entryWriter);
+                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
                 return;
             
             case ValueType.TimeOnly:
-                var timeOnly = ((TimeOnly)value).ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
-                scope.Write(path, fieldId, timeOnly, ref entryWriter);
+                var timeOnly = ((TimeOnly)value);
+                var timeOnlyTextual = timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                scope.Write(path, fieldId, timeOnlyTextual, timeOnly.Ticks, timeOnly.Ticks, ref entryWriter);
+                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
+
                 return;
             
             case ValueType.Convertible:

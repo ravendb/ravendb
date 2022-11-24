@@ -4,6 +4,7 @@ using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -130,7 +131,6 @@ namespace Corax.Queries
 
         private const int TermBufferSize = 32;
         private fixed byte _termsBuffer[TermBufferSize];
-        private ByteStringContext<ByteStringMemoryCache>.ExternalScope _prevTermScope;
 
         public TermNumericRangeProvider(IndexSearcher searcher, FixedSizeTree<TVal> set,
             CompactTree tree, Slice fieldName, TVal low, TVal high)
@@ -142,7 +142,6 @@ namespace Corax.Queries
             _high = high;
             _set = set;
             _tree = tree;
-            _prevTermScope = default;
             _first = true;
         }
 
@@ -150,11 +149,8 @@ namespace Corax.Queries
         {
             _first = true;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Next(out TermMatch term) => Next(out term, out _);
-
-        public bool Next(out TermMatch term, out Slice termSlice)
+        
+        public bool Next(out TermMatch term)
         {
             bool wasFirst = false;
             bool hasNext;
@@ -177,7 +173,7 @@ namespace Corax.Queries
             {
                 if (wasFirst && curVal == _low)
                 {
-                    return Next(out term, out termSlice);
+                    return Next(out term);
                 }
             }     
 
@@ -189,38 +185,11 @@ namespace Corax.Queries
                 goto Empty;
             }
 
-            _prevTermScope.Dispose();
-            
-            fixed (byte* p = _termsBuffer)
-            {
-                int termLen;
-                if (typeof(TVal) == typeof(long))
-                {
-                    if (Utf8Formatter.TryFormat((long)(object)curVal, new Span<byte>(p, TermBufferSize), out termLen) == false)
-                    {
-                        throw new InvalidOperationException("Cannot format long value " + curVal);
-                    }
-                }
-                else if(typeof(TVal) == typeof(double))
-                {
-                    if (Utf8Formatter.TryFormat((double)(object)curVal, new Span<byte>(p, TermBufferSize), out termLen) == false)
-                    {
-                        throw new InvalidOperationException("Cannot format double value " + curVal);
-                    }
-                }
-                else
-                {
-                    throw new NotSupportedException("Unknown type: " + typeof(TVal));
-                }
-
-                _prevTermScope = Slice.External(_set.Llt.Allocator, p, termLen, ByteStringType.Immutable, out termSlice);
-
-                term = _searcher.TermQuery(_tree, termSlice);
-                return true;
-            }
+            var termId = _iterator.CreateReaderForCurrent().ReadLittleEndianInt64();
+            term = _searcher.TermQuery(termId);
+            return true;
 
             Empty:
-            termSlice = Slices.Empty;
             term = TermMatch.CreateEmpty(_searcher.Allocator);
             return false;
         }

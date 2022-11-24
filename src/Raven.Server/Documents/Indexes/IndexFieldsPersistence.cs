@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using Corax;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes
 {

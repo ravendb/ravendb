@@ -7,7 +7,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
+#pragma warning disable CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
     public class malayali : RavenTestBase
+#pragma warning restore CS8981 // The type name only contains lower-cased ascii characters. Such names may become reserved for the language.
     {
         public malayali(ITestOutputHelper output) : base(output)
         {

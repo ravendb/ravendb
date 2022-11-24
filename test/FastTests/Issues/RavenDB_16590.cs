@@ -76,7 +76,7 @@ namespace FastTests.Issues
                 "Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved",
                 "Indexing.Lucene.UseCompoundFileInMerging",
                 "Indexing.Lucene.IndexInputType",
-
+                "Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec",
                 
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",

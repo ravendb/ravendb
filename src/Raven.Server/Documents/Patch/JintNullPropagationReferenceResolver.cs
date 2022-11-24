@@ -1,6 +1,7 @@
 ﻿using System;
 using Jint;
 using Jint.Native;
+using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Jint.Runtime.References;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
@@ -10,15 +11,25 @@ namespace Raven.Server.Documents.Patch
 {
     public abstract class JintNullPropagationReferenceResolver : IReferenceResolver
     {
+        private static readonly JsNumber _numberPositiveZero = new(0);
+
         protected JsValue _selfInstance;
         protected BlittableObjectInstance _args;
 
         public virtual bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
         {
-            var name = reference.GetReferencedName()?.AsString();
-            if (_args == null || name == null || name.StartsWith('$') == false)
+            JsValue referencedName = reference.GetReferencedName();
+
+            if (referencedName.IsString() == false)
             {
-                value = name == "length" ? 0 : Null.Instance;
+                value = JsValue.Undefined;
+                return false;
+            }
+
+            var name = referencedName.AsString();
+            if (_args == null || name.StartsWith('$') == false)
+            {
+                value = name == "length" ? _numberPositiveZero : JsValue.Null;
                 return true;
             }
 
@@ -28,13 +39,19 @@ namespace Raven.Server.Documents.Patch
 
         public virtual bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
         {
-            if (reference.GetReferencedName() == Constants.Documents.Metadata.Key && 
+            JsValue referencedName = reference.GetReferencedName();
+
+            if (referencedName.IsString() == false)
+                return false;
+
+            var name = referencedName.AsString();
+            if (name == Constants.Documents.Metadata.Key &&
                 reference.GetBase() is BlittableObjectInstance boi)
             {
                 value = engine.Invoke(ScriptRunner.SingleRun.GetMetadataMethod, boi);
                 return true;
             }
-            if (reference.GetReferencedName() == "reduce" &&
+            if (name == "reduce" &&
                 value.IsArray() && value.AsArray().Length == 0)
             {
                 value = Null.Instance;
@@ -59,21 +76,29 @@ namespace Raven.Server.Documents.Patch
                 if (baseValue.IsUndefined() ||
                     baseValue.IsArray() && baseValue.AsArray().Length == 0)
                 {
-                    var name = reference.GetReferencedName().AsString();
+                    JsValue referencedName = reference.GetReferencedName();
+
+                    if (referencedName.IsString() == false)
+                    {
+                        value = JsValue.Undefined;
+                        return false;
+                    }
+
+                    var name = referencedName.AsString();
                     switch (name)
                     {
                         case "reduce":
-                            value = new ClrFunctionInstance(engine, "reduce", (thisObj, values) => values.Length > 1 ? values[1] : JsValue.Null);
+                            value = new ClrFunctionInstance(engine, "reduce", static (thisObj, values) => values.At(1, JsValue.Null));
                             return true;
                         case "concat":
-                            value = new ClrFunctionInstance(engine, "concat", (thisObj, values) => values[0]);
+                            value = new ClrFunctionInstance(engine, "concat", static (thisObj, values) => values.At(0));
                             return true;
                         case "some":
                         case "includes":
-                            value = new ClrFunctionInstance(engine, "some", (thisObj, values) => false);
+                            value = new ClrFunctionInstance(engine, "some", static (thisObj, values) => JsBoolean.False);
                             return true;
                         case "every":
-                            value = new ClrFunctionInstance(engine, "every", (thisObj, values) => true);
+                            value = new ClrFunctionInstance(engine, "every", static (thisObj, values) => JsBoolean.True);
                             return true;
                         case "map":
                         case "filter":
@@ -84,7 +109,7 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            value = new ClrFunctionInstance(engine, "function", (thisObj, values) => thisObj);
+            value = new ClrFunctionInstance(engine, "function", static (thisObj, values) => thisObj);
             return true;
         }
 

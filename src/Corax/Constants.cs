@@ -52,7 +52,7 @@ namespace Corax
             private static readonly byte[] LongTreeSuffixBytes = new byte[]  { (byte)'-', (byte)'L' };
 
             
-            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice, DynamicFieldsAnalyzersSlice;
+            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice, IndexVersionSlice, DynamicFieldsAnalyzersSlice, TimeFieldsSlice;
             public const int IntKnownFieldMask = unchecked((int)0x80000000);
             public const short ShortKnownFieldMask = unchecked((short)0x8000);
             public const byte ByteKnownFieldMask = unchecked((byte)0x80);
@@ -68,6 +68,7 @@ namespace Corax
                     Slice.From(ctx, "SuggestionFields", ByteStringType.Immutable, out SuggestionsFieldsSlice);
                     Slice.From(ctx, "IndexVersion", ByteStringType.Immutable, out IndexVersionSlice);
                     Slice.From(ctx, "DynamicFieldsAnalyzers", ByteStringType.Immutable, out DynamicFieldsAnalyzersSlice);
+                    Slice.From(ctx, "TimeFieldsSlice", ByteStringType.Immutable, out TimeFieldsSlice);
                 }
             }
         }
