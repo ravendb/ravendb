@@ -106,6 +106,8 @@ class editIndex extends viewModelBase {
 
     inheritSearchEngineText: KnockoutComputed<string>;
     effectiveSearchEngineText: KnockoutComputed<string>;
+    
+    canOptimizeIndex = ko.observable<boolean>(false);
 
     static readonly searchEngineConfigurationLabel = configurationConstants.indexing.staticIndexingEngineType;
 
@@ -309,6 +311,8 @@ class editIndex extends viewModelBase {
                 this.defaultSearchEngine(indexDefaults.StaticIndexingEngineType === "None" ? "Lucene" : indexDefaults.StaticIndexingEngineType);
                 
                 this.extractSearchEngineFromConfig();
+                
+                this.canOptimizeIndex((this.searchEngineConfiguration() || this.defaultSearchEngine()) === "Lucene");
 
                 this.editedIndex().registerCustomAnalyzers(analyzersList);
                 
