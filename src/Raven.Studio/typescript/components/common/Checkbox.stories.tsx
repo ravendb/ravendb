@@ -8,6 +8,7 @@ export default {
     title: "Bits/Checkbox",
     decorators: [withStorybookContexts, withBootstrap5],
     component: Checkbox,
+    decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof Checkbox>;
 
 export function Checkboxes() {
