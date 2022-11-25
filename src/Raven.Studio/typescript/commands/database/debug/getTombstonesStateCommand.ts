@@ -11,7 +11,7 @@ class getTombstonesStateCommand extends commandBase {
     execute(): JQueryPromise<TombstonesStateOnWire> {
         const url = endpoints.databases.adminTombstone.adminTombstonesState;
         return this.query<TombstonesStateOnWire>(url, null, this.db)
-            .fail((response: JQueryXHR) => this.reportError("Failed to tombstones state", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => this.reportError("Failed to get tombstones state", response.responseText, response.statusText));
     }
 }
 
