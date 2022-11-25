@@ -131,13 +131,13 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
             {firstPart}
             Status filter:
             {filter.status.map((x) => (
-                <Badge color="secondary" className="ms-1" pill>
+                <Badge color="secondary" className="ms-1" pill key={x}>
                     {IndexUtils.formatStatus(x)}
                 </Badge>
             ))}
             {filter.searchText ? (
                 <span className="ms-2">
-                    Name contains: <em className="text-emphasis">"{filter.searchText}"</em>
+                    Name contains: <em className="text-emphasis">&quot;{filter.searchText}&quot;</em>
                 </span>
             ) : (
                 ""
@@ -195,6 +195,7 @@ export default function IndexFilter(props: IndexFilterProps) {
             />
             <UncontrolledDropdown className="mr-1">
                 <DropdownToggle
+                    key="toggle"
                     outline={hasAnyStateFilter(filter)}
                     title="Set the indexing state for the selected indexes"
                     className={classNames("btn btn-default dropdown-toggle")}
@@ -202,7 +203,7 @@ export default function IndexFilter(props: IndexFilterProps) {
                     <span>Index Status</span>
                 </DropdownToggle>
 
-                <DropdownMenu>
+                <DropdownMenu key="menu">
                     <IndexFilterStatusItem
                         toggleStatus={() => toggleStatus("Normal")}
                         checked={filter.status.includes("Normal")}

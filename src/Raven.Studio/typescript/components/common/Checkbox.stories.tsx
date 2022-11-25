@@ -2,9 +2,11 @@
 import { Checkbox } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
 import React from "react";
+import { withBootstrap5, withStorybookContexts } from "../../test/storybookTestUtils";
 
 export default {
     title: "Bits/Checkbox",
+    decorators: [withStorybookContexts, withBootstrap5],
     component: Checkbox,
 } as ComponentMeta<typeof Checkbox>;
 
