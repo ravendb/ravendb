@@ -2,23 +2,18 @@
 import { FormGroup, Input, Label, Row } from "reactstrap";
 
 interface HrBorderProps {
-    selected: boolean;
-    toggleSelection: () => void;
     children?: ReactNode | ReactNode[];
-    color?: string;
+    right?: ReactNode | ReactNode[];
 }
 
 export function HrBorder(props: HrBorderProps) {
-    const { selected, toggleSelection, children, color } = props;
-    const colorClass = `form-check-${color ?? "secondary"}`;
+    const { right, children } = props;
+
     return (
-        <div className={colorClass}>
-            <Input type="checkbox" checked={selected} onChange={toggleSelection} />
-            {children && (
-                <Label check className="ms-2">
-                    {children}
-                </Label>
-            )}
+        <div>
+            {children && <h5 className="ms-2">{children}</h5>}
+            <hr />
+            {right && { right }}
         </div>
     );
 }
