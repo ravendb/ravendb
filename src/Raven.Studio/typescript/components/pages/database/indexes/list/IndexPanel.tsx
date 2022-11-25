@@ -23,20 +23,19 @@ import {
     RichPanelName,
     RichPanelSelect,
 } from "../../../../common/RichPanel";
-import { Checkbox } from "../../../../common/Checkbox";
 import {
     Badge,
     Button,
     ButtonGroup,
-    Dropdown,
     DropdownItem,
     DropdownMenu,
     DropdownToggle,
-    FormGroup,
     Input,
     Spinner,
     UncontrolledDropdown,
 } from "reactstrap";
+import assertUnreachable from "../../../../utils/assertUnreachable";
+import useId from "hooks/useId";
 
 interface IndexPanelProps {
     database: database;
@@ -58,6 +57,32 @@ interface IndexPanelProps {
 }
 
 export const IndexPanel = forwardRef(IndexPanelInternal);
+
+function getPriorityColor(index: IndexSharedInfo) {
+    switch (index.priority) {
+        case "Normal":
+            return "light";
+        case "High":
+            return "warning";
+        case "Low":
+            return "info";
+        default:
+            assertUnreachable(index.priority);
+    }
+}
+
+function getLockColor(index: IndexSharedInfo) {
+    switch (index.lockMode) {
+        case "LockedIgnore":
+            return "warning";
+        case "LockedError":
+            return "warning";
+        case "Unlock":
+            return "light";
+        default:
+            assertUnreachable(index.lockMode);
+    }
+}
 
 export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTMLDivElement>) {
     const { index, selected, toggleSelection, database, hasReplacement, globalIndexingStatus } = props;
@@ -164,37 +189,10 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
     const termsUrl = urls.terms(index.name)();
     const editUrl = urls.editIndex(index.name)();
 
-    const priorityButtonColor = getPriorityColor();
+    const priorityButtonColor = getPriorityColor(index);
+    const lockButtonColor = getLockColor(index);
 
-    function getPriorityColor() {
-        switch (index.priority) {
-            case "Normal":
-                return "light";
-            case "High":
-                return "warning";
-            case "Low":
-                return "info";
-            default:
-                "light";
-        }
-    }
-
-    const lockButtonColor = getLockColor();
-
-    function getLockColor() {
-        switch (index.lockMode) {
-            case "LockedIgnore":
-                return "warning";
-            case "LockedError":
-                return "warning";
-            case "Unlock":
-                return "light";
-            default:
-                "light";
-        }
-    }
-
-    const [reduceOutputId] = useState(() => _.uniqueId("reduce-output-id"));
+    const reduceOutputId = useId("reduce-output-id");
 
     return (
         <>
@@ -202,7 +200,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                 <RichPanelHeader id={indexUniqueId(index)}>
                     <RichPanelSelect>
                         {canReadWriteDatabase(database) && (
-                            <Input type="checkbox" onClick={toggleSelection} checked={selected} />
+                            <Input type="checkbox" onChange={toggleSelection} checked={selected} />
                         )}
                     </RichPanelSelect>
 
