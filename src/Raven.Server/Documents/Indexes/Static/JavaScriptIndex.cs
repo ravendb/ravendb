@@ -514,7 +514,7 @@ function map(name, lambda) {
                     object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, key.AsString());
                     arrayArgs[0] = ConvertToJsValue(value);
 
-                    _engine.Array.PrototypeObject.Push(values, args);
+                    _engine.Array.PrototypeObject.Push(values, arrayArgs);
                 }
 
                 return values;
