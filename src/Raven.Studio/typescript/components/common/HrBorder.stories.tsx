@@ -1,6 +1,5 @@
 ﻿import { ComponentMeta } from "@storybook/react";
 import { HrBorder } from "./HrBorder";
-import useBoolean from "hooks/useBoolean";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "../../test/storybookTestUtils";
 
@@ -11,5 +10,11 @@ export default {
 } as ComponentMeta<typeof HrBorder>;
 
 export function HrBorders() {
-    return <div>Test</div>;
+    return (
+        <div>
+            <HrBorder>Header with divider</HrBorder>
+
+            <HrBorder right="test">Header with divider</HrBorder>
+        </div>
+    );
 }

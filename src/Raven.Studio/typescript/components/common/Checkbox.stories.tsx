@@ -3,15 +3,15 @@ import { Checkbox } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "../../test/storybookTestUtils";
+import { boundCopy } from "../utils/common";
 
 export default {
     title: "Bits/Checkbox",
     decorators: [withStorybookContexts, withBootstrap5],
     component: Checkbox,
-    decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof Checkbox>;
 
-export function Checkboxes() {
+const Template = (args: { withLabel: boolean }) => {
     const { value: selected, toggle } = useBoolean(false);
 
     return (
@@ -21,4 +21,10 @@ export function Checkboxes() {
             </Checkbox>
         </div>
     );
-}
+};
+
+export const WithLabel = boundCopy(Template);
+
+WithLabel.args = {
+    withLabel: true,
+};
