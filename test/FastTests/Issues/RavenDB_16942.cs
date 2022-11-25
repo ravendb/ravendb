@@ -17,6 +17,8 @@ namespace FastTests.Issues
         {
             using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
             {
+                var previousTotalAllocated = allocator._totalAllocated;
+
                 var size = 128 * 1024;
                 for (var i = 0; i < 100; i++)
                 {
@@ -27,6 +29,11 @@ namespace FastTests.Issues
 
                     Assert.Equal(0, allocator._currentlyAllocated);
                     Assert.True(allocator._totalAllocated > 0);
+
+                    if (previousTotalAllocated != allocator._totalAllocated)
+                        Output.WriteLine($"{nameof(ByteStringContext_Should_Reuse_When_Large_Allocations_Are_Requested)} {i}: P: {previousTotalAllocated}: C: {allocator._totalAllocated}");
+
+                    previousTotalAllocated = allocator._totalAllocated;
                 }
 
                 Assert.True(allocator._totalAllocated > 0);
