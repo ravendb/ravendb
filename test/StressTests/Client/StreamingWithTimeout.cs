@@ -27,7 +27,7 @@ namespace StressTests.Client
 
                 using (var session = store.OpenAsyncSession(new SessionOptions { NoCaching = true, NoTracking = true }))
                 {
-                    var results = await session.Advanced.StreamAsync(session.Query<Order>());
+                    await using var results = await session.Advanced.StreamAsync(session.Query<Order>());
 
                     var count = 0;
                     while (await results.MoveNextAsync())
@@ -48,7 +48,7 @@ namespace StressTests.Client
                     {
                         await Assert.ThrowsAsync<TaskCanceledException>(async () =>
                         {
-                            var results = await session.Advanced.StreamAsync(session.Query<Order>());
+                            await using var results = await session.Advanced.StreamAsync(session.Query<Order>());
 
                             while (await results.MoveNextAsync())
                             {

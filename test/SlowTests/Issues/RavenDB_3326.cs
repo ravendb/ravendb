@@ -84,7 +84,7 @@ namespace SlowTests.Issues
                             OtherThanName = r.Address,
                         });
 
-                    var enumerator = await session.Advanced.StreamAsync(query);
+                    await using var enumerator = await session.Advanced.StreamAsync(query);
 
                     while (await enumerator.MoveNextAsync())
                     {
