@@ -238,14 +238,15 @@ namespace Raven.Server.Documents.Replication
                         Delay = delay,
                         Context = documentsContext,
                         LastTransactionMarker = -1,
-                        NumberOfItemsSent = 0,
-                        Size = 0L
+                        Size = 0L,
+                        ScannedItems = 0
                     };
 
                     using (_stats.Storage.Start())
                     {
                         foreach (var item in GetReplicationItems(_parent._database, documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication.CaseInsensitiveCounters))
                         {
+                            replicationState.ScannedItems++;
                             _parent.ForTestingPurposes?.OnDocumentSenderFetchNewItem?.Invoke();
 
                             _parent.CancellationToken.ThrowIfCancellationRequested();
@@ -304,12 +305,6 @@ namespace Raven.Server.Documents.Replication
                             }
 
                             replicationState.Size += item.Size;
-                            replicationState.NumberOfItemsSent++;
-
-                            if (replicationState.Size >= _parent._database.Configuration.Replication.MaxSizeToLoadFromStorage?.GetValue(SizeUnit.Bytes))
-                            {
-                                break;
-                            }
                         }
                     }
 
@@ -434,7 +429,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            if (state.NumberOfItemsSent == 0)
+            if (state.ScannedItems == 1)
             {
                 // always send at least one item
                 return true;
@@ -444,8 +439,10 @@ namespace Raven.Server.Documents.Replication
             var totalSize =
                 state.Size + state.Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
+            int numberOfItemsSent = state.ScannedItems - 1;
+
             if (state.MaxSizeToSend.HasValue && totalSize >= state.MaxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
-                state.BatchSize.HasValue && state.NumberOfItemsSent >= state.BatchSize.Value)
+                state.BatchSize.HasValue && numberOfItemsSent >= state.BatchSize.Value)
             {
                 return false;
             }
@@ -794,10 +791,10 @@ namespace Raven.Server.Documents.Replication
             public long CurrentNext;
             public long Size;
             public DocumentsOperationContext Context;
-            public int NumberOfItemsSent;
             public short LastTransactionMarker;
             public int? BatchSize;
             public Size? MaxSizeToSend;
+            public int ScannedItems;
         }
     }
 }

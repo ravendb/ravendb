@@ -42,11 +42,5 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Replication.MaxSizeToSendInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? MaxSizeToSend { get; set; }
-
-        [Description("Maximum number of data size to load from storage to memory before sending it")]
-        [DefaultValue(1024)]
-        [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Replication.MaxSizeToLoadFromStorage", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public Size? MaxSizeToLoadFromStorage { get; set; }
     }
 }
