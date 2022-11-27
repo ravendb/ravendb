@@ -1890,7 +1890,6 @@ namespace Raven.Server.Documents
 
             internal Action BeforeExecutingClusterTransactions;
 
-            internal Action AfterSnapshotOfDocuments;
             internal Action BeforeSnapshotOfDocuments;
 
             internal Action AfterSnapshotOfDocuments;
