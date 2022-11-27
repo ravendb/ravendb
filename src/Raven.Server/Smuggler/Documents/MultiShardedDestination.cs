@@ -184,8 +184,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
-                    var bucket = ShardHelper.GetBucket(docId);
-                    var shardNumber = DatabaseContext.GetShardNumber(bucket);
+                    var shardNumber = DatabaseContext.GetShardNumberFor(key);
                     await _actions[shardNumber].WriteKeyValueAsync(key, value, existingDocument);
                     return;
                 }
@@ -197,8 +196,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
-                    var bucket = ShardHelper.GetBucket(docId);
-                    var shardNumber = DatabaseContext.GetShardNumber(bucket);
+                    var shardNumber = DatabaseContext.GetShardNumberFor(key);;
                     await _actions[shardNumber].WriteTombstoneKeyAsync(key);
                     return;
                 }
@@ -225,22 +223,20 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
             {
-                var bucket = ShardHelper.GetBucket(_allocator, item.Document.Id);
-                var shardNumber = DatabaseContext.GetShardNumber(bucket);
+                var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, item.Document.Id);
                 await _actions[shardNumber].WriteDocumentAsync(item, progress);
             }
 
             public async ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
             {
-                var bucket = ShardHelper.GetBucket(_allocator, tombstone.LowerId);
-                var shardNumber = DatabaseContext.GetShardNumber(bucket);
+                
+                var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, tombstone.LowerId);
                 await _actions[shardNumber].WriteTombstoneAsync(tombstone, progress);
             }
 
             public async ValueTask WriteConflictAsync(DocumentConflict conflict, SmugglerProgressBase.CountsWithLastEtag progress)
             {
-                var bucket = ShardHelper.GetBucket(_allocator, conflict.Id);
-                var shardNumber = DatabaseContext.GetShardNumber(bucket);
+                var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, conflict.Id);
                 await _actions[shardNumber].WriteConflictAsync(conflict, progress);
             }
 
@@ -269,15 +265,13 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteCounterAsync(CounterGroupDetail counterDetail)
             {
-                var bucket = ShardHelper.GetBucket(_allocator, counterDetail.DocumentId);
-                var shardNumber = DatabaseContext.GetShardNumber(bucket);
+                var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, counterDetail.DocumentId);
                 await _actions[shardNumber].WriteCounterAsync(counterDetail);
             }
 
             public async ValueTask WriteLegacyCounterAsync(CounterDetail counterDetail)
             {
-                var bucket = ShardHelper.GetBucket(counterDetail.DocumentId);
-                var shardNumber = DatabaseContext.GetShardNumber(bucket);
+                var shardNumber = DatabaseContext.GetShardNumberFor(counterDetail.DocumentId);
                 await _actions[shardNumber].WriteLegacyCounterAsync(counterDetail);
             }
 
@@ -294,8 +288,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteTimeSeriesAsync(TimeSeriesItem ts)
             {
-                var bucket = ShardHelper.GetBucket(ts.DocId);
-                var shardNumber = DatabaseContext.GetShardNumber(bucket);
+                var shardNumber = DatabaseContext.GetShardNumberFor(ts.DocId);
                 await _actions[shardNumber].WriteTimeSeriesAsync(ts);
             }
         }
@@ -308,8 +301,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteLegacyDeletions(string id)
             {
-                var bucket = ShardHelper.GetBucket(id);
-                var shardNumber = DatabaseContext.GetShardNumber(bucket);
+                var shardNumber = DatabaseContext.GetShardNumberFor(id);
                 await _actions[shardNumber].WriteLegacyDeletions(id);
             }
         }
