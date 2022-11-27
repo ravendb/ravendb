@@ -61,7 +61,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                         var currentCert = GetCurrentCertificate();
 
-                        using (var connection = new ProxyWebSocketConnection(webSocket, Server.ServerStore.NodeTag, remoteNodeUrl, $"/admin/cluster-dashboard/remote/watch?thumbprint={currentCert?.Thumbprint}", ServerStore.ContextPool, ServerStore.ServerShutdown))
+                        using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, $"/admin/cluster-dashboard/remote/watch?thumbprint={currentCert?.Thumbprint}", ServerStore.ContextPool, ServerStore.ServerShutdown))
                         {
                             await connection.Establish(Server.Certificate?.Certificate);
 
