@@ -20,21 +20,20 @@ namespace Raven.Server.Documents.Sharding
             var i = 0;
             foreach (var id in ids)
             {
-                int bucket;
+                int shardNumber;
                 if (typeof(T) == typeof(Slice))
                 {
-                    bucket = ShardHelper.GetBucket(context, (Slice)(object)id);
+                    shardNumber = databaseContext.GetShardNumberFor((Slice)(object)id);
                 }
                 else if (typeof(T) == typeof(string))
                 {
-                    bucket = ShardHelper.GetBucket(context, (string)(object)id);
+                    shardNumber = databaseContext.GetShardNumberFor((string)(object)id);
                 }
                 else
                 {
                     throw new ArgumentException($"the type {typeof(T).FullName} not supported for bucket calculation");
                 }
 
-                var shardNumber = databaseContext.GetShardNumber(bucket);
 
                 if (result.TryGetValue(shardNumber, out var idsForShard) == false)
                 {
