@@ -167,9 +167,13 @@ namespace Raven.Server.Documents
 
             public IDisposable CreateReaderStream(out LimitedStream limitedStream)
             {
-                var safeFileHandle = new SafeFileHandle(_parent._file.InnerStream.SafeFileHandle.DangerousGetHandle(), false);
-                var stream = new FileStream(safeFileHandle, FileAccess.Read);
+                var safeFileHandle = new SafeFileHandle(_parent._file.InnerStream.SafeFileHandle.DangerousGetHandle(), ownsHandle: false);
+                Stream stream = new FileStream(safeFileHandle, FileAccess.Read);
                 stream.Seek(_startPosition, SeekOrigin.Begin);
+                if (_stream is TempCryptoStream tcs)
+                {
+                    stream = new TempCryptoStream(stream, tcs);
+                }
                 limitedStream = new LimitedStream(stream, Length, _startPosition, _startPosition);
 
                 return new DisposableAction(() =>
