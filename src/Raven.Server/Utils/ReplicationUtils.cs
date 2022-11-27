@@ -8,13 +8,14 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;
 
 namespace Raven.Server.Utils
 {
     internal static class ReplicationUtils
     {
-        public static TcpConnectionInfo GetTcpInfoForInteralReplication(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
+        public static TcpConnectionInfo GetTcpInfoForInternalReplication(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
         {
             return AsyncHelpers.RunSync(() => GetTcpInfoAsync(url, databaseName, databaseId, etag, tag, certificate, localNodeTag, token));
         }
