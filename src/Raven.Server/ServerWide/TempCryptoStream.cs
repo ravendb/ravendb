@@ -9,8 +9,8 @@ namespace Raven.Server.ServerWide
     {
         private bool _ignoreSetLength;
         private readonly Stream _stream;
-        private readonly MemoryStream _authenticationTags = new MemoryStream();
-        private readonly MemoryStream _nonces = new MemoryStream();
+        private readonly MemoryStream _authenticationTags;
+        private readonly MemoryStream _nonces;
         private readonly long _startPosition;
 
         public Stream InnerStream => _stream;
@@ -49,10 +49,24 @@ namespace Raven.Server.ServerWide
             return this;
         }
 
+        public TempCryptoStream(Stream stream, TempCryptoStream other)
+        {
+            _stream = stream;
+            _startPosition = other._startPosition;
+            _nonces = other._nonces;
+            _authenticationTags = other._authenticationTags;
+            _internalBuffer = new byte[4096];
+            _key = other._key;
+            _maxLength = other._maxLength;
+            _blockNumber = -1; // so next read will inc to 0
+        }
+
         public TempCryptoStream(Stream stream)
         {
             _stream = stream;
             _startPosition = stream.Position;
+            _nonces = new MemoryStream();
+            _authenticationTags = new MemoryStream();
             _internalBuffer = new byte[4096];
 
             _key = new byte[(int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes()];

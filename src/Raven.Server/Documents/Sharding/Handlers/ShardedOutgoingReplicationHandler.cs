@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
             catch (Exception e)
             {
-                batch?.BatchSent.TrySetException(e);
+                batch?.BatchSent?.TrySetException(e);
                 try
                 {
                     _tcpConnectionOptions.Dispose();

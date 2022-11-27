@@ -824,8 +824,8 @@ namespace SlowTests.Server.Replication
         public async Task ReplicationShouldSendMissingAttachmentsFromNonShardedToShardedDatabase_LargeAttachments_Encrypted()
         {
            
-            var databaseName = Encryption.SetupEncryptedDatabase(out var cert, out var masterKey);
-            var databaseName2 = Encryption.SetupEncryptedDatabase(out var cert2, out var masterKey2);
+            var databaseName = Encryption.SetupEncryptedDatabase(out var cert, out _);
+            var databaseName2 = Encryption.SetupEncryptedDatabase(out var cert2, out _);
 
             using (var source = GetDocumentStore(new Options
             {
@@ -915,21 +915,20 @@ namespace SlowTests.Server.Replication
                         var attachments = session.Advanced.Attachments.GetNames(user);
                         Assert.Equal(2, attachments.Length);
 
-                        //TODO: make it work
-                        //foreach (var name in attachments)
-                        //{
-                        //    using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
-                        //    {
-                        //        Assert.NotNull(attachment);
-                        //        Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
-                        //        if (attachment.Details.Name == "foo.png")
-                        //        {
-                        //            Assert.Equal(0, buffer[0]);
-                        //            Assert.Equal(1, buffer[1]);
-                        //            Assert.Equal(2, buffer[2]);
-                        //        }
-                        //    }
-                        //}
+                        foreach (var name in attachments)
+                        {
+                            using (var attachment = await session.Advanced.Attachments.GetAsync(user, name.Name))
+                            {
+                                Assert.NotNull(attachment);
+                                Assert.Equal(3, await attachment.Stream.ReadAsync(buffer, 0, 3));
+                                if (attachment.Details.Name == "foo.png")
+                                {
+                                    Assert.Equal(0, buffer[0]);
+                                    Assert.Equal(1, buffer[1]);
+                                    Assert.Equal(2, buffer[2]);
+                                }
+                            }
+                        }
                     }
                 }
             }

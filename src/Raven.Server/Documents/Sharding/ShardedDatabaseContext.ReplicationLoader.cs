@@ -155,6 +155,7 @@ namespace Raven.Server.Documents.Sharding
             }
 
             Items.Clear();
+            BatchSent?.TrySetCanceled();
             BatchSent = null;
         }
     }
