@@ -1173,7 +1173,7 @@ namespace Raven.Server.Documents
                 lastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(ctx.Transaction.InnerTransaction);
             }
 
-            using (TombstoneCleaner.PreventTombstoneCleaning(lastTombstoneEtag))
+            using (TombstoneCleaner.PreventTombstoneCleaningUpToEtag(lastTombstoneEtag))
             using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
             {
