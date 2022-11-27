@@ -2,9 +2,10 @@
 using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Raven.Client.ServerWide.Commands;
 using Sparrow.Json;
 
-namespace Raven.Client.ServerWide.Commands
+namespace Raven.Server.ServerWide.Commands
 {
     public class GetTcpInfoForReplicationCommand : GetTcpInfoCommand
     {
