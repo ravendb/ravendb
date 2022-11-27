@@ -1472,7 +1472,7 @@ namespace Raven.Server.Documents.Replication
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
                         {
                             cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
-                            return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
+                            return ReplicationUtils.GetTcpInfoForInteralReplication(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
                                 "Replication",
                         certificate, _server.NodeTag, cts.Token);
                         }

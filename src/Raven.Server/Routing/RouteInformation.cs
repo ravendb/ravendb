@@ -120,18 +120,18 @@ namespace Raven.Server.Routing
 
                     if(hasChanges == false)
                     {
-                        DatabaseTopology topology = null;
-                        
-                        if (context.HttpContext.Request.Query.TryGetValue("nodetag", out var nodeTag))
+
+                        if (context.HttpContext.Request.Query.TryGetValue("nodetag", out var nodeTag) && string.IsNullOrEmpty(nodeTag)==false && string.IsNullOrWhiteSpace(nodeTag)==false)
                         {
+                            DatabaseTopology topology = null;
                             using (context.RavenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                             using (ctx.OpenReadTransaction())
                                 topology = context.RavenServer.ServerStore.Cluster.ReadDatabaseTopology(ctx, databaseName.ToString());
-                        }
-                    
-                        if (topology != null && topology.Rehabs.Contains(nodeTag))
-                        {
-                            hasChanges = true;
+
+                            if (topology != null && topology.Rehabs.Contains(nodeTag))
+                            {
+                                hasChanges = true;
+                            }
                         }
                     }
 
