@@ -28,7 +28,7 @@ namespace Raven.Server.Documents
         private readonly int _numberOfTombstonesToDeleteInBatch;
 
         private readonly HashSet<ITombstoneAware> _subscriptions = new HashSet<ITombstoneAware>();
-        private long _minTombstoneToDelete = long.MaxValue;
+        private long? _maxTombstoneEtagToDelete;
 
         public TombstoneCleaner(DocumentDatabase documentDatabase) : base(documentDatabase.Name, documentDatabase.DatabaseShutdown)
         {
@@ -66,11 +66,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IDisposable PreventTombstoneCleaning(long minTombstoneToDelete)
+        public IDisposable PreventTombstoneCleaningUpToEtag(long maxTombstoneToDelete)
         {
-            _minTombstoneToDelete = minTombstoneToDelete;
+            _maxTombstoneEtagToDelete = maxTombstoneToDelete;
 
-            return new DisposableAction(() => { _minTombstoneToDelete = long.MaxValue; });
+            return new DisposableAction(() =>
+            {
+                _maxTombstoneEtagToDelete = null;
+            });
         }
 
         protected override async Task DoWork()
@@ -187,7 +190,11 @@ namespace Raven.Server.Documents
                 _subscriptionsLocker.Release();
             }
 
-            result.MinAllDocsEtag = Math.Min(result.MinAllDocsEtag, _minTombstoneToDelete);
+            var maxTombstoneEtagToDelete = _maxTombstoneEtagToDelete;
+            if (maxTombstoneEtagToDelete.HasValue)
+            {
+                result.MinAllDocsEtag = Math.Min(result.MinAllDocsEtag, maxTombstoneEtagToDelete.Value);
+            }
 
             return result;
 
