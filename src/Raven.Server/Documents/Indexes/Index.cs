@@ -1812,8 +1812,13 @@ namespace Raven.Server.Documents.Indexes
 
                     if (batchCompleted)
                     {
+                        Size totalSizeOfJournals = Size.Zero;
+                        foreach (var journalSize in _environment.Journal.Files.Select(i => i.JournalSize))
+                            totalSizeOfJournals += journalSize;
                         
-                        FlushAndSync(_environment, (int)Configuration.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex.AsTimeSpan.TotalMilliseconds, tryCleanupRecycledJournals: true);
+                        
+                        if (totalSizeOfJournals >= Configuration.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndex)
+                            FlushAndSync(_environment, (int)Configuration.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndex.AsTimeSpan.TotalMilliseconds, tryCleanupRecycledJournals: true);
 
                         // this side-by-side index will be replaced in a second, notify about indexing success
                         // so we know that indexing batch is no longer in progress

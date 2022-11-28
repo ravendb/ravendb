@@ -77,7 +77,8 @@ namespace FastTests.Issues
                 "Indexing.Lucene.UseCompoundFileInMerging",
                 "Indexing.Lucene.IndexInputType",
                 "Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec",
-                
+                "Indexing.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndexInMb",
+
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",
                 "Indexing.Analyzers.NGram.MaxGram",
@@ -87,7 +88,7 @@ namespace FastTests.Issues
                 "Indexing.MaxTimeForMergesToKeepRunningInSec",
                 "Indexing.MergeFactor",
                 "Indexing.NumberOfLargeSegmentsToMergeInSingleBatch",
-                "Indexing.UseCompoundFileInMerging"
+                "Indexing.UseCompoundFileInMerging",
             };
 
             var sortedStudioList = propertiesDeclaredInStudio.OrderBy(x => x).ToList();
