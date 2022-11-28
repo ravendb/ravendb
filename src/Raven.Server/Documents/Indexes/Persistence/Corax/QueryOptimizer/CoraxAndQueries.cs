@@ -1,0 +1,171 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
+using Corax;
+using Corax.Queries;
+using Corax.Utils;
+using Sparrow.Extensions;
+
+namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
+
+public class CoraxAndQueries : CoraxBooleanQueryBase
+{
+    private readonly List<CoraxBooleanItem> _queryStack;
+
+    public CoraxAndQueries(IndexSearcher indexSearcher, MemoizationMatchProviderRef<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right,
+        IQueryScoreFunction scoreFunction) : base(indexSearcher, scoreFunction)
+    {
+        if (CoraxBooleanItem.CanBeMergedForAnd(left, right) == false)
+            throw new InvalidDataException($"Cannot merge {nameof(CoraxBooleanItem)}. This is bug. {Environment.NewLine}Details:{Environment.NewLine} {left}{Environment.NewLine}{Environment.NewLine}{right}");
+        
+        _queryStack = new List<CoraxBooleanItem>() {left, right};
+    }
+
+    public bool TryMerge(CoraxAndQueries other)
+    {
+        if (EqualsScoreFunctions(other) == false)
+            return false;
+        
+        _queryStack.AddRange(other._queryStack);
+        return true;
+    }
+
+    public bool TryAnd(IQueryMatch item)
+    {
+        if (item is CoraxBooleanItem cbi)
+        {
+            if (CoraxBooleanItem.CanBeMergedForAnd(_queryStack[0], cbi) == false)
+                return false;
+
+            _queryStack.Add(cbi);
+            return true;
+        }
+
+        return false;
+    }
+    
+    public override IQueryMatch Materialize()
+    {
+        Debug.Assert(_queryStack.Count > 0);
+        
+        IQueryMatch baseMatch = null;
+        var stack = CollectionsMarshal.AsSpan(_queryStack);
+        int reduced = 0;
+        
+        _queryStack.Sort(PrioritizeSort);
+        
+        foreach (var query in stack)
+        {
+            //Out of TermMatches in our stack
+            if (query.Operation is not (UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals))
+                break;
+
+            //We're always do TermMatch (true and NOT (X))
+            IQueryMatch second = IndexSearcher.TermQuery(query.Name, query.TermAsString, query.FieldId);
+
+            if (query.Operation is UnaryMatchOperation.NotEquals)
+            {
+                //This could be more expensive than scanning RAW elements. This returns ~(field.NumberOfEntries - term.NumberOfEntries). Can we set threshold around ~10% to perfom SCAN maybe? 
+                if (baseMatch != null)
+                {
+                    // Instead of performing AND(TermMatch, AndNot(Exist, Term)) we can translate it into AndNot(baseMatch, Term). This way we avoid additional BinaryMatch
+                    baseMatch = IndexSearcher.AndNot(baseMatch, second);
+                    _hasBinary = true;
+                    goto Reduce;
+                }
+
+                //In the first place we've to do (true and NOT))
+                baseMatch = IndexSearcher.AndNot<MultiTermMatch, TermMatch>(IndexSearcher.ExistsQuery(query.Name), (TermMatch)second);
+                _hasBinary = true;
+                goto Reduce;
+            }
+
+
+            // TermMatch:
+            // This should be more complex. Should we always perform AND for TermMatch? For example there could be a case when performing RangeQueries in first place will limit our set very well so scanning would be better option.
+
+            
+            if (baseMatch == null)
+            {
+                baseMatch = second;
+            }
+            else
+            {
+                baseMatch = IndexSearcher.And(baseMatch, second);
+                _hasBinary = true;
+            }
+            Reduce:
+            reduced++;
+
+        }
+
+        stack = stack.Slice(reduced);
+        if (stack.Length == 0)
+            goto Return;
+
+        // Ascending term amount stack. It not always would work for us. Thats is telling us terms inside field are clustered in centrains points
+        var leftmostClause = stack[0];
+        var nextQuery = TransformCoraxBooleanItemIntoQueryMatch(leftmostClause);
+        baseMatch = baseMatch is null
+                ? nextQuery
+                : IndexSearcher.And(baseMatch, nextQuery);
+       
+
+        MultiUnaryItem[] listOfMergedUnaries = new MultiUnaryItem[stack.Length - 1];
+        for (var index = 1; index < stack.Length; index++)
+        {
+            var query = stack[index];
+            if (query.Operation is UnaryMatchOperation.Between)
+            {
+                listOfMergedUnaries[index - 1] = (query.Term, query.Term2) switch
+                {
+                    (long l, long l2) => new MultiUnaryItem(query.FieldId, l, l2, query.BetweenLeft, query.BetweenRight),
+                    (double d, double d2) => new MultiUnaryItem(query.FieldId, d, d2, query.BetweenLeft, query.BetweenRight),
+                    (string s, string s2) => new MultiUnaryItem(IndexSearcher, query.FieldId, s, s2, query.BetweenLeft, query.BetweenRight),
+                    (long l, double d) => new MultiUnaryItem(query.FieldId, Convert.ToDouble(l), d, query.BetweenLeft, query.BetweenRight),
+                    (double d, long l) => new MultiUnaryItem(query.FieldId, d, Convert.ToDouble(l), query.BetweenLeft, query.BetweenRight),
+                    _ => throw new InvalidOperationException($"UnaryMatchOperation {query.Operation} is not supported for type {query.Term.GetType()}")
+                };
+            }
+            else
+            {
+                listOfMergedUnaries[index - 1] = query.Term switch
+                {
+                    long longTerm => new MultiUnaryItem(query.FieldId, longTerm, query.Operation),
+                    double doubleTerm => new MultiUnaryItem(query.FieldId, doubleTerm, query.Operation),
+                    _ => new MultiUnaryItem(IndexSearcher, query.FieldId, query.Term as string, query.Operation),
+                };
+            }
+        }
+
+        if (listOfMergedUnaries.Length > 0)
+        {
+            baseMatch = IndexSearcher.CreateMultiUnaryMatch(baseMatch ?? IndexSearcher.ExistsQuery(stack[1].Name), listOfMergedUnaries);
+        }
+
+        Return:
+        return ScoreFunction is NullScoreFunction
+            ? baseMatch
+            : IndexSearcher.Boost(baseMatch, ScoreFunction);
+    }
+    
+    private static int PrioritizeSort(CoraxBooleanItem firstUnaryItem, CoraxBooleanItem secondUnaryItem)
+    {
+        if (firstUnaryItem.Operation == UnaryMatchOperation.Equals && secondUnaryItem.Operation != UnaryMatchOperation.Equals)
+            return -1;
+        if (firstUnaryItem.Operation != UnaryMatchOperation.Equals && secondUnaryItem.Operation == UnaryMatchOperation.Equals)
+            return 1;
+        if (firstUnaryItem.Operation == UnaryMatchOperation.Between && secondUnaryItem.Operation != UnaryMatchOperation.Between)
+            return -1;
+        if (firstUnaryItem.Operation != UnaryMatchOperation.Between && secondUnaryItem.Operation == UnaryMatchOperation.Between)
+            return 1;
+        if (firstUnaryItem.Operation == UnaryMatchOperation.Between && secondUnaryItem.Operation == UnaryMatchOperation.Between)
+            return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
+
+        return firstUnaryItem.Count.CompareTo(secondUnaryItem.Count);
+    }
+
+    public new bool IsBoosting => ScoreFunction is not NullScoreFunction;
+}
