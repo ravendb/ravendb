@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Http;
 using NuGet.Packaging;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -86,39 +85,14 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
     protected override async ValueTask<bool> NotModifiedAsync()
     {
-        var changeVectors = new List<string>();
-        if (IsAllDocsCollection)
-        {
-            for (int i = 0; i < RequestHandler.DatabaseContext.ShardCount; i++)
-            {
-                var shardExecutor = _requestHandler.ShardExecutor.GetRequestExecutorAt(i);
-                var cmd = new GetStatisticsOperation.GetStatisticsCommand(RequestHandler.Server.DebugTag, RequestHandler.DatabaseContext.ServerStore.NodeTag);
-                await shardExecutor.ExecuteAsync(cmd, _context);
-                var changeVector = cmd.Result.DatabaseChangeVector;
-                if (changeVector != null)
-                    changeVectors.Add(changeVector);
-            }
-        }
-        else
-        {
-            var result = await _requestHandler.ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(RequestHandler, Collection, RequestHandler.DatabaseName));
-            foreach ((_, string changeVector) in result.LastChangeVectors)
-            {
-                if (changeVector != null)
-                    changeVectors.Add(changeVector);
-            }
-        }
+        var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
-        var etag = ComputeHttpEtags.ComputeEtagForChangeVectors(changeVectors);
+        var result = await _requestHandler.ShardExecutor.ExecuteParallelForAllAsync(new ShardedCollectionPreviewOperation(RequestHandler, etag, _continuationToken));
 
-        if (etag == null)
-            return false;
-
-        if (etag == RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch))
+        if (etag != null && etag == result.CombinedEtag)
             return true;
 
-        HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
-
+        HttpContext.Response.Headers["ETag"] = "\"" + result.CombinedEtag + "\"";
         return false;
     }
 
