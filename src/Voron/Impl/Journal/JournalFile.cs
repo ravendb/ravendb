@@ -59,6 +59,8 @@ namespace Voron.Impl.Journal
 
         public long Available4Kbs => _journalWriter?.NumberOfAllocated4Kb - _writePosIn4Kb ?? 0;
 
+        public Size JournalSize => new Size(_journalWriter?.NumberOfAllocated4Kb * 4 ?? 0, SizeUnit.Kilobytes); 
+        
         internal IJournalWriter JournalWriter => _journalWriter;
 
         public PageTable PageTranslationTable => _pageTranslationTable;
