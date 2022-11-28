@@ -7,6 +7,7 @@ using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -30,6 +31,7 @@ internal static class CoraxQueryBuilder
 {
     internal const int TakeAll = -1;
     private const bool HasNoInnerBinary = false;
+
     internal class Parameters
     {
         public readonly IndexSearcher IndexSearcher;
@@ -49,7 +51,10 @@ internal static class CoraxQueryBuilder
         public readonly bool HasDynamics;
         public readonly Lazy<List<string>> DynamicFields;
         public readonly ByteStringContext Allocator;
-        internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping, FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, List<string> buildSteps = null)
+
+        internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
+            IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
+            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, List<string> buildSteps = null)
         {
             IndexSearcher = searcher;
             ServerContext = serverContext;
@@ -66,22 +71,21 @@ internal static class CoraxQueryBuilder
             AllEntries = new MemoizationMatchProviderRef<AllEntriesMatch>(IndexSearcher.Memoize(IndexSearcher.AllEntries()));
             Metadata = query.Metadata;
             HasDynamics = index.Definition.HasDynamicFields;
-            DynamicFields = HasDynamics 
+            DynamicFields = HasDynamics
                 ? new Lazy<List<string>>(() => IndexSearcher.GetFields())
                 : null;
             Allocator = allocator;
         }
     }
 
-    internal static IQueryMatch MateralizeWhenNeeded(IQueryMatch source, ref bool isBinary)
+    private static IQueryMatch MaterializeWhenNeeded(IQueryMatch source, ref bool isBinary)
     {
-        if (source is CoraxBooleanQuery cbq)
+        if (source is CoraxBooleanQueryBase cbq)
         {
             source = cbq.Materialize();
-            isBinary |= cbq.HasInnerBinary;
+            isBinary |= cbq.HasBinary;
         }
-
-        if (source is CoraxBooleanItem cbi)
+        else if (source is CoraxBooleanItem cbi)
             source = cbi.Materialize();
 
         return source;
@@ -100,8 +104,7 @@ internal static class CoraxQueryBuilder
             if (metadata.Query.Where is not null)
             {
                 coraxQuery = ToCoraxQuery<NullScoreFunction>(builderParameters, metadata.Query.Where, default, out isBinary);
-                coraxQuery = MateralizeWhenNeeded(coraxQuery, ref isBinary);
-
+                coraxQuery = MaterializeWhenNeeded(coraxQuery, ref isBinary);
             }
             else
             {
@@ -115,13 +118,15 @@ internal static class CoraxQueryBuilder
                 var sortMetadata = GetSortMetadata(builderParameters);
                 coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata);
             }
+
             // The parser already throws parse exception if there is a syntax error.
             // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
             return coraxQuery;
         }
     }
-    
-    private static IQueryMatch ToCoraxQuery<TScoreFunction>(Parameters builderParameters, QueryExpression expression, TScoreFunction scoreFunction, out bool hasBinary, bool exact = false, int? proximity = null)
+
+    private static IQueryMatch ToCoraxQuery<TScoreFunction>(Parameters builderParameters, QueryExpression expression, TScoreFunction scoreFunction, out bool hasBinary,
+        bool exact = false, int? proximity = null)
         where TScoreFunction : IQueryScoreFunction
     {
         var indexSearcher = builderParameters.IndexSearcher;
@@ -133,7 +138,7 @@ internal static class CoraxQueryBuilder
         var fieldsToFetch = builderParameters.FieldsToFetch;
         var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         var allocator = builderParameters.Allocator;
-        
+
         hasBinary = false;
         if (RuntimeHelpers.TryEnsureSufficientExecutionStack() == false)
             QueryBuilderHelper.ThrowQueryTooComplexException(metadata, queryParameters);
@@ -147,166 +152,169 @@ internal static class CoraxQueryBuilder
             switch (where.Operator)
             {
                 case OperatorType.And:
+                {
+                    IQueryMatch left = null;
+                    IQueryMatch right = null;
+
+                    // translate ((Foo >= $p1) and (Foo <= $p2)) to a more efficient between query
+                    if (@where.Left is BinaryExpression lbe && lbe.IsRangeOperation &&
+                        @where.Right is BinaryExpression rbe && rbe.IsRangeOperation && lbe.Left.Equals(rbe.Left) &&
+                        lbe.Right is ValueExpression leftVal && rbe.Right is ValueExpression rightVal)
                     {
-                        IQueryMatch left = null;
-                        IQueryMatch right = null;
-
-                        // translate ((Foo >= $p1) and (Foo <= $p2)) to a more efficient between query
-                        if (@where.Left is BinaryExpression lbe && lbe.IsRangeOperation &&
-                            @where.Right is BinaryExpression rbe && rbe.IsRangeOperation && lbe.Left.Equals(rbe.Left) &&
-                            lbe.Right is ValueExpression leftVal && rbe.Right is ValueExpression rightVal)
+                        BetweenExpression bq = null;
+                        if (lbe.IsGreaterThan && rbe.IsLessThan)
                         {
-                            BetweenExpression bq = null;
-                            if (lbe.IsGreaterThan && rbe.IsLessThan)
+                            bq = new BetweenExpression(lbe.Left, leftVal, rightVal)
                             {
-                                bq = new BetweenExpression(lbe.Left, leftVal, rightVal)
-                                {
-                                    MinInclusive = lbe.Operator == OperatorType.GreaterThanEqual,
-                                    MaxInclusive = rbe.Operator == OperatorType.LessThanEqual,
-                                };
-                            }
-
-                            if (lbe.IsLessThan && rbe.IsGreaterThan)
-                            {
-                                bq = new BetweenExpression(lbe.Left, rightVal, leftVal)
-                                {
-                                    MinInclusive = rbe.Operator == OperatorType.GreaterThanEqual,
-                                    MaxInclusive = lbe.Operator == OperatorType.LessThanEqual
-                                };
-                            }
-
-                            if (bq != null)
-                                return TranslateBetweenQuery(builderParameters, bq, scoreFunction, exact);
+                                MinInclusive = lbe.Operator == OperatorType.GreaterThanEqual, MaxInclusive = rbe.Operator == OperatorType.LessThanEqual,
+                            };
                         }
 
-                        switch (@where.Left, @where.Right)
+                        if (lbe.IsLessThan && rbe.IsGreaterThan)
                         {
-                            case (NegatedExpression ne1, NegatedExpression ne2):
-                                left = ToCoraxQuery(builderParameters, ne1.Expression, scoreFunction, out var leftInnerBinary, exact);
-                                right = ToCoraxQuery(builderParameters, ne2.Expression, scoreFunction, out var rightInnerBinary, exact);
-
-                                TryMergeTwoNodes(indexSearcher, builderParameters.AllEntries, ref left, ref right, out var merged, scoreFunction, true);
-
-                                hasBinary = leftInnerBinary | rightInnerBinary;
-                                return indexSearcher.AndNot(builderParameters.AllEntries.Replay(), indexSearcher.Or(left, right));
-
-                            case (NegatedExpression ne1, _):
-                                left = ToCoraxQuery(builderParameters, @where.Right, scoreFunction, out leftInnerBinary, exact);
-                                right = ToCoraxQuery(builderParameters, ne1.Expression, scoreFunction, out rightInnerBinary, exact);
-
-                                TryMergeTwoNodes(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, scoreFunction, true);
-
-                                hasBinary = leftInnerBinary | rightInnerBinary;
-                                return indexSearcher.AndNot(right, left);
-
-                            case (_, NegatedExpression ne1):
-                                left = ToCoraxQuery(builderParameters, @where.Left, scoreFunction, out leftInnerBinary, exact);
-                                right = ToCoraxQuery(builderParameters, ne1.Expression, scoreFunction, out rightInnerBinary, exact);
-
-                                hasBinary = leftInnerBinary | rightInnerBinary;
-                                TryMergeTwoNodes(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, scoreFunction, true);
-                                return indexSearcher.AndNot(left, right);
-
-                            default:
-                                left = ToCoraxQuery(builderParameters, @where.Left, scoreFunction, out leftInnerBinary, exact);
-                                right = ToCoraxQuery(builderParameters, @where.Right, scoreFunction, out rightInnerBinary, exact);
-
-
-                                if (TryMergeTwoNodes(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, scoreFunction))
-                                    return merged;
-
-                                hasBinary = leftInnerBinary | rightInnerBinary;
-                                return indexSearcher.And(left, right);
+                            bq = new BetweenExpression(lbe.Left, rightVal, leftVal)
+                            {
+                                MinInclusive = rbe.Operator == OperatorType.GreaterThanEqual, MaxInclusive = lbe.Operator == OperatorType.LessThanEqual
+                            };
                         }
+
+                        if (bq != null)
+                            return TranslateBetweenQuery(builderParameters, bq, scoreFunction, exact);
                     }
+
+                    switch (@where.Left, @where.Right)
+                    {
+                        case (NegatedExpression ne1, NegatedExpression ne2):
+                            left = ToCoraxQuery(builderParameters, ne1.Expression, scoreFunction, out var leftInnerBinary, exact);
+                            right = ToCoraxQuery(builderParameters, ne2.Expression, scoreFunction, out var rightInnerBinary, exact);
+
+                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out var merged, scoreFunction, true);
+
+                            hasBinary = leftInnerBinary | rightInnerBinary;
+                            return indexSearcher.AndNot(builderParameters.AllEntries.Replay(), indexSearcher.Or(left, right));
+
+                        case (NegatedExpression ne1, _):
+                            left = ToCoraxQuery(builderParameters, @where.Right, scoreFunction, out leftInnerBinary, exact);
+                            right = ToCoraxQuery(builderParameters, ne1.Expression, scoreFunction, out rightInnerBinary, exact);
+
+                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, scoreFunction, true);
+
+                            hasBinary = leftInnerBinary | rightInnerBinary;
+                            return indexSearcher.AndNot(right, left);
+
+                        case (_, NegatedExpression ne1):
+                            left = ToCoraxQuery(builderParameters, @where.Left, scoreFunction, out leftInnerBinary, exact);
+                            right = ToCoraxQuery(builderParameters, ne1.Expression, scoreFunction, out rightInnerBinary, exact);
+
+                            hasBinary = leftInnerBinary | rightInnerBinary;
+                            TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, scoreFunction, true);
+                            return indexSearcher.AndNot(left, right);
+
+                        default:
+                            left = ToCoraxQuery(builderParameters, @where.Left, scoreFunction, out leftInnerBinary, exact);
+                            right = ToCoraxQuery(builderParameters, @where.Right, scoreFunction, out rightInnerBinary, exact);
+
+
+                            if (TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out merged, scoreFunction))
+                                return merged;
+
+                            hasBinary = leftInnerBinary | rightInnerBinary;
+                            return indexSearcher.And(left, right);
+                    }
+                }
                 case OperatorType.Or:
-                    {
-                        var left = ToCoraxQuery(builderParameters, @where.Left, scoreFunction, out var leftInnerBinary, exact);
-                        var right = ToCoraxQuery(builderParameters, @where.Right, scoreFunction, out var rightInnerBinary, exact);
+                {
+                    var left = ToCoraxQuery(builderParameters, @where.Left, scoreFunction, out var leftInnerBinary, exact);
+                    var right = ToCoraxQuery(builderParameters, @where.Right, scoreFunction, out var rightInnerBinary, exact);
 
-                        builderParameters.BuildSteps?.Add(
-                            $"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assemby location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlby: {right.GetType().Assembly.FullName} assemby location: {right.GetType().Assembly.Location}");
+                    builderParameters.BuildSteps?.Add(
+                        $"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assemby location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlby: {right.GetType().Assembly.FullName} assemby location: {right.GetType().Assembly.Location}");
 
-                        TryMergeTwoNodes(indexSearcher, builderParameters.AllEntries, ref left, ref right, out var _, scoreFunction, true);
-                        hasBinary = leftInnerBinary | rightInnerBinary;
-
-                        return indexSearcher.Or(left, right);
-                    }
-                default:
-                    {
-                        var operation = QueryBuilderHelper.TranslateUnaryMatchOperation(where.Operator);
-
-                        QueryExpression right = where.Right;
-
-                        if (where.Right is MethodExpression rme)
-                        {
-                            right = QueryBuilderHelper.EvaluateMethod(metadata.Query, metadata, serverContext, documentsContext, rme, queryParameters);
-                        }
-
-
-                        var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, where.Left, metadata);
-
-                        exact = QueryBuilderHelper.IsExact(builderParameters.Index, exact, fieldName);
-
-                        var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, right, true);
-
-                        var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
-
-                        CoraxHighlightingTermIndex highlightingTerm = null;
-                        bool? isHighlighting = builderParameters.HighlightingTerms?.TryGetValue(fieldName, out highlightingTerm);
-                        if (isHighlighting.HasValue && isHighlighting.Value == false)
-                        {
-                            highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName };
-                            builderParameters.HighlightingTerms.TryAdd(fieldName, highlightingTerm);
-                        }
-
-                        var match = valueType switch
-                        {
-                            ValueTokenType.Double => new CoraxBooleanItem(indexSearcher, index, fieldName.Value, fieldId, value, operation, scoreFunction),
-                            ValueTokenType.Long =>  new CoraxBooleanItem(indexSearcher, index, fieldName.Value, fieldId, value, operation, scoreFunction),
-                                ValueTokenType.True or
-                                ValueTokenType.False or
-                                ValueTokenType.Null or
-                                ValueTokenType.String or
-                                ValueTokenType.Parameter => HandleStringUnaryMatch(builderParameters),
-                            _ => throw new NotSupportedException($"Unhandled token type: {valueType}")
-
-                        };
-
-                        if (highlightingTerm != null && valueType is ValueTokenType.Double or ValueTokenType.Long)
-                        {
-                            highlightingTerm.Values = value.ToString();
-                        }
-
+                    var match = new CoraxOrQueries(indexSearcher, scoreFunction);
+                    if (match.TryAddItem(left) && match.TryAddItem(right))
                         return match;
 
+                    TryMergeTwoNodesForAnd(indexSearcher, builderParameters.AllEntries, ref left, ref right, out var _, scoreFunction, true);
+                    hasBinary = leftInnerBinary | rightInnerBinary;
 
-                        CoraxBooleanItem HandleStringUnaryMatch(Parameters queryEnvironment)
-                        {
-                            if (exact && queryEnvironment.Metadata.IsDynamic)
-                            {
-                                fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
-                                fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
-                            }
+                    return indexSearcher.Or(left, right);
+                }
+                default:
+                {
+                    var operation = QueryBuilderHelper.TranslateUnaryMatchOperation(where.Operator);
 
-                            if (value == null)
-                            {
-                                if (operation is UnaryMatchOperation.Equals)
-                                    return  new CoraxBooleanItem(indexSearcher, index, fieldName, fieldId, null, UnaryMatchOperation.Equals, scoreFunction);
-                                else if (operation is UnaryMatchOperation.NotEquals)
-                                    //Please consider if we ever need to support this.
-                                    return  new CoraxBooleanItem(indexSearcher, index, fieldName, fieldId, null, UnaryMatchOperation.NotEquals, scoreFunction);
-                                else
-                                    throw new NotSupportedException($"Unhandled operation: {operation}");
-                            }
+                    QueryExpression right = where.Right;
 
-                            var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
-                            if (highlightingTerm != null)
-                                highlightingTerm.Values = valueAsString;
-
-                            return  new CoraxBooleanItem(indexSearcher, index, fieldName.Value, fieldId, valueAsString, operation, scoreFunction);
-                        }
+                    if (where.Right is MethodExpression rme)
+                    {
+                        right = QueryBuilderHelper.EvaluateMethod(metadata.Query, metadata, serverContext, documentsContext, rme, queryParameters);
                     }
+
+
+                    var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, where.Left, metadata);
+
+                    exact = QueryBuilderHelper.IsExact(builderParameters.Index, exact, fieldName);
+
+                    var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, right, true);
+
+                    var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
+                        builderParameters.DynamicFields, exact: exact);
+
+                    CoraxHighlightingTermIndex highlightingTerm = null;
+                    bool? isHighlighting = builderParameters.HighlightingTerms?.TryGetValue(fieldName, out highlightingTerm);
+                    if (isHighlighting.HasValue && isHighlighting.Value == false)
+                    {
+                        highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName};
+                        builderParameters.HighlightingTerms.TryAdd(fieldName, highlightingTerm);
+                    }
+
+                    var match = valueType switch
+                    {
+                        ValueTokenType.Double => new CoraxBooleanItem(indexSearcher, index, fieldName.Value, fieldId, value, operation, scoreFunction),
+                        ValueTokenType.Long => new CoraxBooleanItem(indexSearcher, index, fieldName.Value, fieldId, value, operation, scoreFunction),
+                        ValueTokenType.True or
+                            ValueTokenType.False or
+                            ValueTokenType.Null or
+                            ValueTokenType.String or
+                            ValueTokenType.Parameter => HandleStringUnaryMatch(builderParameters),
+                        _ => throw new NotSupportedException($"Unhandled token type: {valueType}")
+                    };
+
+                    if (highlightingTerm != null && valueType is ValueTokenType.Double or ValueTokenType.Long)
+                    {
+                        highlightingTerm.Values = value.ToString();
+                    }
+
+                    return match;
+
+
+                    CoraxBooleanItem HandleStringUnaryMatch(Parameters queryEnvironment)
+                    {
+                        if (exact && queryEnvironment.Metadata.IsDynamic)
+                        {
+                            fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
+                            fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
+                                builderParameters.DynamicFields, exact: exact);
+                        }
+
+                        if (value == null)
+                        {
+                            if (operation is UnaryMatchOperation.Equals)
+                                return new CoraxBooleanItem(indexSearcher, index, fieldName, fieldId, null, UnaryMatchOperation.Equals, scoreFunction);
+                            else if (operation is UnaryMatchOperation.NotEquals)
+                                //Please consider if we ever need to support this.
+                                return new CoraxBooleanItem(indexSearcher, index, fieldName, fieldId, null, UnaryMatchOperation.NotEquals, scoreFunction);
+                            else
+                                throw new NotSupportedException($"Unhandled operation: {operation}");
+                        }
+
+                        var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
+                        if (highlightingTerm != null)
+                            highlightingTerm.Values = valueAsString;
+
+                        return new CoraxBooleanItem(indexSearcher, index, fieldName.Value, fieldId, valueAsString, operation, scoreFunction);
+                    }
+                }
             }
         }
 
@@ -345,7 +353,7 @@ internal static class CoraxQueryBuilder
             CoraxHighlightingTermIndex highlightingTerm = null;
             if (builderParameters.HighlightingTerms != null)
             {
-                highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName };
+                highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName};
                 builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
             }
 
@@ -360,7 +368,8 @@ internal static class CoraxQueryBuilder
                 }
             }
 
-            var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
+            var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
+                builderParameters.DynamicFields, exact: exact);
 
             if (ie.All)
             {
@@ -443,16 +452,20 @@ internal static class CoraxQueryBuilder
         using (CultureHelper.EnsureInvariantCulture())
         {
             var filterQuery = BuildQuery(builderParameters, out isBinary);
-            filterQuery = MateralizeWhenNeeded(filterQuery, ref isBinary);
+            filterQuery = MaterializeWhenNeeded(filterQuery, ref isBinary);
 
             var moreLikeThisQuery = ToMoreLikeThisQuery(builderParameters, whereExpression, out isBinary, out var baseDocument, out var options);
-            moreLikeThisQuery = MateralizeWhenNeeded(moreLikeThisQuery, ref isBinary);
+            moreLikeThisQuery = MaterializeWhenNeeded(moreLikeThisQuery, ref isBinary);
 
-            return new MoreLikeThisQuery.MoreLikeThisQuery { BaseDocument = baseDocument, BaseDocumentQuery = moreLikeThisQuery, FilterQuery = filterQuery, Options = options };
+            return new MoreLikeThisQuery.MoreLikeThisQuery
+            {
+                BaseDocument = baseDocument, BaseDocumentQuery = moreLikeThisQuery, FilterQuery = filterQuery, Options = options
+            };
         }
     }
 
-    private static IQueryMatch ToMoreLikeThisQuery(Parameters builderParameters, QueryExpression whereExpression, out bool isBinary, out string baseDocument, out BlittableJsonReaderObject options)
+    private static IQueryMatch ToMoreLikeThisQuery(Parameters builderParameters, QueryExpression whereExpression, out bool isBinary, out string baseDocument,
+        out BlittableJsonReaderObject options)
     {
         var indexSearcher = builderParameters.IndexSearcher;
         var metadata = builderParameters.Metadata;
@@ -484,7 +497,6 @@ internal static class CoraxQueryBuilder
         var firstArgumentValue = QueryBuilderHelper.GetValueAsString(QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, firstArgument).Value);
         if (bool.TryParse(firstArgumentValue, out var firstArgumentBool))
         {
-
             if (firstArgumentBool)
                 return indexSearcher.AllEntries();
 
@@ -495,14 +507,14 @@ internal static class CoraxQueryBuilder
         return null;
     }
 
-    private static bool TryMergeTwoNodes<TScoreFunction>(IndexSearcher indexSearcher, MemoizationMatchProviderRef<AllEntriesMatch> allEntries, ref IQueryMatch lhs,
-        ref IQueryMatch rhs, out CoraxBooleanQuery merged, TScoreFunction scoreFunction, bool reruiredMaterialization = false)
+    private static bool TryMergeTwoNodesForAnd<TScoreFunction>(IndexSearcher indexSearcher, MemoizationMatchProviderRef<AllEntriesMatch> allEntries, ref IQueryMatch lhs,
+        ref IQueryMatch rhs, out CoraxBooleanQueryBase merged, TScoreFunction scoreFunction, bool requiredMaterialization = false)
         where TScoreFunction : IQueryScoreFunction
     {
         merged = null;
-        switch (lhs, rhs, reruiredMaterialization)
+        switch (lhs, rhs, requiredMaterialization)
         {
-            case (CoraxBooleanQuery lhsBq, CoraxBooleanQuery rhsBq, false):
+            case (CoraxAndQueries lhsBq, CoraxAndQueries rhsBq, false):
                 if (lhsBq.TryMerge(rhsBq))
                 {
                     merged = lhsBq;
@@ -513,7 +525,7 @@ internal static class CoraxQueryBuilder
                 rhs = rhsBq.Materialize();
                 return false;
 
-            case (CoraxBooleanQuery lhsBq, CoraxBooleanItem rhsBq, false):
+            case (CoraxAndQueries lhsBq, CoraxBooleanItem rhsBq, false):
                 if (lhsBq.TryAnd(rhsBq))
                 {
                     merged = lhsBq;
@@ -522,7 +534,7 @@ internal static class CoraxQueryBuilder
 
                 lhs = lhsBq.Materialize();
                 return false;
-            case (CoraxBooleanItem lhsBq, CoraxBooleanQuery rhsBq, false):
+            case (CoraxBooleanItem lhsBq, CoraxAndQueries rhsBq, false):
                 if (rhsBq.TryAnd(lhsBq))
                 {
                     merged = rhsBq;
@@ -533,9 +545,9 @@ internal static class CoraxQueryBuilder
                 return false;
 
             case (CoraxBooleanItem lhsBq, CoraxBooleanItem rhsBq, false):
-                if (CoraxBooleanItem.CanBeMerged(lhsBq, rhsBq))
+                if (CoraxBooleanItem.CanBeMergedForAnd(lhsBq, rhsBq))
                 {
-                    merged = new CoraxBooleanQuery(indexSearcher, allEntries, lhsBq, rhsBq, scoreFunction);
+                    merged = new CoraxAndQueries(indexSearcher, allEntries, lhsBq, rhsBq, scoreFunction);
                     return true;
                 }
 
@@ -543,18 +555,18 @@ internal static class CoraxQueryBuilder
             default:
                 if (lhs is CoraxBooleanItem cbi)
                     lhs = cbi.Materialize();
-                else if (lhs is CoraxBooleanQuery cbq)
+                else if (lhs is CoraxBooleanQueryBase cbq)
                     lhs = cbq.Materialize();
                 if (rhs is CoraxBooleanItem cbi1)
                     rhs = cbi1.Materialize();
-                else if (rhs is CoraxBooleanQuery cbq1)
+                else if (rhs is CoraxBooleanQueryBase cbq1)
                     rhs = cbq1.Materialize();
                 return false;
         }
     }
 
-
-    private static IQueryMatch HandleExact<TScoreFunction>(Parameters builderParameters, MethodExpression expression, TScoreFunction scoreFunction, out bool hasBinary, int? proximity = null)
+    private static IQueryMatch HandleExact<TScoreFunction>(Parameters builderParameters, MethodExpression expression, TScoreFunction scoreFunction, out bool hasBinary,
+        int? proximity = null)
         where TScoreFunction : IQueryScoreFunction
     {
         return ToCoraxQuery(builderParameters, expression.Arguments[0], scoreFunction, out hasBinary, true, proximity);
@@ -568,29 +580,30 @@ internal static class CoraxQueryBuilder
         var index = builderParameters.Index;
         var fieldsToFetch = builderParameters.FieldsToFetch;
         var indexFieldsMapping = builderParameters.IndexFieldsMapping;
-        var allocator = builderParameters.Allocator; 
-        
+        var allocator = builderParameters.Allocator;
+
         var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, be.Source, metadata);
         var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Min);
         var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Max);
-        var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
+        var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
+            builderParameters.DynamicFields, exact: exact);
         var leftSideOperation = be.MinInclusive ? UnaryMatchOperation.GreaterThanOrEqual : UnaryMatchOperation.GreaterThan;
         var rightSideOperation = be.MaxInclusive ? UnaryMatchOperation.LessThanOrEqual : UnaryMatchOperation.LessThan;
-
-
 
         if ((valueFirstType, valueSecondType) is (ValueTokenType.Double, ValueTokenType.Double) or (ValueTokenType.Long, ValueTokenType.Long))
         {
             if (builderParameters.HighlightingTerms != null)
             {
-                var highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = (valueFirst, valueSecond) };
+                var highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName, Values = (valueFirst, valueSecond)};
                 builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
             }
         }
+
         return (valueFirstType, valueSecondType) switch
         {
             (ValueTokenType.String, ValueTokenType.String) => HandleStringBetween(),
-            _ => new CoraxBooleanItem(builderParameters.IndexSearcher, index, fieldName, fieldId, valueFirst, valueSecond, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction)
+            _ => new CoraxBooleanItem(builderParameters.IndexSearcher, index, fieldName, fieldId, valueFirst, valueSecond, UnaryMatchOperation.Between, leftSideOperation,
+                rightSideOperation, scoreFunction)
         };
 
         CoraxBooleanItem HandleStringBetween()
@@ -601,11 +614,12 @@ internal static class CoraxQueryBuilder
 
             if (builderParameters.HighlightingTerms != null)
             {
-                var highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = (valueFirst, valueSecond) };
+                var highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName, Values = (valueFirst, valueSecond)};
                 builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
             }
 
-            return new CoraxBooleanItem(builderParameters.IndexSearcher, index, fieldName, fieldId, valueFirstAsString, valueSecondAsString, UnaryMatchOperation.Between, leftSideOperation, rightSideOperation, scoreFunction);
+            return new CoraxBooleanItem(builderParameters.IndexSearcher, index, fieldName, fieldId, valueFirstAsString, valueSecondAsString, UnaryMatchOperation.Between,
+                leftSideOperation, rightSideOperation, scoreFunction);
         }
     }
 
@@ -614,7 +628,7 @@ internal static class CoraxQueryBuilder
     {
         var metadata = builderParameters.Metadata;
         var queryParameters = builderParameters.QueryParameters;
-        
+
         var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, expression.Arguments[0], metadata);
 
         return builderParameters.IndexSearcher.ExistsQuery(fieldName, scoreFunction);
@@ -629,7 +643,7 @@ internal static class CoraxQueryBuilder
         var fieldsToFetch = builderParameters.FieldsToFetch;
         var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         var allocator = builderParameters.Allocator;
-        
+
         var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, expression.Arguments[0], metadata);
         var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, (ValueExpression)expression.Arguments[1]);
         if (valueType != ValueTokenType.String)
@@ -639,7 +653,7 @@ internal static class CoraxQueryBuilder
         CoraxHighlightingTermIndex highlightingTerm = null;
         if (builderParameters.HighlightingTerms != null)
         {
-            highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = valueAsString };
+            highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName, Values = valueAsString};
             builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
         }
 
@@ -654,7 +668,8 @@ internal static class CoraxQueryBuilder
             }
         }
 
-        var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
+        var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
+            builderParameters.DynamicFields, exact: exact);
         return builderParameters.IndexSearcher.StartWithQuery(fieldName, valueAsString, scoreFunction: scoreFunction, fieldId: fieldId);
     }
 
@@ -669,7 +684,7 @@ internal static class CoraxQueryBuilder
         var fieldsToFetch = builderParameters.FieldsToFetch;
         var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         var allocator = builderParameters.Allocator;
-        
+
         var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, expression.Arguments[0], metadata);
         var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, (ValueExpression)expression.Arguments[1]);
         if (valueType != ValueTokenType.String)
@@ -680,7 +695,7 @@ internal static class CoraxQueryBuilder
         CoraxHighlightingTermIndex highlightingTerm = null;
         if (highlightingTerms != null)
         {
-            highlightingTerm = new CoraxHighlightingTermIndex { FieldName = fieldName, Values = valueAsString };
+            highlightingTerm = new CoraxHighlightingTermIndex {FieldName = fieldName, Values = valueAsString};
             highlightingTerms[fieldName] = highlightingTerm;
         }
 
@@ -695,7 +710,8 @@ internal static class CoraxQueryBuilder
             }
         }
 
-        var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact);
+        var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
+            builderParameters.DynamicFields, exact: exact);
         return indexSearcher.EndsWithQuery(fieldName, valueAsString, scoreFunction: scoreFunction, fieldId: fieldId);
     }
 
@@ -741,21 +757,9 @@ internal static class CoraxQueryBuilder
                     metadata.QueryText, queryParameters);
         }
 
-
-        var rawQuery = ToCoraxQuery(builderParameters, expression.Arguments[0], default(NullScoreFunction), out hasBinary, exact);
-
-        if (rawQuery is CoraxBooleanItem cbi)
-            rawQuery = cbi.Materialize();
-        else if (rawQuery is CoraxBooleanQuery cbq)
-        {
-            rawQuery = cbq.Materialize();
-            hasBinary = cbq.HasInnerBinary;
-        }
-
-        hasBinary = false;
         var scoreFunction = new ConstantScoreFunction(boost);
 
-        return indexSearcher.Boost(rawQuery, scoreFunction);
+        return ToCoraxQuery(builderParameters, expression.Arguments[0], scoreFunction, out hasBinary, exact);
     }
 
     private static IQueryMatch HandleSearch<TScoreFunction>(Parameters builderParameters, MethodExpression expression, int? proximity, TScoreFunction scoreFunction)
@@ -769,7 +773,7 @@ internal static class CoraxQueryBuilder
         var fieldsToFetch = builderParameters.FieldsToFetch;
         var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         var allocator = builderParameters.Allocator;
-        
+
         QueryFieldName fieldName;
         var isDocumentId = false;
         switch (expression.Arguments[0])
@@ -791,14 +795,15 @@ internal static class CoraxQueryBuilder
 
         var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, (ValueExpression)expression.Arguments[1]);
         if (valueType != ValueTokenType.String)
-            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("search", ValueTokenType.String, valueType, builderParameters.Metadata.QueryText, builderParameters.QueryParameters);
+            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("search", ValueTokenType.String, valueType, builderParameters.Metadata.QueryText,
+                builderParameters.QueryParameters);
 
         Debug.Assert(metadata.IsDynamic == false || metadata.WhereFields[fieldName].IsFullTextSearch);
 
         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
         if (highlightingTerms != null && highlightingTerms.TryGetValue(fieldName, out var highlightingTerm) == false)
         {
-            highlightingTerm = new CoraxHighlightingTermIndex { Values = valueAsString, };
+            highlightingTerm = new CoraxHighlightingTermIndex {Values = valueAsString,};
 
             highlightingTerm.FieldName = fieldName;
             highlightingTerms?.TryAdd(fieldName, highlightingTerm);
@@ -817,7 +822,8 @@ internal static class CoraxQueryBuilder
             fieldName = new QueryFieldName(AutoIndexField.GetSearchAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
         }
 
-        var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields);
+        var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
+            builderParameters.DynamicFields);
 
         if (proximity.HasValue)
         {
@@ -857,7 +863,7 @@ internal static class CoraxQueryBuilder
         var indexFieldsMapping = builderParameters.IndexFieldsMapping;
         var fieldsToFetch = builderParameters.FieldsToFetch;
         var allocator = builderParameters.Allocator;
-        
+
         string fieldName;
         if (metadata.IsDynamic == false)
             fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, expression.Arguments[0], metadata);
@@ -867,7 +873,8 @@ internal static class CoraxQueryBuilder
             fieldName = metadata.GetSpatialFieldName(spatialExpression, builderParameters.QueryParameters);
         }
 
-        var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields);
+        var fieldId = QueryBuilderHelper.GetFieldId(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
+            builderParameters.DynamicFields);
         var shapeExpression = (MethodExpression)expression.Arguments[1];
 
         var distanceErrorPct = RavenConstants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
@@ -916,7 +923,7 @@ internal static class CoraxQueryBuilder
     }
 
     private static IQueryMatch HandleRegex<TScoreFunction>(Parameters builderParameters, MethodExpression expression, TScoreFunction scoreFunction = default)
-    where TScoreFunction : IQueryScoreFunction
+        where TScoreFunction : IQueryScoreFunction
     {
         if (expression.Arguments.Count != 2)
             throw new ArgumentException(
@@ -925,11 +932,12 @@ internal static class CoraxQueryBuilder
 
         var metadata = builderParameters.Metadata;
         var queryParameters = builderParameters.QueryParameters;
-        
+
         var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, expression.Arguments[0], metadata);
         var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, (ValueExpression)expression.Arguments[1]);
         if (valueType != ValueTokenType.String && !(valueType == ValueTokenType.Parameter && IsStringFamily(value)))
-            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("regex", ValueTokenType.String, valueType, builderParameters.Metadata.QueryText, builderParameters.QueryParameters);
+            QueryBuilderHelper.ThrowMethodExpectsArgumentOfTheFollowingType("regex", ValueTokenType.String, valueType, builderParameters.Metadata.QueryText,
+                builderParameters.QueryParameters);
         var valueAsString = QueryBuilderHelper.CoraxGetValueAsString(value);
         return builderParameters.IndexSearcher.RegexQuery<TScoreFunction>(fieldName, scoreFunction, builderParameters.Factories.GetRegexFactory(valueAsString));
 
@@ -958,7 +966,7 @@ internal static class CoraxQueryBuilder
         {
             if (query.Metadata.HasBoost == false && index.HasBoostedFields == false)
                 return null;
-            return new[] { new OrderMetadata(true, MatchCompareFieldType.Score) };
+            return new[] {new OrderMetadata(true, MatchCompareFieldType.Score)};
         }
 
         int sortIndex = 0;
@@ -984,7 +992,8 @@ internal static class CoraxQueryBuilder
             if (field.OrderingType == OrderByFieldType.Distance)
             {
                 var spatialField = getSpatialField(field.Name);
-                var distanceFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, field.Name, index, builderParameters.HasDynamics, builderParameters.DynamicFields, indexMapping, queryMapping, false);
+                var distanceFieldId = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, field.Name, index, builderParameters.HasDynamics,
+                    builderParameters.DynamicFields, indexMapping, queryMapping, false);
 
                 int lastArgument;
                 IPoint point;
@@ -1028,7 +1037,8 @@ internal static class CoraxQueryBuilder
             }
 
             var fieldName = field.Name.Value;
-            var fieldId = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, fieldName, index, builderParameters.HasDynamics, builderParameters.DynamicFields, indexMapping, queryMapping, false);
+            var fieldId = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, fieldName, index, builderParameters.HasDynamics, builderParameters.DynamicFields,
+                indexMapping, queryMapping, false);
             OrderMetadata? temporaryOrder = null;
             switch (field.OrderingType)
             {
@@ -1062,197 +1072,197 @@ internal static class CoraxQueryBuilder
             case 0:
                 return match;
             case 1:
-                {
-                    var order = orderMetadata[0];
-                    if (order.HasBoost)
-                        return indexSearcher.OrderByScore(match, take: take);
+            {
+                var order = orderMetadata[0];
+                if (order.HasBoost)
+                    return indexSearcher.OrderByScore(match, take: take);
 
-                    return (order.FieldType, order.Ascending) switch
-                    {
-                        (MatchCompareFieldType.Spatial, _) => indexSearcher.OrderByDistance(in match, in order),
-                        (_, true) => indexSearcher.OrderByAscending(match, order.FieldId, order.FieldType, take),
-                        (_, false) => indexSearcher.OrderByDescending(match, order.FieldId, order.FieldType, take)
-                    };
-                }
+                return (order.FieldType, order.Ascending) switch
+                {
+                    (MatchCompareFieldType.Spatial, _) => indexSearcher.OrderByDistance(in match, in order),
+                    (_, true) => indexSearcher.OrderByAscending(match, order.FieldId, order.FieldType, take),
+                    (_, false) => indexSearcher.OrderByDescending(match, order.FieldId, order.FieldType, take)
+                };
+            }
 
             case 2:
+            {
+                var firstComparerType = QueryBuilderHelper.GetComparerType(orderMetadata[0].Ascending, orderMetadata[0].FieldType, orderMetadata[0].FieldId);
+                var secondComparerType = QueryBuilderHelper.GetComparerType(orderMetadata[1].Ascending, orderMetadata[1].FieldType, orderMetadata[1].FieldId);
+                return (firstComparerType, secondComparerType) switch
                 {
-                    var firstComparerType = QueryBuilderHelper.GetComparerType(orderMetadata[0].Ascending, orderMetadata[0].FieldType, orderMetadata[0].FieldId);
-                    var secondComparerType = QueryBuilderHelper.GetComparerType(orderMetadata[1].Ascending, orderMetadata[1].FieldType, orderMetadata[1].FieldId);
-                    return (firstComparerType, secondComparerType) switch
-                    {
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(
-                            indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
-                            default(BoostingComparer),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
-                            default(BoostingComparer),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            default(BoostingComparer),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
-                            default(BoostingComparer),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            default(BoostingComparer),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
-                            default(BoostingComparer),
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
-                            default(BoostingComparer),
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
-                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            default(BoostingComparer)),
-                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
-                        (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
-                            match,
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
-                            new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.Descending, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(
+                        indexSearcher, match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(
+                        indexSearcher, match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.AscendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(
+                        indexSearcher, match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(
+                        indexSearcher, match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.DescendingAlphanumeric, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[0].FieldId, orderMetadata[0].FieldType),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.Boosting, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        default(BoostingComparer),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.AscendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Ascending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Descending) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.DescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AlphanumericAscendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingAlphanumeric) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.AlphanumericDescendingMatchComparer(indexSearcher, orderMetadata[1].FieldId, orderMetadata[1].FieldType)),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.Boosting) => SortingMultiMatch.Create(indexSearcher, match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        default(BoostingComparer)),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.AscendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.SpatialAscendingMatchComparer(indexSearcher, in orderMetadata[1])),
+                    (QueryBuilderHelper.ComparerType.DescendingSpatial, QueryBuilderHelper.ComparerType.DescendingSpatial) => SortingMultiMatch.Create(indexSearcher,
+                        match,
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[0]),
+                        new SortingMatch.SpatialDescendingMatchComparer(indexSearcher, in orderMetadata[1])),
 
-                        var (type1, type2) => throw new NotSupportedException($"Currently, we do not support sorting by tuple ({type1}, {type2})")
-                    };
-                }
+                    var (type1, type2) => throw new NotSupportedException($"Currently, we do not support sorting by tuple ({type1}, {type2})")
+                };
+            }
             case 3:
-                {
-                    return (QueryBuilderHelper.GetComparerType(orderMetadata[0].Ascending, orderMetadata[0].FieldType, orderMetadata[0].FieldId),
-                            QueryBuilderHelper.GetComparerType(orderMetadata[1].Ascending, orderMetadata[1].FieldType, orderMetadata[1].FieldId),
-                            QueryBuilderHelper.GetComparerType(orderMetadata[2].Ascending, orderMetadata[2].FieldType, orderMetadata[2].FieldId)
-                        ) switch
+            {
+                return (QueryBuilderHelper.GetComparerType(orderMetadata[0].Ascending, orderMetadata[0].FieldType, orderMetadata[0].FieldId),
+                        QueryBuilderHelper.GetComparerType(orderMetadata[1].Ascending, orderMetadata[1].FieldType, orderMetadata[1].FieldId),
+                        QueryBuilderHelper.GetComparerType(orderMetadata[2].Ascending, orderMetadata[2].FieldType, orderMetadata[2].FieldId)
+                    ) switch
                     {
                         (QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending, QueryBuilderHelper.ComparerType.Ascending) =>
                             SortingMultiMatch.Create(indexSearcher, match,
@@ -2972,7 +2982,7 @@ internal static class CoraxQueryBuilder
 
                         var (type1, type2, type3) => throw new NotSupportedException($"Currently, we do not support sorting by tuple ({type1}, {type2}, {type3})")
                     };
-                }
+            }
         }
 
         var comparers = new IMatchComparer[orderMetadata.Length];

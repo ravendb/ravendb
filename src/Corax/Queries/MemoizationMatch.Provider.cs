@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Utils;
@@ -8,7 +9,7 @@ using static Voron.Global.Constants;
 
 namespace Corax.Queries
 {
-
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct MemoizationMatchProvider<TInner> : IMemoizationMatchSource
              where TInner : IQueryMatch
     {
@@ -17,6 +18,7 @@ namespace Corax.Queries
 
         private readonly ByteStringContext _ctx;
         private TInner _inner;
+
         public bool IsBoosting => _inner.IsBoosting;
         public long Count => _inner.Count;
         public QueryCountConfidence Confidence => _inner.Confidence;
@@ -136,6 +138,7 @@ namespace Corax.Queries
         {
             return _inner.Inspect();
         }
+        string DebugView => Inspect().ToString();
 
         public void Dispose()
         {

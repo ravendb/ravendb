@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Corax.Queries
 {    
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct MemoizationMatch<TInner> : IQueryMatch
         where TInner : IQueryMatch
     {
         private MemoizationMatchProvider<TInner> _inner;
         private int _bufferCurrentIdx;
+        public bool IsAllEntries = typeof(TInner) == typeof(AllEntriesMatch);
 
         public bool IsBoosting => _inner.IsBoosting;
         public long Count => _inner.Count;
@@ -57,6 +60,7 @@ namespace Corax.Queries
         {
             _inner.Score(matches, scores);
         }
+        string DebugView => Inspect().ToString();
 
         public QueryInspectionNode Inspect()
         {
@@ -64,7 +68,7 @@ namespace Corax.Queries
                 children: new List<QueryInspectionNode> { _inner.Inspect() },
                 parameters: new Dictionary<string, string>()
                 {
-                    { "BufferSize", _inner.Buffer.Length.ToString() },
+                   // { "BufferSize", _inner.Buffer.Length.ToString() },
                     { nameof(IsBoosting), IsBoosting.ToString() },
                     { nameof(Count), $"{Count} [{Confidence}]" }
                 });
