@@ -3,7 +3,9 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,6 +20,8 @@ public class PrefixedSharding : RavenTestBase
     [Fact]
     public async Task CanShardByDocumentsPrefix()
     {
+        const int prefixedRangeStart = 1024 * 1024;
+
         using var store = Sharding.GetDocumentStore(new Options
         {
             ModifyDatabaseRecord = record =>
@@ -27,28 +31,59 @@ public class PrefixedSharding : RavenTestBase
                 {
                     ["eu/"] = new List<ShardBucketRange>()
                     {
+                        // range for 'eu/' is : 
+                        // shard 0 : [1M, 2M]
                         new ShardBucketRange
                         {
                             ShardNumber = 0,
-                            BucketRangeStart = 0
+                            BucketRangeStart = prefixedRangeStart
                         }
                     },
                     ["asia/"] = new List<ShardBucketRange>()
                     {
+                        // range for 'asia/' is :
+                        // shard 1 : [2M, 2.5M]
+                        // shard 2 : [2.5M, 3M]
+
                         new ShardBucketRange
                         {
                             ShardNumber = 1,
-                            BucketRangeStart = 0
+                            BucketRangeStart = prefixedRangeStart * 2
                         },
                         new ShardBucketRange
                         {
                             ShardNumber = 2,
-                            BucketRangeStart = 512*1024
+                            BucketRangeStart = (int)(prefixedRangeStart * 2.5)
                         }
                     }
                 };
             }
         });
+
+
+        var sharding = await Sharding.GetShardingConfigurationAsync(store);
+        using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        {
+            using (Slice.From(context.Allocator, "eu/0", out Slice idSlice))
+            {
+                var shardNumber = ShardHelper.GetShardNumberFor(sharding, idSlice);
+                Assert.Equal(0, shardNumber);
+            }
+
+            using (Slice.From(context.Allocator, "asia/1", out Slice idSlice))
+            {
+                var shardNumber = ShardHelper.GetShardNumberFor(sharding, idSlice);
+                Assert.Equal(1, shardNumber);
+            }
+
+            using (Slice.From(context.Allocator, "asia/2", out Slice idSlice))
+            {
+                var shardNumber = ShardHelper.GetShardNumberFor(sharding, idSlice);
+                Assert.Equal(2, shardNumber);
+            }
+
+        }
+
         var rand = new System.Random(2022_04_19);
         var prefixes = new[] { "us/", "eu/", "asia/", null };
 
