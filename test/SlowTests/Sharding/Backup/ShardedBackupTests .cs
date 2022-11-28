@@ -388,6 +388,7 @@ namespace SlowTests.Sharding.Backup
                 var backupTaskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
 
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(backupTaskId + 3, TimeSpan.FromSeconds(10));
 
                 var dirs = Directory.GetDirectories(backupPath).ToList();
                 Assert.Equal(cluster.Nodes.Count, dirs.Count);
