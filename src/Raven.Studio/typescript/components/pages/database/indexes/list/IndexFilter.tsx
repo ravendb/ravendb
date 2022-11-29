@@ -1,22 +1,13 @@
-﻿import React, { ChangeEvent } from "react";
+﻿import React, { ChangeEvent, useCallback, useState } from "react";
 import classNames from "classnames";
 import { shardingTodo } from "common/developmentHelper";
 import { IndexStatus, IndexFilterCriteria, IndexSharedInfo } from "../../../../models/indexes";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import IndexUtils from "../../../../utils/IndexUtils";
+import { Badge, Button, DropdownItem, FormGroup, Input, InputGroup, Label } from "reactstrap";
+import useId from "hooks/useId";
+import useBoolean from "hooks/useBoolean";
 import { DropdownPanel } from "../../../../common/DropdownPanel";
-import {
-    Badge,
-    Dropdown,
-    DropdownItem,
-    DropdownMenu,
-    DropdownToggle,
-    FormGroup,
-    Input,
-    InputGroup,
-    Label,
-    UncontrolledDropdown,
-} from "reactstrap";
 
 interface IndexFilterStatusItemProps {
     label: string;
@@ -30,14 +21,24 @@ interface IndexFilterStatusItemProps {
 function IndexFilterStatusItem(props: IndexFilterStatusItemProps) {
     const switchColor = `form-check-${props.color ?? "secondary"}`;
 
+    const uniqueId = useId("index-filter-status");
+
     return (
-        <DropdownItem text>
+        <React.Fragment>
             <FormGroup switch className={classNames("form-check-reverse", switchColor, props.toggleClass)}>
-                <Input type="switch" role="switch" checked={props.checked} onChange={props.toggleStatus} />
-                <Label check>{props.label}</Label>
+                <Input
+                    id={uniqueId}
+                    type="switch"
+                    role="switch"
+                    checked={props.checked}
+                    onChange={props.toggleStatus}
+                />
+                <Label htmlFor={uniqueId} check>
+                    {props.label}
+                </Label>
             </FormGroup>
             {props.children}
-        </DropdownItem> //TODO: Fix buttons lag
+        </React.Fragment>
     );
 }
 
@@ -151,16 +152,20 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
 }
 
 export default function IndexFilter(props: IndexFilterProps) {
-    const { filter } = props;
+    const { filter, setFilter } = props;
 
-    const toggleStatus = (status: IndexStatus) => {
-        props.setFilter((f) => ({
-            ...f,
-            status: filter.status.includes(status)
-                ? filter.status.filter((x) => x !== status)
-                : filter.status.concat(status),
-        }));
-    };
+    const toggleStatus = useCallback(
+        (status: IndexStatus) => {
+            console.log("status toggled " + status);
+            setFilter((f) => ({
+                ...f,
+                status: filter.status.includes(status)
+                    ? filter.status.filter((x) => x !== status)
+                    : filter.status.concat(status),
+            }));
+        },
+        [filter, setFilter]
+    );
 
     const onSearchTextChange = (e: ChangeEvent<HTMLInputElement>) => {
         props.setFilter((f) => ({
@@ -183,6 +188,9 @@ export default function IndexFilter(props: IndexFilterProps) {
         }));
     };
 
+    const [filterReferenceElement, setFilterReferenceElement] = useState(null);
+    const { value: filterDropdownVisible, toggle: toggleFilterDropdown } = useBoolean(false);
+
     return (
         <InputGroup data-label="Filter">
             <Input
@@ -193,84 +201,88 @@ export default function IndexFilter(props: IndexFilterProps) {
                 value={filter.searchText}
                 onChange={onSearchTextChange}
             />
-            <UncontrolledDropdown className="mr-1">
-                <DropdownToggle
-                    key="toggle"
-                    outline={hasAnyStateFilter(filter)}
-                    title="Set the indexing state for the selected indexes"
-                    className={classNames("btn btn-default dropdown-toggle")}
-                >
-                    <span>Index Status</span>
-                </DropdownToggle>
 
-                <DropdownMenu key="menu">
+            <Button
+                innerRef={setFilterReferenceElement}
+                onClick={toggleFilterDropdown}
+                outline={hasAnyStateFilter(filter)}
+                title="Set the indexing state for the selected indexes"
+                className={classNames("dropdown-toggle")}
+            >
+                <span>Index Status</span>
+            </Button>
+
+            <DropdownPanel
+                visible={filterDropdownVisible}
+                toggle={toggleFilterDropdown}
+                buttonRef={filterReferenceElement}
+            >
+                <IndexFilterStatusItem
+                    toggleStatus={() => toggleStatus("Normal")}
+                    checked={filter.status.includes("Normal")}
+                    label="Normal"
+                    color="success"
+                />
+                <IndexFilterStatusItem
+                    toggleStatus={() => toggleStatus("ErrorOrFaulty")}
+                    checked={filter.status.includes("ErrorOrFaulty")}
+                    label="Error / Faulty"
+                    color="danger"
+                />
+                <IndexFilterStatusItem
+                    toggleStatus={() => toggleStatus("Stale")}
+                    checked={filter.status.includes("Stale")}
+                    label="Stale"
+                    color="warning"
+                />
+                <IndexFilterStatusItem
+                    toggleStatus={() => toggleStatus("RollingDeployment")}
+                    checked={filter.status.includes("RollingDeployment")}
+                    label="Rolling deployment"
+                    color="warning"
+                />
+                <IndexFilterStatusItem
+                    toggleStatus={() => toggleStatus("Paused")}
+                    checked={filter.status.includes("Paused")}
+                    label="Paused"
+                    color="warning"
+                />
+                <IndexFilterStatusItem
+                    toggleStatus={() => toggleStatus("Disabled")}
+                    checked={filter.status.includes("Disabled")}
+                    label="Disabled"
+                    color="warning"
+                />
+                <IndexFilterStatusItem
+                    toggleStatus={() => toggleStatus("Idle")}
+                    checked={filter.status.includes("Idle")}
+                    label="Idle"
+                    color="warning"
+                />
+                <DropdownItem divider />
+                <div className="bg-faded-warning">
                     <IndexFilterStatusItem
-                        toggleStatus={() => toggleStatus("Normal")}
-                        checked={filter.status.includes("Normal")}
-                        label="Normal"
-                        color="success"
-                    />
-                    <IndexFilterStatusItem
-                        toggleStatus={() => toggleStatus("ErrorOrFaulty")}
-                        checked={filter.status.includes("ErrorOrFaulty")}
-                        label="Error / Faulty"
-                        color="danger"
-                    />
-                    <IndexFilterStatusItem
-                        toggleStatus={() => toggleStatus("Stale")}
-                        checked={filter.status.includes("Stale")}
-                        label="Stale"
+                        toggleStatus={toggleIndexesWithErrors}
+                        checked={filter.showOnlyIndexesWithIndexingErrors}
+                        label="With indexing errors only"
                         color="warning"
                     />
+                </div>
+                <div className="bg-faded-info">
                     <IndexFilterStatusItem
-                        toggleStatus={() => toggleStatus("RollingDeployment")}
-                        checked={filter.status.includes("RollingDeployment")}
-                        label="Rolling deployment"
+                        toggleStatus={toggleAutoRefresh}
+                        checked={filter.autoRefresh}
+                        label="Auto refresh"
                         color="warning"
-                    />
-                    <IndexFilterStatusItem
-                        toggleStatus={() => toggleStatus("Paused")}
-                        checked={filter.status.includes("Paused")}
-                        label="Paused"
-                        color="warning"
-                    />
-                    <IndexFilterStatusItem
-                        toggleStatus={() => toggleStatus("Disabled")}
-                        checked={filter.status.includes("Disabled")}
-                        label="Disabled"
-                        color="warning"
-                    />
-                    <IndexFilterStatusItem
-                        toggleStatus={() => toggleStatus("Idle")}
-                        checked={filter.status.includes("Idle")}
-                        label="Idle"
-                        color="warning"
-                    />
-                    <DropdownItem divider />
-                    <div className="bg-faded-warning">
-                        <IndexFilterStatusItem
-                            toggleStatus={toggleIndexesWithErrors}
-                            checked={filter.showOnlyIndexesWithIndexingErrors}
-                            label="With indexing errors only"
-                            color="warning"
-                        />
-                    </div>
-                    <div className="bg-faded-info">
-                        <IndexFilterStatusItem
-                            toggleStatus={toggleAutoRefresh}
-                            checked={filter.autoRefresh}
-                            label="Auto refresh"
-                            color="warning"
-                        >
-                            <div className="fs-5">
-                                Automatically refreshes the list of indexes.
-                                <br />
-                                Might result in list flickering.
-                            </div>
-                        </IndexFilterStatusItem>
-                    </div>
-                </DropdownMenu>
-            </UncontrolledDropdown>
+                    >
+                        <div className="fs-5">
+                            Automatically refreshes the list of indexes.
+                            <br />
+                            Might result in list flickering.
+                        </div>
+                    </IndexFilterStatusItem>
+                </div>
+            </DropdownPanel>
         </InputGroup>
     );
 }

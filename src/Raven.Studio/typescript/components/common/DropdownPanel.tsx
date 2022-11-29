@@ -1,50 +1,96 @@
-﻿import classNames from "classnames";
-import React, { MouseEvent, useCallback, useRef } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
+import classNames from "classnames";
+import React from "react";
+import { usePopper } from "react-popper";
+import { Button } from "reactstrap";
+import useBoolean from "hooks/useBoolean";
 
 interface DropdownPanelProps {
-    className?: string;
-    children: JSX.Element;
+    buttonRef: HTMLElement;
+    visible: boolean;
+    toggle: () => void;
+    children: JSX.Element | JSX.Element[];
 }
 
 export function DropdownPanel(props: DropdownPanelProps) {
-    const { className, children } = props;
+    const { visible, buttonRef, toggle, children } = props;
 
-    const element = useRef<HTMLDivElement>();
+    const [popperElement, setPopperElement] = useState(null);
 
-    const onClick = useCallback((event: MouseEvent<HTMLElement>) => {
-        const $target = $(event.target);
+    const { styles, attributes, update } = usePopper(buttonRef, popperElement, {
+        placement: "bottom-start",
+    });
 
-        const closestClosePanel = $target.closest(".close-panel");
-        const clickedOnClose = !!closestClosePanel.length;
-        if (clickedOnClose) {
-            if (!closestClosePanel.is(":disabled")) {
-                const $dropdownParent = $target.closest(".dropdown-menu").parent();
-                $dropdownParent.removeClass("open");
-            } else {
-                event.stopPropagation();
-            }
-        } else {
-            const $button = $target.closest(".dropdown-toggle");
-            const $dropdown = $button.next(".dropdown-menu");
-            if ($dropdown.length && $dropdown[0] !== element.current) {
-                if (!$button.is(":disabled")) {
-                    const $parent = $dropdown.parent();
-                    $parent.toggleClass("open");
-                }
-            } else {
-                // close any child dropdown
-                $(".dropdown", element.current).each((idx, elem) => {
-                    $(elem).removeClass("open");
-                });
+    const handleDocumentClick = useCallback(
+        (event: any) => {
+            if (!visible) {
+                return;
             }
 
-            event.stopPropagation();
+            // if we clicked inside element with 'closerClass' then hide dropdown
+            if (event.target.closest("." + CSS.escape(DropdownPanel.closerClass))) {
+                toggle();
+                return;
+            }
+
+            if (buttonRef.contains(event.target)) {
+                return;
+            }
+            if (popperElement.contains(event.target)) {
+                return;
+            }
+            toggle();
+        },
+        [buttonRef, toggle, popperElement, visible]
+    );
+
+    useEffect(() => {
+        if (visible) {
+            update();
         }
-    }, []);
+    }, [visible, update]);
+
+    useEffect(() => {
+        document.addEventListener("mousedown", handleDocumentClick);
+        return () => {
+            document.removeEventListener("mousedown", handleDocumentClick);
+        };
+    }, [handleDocumentClick]);
 
     return (
-        <div className={classNames("dropdown-menu", className)} onClick={onClick} ref={element}>
+        <div
+            className={classNames("dropdown-menu", { show: visible })}
+            ref={setPopperElement}
+            style={styles.popper}
+            {...attributes.popper}
+        >
             {children}
         </div>
+    );
+}
+
+DropdownPanel.closerClass = "dropdown-closer";
+
+interface UncontrolledButtonWithDropdownPanelProps {
+    buttonText: string | JSX.Element;
+    children: JSX.Element | JSX.Element[];
+}
+
+export function UncontrolledButtonWithDropdownPanel(props: UncontrolledButtonWithDropdownPanelProps) {
+    const { buttonText, children } = props;
+
+    const [referenceElement, setReferenceElement] = useState(null);
+    const { value: visible, toggle: togglePopper } = useBoolean(false);
+
+    return (
+        <React.Fragment>
+            <Button innerRef={setReferenceElement} onClick={togglePopper} className={classNames("dropdown-toggle")}>
+                {buttonText}
+            </Button>
+
+            <DropdownPanel visible={visible} toggle={togglePopper} buttonRef={referenceElement}>
+                {children}
+            </DropdownPanel>
+        </React.Fragment>
     );
 }
