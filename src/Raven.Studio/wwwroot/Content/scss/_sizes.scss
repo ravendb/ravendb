@@ -30,4 +30,8 @@ $screen-md: 992px; $screen-md-min: $screen-md !default;
 $screen-lg: 1200px; $screen-lg-min: $screen-lg !default;
 $screen-xs-max: ($screen-sm-min - 1) !default; $screen-sm-max: ($screen-md-min - 1) !default; $screen-md-max: ($screen-lg-min - 1) !default;
 
-
+$font-size-root:              14px !default;
+$font-size-base:              1rem !default; // Assumes the browser default, typically `16px`
+$font-size-sm:                $font-size-base * .875 !default;
+$font-size-lg:                $font-size-base * 1.25 !default;
+$font-size-xs:                $font-size-base * .7 !default;

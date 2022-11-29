@@ -15,7 +15,8 @@ import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.Periodic
 import { loadableData } from "../../../../models/common";
 import genUtils from "common/generalUtils";
 import moment from "moment";
-import { Button, Row } from "reactstrap";
+import { Button, Card, Row, Spinner } from "reactstrap";
+import { HrHeader } from "../../../../../components/common/HrHeader";
 
 interface manualBackupListModel {
     backupType: Raven.Client.Documents.Operations.Backups.BackupType;
@@ -73,7 +74,7 @@ function ManualBackup(props: ManualBackupProps) {
     if (model.status === "loading" || model.status === "notLoaded") {
         return (
             <div className="manual-backup">
-                <i className="btn-spinner global-spinner" />
+                <Spinner />
             </div>
         );
     }
@@ -84,8 +85,8 @@ function ManualBackup(props: ManualBackupProps) {
         return (
             <div className="manual-backup">
                 <div className="text-center">
-                    <i className="icon-lg icon-empty-set text-muted"></i>
-                    <h2 className="text-muted margin-top margin-top-sm">No manual backup created</h2>
+                    <i className="icon-xl icon-empty-set text-muted"></i>
+                    <div className="lead">No manual backup created</div>
                 </div>
             </div>
         );
@@ -97,8 +98,8 @@ function ManualBackup(props: ManualBackupProps) {
 
     return (
         <div className="manual-backup">
-            <div className="margin-top margin-top-xs">
-                <div className="panel destination-item recent-backup">
+            <div className="mt-1">
+                <Card className="destination-item recent-backup">
                     <div className="padding flex-horizontal">
                         <div className="inline-properties">
                             <div className="property-item">
@@ -137,7 +138,7 @@ function ManualBackup(props: ManualBackupProps) {
                             </div>
                         </div>
                     </div>
-                </div>
+                </Card>
             </div>
         </div>
     );
@@ -283,10 +284,10 @@ export function BackupsPage(props: BackupsPageProps) {
     const backups = tasks.tasks.filter((x) => x.shared.taskType === "Backup") as OngoingTaskPeriodicBackupInfo[];
 
     return (
-        <div className="flex-grow flex-stretch-items">
+        <div className="flex-grow-1 flex-stretch-items">
             <div className="flex-vertical">
                 {isAdminAccessOrAbove(database) && (
-                    <div className="flex-noshrink mb-4">
+                    <div className="flex-shrink-0 mb-4">
                         <Button
                             onClick={navigateToRestoreDatabase}
                             className=""
@@ -298,59 +299,54 @@ export function BackupsPage(props: BackupsPageProps) {
                     </div>
                 )}
 
-                <div className="flex-noshrink">
-                    <div className="hr-title">
-                        <h5 className="tasks-list-item periodic-backup">
-                            <i className="icon-backup"></i>
-                            <span>Manual Backup</span>
-                        </h5>
-                        <hr />
-                    </div>
+                <div className="flex-shrink-0">
+                    <HrHeader>
+                        <i className="icon-backup"></i>
+                        <span>Manual Backup</span>
+                    </HrHeader>
+
                     {isAdminAccessOrAbove(database) && (
-                        <div className="flex-header flex-horizontal margin-top-sm">
-                            <button
-                                className="btn btn-primary"
-                                type="button"
-                                title="Backup the database now"
-                                onClick={createManualBackup}
-                            >
+                        <div className="mt-3 flex-shrink-0">
+                            <Button color="primary" title="Backup the database now" onClick={createManualBackup}>
                                 <i className="icon-backup"></i>
                                 <span>Create a Backup</span>
-                            </button>
+                            </Button>
                         </div>
                     )}
                 </div>
 
                 <ManualBackup model={manualBackup} />
 
-                <div className="flex-noshrink margin-top margin-top-lg">
-                    <div className="hr-title">
-                        <h5 className="tasks-list-item periodic-backup no-text-transform">
-                            <i className="icon-manage-ongoing-tasks"></i>
-                            <span>Periodic Backup ({backups.length})</span>
-                        </h5>
-                        <hr />
-                        {canNavigateToServerWideTasks && (
-                            <h5
-                                className="tasks-list-item no-text-transform"
-                                title="Navigate to the Server-Wide Tasks View"
-                            >
-                                <a target="_blank" href={serverWideTasksUrl}>
+                <div className="flex-shrink-0 mt-5">
+                    <HrHeader
+                        right={
+                            canNavigateToServerWideTasks && (
+                                <Button
+                                    size="xs"
+                                    target="_blank"
+                                    outline
+                                    color="link"
+                                    title="Navigate to the Server-Wide Tasks View"
+                                    href={serverWideTasksUrl}
+                                >
                                     Go to Server-Wide Tasks View
-                                </a>
-                            </h5>
-                        )}
-                    </div>
+                                </Button>
+                            )
+                        }
+                    >
+                        <i className="icon-manage-ongoing-tasks"></i>
+                        <span>Periodic Backup ({backups.length})</span>
+                    </HrHeader>
                     {canReadWriteDatabase(database) && (
-                        <div className="flex-header margin-top-sm">
-                            <button
+                        <div className="mt-3">
+                            <Button
+                                color="primary"
                                 onClick={createNewPeriodicBackupTask}
                                 title="Create an ongoing periodic backup task"
-                                className="btn btn-primary"
                             >
                                 <i className="icon-backups"></i>
                                 <span>Create a Periodic Backup</span>
-                            </button>
+                            </Button>
                         </div>
                     )}
                 </div>
@@ -373,11 +369,9 @@ export function BackupsPage(props: BackupsPageProps) {
                         </div>
 
                         {backups.length === 0 && (
-                            <div className="row">
-                                <div className="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
-                                    <i className="icon-xl icon-empty-set text-muted"></i>
-                                    <h2 className="text-center text-muted">No periodic backup tasks created</h2>
-                                </div>
+                            <div className="text-center">
+                                <i className="icon-xl icon-empty-set text-muted"></i>
+                                <div className="lead">No periodic backup tasks created</div>
                             </div>
                         )}
                     </div>

@@ -26,26 +26,42 @@
         padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
         padding-left: sizes.$gutter-md;
         display: flex;
+        align-items: flex-end;
 
         .rich-panel-detail-item {
             padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
+        }
+
+        .rich-panel-detail-item-sm {
+            padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
+            font-size: sizes.$font-size-sm;
+        }
+
+        .detail-item-label {
+            font-size: sizes.$font-size-xs;
+            color: colors.$text-muted;            
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            line-height: 1em;
+        }
+        .detail-item-content {
             display: flex;
             align-items: center;
+        }
 
-            & > i {
-                margin-right: sizes.$gutter-xxs;
-            }
+        i {
+            margin-right: sizes.$gutter-xxs;
+        }
 
-            .value {
-                margin-left: sizes.$gutter-xxs;
-                font-weight: bold;
-                color: colors.$white;
-            }
+        .value {
+            margin-left: sizes.$gutter-xxs;
+            font-weight: bold;
+            color: colors.$white;
+        }
 
-            .progress-circle .state-indicator {
-                margin-top: -3px;
-                margin-bottom: -3px;
-            }
+        .progress-circle .state-indicator {
+            margin-top: -3px;
+            margin-bottom: -3px;
         }
     }
 }

@@ -425,12 +425,7 @@ $font-family-monospace:       Menlo, Monaco, Consolas, "Courier New", monospace 
 $font-family-base:            var(--#{$variable-prefix}font-sans-serif) !default;
 $font-family-code:            var(--#{$variable-prefix}font-monospace) !default;
 
-// $font-size-root affects the value of `rem`, which is used for as well font sizes, paddings, and margins
-// $font-size-base affects the font size of the body text
-$font-size-root:              14px !default;
-$font-size-base:              1rem !default; // Assumes the browser default, typically `16px`
-$font-size-sm:                $font-size-base * .875 !default;
-$font-size-lg:                $font-size-base * 1.25 !default;
+
 
 $font-weight-lighter:         lighter !default;
 $font-weight-light:           300 !default;
@@ -608,6 +603,11 @@ $input-btn-padding-y-lg:      .5rem !default;
 $input-btn-padding-x-lg:      1rem !default;
 $input-btn-font-size-lg:      $font-size-lg !default;
 
+$input-btn-padding-y-xs:      $gutter-xxs !default;
+$input-btn-padding-x-xs:      $gutter-xs !default;
+$input-btn-font-size-xs:      $font-size-xs !default;
+
+
 $input-btn-border-width:      $border-width !default;
 // scss-docs-end input-btn-variables
 
@@ -631,6 +631,10 @@ $btn-font-size-sm:            $input-btn-font-size-sm !default;
 $btn-padding-y-lg:            $input-btn-padding-y-lg !default;
 $btn-padding-x-lg:            $input-btn-padding-x-lg !default;
 $btn-font-size-lg:            $input-btn-font-size-lg !default;
+
+$btn-padding-y-xs:            $input-btn-padding-y-xs !default;
+$btn-padding-x-xs:            $input-btn-padding-x-xs !default;
+$btn-font-size-xs:            $input-btn-font-size-xs !default;
 
 $btn-border-width:            $input-btn-border-width !default;
 

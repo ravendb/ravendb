@@ -62,15 +62,19 @@ export function RichPanelName(props: { children: ReactNode | ReactNode[] }) {
 
 interface RichPanelDetailItemProps {
     id?: string;
+    size?: string;
     children: ReactNode | ReactNode[];
     className?: string;
+    label?: ReactNode | ReactNode[];
 }
 
 export function RichPanelDetailItem(props: RichPanelDetailItemProps) {
-    const { children, className, ...rest } = props;
+    const { children, className, size, label, ...rest } = props;
+    const panelClass = size ? "rich-panel-detail-item" + "-" + size : "rich-panel-detail-item";
     return (
-        <div className={classNames("rich-panel-detail-item", className)} {...rest}>
-            {children}
+        <div className={classNames(panelClass, className)} {...rest}>
+            {label && <div className="detail-item-label">{label}</div>}
+            <div className="detail-item-content">{children}</div>
         </div>
     );
 }
