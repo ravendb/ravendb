@@ -5,8 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
@@ -17,16 +15,19 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public string Query { get; set; }
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
-        public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
         public long SubscriptionId { get; set; }
         public string SubscriptionName { get; set; }
         public string MentorNode { get; set; }
         public bool PinToMentorNode { get; set; }
-        public string NodeTag { get; set; }
+
         public DateTime? LastBatchAckTime { get; set; }  // Last time server made some progress with the subscriptions docs  
         public DateTime? LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
-        
         public bool Disabled { get; set; }
+
+        // in sharding context - orchestrator node tag
+        public string NodeTag { get; set; }
+        
+        public SubscriptionShardingState SubscriptionShardingState { get; set; }
 
         public ulong GetTaskKey()
         {
@@ -72,8 +73,12 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled,
-                [nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson()
             };
+
+            if (SubscriptionShardingState != null)
+            {
+                djv[nameof(SubscriptionShardingState)] = SubscriptionShardingState.ToJson();
+            }
 
             return djv;
         }

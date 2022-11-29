@@ -22,14 +22,13 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Voron;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionStorage : IDisposable, ILowMemoryHandler, ISubscriptionSemaphore
+    public partial class SubscriptionStorage : IDisposable, ILowMemoryHandler, ISubscriptionSemaphore
     {
         internal readonly DocumentDatabase _db;
         private readonly ServerStore _serverStore;
@@ -241,47 +240,6 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionConnectionsState GetSubscriptionStateById(long id) => _subscriptions[id];
 
-        public class ResendItem : IDynamicJson
-        {
-            public string Id;
-            public long Batch;
-            public string ChangeVector;
-            public SubscriptionType Type;
-
-            public DynamicJsonValue ToJson()
-            {
-                return new DynamicJsonValue
-                {
-                    [nameof(Id)] = Id,
-                    [nameof(Batch)] = Batch,
-                    [nameof(ChangeVector)] = ChangeVector,
-                    [nameof(Type)] = Type.ToString()
-                };
-            }
-        }
-
-        public static IEnumerable<ResendItem> GetResendItems(ClusterOperationContext context, string database, long id)
-        {
-            var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-            using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionPrefix(context, database, id, out var prefix))
-            using (Slice.External(context.Allocator, prefix, out var prefixSlice))
-            {
-                ResendItem resendItem;
-                foreach (var item in subscriptionState.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
-                {
-                    resendItem = new ResendItem
-                    {
-                        Type = (SubscriptionType)item.Key[prefixSlice.Size],
-                        Id = item.Value.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length + 2),
-                        ChangeVector = item.Value.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector),
-                        Batch = Bits.SwapBytes(item.Value.Reader.ReadLong((int)ClusterStateMachine.SubscriptionStateTable.BatchId))
-                    };
-
-                    yield return resendItem;
-                }
-            }
-        }
-
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllRunningSubscriptions(TransactionOperationContext context, bool history, int start, int take)
         {
             foreach (var kvp in _subscriptions)
@@ -438,7 +396,7 @@ namespace Raven.Server.Documents.Subscriptions
                 LastBatchAckTime = @base.LastBatchAckTime;
                 LastClientConnectionTime = @base.LastClientConnectionTime;
                 Disabled = @base.Disabled;
-                ChangeVectorForNextBatchStartingPointPerShard = @base.ChangeVectorForNextBatchStartingPointPerShard;
+                SubscriptionShardingState = @base.SubscriptionShardingState;
             }
         }
 

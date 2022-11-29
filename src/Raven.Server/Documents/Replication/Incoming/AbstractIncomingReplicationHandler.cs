@@ -465,7 +465,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                             $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                     }
 
-                    _tcpConnectionOptions._lastEtagReceived = _lastDocumentEtag;
+                    _tcpConnectionOptions.LastEtagReceived = _lastDocumentEtag;
                     _tcpConnectionOptions.RegisterBytesReceived(incomingReplicationAllocator.TotalDocumentsSizeInBytes);
 
 

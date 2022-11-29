@@ -330,8 +330,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                         var changeVectorToMerge = PreProcessItem(context, item);
 
                         var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
-                        var changeVectorVersion = incomingChangeVector .Version;
-                        var changeVectorOrder = incomingChangeVector .Order;
+                        var changeVectorVersion = incomingChangeVector.Version;
+                        var changeVectorOrder = incomingChangeVector.Order;
 
                         context.LastDatabaseChangeVector = ChangeVector.Merge(changeVectorToMerge, context.LastDatabaseChangeVector, context);
 

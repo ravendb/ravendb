@@ -141,7 +141,7 @@ namespace Raven.Server.Documents
 
         public override string ToString()
         {
-            return Id;
+            return $"id:{Id}, cv:{ChangeVector}";
         }
     }
 

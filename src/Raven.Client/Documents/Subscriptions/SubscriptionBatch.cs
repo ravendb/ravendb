@@ -20,11 +20,11 @@ namespace Raven.Client.Documents.Subscriptions
 
         private bool _sessionOpened;
 
-        internal override string Initialize(BatchFromServer batch)
+        internal override void Initialize(BatchFromServer batch)
         {
             _sessionOpened = false;
 
-            return base.Initialize(batch);
+            base.Initialize(batch);
         }
 
         public IDocumentSession OpenSession()

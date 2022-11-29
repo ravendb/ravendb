@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -7,7 +6,6 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -30,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
                 HashSet<long> activeBatches;
-                IEnumerable<SubscriptionStorage.ResendItem> resendItems;
+                IEnumerable<ResendItem> resendItems;
                 using (context.OpenReadTransaction())
                 {
                     SubscriptionState subscriptionState;
@@ -45,7 +43,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                         return;
                     }
                     
-                    resendItems = SubscriptionStorage.GetResendItems(context, RequestHandler.DatabaseName, subscriptionState.SubscriptionId);
+                    resendItems = SubscriptionConnectionsStateBase.GetResendItems(context, RequestHandler.DatabaseName, subscriptionState.SubscriptionId);
                     activeBatches = GetActiveBatches(context, subscriptionState);
 
                     if (activeBatches == null)
@@ -59,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
             }
         }
 
-        protected async Task WriteSubscriptionBatchesStateAsync(JsonOperationContext context, IEnumerable<SubscriptionStorage.ResendItem> resendItems, HashSet<long> activeBatches)
+        protected async Task WriteSubscriptionBatchesStateAsync(JsonOperationContext context, IEnumerable<ResendItem> resendItems, HashSet<long> activeBatches)
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
@@ -75,6 +73,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
     public class SubscriptionBatchesState
     {
         public HashSet<long> Active;
-        public List<SubscriptionStorage.ResendItem> Results;
+        public List<ResendItem> Results;
     }
 }

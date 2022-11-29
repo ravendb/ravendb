@@ -12,7 +12,6 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Subscriptions;
-using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -1148,7 +1147,7 @@ namespace SlowTests.Client.Subscriptions
         private class ResendListResult
         {
 #pragma warning disable CS0649
-            public List<SubscriptionStorage.ResendItem> Results;
+            public List<ResendItem> Results;
 #pragma warning restore CS0649
         }
 

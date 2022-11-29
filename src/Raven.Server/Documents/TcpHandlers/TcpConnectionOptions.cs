@@ -23,8 +23,8 @@ namespace Raven.Server.Documents.TcpHandlers
         private MeterMetric _bytesReceivedMetric;
         private MeterMetric _bytesSentMetric;
         private readonly DateTime _connectedAt;
-        public long _lastEtagSent;
-        public long _lastEtagReceived;
+        public long LastEtagSent;
+        public long LastEtagReceived;
 
         private bool _isDisposed;
 
@@ -209,8 +209,8 @@ namespace Raven.Server.Documents.TcpHandlers
                 ["ClientUri"] = clientUri,
                 ["ConnectedAt"] = _connectedAt,
                 ["Duration"] = (DateTime.UtcNow - _connectedAt).ToString(),
-                ["LastEtagReceived"] = _lastEtagReceived,
-                ["LastEtagSent"] = _lastEtagSent
+                ["LastEtagReceived"] = LastEtagReceived,
+                ["LastEtagSent"] = LastEtagSent
             };
 
 

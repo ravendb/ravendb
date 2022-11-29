@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.Replication
         public const string RaftTag = "RAFT";
         public const string TrxnTag = "TRXN";
         public const string SinkTag = "SINK";
+        public const string MoveTag = "MOVE";
+
         public static readonly int RaftInt = RaftTag.ParseNodeTag();
         public static readonly int TrxnInt = TrxnTag.ParseNodeTag();
         public static readonly int SinkInt = SinkTag.ParseNodeTag();
