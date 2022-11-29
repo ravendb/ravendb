@@ -94,6 +94,10 @@
 @include check-size-variant(1.61, "lg");
 @include check-size-variant(.61, "sm");
 
+.btn-xs {
+    @include button-size($btn-padding-y-xs, $btn-padding-x-xs, $btn-font-size-xs, $btn-border-radius-sm);
+}
+
 .hr-title {
     display: flex;
     align-items: center;

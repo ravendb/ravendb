@@ -1,5 +1,6 @@
 ﻿import { ComponentMeta } from "@storybook/react";
 import { boundCopy } from "../utils/common";
+import { withBootstrap5, withStorybookContexts } from "../../test/storybookTestUtils";
 import {
     RichPanel,
     RichPanelDetailItem,
@@ -14,6 +15,7 @@ import useBoolean from "hooks/useBoolean";
 
 export default {
     title: "Bits/Rich Panel",
+    decorators: [withStorybookContexts, withBootstrap5],
     component: RichPanel,
 } as ComponentMeta<typeof RichPanel>;
 
@@ -37,6 +39,24 @@ const Template = (args: { withCheckbox: boolean }) => {
                 </RichPanelDetailItem>
                 <RichPanelDetailItem>
                     <i className="icon-warning" /> Detail #2
+                </RichPanelDetailItem>
+                <RichPanelDetailItem size="sm">
+                    <i className="icon-warning" /> Detail small
+                </RichPanelDetailItem>
+
+                <RichPanelDetailItem label="Detail label">
+                    <i className="icon-warning" /> Detail small
+                </RichPanelDetailItem>
+                <RichPanelDetailItem
+                    size="sm"
+                    label={
+                        <>
+                            <i className="icon-processor" />
+                            label with icon
+                        </>
+                    }
+                >
+                    Detail small with label
                 </RichPanelDetailItem>
             </RichPanelDetails>
         </RichPanel>
