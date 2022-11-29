@@ -56,7 +56,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
     public abstract class AbstractGetPeriodicBackupStatusOperationResult
     {
-        public bool IsSharded;
+        [ForceJsonSerialization]
+        internal bool IsSharded;
     }
 
     public class GetPeriodicBackupStatusOperationResult : AbstractGetPeriodicBackupStatusOperationResult
