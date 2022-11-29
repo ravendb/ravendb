@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
+using Sparrow.Binary;
 
 namespace Raven.Server.Integrations.PostgreSQL.Messages
 {
@@ -378,7 +379,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             {
                 using (var oldOwner = _bufferOwner)
                 {
-                    _bufferOwner = MemoryPool<byte>.Shared.Rent(oldOwner.Memory.Length * 2);
+                    _bufferOwner = MemoryPool<byte>.Shared.Rent(Bits.PowerOf2(pos + addedSize));
                     oldOwner.Memory.CopyTo(_bufferOwner.Memory);
                 }
             }
