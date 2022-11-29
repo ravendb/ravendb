@@ -37,109 +37,91 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByMultipleCollections_ShouldRemoveDocWhichCreatedAfterTheMinDate()
         {
-            var defaultBatchSize = 32 * 1_024 * 1_024;
+            var batchSizeLimit = 32 * 1_024;
             var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "companies", "users" };
-            var names = new []
+            var names = new[] { GenerateRandomString(batchSizeLimit / 2), GenerateRandomString(batchSizeLimit / 2 + 1), GenerateRandomString(batchSizeLimit / 2), };
+            var server = GetNewServer();
+            using var store = GetDocumentStore(new Options
             {
-                GenerateRandomString(defaultBatchSize / 2), 
-                GenerateRandomString(defaultBatchSize / 2 + 1), 
-                GenerateRandomString(defaultBatchSize / 2),
-            };
-            using (var store = GetDocumentStore())
+                Server = server,
+                ReplicationFactor = 1
+            });
+
+            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            database.DocumentsStorage.RevisionsStorage.SizeLimit = batchSizeLimit;
+            await RevisionsHelper.SetupRevisions(store, server.ServerStore);
+            
+            using (var session = store.OpenAsyncSession())
             {
-                await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new Company
-                    {
-                        Name = names[0]
-                    }, "companies/1");
+                await session.StoreAsync(new Company { Name = names[0] }, "companies/1");
 
-                    await session.StoreAsync(new Company
-                    {
-                        Name = names[1]
-                    }, "companies/2");
+                await session.StoreAsync(new Company { Name = names[1] }, "companies/2");
 
-                    await session.StoreAsync(new User
-                    {
-                        Name = names[2]
-                    }, "users/1");
+                await session.StoreAsync(new User { Name = names[2] }, "users/1");
 
-                    await session.SaveChangesAsync();
-                }
-
-                await Task.Delay(100);
-                DateTime last = DateTime.UtcNow;
-                await Task.Delay(100);
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new Company
-                    {
-                        Name = "abc"
-                    }, "companies/1");
-
-                    await session.StoreAsync(new Company
-                    {
-                        Name = "abc"
-                    }, "companies/2");
-
-                    await session.StoreAsync(new User
-                    {
-                        Name = "abc"
-                    }, "users/1");
-
-                    await session.StoreAsync(new User
-                    {
-                        Name = "abc"
-                    }, "users/2");
-
-                    await session.SaveChangesAsync();
-                }
-
-                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-
-                RevertResult result;
-                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                {
-                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
-                        token: token, collections: collections);
-                }
-                
-                using (var session = store.OpenAsyncSession())
-                {
-                    var o1 = await session.LoadAsync<Company>("companies/1");
-                    var o2 = await session.LoadAsync<Company>("companies/2");
-                    var o3 = await session.LoadAsync<User>("users/1");
-                    var o4 = await session.LoadAsync<User>("users/2");
-                    Assert.NotNull(o1);
-                    Assert.NotNull(o2);
-                    Assert.NotNull(o3);
-                    Assert.Null(o4);
-
-                    var revisions_c1 = await session.Advanced.Revisions.GetForAsync<Company>("companies/1");
-                    Assert.Equal(3, revisions_c1.Count);
-                    Assert.Equal(names[0], revisions_c1[0].Name);
-                    Assert.Equal("abc", revisions_c1[1].Name);
-                    Assert.Equal(names[0], revisions_c1[2].Name);
-
-                    var revisions_c2 = await session.Advanced.Revisions.GetForAsync<Company>("companies/2");
-                    Assert.Equal(3, revisions_c2.Count);
-                    Assert.Equal(names[1], revisions_c2[0].Name);
-                    Assert.Equal("abc", revisions_c2[1].Name);
-                    Assert.Equal(names[1], revisions_c2[2].Name);
-
-                    var revisions_u1 = await session.Advanced.Revisions.GetForAsync<User>("users/1");
-                    Assert.Equal(3, revisions_u1.Count);
-                    Assert.Equal(names[2], revisions_u1[0].Name);
-                    Assert.Equal("abc", revisions_u1[1].Name);
-                    Assert.Equal(names[2], revisions_u1[2].Name);
-
-                    var revisions_u2 = await session.Advanced.Revisions.GetForAsync<User>("users/2");
-                    Assert.Null(revisions_u2[0].Name);
-                    Assert.Equal("abc", revisions_u2[1].Name);
-                }
+                await session.SaveChangesAsync();
             }
+
+            await Task.Delay(100);
+            DateTime last = DateTime.UtcNow;
+            await Task.Delay(100);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Company { Name = "abc" }, "companies/1");
+
+                await session.StoreAsync(new Company { Name = "abc" }, "companies/2");
+
+                await session.StoreAsync(new User { Name = "abc" }, "users/1");
+
+                await session.StoreAsync(new User { Name = "abc" }, "users/2");
+
+                await session.SaveChangesAsync();
+            }
+
+            var db = database;//await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            RevertResult result;
+            using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
+            {
+                result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                    token: token, collections: collections);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var o1 = await session.LoadAsync<Company>("companies/1");
+                var o2 = await session.LoadAsync<Company>("companies/2");
+                var o3 = await session.LoadAsync<User>("users/1");
+                var o4 = await session.LoadAsync<User>("users/2");
+                Assert.NotNull(o1);
+                Assert.NotNull(o2);
+                Assert.NotNull(o3);
+                Assert.Null(o4);
+
+                var revisions_c1 = await session.Advanced.Revisions.GetForAsync<Company>("companies/1");
+                Assert.Equal(3, revisions_c1.Count);
+                Assert.Equal(names[0], revisions_c1[0].Name);
+                Assert.Equal("abc", revisions_c1[1].Name);
+                Assert.Equal(names[0], revisions_c1[2].Name);
+
+                var revisions_c2 = await session.Advanced.Revisions.GetForAsync<Company>("companies/2");
+                Assert.Equal(3, revisions_c2.Count);
+                Assert.Equal(names[1], revisions_c2[0].Name);
+                Assert.Equal("abc", revisions_c2[1].Name);
+                Assert.Equal(names[1], revisions_c2[2].Name);
+
+                var revisions_u1 = await session.Advanced.Revisions.GetForAsync<User>("users/1");
+                Assert.Equal(3, revisions_u1.Count);
+                Assert.Equal(names[2], revisions_u1[0].Name);
+                Assert.Equal("abc", revisions_u1[1].Name);
+                Assert.Equal(names[2], revisions_u1[2].Name);
+
+                var revisions_u2 = await session.Advanced.Revisions.GetForAsync<User>("users/2");
+                Assert.Null(revisions_u2[0].Name);
+                Assert.Equal("abc", revisions_u2[1].Name);
+            }
+
         }
 
         private string GenerateRandomString(int size)
@@ -572,7 +554,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact] //--
+        [Fact]
         public async Task RevertByWrongCollection_EndPointCheck()
         {
             var collections = new string[]

@@ -41,6 +41,7 @@ namespace Raven.Server.Documents.Revisions
         private static readonly Slice RevisionsTombstonesSlice;
         private static readonly Slice RevisionsPrefix;
         public static Slice ResolvedFlagByEtagSlice;
+        public long SizeLimit = 32 * 1_024 * 1_024;
 
         public static readonly string RevisionsTombstones = "Revisions.Tombstones";
 
@@ -1443,8 +1444,6 @@ namespace Raven.Server.Documents.Revisions
                 }
             }
         }
-
-        private const long SizeLimit = 32 * 1_024 * 1_024;
 
         private class Parameters
         {
