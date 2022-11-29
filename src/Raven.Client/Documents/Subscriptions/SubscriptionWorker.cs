@@ -823,6 +823,8 @@ namespace Raven.Client.Documents.Subscriptions
 
                     return true;
 
+                case DatabaseDisabledException:
+                case AllTopologyNodesDownException:
                 case NodeIsPassiveException e:
                     {
                         // if we failed to talk to a node, we'll forget about it and let the topology to
@@ -848,7 +850,6 @@ namespace Raven.Client.Documents.Subscriptions
                 case SubscriptionInvalidStateException _:
                 case DatabaseDoesNotExistException _:
                 case AuthorizationException _:
-                case AllTopologyNodesDownException _:
                 case SubscriberErrorException _:
                     _processingCts.Cancel();
                     return false;
