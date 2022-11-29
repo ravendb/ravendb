@@ -75,6 +75,16 @@ namespace Raven.Server.Documents.Handlers.Admin
                         w.WritePropertyName(nameof(v.Value.TimeSeries.Etag));
                         w.WriteInteger(v.Value.TimeSeries.Etag);
                         w.WriteEndObject();
+                        w.WriteComma();
+
+                        w.WritePropertyName(nameof(v.Value.Counters));
+                        w.WriteStartObject();
+                        w.WritePropertyName(nameof(v.Value.Counters.Component));
+                        w.WriteString(v.Value.Counters.Component);
+                        w.WriteComma();
+                        w.WritePropertyName(nameof(v.Value.Counters.Etag));
+                        w.WriteInteger(v.Value.Counters.Etag);
+                        w.WriteEndObject();
 
                         w.WriteEndObject();
                     });
