@@ -9,6 +9,7 @@ using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 
@@ -24,10 +25,12 @@ public abstract class SubscriptionProcessor : IDisposable
 
     protected int BatchSize => Options.MaxDocsPerBatch;
 
+    protected Logger Logger;
+
     public static SubscriptionProcessor Create(SubscriptionConnectionBase connection)
     {
-        if (connection is OrchestratedSubscriptionConnection)
-            return new OrchestratedSubscriptionProcessor(connection.TcpConnection.DatabaseContext.ServerStore, connection.TcpConnection.DatabaseContext, connection);
+        if (connection is OrchestratedSubscriptionConnection orchestratedSubscription)
+            return new OrchestratedSubscriptionProcessor(connection.TcpConnection.DatabaseContext.ServerStore, connection.TcpConnection.DatabaseContext, orchestratedSubscription);
 
         if (connection is SubscriptionConnectionForShard sharded)
             return CreateForSharded(sharded);
@@ -64,6 +67,7 @@ public abstract class SubscriptionProcessor : IDisposable
     {
         Server = server;
         Connection = connection;
+        Logger = LoggingSource.Instance.GetLogger(connection.DatabaseName, GetType().FullName);
     }
 
     public virtual void InitializeProcessor()

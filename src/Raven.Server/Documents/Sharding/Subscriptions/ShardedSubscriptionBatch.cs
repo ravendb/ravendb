@@ -12,7 +12,6 @@ public class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJsonReade
 {
     public TaskCompletionSource SendBatchToClientTcs;
     public TaskCompletionSource ConfirmFromShardSubscriptionConnectionTcs;
-    public string LastSentChangeVectorInBatch;
     public string ShardName;
     public IDisposable ReturnContext;
 
@@ -35,15 +34,16 @@ public class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJsonReade
 
     protected override void EnsureDocumentId(BlittableJsonReaderObject item, string id) => throw new SubscriberErrorException($"Missing id property for {item}");
 
-    internal override string Initialize(BatchFromServer batch)
+    internal override void Initialize(BatchFromServer batch)
     {
         SendBatchToClientTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         ConfirmFromShardSubscriptionConnectionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        LastSentChangeVectorInBatch = null;
         
         ReturnContext = batch.ReturnContext;
         batch.ReturnContext = null; // move the release responsibility to the OrchestratedSubscriptionProcessor
 
-        return base.Initialize(batch);
+        base.Initialize(batch);
+
+        LastSentChangeVectorInBatch = null;
     }
 }

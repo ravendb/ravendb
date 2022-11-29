@@ -15,7 +15,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract void FillJson(DynamicJsonValue json);
 
-        protected abstract BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context,
+        protected abstract BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
             BlittableJsonReaderObject existingValue);
 
         public virtual unsafe void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
@@ -45,12 +45,20 @@ namespace Raven.Server.ServerWide.Commands
                 itemKey = GetItemId();
             }
 
+            result = UpdateValue(context, items, index, itemKey, itemBlittable);
+        }
+
+        protected object UpdateValue(ClusterOperationContext context, Table items, long index, string itemKey, BlittableJsonReaderObject itemBlittable)
+        {
+            object result;
             using (Slice.From(context.Allocator, itemKey, out Slice valueName))
             using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
             {
                 ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, itemBlittable);
                 result = GetResult();
             }
+
+            return result;
         }
 
         public virtual object GetResult()

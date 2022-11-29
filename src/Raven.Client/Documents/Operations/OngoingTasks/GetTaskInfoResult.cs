@@ -94,8 +94,6 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(Query)] = Query;
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(SubscriptionId)] = SubscriptionId;
-            json[nameof(MentorNode)] = MentorNode;
-            json[nameof(PinToMentorNode)] = PinToMentorNode;
             json[nameof(ChangeVectorForNextBatchStartingPoint)] = ChangeVectorForNextBatchStartingPoint;
             json[nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson();
             json[nameof(LastBatchAckTime)] = LastBatchAckTime;

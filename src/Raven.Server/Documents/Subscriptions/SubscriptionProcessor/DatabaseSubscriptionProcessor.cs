@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using Jint;
 using Jint.Native;
@@ -17,13 +18,11 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 {
     public abstract class DatabaseSubscriptionProcessor<T> : DatabaseSubscriptionProcessor
     {
-        protected Logger Logger;
         protected SubscriptionFetcher<T> Fetcher;
 
         protected DatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) :
             base(server, database, connection)
         {
-            Logger = LoggingSource.Instance.GetLogger<DatabaseSubscriptionProcessor<T>>(Database.Name);
         }
 
         public override IDisposable InitializeForNewBatch(ClusterOperationContext clusterContext, out SubscriptionIncludeCommands includesCommands)
