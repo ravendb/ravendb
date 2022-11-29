@@ -124,7 +124,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 var processedString = (prop.Token & BlittableJsonReaderBase.TypesMask) switch
                 {
-                    BlittableJsonToken.CompressedString => (string)prop.Value,
+                    BlittableJsonToken.CompressedString => (string)(LazyCompressedStringValue)prop.Value,
                     BlittableJsonToken.String => (LazyStringValue)prop.Value,
                     _ => null
                 };
