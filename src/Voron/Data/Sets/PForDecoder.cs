@@ -9,6 +9,7 @@ using System.Xml;
 using static System.Runtime.Intrinsics.X86.Sse2;
 using static System.Runtime.Intrinsics.X86.Avx2;
 using System.Runtime.Intrinsics.X86;
+using Sparrow.Json;
 using Sparrow.Server;
 
 namespace Voron.Data.Sets
@@ -54,19 +55,6 @@ namespace Voron.Data.Sets
                 NumberOfReads = 0;
                 BufferSize = bufferSize;
             }
-        }
-
-        public static void Reset(ref DecoderState state, int bufferLength)
-        {
-            state._bitPos = 0;
-            state._prevValue = 0;
-            state.NumberOfReads = 0;
-            state.BufferSize = bufferLength;
-        }
-
-        public static DecoderState Initialize(Span<byte> inputBuffer)
-        {
-            return new DecoderState(inputBuffer.Length);
         }
 
         private static ReadOnlySpan<byte> NumberOfValues => new byte[] { 1, 32, 64, 128 };
@@ -307,7 +295,7 @@ namespace Voron.Data.Sets
             Span<int> scratch = stackalloc int[128];
             
             var list = new List<int>();
-            var state = Initialize(buf);
+            var state = new DecoderState(buf.Length);
             while (true)
             {
                 var len = Decode(ref state, buf, scratch);
@@ -320,6 +308,25 @@ namespace Voron.Data.Sets
                 }
             }
             return list;
+        }
+
+        public static int ReadCount(Span<byte> output)
+        {
+            fixed (byte* p = output)
+            {
+                BlittableJsonReaderBase.ReadVariableSizeIntInReverse(p, output.Length - 1, out byte pos);
+                int count = BlittableJsonReaderBase.ReadVariableSizeIntInReverse(p, output.Length - 1 - pos, out _);
+                return count;
+            }
+        }
+        
+        public static int ReadLast(Span<byte> output)
+        {
+            fixed (byte* p = output)
+            {
+                int len = BlittableJsonReaderBase.ReadVariableSizeIntInReverse(p, output.Length - 1, out _);
+                return len;
+            }
         }
     }
 }

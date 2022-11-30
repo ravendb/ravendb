@@ -245,7 +245,7 @@ namespace Corax.Queries
 
                 var it = term._set;
 
-                it.MaybeSeek(buffer[0] - 1);
+                it.Seek(buffer[0] - 1);
                 if (it.MoveNext() == false)
                     goto Fail;                    
                 
@@ -300,7 +300,7 @@ namespace Corax.Queries
 
                 Debug.Assert(Vector256<long>.Count == 4);
 
-                term._set.MaybeSeek(buffer[0] - 1);
+                term._set.Seek(buffer[0] - 1);
                 
                 // PERF: The AND operation can be performed in place, because we end up writing the same value that we already read. 
                 fixed (long* inputStartPtr = buffer)

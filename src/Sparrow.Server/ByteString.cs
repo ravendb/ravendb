@@ -868,7 +868,7 @@ namespace Sparrow.Server
 
             public override Memory<T> Memory => CreateMemory(_str.Length);
 
-            public override Span<T> GetSpan() => new Span<T>(_str._pointer, _str.Length);
+            public override Span<T> GetSpan() => new Span<T>(_str.Ptr, _str.Length);
 
             public override MemoryHandle Pin(int elementIndex = 0)
             {

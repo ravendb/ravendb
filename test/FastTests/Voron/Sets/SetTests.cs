@@ -226,9 +226,14 @@ namespace FastTests.Voron.Sets
                         }
                     }
 
-                    Assert.Equal(inTreeKeys.Count, set.State.NumberOfEntries);
 
                     wtx.Commit();
+                }
+                
+                using (var rtx = Env.ReadTransaction())
+                {
+                    var set = rtx.OpenSet($"Set({name})");
+                    Assert.Equal(inTreeKeys.Count, set.State.NumberOfEntries);
                 }
 
                 var values = inTreeKeys.ToArray();
@@ -242,8 +247,6 @@ namespace FastTests.Voron.Sets
                         set.Remove(values[i]);
                         inTreeKeys.Remove(values[i]);
                         removedKeys.Add(values[i]);
-
-                        Assert.Equal(inTreeKeys.Count, set.State.NumberOfEntries);
                     }
 
                     wtx.Commit();

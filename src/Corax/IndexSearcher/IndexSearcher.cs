@@ -179,7 +179,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             || binding.Analyzer is null)
         {
             var disposable = Allocator.AllocateDirect(originalTerm.Length, ByteStringType.Immutable, out var originalTermSliced);
-            originalTerm.CopyTo(new Span<byte>(originalTermSliced._pointer->Ptr, originalTerm.Length));
+            originalTerm.CopyTo(new Span<byte>(originalTermSliced.Ptr, originalTerm.Length));
 
             value = new Slice(originalTermSliced);
             return disposable;
