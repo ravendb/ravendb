@@ -21,47 +21,49 @@
             margin-right: sizes.$gutter-sm;
         }
     }
+}
 
-    .rich-panel-details {
+.rich-panel-details {
+    padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
+    padding-left: sizes.$gutter-md;
+    display: flex;
+    align-items: flex-end;
+
+    .rich-panel-detail-item {
         padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
-        padding-left: sizes.$gutter-md;
+    }
+
+    .rich-panel-detail-item-sm {
+        padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
+        font-size: sizes.$font-size-sm;
+    }
+
+    .detail-item-label {
+        font-size: sizes.$font-size-xs;
+        color: colors.$text-muted;            
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        line-height: 1.1em;
+        margin-bottom: 2px;
+    }
+    .detail-item-content {
         display: flex;
-        align-items: flex-end;
+        align-items: center;
+        line-height: 1.4em;
+    }
 
-        .rich-panel-detail-item {
-            padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
-        }
+    i {
+        margin-right: sizes.$gutter-xxs;
+    }
 
-        .rich-panel-detail-item-sm {
-            padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
-            font-size: sizes.$font-size-sm;
-        }
+    .value {
+        margin-left: sizes.$gutter-xxs;
+        font-weight: bold;
+        color: colors.$white;
+    }
 
-        .detail-item-label {
-            font-size: sizes.$font-size-xs;
-            color: colors.$text-muted;            
-            letter-spacing: .1em;
-            text-transform: uppercase;
-            line-height: 1em;
-        }
-        .detail-item-content {
-            display: flex;
-            align-items: center;
-        }
-
-        i {
-            margin-right: sizes.$gutter-xxs;
-        }
-
-        .value {
-            margin-left: sizes.$gutter-xxs;
-            font-weight: bold;
-            color: colors.$white;
-        }
-
-        .progress-circle .state-indicator {
-            margin-top: -3px;
-            margin-bottom: -3px;
-        }
+    .progress-circle .state-indicator {
+        margin-top: -3px;
+        margin-bottom: -3px;
     }
 }

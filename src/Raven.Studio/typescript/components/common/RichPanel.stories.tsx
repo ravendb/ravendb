@@ -44,8 +44,8 @@ const Template = (args: { withCheckbox: boolean }) => {
                     <i className="icon-warning" /> Detail small
                 </RichPanelDetailItem>
 
-                <RichPanelDetailItem label="Detail label">
-                    <i className="icon-warning" /> Detail small
+                <RichPanelDetailItem label="label">
+                    <i className="icon-warning" /> Detail with label
                 </RichPanelDetailItem>
                 <RichPanelDetailItem
                     size="sm"
@@ -56,7 +56,7 @@ const Template = (args: { withCheckbox: boolean }) => {
                         </>
                     }
                 >
-                    Detail small with label
+                    Small with label
                 </RichPanelDetailItem>
             </RichPanelDetails>
         </RichPanel>

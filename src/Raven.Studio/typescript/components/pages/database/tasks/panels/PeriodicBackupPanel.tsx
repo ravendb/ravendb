@@ -10,7 +10,13 @@ import {
 import { OngoingTaskPeriodicBackupInfo } from "../../../../models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
-import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../common/RichPanel";
+import {
+    RichPanel,
+    RichPanelDetailItem,
+    RichPanelDetails,
+    RichPanelHeader,
+    RichPanelName,
+} from "../../../../common/RichPanel";
 import genUtils from "common/generalUtils";
 import moment = require("moment");
 import assertUnreachable from "../../../../utils/assertUnreachable";
@@ -22,6 +28,7 @@ import backupNow = require("viewmodels/database/tasks/backupNow");
 import app from "durandal/app";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
+import { FlexGrow } from "../../../../../components/common/FlexGrow";
 
 type PeriodicBackupPanelProps = BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> & { forceReload: () => void };
 
@@ -210,15 +217,11 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
 
 function BackupEncryption(props: { encrypted: boolean }) {
     return (
-        <div className="margin-left-xs margin-right-xs">
+        <div className="me-3">
             {props.encrypted ? (
-                <small title="Backup is encrypted">
-                    <i className="icon-encryption text-success"></i>
-                </small>
+                <i className="icon-encryption text-success" title="Backup is encrypted" />
             ) : (
-                <small title="Backup is not encrypted">
-                    <i className="icon-unlock text-gray"></i>
-                </small>
+                <i className="icon-unlock text-gray" title="Backup is not encrypted" />
             )}
         </div>
     );
@@ -242,6 +245,7 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
         <RichPanel>
             <RichPanelHeader>
                 <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
+                <FlexGrow />
                 <OngoingTaskResponsibleNode task={data} />
                 <BackupEncryption encrypted={data.shared.encrypted} />
                 <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
