@@ -11,17 +11,19 @@ using Voron.Impl;
 
 namespace Voron.Data.Sets
 {
-    public unsafe class Set : IDisposable
+    public sealed unsafe class Set : IDisposable
     {
         public Slice Name;
         private readonly LowLevelTransaction _llt;
         private SetState _state;
         private UnmanagedSpan<SetCursorState> _stk;
         private int _pos = -1, _len;
-        private readonly ByteStringContext<ByteStringMemoryCache>.InternalScope _scope;
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope _scope;
 
         public SetState State => _state;
         internal LowLevelTransaction Llt => _llt;
+
+        private NativeIntegersList _additions, _removals;
 
         public Set(LowLevelTransaction llt, Slice name, in SetState state)
         {
@@ -36,162 +38,23 @@ namespace Voron.Data.Sets
             // we will just discard the memory as reclaiming it may be even more costly.  
             _scope = llt.Allocator.AllocateDirect(8 * sizeof(SetCursorState), out ByteString buffer);
             _stk = new UnmanagedSpan<SetCursorState>(buffer.Ptr, buffer.Size);
+            if (llt.Flags == TransactionFlags.ReadWrite)
+            {
+                _additions = new NativeIntegersList(llt.Allocator);
+                _removals = new NativeIntegersList(llt.Allocator);
+            }
         }
 
         public static void Create(LowLevelTransaction tx, ref SetState state)
         {
             var newPage = tx.AllocatePage(1);
-            new SetLeafPage(newPage).Init(0);
+            SetLeafPage setLeafPage = new SetLeafPage(newPage);
+            SetLeafPage.InitLeaf(setLeafPage.Header, 0);
             state.RootObjectType = RootObjectType.Set;
             state.Depth = 1;
             state.BranchPages = 0;
             state.LeafPages = 1;
             state.RootPage = newPage.PageNumber;
-        }
-
-        public void Remove(long value)
-        {
-            // caller ensures that the value *already exists* in the set
-            FindPageFor(value);
-            ref var state = ref _stk[_pos];
-            state.Page = _llt.ModifyPage(state.Page.PageNumber);
-            var leaf = new SetLeafPage(state.Page);
-            if (leaf.IsValidValue(value) == false)
-                return; // value does not exists in tree
-
-            if (leaf.Remove(_llt, value)) // removed value properly
-            {
-                _state.NumberOfEntries = Math.Max(0, _state.NumberOfEntries - 1);
-                if (_pos == 0)
-                    return;  // this is the root page
-
-                if (leaf.SpaceUsed > Constants.Storage.PageSize / 4)
-                    return; // don't merge too eagerly
-
-                MaybeMergeLeafPage(in leaf);
-                return;
-            }
-            // could not store the new value (rare, but can happen)
-            // need to split on remove :-(
-            _state.LeafPages++;
-            // we need to always split by half here, so we'll have enough space to
-            // write the new removed entry
-            var (separator, newPage) = SplitLeafPageInHalf(value, leaf, state);
-            AddToParentPage(separator, newPage);
-            Remove(value); // now we can properly store the new value
-        }
-
-        private void MaybeMergeLeafPage(in SetLeafPage leaf)
-        {
-            if (_pos == 0)
-                return; // no parent branch to go to...
-            
-            PopPage();
-            
-            ref var parent = ref _stk[_pos];
-            
-            var branch = new SetBranchPage(parent.Page);
-            Debug.Assert(branch.Header->NumberOfEntries >= 2);
-            var siblingIdx = parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
-            var (_, siblingPageNum) = branch.GetByIndex(siblingIdx);
-
-            var siblingPage = _llt.GetPage(siblingPageNum);
-            var siblingHeader = (SetLeafPageHeader*)siblingPage.Pointer;
-            if (siblingHeader->SetFlags != ExtendedPageType.SetLeaf)
-                return;
-
-            if (siblingHeader->Baseline != leaf.Header->Baseline)
-                return; // we cannot merge pages from different leafs
-
-            var sibling = new SetLeafPage(siblingPage);
-            if (sibling.SpaceUsed + leaf.SpaceUsed > Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4)
-                return; // if the two pages together will be bigger than 75%, can skip merging
-
-            var it = sibling.GetIterator(_llt);
-            while (it.MoveNext(out long v))
-            {
-                if (leaf.Add(_llt, v) == false)
-                    throw new InvalidOperationException("Even though we have 25% spare capacity, we run out?! Should not happen ever");
-            }
-
-            MergeSiblingsAtParent();
-        }
-
-        private void MergeSiblingsAtParent()
-        {
-            ref var state = ref _stk[_pos];
-            state.Page = _llt.ModifyPage(state.Page.PageNumber);
-            
-            var current = new SetBranchPage(state.Page);
-            Debug.Assert(current.Header->SetFlags == ExtendedPageType.SetBranch);
-            var (siblingKey, siblingPageNum) = current.GetByIndex(GetSiblingIndex(in state));
-            var (leafKey, leafPageNum) = current.GetByIndex(state.LastSearchPosition);
-
-            var siblingPageHeader = (SetLeafPageHeader*)_llt.GetPage(siblingPageNum).Pointer;
-            if (siblingPageHeader->SetFlags == ExtendedPageType.SetBranch)
-                _state.BranchPages--;
-            else
-                _state.LeafPages--;
-            
-            _llt.FreePage(siblingPageNum);
-            current.Remove(siblingKey);
-            current.Remove(leafKey);
-
-            // if it is empty, can just replace with the child
-            if (current.Header->NumberOfEntries == 0)
-            {
-                var leafPage = _llt.GetPage(leafPageNum);
-                
-                long cpy = state.Page.PageNumber;
-                leafPage.CopyTo(state.Page);
-                state.Page.PageNumber = cpy;
-
-                if (_pos == 0)
-                    _state.Depth--; // replaced the root page
-
-                _state.BranchPages--;
-                _llt.FreePage(leafPageNum);
-                return;
-            }
-
-            var newKey = Math.Min(siblingKey, leafKey);
-            if (current.TryAdd(_llt, newKey, leafPageNum) == false)
-                throw new InvalidOperationException("We just removed two values to add one, should have enough space. This error should never happen");
-
-            if (_pos == 0)
-                return; // root has no siblings
-
-            if (current.Header->NumberOfEntries > SetBranchPage.MinNumberOfValuesBeforeMerge)
-                return;
-
-            PopPage();
-            ref var parent = ref _stk[_pos];
-            
-            var gp = new SetBranchPage(parent.Page);
-            var siblingIdx = GetSiblingIndex(parent);
-            (_, siblingPageNum) = gp.GetByIndex(siblingIdx);
-            var siblingPage = _llt.GetPage(siblingPageNum);
-            var siblingHeader = (SetLeafPageHeader*)siblingPage.Pointer;
-            if (siblingHeader->SetFlags != ExtendedPageType.SetBranch)
-                return;// cannot merge leaf & branch
-            
-            var sibling = new SetBranchPage(siblingPage);
-            if (sibling.Header->NumberOfEntries + current.Header->NumberOfEntries > SetBranchPage.MinNumberOfValuesBeforeMerge * 2)
-                return; // not enough space to _ensure_ that we can merge
-
-            for (int i = 0; i < sibling.Header->NumberOfEntries; i++)
-            {
-                (long key, long page) = sibling.GetByIndex(i);
-                if(current.TryAdd(_llt, key, page) == false)
-                    throw new InvalidOperationException("Even though we have checked for spare capacity, we run out?! Should not hapen ever");
-            }
-
-            MergeSiblingsAtParent();
-        }
-
-        private static int GetSiblingIndex(in SetCursorState parent)
-        {
-            return parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
         }
 
         public List<long> DumpAllValues()
@@ -207,344 +70,34 @@ namespace Voron.Data.Sets
             return results;
         }
 
-        /// <summary>
-        /// We do a bulk removal of the values in the tree. The values are *assumed to already exists* in the tree.
-        /// </summary>
+        public void Add(long value)
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException(nameof(value), "Only positive values are allowed"); 
+            
+            _additions.Add(value);
+        }
+
         public void Remove(ReadOnlySpan<long> values)
         {
-            int index = 0;
-            while (index < values.Length)
-            {
-                FindPageFor(values[index]);
-                ref var state = ref _stk[_pos];
-                state.Page = _llt.ModifyPage(state.Page.PageNumber);
-                var leafPage = new SetLeafPage(state.Page);
-                if (leafPage.Header->Baseline != (values[index] & ~int.MaxValue))
-                {
-                    throw new InvalidOperationException($"Attempted to remove a value {values[index]} that is no located in page {state.Page.PageNumber} (baseline: {leafPage.Header->Baseline})");
-                }
-
-                long limit = Math.Min(NextParentLimit(), leafPage.Header->Baseline + int.MaxValue + 1);
-
-                for (; index < values.Length && values[index] < limit; index++)
-                {
-                    if (leafPage.Remove(_llt, values[index]) == false)
-                    {
-                        // shouldn't really happen, but may because removing a value may change
-                        // the compression rate. if we can't add the removal, we'll just remove
-                        // using single value method, and resume the bulk mode on the next one 
-                        Remove(values[index++]);
-                        break; 
-                    }
-                    _state.NumberOfEntries--;
-                }
-
-                // because we are in bulk mode, rather than try to be eager about this
-                // we only want to try to do a merge if the  page is 75% empty or the
-                // space used is less than 25% of the total size 
-                if (leafPage.SpaceUsed < Constants.Storage.PageSize / 4) 
-                    MaybeMergeLeafPage(in leafPage);
-            }
+            _removals.Add(values);
         }
 
         public void Add(ReadOnlySpan<long> values)
         {
-            // NOTE: We assume that values is sorted
-            
-            int index = 0;
-#if DEBUG
-            var prev = long.MinValue;
-#endif
-            while (index < values.Length)
-            {               
-                FindPageFor(values[index]);
-                ref var state = ref _stk[_pos];
-
-                state.Page = _llt.ModifyPage(state.Page.PageNumber);
-
-                var leafPage = new SetLeafPage(state.Page);
-
-                // Two different conditions may force us to move into single value insertions.
-                // Either the value is outside range on the upside, OR it is within range
-                // but because we are not going to be adding elements below the Baseline we 
-                // need to create another leaf page to deal with that one. This is the case
-                // when values are separated by more than int.MaxValue. 
-
-                long last = NextParentLimit();
-                if (leafPage.IsValidValue(last) == false)
-                {
-                    // must still fit in the page
-                    last = leafPage.Header->Baseline + int.MaxValue;
-                    if (values[index] > last)
-                    {
-                        // add a single item, forcing new page creation
-                        Add(values[index++]);
-                        continue;
-                    }
-                }
-
-                if (values[index] < leafPage.Header->Baseline)
-                {
-                    // Since FindPageFor will return the minimal leaf page that holds this range,
-                    // we need to create a new leaf page to hold this value as the current baseline
-                    // is incompatible. 
-                    Add(values[index++]);
-                    continue;
-                }
-
-                for (; index < values.Length && values[index] < last; index++)
-                {
-#if DEBUG
-                    if(prev > values[index])
-                        throw new InvalidOperationException("Values not sorted");
-                    prev = values[index];
-#endif
-                    if (leafPage.Add(_llt, values[index]))
-                    {
-                        _state.NumberOfEntries++;
-                        continue; // successfully added
-                    }
-                    // we couldn't add to the page (but it fits, need to split)
-                    var (separator, newPage) = SplitLeafPage(values[index]);
-                    AddToParentPage(separator, newPage);
-#if DEBUG
-                    prev = values[index];
-#endif
-                    break; 
-                }
-            }
+            _additions.Add(values);
         }
-
-        private long NextParentLimit()
-        {
-            var cur = _pos;
-            while (cur > 0)
-            {
-                ref var state = ref _stk[cur - 1];
-                if (state.LastSearchPosition + 1 < state.BranchHeader->NumberOfEntries)
-                {
-                    var (key, _) = new SetBranchPage(state.Page).GetByIndex(state.LastSearchPosition + 1);
-                    return key;
-                }
-                cur--;
-            }
-            return long.MaxValue;
-        }
-
-        public void Add(long value)
-        {
-            if (value < 0)
-                throw new ArgumentOutOfRangeException(nameof(value), "Only positive values are allowed");
-
-            FindPageFor(value);
-            AddToPage(value);
-        }
-
-        private void AddToPage(long value)
-        {
-            ref var state = ref _stk[_pos];
-
-            state.Page = _llt.ModifyPage(state.Page.PageNumber);
-
-            var leafPage = new SetLeafPage(state.Page);
-            if (leafPage.IsValidValue(value) && // may have enough space, but too far out to fit 
-                leafPage.Add(_llt, value))
-            {
-                _state.NumberOfEntries++;
-                return; // successfully added
-            }
         
-
-            if (leafPage.IsValidValue(value) == false) 
-            {
-                if (leafPage.Header->NumberOfCompressedPositions == 0 &&
-                    leafPage.Header->NumberOfRawValues == 0)
-                {
-                    // never had a write, the baseline is wrong, can update 
-                    // this and move on
-                    leafPage.Header->Baseline = value & ~int.MaxValue;
-                    if(leafPage.Add(_llt, value) == false)
-                        throw new InvalidOperationException("Adding value to empty page failed?!");
-                    return;
-                }
-            }
-
-            var (separator, newPage) = SplitLeafPage(value);
-            AddToParentPage(separator, newPage);
-            Add(value); // now add the value after the split
-        }
-
-        private void AddToParentPage(long separator, long newPage)
+        public void Remove(long value)
         {
-            if (_pos == 0) // need to create a root page
-            {
-                CreateRootPage();
-            }
-
-            PopPage();
-            ref var state = ref _stk[_pos];
-            state.Page = _llt.ModifyPage(state.Page.PageNumber);
-            var parent = new SetBranchPage(state.Page);
-            if (parent.TryAdd(_llt, separator, newPage))
-                return;
-
-            SplitBranchPage(separator, newPage);
+            _removals.Add(value);
         }
-
-        private void SplitBranchPage(long key, long value)
-        {
-            ref var state = ref _stk[_pos];
-
-            var pageToSplit = new SetBranchPage(state.Page);
-            var page = _llt.AllocatePage(1);
-            var branch = new SetBranchPage(page);
-            branch.Init();
-            _state.BranchPages++;
-            
-            // grow rightward
-            if (key > pageToSplit.Last)
-            {
-                if (branch.TryAdd(_llt, key, value) == false)
-                    throw new InvalidOperationException("Failed to add to a newly created page? Should never happen");
-                AddToParentPage(key, page.PageNumber);
-                return;
-            }
-
-            // grow leftward
-            if (key < pageToSplit.First)
-            {
-                long oldFirst = pageToSplit.First;
-                var cpy = page.PageNumber;
-                state.Page.AsSpan().CopyTo(page.AsSpan());
-                page.PageNumber = cpy;
-
-                cpy = state.Page.PageNumber;
-                state.Page.AsSpan().Clear();
-                state.Page.PageNumber = cpy;
-
-                var curPage = new SetBranchPage(state.Page);
-                curPage.Init();
-                if(curPage.TryAdd(_llt, key, value) == false)
-                    throw new InvalidOperationException("Failed to add to a newly initialized page? Should never happen");
-                AddToParentPage(oldFirst, page.PageNumber);
-                return;
-            }
-
-            // split in half
-            for (int i = pageToSplit.Header->NumberOfEntries / 2; i < pageToSplit.Header->NumberOfEntries; i++)
-            {
-                var (k, v) = pageToSplit.GetByIndex(i);
-                if(branch.TryAdd(_llt, k, v) == false)
-                    throw new InvalidOperationException("Failed to add half our capacity to a newly created page? Should never happen");
-            }
-
-            pageToSplit.Header->NumberOfEntries /= 2;// truncate entries
-            var success = pageToSplit.Last > key ?
-                branch.TryAdd(_llt, key, value) :
-                pageToSplit.TryAdd(_llt, key, value);
-            if(success == false)
-                throw new InvalidOperationException("Failed to add final to a newly created page after adding half the capacit? Should never happen");
-
-            AddToParentPage(branch.First, page.PageNumber);
-        }
-
-        private (long Separator, long NewPage) SplitLeafPage(long value)
-        {
-            ref var state = ref _stk[_pos];
-            var curPage = new SetLeafPage(state.Page);
-            var (first, last) = curPage.GetRange();
-            _state.LeafPages++;
-
-            if (value >= first && value <= last)
-            {
-                return SplitLeafPageInHalf(value, curPage, state);
-            }
-
-            Page page;
-            if (value > last)
-            {
-                // optimize sequential writes, can create a new page directly
-                page = _llt.AllocatePage(1);
-                var newPage = new SetLeafPage(page);
-                newPage.Init(value);
-                return (value, page.PageNumber);
-            }
-            Debug.Assert(first > value);
-            // smaller than current, we'll move the higher values to the new location
-            // instead of update the entry position
-            page = _llt.AllocatePage(1);
-            var cpy = page.PageNumber;
-            curPage.Span.CopyTo(page.AsSpan());
-            page.PageNumber = cpy;
-
-            cpy = state.Page.PageNumber;
-            curPage.Span.Clear();
-            state.Page.PageNumber = cpy;
-
-            curPage.Init(value);
-            return (first, page.PageNumber);
-        }
-
-        private (long Separator, long NewPage) SplitLeafPageInHalf(long value, SetLeafPage curPage, in SetCursorState state)
-        {
-            // we have to split this in the middle page
-            var page = _llt.AllocatePage(1);
-            var newPage = new SetLeafPage(page);
-
-            curPage.SplitHalfInto(ref newPage);
-            Debug.Assert(curPage.Header->SetFlags == ExtendedPageType.SetLeaf);
-            Debug.Assert(newPage.Header->SetFlags == ExtendedPageType.SetLeaf);
-
-            var (start, _) = newPage.GetRange();
-            return (start, page.PageNumber);
-        }
-
 
 
         [Conditional("DEBUG")]
         public void Render()
         {
             DebugStuff.RenderAndShow(this);
-        }
-
-        private void CreateRootPage()
-        {
-            _state.Depth++;
-            _state.BranchPages++;
-            // we'll copy the current page and reuse it, to avoid changing the root page number
-            var page = _llt.AllocatePage(1);
-            long cpy = page.PageNumber;
-            ref var state = ref _stk[_pos];
-            Memory.Copy(page.Pointer, state.Page.Pointer, Constants.Storage.PageSize);
-            page.PageNumber = cpy;
-            Memory.Set(state.Page.DataPointer, 0, Constants.Storage.PageSize - PageHeader.SizeOf);
-            var rootPage = new SetBranchPage(state.Page);
-            rootPage.Init();
-            rootPage.TryAdd(_llt, long.MinValue, cpy);
-
-            InsertToStack(new SetCursorState
-            {
-                Page = page,
-                LastMatch = state.LastMatch,
-                LastSearchPosition = state.LastSearchPosition
-            });
-            state.LastMatch = -1;
-            state.LastSearchPosition = 0;
-        }
-
-        private void InsertToStack(SetCursorState newPageState)
-        {
-            // insert entry and shift other elements
-            if (_len + 1 >= _stk.Length) // should never happen
-                ResizeCursorState();
-
-            var src = _stk.ToReadOnlySpan().Slice(_pos + 1, _len - (_pos + 1));
-            var dest = _stk.ToSpan().Slice(_pos + 2);
-            src.CopyTo(dest);
-
-            _len++;
-            _stk[_pos + 1] = newPageState;
-            _pos++;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -622,6 +175,8 @@ namespace Voron.Data.Sets
 
         public Iterator Iterate()
         {
+            if (_additions.Count != 0 || _removals.Count != 0)
+                throw new NotSupportedException("The set was modified, cannot read from it until is was committed");
             return new Iterator(this);
         }
 
@@ -642,18 +197,9 @@ namespace Voron.Data.Sets
                 var state = _parent.FindSmallestValue();
 
                 var leafPage = new SetLeafPage(state->Page);
-                _it = leafPage.GetIterator(_parent._llt);
+                _it = leafPage.GetIterator();
             }
 
-            public bool? MaybeSeek(long from)
-            {                
-                // TODO: In case that we are in the right location but we have passed over,
-                //       we may be able to use a optimized Seek method instead which would
-                //       avoid getting the page and just start over in the current segment.
-                if (Current < from && _it.IsInRange(from)) 
-                    return null;
-                return Seek(from);
-            }
 
             public bool Seek(long from = long.MinValue)
             {
@@ -661,8 +207,9 @@ namespace Voron.Data.Sets
                 ref var state = ref _parent._stk[_parent._pos];
                 var leafPage = new SetLeafPage(state.Page);
 
-                _it = leafPage.GetIterator(_parent._llt);
-                return _it.Skip(from);
+                _it = leafPage.GetIterator();
+                _it.Skip(from);
+                return true;
             }
 
             public bool Fill(Span<long> matches, out int total, long pruneGreaterThanOptimization = long.MaxValue)
@@ -713,7 +260,7 @@ namespace Voron.Data.Sets
                                 parent._stk[parent._pos].LastSearchPosition = -1;
                                 continue;
                             }
-                            _it = new SetLeafPage(page).GetIterator(llt);
+                            _it = new SetLeafPage(page).GetIterator();
                             break;
                         }
                     }                        
@@ -776,7 +323,7 @@ namespace Voron.Data.Sets
                         parent._stk[parent._pos].LastSearchPosition = -1;
                         continue;
                     }
-                    it = new SetLeafPage(page).GetIterator(llt);
+                    it = new SetLeafPage(page).GetIterator();
                     if (it.MoveNext(out Current))
                     {
                         result = true;
@@ -797,10 +344,10 @@ namespace Voron.Data.Sets
         public List<long> AllPages()
         {
             var result = new List<long>();
-            Add(_llt.GetPage(_state.RootPage));
+            AddPage(_llt.GetPage(_state.RootPage));
             return result;
 
-            void Add(Page p)
+            void AddPage(Page p)
             {
                 result.Add(p.PageNumber);
                 var state = new SetCursorState { Page = p, };
@@ -811,14 +358,333 @@ namespace Voron.Data.Sets
                 foreach (var child in branch.GetAllChildPages())
                 {
                     var childPage = _llt.GetPage(child);
-                    Add(childPage);
+                    AddPage(childPage);
                 }
             }
         }
 
         public void Dispose()
         {
+            _additions.Dispose();
+            _removals.Dispose();
             _scope.Dispose();
+        }
+
+        public void PrepareForCommit()
+        {
+            Span<long> additions = _additions.Items;
+            Span<long> removals = _removals.Items;
+            additions.Sort();
+            removals.Sort();
+
+            while (additions.IsEmpty == false || removals.IsEmpty == false)
+            {
+                bool hadRemovals = removals.IsEmpty == false;
+                
+                long first = -1;
+                if (additions.IsEmpty == false)
+                    first = additions[0];
+                if (removals.IsEmpty == false) 
+                    first = first == -1 ? removals[0] : Math.Min(removals[0], first);
+            
+                FindPageFor(first);
+                long limit = NextParentLimit();
+                ref var state = ref _stk[_pos];
+                state.Page = _llt.ModifyPage(state.Page.PageNumber);
+                var leafPage = new SetLeafPage(state.Page);
+
+                _state.NumberOfEntries -= leafPage.Header->NumberOfEntries;
+
+                long firstBaseline = first & int.MinValue;
+                if (state.LeafHeader->Baseline != firstBaseline) // wrong baseline, need new page
+                {
+                    if (state.LeafHeader->NumberOfCompressedPositions != 0)
+                    {
+                        var page = _llt.AllocatePage(1);
+                        var newPage = new SetLeafPage(page);
+                        SetLeafPage.InitLeaf(newPage.Header, firstBaseline);
+                        AddToParentPage(firstBaseline, page.PageNumber);
+                        continue;
+                    }
+                    leafPage.Header->Baseline = firstBaseline;
+                }
+                
+                var extras = leafPage.Update(_llt, ref additions, ref removals, limit);
+                _state.NumberOfEntries += leafPage.Header->NumberOfEntries;
+
+                if (extras != null) // we overflow and need to split excess to additional pages
+                {
+                    AddNewPageForTheExtras(leafPage, extras);
+                }
+                else if (hadRemovals && _len > 1 && leafPage.SpaceUsed < Constants.Storage.PageSize / 2)
+                {
+                    // check if we want to merge this page
+                    PopPage();
+            
+                    ref var parent = ref _stk[_pos];
+            
+                    var branch = new SetBranchPage(parent.Page);
+                    Debug.Assert(branch.Header->NumberOfEntries >= 2);
+                    var siblingIdx = GetSiblingIndex(parent);
+                    var (_, siblingPageNum) = branch.GetByIndex(siblingIdx);
+
+                    var siblingPage = _llt.GetPage(siblingPageNum);
+                    var siblingHeader = (SetLeafPageHeader*)siblingPage.Pointer;
+                    if (siblingHeader->SetFlags != ExtendedPageType.SetLeaf)
+                        continue;
+                    
+                    if (siblingHeader->Baseline != leafPage.Header->Baseline)
+                        continue; // we cannot merge pages from different leafs
+
+                    var sibling = new SetLeafPage(siblingPage);
+                    if (sibling.SpaceUsed + leafPage.SpaceUsed > Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4)
+                        continue; // if the two pages together will be bigger than 75%, can skip merging
+
+                    if (parent.LastSearchPosition == 0) // copy from the right to the left
+                        sibling.CopyEntriesToEndOf(leafPage);
+                    else
+                        leafPage.CopyEntriesToEndOf(sibling);
+
+                    MergeSiblingsAtParent();
+                } 
+            }
+        }
+        
+        private static int GetSiblingIndex(in SetCursorState parent)
+        {
+            return parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
+        }
+        
+        private void MergeSiblingsAtParent()
+        {
+            ref var state = ref _stk[_pos];
+            state.Page = _llt.ModifyPage(state.Page.PageNumber);
+            
+            var current = new SetBranchPage(state.Page);
+            Debug.Assert(current.Header->SetFlags == ExtendedPageType.SetBranch);
+            var (siblingKey, siblingPageNum) = current.GetByIndex(GetSiblingIndex(in state));
+            var (leafKey, leafPageNum) = current.GetByIndex(state.LastSearchPosition);
+
+            var siblingPageHeader = (SetLeafPageHeader*)_llt.GetPage(siblingPageNum).Pointer;
+            if (siblingPageHeader->SetFlags == ExtendedPageType.SetBranch)
+                _state.BranchPages--;
+            else
+                _state.LeafPages--;
+            
+            _llt.FreePage(siblingPageNum);
+            current.Remove(siblingKey);
+            current.Remove(leafKey);
+
+            // if it is empty, can just replace with the child
+            if (current.Header->NumberOfEntries == 0)
+            {
+                var leafPage = _llt.GetPage(leafPageNum);
+                
+                long cpy = state.Page.PageNumber;
+                leafPage.CopyTo(state.Page);
+                state.Page.PageNumber = cpy;
+
+                if (_pos == 0)
+                    _state.Depth--; // replaced the root page
+
+                _state.BranchPages--;
+                _llt.FreePage(leafPageNum);
+                return;
+            }
+
+            var newKey = Math.Min(siblingKey, leafKey);
+            if (current.TryAdd(_llt, newKey, leafPageNum) == false)
+                throw new InvalidOperationException("We just removed two values to add one, should have enough space. This error should never happen");
+
+            if (_pos == 0)
+                return; // root has no siblings
+
+            if (current.Header->NumberOfEntries > SetBranchPage.MinNumberOfValuesBeforeMerge)
+                return;
+
+            PopPage();
+            ref var parent = ref _stk[_pos];
+            
+            var gp = new SetBranchPage(parent.Page);
+            var siblingIdx = GetSiblingIndex(parent);
+            (_, siblingPageNum) = gp.GetByIndex(siblingIdx);
+            var siblingPage = _llt.GetPage(siblingPageNum);
+            var siblingHeader = (SetLeafPageHeader*)siblingPage.Pointer;
+            if (siblingHeader->SetFlags != ExtendedPageType.SetBranch)
+                return;// cannot merge leaf & branch
+            
+            var sibling = new SetBranchPage(siblingPage);
+            if (sibling.Header->NumberOfEntries + current.Header->NumberOfEntries > SetBranchPage.MinNumberOfValuesBeforeMerge * 2)
+                return; // not enough space to _ensure_ that we can merge
+
+            for (int i = 0; i < sibling.Header->NumberOfEntries; i++)
+            {
+                (long key, long page) = sibling.GetByIndex(i);
+                if(current.TryAdd(_llt, key, page) == false)
+                    throw new InvalidOperationException("Even though we have checked for spare capacity, we run out?! Should not hapen ever");
+            }
+
+            MergeSiblingsAtParent();
+        }
+
+        private void AddNewPageForTheExtras(SetLeafPage leafPage, List<SetLeafPage.ExtraSegmentDetails> extras)
+        {
+            int idx = 0;
+            var page = _llt.AllocatePage(1);
+            _state.LeafPages++;
+            var newPage = new SetLeafPage(page);
+            SetLeafPage.InitLeaf(newPage.Header, leafPage.Header->Baseline);
+            long firstValue = leafPage.Header->Baseline | extras[0].FirstValue;
+            while (idx < extras.Count)
+            {
+                var cur = extras[idx];
+                if (SetLeafPage.TryAdd(newPage.Header, cur.Compressed.Span))
+                {
+                    cur.Scope.Dispose();
+                    idx++;
+                    continue;
+                }
+                _state.NumberOfEntries += newPage.Header->NumberOfEntries;
+                AddToParentPage(firstValue, newPage.Header->PageNumber);
+                page = _llt.AllocatePage(1);
+                newPage = new SetLeafPage(page);
+                firstValue = leafPage.Header->Baseline | cur.FirstValue;
+                SetLeafPage.InitLeaf(newPage.Header, leafPage.Header->Baseline);
+            }
+
+            _state.NumberOfEntries += newPage.Header->NumberOfEntries;
+            
+            AddToParentPage(firstValue, newPage.Header->PageNumber);
+        }
+
+        private long NextParentLimit()
+        {
+            var cur = _pos;
+            while (cur > 0)
+            {
+                ref var state = ref _stk[cur - 1];
+                if (state.LastSearchPosition + 1 < state.BranchHeader->NumberOfEntries)
+                {
+                    var (key, _) = new SetBranchPage(state.Page).GetByIndex(state.LastSearchPosition + 1);
+                    return key;
+                }
+                cur--;
+            }
+            return long.MaxValue;
+        }
+        
+        private void AddToParentPage(long separator, long newPage)
+        {
+            if (_pos == 0) // need to create a root page
+            {
+                CreateRootPage();
+            }
+
+            PopPage();
+            ref var state = ref _stk[_pos];
+            state.Page = _llt.ModifyPage(state.Page.PageNumber);
+            var parent = new SetBranchPage(state.Page);
+            if (parent.TryAdd(_llt, separator, newPage))
+                return;
+
+            SplitBranchPage(separator, newPage);
+        }
+
+        private void SplitBranchPage(long key, long value)
+        {
+            ref var state = ref _stk[_pos];
+
+            var pageToSplit = new SetBranchPage(state.Page);
+            var page = _llt.AllocatePage(1);
+            var branch = new SetBranchPage(page);
+            branch.Init();
+            _state.BranchPages++;
+            
+            // grow rightward
+            if (key > pageToSplit.Last)
+            {
+                if (branch.TryAdd(_llt, key, value) == false)
+                    throw new InvalidOperationException("Failed to add to a newly created page? Should never happen");
+                AddToParentPage(key, page.PageNumber);
+                return;
+            }
+
+            // grow leftward
+            if (key < pageToSplit.First)
+            {
+                long oldFirst = pageToSplit.First;
+                var cpy = page.PageNumber;
+                state.Page.AsSpan().CopyTo(page.AsSpan());
+                page.PageNumber = cpy;
+
+                cpy = state.Page.PageNumber;
+                state.Page.AsSpan().Clear();
+                state.Page.PageNumber = cpy;
+
+                var curPage = new SetBranchPage(state.Page);
+                curPage.Init();
+                if(curPage.TryAdd(_llt, key, value) == false)
+                    throw new InvalidOperationException("Failed to add to a newly initialized page? Should never happen");
+                AddToParentPage(oldFirst, page.PageNumber);
+                return;
+            }
+
+            // split in half
+            for (int i = pageToSplit.Header->NumberOfEntries / 2; i < pageToSplit.Header->NumberOfEntries; i++)
+            {
+                var (k, v) = pageToSplit.GetByIndex(i);
+                if(branch.TryAdd(_llt, k, v) == false)
+                    throw new InvalidOperationException("Failed to add half our capacity to a newly created page? Should never happen");
+            }
+
+            pageToSplit.Header->NumberOfEntries /= 2;// truncate entries
+            var success = pageToSplit.Last > key ?
+                branch.TryAdd(_llt, key, value) :
+                pageToSplit.TryAdd(_llt, key, value);
+            if(success == false)
+                throw new InvalidOperationException("Failed to add final to a newly created page after adding half the capacit? Should never happen");
+
+            AddToParentPage(branch.First, page.PageNumber);
+        }
+        
+        private void InsertToStack(SetCursorState newPageState)
+        {
+            // insert entry and shift other elements
+            if (_len + 1 >= _stk.Length) // should never happen
+                ResizeCursorState();
+
+            var src = _stk.ToReadOnlySpan().Slice(_pos + 1, _len - (_pos + 1));
+            var dest = _stk.ToSpan().Slice(_pos + 2);
+            src.CopyTo(dest);
+
+            _len++;
+            _stk[_pos + 1] = newPageState;
+            _pos++;
+        }
+
+        private void CreateRootPage()
+        {
+            _state.Depth++;
+            _state.BranchPages++;
+            // we'll copy the current page and reuse it, to avoid changing the root page number
+            var page = _llt.AllocatePage(1);
+            long cpy = page.PageNumber;
+            ref var state = ref _stk[_pos];
+            Memory.Copy(page.Pointer, state.Page.Pointer, Constants.Storage.PageSize);
+            page.PageNumber = cpy;
+            Memory.Set(state.Page.DataPointer, 0, Constants.Storage.PageSize - PageHeader.SizeOf);
+            var rootPage = new SetBranchPage(state.Page);
+            rootPage.Init();
+            rootPage.TryAdd(_llt, long.MinValue, cpy);
+
+            InsertToStack(new SetCursorState
+            {
+                Page = page,
+                LastMatch = state.LastMatch,
+                LastSearchPosition = state.LastSearchPosition
+            });
+            state.LastMatch = -1;
+            state.LastSearchPosition = 0;
         }
     }
 }

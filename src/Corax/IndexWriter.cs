@@ -1585,6 +1585,7 @@ namespace Corax
             using var set = new Set(llt, Slices.Empty, setState);
             set.Remove(entries.Removals);
             set.Add(entries.Additions);
+            set.PrepareForCommit();
 
             termId = -1;
 
@@ -1740,6 +1741,7 @@ namespace Corax
             
             using var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
             set.Add(additions);
+            set.PrepareForCommit();
             setState = set.State;
             termId = setId | (long)TermIdMask.Set;
         }

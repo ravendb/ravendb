@@ -397,7 +397,7 @@ namespace Voron.Debugging
 
             List<long> leafEntries = null;
             if (header.IsLeaf)
-                leafEntries = leaf.GetDebugOutput(tree.Llt);
+                leafEntries = leaf.GetDebugOutput();
             sw.WriteLine(
                 string.Format("<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries - {5}</label><ul>",
                     page.PageNumber, header.IsLeaf ? "leaf" : "branch", header.IsLeaf ? leafEntries!.Count : branch.Header->NumberOfEntries, open ? "checked" : "", text, 
@@ -411,9 +411,9 @@ namespace Voron.Debugging
                 for (int i = 0; i < leaf.Header->NumberOfCompressedPositions; i++)
                 {
                     var entry = leaf.Positions[i];
-                    sw.Write($"<li>Compressed with {entry.Length:#,#;;0} bytes</li>");
+                    int count = PForDecoder.ReadCount(leaf.SpanFor(i));
+                    sw.Write($"<li>Compressed {count:#,#;;0} entries with {entry.Length:#,#;;0} bytes</li>");
                 }
-                sw.Write($"<li>Raw with {leaf.Header->NumberOfRawValues:#,#;;0} values</li>");
                 var range = leaf.GetRange();
                 sw.WriteLine($"<li>Range {range.First} ... {range.Last}</li>");
 

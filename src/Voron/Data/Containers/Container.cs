@@ -7,7 +7,6 @@ using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Server;
 using Voron.Data.Sets;
-using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
@@ -129,6 +128,7 @@ namespace Voron.Data.Containers
             // We are adding the root to the list of all pages.
             Set allPages = new Set(llt, AllPagesSetName, MemoryMarshal.AsRef<SetState>(allPagesSet));
             allPages.Add(page.PageNumber);
+            allPages.PrepareForCommit();
             allPagesState = allPages.State;
             return page.PageNumber;
         }
@@ -423,6 +423,7 @@ namespace Voron.Data.Containers
                 set.Add(value);
             else
                 set.Remove(value);
+            set.PrepareForCommit();
             state = set.State;
         }
 

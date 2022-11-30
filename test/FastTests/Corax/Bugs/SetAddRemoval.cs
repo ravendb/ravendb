@@ -37,6 +37,12 @@ public class SetAddRemoval : StorageTest
                 }
             }
 
+            wtx.Commit();
+        }
+
+        using (var wtx = Env.WriteTransaction())
+        {
+            var set = wtx.OpenSet("test");
             set.DumpAllValues();
         }
     }
@@ -59,6 +65,15 @@ public class SetAddRemoval : StorageTest
             wtx.Commit();
         }
 
+        using (var rtx = Env.ReadTransaction())
+        {
+            var set = rtx.OpenSet("test");
+           
+
+            Assert.Equal(items, set.DumpAllValues());
+            Assert.Equal(items.Count, set.State.NumberOfEntries);
+        }
+
         var removals = ReadNumbersFromResource("Corax.Set.Removals.txt").ToList();
         using (var wtx = Env.WriteTransaction())
         {
@@ -76,6 +91,7 @@ public class SetAddRemoval : StorageTest
         using (var rtx = Env.ReadTransaction())
         {
             var set = rtx.OpenSet("test");
+            Assert.Equal(items, set.DumpAllValues());
 
             Assert.Equal(items.Count, set.State.NumberOfEntries);
         }

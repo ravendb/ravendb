@@ -52,8 +52,6 @@ namespace Voron.Impl.Paging
             _tempPage = new IntPtr(ptr);
         }
 
-        public byte[] TempPageBuffer => _tempPageBuffer;
-
         public byte* TempPagePointer => (byte*)_tempPage.ToPointer();
 
         public TreePage GetTempPage()
