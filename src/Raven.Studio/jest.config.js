@@ -28,6 +28,7 @@ module.exports = {
     ],
     moduleNameMapper: {
         "^common/(.*)$": "<rootDir>/typescript/common/$1",
+        "^components/(.*)$": "<rootDir>/typescript/components/$1",
         "^views/(.*)$": "<rootDir>/wwwroot/App/views/$1",
         "^external/(.*)$": "<rootDir>/typescript/external/$1",
         "^models/(.*)$": "<rootDir>/typescript/models/$1",

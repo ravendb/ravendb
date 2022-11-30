@@ -290,6 +290,7 @@ module.exports = (env, args) => {
                 commands: path.resolve(__dirname, 'typescript/commands'),
                 durandalPlugins: path.resolve(__dirname, 'typescript/durandalPlugins'),
                 viewmodels: path.resolve(__dirname, 'typescript/viewmodels'),
+                components: path.resolve(__dirname, 'typescript/components'),
                 overrides: path.resolve(__dirname, 'typescript/overrides'),
                 widgets: path.resolve(__dirname, 'typescript/widgets'),
                 views: path.resolve(__dirname, 'wwwroot/App/views'),

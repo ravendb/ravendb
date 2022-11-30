@@ -273,13 +273,13 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
                                 const showReduceErrors = index.details.some((x) => x && x.reduceErrors > 0);
 
                                 return (
-                                    <>
+                                    <React.Fragment key={index.name}>
                                         <h4 className="text-elipsis mt-4">
                                             <a href={performanceUrl} title={index.name}>
                                                 {index.name}
                                             </a>
                                         </h4>
-                                        <Table responsive condensed striped key={index.name}>
+                                        <Table responsive striped key={index.name}>
                                             <tbody>
                                                 <tr>
                                                     <td style={{ width: "200px" }}>Staleness</td>
@@ -445,7 +445,7 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
                                                 )}
                                             </tbody>
                                         </Table>
-                                    </>
+                                    </React.Fragment>
                                 );
                             })}
                         </div>

@@ -1,6 +1,8 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import footer = require("common/shell/footer");
+import { bridgeToReact } from "common/reactUtils";
+import { IndexesPage } from "components/pages/database/indexes/list/IndexesPage";
 export = getIndexesMenuItem;
 
 function getIndexesMenuItem(appUrls: computedAppUrls) {
@@ -19,7 +21,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             nav: true,
             shardingMode: "allShards",
             route: "databases/indexes",
-            moduleId: require("viewmodels/database/indexes/indexes").indexes,
+            moduleId: bridgeToReact(IndexesPage, "shardedView"),
             css: 'icon-list-of-indexes',
             dynamicHash: appUrls.indexes
         }),

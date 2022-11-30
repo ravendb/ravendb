@@ -21,10 +21,7 @@ export const Sharded: ComponentStory<typeof DatabasesPage> = () => {
     databasesService.withGetDatabasesSharded();
 
     return (
-        <div
-            className="databases flex-vertical absolute-fill content-margin"
-            style={{ height: "100vh", overflow: "auto" }}
-        >
+        <div style={{ height: "100vh", overflow: "auto" }}>
             <DatabasesPage />
         </div>
     );
@@ -39,10 +36,7 @@ export const Single: ComponentStory<typeof DatabasesPage> = () => {
     databasesService.withGetDatabasesSingle();
 
     return (
-        <div
-            className="databases flex-vertical absolute-fill content-margin"
-            style={{ height: "100vh", overflow: "auto" }}
-        >
+        <div style={{ height: "100vh", overflow: "auto" }}>
             <DatabasesPage />
         </div>
     );

@@ -1,5 +1,7 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import { bridgeToReact } from "common/reactUtils";
+import { StatisticsPage } from "components/pages/database/status/statistics/StatisticsPage";
 
 export = getStatsMenuItem;
 
@@ -7,7 +9,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
     const statsItems: menuItem[] = [
         new leafMenuItem({
             route: 'databases/status',
-            moduleId: require('viewmodels/database/status/statistics'),
+            moduleId: bridgeToReact(StatisticsPage, "shardedView"),
             shardingMode: "allShards",
             title: 'Stats',
             nav: true,
