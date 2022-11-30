@@ -25,7 +25,7 @@ namespace SlowTests.Sharding.Subscriptions
         {
         }
 
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(3000);
 
         [Fact]
         public async Task CanRunShardedSubscriptionInCluster()
@@ -80,8 +80,8 @@ namespace SlowTests.Sharding.Subscriptions
             int rf = 1;
             int clusterSize = 3;
             var (nodes, leader) = await CreateRaftCluster(clusterSize, shouldRunInMemory: false);
-
             var options = Sharding.GetOptionsForCluster(leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: clusterSize);
+            options.Server = leader;
             options.RunInMemory = false;
 
             using (var store = Sharding.GetDocumentStore(options))

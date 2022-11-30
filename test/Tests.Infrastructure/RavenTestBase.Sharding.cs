@@ -28,12 +28,13 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
+using Raven.Server.Documents.Subscriptions;
+using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -46,6 +47,7 @@ public partial class RavenTestBase
     public class ShardingTestBase
     {
         public ShardedBackupTestsBase Backup;
+        public ShardedSubscriptionTestBase Subscriptions;
 
         private readonly RavenTestBase _parent;
         public readonly ReshardingTestBase Resharding;
@@ -55,9 +57,10 @@ public partial class RavenTestBase
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             Backup = new ShardedBackupTestsBase(_parent);
             Resharding = new ReshardingTestBase(_parent);
+            Subscriptions = new ShardedSubscriptionTestBase(_parent);
         }
 
-        public DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, Dictionary<int, DatabaseTopology> shards = null)
+        public DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, DatabaseTopology[] shards = null)
         {
             var shardedOptions = options ?? new Options();
             shardedOptions.ModifyDatabaseRecord += r =>
@@ -66,12 +69,7 @@ public partial class RavenTestBase
 
                 if (shards == null)
                 {
-                    r.Sharding.Shards = new Dictionary<int, DatabaseTopology>()
-                    {
-                        {0, new DatabaseTopology()},
-                        {1, new DatabaseTopology()},
-                        {2, new DatabaseTopology()},
-                    };
+                    r.Sharding.Shards = new[] { new DatabaseTopology(), new DatabaseTopology(), new DatabaseTopology(), };
                 }
                 else
                 {
@@ -89,7 +87,7 @@ public partial class RavenTestBase
                 {
                     r.Sharding = new ShardingConfiguration
                     {
-                        Shards = new Dictionary<int, DatabaseTopology>(shards),
+                        Shards = new DatabaseTopology[shards],
                         Orchestrator = new OrchestratorConfiguration
                         {
                             Topology = new OrchestratorTopology
@@ -100,11 +98,12 @@ public partial class RavenTestBase
                         }
                     };
 
-                    for (int shardNumber = 0; shardNumber < shards ; shardNumber++)
+                    for (int i = 0; i < r.Sharding.Shards.Length; i++)
                     {
-                        r.Sharding.Shards[shardNumber] = new DatabaseTopology
+                        r.Sharding.Shards[i] = new DatabaseTopology
                         {
-                            ReplicationFactor = shardReplicationFactor
+                            ReplicationFactor = shardReplicationFactor,
+                            DynamicNodesDistribution = dynamicNodeDistribution
                         };
                     }
                 },
@@ -113,6 +112,7 @@ public partial class RavenTestBase
 
             return options;
         }
+
 
         public async Task<ShardingConfiguration> GetShardingConfigurationAsync(IDocumentStore store)
         {
@@ -181,6 +181,35 @@ public partial class RavenTestBase
             return true;
         }
 
+        public long GetDocsCountForCollectionInAllShards(IDictionary<string, List<DocumentDatabase>> servers, string collection)
+        {
+            var sum = 0L;
+            foreach (var kvp in servers)
+            {
+                foreach (var documentDatabase in kvp.Value)
+                {
+                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var ids = documentDatabase.DocumentsStorage.GetCollectionDetails(context, collection).CountOfDocuments;
+                        sum += ids;
+                    }
+                }
+            }
+
+            return sum;
+        }
+
+        internal async Task<ShardedOngoingTasksHandlerProcessorForGetOngoingTasks> InstantiateShardedOutgoingTaskProcessor(string name, RavenServer server)
+        {
+            Assert.True(server.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(name, out var db));
+            var database = await db;
+            var handler = new ShardedOngoingTasksHandler();
+            var ctx = new RequestHandlerContext { RavenServer = server, DatabaseContext = database, HttpContext = new DefaultHttpContext() };
+            handler.InitForOfflineOperation(ctx);
+            return new ShardedOngoingTasksHandlerProcessorForGetOngoingTasks(handler);
+        }
+
         public async Task<bool> AllShardHaveDocsAsync(RavenServer server, string databaseName, long count = 1L)
         {
             var databases = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(databaseName);
@@ -223,524 +252,495 @@ public partial class RavenTestBase
 
             return docIdPerShard;
         }
+    }
 
-        public long GetDocsCountForCollectionInAllShards(IDictionary<string, List<DocumentDatabase>> servers, string collection)
+    public class ShardedSubscriptionTestBase
+    {
+        private readonly RavenTestBase _parent;
+
+        public ShardedSubscriptionTestBase(RavenTestBase parent)
         {
-            var sum = 0L;
-            foreach (var kvp in servers)
+            _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+        }
+
+        public async Task AssertNoItemsInTheResendQueueAsync(IDocumentStore store, string subscriptionId)
+        {
+            var id = long.Parse(subscriptionId);
+            var shards = _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store);
+            await foreach (var shard in shards)
             {
-                foreach (var documentDatabase in kvp.Value)
+                var result = await WaitForValueAsync(() =>
                 {
-                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    using (shard.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
                     {
-                        var ids = documentDatabase.DocumentsStorage.GetCollectionDetails(context, collection).CountOfDocuments;
-                        sum += ids;
+                        return Task.FromResult(SubscriptionConnectionsStateBase.GetNumberOfResendDocuments(shard.ServerStore, store.Database, SubscriptionType.Document, id));
                     }
+                }, 0, timeout: 1_500_000);
+                // SubscriptionConnectionsStateBase.TryGetDocumentFromResend()
+                using (shard.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.True(result == 0, $"{string.Join(Environment.NewLine, SubscriptionConnectionsStateBase.GetResendItems(ctx, store.Database, id).Select(x=>$"{x.Id}, {x.ChangeVector}, {x.Batch}"))}");
                 }
             }
+        }
+    }
 
-            return sum;
+    public class ShardedBackupTestsBase
+    {
+        internal readonly RavenTestBase _parent;
+
+        public ShardedBackupTestsBase(RavenTestBase parent)
+        {
+            _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
 
-        internal async Task<ShardedOngoingTasksHandlerProcessorForGetOngoingTasks> InstantiateShardedOutgoingTaskProcessor(string name, RavenServer server)
+        public async Task InsertData(IDocumentStore store)
         {
-            Assert.True(server.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(name, out var db));
-            var database = await db;
-            var handler = new ShardedOngoingTasksHandler();
-            var ctx = new RequestHandlerContext
+            using (var session = store.OpenAsyncSession())
             {
-                RavenServer = server,
-                DatabaseContext = database,
-                HttpContext = new DefaultHttpContext()
-            };
-            handler.InitForOfflineOperation(ctx);
-            return new ShardedOngoingTasksHandlerProcessorForGetOngoingTasks(handler);
-        }
-
-        public class ShardedBackupTestsBase
-        {
-            internal readonly RavenTestBase _parent;
-
-            public ShardedBackupTestsBase(RavenTestBase parent)
-            {
-                _parent = parent ?? throw new ArgumentNullException(nameof(parent));
-            }
-
-            public async Task InsertData(IDocumentStore store)
-            {
-                using (var session = store.OpenAsyncSession())
+                await SetupRevisionsAsync(store, configuration: new RevisionsConfiguration
                 {
-                    await SetupRevisionsAsync(store, configuration: new RevisionsConfiguration
+                    Default = new RevisionsCollectionConfiguration
                     {
-                        Default = new RevisionsCollectionConfiguration
-                        {
-                            Disabled = false
-                        }
-                    });
+                        Disabled = false
+                    }
+                });
 
-                    //Docs
-                    await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1", Age = 5 }, "users/1");
-                    await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2", Age = 78 }, "users/2");
-                    await session.StoreAsync(new User { Name = "Name1", LastName = "LastName3", Age = 4 }, "users/3");
-                    await session.StoreAsync(new User { Name = "Name2", LastName = "LastName4", Age = 15 }, "users/4");
+                //Docs
+                await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1", Age = 5 }, "users/1");
+                await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2", Age = 78 }, "users/2");
+                await session.StoreAsync(new User { Name = "Name1", LastName = "LastName3", Age = 4 }, "users/3");
+                await session.StoreAsync(new User { Name = "Name2", LastName = "LastName4", Age = 15 }, "users/4");
 
-                    //Time series
-                    session.TimeSeriesFor("users/1", "Heartrate")
-                        .Append(DateTime.Now, 59d, "watches/fitbit");
-                    session.TimeSeriesFor("users/3", "Heartrate")
-                        .Append(DateTime.Now.AddHours(6), 59d, "watches/fitbit");
-                    //counters
-                    session.CountersFor("users/2").Increment("Downloads", 100);
-                    //Attachments
-                    var names = new[]
-                    {
+                //Time series
+                session.TimeSeriesFor("users/1", "Heartrate")
+                    .Append(DateTime.Now, 59d, "watches/fitbit");
+                session.TimeSeriesFor("users/3", "Heartrate")
+                    .Append(DateTime.Now.AddHours(6), 59d, "watches/fitbit");
+                //counters
+                session.CountersFor("users/2").Increment("Downloads", 100);
+                //Attachments
+                var names = new[]
+                {
                         "background-photo.jpg",
                         "fileNAME_#$1^%_בעברית.txt",
                         "profile.png",
                     };
-                    await using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
-                    await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
-                    await using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
-                    {
-                        session.Advanced.Attachments.Store("users/1", names[0], backgroundStream, "ImGgE/jPeG");
-                        session.Advanced.Attachments.Store("users/2", names[1], fileStream);
-                        session.Advanced.Attachments.Store("users/3", names[2], profileStream, "image/png");
-                        await session.SaveChangesAsync();
-                    }
-                }
-
-                //tombstone + revision
-                using (var session = store.OpenAsyncSession())
+                await using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                await using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
-                    session.Delete("users/4");
-                    var user = await session.LoadAsync<User>("users/1");
-                    user.Age = 10;
+                    session.Advanced.Attachments.Store("users/1", names[0], backgroundStream, "ImGgE/jPeG");
+                    session.Advanced.Attachments.Store("users/2", names[1], fileStream);
+                    session.Advanced.Attachments.Store("users/3", names[2], profileStream, "image/png");
                     await session.SaveChangesAsync();
                 }
-
-                //subscription
-                await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
-
-                //Identity
-                store.Maintenance.Send(new SeedIdentityForOperation("users", 1990));
-
-                //CompareExchange
-                var user1 = new User
-                {
-                    Name = "Toli"
-                };
-                var user2 = new User
-                {
-                    Name = "Mitzi"
-                };
-
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/toli", user1, 0));
-                var operationResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/mitzi", user2, 0));
-                await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("cat/mitzi", operationResult.Index));
-
-                //Cluster transaction
-                using (var session = store.OpenAsyncSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
-                {
-                    var user5 = new User { Name = "Ayende" };
-                    await session.StoreAsync(user5, "users/5");
-                    await session.StoreAsync(new { ReservedFor = user5.Id }, "usernames/" + user5.Name);
-
-                    await session.SaveChangesAsync();
-                }
-
-                //Index
-                await new Index().ExecuteAsync(store);
             }
 
-            public ShardedRestoreSettings GenerateShardRestoreSettings(IReadOnlyCollection<string> backupPaths, ShardingConfiguration sharding)
+            //tombstone + revision
+            using (var session = store.OpenAsyncSession())
             {
-                var settings = new ShardedRestoreSettings
+                session.Delete("users/4");
+                var user = await session.LoadAsync<User>("users/1");
+                user.Age = 10;
+                await session.SaveChangesAsync();
+            }
+
+            //subscription
+            await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
+
+            //Identity
+            store.Maintenance.Send(new SeedIdentityForOperation("users", 1990));
+
+            //CompareExchange
+            var user1 = new User
+            {
+                Name = "Toli"
+            };
+            var user2 = new User
+            {
+                Name = "Mitzi"
+            };
+
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/toli", user1, 0));
+            var operationResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/mitzi", user2, 0));
+            await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("cat/mitzi", operationResult.Index));
+
+            //Cluster transaction
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                var user5 = new User { Name = "Ayende" };
+                await session.StoreAsync(user5, "users/5");
+                await session.StoreAsync(new { ReservedFor = user5.Id }, "usernames/" + user5.Name);
+
+                await session.SaveChangesAsync();
+            }
+
+            //Index
+            await new Index().ExecuteAsync(store);
+        }
+
+        public ShardedRestoreSettings GenerateShardRestoreSettings(IReadOnlyCollection<string> backupPaths, ShardingConfiguration sharding)
+        {
+            var settings = new ShardedRestoreSettings
+            {
+                Shards = new SingleShardRestoreSetting[backupPaths.Count]
+            };
+
+            foreach (var dir in backupPaths)
+            {
+                var shardIndexPosition = dir.LastIndexOf('$') + 1;
+                var shardNumber = int.Parse(dir[shardIndexPosition].ToString());
+
+                settings.Shards[shardNumber] = new SingleShardRestoreSetting
                 {
-                    Shards = new Dictionary<int, SingleShardRestoreSetting>(backupPaths.Count),
-                    BucketRanges = sharding.BucketRanges
+                    ShardNumber = shardNumber,
+                    FolderName = dir,
+                    NodeTag = sharding.Shards[shardNumber].Members[0]
                 };
-
-                foreach (var dir in backupPaths)
-                {
-                    var shardNumber = GetShardNumberFromBackupPath(dir);
-                    
-                    settings.Shards.Add(shardNumber, new SingleShardRestoreSetting
-                    {
-                        ShardNumber = shardNumber,
-                        FolderName = dir,
-                        NodeTag = sharding.Shards[shardNumber].Members[0]
-                    });
-                }
-
-                return settings;
             }
 
-            private int GetShardNumberFromBackupPath(string path)
+            return settings;
+        }
+
+        public async Task CheckData(IDocumentStore store, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, long expectedRevisionsCount = 28, string database = null)
+        {
+            long docsCount = default, tombstonesCount = default, revisionsCount = default;
+            database ??= store.Database;
+            if (dbMode == RavenDatabaseMode.Sharded)
             {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "Handle shard number being a two digit integer");
-                var shardIndexPosition = path.LastIndexOf('$') + 1;
-                return int.Parse(path[shardIndexPosition].ToString());
-            }
-
-            public async Task CheckData(IDocumentStore store, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, long expectedRevisionsCount = 28, string database = null)
-            {
-                long docsCount = default, tombstonesCount = default, revisionsCount = default;
-                database ??= store.Database;
-                if (dbMode == RavenDatabaseMode.Sharded)
+                await foreach (var shard in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database))
                 {
-                    await foreach (var shard in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database))
-                    {
-                        var storage = shard.DocumentsStorage;
+                    var storage = shard.DocumentsStorage;
 
-                        docsCount += storage.GetNumberOfDocuments();
-                        using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                        using (context.OpenReadTransaction())
-                        {
-                            tombstonesCount += storage.GetNumberOfTombstones(context);
-                            revisionsCount += storage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
-                        }
-
-                        //Index
-                        Assert.Equal(1, shard.IndexStore.Count);
-                    }
-                }
-                else
-                {
-                    var db = await _parent.GetDocumentDatabaseInstanceFor(store, database);
-                    var storage = db.DocumentsStorage;
-
-                    docsCount = storage.GetNumberOfDocuments();
+                    docsCount += storage.GetNumberOfDocuments();
                     using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        tombstonesCount = storage.GetNumberOfTombstones(context);
-                        revisionsCount = storage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
+                        tombstonesCount += storage.GetNumberOfTombstones(context);
+                        revisionsCount += storage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
                     }
 
                     //Index
-                    var indexes = await store.Maintenance.ForDatabase(database).SendAsync(new GetIndexesOperation(0, 128));
-                    Assert.Equal(1, indexes.Length);
+                    Assert.Equal(1, shard.IndexStore.Count);
+                }
+            }
+            else
+            {
+                var db = await _parent.GetDocumentDatabaseInstanceFor(store, database);
+                var storage = db.DocumentsStorage;
+
+                docsCount = storage.GetNumberOfDocuments();
+                using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    tombstonesCount = storage.GetNumberOfTombstones(context);
+                    revisionsCount = storage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
                 }
 
-                //doc
-                Assert.Equal(5, docsCount);
+                //Index
+                var indexes = await store.Maintenance.ForDatabase(database).SendAsync(new GetIndexesOperation(0, 128));
+                Assert.Equal(1, indexes.Length);
+            }
 
-                //Assert.Equal(1, detailedStats.CountOfCompareExchangeTombstones); //TODO - test number of processed compare exchange tombstones  
+            //doc
+            Assert.Equal(5, docsCount);
 
-                //tombstone
-                Assert.Equal(1, tombstonesCount);
+            //Assert.Equal(1, detailedStats.CountOfCompareExchangeTombstones); //TODO - test number of processed compare exchange tombstones  
 
-                //revisions
-                Assert.Equal(expectedRevisionsCount, revisionsCount);
+            //tombstone
+            Assert.Equal(1, tombstonesCount);
 
-                //Subscriptions
-                var subscriptionDocuments = await store.Subscriptions.GetSubscriptionsAsync(0, 10, database);
-                Assert.Equal(1, subscriptionDocuments.Count);
+            //revisions
+            Assert.Equal(expectedRevisionsCount, revisionsCount);
 
-                using (var session = store.OpenSession(database))
+            //Subscriptions
+            var subscriptionDocuments = await store.Subscriptions.GetSubscriptionsAsync(0, 10, database);
+            Assert.Equal(1, subscriptionDocuments.Count);
+
+            using (var session = store.OpenSession(database))
+            {
+                //Time series
+                var val = session.TimeSeriesFor("users/1", "Heartrate")
+                    .Get(DateTime.MinValue, DateTime.MaxValue);
+
+                Assert.Equal(1, val.Length);
+
+                val = session.TimeSeriesFor("users/3", "Heartrate")
+                    .Get(DateTime.MinValue, DateTime.MaxValue);
+
+                Assert.Equal(1, val.Length);
+
+                //Counters
+                var counterValue = session.CountersFor("users/2").Get("Downloads");
+                Assert.Equal(100, counterValue.Value);
+            }
+
+            using (var session = store.OpenAsyncSession(database))
+            {
+                var attachmentNames = new[]
                 {
-                    //Time series
-                    var val = session.TimeSeriesFor("users/1", "Heartrate")
-                        .Get(DateTime.MinValue, DateTime.MaxValue);
-
-                    Assert.Equal(1, val.Length);
-
-                    val = session.TimeSeriesFor("users/3", "Heartrate")
-                        .Get(DateTime.MinValue, DateTime.MaxValue);
-
-                    Assert.Equal(1, val.Length);
-
-                    //Counters
-                    var counterValue = session.CountersFor("users/2").Get("Downloads");
-                    Assert.Equal(100, counterValue.Value);
-                }
-
-                using (var session = store.OpenAsyncSession(database))
-                {
-                    var attachmentNames = new[]
-                    {
                         "background-photo.jpg",
                         "fileNAME_#$1^%_בעברית.txt",
                         "profile.png",
                     };
 
-                    for (var i = 0; i < attachmentNames.Length; i++)
-                    {
-                        var user = await session.LoadAsync<User>("users/" + (i + 1));
-                        var metadata = session.Advanced.GetMetadataFor(user);
+                for (var i = 0; i < attachmentNames.Length; i++)
+                {
+                    var user = await session.LoadAsync<User>("users/" + (i + 1));
+                    var metadata = session.Advanced.GetMetadataFor(user);
 
-                        //Attachment
-                        var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
-                        Assert.Equal(1, attachments.Length);
-                        var attachment = attachments[0];
-                        Assert.Equal(attachmentNames[i], attachment.GetString(nameof(AttachmentName.Name)));
-                        var hash = attachment.GetString(nameof(AttachmentName.Hash));
-                        if (i == 0)
-                        {
-                            Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
-                            Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
-                        }
-                        else if (i == 1)
-                        {
-                            Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", hash);
-                            Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
-                        }
-                        else if (i == 2)
-                        {
-                            Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
-                            Assert.Equal(3, attachment.GetLong(nameof(AttachmentName.Size)));
-                        }
+                    //Attachment
+                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                    Assert.Equal(1, attachments.Length);
+                    var attachment = attachments[0];
+                    Assert.Equal(attachmentNames[i], attachment.GetString(nameof(AttachmentName.Name)));
+                    var hash = attachment.GetString(nameof(AttachmentName.Hash));
+                    if (i == 0)
+                    {
+                        Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", hash);
+                        Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
                     }
-
-                    await session.StoreAsync(new User() { Name = "Toli" }, "users|");
-                    await session.SaveChangesAsync();
-                }
-                //Identity
-                using (var session = store.OpenAsyncSession(database))
-                {
-                    var user = await session.LoadAsync<User>("users/1991");
-                    Assert.NotNull(user);
-                }
-                //CompareExchange
-                using (var session = store.OpenAsyncSession(new SessionOptions { Database = database, TransactionMode = TransactionMode.ClusterWide }))
-                {
-                    var user = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("cat/toli");
-                    Assert.NotNull(user);
-
-                    var u = await store.Operations.ForDatabase(database).SendAsync(new GetCompareExchangeValueOperation<AtomicGuard>("rvn-atomic/usernames/Ayende"));
-                    Assert.NotNull(u.Value);
-
-                    u = await store.Operations.ForDatabase(database).SendAsync(new GetCompareExchangeValueOperation<AtomicGuard>("rvn-atomic/users/5"));
-                    Assert.NotNull(u.Value);
-
-                    var user2 = await session.LoadAsync<User>("users/5");
-                    Assert.NotNull(user2);
-
-                    user2 = await session.LoadAsync<User>("usernames/Ayende");
-                    Assert.NotNull(user2);
-                }
-            }
-
-            private class AtomicGuard
-            {
-#pragma warning disable CS0649
-                public string Id;
-#pragma warning restore CS0649
-            }
-
-            public Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store)
-            {
-                return WaitForBackupsToComplete(new[] { store });
-            }
-
-            public async Task<WaitHandle[]> WaitForBackupsToComplete(IEnumerable<IDocumentStore> stores)
-            {
-                var waitHandles = new List<WaitHandle>();
-                foreach (var store in stores)
-                {
-                    await foreach (var db in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store))
+                    else if (i == 1)
                     {
-                        BackupTestBase.FillBackupCompletionHandles(waitHandles, db);
+                        Assert.Equal("Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=", hash);
+                        Assert.Equal(5, attachment.GetLong(nameof(AttachmentName.Size)));
+                    }
+                    else if (i == 2)
+                    {
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
+                        Assert.Equal(3, attachment.GetLong(nameof(AttachmentName.Size)));
                     }
                 }
 
-                return waitHandles.ToArray();
+                await session.StoreAsync(new User() { Name = "Toli" }, "users|");
+                await session.SaveChangesAsync();
             }
-
-            public async Task<WaitHandle[]> WaitForBackupsToComplete(List<RavenServer> nodes, string database)
+            //Identity
+            using (var session = store.OpenAsyncSession(database))
             {
-                var waitHandles = new List<WaitHandle>();
+                var user = await session.LoadAsync<User>("users/1991");
+                Assert.NotNull(user);
+            }
+            //CompareExchange
+            using (var session = store.OpenAsyncSession(new SessionOptions { Database = database, TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var user = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("cat/toli");
+                Assert.NotNull(user);
 
-                await foreach (var db in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database, nodes))
+                user = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("rvn-atomic/usernames/Ayende");
+                Assert.NotNull(user);
+
+                user = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("rvn-atomic/users/5");
+                Assert.NotNull(user);
+
+                var user2 = await session.LoadAsync<User>("users/5");
+                Assert.NotNull(user2);
+
+                user2 = await session.LoadAsync<User>("usernames/Ayende");
+                Assert.NotNull(user2);
+            }
+        }
+
+        public Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store)
+        {
+            return WaitForBackupsToComplete(new[] { store });
+        }
+
+        public async Task<WaitHandle[]> WaitForBackupsToComplete(IEnumerable<IDocumentStore> stores)
+        {
+            var waitHandles = new List<WaitHandle>();
+            foreach (var store in stores)
+            {
+                await foreach (var db in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(store))
                 {
                     BackupTestBase.FillBackupCompletionHandles(waitHandles, db);
                 }
-
-                return waitHandles.ToArray();
             }
 
-            public Task<long> UpdateConfigurationAndRunBackupAsync(RavenServer server, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
+            return waitHandles.ToArray();
+        }
+
+        public async Task<WaitHandle[]> WaitForBackupsToComplete(List<RavenServer> nodes, string database)
+        {
+            var waitHandles = new List<WaitHandle>();
+
+            await foreach (var db in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database, nodes))
             {
-                return UpdateConfigurationAndRunBackupAsync(new List<RavenServer> { server }, store, config, isFullBackup);
+                BackupTestBase.FillBackupCompletionHandles(waitHandles, db);
             }
 
-            public async Task<long> UpdateConfigurationAndRunBackupAsync(List<RavenServer> servers, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
+            return waitHandles.ToArray();
+        }
+
+        public Task<long> UpdateConfigurationAndRunBackupAsync(RavenServer server, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
+        {
+            return UpdateConfigurationAndRunBackupAsync(new List<RavenServer> { server }, store, config, isFullBackup);
+        }
+
+        public async Task<long> UpdateConfigurationAndRunBackupAsync(List<RavenServer> servers, IDocumentStore store, PeriodicBackupConfiguration config, bool isFullBackup = false)
+        {
+            var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+            await RunBackupAsync(store.Database, result.TaskId, isFullBackup, servers);
+
+            return result.TaskId;
+        }
+
+        public async Task RunBackupAsync(string database, long taskId, bool isFullBackup, List<RavenServer> servers = null)
+        {
+            await foreach (var documentDatabase in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database, servers))
             {
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-
-                await RunBackupAsync(store.Database, result.TaskId, isFullBackup, servers);
-
-                return result.TaskId;
+                var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
+                periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
             }
+        }
 
-            public async Task RunBackupAsync(string database, long taskId, bool isFullBackup, List<RavenServer> servers = null)
+
+        public IDisposable ReadOnly(string path)
+        {
+            var allFiles = new List<string>();
+            var dirs = Directory.GetDirectories(path);
+            FileAttributes attributes = default;
+            foreach (string dir in dirs)
             {
-                await foreach (var documentDatabase in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database, servers))
+                var files = Directory.GetFiles(dir);
+                if (attributes != default)
+                    attributes = new FileInfo(files[0]).Attributes;
+
+                foreach (string file in files)
                 {
-                    var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
-                    periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
+                    File.SetAttributes(file, FileAttributes.ReadOnly);
                 }
+
+                allFiles.AddRange(files);
             }
 
-            public IDisposable ReadOnly(string path)
+
+            return new DisposableAction(() =>
             {
-                var allFiles = new List<string>();
-                var dirs = Directory.GetDirectories(path);
-                FileAttributes attributes = default;
-                foreach (string dir in dirs)
+                foreach (string file in allFiles)
                 {
-                    var files = Directory.GetFiles(dir);
-                    if (attributes != default)
-                        attributes = new FileInfo(files[0]).Attributes;
-
-                    foreach (string file in files)
-                    {
-                        File.SetAttributes(file, FileAttributes.ReadOnly);
-                    }
-
-                    allFiles.AddRange(files);
+                    File.SetAttributes(file, attributes);
                 }
+            });
+        }
 
+        private static async Task<long> SetupRevisionsAsync(
+            IDocumentStore store,
+            RevisionsConfiguration configuration)
+        {
+            if (store == null)
+                throw new ArgumentNullException(nameof(store));
 
-                return new DisposableAction(() =>
-                {
-                    foreach (string file in allFiles)
+            var result = await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRevisionsOperation(configuration));
+            return result.RaftCommandIndex ?? -1;
+        }
+
+        private class Item
+        {
+
+        }
+
+        private class Index : AbstractIndexCreationTask<Item>
+        {
+            public Index()
+            {
+                Map = items =>
+                    from item in items
+                    select new
                     {
-                        File.SetAttributes(file, attributes);
-                    }
-                });
-            }
-
-            private static async Task<long> SetupRevisionsAsync(
-                IDocumentStore store,
-                RevisionsConfiguration configuration)
-            {
-                if (store == null)
-                    throw new ArgumentNullException(nameof(store));
-
-                var result = await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRevisionsOperation(configuration));
-                return result.RaftCommandIndex ?? -1;
-            }
-
-            private class Item
-            {
-
-            }
-
-            private class Index : AbstractIndexCreationTask<Item>
-            {
-                public Index()
-                {
-                    Map = items =>
-                        from item in items
-                        select new
+                        _ = new[]
                         {
-                            _ = new[]
-                            {
                                 CreateField("foo", "a"),
                                 CreateField("foo", "b"),
-                            }
-                        };
+                        }
+                    };
+            }
+        }
+    }
+
+    public class ReshardingTestBase
+    {
+        private readonly RavenTestBase _parent;
+
+        public ReshardingTestBase(RavenTestBase parent)
+        {
+            _parent = parent;
+        }
+
+        public async Task StartMovingShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
+        {
+            servers ??= _parent.GetServers();
+
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            var bucket = ShardHelper.GetBucket(id);
+            var location = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+            var newLocation = (location + 1) % record.Sharding.Shards.Length;
+
+            using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
+            {
+                var user = await session.Advanced.ExistsAsync(id);
+                Assert.NotNull(user);
+            }
+
+            foreach (var server in servers)
+            {
+                try
+                {
+                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
+                    break;
+                }
+                catch
+                {
+                    //
+                }
+            }
+
+
+            var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation), timeout: 30_000);
+            Assert.True(exists, $"{id} wasn't found at shard {newLocation}");
+        }
+
+        public async Task WaitForMigrationComplete(IDocumentStore store, string id)
+        {
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+            {
+                var bucket = ShardHelper.GetBucket(id);
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
+                while (record.Sharding.BucketMigrations.ContainsKey(bucket))
+                {
+                    await Task.Delay(250, cts.Token);
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
                 }
             }
         }
 
-        public class ReshardingTestBase
+        public async Task MoveShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
         {
-            private readonly RavenTestBase _parent;
-
-            public ReshardingTestBase(RavenTestBase parent)
+            try
             {
-                _parent = parent;
+                await StartMovingShardForId(store, id, servers);
+                await WaitForMigrationComplete(store, id);
             }
-
-            public async Task StartMovingShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
+            catch (Exception e)
             {
-                servers ??= _parent.GetServers();
-
-                var server = servers[0].ServerStore;
-
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var bucket = ShardHelper.GetBucket(id);
-                var shardNumber = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
-                var toShard = GetNextSortedShardNumber(record.Sharding.Shards, shardNumber);
-
-                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
-                    Assert.True(await session.Advanced.ExistsAsync(id));
-                }
-
-                await server.Sharding.StartBucketMigration(store.Database, bucket, shardNumber, toShard);
-                
-                var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard), timeout: 30_000);
-                Assert.True(exists, $"{id} wasn't found at shard {toShard}");
-            }
-
-            public static int GetNextSortedShardNumber(Dictionary<int, DatabaseTopology> shards, int shardNumber)
-            {
-                var shardsSorted = shards.Keys.OrderBy(x => x).ToArray();
-                var toShard = -1;
-                for (int i = 0; i < shardsSorted.Length; i++)
-                {
-                    if (shardsSorted[i] == shardNumber)
-                    {
-                        if (i + 1 < shardsSorted.Length)
-                        {
-                            toShard = shardsSorted[i + 1];
-                        }
-                        else
-                        {
-                            toShard = shardsSorted[0];
-                        }
-
-                        break;
-                    }
-                }
-
-                if (shardNumber == -1)
-                    throw new ArgumentException($"Shard number {shardNumber} doesn't exist in the database record.");
-
-                return toShard;
-            }
-
-            public async Task WaitForMigrationComplete(IDocumentStore store, string id)
-            {
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60)))
-                {
-                    var bucket = ShardHelper.GetBucket(id);
-                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
-                    while (record.Sharding.BucketMigrations.ContainsKey(bucket))
-                    {
-                        await Task.Delay(250, cts.Token);
-                        record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
-                    }
-                }
-            }
-
-            public async Task MoveShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
-            {
-                try
-                {
-                    await StartMovingShardForId(store, id, servers);
-                    await WaitForMigrationComplete(store, id);
-                }
-                catch (Exception e)
-                {
-                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                    using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                    {
-                        var sharding = store.Conventions.Serialization.DefaultConverter.ToBlittable(record.Sharding, ctx).ToString();
-                        throw new InvalidOperationException(
-                            $"Failed to completed the migration for {id}{Environment.NewLine}{sharding}{Environment.NewLine}{_parent.Cluster.CollectLogsFromNodes(servers ?? new List<RavenServer> { _parent.Server })}",
-                            e);
-                    }
+                    var sharding = store.Conventions.Serialization.DefaultConverter.ToBlittable(record.Sharding, ctx).ToString();
+                    throw new InvalidOperationException(
+                        $"Failed to completed the migration for {id}{Environment.NewLine}{sharding}{Environment.NewLine}{_parent.Cluster.CollectLogsFromNodes(servers ?? new List<RavenServer> { _parent.Server })}",
+                        e);
                 }
             }
         }
     }
 }
+
 

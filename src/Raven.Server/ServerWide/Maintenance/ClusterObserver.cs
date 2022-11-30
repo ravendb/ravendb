@@ -36,7 +36,7 @@ namespace Raven.Server.ServerWide.Maintenance
     {
         private readonly PoolOfThreads.LongRunningWork _observe;
         private readonly DatabaseTopologyUpdater _databaseTopologyUpdater;
-        private readonly DatabaseTopologyUpdater _orchestratorTopologyUpdater;
+        private readonly OrchestratorTopologyUpdater _orchestratorTopologyUpdater;
         private readonly CancellationTokenSource _cts;
         private readonly ClusterMaintenanceSupervisor _maintenance;
         private readonly string _nodeTag;

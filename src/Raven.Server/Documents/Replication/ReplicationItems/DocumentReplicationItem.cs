@@ -192,5 +192,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             Data?.Dispose();
         }
+
+        public override string ToString()
+        {
+            var type = Data == null ? "Tombstone" : "Document";
+            return $"{Id} : {ChangeVector} ({type})";
+        }
     }
 }
