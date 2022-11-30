@@ -496,7 +496,10 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateSubscriptionClientConnectionTime):
                     case nameof(UpdateSnmpDatabaseIndexesMappingCommand):
                     case nameof(RemoveEtlProcessStateCommand):
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
+                        if (result != null)
+                            leader?.SetStateOf(index, result);
+
                         break;
 
                     case nameof(AddOrUpdateCompareExchangeCommand):
@@ -1335,14 +1338,15 @@ namespace Raven.Server.ServerWide
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
             {
-                _rachisLogIndexNotifications.AddTask(index);
                 var count = tasks.Count;
+                _rachisLogIndexNotifications.AddTask(index);
 
                 if (count == 0)
                 {
                     NotifyAndSetCompleted(index);
                     return;
                 }
+                
 
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
                 {
@@ -4674,10 +4678,10 @@ namespace Raven.Server.ServerWide
                     continue;
 
                 access = JsonDeserializationCluster.DetailedReplicationHubAccess(obj);
-                return true;
-            }
-
-            return false;
+                return true;                                                       
+            }                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                               
+            return false;                 
         }
 
         public ClusterStateMachine()

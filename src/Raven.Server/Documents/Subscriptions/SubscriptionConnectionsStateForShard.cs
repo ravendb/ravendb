@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Commands.Subscriptions;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Subscriptions;
 
@@ -17,8 +19,8 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
 
     protected override void SetLastChangeVectorSent(SubscriptionConnection connection)
     {
-        if (connection.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard == null ||
-            connection.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(DocumentDatabase.Name, out string cv) == false)
+        if (connection.SubscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard == null ||
+            connection.SubscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(DocumentDatabase.Name, out string cv) == false)
         {
             LastChangeVectorSent = null;
         }
@@ -30,7 +32,7 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
 
     public override Task UpdateClientConnectionTime()
     {
-        // the orchastartor will update the client connection time
+        // the orchestrator will update the client connection time
         return Task.CompletedTask;
     }
 
@@ -47,10 +49,28 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
         // we let take over to override even an existing subscription with take over
     }
 
-    protected override Task<long> RecordBatchInternal(RecordBatchSubscriptionDocumentsCommand command)
+    protected override Task<(long Index, object Skipped)> RecordBatchInternal(RecordBatchSubscriptionDocumentsCommand command)
     {
         command.DatabaseName = ShardedDocumentDatabase.ShardedDatabaseName;
         command.ShardName = ShardedDocumentDatabase.Name;
+        command.ActiveBatchesFromSender = GetActiveBatches();
         return base.RecordBatchInternal(command);
+    }
+
+    
+    public bool HasDocumentFormResendForShard()
+    {
+        using (_server.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            foreach (var item in GetDocumentsFromResend(context, GetActiveBatches()))
+            {
+                var shard = ShardHelper.GetShardNumber(ShardedDocumentDatabase.DatabaseContext.DatabaseRecord.Sharding.BucketRanges, item.DocumentId);
+                if (shard == ShardedDocumentDatabase.ShardNumber)
+                    return true;
+            }
+        }
+
+        return false;
     }
 }

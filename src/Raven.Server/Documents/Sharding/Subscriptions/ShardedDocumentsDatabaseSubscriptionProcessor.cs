@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Amqp.Types;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions;
@@ -32,6 +36,17 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
         {
             var bucket = ShardHelper.GetBucket(item.Id);
+            if (_sharding.BucketMigrations.TryGetValue(bucket, out var migration))
+            {
+                if (migration.Status < MigrationStatus.OwnershipTransferred)
+                {
+                    reason = $"The document {item.Id} from bucket {bucket} is under active migration)";
+                    item.Data = null;
+                    item.ChangeVector = string.Empty;
+                    return false;
+                }
+            }
+
             var shard = ShardHelper.GetShardNumber(_sharding.BucketRanges, bucket);
             if (shard != _database.ShardNumber)
             {
@@ -43,5 +58,33 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         }
 
         return base.ShouldSend(item, out reason, out exception, out result);
+    }
+
+    protected override bool ShouldFetchFromResend(DocumentsOperationContext context, string id, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector, out string reason)
+    {
+        reason = null;
+        if (item.Document == null)
+        {
+            // the document was delete while it was processed by the client
+            ItemsToRemoveFromResend.Add(id);
+            reason = $"document '{id}' removed and skipped from resend";
+            return false;
+        }
+
+        var cv = context.GetChangeVector(item.Document.ChangeVector);
+        if (cv.IsSingle)
+            return base.ShouldFetchFromResend(context, id, item, currentChangeVector, out reason);
+
+        item.Document.ChangeVector = context.GetChangeVector(cv.Version, cv.Order.RemoveId(_sharding.DatabaseId, context));
+        return true;
+    }
+
+    public HashSet<string> Skipped;
+
+    public override async Task<long> RecordBatch(string lastChangeVectorSentInThisBatch)
+    {
+        var result = await SubscriptionConnectionsState.RecordBatchDocuments(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch);
+        Skipped = result.Skipped as HashSet<string>;
+        return result.Index;
     }
 }

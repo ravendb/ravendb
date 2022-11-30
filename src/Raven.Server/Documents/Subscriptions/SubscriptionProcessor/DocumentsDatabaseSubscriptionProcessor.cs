@@ -32,41 +32,36 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
             foreach (var item in Fetcher.GetEnumerator())
             {
-                using (item)
+                size += new Size(item.Data?.Size ?? 0, SizeUnit.Bytes);
+
+                var result = GetBatchItem(item);
+
+                if (result.Doc.Data != null)
                 {
-                    size += new Size(item.Data?.Size ?? 0, SizeUnit.Bytes);
-
-                    var result = GetBatchItem(item);
-                    using (result.Doc)
+                    BatchItems.Add(new DocumentRecord
                     {
-                        if (result.Doc.Data != null)
-                        {
-                            BatchItems.Add(new DocumentRecord
-                            {
-                                DocumentId = result.Doc.Id,
-                                ChangeVector = result.Doc.ChangeVector,
-                            });
+                        DocumentId = result.Doc.Id,
+                        ChangeVector = result.Doc.ChangeVector,
+                    });
 
-                            yield return result;
+                    yield return result;
 
-                            if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
-                                yield break;
+                    if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
+                        yield break;
 
-                            if (++numberOfDocs >= BatchSize)
-                                yield break;
-                        }
-                        else
-                            yield return result;
-                    }
+                    if (++numberOfDocs >= BatchSize)
+                        yield break;
                 }
+                else
+                    yield return result;
             }
         }
 
         public List<string> ItemsToRemoveFromResend = new List<string>();
         public List<DocumentRecord> BatchItems = new List<DocumentRecord>();
 
-        public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) =>
-            SubscriptionConnectionsState.RecordBatchDocuments(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch);
+        public override async Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) =>
+            (await SubscriptionConnectionsState.RecordBatchDocuments(BatchItems, ItemsToRemoveFromResend, lastChangeVectorSentInThisBatch)).Index;
 
         public override async Task AcknowledgeBatch(long batchId)
         {
@@ -140,17 +135,15 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
             {
                 var current = Database.DocumentsStorage.GetDocumentOrTombstone(DocsContext, item.Id, throwOnConflict: false);
-                if (ShouldFetchFromResend(DocsContext, item.Id, current, item.ChangeVector) == false)
+                if (ShouldFetchFromResend(DocsContext, item.Id, current, item.ChangeVector, out reason) == false)
                 {
                     item.ChangeVector = string.Empty;
-                    reason = $"Skip {item.Id} from resend";
                     return false;
                 }
 
                 Debug.Assert(current.Document != null, "Document does not exist");
                 result.Id = current.Document.Id; // use proper casing
                 result.Data = current.Document.Data;
-                result.Etag = current.Document.Etag;
                 result.ChangeVector = current.Document.ChangeVector;
             }
 
@@ -170,6 +163,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                         ItemsToRemoveFromResend.Add(item.Id);
                     }
 
+                    result.Data.Dispose();
                     result.Data = null;
                     reason = $"{item.Id} filtered out by criteria";
                     return false;
@@ -185,12 +179,14 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             }
         }
 
-        private bool ShouldFetchFromResend(DocumentsOperationContext context, string id, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
+        protected virtual bool ShouldFetchFromResend(DocumentsOperationContext context, string id, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector, out string reason)
         {
+            reason = null;
             if (item.Document == null)
             {
                 // the document was delete while it was processed by the client
                 ItemsToRemoveFromResend.Add(id);
+                reason = $"document '{id}' removed and skipped from resend";
                 return false;
             }
 
@@ -204,16 +200,22 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                     {
                         // we can clear it from resend list, and it will processed as regular document
                         ItemsToRemoveFromResend.Add(id);
+                        reason = $"document '{id}' was updated ({item.Document.ChangeVector}), but the subscription went too far and skipped from resend (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
                         return false;
                     }
 
                     // We need to resend it
-                    return resendStatus == ConflictStatus.AlreadyMerged;
+                    var fetch = resendStatus == ConflictStatus.AlreadyMerged;
+                    if (fetch == false)
+                        reason = $"document '{id}' is in status {resendStatus} (local: {item.Document.ChangeVector}) with the subscription progress (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
+
+                    return fetch;
 
                 case ConflictStatus.AlreadyMerged:
                     return true;
 
                 case ConflictStatus.Conflict:
+                    reason = $"document '{id}' is in conflict with";
                     return false;
 
                 default:

@@ -6,7 +6,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
-using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -31,8 +30,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public long? BatchId;
         public List<DocumentRecord> DocumentsToResend; // documents that were updated while this batch was processing 
-        public string ShardName;
         
+        public string ShardName;
+
         // for serialization
         private AcknowledgeSubscriptionBatchCommand() { }
 
@@ -42,7 +42,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override string GetItemId() => SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
         {
             var subscriptionName = SubscriptionName;
             if (string.IsNullOrEmpty(subscriptionName))
@@ -53,14 +53,15 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (existingValue == null)
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist");
 
-            var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
+            var currentState = JsonDeserializationCluster.SubscriptionState(existingValue);
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
-            var topology = string.IsNullOrEmpty(ShardName) ? record.TopologyForSubscriptions() : record.Sharding.Shards[ShardHelper.GetShardNumber(ShardName)];
-            var lastResponsibleNode = string.IsNullOrEmpty(ShardName) ? GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag) : null;
 
-            var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
+            var topology = string.IsNullOrEmpty(ShardName) ? record.Topology : record.Sharding.Shards[ShardHelper.GetShardNumber(ShardName)];
+            var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
+            var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, currentState, lastResponsibleNode);
+            
             if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
                 throw new DatabaseDoesNotExistException($"Stopping subscription '{subscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
 
@@ -79,16 +80,27 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             if (IsLegacyCommand())
             {
-                if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
-                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+                if (LastKnownSubscriptionChangeVector != currentState.ChangeVectorForNextBatchStartingPoint)
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {currentState.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
 
-                subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
+                currentState.ChangeVectorForNextBatchStartingPoint = ChangeVector;
             }
 
-            subscription.NodeTag = NodeTag;
-            subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
+            if (string.IsNullOrEmpty(ShardName))
+            {
+                currentState.NodeTag = NodeTag;
+            }
+            else
+            {
+                var changeVector = context.GetChangeVector(ChangeVector);
+                currentState.SubscriptionShardingState.NodeTagPerShard[ShardName] = NodeTag;
+                currentState.ChangeVectorForNextBatchStartingPoint =
+                    ChangeVectorUtils.MergeVectors(changeVector.Order.StripMoveTag(context), currentState.ChangeVectorForNextBatchStartingPoint);
+            }
+
+            currentState.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
             
-            return context.ReadObject(subscription.ToJson(), subscriptionName);
+            return context.ReadObject(currentState.ToJson(), subscriptionName);
         }
 
         private bool IsLegacyCommand()
@@ -104,10 +116,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (IsLegacyCommand())
                 return;
 
-            ExecuteAcknowledgeSubscriptionBatch(context, index);
+            ExecuteAcknowledgeSubscriptionBatch(context,items, index);
         }
 
-        private unsafe void ExecuteAcknowledgeSubscriptionBatch(ClusterOperationContext context, long index)
+        private unsafe void ExecuteAcknowledgeSubscriptionBatch(ClusterOperationContext context, Table items, long index)
         {
             if (SubscriptionId == default)
             {
@@ -124,23 +136,27 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             {
                 throw new RachisApplyException($"'{nameof(BatchId)}' is missing in '{nameof(AcknowledgeSubscriptionBatchCommand)}'.");
             }
-            
+
             var subscriptionStateTable = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
             var bigEndBatchId = Bits.SwapBytes(BatchId ?? 0);
             using var _ = Slice.External(context.Allocator, (byte*)&bigEndBatchId, sizeof(long), out var batchIdSlice);
-            subscriptionStateTable.DeleteForwardFrom(ClusterStateMachine.SubscriptionStateSchema.Indexes[ClusterStateMachine.SubscriptionStateByBatchIdSlice], batchIdSlice, 
-                false, long.MaxValue, shouldAbort: tvh =>
+            using (SubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionPrefix(context, DatabaseName, SubscriptionId, out var prefix))
+            using (Slice.External(context.Allocator, prefix, out var prefixSlice))
             {
-                var recordBatchId = Bits.SwapBytes(*(long*)tvh.Reader.Read((int)ClusterStateMachine.SubscriptionStateTable.BatchId, out var size));
-                return recordBatchId != BatchId;
-            });
+                subscriptionStateTable.DeleteForwardFrom(ClusterStateMachine.SubscriptionStateSchema.Indexes[ClusterStateMachine.SubscriptionStateByBatchIdSlice], batchIdSlice, 
+                    false, long.MaxValue, shouldAbort: tvh =>
+                    {
+                        var recordBatchId = Bits.SwapBytes(*(long*)tvh.Reader.Read((int)ClusterStateMachine.SubscriptionStateTable.BatchId, out var size));
+                        return recordBatchId != BatchId;
+                    });
+            }
 
             if (DocumentsToResend == null)
                 return;
 
             foreach (var r in DocumentsToResend)
             {
-                using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, r.DocumentId, out var key))
+                using (SubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, r.DocumentId, out var key))
                 using (subscriptionStateTable.Allocate(out var tvb))
                 {
                     using var __ = Slice.External(context.Allocator, key, out var keySlice);
@@ -155,7 +171,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
         }
 
-        private static readonly long SwappedNonExistentBatch = Bits.SwapBytes(SubscriptionConnectionBase.NonExistentBatch);
+        public static readonly long SwappedNonExistentBatch = Bits.SwapBytes(SubscriptionConnectionBase.NonExistentBatch);
 
         public static Func<string> GetLastResponsibleNode(
             bool hasHighlyAvailableTasks,
@@ -193,6 +209,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             var msg = $"Got 'Ack' for id={SubscriptionId}, name={SubscriptionName}, CV={ChangeVector}, Tag={NodeTag}, lastProgressTime={LastTimeServerMadeProgressWithDocuments}" +
                 $"lastKnownCV={LastKnownSubscriptionChangeVector}, HasHighlyAvailableTasks={HasHighlyAvailableTasks}.";
+            
+            if (ShardName != null)
+            {
+                msg += $" for shard {ShardName}.";
+            }
+            
             if (exception != null)
             {
                 msg += $" Exception = {exception}.";
