@@ -24,7 +24,7 @@ namespace Raven.Server.ServerWide.Commands
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var request = base.CreateRequest(ctx, node, out url);
-            url += $"&nodetag={_localNodeTag}";
+            url += $"&nodeTag={_localNodeTag}";
             return request;
         }
     }

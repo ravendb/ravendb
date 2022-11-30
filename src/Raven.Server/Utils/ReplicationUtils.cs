@@ -17,7 +17,7 @@ namespace Raven.Server.Utils
     {
         public static TcpConnectionInfo GetTcpInfoForInternalReplication(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
         {
-            return AsyncHelpers.RunSync(() => GetTcpInfoAsync(url, databaseName, databaseId, etag, tag, certificate, localNodeTag, token));
+            return AsyncHelpers.RunSync(() => GetTcpInfoForInternalReplicationAsync(url, databaseName, databaseId, etag, tag, certificate, localNodeTag, token));
         }
 
         public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, CancellationToken token)
@@ -50,7 +50,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static async Task<TcpConnectionInfo> GetTcpInfoAsync(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
+        private static async Task<TcpConnectionInfo> GetTcpInfoForInternalReplicationAsync(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
         {
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate, DocumentConventions.DefaultForServer))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
