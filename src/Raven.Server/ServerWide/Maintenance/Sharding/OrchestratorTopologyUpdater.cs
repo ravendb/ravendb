@@ -22,47 +22,37 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
 
         protected override (bool Promote, string UpdateTopologyReason) TryPromote(ClusterOperationContext context, ClusterObserver.DatabaseObservationState state, string promotable, ClusterNodeStatusReport nodeStats)
         {
-            if (IsLastCommittedIndexCaughtUp(context, promotable, state.DatabaseTopology, nodeStats, state.ObserverIteration))
-            {
-                state.DatabaseTopology.PromotablesStatus.Remove(promotable);
-                state.DatabaseTopology.DemotionReasons.Remove(promotable);
-                return (true, $"Node {promotable} is ready to be promoted to orchestrator");
-            }
-
-            return (false, $"Node {promotable} is not ready to be promoted to orchestrator because its index is not caught up yet");
-        }
-
-        private bool IsLastCommittedIndexCaughtUp(ClusterOperationContext context, string node, DatabaseTopology topology, ClusterNodeStatusReport nodeStats, long iteration)
-        {
             var lastCommittedIndex = _engine.GetLastCommitIndex(context);
             
             if (nodeStats.ServerReport.LastCommittedIndex == null)
             {
-                _logger.Log($"Expected to get the Last Committed Index in the node's server report but it is empty", iteration);
-                return false;
+                _logger.Log($"Expected to get the Last Committed Index in the node's server report but it is empty", state.ObserverIteration);
+                return (false, null);
             }
 
             if (nodeStats.ServerReport.LastCommittedIndex < lastCommittedIndex)
             {
-                var msg = $"Node {node} is not ready to be promoted to orchestrator. Not all cluster transactions finished applying." +
+                var msg = $"Node {promotable} is not ready to be promoted to orchestrator. Not all cluster commands finished applying." +
                           Environment.NewLine +
-                          $"Last Committed Cluster Raft Index: {lastCommittedIndex}" + Environment.NewLine +
-                          $"Leader's Last Completed Cluster Transaction Raft Index: {nodeStats.ServerReport.LastCommittedIndex}";
+                          $"Last Committed Cluster Raft Index: {nodeStats.ServerReport.LastCommittedIndex}" + Environment.NewLine +
+                          $"Leader's Last Committed Raft Index: {lastCommittedIndex}";
 
-                _logger.Log($"Node {node} hasn't been promoted because its last commit index isn't up to date yet", iteration);
+                _logger.Log($"Node {promotable} hasn't been promoted because its last commit index isn't up to date yet", state.ObserverIteration);
 
-                if (topology.DemotionReasons.TryGetValue(node, out var demotionReason) == false ||
+                if (state.DatabaseTopology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
                     msg.Equals(demotionReason) == false)
                 {
-                    topology.DemotionReasons[node] = msg;
-                    topology.PromotablesStatus[node] = DatabasePromotionStatus.RaftIndexNotUpToDate;
-                    return false;
+                    state.DatabaseTopology.DemotionReasons[promotable] = msg;
+                    state.DatabaseTopology.PromotablesStatus[promotable] = DatabasePromotionStatus.RaftIndexNotUpToDate;
+                    return (false, msg);
                 }
 
-                return false;
+                return (false, null);
             }
 
-            return true;
+            state.DatabaseTopology.DemotionReasons.Remove(promotable);
+            state.DatabaseTopology.PromotablesStatus.Remove(promotable);
+            return (true, $"Node {promotable} is ready to be promoted to orchestrator");
         }
 
         protected override void RemoveOtherNodesIfNeeded(ClusterObserver.DatabaseObservationState state, ref List<DeleteDatabaseCommand> deletions)

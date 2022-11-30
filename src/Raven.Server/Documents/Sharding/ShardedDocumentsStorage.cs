@@ -267,46 +267,49 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
         var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
         var merged = context.GetChangeVector(string.Empty);
+        foreach (var result in GetItemsByBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], bucket, 0))
+        {
+            var documentCv = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(documentCv, context);
+        }
+        foreach (var result in GetItemsByBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, 0))
+        {
+            var tombstoneCv = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref result.Result.Reader);
+            var flags = TableValueToFlags((int)TombstoneTable.Flags, ref result.Result.Reader);
+            if (flags.HasFlag(DocumentFlags.Artificial | DocumentFlags.FromResharding))
+                continue;
 
-        if (GetLastItemInBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], bucket, out var reader))
-        {
-            var lastDocCv = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref reader);
-            merged = merged.MergeWith(lastDocCv, context);
+            merged = merged.MergeWith(tombstoneCv, context);
         }
-        if (GetLastItemInBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, out reader))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, 0))
         {
-            var lastTombstoneCv = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref reader);
-            merged = merged.MergeWith(lastTombstoneCv, context);
+            var counterCv = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(counterCv, context);
         }
-        if (GetLastItemInBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, out reader))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, 0))
         {
-            var lastCounterCv = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref reader);
-            merged = merged.MergeWith(lastCounterCv, context);
+            var conflictCv = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(conflictCv, context);
         }
-        if (GetLastItemInBucket(context.Allocator, table, ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, out reader))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, 0))
         {
-            var lastConflictCv = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref reader);
-            merged = merged.MergeWith(lastConflictCv, context);
+            var revisionCv = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(revisionCv, context);
         }
-        if (GetLastItemInBucket(context.Allocator, table, RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, out reader))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndEtagSlice], bucket, 0))
         {
-            var lastRevisionCv = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref reader);
-            merged = merged.MergeWith(lastRevisionCv, context);
+            var attachmentCv = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(attachmentCv, context);
         }
-        if (GetLastItemInBucket(context.Allocator, table, AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndEtagSlice], bucket, out reader))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, 0))
         {
-            var lastAttachmentCv = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref reader);
-            merged = merged.MergeWith(lastAttachmentCv, context);
-}
-        if (GetLastItemInBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, out reader))
-        {
-            var lastTimeSeriesCv = TableValueToChangeVector(context, (int)TimeSeriesTable.ChangeVector, ref reader);
-            merged = merged.MergeWith(lastTimeSeriesCv, context);
+            var tsCv = TableValueToChangeVector(context, (int)TimeSeriesTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(tsCv, context);
         }
-        if (GetLastItemInBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, out reader))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, 0))
         {
-            var lastDeleteRangeCv = TableValueToChangeVector(context, (int)DeletedRangeTable.ChangeVector, ref reader);
-            merged = merged.MergeWith(lastDeleteRangeCv, context);
+            var deletedRangeCv = TableValueToChangeVector(context, (int)DeletedRangeTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(deletedRangeCv, context);
         }
 
         return merged;
@@ -376,7 +379,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
     {
         long numOfDeletions = 0;
 
-        MarkTombstonesAsArtificial(context, bucket);
+        MarkTombstonesAsArtificial(context, bucket, upTo);
 
         foreach (var document in GetDocumentsByBucketFrom(context, bucket, 0))
         {
@@ -402,7 +405,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         return numOfDeletions;
     }
 
-    private void MarkTombstonesAsArtificial(DocumentsOperationContext context, int bucket)
+    private void MarkTombstonesAsArtificial(DocumentsOperationContext context, int bucket, ChangeVector upTo)
     {
         long lastProcessedEtag = 0;
         bool hasMore = true, collectionNamesUpdated = false;
@@ -418,6 +421,10 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
                 if (tombstone.Flags.Contain(DocumentFlags.Artificial) && tombstone.Flags.Contain(DocumentFlags.FromResharding))
                     continue;
 
+                var tombstoneChangeVector = context.GetChangeVector(tombstone.ChangeVector);
+                if (ChangeVectorUtils.GetConflictStatus(tombstoneChangeVector, upTo) != ConflictStatus.AlreadyMerged)
+                    break;
+
                 var collection = TableValueToId(context, (int)TombstoneTable.Collection, ref result.Result.Reader);
                 if (collectionNames.TryGetValue(collection, out var collectionName) == false)
                 {
@@ -428,7 +435,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
                 var writeTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
 
                 var newEtag = GenerateNextEtag();
-                var cv = ChangeVector.Merge(context.LastDatabaseChangeVector, context.GetChangeVector(tombstone.ChangeVector), context);
+                var cv = ChangeVector.Merge(context.LastDatabaseChangeVector, tombstoneChangeVector, context);
                 var flags = tombstone.Flags | DocumentFlags.Artificial | DocumentFlags.FromResharding;
 
                 using (Slice.From(context.Allocator, cv, out var cvSlice))

@@ -16,7 +16,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Replication;
-using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -412,6 +411,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                     var firstItemchangeVector = cvFirst.ToChangeVector();
                     var cvNew = new List<ChangeVectorEntry>();
+
                     await foreach (var db in Sharding.GetShardsDocumentDatabaseInstancesFor(store))
                     {
                         cvNew.Add(new ChangeVectorEntry()
@@ -435,6 +435,7 @@ namespace SlowTests.Sharding.Subscriptions
                     {
                         subscriptionState = Server.ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, store.Database, subscriptionId);
                     }
+
                     await foreach (var db in Sharding.GetShardsDocumentDatabaseInstancesFor(store))
                     {
                         var connectionState = db.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
@@ -619,7 +620,7 @@ namespace SlowTests.Sharding.Subscriptions
                     });
 
                     await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6), 6000);
-                    await AssertNoLeftovers(store, id);
+                    await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, id);
                 }
             }
         }
@@ -675,24 +676,8 @@ namespace SlowTests.Sharding.Subscriptions
                     amre.Set();
 
                     await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count == 6), 6000);
-                    await AssertNoLeftovers(store, id);
+                    await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, id);
                 }
-            }
-        }
-
-        private async Task AssertNoLeftovers(IDocumentStore store, string id)
-        {
-            var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
-            await foreach (var db in shards)
-            {
-                await AssertWaitForValueAsync(() =>
-                {
-                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
-                    {
-                        return Task.FromResult(db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, id).GetNumberOfResendDocuments(SubscriptionType.Document));
-                    }
-                }, 0);
             }
         }
     }

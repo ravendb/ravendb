@@ -810,7 +810,6 @@ namespace Raven.Server.Documents.Replication
         {
             if (ShardHelper.TryGetShardNumberAndDatabaseName(newRecord.DatabaseName, out var shardedDatabaseName, out var myShard) == false)
                 return;
-
             var toRemove = new List<BucketMigrationReplication>();
             // remove
             foreach (var handler in OutgoingHandlers)
@@ -829,7 +828,6 @@ namespace Raven.Server.Documents.Replication
                     toRemove.Add(migrationHandler.BucketMigrationNode);
                     continue;
                 }
-
 
                 var destTopology = GetTopologyForShard(migration.DestinationShard);
                 var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, migration, getLastResponsibleNode: null);
@@ -869,6 +867,11 @@ namespace Raven.Server.Documents.Replication
 
                         var destTopology = GetTopologyForShard(process.DestinationShard);
                         var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, process, getLastResponsibleNode: null);
+
+                        // can happened if all nodes are in Rehab
+                        if (destNode == null)
+                            continue;
+
                         var migrationDestination = new BucketMigrationReplication(process, destNode)
                         {
                             Database = ShardHelper.ToShardName(shardedDatabaseName, process.DestinationShard),
@@ -970,10 +973,23 @@ namespace Raven.Server.Documents.Replication
                             // no longer my task
                             continue;
 
-                        if (failure.Node is BucketMigrationReplication migration &&
-                            topology.WhoseTaskIsIt(RachisState.Follower, migration.ShardBucketMigration, getLastResponsibleNode: null) != _server.NodeTag)
-                            // no longer my task
-                            continue;
+                        if (failure.Node is BucketMigrationReplication migration)
+                        {
+                            if (topology.WhoseTaskIsIt(RachisState.Follower, migration.ShardBucketMigration, getLastResponsibleNode: null) != _server.NodeTag)
+                                // no longer my task
+                                continue;
+
+                            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                            using (ctx.OpenReadTransaction())
+                            {
+                                var raw = _server.Cluster.ReadRawDatabaseRecord(ctx, ShardHelper.ToDatabaseName(Database.Name));
+                                if (raw.Sharding.BucketMigrations.TryGetValue(migration.Bucket, out var current) == false)
+                                    continue;
+
+                                if (migration.ForBucketMigration(current) == false)
+                                    continue;
+                            }
+                        }
 
                         AddAndStartOutgoingReplication(failure.Node);
                     }

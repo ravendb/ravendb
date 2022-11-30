@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
@@ -51,6 +53,67 @@ public partial class RavenTestBase
             // wait for index creation on cluster
             nodes ??= _parent.Servers;
             await WaitForRaftIndexToBeAppliedOnClusterNodesAsync(results.RaftCommandIndex, nodes);
+        }
+
+        public async Task WaitForAllNodesToBeMembersAsync(IDocumentStore store, string databaseName = null, CancellationToken token = default)
+        {
+            while (true)
+            {
+                token.ThrowIfCancellationRequested();
+
+                await Task.Delay(TimeSpan.FromMilliseconds(250), token);
+                var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName ?? store.Database), token);
+                if (res != null)
+                {
+                    if (res.IsSharded == false)
+                    {
+                        if (res.Topology.Members.Count == res.Topology.Count)
+                            return;
+                    }
+                    else
+                    {
+                        if (res.Sharding.Orchestrator.Topology.Count != res.Sharding.Orchestrator.Topology.Members.Count)
+                            continue;
+
+                        if (res.Sharding.Shards.Sum(t => t.Count) != res.Sharding.Shards.Sum(t => t.Members.Count))
+                            continue;
+
+                        return;
+                    }
+                }
+            }
+        }
+
+        public async Task WaitForNodeToBeRehabAsync(IDocumentStore store, string node, string databaseName = null, CancellationToken token = default)
+        {
+            while (true)
+            {
+                token.ThrowIfCancellationRequested();
+
+                await Task.Delay(TimeSpan.FromMilliseconds(250), token);
+                var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName ?? store.Database), token);
+                if (res != null)
+                {
+                    if (res.IsSharded == false)
+                    {
+                        if (res.Topology.Rehabs.Contains(node))
+                            return;
+                    }
+                    else
+                    {
+                        if (res.Sharding.Orchestrator.Topology.RelevantFor(node))
+                        {
+                            if (res.Sharding.Orchestrator.Topology.Rehabs.Contains(node) == false)
+                                continue;
+                        }
+
+                        if (res.Sharding.Shards.Where(s => s.RelevantFor(node)).All(s => s.Rehabs.Contains(node)) == false)
+                            continue;
+
+                        return;
+                    }
+                }
+            }
         }
 
         public long LastRaftIndexForCommand(RavenServer server, string commandType)
@@ -167,6 +230,11 @@ public partial class RavenTestBase
             for (var i = 0; i < nodes.Count; i++)
             {
                 message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}.";
+                if (nodes[i].Disposed)
+                {
+                    message += "Disposed";
+                    continue;
+                }
                 using (nodes[i].ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
