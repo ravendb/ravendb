@@ -101,13 +101,7 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
     public override IQueryMatch Materialize()
     {
         IQueryMatch baseQuery = null;
-
-        if (_complexMatches != null)
-        {
-            foreach (var complex in _complexMatches ?? Enumerable.Empty<IQueryMatch>())
-                AddToQueryTree(complex);
-        }
-
+        
         if (_unaryMatchesList != null)
         {
             foreach (var unaryMatch in _unaryMatchesList)
@@ -123,8 +117,17 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
                 AddToQueryTree(IndexSearcher.InQuery(fieldName, terms, fieldId));
         }
 
-        return baseQuery;
+        if (ScoreFunction is not NullScoreFunction && ScoreFunction != null)
+            baseQuery = IndexSearcher.Boost(baseQuery, ScoreFunction);
+        
+        if (_complexMatches != null)
+        {
+            foreach (var complex in _complexMatches ?? Enumerable.Empty<IQueryMatch>())
+                AddToQueryTree(complex);
+        }
 
+        return baseQuery;
+        
         void AddToQueryTree(IQueryMatch query)
         {
             baseQuery = baseQuery is null
