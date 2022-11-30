@@ -75,6 +75,7 @@ public class ChangeVector
     public bool IsSingle => string.IsNullOrEmpty(_order?._changeVector) &&
                             string.IsNullOrEmpty(_version?._changeVector);
 
+    public int NumberOfEntries => _changeVector.ToChangeVector().Length;
 
     public bool IsEqual(ChangeVector changeVector)
     {
@@ -106,6 +107,15 @@ public class ChangeVector
         return context.GetChangeVector(Version, order);
     }
 
+    public ChangeVector MergeOrderWith(ChangeVector changeVector, IChangeVectorOperationContext context)
+    {
+        var orderMerge = ChangeVectorUtils.MergeVectors(changeVector.Order._changeVector, Order._changeVector);
+        if (IsSingle)
+            return context.GetChangeVector(orderMerge);
+
+        return context.GetChangeVector(Version, orderMerge);
+    }
+
     public ChangeVector UpdateVersion(string nodeTag, string dbId, long etag, IChangeVectorOperationContext context)
     {
         var version = UpdateInternal(nodeTag, dbId, etag, Version, context);
@@ -115,9 +125,9 @@ public class ChangeVector
         return context.GetChangeVector(version, Order);
     }
 
-    public static ConflictStatus GetConflictStatusForDocument(ChangeVector documentVector1, ChangeVector documentVector2) => GetConflictStatusInternal(documentVector1.Version, documentVector2.Version);
+    public static ConflictStatus GetConflictStatusForDocument(ChangeVector remote, ChangeVector local) => GetConflictStatusInternal(remote.Version, local.Version);
 
-    public static ConflictStatus GetConflictStatusForDatabase(ChangeVector documentVector, ChangeVector databaseVector) => GetConflictStatusInternal(documentVector.Order, databaseVector.Order);
+    public static ConflictStatus GetConflictStatusForDatabase(ChangeVector remote, ChangeVector local) => GetConflictStatusInternal(remote.Order, local.Order);
 
     private ChangeVector UpdateInternal(string nodeTag, string dbId, long etag, ChangeVector changeVector, IChangeVectorOperationContext context)
     {
@@ -167,6 +177,14 @@ public class ChangeVector
         }
 
         return result;
+    }
+
+    public ChangeVector RemoveId(string id, IChangeVectorOperationContext context)
+    {
+        if (TryRemoveIds(new HashSet<string>(capacity: 1) { id }, context, out var result))
+            return result;
+
+        return this;
     }
 
     public bool TryRemoveIds(HashSet<string> ids, IChangeVectorOperationContext context, out ChangeVector changeVector)
@@ -225,6 +243,8 @@ public class ChangeVector
 
         return context.GetChangeVector(StripTags(Version._changeVector, tag, exclude), StripTags(Order._changeVector, tag, exclude));
     }
+
+    public ChangeVector StripMoveTag(IChangeVectorOperationContext context) => StripTags(ChangeVectorParser.MoveTag, exclude: null, context);
 
     public ChangeVector StripTrxnTags(IChangeVectorOperationContext context) => StripTags(ChangeVectorParser.TrxnTag, exclude: null, context);
 

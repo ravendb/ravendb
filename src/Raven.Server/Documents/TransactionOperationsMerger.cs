@@ -119,6 +119,8 @@ namespace Raven.Server.Documents
         /// </summary>
         public async Task Enqueue(MergedTransactionCommand cmd)
         {
+            Debug.Assert(cmd.TaskCompletionSource.Task.IsCompleted == false, $"{cmd.GetType()} is already completed");
+
             _edi?.Throw();
             _operations.Enqueue(cmd);
             _waitHandle.Set();

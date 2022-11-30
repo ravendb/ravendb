@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -13,6 +15,7 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
+using Sparrow.Server.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Subscriptions
@@ -127,7 +130,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                     string current = tvh.Reader.ReadStringWithPrefix((int)ClusterStateMachine.SubscriptionStateTable.Key, prefix.Length);
                     string previous = tvh.Reader.ReadString((int)ClusterStateMachine.SubscriptionStateTable.ChangeVector);
-                        
+
                     yield return new RevisionRecord
                     {
                         Current = current,
@@ -151,10 +154,10 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
             
-        public bool IsRevisionInActiveBatch(ClusterOperationContext context, string current, HashSet<long> activeBatches)
+        public bool IsRevisionInActiveBatch(ClusterOperationContext context, Document current, HashSet<long> activeBatches)
         {
             var subscriptionState = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-            using (GetDatabaseAndSubscriptionAndRevisionKey(context, _databaseName, SubscriptionId, current, out var key))
+            using (GetDatabaseAndSubscriptionAndRevisionKey(context, _databaseName, SubscriptionId, current.Id, current.ChangeVector, out var key))
             using (Slice.External(context.Allocator,key, out var keySlice))
             {
                 if (subscriptionState.ReadByKey(keySlice, out var reader) == false)
@@ -189,7 +192,7 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
 
-        public async Task<long> RecordBatchRevisions(List<RevisionRecord> list, string lastRecordedChangeVector)
+        public async Task<(long Index, object Skipped)> RecordBatchRevisions(List<RevisionRecord> list, string lastRecordedChangeVector)
         {
             var command = new RecordBatchSubscriptionDocumentsCommand(
                 _databaseName, 
@@ -205,8 +208,14 @@ namespace Raven.Server.Documents.Subscriptions
             return await RecordBatchInternal(command);
         }
 
-        public async Task<long> RecordBatchDocuments(List<DocumentRecord> list, List<string> deleted, string lastRecordedChangeVector)
+        public async Task<(long Index, object Skipped)> RecordBatchDocuments(List<DocumentRecord> list, List<string> deleted, string lastRecordedChangeVector)
         {
+            if (list.Count == 0 && deleted.Count == 0 && lastRecordedChangeVector == null)
+            {
+                // nothing to record
+                return await Task.FromResult<(long, object)>((0, null));
+            }
+
             var command = new RecordBatchSubscriptionDocumentsCommand(
                 _databaseName, 
                 SubscriptionId, 
@@ -222,14 +231,12 @@ namespace Raven.Server.Documents.Subscriptions
             return await RecordBatchInternal(command);
         }
 
-        protected virtual async Task<long> RecordBatchInternal(RecordBatchSubscriptionDocumentsCommand command)
+        protected virtual async Task<(long Index, object Skipped)> RecordBatchInternal(RecordBatchSubscriptionDocumentsCommand command)
         {
-            var (etag, _) = await _server.SendToLeaderAsync(command);
-            await WaitForIndexNotificationAsync(etag);
-            return etag;
+            var result = await _server.SendToLeaderAsync(command);
+            await WaitForIndexNotificationAsync(result.Index);
+            return result;
         }
-    
-    
 
         public override void Dispose()
         {

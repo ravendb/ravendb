@@ -1,5 +1,7 @@
-﻿using Raven.Client.Documents.Replication.Messages;
+﻿using System;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
@@ -44,8 +46,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 var order = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context).ChangeVector;
                 var changeVector = context.GetChangeVector(item.ChangeVector);
-                if (changeVector.Order.Contains(_shardedDatabase.ShardedDatabaseId))
-                    return order;
 
                 var migratedChangeVector = context.GetChangeVector(changeVector.Version, order);
                 migratedChangeVector = migratedChangeVector.UpdateOrder(MigrationTag, _shardedDatabase.ShardedDatabaseId, _migrationIndex, context);
@@ -57,9 +57,6 @@ namespace Raven.Server.Documents.Replication.Incoming
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 _shardedDatabase = ShardedDocumentDatabase.CastToShardedDocumentDatabase(context.DocumentDatabase);
-               
-                // TODO: handle the incoming properly
-
                 return base.ExecuteCmd(context);
             }
 

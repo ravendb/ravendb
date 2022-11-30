@@ -28,6 +28,7 @@ using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
 {
@@ -38,16 +39,6 @@ namespace Raven.Server.ServerWide
             if (record.IsSharded == false)
                 return record.Topology;
 
-            var rehabs = new HashSet<string>();
-            foreach (var shardedTopology in record.Sharding.Shards.Values)
-            {
-                foreach (var rehab in shardedTopology.Rehabs)
-                {
-                    rehabs.Add(rehab);
-                }
-            }
-
-            record.Sharding.Orchestrator.Topology.Members.RemoveAll(rehabs.Contains);
             return record.Sharding.Orchestrator.Topology;
         }
     }
@@ -213,8 +204,8 @@ namespace Raven.Server.ServerWide
                     var sharding = Sharding;
                     if (sharding != null)
                     {
-                        sharding.Raw.TryGet(nameof(DatabaseRecord.Sharding.Shards), out BlittableJsonReaderObject shardTopologies);
-                        _isSharded = shardTopologies is { Count: > 0 };
+                        sharding.Raw.TryGet(nameof(DatabaseRecord.Sharding.Shards), out BlittableJsonReaderArray array);
+                        _isSharded = array is { Length: > 0 };
                     }
                     else
                     {
@@ -228,11 +219,11 @@ namespace Raven.Server.ServerWide
 
         public RawDatabaseRecord GetShardedDatabaseRecord(int shardNumber)
         {
-            Sharding.Raw.TryGet(nameof(ShardingConfiguration.Shards), out BlittableJsonReaderObject shardTopologies);
-            if (shardTopologies.TryGet(shardNumber.ToString(), out BlittableJsonReaderObject shardedTopology) == false)
-            {
+            Sharding.Raw.TryGet(nameof(ShardingConfiguration.Shards), out BlittableJsonReaderArray array);
+            if(array.Length <= shardNumber)
                 throw new ArgumentException($"Can't fetch topology of shard number {shardNumber} from the raw record because it does not exist.");
-            }
+
+            var shardedTopology = (BlittableJsonReaderObject)array[shardNumber];
             var shardName = ShardHelper.ToShardName(DatabaseName, shardNumber);
 
             var settings = new Dictionary<string, string>();
@@ -273,19 +264,11 @@ namespace Raven.Server.ServerWide
             if (IsSharded == false)
                 yield break;
 
-            Sharding.Raw.TryGet(nameof(ShardingConfiguration.Shards), out BlittableJsonReaderObject shardTopologies);
+            Sharding.Raw.TryGet(nameof(ShardingConfiguration.Shards), out BlittableJsonReaderArray array);
 
-            for (int i = 0; i < shardTopologies.Count; i++)
+            for (var index = 0; index < array.Length; index++)
             {
-                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                shardTopologies.GetPropertyByIndex(i, ref propertyDetails);
-
-                if(propertyDetails.Value == null)
-                    continue;
-
-                var shardNumber = RawShardingConfiguration.GetShardNumberFromPropertyDetails(propertyDetails);
-
-                yield return GetShardedDatabaseRecord(shardNumber);
+                yield return GetShardedDatabaseRecord(index);
             }
         }
 
@@ -296,20 +279,24 @@ namespace Raven.Server.ServerWide
                 if (DeletionInProgress.Count == 0)
                     return false;
 
-                if (Sharding.Shards.Sum(x => x.Value.Count) == 0)
+                if (Sharding.Shards.Sum(x => x.Count) == 0)
                     return true;
 
-                foreach (var (shardNumber, shardTopology) in Sharding.Shards)
+                int shard = 0;
+                foreach (var shardTopology in Sharding.Shards)
                 {
                     foreach (var nodeWithShard in shardTopology.AllNodes)
                     {
-                        if (DeletionInProgress.TryGetValue(DatabaseRecord.GetKeyForDeletionInProgress(nodeWithShard, shardNumber), out var deletionStatus) == false || deletionStatus == DeletionInProgressStatus.No)
+                        if (DeletionInProgress.TryGetValue(DatabaseRecord.GetKeyForDeletionInProgress(nodeWithShard, shard), out var deletionStatus) == false || deletionStatus == DeletionInProgressStatus.No)
                         {
                             return false;
                         }
                     }
+
+                    shard++;
                 }
-                
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal,
+                    "Handle case where shard numbers are not consecutive");
                 return true;
             }
             else
@@ -340,8 +327,8 @@ namespace Raven.Server.ServerWide
             if (IsSharded == false)
                 return Topology.ClusterTransactionIdBase64;
 
-            Debug.Assert(Sharding.Shards.All(s => s.Value.ClusterTransactionIdBase64.Equals(Sharding.Shards.ElementAt(0).Value.ClusterTransactionIdBase64)));
-            return Sharding.Shards.ElementAt(0).Value.ClusterTransactionIdBase64;
+            Debug.Assert(Sharding.Shards.All(s => s.ClusterTransactionIdBase64.Equals(Sharding.Shards[0].ClusterTransactionIdBase64)));
+            return Sharding.Shards[0].ClusterTransactionIdBase64;
         }
 
         private DatabaseStateStatus? _databaseState;
@@ -1217,16 +1204,6 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        internal bool IsShardBeingDeletedOnAnyNode(int shardNumber)
-        {
-            foreach (var deletion in DeletionInProgress)
-            {
-                if (deletion.Key.Contains(shardNumber.ToString()))
-                    return true;
-            }
-
-            return false;
-        }
 
         public void Dispose()
         {

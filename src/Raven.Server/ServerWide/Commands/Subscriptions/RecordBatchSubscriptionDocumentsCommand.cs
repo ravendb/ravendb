@@ -1,10 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
@@ -29,6 +33,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public List<DocumentRecord> Documents;
         public List<string> Deleted;
         public List<RevisionRecord> Revisions;
+
+        // for sharding
+        public HashSet<long> ActiveBatchesFromSender;
         public string ShardName;
 
         public RecordBatchSubscriptionDocumentsCommand()
@@ -57,10 +64,29 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             HasHighlyAvailableTasks = hasHighlyAvailableTasks;
         }
 
+        public override object FromRemote(object remoteResult)
+        {
+            var rc = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var obj = remoteResult as BlittableJsonReaderArray;
+
+            if (obj == null)
+            {
+                // this is an error as we expect BlittableJsonReaderArray, but we will pass the object value to get later appropriate exception
+                return base.FromRemote(remoteResult);
+            }
+
+            foreach (var o in obj)
+            {
+                rc.Add(o.ToString());
+            }
+            return rc;
+        }
+
         public override unsafe void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
         {
             result = null;
             var shouldUpdateChangeVector = true;
+
             var subscriptionName = SubscriptionName;
             if (string.IsNullOrEmpty(subscriptionName))
             {
@@ -86,25 +112,22 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist in database '{DatabaseName}'");
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(existingValue);
-
+                
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
 
-                var topology = string.IsNullOrEmpty(ShardName) ? record.TopologyForSubscriptions() : record.Sharding.Shards[ShardHelper.GetShardNumber(ShardName)];
-                var lastResponsibleNode = string.IsNullOrEmpty(ShardName)
-                    ? AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag)
-                    : null;
-
+                var topology = string.IsNullOrEmpty(ShardName) ? record.Topology : record.Sharding.Shards[ShardHelper.GetShardNumber(ShardName)];
+                var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
                 var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscriptionState, lastResponsibleNode);
+
                 if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
-                    throw new DatabaseDoesNotExistException($"Stopping subscription '{subscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
+                    throw new DatabaseDoesNotExistException(
+                        $"Stopping subscription '{subscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
 
                 if (appropriateNode != NodeTag)
                 {
                     throw new SubscriptionDoesNotBelongToNodeException(
-                            $"Cannot apply {nameof(AcknowledgeSubscriptionBatchCommand)} for subscription '{subscriptionName}' with id '{SubscriptionId}', on database '{DatabaseName}', on node '{NodeTag}'," +
-                            $" because the subscription task belongs to '{appropriateNode ?? "N/A"}'.")
-                        { AppropriateNode = appropriateNode };
+                        $"Cannot apply {nameof(AcknowledgeSubscriptionBatchCommand)} for subscription '{subscriptionName}' with id '{SubscriptionId}', on database '{DatabaseName}', on node '{NodeTag}'," +
+                        $" because the subscription task belongs to '{appropriateNode ?? "N/A"}'.") { AppropriateNode = appropriateNode };
                 }
 
                 if (CurrentChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
@@ -115,62 +138,202 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                 CheckConcurrencyForBatchCv(subscriptionState, subscriptionName);
 
-                if (shouldUpdateChangeVector)
+                foreach (var deletedId in Deleted)
                 {
-                    UpdateChangeVector(subscriptionState);
-
-                    subscriptionState.NodeTag = NodeTag;
-                    using (var obj = context.ReadObject(subscriptionState.ToJson(), "subscription"))
+                    if (subscriptionState.SubscriptionShardingState != null)
                     {
-                        ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, obj);
+                        if (IsFromProperShard(record, deletedId) == false)
+                            continue;
+                    }
+
+                    using (SubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, deletedId, out var key))
+                    {
+                        using var _ = Slice.External(context.Allocator, key, out var keySlice);
+                        subscriptionStateTable.DeleteByKey(keySlice);
                     }
                 }
+
+                var skipped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var documentRecord in Documents)
+                {
+                    using (SubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, documentRecord.DocumentId,
+                               out var key))
+                    {
+                        using var _ = Slice.External(context.Allocator, key, out var keySlice);
+                        using var __ = Slice.From(context.Allocator, documentRecord.ChangeVector, out var changeVectorSlice);
+
+                        var batchId = index;
+                        if (subscriptionState.SubscriptionShardingState != null)
+                        {
+                            var exists = TryGetExisting(context, keySlice, out var currentBatch, out var currentChangeVector);
+                            var owner = IsFromProperShard(record, documentRecord.DocumentId);
+
+                            if (exists)
+                            {
+                                if (owner)
+                                {
+                                    if (ActiveBatchesFromSender.Contains(currentBatch))
+                                    {
+                                        // item has been picked up by someone else
+                                        skipped.Add(documentRecord.DocumentId);
+                                        continue;
+                                    }
+                                }
+                                else
+                                {
+                                    // it is not mine, cannot send it
+                                    skipped.Add(documentRecord.DocumentId);
+                                    continue;
+                                }
+                            }
+                            else
+                            {
+                                if (IsAlreadyProcessed(context, subscriptionState.SubscriptionShardingState, documentRecord.DocumentId,
+                                        documentRecord.ChangeVector))
+                                {
+                                    // item was already processed
+                                    skipped.Add(documentRecord.DocumentId);
+                                    continue;
+                                }
+                            }
+
+                            var vector = context.GetChangeVector(documentRecord.ChangeVector);
+                            var bucket = ShardHelper.GetBucket(documentRecord.DocumentId);
+
+                            if (IsBucketUnderActiveMigration(record, bucket))
+                            {
+                                batchId = SubscriptionConnectionBase.NonExistentBatch;
+                                skipped.Add(documentRecord.DocumentId);
+                            } 
+                            else if (owner == false)
+                            {
+                                batchId = SubscriptionConnectionBase.NonExistentBatch;
+                                skipped.Add(documentRecord.DocumentId);
+                            }
+
+                            if (batchId > SubscriptionConnectionBase.NonExistentBatch)
+                            {
+                                if (subscriptionState.SubscriptionShardingState.ProcessedChangeVectorPerBucket.TryGetValue(bucket, out var current))
+                                {
+                                    subscriptionState.SubscriptionShardingState.ProcessedChangeVectorPerBucket[bucket] = ChangeVectorUtils.MergeVectors(current, vector.Version);
+                                }
+                            }
+                        }
+
+                        using (subscriptionStateTable.Allocate(out var tvb))
+                        {
+                            tvb.Add(keySlice);
+                            tvb.Add(changeVectorSlice);
+                            tvb.Add(Bits.SwapBytes(batchId)); // batch id
+
+                            subscriptionStateTable.Set(tvb);
+                        }
+                    }
+                }
+
+                foreach (var revisionRecord in Revisions)
+                {
+                    using (SubscriptionConnectionsStateBase.GetDatabaseAndSubscriptionAndRevisionKey(context, DatabaseName, SubscriptionId, revisionRecord.DocumentId, revisionRecord.Current,
+                               out var key))
+                    using (subscriptionStateTable.Allocate(out var tvb))
+                    {
+                        using var _ = Slice.External(context.Allocator, key, out var keySlice);
+                        using var __ = Slice.From(context.Allocator, revisionRecord.Previous ?? string.Empty, out var changeVectorSlice);
+
+                        tvb.Add(keySlice);
+                        tvb.Add(changeVectorSlice); //prev change vector
+                        tvb.Add(Bits.SwapBytes(index)); // batch id
+
+                        subscriptionStateTable.Set(tvb);
+                    }
+                }
+
+                if (shouldUpdateChangeVector)
+                {
+                    if (string.IsNullOrEmpty(ShardName))
+                    {
+                        subscriptionState.ChangeVectorForNextBatchStartingPoint =
+                            ChangeVectorUtils.MergeVectors(CurrentChangeVector, subscriptionState.ChangeVectorForNextBatchStartingPoint);
+                        subscriptionState.NodeTag = NodeTag;
+                    }
+                    else
+                    {
+                        var changeVector = context.GetChangeVector(CurrentChangeVector);
+                        subscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string current);
+                        subscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard[ShardName] =
+                            changeVector.Order.MergeWith(current, context);
+                        subscriptionState.SubscriptionShardingState.NodeTagPerShard[ShardName] = NodeTag;
+                    }
+                }
+
+                using (var obj = context.ReadObject(subscriptionState.ToJson(), "subscription"))
+                {
+                    ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, obj);
+                }
+
+                result = skipped;
+            }
+        }
+
+        private bool TryGetExisting(ClusterOperationContext context, Slice keySlice, out long batchId, out ChangeVector changeVector)
+        {
+            batchId = -2;
+            changeVector = null;
+            
+            var subscriptionStateTable = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
+            if (subscriptionStateTable.ReadByKey(keySlice, out var current))
+            {
+                
+                    batchId = DocumentsStorage.TableValueToEtag((int)ClusterStateMachine.SubscriptionStateTable.BatchId, ref current);
+                    var changeVectorAsString =
+                        DocumentsStorage.TableValueToChangeVector(context, (int)ClusterStateMachine.SubscriptionStateTable.ChangeVector, ref current);
+                    changeVector = context.GetChangeVector(changeVectorAsString);
+                    return true;
             }
 
-            foreach (var deletedId in Deleted)
+            return false;
+        }
+
+        private bool IsAlreadyProcessed(ClusterOperationContext context, SubscriptionShardingState subscriptionShardingState, string id,
+            string changeVector)
+        {
+            var vector = context.GetChangeVector(changeVector);
+            var bucket = ShardHelper.GetBucket(id);
+
+            if (subscriptionShardingState.ProcessedChangeVectorPerBucket.TryGetValue(bucket, out var processedChangeVector))
             {
-                using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, deletedId, out var key))
+                var status = ChangeVectorUtils.GetConflictStatus(vector.Version, processedChangeVector);
+
+                if (status == ConflictStatus.AlreadyMerged)
                 {
-                    using var _ = Slice.External(context.Allocator, key, out var keySlice);
-                    subscriptionStateTable.DeleteByKey(keySlice);
+                    return true;    
                 }
             }
 
-            foreach (var documentRecord in Documents)
-            {
-                using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionAndDocumentKey(context, DatabaseName, SubscriptionId, documentRecord.DocumentId, out var key))
-                using (subscriptionStateTable.Allocate(out var tvb))
-                {
-                    using var _ = Slice.External(context.Allocator, key, out var keySlice);
-                    using var __ = Slice.From(context.Allocator, documentRecord.ChangeVector, out var changeVectorSlice);
+            return false;
+        }
 
-                    tvb.Add(keySlice);
-                    tvb.Add(changeVectorSlice);
-                    tvb.Add(Bits.SwapBytes(index)); // batch id
+        private bool IsBucketUnderActiveMigration(RawDatabaseRecord record, int bucket)
+        {
+            if (record.Sharding.BucketMigrations.TryGetValue(bucket, out var migration) == false)
+                return false;
 
-                    subscriptionStateTable.Set(tvb);
-                }
-            }
-            foreach (var revisionRecord in Revisions)
-            {
-                using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionAndRevisionKey(context, DatabaseName, SubscriptionId, revisionRecord.Current, out var key))
-                using (subscriptionStateTable.Allocate(out var tvb))
-                {
-                    using var _ = Slice.External(context.Allocator, key, out var keySlice);
-                    using var __ = Slice.From(context.Allocator, revisionRecord.Previous ?? string.Empty, out var changeVectorSlice);
+            return migration.Status < MigrationStatus.OwnershipTransferred;
+        }
 
-                    tvb.Add(keySlice);
-                    tvb.Add(changeVectorSlice); //prev change vector
-                    tvb.Add(Bits.SwapBytes(index)); // batch id
+        private bool IsFromProperShard(RawDatabaseRecord record, string id)
+        {
+            var bucket = ShardHelper.GetBucket(id);
+            var expected = ShardHelper.GetShardNumber(record.Sharding.ShardBucketRanges, bucket);
+            var actual = ShardHelper.GetShardNumber(ShardName);
 
-                    subscriptionStateTable.Set(tvb);
-                }
-            }
+            return expected == actual;
         }
 
         private void CheckConcurrencyForBatchCv(SubscriptionState state, string subscriptionName)
         {
-            if (ShardName == null)
+            if (string.IsNullOrEmpty(ShardName))
             {
                 var subscriptionStateChangeVectorForNextBatchStartingPoint = state.ChangeVectorForNextBatchStartingPoint;
                 if (subscriptionStateChangeVectorForNextBatchStartingPoint != PreviouslyRecordedChangeVector)
@@ -180,28 +343,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 return;
             }
 
-            state.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string cvInStorage);
+            state.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string cvInStorage);
             if (cvInStorage != PreviouslyRecordedChangeVector)
             {
                 throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't record sharded subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {cvInStorage}, received value: {PreviouslyRecordedChangeVector}.");
-            }
-        }
-
-        private void UpdateChangeVector(SubscriptionState subscriptionState)
-        {
-            if (ShardName == null)
-            {
-                subscriptionState.ChangeVectorForNextBatchStartingPoint =
-                    ChangeVectorUtils.MergeVectors(CurrentChangeVector, subscriptionState.ChangeVectorForNextBatchStartingPoint);
-                return;
-            }
-            if (subscriptionState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string cvInStorage))
-            {
-                subscriptionState.ChangeVectorForNextBatchStartingPointPerShard[ShardName] = ChangeVectorUtils.MergeVectors(cvInStorage, CurrentChangeVector);
-            }
-            else
-            {
-                subscriptionState.ChangeVectorForNextBatchStartingPointPerShard[ShardName] = CurrentChangeVector;
             }
         }
 
@@ -219,6 +364,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
             json[nameof(ShardName)] = ShardName;
+
+            if (ActiveBatchesFromSender != null)
+                json[nameof(ActiveBatchesFromSender)] = new DynamicJsonArray(ActiveBatchesFromSender);
             if (Documents != null)
                 json[nameof(Documents)] = new DynamicJsonArray(Documents);
             if(Revisions != null)
@@ -227,7 +375,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 json[nameof(Deleted)] = new DynamicJsonArray(Deleted);
         }
 
-        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue)
+        protected override BlittableJsonReaderObject GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context,
+            BlittableJsonReaderObject existingValue)
         {
             throw new System.NotImplementedException();
         }
@@ -255,12 +404,14 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
     public class RevisionRecord : SubscriptionRecord, IDynamicJsonValueConvertible
     {
+        public string DocumentId;
         public string Previous;
         public string Current;
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue()
             {
+                [nameof(DocumentId)] = DocumentId,
                 [nameof(Previous)] = Previous,
                 [nameof(Current)] = Current
             };

@@ -24,7 +24,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     public ShardedDocumentsStorage ShardedDocumentsStorage;
 
-    public ShardedDatabaseContext DatabaseContext => ServerStore.DatabasesLandlord.GetShardedDatabaseContext(ShardedDatabaseName);
+    public ShardedDatabaseContext DatabaseContext => ServerStore.DatabasesLandlord.GetOrAddShardedDatabaseContext(ShardedDatabaseName);
 
     public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         : base(name, configuration, serverStore, addToInitLog)
@@ -132,11 +132,13 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     public async Task DeleteBucket(int bucket, long migrationIndex, string uptoChangeVector)
     {
-        var cmd = new DeleteBucketCommand(this, bucket, uptoChangeVector);
-        while (cmd.HasMore)
+        bool hasMore;
+        do
         {
+            var cmd = new DeleteBucketCommand(this, bucket, uptoChangeVector);
             await TxMerger.Enqueue(cmd);
-        }
+            hasMore = cmd.HasMore;
+        } while (hasMore);
 
         await ServerStore.Sharding.SourceMigrationCleanup(ShardedDatabaseName, bucket, migrationIndex,
             $"{bucket}@{migrationIndex}-Cleaned-{ServerStore.NodeTag}");

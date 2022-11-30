@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using static Sparrow.Json.CachedProperties;
 
 namespace Sparrow.Json
 {
@@ -226,7 +227,15 @@ namespace Sparrow.Json
                                 .MakeGenericMethod(keyType);
                             return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
                         }
-                        throw new NotSupportedException(propertyType.FullName + " is not supported by the deserializer, please add support to it");
+
+                        if (keyType.IsPrimitive)
+                        {
+                            var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfPrimitiveKeys), BindingFlags.NonPublic | BindingFlags.Static)
+                                .MakeGenericMethod(keyType);
+                            return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                        }
+
+                        throw new NotSupportedException($"{propertyName} of type {propertyType.FullName} is not supported by the deserializer, please add support to it");
                     }
                     if (valueType == typeof(Dictionary<string, string[]>))
                     {
@@ -257,7 +266,9 @@ namespace Sparrow.Json
                     {
                         var listType = valueType.GenericTypeArguments[0];
                         var converterExpression = Expression.Constant(GetConverterFromCache(listType));
-                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfList), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(listType);
+                        var keyType = propertyType.GenericTypeArguments[0];
+                        
+                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfList), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(keyType, listType);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName), GetJsonDeserializationDictionaryAttribute(customAttributes), converterExpression);
                     }
                     if (valueType.IsEnum)
@@ -510,6 +521,29 @@ namespace Sparrow.Json
             return dic;
         }
 
+        private static Dictionary<TKey, string> ToDictionaryOfPrimitiveKeys<TKey>(BlittableJsonReaderObject json, string name)
+        {
+            var dic = new Dictionary<TKey, string>();
+
+            BlittableJsonReaderObject obj;
+            //should a "null" exist in json? -> not sure that "null" can exist there
+            if (json.TryGet(name, out obj) == false || obj == null)
+                return dic;
+
+            var type = typeof(TKey);
+
+            foreach (var propertyName in obj.GetPropertyNames())
+            {
+                object val;
+                if (obj.TryGet(propertyName, out val))
+                {
+                    var key = (TKey)Convert.ChangeType(propertyName, type);
+                    dic[key] = val?.ToString();
+                }
+            }
+            return dic;
+        }
+
         private static Dictionary<TEnum, string> ToDictionaryOfEnumKeys<TEnum>(BlittableJsonReaderObject json, string name)
         {
             var dic = new Dictionary<TEnum, string>();
@@ -550,7 +584,7 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, List<T>> ToDictionaryOfList<T>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, T> converter)
+        /*private static Dictionary<string, List<T>> ToDictionaryOfList<T>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, T> converter)
         {
             var dic = new Dictionary<string, List<T>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -570,6 +604,56 @@ namespace Sparrow.Json
                         list.Add(converter(item));
                     }
                     dic[propertyName] = list;
+                }
+            }
+            return dic;
+        }*/
+
+        private static Dictionary<TK, List<TV>> ToDictionaryOfList<TK, TV>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, TV> converter)
+        {
+            var type = typeof(TK);
+            Dictionary<TK, List<TV>> dic;
+
+            if (type == typeof(string))
+            {
+                var comparer = GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase);
+                dic = (Dictionary<TK, List<TV>>)(object)new Dictionary<string, List<TV>>(comparer);
+            }
+            else
+            {
+                dic = new Dictionary<TK, List<TV>>();
+            }
+
+            BlittableJsonReaderObject obj;
+            //should a "null" exist in json? -> not sure that "null" can exist there
+            if (json.TryGet(name, out obj) == false || obj == null)
+                return dic;
+            
+            var isPrimitiveValue = typeof(TV).IsPrimitive;
+            foreach (var propertyName in obj.GetPropertyNames())
+            {
+                BlittableJsonReaderArray array;
+                if (obj.TryGet(propertyName, out array))
+                {
+                    var list = new List<TV>(array.Length);
+
+                    if (isPrimitiveValue)
+                    {
+                        foreach (TV item in array)
+                        {
+                            list.Add(item);
+                        }
+                    }
+                    else
+                    {
+                        foreach (BlittableJsonReaderObject item in array)
+                        {
+                            list.Add(converter(item));
+                        }
+                    }
+                    
+                    var key = (TK)Convert.ChangeType(propertyName, type);
+                    dic[key] = list;
                 }
             }
             return dic;
@@ -790,7 +874,7 @@ namespace Sparrow.Json
             if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
                 return hashset;
 
-            foreach (BlittableJsonReaderObject item in array)
+            foreach (object item in array)
             {
                 if (item == null)
                 {
@@ -798,7 +882,26 @@ namespace Sparrow.Json
                     continue;
                 }
                 
-                hashset.Add(converter(item));
+                if (item is BlittableJsonReaderObject bjro)
+                {
+                    hashset.Add(converter(bjro));
+                    continue;
+                }
+
+                if (item is LazyStringValue enumItem && typeof(T).IsEnum)
+                {
+                    hashset.Add((T) Enum.Parse(typeof(T), enumItem));
+                    continue;
+                }
+
+                object copy = item;
+
+                if (item is LazyStringValue lsv && IsNumeric<T>())
+                {
+                    copy = new LazyNumberValue(lsv);
+                }
+
+                hashset.Add((T)Convert.ChangeType(copy, typeof(T)));
             }
 
             return hashset;

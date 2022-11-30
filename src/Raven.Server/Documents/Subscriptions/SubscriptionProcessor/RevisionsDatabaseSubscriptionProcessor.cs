@@ -49,33 +49,32 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 using (item.Previous)
                 {
                     var result = GetBatchItem(item);
-                    using (result.Doc)
+                    
+                    if (result.Doc.Data != null)
                     {
-                        if (result.Doc.Data != null)
+                        BatchItems.Add(new RevisionRecord
                         {
-                            BatchItems.Add(new RevisionRecord
-                            {
-                                Current = item.Current.ChangeVector,
-                                Previous = item.Previous?.ChangeVector
-                            });
+                            DocumentId = item.Current.Id,
+                            Current = item.Current.ChangeVector,
+                            Previous = item.Previous?.ChangeVector
+                        });
 
-                            yield return result;
+                        yield return result;
 
-                            if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
-                                yield break;
+                        if (size + DocsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize >= MaximumAllowedMemory)
+                            yield break;
 
-                            if (++numberOfDocs >= BatchSize)
-                                yield break;
-                        }
-                        else
-                            yield return result;
+                        if (++numberOfDocs >= BatchSize)
+                            yield break;
                     }
+                    else
+                        yield return result;
                 }
             }
         }
 
-        public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) => 
-            SubscriptionConnectionsState.RecordBatchRevisions(BatchItems, lastChangeVectorSentInThisBatch);
+        public override async Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) => 
+            (await SubscriptionConnectionsState.RecordBatchRevisions(BatchItems, lastChangeVectorSentInThisBatch)).Index;
 
         public override Task AcknowledgeBatch(long batchId) => 
             SubscriptionConnectionsState.AcknowledgeBatch(_connection, batchId, null);
@@ -99,7 +98,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         {
             exception = null;
             reason = null;
-            result = item.Current;
+            result = item.Current.CloneWith(DocsContext, newData: null);
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
             {
@@ -113,7 +112,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                     return false;
                 }
 
-                if (SubscriptionConnectionsState.IsRevisionInActiveBatch(ClusterContext, item.Current.ChangeVector, Active))
+                if (SubscriptionConnectionsState.IsRevisionInActiveBatch(ClusterContext, item.Current, Active))
                 {
                     reason = $"{item.Current.Id} is in active batch";
                     return false;
@@ -143,6 +142,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 var match = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref result.Data);
                 if (match == false)
                 {
+                    result.Data.Dispose();
                     result.Data = null;
                     reason = $"{item.Current.Id} filtered by criteria";
                     return false;
