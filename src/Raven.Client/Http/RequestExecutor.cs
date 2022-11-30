@@ -297,6 +297,15 @@ namespace Raven.Client.Http
             {
                 using (var handler = new HttpClientHandler())
                     handler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+
+                string explicitlyTrustedCerts = Environment.GetEnvironmentVariable("Raven_ExplicitlyTrustedServerCertificateThumbprints") ?? 
+												Environment.GetEnvironmentVariable("Raven.ExplicitlyTrustedServerCertificateThumbprints");
+                if (explicitlyTrustedCerts == null) return;
+                string[] certThumbprints = explicitlyTrustedCerts.Split(new[]{';'}, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string thumbprint in certThumbprints)
+                {
+                    ExplicitlyTrustedServerCertificates.Add(thumbprint);
+                }
             }
             catch (Exception e)
             {
@@ -2028,8 +2037,30 @@ namespace Raven.Client.Http
                 ServerCertificateCustomValidationCallbackRegistrationException);
         }
 
+        private static readonly ConcurrentSet<string> ExplicitlyTrustedServerCertificates = new(StringComparer.OrdinalIgnoreCase);
+
+        public static bool IsExplicitlyTrustedCertificate(X509Certificate2 x509Certificate)
+        {
+            return ExplicitlyTrustedServerCertificates.Contains(x509Certificate.Thumbprint);
+        }
+
+        public static IDisposable RegisterExplicitlyTrustedServerCertificate(X509Certificate2 certificate)
+        {
+            string certificateThumbprint = certificate.Thumbprint;
+
+            if (ExplicitlyTrustedServerCertificates.TryAdd(certificateThumbprint) == false)
+                return null;
+
+            return new DisposableAction(() => ExplicitlyTrustedServerCertificates.TryRemove(certificateThumbprint));
+        }
+
         internal static bool OnServerCertificateCustomValidationCallback(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors)
         {
+            if (cert is X509Certificate2 cert2 && ExplicitlyTrustedServerCertificates.Contains(cert2.Thumbprint))
+            {
+                return true;
+            }
+
             var onServerCertificateCustomValidationCallback = _serverCertificateCustomValidationCallback;
             if (onServerCertificateCustomValidationCallback == null ||
                 onServerCertificateCustomValidationCallback.Length == 0)
@@ -2042,8 +2073,8 @@ namespace Raven.Client.Http
 
             for (var i = 0; i < onServerCertificateCustomValidationCallback.Length; i++)
             {
-                var result = onServerCertificateCustomValidationCallback[i](sender, cert, chain, errors);
-                if (result)
+                var callback = onServerCertificateCustomValidationCallback[i];
+                if (callback(sender, cert, chain, errors))
                     return true;
             }
 
