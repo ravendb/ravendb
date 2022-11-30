@@ -49,8 +49,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public StreamsTempFile GetTempFile()
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "figure out if the sharded db is encrypted ('encrypted' parameter for 'StreamsTempFile')");
-
             var name = $"attachment.{Guid.NewGuid():N}.shardedReplication";
             var tempPath = _parent.Context.ServerStore._env.Options.DataPager.Options.TempPath.Combine(name);
             return new StreamsTempFile(tempPath.FullPath, _parent.Context.Encrypted);
@@ -198,7 +196,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 foreach (var attachment in dataForReplicationCommand.ReplicatedAttachmentStreams)
                 {
                     if (attachment.Value.Stream is StreamsTempFile.InnerStream innerStream == false)
-                        throw new NotSupportedException("Cannot understand how to read stream: " + attachment.Value.Stream);
+                        throw new NotSupportedException($"Cannot understand how to read stream of type '{attachment.Value.Stream.GetType().Name}'. Should not happen!");
 
                     for (var shard = 0; shard < _parent.Context.ShardCount; shard++)
                     {

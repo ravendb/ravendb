@@ -20,7 +20,7 @@ namespace Raven.Server.Documents
         internal bool _reading;
         private InnerStream _previousInstance;
 
-        public StreamsTempFile(string tempFile, StorageEnvironment environment) : this (tempFile, environment.Options.Encryption.IsEnabled)
+        public StreamsTempFile(string tempFile, StorageEnvironment environment) : this(tempFile, environment.Options.Encryption.IsEnabled)
         {
         }
 
@@ -179,7 +179,7 @@ namespace Raven.Server.Documents
                 return new DisposableAction(() =>
                 {
                     stream.Dispose();
-                   safeFileHandle.Dispose();
+                    safeFileHandle.Dispose();
                 });
             }
         }

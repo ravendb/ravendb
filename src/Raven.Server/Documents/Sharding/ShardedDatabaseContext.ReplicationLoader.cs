@@ -141,6 +141,8 @@ namespace Raven.Server.Documents.Sharding
 
         public void Dispose()
         {
+            BatchSent?.TrySetCanceled();
+
             if (AttachmentStreams != null)
             {
                 foreach (var attachment in AttachmentStreams)
@@ -155,7 +157,6 @@ namespace Raven.Server.Documents.Sharding
             }
 
             Items.Clear();
-            BatchSent?.TrySetCanceled();
             BatchSent = null;
         }
     }
