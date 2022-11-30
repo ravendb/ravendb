@@ -20,6 +20,7 @@ using Index = Raven.Server.Documents.Indexes.Index;
 using Sparrow.LowMemory;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.LowMemory;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
@@ -32,13 +33,14 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly Logger _logger;
 
         private readonly string _name;
-        private readonly string _shortThreadName;
         public readonly long CurrentTerm;
 
         public readonly TimeSpan WorkerSamplePeriod;
         private PoolOfThreads.LongRunningWork _collectingTask;
         public readonly TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
         private readonly float _temporaryDirtyMemoryAllowedPercentage;
+        private readonly long _term;
+        private readonly string _leader;
 
         public ClusterMaintenanceWorker(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore, string leader, long term)
         {
@@ -48,8 +50,9 @@ namespace Raven.Server.ServerWide.Maintenance
             _server = serverStore;
             _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>(serverStore.NodeTag);
             _name = $"Heartbeats worker connection to leader {leader} in term {term}";
-            _shortThreadName = $"HWCTL {leader} IT {term}";
             _temporaryDirtyMemoryAllowedPercentage = _server.Server.ServerStore.Configuration.Memory.TemporaryDirtyMemoryAllowedPercentage;
+            _leader = leader;
+            _term = term;
 
             WorkerSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
             CurrentTerm = term;
@@ -81,7 +84,11 @@ namespace Raven.Server.ServerWide.Maintenance
                     // we don't want to crash the process so we don't propagate this exception.
                 }
             }
-            , null, _name, _shortThreadName);
+                , null, new ThreadNames.ThreadInfo
+                {
+                    FullName = _name,
+                    Details = new ThreadNames.ThreadDetails.HeartbeatsWorker(_leader, _term)
+                });
         }
 
         public void CollectDatabasesStatusReport()

@@ -5,6 +5,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Rachis
 {
@@ -25,7 +26,11 @@ namespace Raven.Server.Rachis
         {
             _engine.AppendElector(this);
 
-            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, "Elector for candidate {_connection.Source}", $"EFC {_connection.Source}");
+            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, new ThreadNames.ThreadInfo
+            {
+                FullName = $"Elector for candidate {_connection.Source}",
+                Details = new ThreadNames.ThreadDetails.Elector(_connection.Source)
+            });
         }
 
         public override string ToString()

@@ -17,7 +17,7 @@ namespace Sparrow.Server.Utils
 
         private class Runner
         {
-            private readonly string TasksExecutorThreadName = PlatformDetails.RunningOnLinux ? "Tasks Executor" : "RavenDB Tasks Executor";
+            private readonly string TasksExecutorThreadName = "Tasks Executor";
             private readonly ConcurrentQueue<(WaitCallback, object)> _actions = new ConcurrentQueue<(WaitCallback, object)>();
 
             private readonly ManualResetEventSlim _event = new ManualResetEventSlim(false);

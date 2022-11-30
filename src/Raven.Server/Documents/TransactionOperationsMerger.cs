@@ -70,11 +70,14 @@ namespace Raven.Server.Documents
         public int NumberOfQueuedOperations => _operations.Count;
 
         private string TransactionMergerThreadName => $"'{_parent.Name}' Transaction Merging Thread";
-        private string TransactionMergerShortThreadName => $"TM {_parent.Name}";
 
         public void Start()
         {
-            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName, TransactionMergerShortThreadName);
+            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, new ThreadNames.ThreadInfo
+            {
+                FullName = TransactionMergerThreadName,
+                Details = new ThreadNames.ThreadDetails.TransactionMerging(_parent.Name)
+            });
         }
 
         public interface IRecordableCommand

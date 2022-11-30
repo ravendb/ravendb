@@ -26,6 +26,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Utils;
 using static Raven.Server.ServerWide.Maintenance.DatabaseStatus;
 using Index = Raven.Server.Documents.Indexes.Index;
 
@@ -90,7 +91,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     // nothing we can do here
                 }
-            }, null, $"Cluster observer for term {_term}", $"CO F T {_term}");
+            }, null, new ThreadNames.ThreadInfo
+            {
+                FullName = $"Cluster observer for term {_term}",
+                Details = new ThreadNames.ThreadDetails.ClusterObserver(_term)
+            });
         }
 
         public bool Suspended = false; // don't really care about concurrency here
