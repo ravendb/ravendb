@@ -411,22 +411,23 @@ function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) 
     const { db } = props;
 
     return (
-        <RichPanelDetails data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.createIsLocalDatabaseObservable(name)">
-            <RichPanelDetailItem>
-                <div className="encryption">
-                    {db.encrypted && (
-                        <small title="This database is encrypted">
-                            <i className="icon-key text-success" />
-                        </small>
-                    )}
-                    {!db.encrypted && (
-                        <small title="This database is not encrypted">
-                            <i className="icon-unencrypted text-muted" />
-                        </small>
-                    )}
-                </div>
-            </RichPanelDetailItem>
-            {/* TODO <div data-bind="if: databaseAccessText">
+        <Card>
+            <RichPanelDetails data-bind="template: { name: hasLoadError() ? 'invalid-database-properties-template': 'valid-database-properties-template' }, visible: $root.createIsLocalDatabaseObservable(name)">
+                <RichPanelDetailItem>
+                    <div className="encryption">
+                        {db.encrypted && (
+                            <small title="This database is encrypted">
+                                <i className="icon-key text-success" />
+                            </small>
+                        )}
+                        {!db.encrypted && (
+                            <small title="This database is not encrypted">
+                                <i className="icon-unencrypted text-muted" />
+                            </small>
+                        )}
+                    </div>
+                </RichPanelDetailItem>
+                {/* TODO <div data-bind="if: databaseAccessText">
                             <div className="database-access" title="Database access level">
                                 <i data-bind="attr: { class: databaseAccessColor() + ' ' + databaseAccessClass() }"/>
                                 <small data-bind="text: databaseAccessText"/>
@@ -479,7 +480,7 @@ function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) 
                             </div>
                         </div>*/}
 
-            {/* TODO <div className="database-properties-right">
+                {/* TODO <div className="database-properties-right">
                         <div className="indexing-errors text-danger" data-bind="visible: indexingErrors()">
                             <small><i className="icon-exclamation"/></small>
                             <a className="set-size text-danger"
@@ -531,7 +532,8 @@ function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) 
                         </div>
                       
                     </div>*/}
-        </RichPanelDetails>
+            </RichPanelDetails>
+        </Card>
     );
 }
 

@@ -42,6 +42,10 @@ import TaskUtils from "../../../../utils/TaskUtils";
 import { KafkaEtlPanel } from "../panels/KafkaEtlPanel";
 import { RabbitMqEtlPanel } from "../panels/RabbitMqEtlPanel";
 import useInterval from "hooks/useInterval";
+import { Badge, Button } from "reactstrap";
+import { FlexGrow } from "../../../../../components/common/FlexGrow";
+import { HrHeader } from "../../../../../components/common/HrHeader";
+import { EmptySet } from "../../../../../components/common/EmptySet";
 
 interface OngoingTasksPageProps {
     database: database;
@@ -190,264 +194,221 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
             <div className="flex-vertical">
                 <div className="flex-header flex-horizontal">
                     {canReadWriteDatabase(database) && (
-                        <button onClick={addNewOngoingTask} className="btn btn-primary">
-                            <i className="icon-plus"></i>
-                            <span>Add a Database Task</span>
-                        </button>
+                        <Button onClick={addNewOngoingTask} color="primary">
+                            <i className="icon-plus me-1"></i>
+                            Add a Database Task
+                        </Button>
                     )}
-                    <div className="flex-separator"></div>
-                    {canNavigateToServerWideTasks && (
-                        <small className="padding padding-xs margin-left" title="Go to the Server-Wide Tasks view">
-                            <a target="_blank" href={serverWideTasksUrl}>
-                                <i className="icon-link"></i>Server-Wide Tasks
-                            </a>
-                        </small>
-                    )}
+                    <FlexGrow />
+                    <div>
+                        {canNavigateToServerWideTasks && (
+                            <Button
+                                color="link"
+                                size="sm"
+                                outline
+                                target="_blank"
+                                href={serverWideTasksUrl}
+                                title="Go to the Server-Wide Tasks view"
+                            >
+                                <i className="icon-server-wide-tasks me-1" />
+                                Server-Wide Tasks
+                            </Button>
+                        )}
+                    </div>
                 </div>
                 <div className="scroll flex-grow">
                     {tasks.tasks.length === 0 && tasks.replicationHubs.length === 0 && (
-                        <div className="row">
-                            <div className="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
-                                <i className="icon-xl icon-empty-set text-muted"></i>
-                                <h2 className="text-center text-muted">
-                                    No tasks have been created for this Database Group.
-                                </h2>
-                            </div>
-                        </div>
+                        <EmptySet>No tasks have been created for this Database Group.</EmptySet>
                     )}
 
                     {externalReplications.length > 0 && (
                         <div key="external-replications">
-                            <div className="hr-title margin-top-xs">
-                                <h5 className="tasks-list-item external-replication no-text-transform">
-                                    <i className="icon-external-replication"></i>
-                                    <span>External Replication ({externalReplications.length})</span>
-                                </h5>
-                                <hr />
-                            </div>
-                            <div>
-                                {externalReplications.map((x) => (
-                                    <ExternalReplicationPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
-                                ))}
-                            </div>
+                            <HrHeader className="external-replication" count={externalReplications.length}>
+                                <i className="icon-external-replication me-1" />
+                                External Replication
+                            </HrHeader>
+
+                            {externalReplications.map((x) => (
+                                <ExternalReplicationPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                            ))}
                         </div>
                     )}
 
                     {ravenEtls.length > 0 && (
                         <div key="raven-etls">
-                            <div className="hr-title margin-top-xs">
-                                <h5 className="tasks-list-item ravendb-etl no-text-transform">
-                                    <i className="icon-etl"></i>
-                                    <span>RavenDB ETL ({ravenEtls.length})</span>
-                                </h5>
-                                <hr />
-                            </div>
-                            <div>
-                                {ravenEtls.map((x) => (
-                                    <RavenEtlPanel
-                                        {...sharedPanelProps}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                        onToggleDetails={startTrackingProgress}
-                                        showItemPreview={showItemPreview}
-                                    />
-                                ))}
-                            </div>
+                            <HrHeader className="ravendb-etl" count={ravenEtls.length}>
+                                <i className="icon-etl me-1" />
+                                RavenDB ETL
+                            </HrHeader>
+
+                            {ravenEtls.map((x) => (
+                                <RavenEtlPanel
+                                    {...sharedPanelProps}
+                                    key={taskKey(x.shared)}
+                                    data={x}
+                                    onToggleDetails={startTrackingProgress}
+                                    showItemPreview={showItemPreview}
+                                />
+                            ))}
                         </div>
                     )}
 
                     {sqlEtls.length > 0 && (
                         <div key="sql-etls">
-                            <div className="hr-title margin-top-xs">
-                                <h5 className="tasks-list-item sql-etl no-text-transform">
-                                    <i className="icon-sql-etl"></i>
-                                    <span>SQL ETL ({sqlEtls.length})</span>
-                                </h5>
-                                <hr />
-                            </div>
-                            <div>
-                                {sqlEtls.map((x) => (
-                                    <SqlEtlPanel
-                                        {...sharedPanelProps}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                        onToggleDetails={startTrackingProgress}
-                                        showItemPreview={showItemPreview}
-                                    />
-                                ))}
-                            </div>
+                            <HrHeader className="sql-etl" count={sqlEtls.length}>
+                                <i className="icon-sql-etl me-1" />
+                                SQL ETL
+                            </HrHeader>
+
+                            {sqlEtls.map((x) => (
+                                <SqlEtlPanel
+                                    {...sharedPanelProps}
+                                    key={taskKey(x.shared)}
+                                    data={x}
+                                    onToggleDetails={startTrackingProgress}
+                                    showItemPreview={showItemPreview}
+                                />
+                            ))}
                         </div>
                     )}
 
                     {olapEtls.length > 0 && (
                         <div key="olap-etls">
-                            <div className="hr-title margin-top-xs">
-                                <h5 className="tasks-list-item olap-etl no-text-transform">
-                                    <i className="icon-olap-etl"></i>
-                                    <span>OLAP ETL ({olapEtls.length})</span>
-                                </h5>
-                                <hr />
-                            </div>
-                            <div>
-                                {olapEtls.map((x) => (
-                                    <OlapEtlPanel
-                                        {...sharedPanelProps}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                        onToggleDetails={startTrackingProgress}
-                                        showItemPreview={showItemPreview}
-                                    />
-                                ))}
-                            </div>
+                            <HrHeader className="olap-etl" count={olapEtls.length}>
+                                <i className="icon-olap-etl me-1" />
+                                OLAP ETL
+                            </HrHeader>
+
+                            {olapEtls.map((x) => (
+                                <OlapEtlPanel
+                                    {...sharedPanelProps}
+                                    key={taskKey(x.shared)}
+                                    data={x}
+                                    onToggleDetails={startTrackingProgress}
+                                    showItemPreview={showItemPreview}
+                                />
+                            ))}
                         </div>
                     )}
 
                     {kafkaEtls.length > 0 && (
                         <div key="kafka-etls">
-                            <div className="hr-title margin-top-xs">
-                                <h5 className="tasks-list-item kafka-etl no-text-transform">
-                                    <i className="icon-kafka-etl"></i>
-                                    <span>KAFKA ETL ({kafkaEtls.length})</span>
-                                </h5>
-                                <hr />
-                            </div>
-                            <div>
-                                {kafkaEtls.map((x) => (
-                                    <KafkaEtlPanel
-                                        {...sharedPanelProps}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                        onToggleDetails={startTrackingProgress}
-                                        showItemPreview={showItemPreview}
-                                    />
-                                ))}
-                            </div>
+                            <HrHeader className="kafka-etl" count={kafkaEtls.length}>
+                                <i className="icon-kafka-etl" />
+                                KAFKA ETL
+                            </HrHeader>
+
+                            {kafkaEtls.map((x) => (
+                                <KafkaEtlPanel
+                                    {...sharedPanelProps}
+                                    key={taskKey(x.shared)}
+                                    data={x}
+                                    onToggleDetails={startTrackingProgress}
+                                    showItemPreview={showItemPreview}
+                                />
+                            ))}
                         </div>
                     )}
 
                     {rabbitMqEtls.length > 0 && (
                         <div key="rabbitmq-etls">
-                            <div className="hr-title margin-top-xs">
-                                <h5 className="tasks-list-item rabbitmq-etl no-text-transform">
-                                    <i className="icon-rabbitmq-etl"></i>
-                                    <span>RABBITMQ ETL ({rabbitMqEtls.length})</span>
-                                </h5>
-                                <hr />
-                            </div>
-                            <div>
-                                {rabbitMqEtls.map((x) => (
-                                    <RabbitMqEtlPanel
-                                        {...sharedPanelProps}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                        onToggleDetails={startTrackingProgress}
-                                        showItemPreview={showItemPreview}
-                                    />
-                                ))}
-                            </div>
+                            <HrHeader className="rabbitmq-etl" count={rabbitMqEtls.length}>
+                                <i className="icon-rabbitmq-etl me-1" />
+                                RABBITMQ ETL
+                            </HrHeader>
+
+                            {rabbitMqEtls.map((x) => (
+                                <RabbitMqEtlPanel
+                                    {...sharedPanelProps}
+                                    key={taskKey(x.shared)}
+                                    data={x}
+                                    onToggleDetails={startTrackingProgress}
+                                    showItemPreview={showItemPreview}
+                                />
+                            ))}
                         </div>
                     )}
 
                     {elasticSearchEtls.length > 0 && (
                         <div key="elastic-search-etls">
-                            <div className="hr-title margin-top-xs">
-                                <h5 className="tasks-list-item elastic-etl no-text-transform">
-                                    <i className="icon-elastic-search-etl"></i>
-                                    <span>Elasticsearch ETL ({elasticSearchEtls.length})</span>
-                                </h5>
-                                <hr />
-                            </div>
-                            <div>
-                                {elasticSearchEtls.map((x) => (
-                                    <ElasticSearchEtlPanel
-                                        {...sharedPanelProps}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                        onToggleDetails={startTrackingProgress}
-                                        showItemPreview={showItemPreview}
-                                    />
-                                ))}
-                            </div>
+                            <HrHeader className="elastic-etl" count={elasticSearchEtls.length}>
+                                <i className="icon-elastic-search-etl me-1" />
+                                Elasticsearch ETL
+                            </HrHeader>
+
+                            {elasticSearchEtls.map((x) => (
+                                <ElasticSearchEtlPanel
+                                    {...sharedPanelProps}
+                                    key={taskKey(x.shared)}
+                                    data={x}
+                                    onToggleDetails={startTrackingProgress}
+                                    showItemPreview={showItemPreview}
+                                />
+                            ))}
                         </div>
                     )}
 
                     {backups.length > 0 && (
                         <div key="backups">
-                            <div className="hr-title margin-top-xs">
-                                <h5 className="tasks-list-item periodic-backup no-text-transform">
-                                    <i className="icon-backups"></i>
-                                    <span>Periodic Backup ({backups.length})</span>
-                                </h5>
-                                <hr />
-                            </div>
-                            <div>
-                                {backups.map((x) => (
-                                    <PeriodicBackupPanel
-                                        forceReload={reload}
-                                        {...sharedPanelProps}
-                                        key={taskKey(x.shared)}
-                                        data={x}
-                                    />
-                                ))}
-                            </div>
+                            <HrHeader className="periodic-backup" count={backups.length}>
+                                <i className="icon-backups me-1" />
+                                Periodic Backup
+                            </HrHeader>
+
+                            {backups.map((x) => (
+                                <PeriodicBackupPanel
+                                    forceReload={reload}
+                                    {...sharedPanelProps}
+                                    key={taskKey(x.shared)}
+                                    data={x}
+                                />
+                            ))}
                         </div>
                     )}
 
                     {subscriptions.length > 0 && (
                         <div key="subscriptions">
-                            <div className="hr-title margin-top-xs">
-                                <h5 className="tasks-list-item subscription no-text-transform">
-                                    <i className="icon-subscription"></i>
-                                    <span>Subscription ({subscriptions.length})</span>
-                                </h5>
-                                <hr />
-                            </div>
-                            <div>
-                                {subscriptions.map((x) => (
-                                    <SubscriptionPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
-                                ))}
-                            </div>
+                            <HrHeader className="subscription" count={subscriptions.length}>
+                                <i className="icon-subscription me-1" />
+                                Subscription
+                            </HrHeader>
+
+                            {subscriptions.map((x) => (
+                                <SubscriptionPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                            ))}
                         </div>
                     )}
 
                     {hubDefinitions.length > 0 && (
                         <div key="replication-hubs">
-                            <div className="hr-title margin-top-xs">
-                                <h5 className="tasks-list-item pull-replication-hub no-text-transform">
-                                    <i className="icon-pull-replication-hub"></i>
-                                    <span>Replication Hub ({hubDefinitions.length})</span>
-                                </h5>
-                                <hr />
-                            </div>
-                            <div>
-                                {hubDefinitions.map((def) => (
-                                    <ReplicationHubDefinitionPanel
-                                        {...sharedPanelProps}
-                                        key={taskKey(def.shared)}
-                                        data={def}
-                                        connectedSinks={replicationHubs.filter(
-                                            (x) => x.shared.taskId === def.shared.taskId
-                                        )}
-                                    />
-                                ))}
-                            </div>
+                            <HrHeader className="pull-replication-hub" count={hubDefinitions.length}>
+                                <i className="icon-pull-replication-hub me-1" />
+                                Replication Hub
+                            </HrHeader>
+
+                            {hubDefinitions.map((def) => (
+                                <ReplicationHubDefinitionPanel
+                                    {...sharedPanelProps}
+                                    key={taskKey(def.shared)}
+                                    data={def}
+                                    connectedSinks={replicationHubs.filter(
+                                        (x) => x.shared.taskId === def.shared.taskId
+                                    )}
+                                />
+                            ))}
                         </div>
                     )}
 
                     {replicationSinks.length > 0 && (
                         <div key="replication-sinks">
-                            <div className="hr-title margin-top-xs">
-                                <h5 className="tasks-list-item pull-replication-sink no-text-transform">
-                                    <i className="icon-pull-replication-agent"></i>
-                                    <span>Replication Sink ({replicationSinks.length})</span>
-                                </h5>
-                                <hr />
-                            </div>
-                            <div>
-                                {replicationSinks.map((x) => (
-                                    <ReplicationSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
-                                ))}
-                            </div>
+                            <HrHeader className="pull-replication-sink" count={replicationSinks.length}>
+                                <i className="icon-pull-replication-agent me-1" />
+                                Replication Sink
+                            </HrHeader>
+
+                            {replicationSinks.map((x) => (
+                                <ReplicationSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                            ))}
                         </div>
                     )}
                 </div>

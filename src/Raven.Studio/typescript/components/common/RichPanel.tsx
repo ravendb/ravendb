@@ -35,14 +35,15 @@ export function RichPanelHeader(props: RichPanelHeaderProps) {
 
 interface RichPanelDetailsProps {
     children: ReactNode | ReactNode[];
+    className?: string;
 }
 
 export function RichPanelDetails(props: RichPanelDetailsProps) {
-    const { children, ...rest } = props;
+    const { children, className, ...rest } = props;
     return (
-        <CardBody className="rich-panel-details" {...rest}>
+        <div className={classNames("rich-panel-details", className)} {...rest}>
             {children}
-        </CardBody>
+        </div>
     );
 }
 
@@ -56,8 +57,18 @@ interface RichPanelDetailItemProps {
     className?: string;
 }
 
-export function RichPanelName(props: { children: ReactNode | ReactNode[] }) {
-    return <h3 className="m-0 me-4">{props.children}</h3>;
+interface RichPanelNameProps {
+    children: ReactNode | ReactNode[];
+    title?: string;
+}
+
+export function RichPanelName(props: RichPanelNameProps) {
+    const { children, ...rest } = props;
+    return (
+        <h3 className="m-0 me-4 flex-grow-1" {...rest}>
+            {props.children}
+        </h3>
+    );
 }
 
 interface RichPanelDetailItemProps {
@@ -66,6 +77,7 @@ interface RichPanelDetailItemProps {
     children: ReactNode | ReactNode[];
     className?: string;
     label?: ReactNode | ReactNode[];
+    title?: string;
 }
 
 export function RichPanelDetailItem(props: RichPanelDetailItemProps) {

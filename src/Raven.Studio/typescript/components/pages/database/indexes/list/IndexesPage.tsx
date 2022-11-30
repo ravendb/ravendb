@@ -37,7 +37,8 @@ import messagePublisher from "common/messagePublisher";
 import "./IndexesPage.scss";
 import { useChanges } from "hooks/useChanges";
 import { delay } from "../../../../utils/common";
-import { Card, Col, Row } from "reactstrap";
+import { Button, Card, Col, Row } from "reactstrap";
+import { EmptySet } from "../../../../../components/common/EmptySet";
 
 interface IndexesPageProps {
     database: database;
@@ -83,12 +84,12 @@ function NoIndexes(props: NoIndexesProps) {
 
     return (
         <div className="text-center">
-            <i className="icon-xl icon-empty-set text-muted" />
-            <h2 className="text-center text-muted">No indexes have been created for this database.</h2>
+            <EmptySet>No indexes have been created for this database.</EmptySet>
+
             {canReadWriteDatabase(database) && (
-                <p className="lead text-muted">
-                    Go ahead and <a href={newIndexUrl}>create one now</a>.
-                </p>
+                <Button outline color="primary" className="mt-4" href={newIndexUrl}>
+                    Create new index
+                </Button>
             )}
         </div>
     );

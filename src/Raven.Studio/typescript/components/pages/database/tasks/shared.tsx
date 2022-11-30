@@ -9,10 +9,11 @@ import useBoolean from "hooks/useBoolean";
 import React, { useCallback } from "react";
 import router from "plugins/router";
 import { withPreventDefault } from "../../../utils/common";
-import { RichPanelDetailItem } from "../../../common/RichPanel";
+import { RichPanelDetailItem, RichPanelName } from "../../../common/RichPanel";
 import ongoingTaskModel from "models/database/tasks/ongoingTaskModel";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
+import { Button, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownToggle } from "reactstrap";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     db: database;
@@ -101,42 +102,39 @@ export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
     const usingNotPreferredNode = preferredMentor && currentNode ? preferredMentor !== currentNode : false;
 
     if (currentNode) {
-        if (usingNotPreferredNode) {
-            return (
-                <div className="node">
-                    <div>
-                        <i className="icon-cluster-node"></i>
+        return (
+            <div className="node me-3">
+                {usingNotPreferredNode ? (
+                    <>
                         <span className="text-danger pulse" title="User preferred node for this task">
+                            <i className="icon-cluster-node me-1" />
                             {preferredMentor}
                         </span>
-                        <i className="icon-arrow-right pulse text-danger"></i>
+
                         <span className="text-success" title="Cluster node that is temporary responsible for this task">
+                            <i className="icon-arrow-right pulse text-danger me-1" />
                             {currentNode}
                         </span>
-                    </div>
-                </div>
-            );
-        } else {
-            return (
-                <div className="node">
-                    <div
+                    </>
+                ) : (
+                    <span
                         title={
                             task.shared.taskType === "PullReplicationAsHub"
                                 ? "Hub node that is serving this Sink task"
                                 : "Cluster node that is responsible for this task"
                         }
                     >
-                        <i className="icon-cluster-node"></i>
-                        <span>{currentNode}</span>
-                    </div>
-                </div>
-            );
-        }
+                        <i className="icon-cluster-node me-1" />
+                        {currentNode}
+                    </span>
+                )}
+            </div>
+        );
     }
 
     return (
         <div title="No node is currently handling this task">
-            <i className="icon-cluster-node"></i> N/A
+            <i className="icon-cluster-node" /> N/A
         </div>
     );
 }
@@ -144,16 +142,9 @@ export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
 export function OngoingTaskName(props: { task: OngoingTaskInfo; canEdit: boolean; editUrl: string }) {
     const { task, canEdit, editUrl } = props;
     return (
-        <div className="panel-name flex-grow">
-            <h3 title={"Task name: " + task.shared.taskName}>
-                {canEdit && (
-                    <a href={editUrl}>
-                        <span>{task.shared.taskName}</span>
-                    </a>
-                )}
-                {!canEdit && <div>{task.shared.taskName}</div>}
-            </h3>
-        </div>
+        <RichPanelName title={"Task name: " + task.shared.taskName}>
+            {canEdit ? <a href={editUrl}>{task.shared.taskName}</a> : task.shared.taskName}
+        </RichPanelName>
     );
 }
 
@@ -164,24 +155,24 @@ export function OngoingTaskStatus(props: {
 }) {
     const { task, canEdit, toggleState } = props;
     return (
-        <div className="btn-group">
-            <button type="button" className="btn dropdown-toggle" data-toggle="dropdown" disabled={!canEdit}>
-                <span>{task.shared.taskState}</span>
-                <span className="caret"></span>
-            </button>
-            <ul className="dropdown-menu">
-                <li>
-                    <a href="#" onClick={withPreventDefault(() => toggleState(true))}>
-                        <span>Enable</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" onClick={withPreventDefault(() => toggleState(false))}>
-                        <span>Disable</span>
-                    </a>
-                </li>
-            </ul>
-        </div>
+        <Dropdown>
+            <DropdownToggle
+                caret
+                disabled={!canEdit}
+                color={task.shared.taskState === "Disabled" ? "warning" : "secondary"}
+            >
+                {task.shared.taskState}
+            </DropdownToggle>
+            <DropdownMenu>
+                <DropdownItem onClick={withPreventDefault(() => toggleState(true))}>
+                    <i className="icon-play me-1" /> Enable
+                </DropdownItem>
+                <DropdownItem onClick={withPreventDefault(() => toggleState(false))}>
+                    <i className="icon-stop me-1" />
+                    Disable
+                </DropdownItem>
+            </DropdownMenu>
+        </Dropdown>
     );
 }
 
@@ -195,29 +186,23 @@ export function OngoingTaskActions(props: {
     const { canEdit, task, onEdit, onDelete, toggleDetails } = props;
 
     return (
-        <div className="actions-container">
-            <div className="actions">
-                <button className="btn btn-default" type="button" onClick={toggleDetails} title="Click for details">
-                    <i className="icon-info"></i>
-                </button>
+        <div className="actions">
+            <ButtonGroup className="ms-1">
+                <Button onClick={toggleDetails} title="Click for details">
+                    <i className="icon-info" />
+                </Button>
                 {!task.shared.serverWide && (
-                    <button type="button" className="btn btn-default" title="Edit task" onClick={onEdit}>
-                        <i className="icon-edit"></i>
-                    </button>
+                    <Button onClick={onEdit} title="Edit task">
+                        <i className="icon-edit" />
+                    </Button>
                 )}
+            </ButtonGroup>
 
-                {!task.shared.serverWide && (
-                    <button
-                        className="btn btn-danger"
-                        type="button"
-                        disabled={!canEdit}
-                        onClick={onDelete}
-                        title="Delete task"
-                    >
-                        <i className="icon-trash"></i>
-                    </button>
-                )}
-            </div>
+            {!task.shared.serverWide && (
+                <Button color="danger" className="ms-1" disabled={!canEdit} onClick={onDelete} title="Delete task">
+                    <i className="icon-trash" />
+                </Button>
+            )}
         </div>
     );
 }
