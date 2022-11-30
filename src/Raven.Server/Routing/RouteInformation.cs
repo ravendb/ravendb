@@ -119,9 +119,8 @@ namespace Raven.Server.Routing
                     }
 
                     if (hasChanges == false && 
-                        context.HttpContext.Request.Query.TryGetValue("nodetag", out var nodeTag) &&
-                        string.IsNullOrEmpty(nodeTag) == false &&
-                        string.IsNullOrWhiteSpace(nodeTag) == false)
+                        context.HttpContext.Request.Query.TryGetValue("nodeTag", out var nodeTag) &&
+                        string.IsNullOrEmpty(nodeTag) == false)
                     {
 
                         DatabaseTopology topology = null;
