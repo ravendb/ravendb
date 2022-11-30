@@ -699,6 +699,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_periodicBackups.TryGetValue(taskId, out PeriodicBackup periodicBackup))
                 inMemoryBackupStatus = periodicBackup.BackupStatus;
 
+            if (_forTestingPurposes != null && _forTestingPurposes.BackupStatusFromMemoryOnly)
+                return inMemoryBackupStatus;
+            
             return GetBackupStatus(taskId, inMemoryBackupStatus);
         }
         
@@ -1116,6 +1119,23 @@ namespace Raven.Server.Documents.PeriodicBackup
             return result;
         }
 
+        public void HandleDatabaseValueChanged(string type, object changeState)
+        {
+            if (type != nameof(DelayBackupCommand))
+                return;
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var state = (DelayBackupCommand.DelayBackupCommandState)changeState;
+                var periodicBackup = _periodicBackups.Single(x => x.Key == state.TaskId);
+                
+                periodicBackup.Value.BackupStatus ??= new PeriodicBackupStatus();
+                periodicBackup.Value.BackupStatus.DelayUntil = state.DelayUntil;
+                ScheduleNextBackup(periodicBackup.Value, state.DelayUntil.Subtract(DateTime.UtcNow), lockTaken: false);
+            }
+        }
+
         internal TestingStuff _forTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
@@ -1135,7 +1155,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             internal bool SimulateActiveByCurrentNode_UpdateConfigurations;
             internal bool SimulateDisableNodeStatus_UpdateConfigurations;
             internal bool SimulateFailedBackup;
-            internal bool SkipBackupStatusSaving;
+            internal bool BackupStatusFromMemoryOnly;
 
             internal TaskCompletionSource<object> OnBackupTaskRunHoldBackupExecution;
         }

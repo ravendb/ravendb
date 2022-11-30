@@ -53,6 +53,11 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
+        public virtual object GetState()
+        {
+            return null;
+        }
+
         public virtual object GetResult()
         {
             return null;

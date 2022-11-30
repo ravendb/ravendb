@@ -48,4 +48,19 @@ public class DelayBackupCommand : UpdateValueForDatabaseCommand
         };
         return context.ReadObject(status.ToJson(), GetItemId());
     }
+
+    public override object GetState()
+    {
+        return new DelayBackupCommandState
+        {
+            TaskId = TaskId,
+            DelayUntil = DelayUntil
+        };
+    }
+
+    public class DelayBackupCommandState
+    {
+        public long TaskId;
+        public DateTime DelayUntil;
+    }
 }

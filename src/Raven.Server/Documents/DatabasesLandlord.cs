@@ -90,7 +90,7 @@ namespace Raven.Server.Documents
             internal ManualResetEventSlim RescheduleDatabaseWakeupMre = null;
         }
 
-        private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object _)
+        private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
         {
             ForTestingPurposes?.BeforeHandleClusterDatabaseChanged?.Invoke(_serverStore);
 
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents
                             break;
 
                         case ClusterDatabaseChangeType.ValueChanged:
-                            database.ValueChanged(index);
+                            database.ValueChanged(index, type, changeState);
                             break;
 
                         case ClusterDatabaseChangeType.PendingClusterTransactions:
