@@ -46,7 +46,7 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
     };
 
     return (
-        <div className="stats">
+        <div className="stats content-margin">
             <Row>
                 <Col>
                     <h2 className="on-base-background">

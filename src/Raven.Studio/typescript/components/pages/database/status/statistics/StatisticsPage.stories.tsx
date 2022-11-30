@@ -30,7 +30,7 @@ export const StatisticsTemplate = (args: { db: database; stats?: IndexStats[] })
     indexesService.withGetStats(args.stats);
 
     return (
-        <div className="content-margin absolute-fill stats" style={{ height: "100vh", overflow: "auto" }}>
+        <div style={{ height: "100vh", overflow: "auto" }}>
             <StatisticsPage database={args.db} />
         </div>
     );

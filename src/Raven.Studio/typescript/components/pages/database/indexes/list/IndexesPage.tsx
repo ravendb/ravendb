@@ -42,7 +42,7 @@ import { Card, Col, Row } from "reactstrap";
 interface IndexesPageProps {
     database: database;
     stale?: boolean;
-    indexToHighlight?: string;
+    indexName?: string;
 }
 
 async function confirmResetIndex(db: database, index: IndexSharedInfo): Promise<boolean> {
@@ -203,7 +203,7 @@ function getAllIndexes(groups: IndexGroup[], replacements: IndexSharedInfo[]) {
 }
 
 export function IndexesPage(props: IndexesPageProps) {
-    const { database, stale, indexToHighlight } = props;
+    const { database, stale, indexName: indexToHighlight } = props;
     const locations = database.getLocations();
 
     const { indexesService } = useServices();
@@ -695,7 +695,7 @@ export function IndexesPage(props: IndexesPageProps) {
     }
 
     return (
-        <>
+        <div className="indexes content-margin no-transition">
             <div className="sticky-header">
                 {stats.indexes.length > 0 && (
                     <Row>
@@ -816,6 +816,6 @@ export function IndexesPage(props: IndexesPageProps) {
                     );
                 })}
             </div>
-        </>
+        </div>
     );
 }

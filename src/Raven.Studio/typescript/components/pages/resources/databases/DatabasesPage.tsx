@@ -9,10 +9,7 @@ import { NoDatabases } from "./NoDatabases";
 import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
 import { useChanges } from "hooks/useChanges";
 import { Col, Row } from "reactstrap";
-
-interface DatabasesPageProps {
-    activeDatabase?: string;
-}
+import { useActiveDatabase } from "hooks/useActiveDatabase";
 
 function filterDatabases(stats: DatabasesStatsState, criteria: DatabaseFilterCriteria) {
     if (criteria.searchText) {
@@ -23,8 +20,10 @@ function filterDatabases(stats: DatabasesStatsState, criteria: DatabaseFilterCri
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function DatabasesPage(props: DatabasesPageProps) {
+export function DatabasesPage() {
     //TODO: highlight active database
+
+    const { db: activeDatabase } = useActiveDatabase();
 
     const [stats, dispatch] = useReducer(databasesStatsReducer, null, databasesStatsReducerInitializer);
 
@@ -98,7 +97,7 @@ export function DatabasesPage(props: DatabasesPageProps) {
     }, [serverNotifications, fetchDatabases]);
 
     return (
-        <div>
+        <div className="databases flex-vertical absolute-fill content-margin">
             <div className="sticky-header">
                 <Row className="databasesToolbar">
                     <Col>

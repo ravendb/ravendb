@@ -50,6 +50,7 @@
           "moment": ["node_modules/moment/moment.d.ts"],
           "jszip":  ["typings/jszip.d.ts"],
           "viewmodels/*":  ["typescript/viewmodels/*"],
+          "components/*":  ["typescript/components/*"],
           "models/*":  ["typescript/models/*"],
           "common/*": ["typescript/common/*"],
           "external/*": ["typescript/external/*"],

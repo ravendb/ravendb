@@ -1,10 +1,12 @@
 ﻿import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import appUrl from "common/appUrl";
+import { bridgeToReact } from "common/reactUtils";
+import { DatabasesPage } from "components/pages/resources/databases/DatabasesPage";
 
 export = getDatabasesMenuItem;
 
 function getDatabasesMenuItem(appUrls: computedAppUrls) {
-    const databasesView = require("viewmodels/resources/databases");
+    const databasesView = bridgeToReact(DatabasesPage, "nonShardedView");
     
     appUrl.defaultModule = databasesView;
     
