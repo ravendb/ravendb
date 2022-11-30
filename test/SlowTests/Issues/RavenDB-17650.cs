@@ -55,7 +55,7 @@ namespace SlowTests.Issues
 
             var cts = new CancellationTokenSource();
             var mre = new ManualResetEvent(false);
-            var t = worker.Run(async batch =>
+            var _ = worker.Run( batch =>
             {
                 mre.Set();
             }, cts.Token);
@@ -100,7 +100,7 @@ namespace SlowTests.Issues
 
             var cts = new CancellationTokenSource();
             var mre = new ManualResetEvent(false);
-            var t = worker.Run(async batch =>
+            var _ = worker.Run( batch =>
             {
                 mre.Set();
             }, cts.Token);
