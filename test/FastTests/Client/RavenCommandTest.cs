@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Http;
+using Raven.Server.ServerWide.Commands;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -48,10 +49,10 @@ namespace FastTests.Client
                 "ReorderDatabaseMembersCommand", "ReplaceClusterCertificateCommand", "ResetEtlCommand", "ResetIndexCommand", "SetDatabaseDynamicDistributionCommand",
                 "SetIndexLockCommand", "SetIndexPriorityCommand", "SetLogsConfigurationCommand", "StartIndexCommand", "StartIndexingCommand",
                 "StartTransactionsRecordingCommand", "StopIndexCommand", "StopIndexingCommand", "StopTransactionsRecordingCommand",
-                "UpdateUnusedDatabasesCommand", "WaitForRaftIndexCommand", "ConfigureTimeSeriesCommand", "ConfigureTimeSeriesPolicyCommand", 
+                "UpdateUnusedDatabasesCommand", "WaitForRaftIndexCommand", "ConfigureTimeSeriesCommand", "ConfigureTimeSeriesPolicyCommand",
                 "UpdateSubscriptionCommand", "RemoveTimeSeriesPolicyCommand", "GetTimeSeriesStatisticsCommand", "GetTimeSeriesCommand", "GetMultipleTimeSeriesCommand",
                 "GetAttachmentsCommand", "ConfigureTimeSeriesValueNamesCommand", "DeleteIndexErrorsCommand", "TimeSeriesBatchCommand", "GetRevisionsResultCommand", "SetIndexStateCommand",
-                "BackupCommand", "GetReplicationHubAccessCommand", "GetServerWideExternalReplicationCommand", "GetServerWideExternalReplicationsCommand", 
+                "BackupCommand", "GetReplicationHubAccessCommand", "GetServerWideExternalReplicationCommand", "GetServerWideExternalReplicationsCommand",
                 "PutServerWideBackupConfigurationCommand", "PutServerWideExternalReplicationCommand", "ConditionalGetDocumentsCommand",
                 "DeleteServerWideTaskCommand", "RegisterReplicationHubAccessCommand", "ToggleServerWideTaskStateCommand", "UnregisterReplicationHubAccessCommand", "GetRevisionsCountCommand",
                 "DeleteAnalyzerCommand", "PutAnalyzersCommand","UpdateDocumentCompressionConfigurationCommand",
@@ -60,7 +61,7 @@ namespace FastTests.Client
                 "SetDatabasesLockCommand",
                 "GetDatabaseSettingsCommand", "PutDatabaseConfigurationSettingsCommand",
                 "GetTrafficWatchConfigurationCommand", "SetTrafficWatchConfigurationCommand",
-                "GetNextServerOperationIdCommand", "KillServerOperationCommand", "ModifyDatabaseTopologyCommand"
+                "GetNextServerOperationIdCommand", "KillServerOperationCommand", "ModifyDatabaseTopologyCommand", "DelayBackupCommand",
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);

@@ -866,9 +866,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, BackupResult backupResult, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
-            if (forTestingPurposes != null && forTestingPurposes.SkipBackupStatusSaving)
-                return;
-
             try
             {
                 var command = new UpdatePeriodicBackupStatusCommand(documentDatabase.Name, RaftIdGenerator.NewId())

@@ -1353,7 +1353,7 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(type, index, exception, updateCommand);
-                NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null);
+                NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, updateCommand?.GetState());
             }
         }
 
