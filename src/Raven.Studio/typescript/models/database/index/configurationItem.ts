@@ -34,7 +34,8 @@ class configurationItem {
         "Indexing.OrderByScoreAutomaticallyWhenBoostingIsInvolved",
         "Indexing.Lucene.UseCompoundFileInMerging",
         "Indexing.Lucene.IndexInputType",
-        "Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec"
+        "Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec",
+        "Indexing.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndexInMb"
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:

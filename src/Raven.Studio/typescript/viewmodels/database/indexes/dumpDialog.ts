@@ -91,10 +91,12 @@ class dumpDialog extends dialogViewModelBase {
         if (!this.isValid(this.validationGroup)) {
             return;
         }
-        
-        new dumpIndexCommand(this.indexName(), this.db, this.directoryPath(), this.location())
+
+        new dumpIndexCommand(this.indexName(), this.activeDatabase(), this.directoryPath(), this.location())
             .execute()
-            .done(() => this.close());
+            .done(() => {
+                dialog.close(this);
+            });
     }
 
     close() {

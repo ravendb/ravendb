@@ -324,7 +324,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = session.Query<UserTalk>().ProjectInto<TalkUserIds>();
-                    var stream = await session.Advanced.StreamAsync(query);
+                    await using var stream = await session.Advanced.StreamAsync(query);
 
                     while (await stream.MoveNextAsync())
                     {

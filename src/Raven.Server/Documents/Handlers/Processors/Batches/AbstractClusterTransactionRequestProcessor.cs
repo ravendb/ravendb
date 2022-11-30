@@ -40,15 +40,14 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         var waitForIndexesTimeout = RequestHandler.GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
         var waitForIndexThrow = RequestHandler.GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;
         var specifiedIndexesQueryString = RequestHandler.HttpContext.Request.Query["waitForSpecificIndex"];
+        
+        var disableAtomicDocumentWrites = RequestHandler.GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ?? false;
+        CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
 
-        ClusterTransactionCommand.ValidateCommands(parsedCommands);
+        ClusterTransactionCommand.ValidateCommands(parsedCommands, disableAtomicDocumentWrites);
 
         using (RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(out var taskId))
         {
-            var disableAtomicDocumentWrites = RequestHandler.GetBoolValueQueryString("disableAtomicDocumentWrites", required: false) ?? false;
-
-            CheckBackwardCompatibility(ref disableAtomicDocumentWrites);
-
             var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites, ClusterCommandsVersionManager.CurrentClusterMinimalVersion)
             {
                 WaitForIndexesTimeout = waitForIndexesTimeout,

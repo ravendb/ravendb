@@ -38,7 +38,7 @@
         "<ul>" +
             "<li>Define the minimum time to keep the Backups (and Snapshots) in the system.<br></li>" +
             "<li>A <strong>Full Backup</strong> that is older than the specified retention time will be deleted by RavenDB server.<br>" +
-            "If <strong>Incremental Backups</strong> exists, the Full Backup, and its incrementals, are removed only if the <em>last incremental</em> is older than the defined retention time.<br></li>"+
+            "If <strong>Incremental Backups</strong> exist, the Full Backup, and its incrementals, are removed only if the <em>last incremental</em> is older than the defined retention time.<br></li>"+
             "<li>The deletion occurs when the backup task is triggered on its schedule.</li>" +
         "</ul>";
  

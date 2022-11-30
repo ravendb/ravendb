@@ -53,7 +53,7 @@ namespace SlowTests.Core.Streaming
                     Assert.Equal(2, queryResult.Count);
                     Assert.True(queryResult.All(x => x.TenantId.Equals(tenantA, StringComparison.Ordinal)));
 
-                    IAsyncEnumerator<StreamResult<Article>> streamResult = await session.Advanced.StreamAsync(query);
+                    await using IAsyncEnumerator<StreamResult<Article>> streamResult = await session.Advanced.StreamAsync(query);
                     var streamedItems = new List<Article>();
                     while (await streamResult.MoveNextAsync())
                     {

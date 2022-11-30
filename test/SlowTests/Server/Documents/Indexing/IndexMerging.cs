@@ -499,7 +499,79 @@ select new
     Total = doc.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
 }", results.Suggestions.First().MergedIndex.Maps.First());
         }
+        
+        [Fact]
+        public void CanMergeWhenBinaryExpressionIsInsideIndex()
+        {
+            var index1 = new IndexDefinition
+            {
+                Name = "Orders/ByShipment/Location",
+                Maps = { @"from order in docs.Orders
+select new
+{
+    order.Employee,
+    order.Company,
+    TotalSum = order.Day.Add(order.A + order.B)
+}" },
+                Type = IndexType.Map
+            };
+            var index2 = new IndexDefinition
+            {
+                Name = "Orders/Totals",
+                Maps = { @"from test in docs.Orders
+select new
+{
+    test.Employee,
+    test.Company,
+    Total = test.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))
+}" },
+                Type = IndexType.Map
+            };
+            var results = GetMergeReportOfTwoIndexes(index2, index1);
+           
+            Assert.Equal(1, results.Suggestions.Count);
+            RavenTestHelper.AssertEqualRespectingNewLines(@"from doc in docs.Orders
+select new
+{
+    Company = doc.Company,
+    Employee = doc.Employee,
+    Total = doc.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount)),
+    TotalSum = doc.Day.Add(doc.A + doc.B)
+}", results.Suggestions.First().MergedIndex.Maps.First());
+        }
 
+        [Fact]
+        public void CannotMergeSameIndexesWhenCollectionsDoesntMatch()
+        {
+            var index1 = new IndexDefinition
+            {
+                Name = "OrdersA",
+                Maps = { @"from order in docs.Orders
+select new
+{
+    order.Employee,
+    order.Company,
+    TotalSum = order.Day.Add(order.A + order.B)
+}" },
+                Type = IndexType.Map
+            };
+            var index2 = new IndexDefinition
+            {
+                Name = "OrdersB",
+                Maps = { @"from order in docs.Returns
+select new
+{
+    order.Employee,
+    order.Company,
+    TotalSum = order.Day.Add(order.A + order.B)
+}" },
+                Type = IndexType.Map
+            };
+
+            var results = GetMergeReportOfTwoIndexes(index2, index1);
+           
+            Assert.Equal(0, results.Suggestions.Count);
+        }
         
         [Fact]
         public void AutoIndexesWillNotBeIncludedInOperationOutput()

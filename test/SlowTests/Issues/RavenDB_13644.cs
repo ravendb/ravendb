@@ -606,6 +606,231 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanLoadCompareExchangeInIndexes_Simple_Array(Options options)
+        {
+            CanLoadCompareExchangeInIndexes_Simple_Array<Index_With_CompareExchange_Simple_Array>(options);
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanLoadCompareExchangeInIndexes_Simple_Array_JavaScript(Options options)
+        {
+            CanLoadCompareExchangeInIndexes_Simple_Array<Index_With_CompareExchange_Simple_Array_JavaScript>(options);
+        }
+
+        private void CanLoadCompareExchangeInIndexes_Simple_Array<TIndex>(Options options)
+            where TIndex : AbstractIndexCreationTask, new()
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var index = new TIndex();
+                var indexName = index.IndexName;
+                index.Execute(store);
+
+                Indexes.WaitForIndexing(store);
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Cities", null));
+                Assert.Equal(0, terms.Length);
+
+                // add doc
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Store(new Company_Array { Name = "CF", ExternalIds = new[] { "companies/cf" } });
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Contains("There are still some documents to process from collection", staleness.StalenessReasons[0]);
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                Indexes.WaitForIndexing(store);
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Cities", null));
+                Assert.Equal(0, terms.Length);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                // add compare
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/cf", "Torun");
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[0]);
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                Indexes.WaitForIndexing(store);
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Cities", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("torun", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                // add doc and compare
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Store(new Company_Array { Name = "HR", ExternalIds = new[] { "companies/hr" } });
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", "Cesarea");
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(2, staleness.StalenessReasons.Count);
+                Assert.Contains("There are still some documents to process from collection", staleness.StalenessReasons[0]);
+                Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[1]);
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                Indexes.WaitForIndexing(store);
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Cities", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("torun", terms);
+                Assert.Contains("cesarea", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                // update
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>("companies/hr");
+                    value.Value = "Hadera";
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Contains("There are still some compare exchange references to process for collection", staleness.StalenessReasons[0]);
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                Indexes.WaitForIndexing(store);
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Cities", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("torun", terms);
+                Assert.Contains("hadera", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                // delete
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    var value = session.Advanced.ClusterTransaction.GetCompareExchangeValue<string>("companies/hr");
+                    session.Advanced.ClusterTransaction.DeleteCompareExchangeValue(value);
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.Contains("There are still some compare exchange tombstone references to process for collection", staleness.StalenessReasons[0]);
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                Indexes.WaitForIndexing(store);
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Cities", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("torun", terms);
+
+                // live add compare without stopping indexing
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/hr", "Tel Aviv");
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Cities", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("torun", terms);
+                Assert.Contains("tel aviv", terms);
+
+                // add doc and 2x compare
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Store(new Company_Array { Name = "HR", ExternalIds = new[] { "companies/ms", "companies/wf" } });
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/ms", "MS");
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("companies/wf", "WF");
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Cities", null));
+                Assert.Equal(4, terms.Length);
+                Assert.Contains("torun", terms);
+                Assert.Contains("tel aviv", terms);
+                Assert.Contains("ms", terms);
+                Assert.Contains("wf", terms);
+            }
+        }
+
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanLoadCompareExchangeInIndexes_Query(Options options)
         {
             CanLoadCompareExchangeInIndexes_Query<Index_With_CompareExchange>(options);
@@ -2928,6 +3153,34 @@ namespace SlowTests.Issues
             }
         }
 
+        private class Index_With_CompareExchange_Simple_Array : AbstractIndexCreationTask<Company_Array>
+        {
+            public Index_With_CompareExchange_Simple_Array()
+            {
+                Map = companies => from c in companies
+                                   let cities = LoadCompareExchangeValue<string>(c.ExternalIds)
+                                   select new
+                                   {
+                                       Cities = cities
+                                   };
+
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        private class Index_With_CompareExchange_Simple_Array_JavaScript : AbstractJavaScriptIndexCreationTask
+        {
+            public Index_With_CompareExchange_Simple_Array_JavaScript()
+            {
+                Maps = new HashSet<string>
+                {
+                    "map('Company_Arrays', function (c) { var cities = cmpxchg(c.ExternalIds); return { Cities: cities };})",
+                };
+
+                Fields.Add(Constants.Documents.Indexing.Fields.AllFields, new IndexFieldOptions { Storage = FieldStorage.Yes });
+            }
+        }
+
         private class Index_With_CompareExchange_JavaScript : AbstractJavaScriptIndexCreationTask
         {
             public Index_With_CompareExchange_JavaScript()
@@ -2940,6 +3193,7 @@ namespace SlowTests.Issues
                 Fields.Add(Constants.Documents.Indexing.Fields.AllFields, new IndexFieldOptions { Storage = FieldStorage.Yes });
             }
         }
+
 
         private class TimeSeries_Index_With_CompareExchange : AbstractTimeSeriesIndexCreationTask<Company>
         {
@@ -3019,6 +3273,13 @@ namespace SlowTests.Issues
                                         Count = g.Sum(x => x.Count)
                                     };
             }
+        }
+
+        public class Company_Array
+        {
+            public string Id { get; set; }
+            public string[] ExternalIds { get; set; }
+            public string Name { get; set; }
         }
     }
 }

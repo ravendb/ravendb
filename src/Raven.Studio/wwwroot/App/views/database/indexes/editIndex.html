@@ -22,9 +22,25 @@
                         <a data-bind="click: getCSharpCode, visible: isEditingExistingIndex" class="btn" title="Copy the index c# code"><i class="icon-code"></i><span>Copy C#</span></a>
                         <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
                         <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
-                        <a data-bind="click: openDumpDialog, visible: isEditingExistingIndex, requiredAccess: 'DatabaseAdmin'" href="#" class="btn" title="Dump the raw Lucene index files">
-                            <i class="icon-dump-index-files"></i><span>Dump</span>
-                        </a>
+                        <div class="btn-group" data-bind="visible: isEditingExistingIndex, requiredAccess: 'DatabaseAdmin'">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" >
+                                <i class="icon-debug-advanced"></i> <span>Advanced</span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li title="Dump the raw Lucene index files">
+                                    <a href="#" data-bind="click: openDumpDialog">
+                                        <i class="icon-dump-index-files"></i>
+                                        <span>Dump</span>
+                                    </a>
+                                </li>
+                                <li title="Optimize Lucene index files" data-bind="visible: canOptimizeIndex">
+                                    <a href="#" data-bind="click: openOptimizeDialog">
+                                        <i class="icon-compact"></i>
+                                        <span>Optimize</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                         <button class="btn btn-danger" 
                                 data-bind="visible: isEditingExistingIndex, click: deleteIndex, attr: { title: 'Delete index: ' + editedIndex().name() }, requiredAccess: 'DatabaseReadWrite'">
                             <i class="icon-trash"></i><span>Delete</span>
@@ -466,9 +482,25 @@
                     <div>
                         <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
                         <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
-                        <a data-bind="click: openDumpDialog, visible: isEditingExistingIndex, requiredAccess: 'DatabaseAdmin'" href="#" class="btn" title="Dump the raw Lucene index files">
-                            <i class="icon-dump-index-files"></i><span>Dump</span>
-                        </a>
+                        <div class="btn-group" data-bind="visible: isEditingExistingIndex, requiredAccess: 'DatabaseAdmin'">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" >
+                                <i class="icon-debug-advanced"></i> <span>Advanced</span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li title="Dump the raw Lucene index files">
+                                    <a href="#" data-bind="click: openDumpDialog">
+                                        <i class="icon-dump-index-files"></i>
+                                        <span>Dump</span>
+                                    </a>
+                                </li>
+                                <li title="Optimize Lucene index files">
+                                    <a href="#" data-bind="click: openOptimizeDialog">
+                                        <i class="icon-compact"></i>
+                                        <span>Optimize</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                         <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex, requiredAccess: 'DatabaseReadWrite'" title="Delete this index">
                             <i class="icon-trash"></i><span>Delete</span>
                         </button>

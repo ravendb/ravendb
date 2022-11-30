@@ -16,6 +16,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
+using xRetry;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -140,7 +141,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenFact(RavenTestCategory.BulkInsert)]
+        [RetryFact]
         public async Task Bulk_Insert_Should_Throw_On_StoreAsync_Concurrent_Calls()
         {
             using (var store = GetDocumentStore())
