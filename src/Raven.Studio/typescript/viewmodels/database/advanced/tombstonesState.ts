@@ -54,21 +54,21 @@ class tombstonesState extends viewModelBase {
                 new textColumn<TombstoneItem>(collectionsGrid, x => x.Collection, "Collection", "26%", {
                     sortable: "string"
                 }),
-                new textColumn<TombstoneItem>(collectionsGrid, x => x.Documents.Component, "Document Process", "15%", {
+                new textColumn<TombstoneItem>(collectionsGrid, x => x.Documents.Component, "Document Task", "15%", {
                     sortable: "string"
                 }),
                 new textColumn<TombstoneItem>(collectionsGrid, x => this.formatEtag(x.Documents.Etag), "Document Etag", "8%", {
                     sortable: "number", title: (x) => this.getEtagTitle(x.Documents.Etag)
                 }),
 
-                new textColumn<TombstoneItem>(collectionsGrid, x => x.TimeSeries.Component, "Time Series Process", "15%", {
+                new textColumn<TombstoneItem>(collectionsGrid, x => x.TimeSeries.Component, "Time Series Task", "15%", {
                     sortable: "string"
                 }),
                 new textColumn<TombstoneItem>(collectionsGrid, x => this.formatEtag(x.TimeSeries.Etag), "Time Series Etag", "8%", {
                     sortable: "number", title: (x) => this.getEtagTitle(x.TimeSeries.Etag)
                 }),
 
-                new textColumn<TombstoneItem>(collectionsGrid, x => x.Counters.Component, "Counter Process", "15%", {
+                new textColumn<TombstoneItem>(collectionsGrid, x => x.Counters.Component, "Counter Task", "15%", {
                     sortable: "string"
                 }),
                 new textColumn<TombstoneItem>(collectionsGrid, x => this.formatEtag(x.Counters.Etag), "Counter Etag", "8%", {
