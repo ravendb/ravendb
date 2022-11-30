@@ -37,19 +37,17 @@ namespace SlowTests.Server.Documents.Revisions
         [Fact]
         public async Task RevertByMultipleCollections_ShouldRemoveDocWhichCreatedAfterTheMinDate()
         {
-            var batchSizeLimit = 32 * 1_024;
+            var batchSizeLimitInBytes = 32 * 1_024; //32kb
             var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "companies", "users" };
-            var names = new[] { GenerateRandomString(batchSizeLimit / 2), GenerateRandomString(batchSizeLimit / 2 + 1), GenerateRandomString(batchSizeLimit / 2), };
-            var server = GetNewServer();
+            var names = new[] { GenerateRandomString(batchSizeLimitInBytes / 2), GenerateRandomString(batchSizeLimitInBytes / 2 + 1), GenerateRandomString(batchSizeLimitInBytes / 2), };
             using var store = GetDocumentStore(new Options
             {
-                Server = server,
                 ReplicationFactor = 1
             });
 
-            var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            database.DocumentsStorage.RevisionsStorage.SizeLimit = batchSizeLimit;
-            await RevisionsHelper.SetupRevisions(store, server.ServerStore);
+            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            database.DocumentsStorage.RevisionsStorage.SizeLimitInBytes = batchSizeLimitInBytes;
+            await RevisionsHelper.SetupRevisions(store, Server.ServerStore);
             
             using (var session = store.OpenAsyncSession())
             {

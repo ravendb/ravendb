@@ -20,6 +20,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Revisions
         private static readonly Slice RevisionsTombstonesSlice;
         private static readonly Slice RevisionsPrefix;
         public static Slice ResolvedFlagByEtagSlice;
-        public long SizeLimit = 32 * 1_024 * 1_024;
+        public long SizeLimitInBytes = (new Size(PlatformDetails.Is32Bits == false ? 32 : 2, SizeUnit.Megabytes)).GetValue(SizeUnit.Bytes);
 
         public static readonly string RevisionsTombstones = "Revisions.Tombstones";
 
@@ -1325,7 +1326,7 @@ namespace Raven.Server.Documents.Revisions
                 if (elapsed > MaxEnforceConfigurationSingleBatchTime)
                     return false;
 
-                if (context.AllocatedMemory > SizeLimit)
+                if (context.AllocatedMemory > SizeLimitInBytes)
                     return false;
 
                 return true;
@@ -1572,7 +1573,7 @@ namespace Raven.Server.Documents.Revisions
 
                     RestoreRevision(readCtx, writeCtx, parameters, id, result, list);
 
-                    if (readCtx.AllocatedMemory + writeCtx.AllocatedMemory > SizeLimit)
+                    if (readCtx.AllocatedMemory + writeCtx.AllocatedMemory > SizeLimitInBytes)
                     {
                         return true;
                     }
