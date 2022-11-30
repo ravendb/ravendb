@@ -10,6 +10,7 @@ using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Sparrow.Threading;
 using Raven.Server.Utils;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Rachis
 {
@@ -294,7 +295,11 @@ namespace Raven.Server.Rachis
 
         public void Start()
         {
-            _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x=>Run(), null, "Candidate for - " + _engine.Tag, "C F " + _engine.Tag);
+            _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, new ThreadNames.ThreadInfo
+            {
+                FullName = "Candidate for - " + _engine.Tag,
+                Details = new ThreadNames.ThreadDetails.Candidate(_engine.Tag)
+            });
         }
 
         public void Dispose()

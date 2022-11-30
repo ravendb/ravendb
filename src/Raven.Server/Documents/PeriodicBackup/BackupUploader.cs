@@ -18,6 +18,7 @@ using Raven.Server.Utils.Metrics;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using Size = Sparrow.Size;
@@ -259,7 +260,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var localUploadStatus = uploadStatus;
             var threadName = $"Upload backup file of database '{_settings.DatabaseName}' to {targetName} (task: '{_settings.TaskName}')";
-            var shortThreadName = $"UBF {_settings.DatabaseName} t {targetName}";
             var thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
             {
                 try
@@ -327,7 +327,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                     localUploadStatus.Exception = (exception ?? e).ToString();
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
-            }, null, threadName, shortThreadName);
+            }, null, new ThreadNames.ThreadInfo
+            {
+                FullName = threadName,
+                Details = new ThreadNames.ThreadDetails.UploadBackupFile(_settings.DatabaseName, targetName, _settings.TaskName)
+            });
 
             _threads.Add(thread);
         }
@@ -339,7 +343,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return;
 
             var threadName = $"Delete backup file of database '{_settings.DatabaseName}' from {targetName} (task: '{_settings.TaskName}')";
-            var shortThreadName = $"DBF {_settings.DatabaseName} f {targetName}";
             var thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
             {
                 try
@@ -363,7 +366,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
-            }, null, threadName, shortThreadName);
+            }, null, new ThreadNames.ThreadInfo
+            {
+                FullName = threadName,
+                Details = new ThreadNames.ThreadDetails.DeleteBackupFile(_settings.DatabaseName, targetName, _settings.TaskName)
+            });
 
             _threads.Add(thread);
         }

@@ -33,6 +33,7 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -149,7 +150,6 @@ namespace Raven.Server.Documents.Replication
         }
 
         private string IncomingReplicationThreadName => $"Incoming replication {FromToString}";
-        private string IncomingReplicationShortThreadName => $"IR {_database.Name} f {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName}";
 
         public void Start()
         {
@@ -161,7 +161,11 @@ namespace Raven.Server.Documents.Replication
                 if (_incomingWork != null)
                     return; // already set by someone else, they can start it
 
-                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadName, IncomingReplicationShortThreadName);
+                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, new ThreadNames.ThreadInfo
+                {
+                    FullName = IncomingReplicationThreadName,
+                    Details = new ThreadNames.ThreadDetails.IncomingReplication(_database.Name, ConnectionInfo.SourceDatabaseName)
+                });
             }
 
             if (_log.IsInfoEnabled)

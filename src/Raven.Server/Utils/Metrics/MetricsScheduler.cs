@@ -34,7 +34,7 @@ namespace Raven.Server.Utils.Metrics
             _schedulerThread = new Thread(SchedulerTicking)
             {
                 IsBackground = true,
-                Name = PlatformDetails.RunningOnLinux ? "MS" : "Metrics Scheduler"
+                Name = "Metrics Scheduler"
             };
             _schedulerThread.Start();
         }

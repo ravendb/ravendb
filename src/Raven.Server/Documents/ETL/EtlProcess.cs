@@ -37,6 +37,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
@@ -613,7 +614,6 @@ namespace Raven.Server.Documents.ETL
             _cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown);
 
             var threadName = $"{Tag} process: {Name}";
-            var shortThreadName = $"{Tag} {Name}";
             _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
                 try
@@ -629,7 +629,11 @@ namespace Raven.Server.Documents.ETL
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Failed to run ETL {Name}", e);
                 }
-            }, null, threadName, shortThreadName);
+            }, null, new ThreadNames.ThreadInfo
+            {
+                FullName = threadName, 
+                Details = new ThreadNames.ThreadDetails.EtlProcess(Tag, Name)
+            });
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Starting {Tag} process: '{Name}'.");
