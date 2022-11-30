@@ -56,6 +56,8 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
         
         _queryStack.Sort(PrioritizeSort);
         
+        // Build a stack of termmatch at the beginning. 
+        // Opt: Maybe we can do it like MultiTermMatch in the future? It should be faster than performing BinaryMatch.
         foreach (var query in stack)
         {
             //Out of TermMatches in our stack
@@ -67,7 +69,7 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
 
             if (query.Operation is UnaryMatchOperation.NotEquals)
             {
-                //This could be more expensive than scanning RAW elements. This returns ~(field.NumberOfEntries - term.NumberOfEntries). Can we set threshold around ~10% to perfom SCAN maybe? 
+                //This could be more expensive than scanning RAW elements. This returns ~(field.NumberOfEntries - term.NumberOfEntries). Can we set threshold around ~10% to perform SCAN maybe? 
                 if (baseMatch != null)
                 {
                     // Instead of performing AND(TermMatch, AndNot(Exist, Term)) we can translate it into AndNot(baseMatch, Term). This way we avoid additional BinaryMatch
@@ -105,7 +107,7 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
         if (stack.Length == 0)
             goto Return;
 
-        // Ascending term amount stack. It not always would work for us. Thats is telling us terms inside field are clustered in centrains points
+        //We will perform a scan for the rest. We want to evaluate leftmostClause as our inner match.
         var leftmostClause = stack[0];
         var nextQuery = TransformCoraxBooleanItemIntoQueryMatch(leftmostClause);
         baseMatch = baseMatch is null
