@@ -37,7 +37,7 @@ import messagePublisher from "common/messagePublisher";
 import "./IndexesPage.scss";
 import { useChanges } from "hooks/useChanges";
 import { delay } from "../../../../utils/common";
-import { Button, Card, Col, Row } from "reactstrap";
+import { Button, Card, Col, Row, Spinner } from "reactstrap";
 import { EmptySet } from "../../../../../components/common/EmptySet";
 
 interface IndexesPageProps {
@@ -775,16 +775,20 @@ export function IndexesPage(props: IndexesPageProps) {
                                                     <div className="title me-4">
                                                         <i className="icon-swap" /> Side by side
                                                     </div>
-                                                    <button
-                                                        className={classNames("btn btn-sm btn-warning", {
-                                                            "btn-spinner": swapNowProgress.includes(index.name),
-                                                        })}
+                                                    <Button
+                                                        color="warning"
+                                                        size="sm"
                                                         disabled={swapNowProgress.includes(index.name)}
                                                         onClick={() => confirmSwapSideBySide(index)}
                                                         title="Click to replace the current index definition with the replacement index"
                                                     >
-                                                        <i className="icon-force" /> <span>Swap now</span>
-                                                    </button>
+                                                        {swapNowProgress.includes(index.name) ? (
+                                                            <Spinner size={"sm"} />
+                                                        ) : (
+                                                            <i className="icon-force me-1" />
+                                                        )}{" "}
+                                                        Swap now
+                                                    </Button>
                                                 </div>
                                             </Card>
                                         )}

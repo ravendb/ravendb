@@ -12,6 +12,7 @@ import {
 } from "../../../../common/LocationDistribution";
 import assertUnreachable from "../../../../utils/assertUnreachable";
 import { ProgressCircle } from "../../../../common/ProgressCircle";
+import { Button } from "reactstrap";
 
 interface IndexDistributionProps {
     index: IndexSharedInfo;
@@ -64,17 +65,21 @@ export function IndexDistribution(props: IndexDistributionProps) {
                         </div>
                         <div className="entries">{entriesCount}</div>
                         <div className="errors">{nodeInfo.details?.errorCount ?? ""}</div>
-                        {nodeInfo.details?.faulty && (
-                            <button
-                                type="button"
-                                className="btn btn-danger"
-                                onClick={() => openFaulty(nodeInfo.location)}
-                            >
-                                Open faulty index
-                            </button>
-                        )}
 
                         <IndexProgress nodeInfo={nodeInfo} />
+
+                        {nodeInfo.details?.faulty && (
+                            <div className="text-center">
+                                <Button
+                                    color="danger"
+                                    className="px-1 py-0 my-1"
+                                    size="xs"
+                                    onClick={() => openFaulty(nodeInfo.location)}
+                                >
+                                    Open faulty index
+                                </Button>
+                            </div>
+                        )}
 
                         <IndexProgressTooltip
                             target={id}
