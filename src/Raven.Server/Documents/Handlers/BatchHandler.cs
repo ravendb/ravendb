@@ -25,6 +25,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -1082,11 +1083,13 @@ namespace Raven.Server.Documents.Handlers
 
                             var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.DestinationId, fromEtl: false);
 
+                            var appendOptions = new TimeSeriesStorage.AppendOptions { VerifyName = false };
                             var cv = Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
                                     cmd.DestinationId,
                                     docCollection,
                                     cmd.DestinationName,
-                                    reader.AllValues()
+                                    reader.AllValues(),
+                                    appendOptions
                                 );
 
                             Reply.Add(new DynamicJsonValue
