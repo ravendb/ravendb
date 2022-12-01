@@ -13,6 +13,8 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
 
         public override ConnectionStringType Type => ConnectionStringType.ElasticSearch;
 
+        public bool EnableCompatibilityMode { get; set; }
+
         protected override void ValidateImpl(ref List<string> errors)
         {
             if (Nodes == null || Nodes.Length == 0)
