@@ -460,11 +460,11 @@ public partial class RavenTestBase
                     var user = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("cat/toli");
                     Assert.NotNull(user);
 
-                    user = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("rvn-atomic/usernames/Ayende");
-                    Assert.NotNull(user);
+                    var u = await store.Operations.ForDatabase(database).SendAsync(new GetCompareExchangeValueOperation<AtomicGuard>("rvn-atomic/usernames/Ayende"));
+                    Assert.NotNull(u.Value);
 
-                    user = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("rvn-atomic/users/5");
-                    Assert.NotNull(user);
+                    u = await store.Operations.ForDatabase(database).SendAsync(new GetCompareExchangeValueOperation<AtomicGuard>("rvn-atomic/users/5"));
+                    Assert.NotNull(u.Value);
 
                     var user2 = await session.LoadAsync<User>("users/5");
                     Assert.NotNull(user2);
@@ -472,6 +472,13 @@ public partial class RavenTestBase
                     user2 = await session.LoadAsync<User>("usernames/Ayende");
                     Assert.NotNull(user2);
                 }
+            }
+
+            private class AtomicGuard
+            {
+#pragma warning disable CS0649
+                public string Id;
+#pragma warning restore CS0649
             }
 
             public Task<WaitHandle[]> WaitForBackupToComplete(IDocumentStore store)
