@@ -41,7 +41,7 @@
                 height: 50px;
             }
 
-            &:last-of-type {
+            &:last-of-type, &.progress-circle {
                 height: auto;
             }
         }

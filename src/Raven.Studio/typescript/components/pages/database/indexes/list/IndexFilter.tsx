@@ -25,19 +25,20 @@ function IndexFilterStatusItem(props: IndexFilterStatusItemProps) {
 
     return (
         <React.Fragment>
-            <FormGroup switch className={classNames("form-check-reverse", switchColor, props.toggleClass)}>
-                <Input
-                    id={uniqueId}
-                    type="switch"
-                    role="switch"
-                    checked={props.checked}
-                    onChange={props.toggleStatus}
-                />
-                <Label htmlFor={uniqueId} check>
+            <Label className="dropdown-item-text m-0" htmlFor={uniqueId}>
+                <div className={classNames("form-switch form-check-reverse", switchColor, props.toggleClass)}>
+                    <Input
+                        id={uniqueId}
+                        type="switch"
+                        role="switch"
+                        checked={props.checked}
+                        onChange={props.toggleStatus}
+                    />
+
                     {props.label}
-                </Label>
-            </FormGroup>
-            {props.children}
+                </div>
+                {props.children}
+            </Label>
         </React.Fragment>
     );
 }
@@ -205,7 +206,7 @@ export default function IndexFilter(props: IndexFilterProps) {
             <Button
                 innerRef={setFilterReferenceElement}
                 onClick={toggleFilterDropdown}
-                outline={hasAnyStateFilter(filter)}
+                color={hasAnyStateFilter(filter) ? "light" : "secondary"}
                 title="Set the indexing state for the selected indexes"
                 className={classNames("dropdown-toggle")}
             >
