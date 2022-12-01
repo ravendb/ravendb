@@ -54,18 +54,23 @@ namespace SlowTests.Issues
             Assert.True(disableSucceeded.Disabled);
 
             var cts = new CancellationTokenSource();
-            var mre = new ManualResetEvent(false);
+            var failMre = new ManualResetEvent(false);
+            worker.OnSubscriptionConnectionRetry += _ =>
+            {
+                failMre.Set();
+            };
+            var successMre = new ManualResetEvent(false);
             var _ = worker.Run( batch =>
             {
-                mre.Set();
+                successMre.Set();
             }, cts.Token);
 
             //enable database
-            await Task.Delay(500);
+            Assert.True(failMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't fail as expected.");
             var enableSucceeded = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
             Assert.False(enableSucceeded.Disabled);
             Assert.True(enableSucceeded.Success);
-            Assert.True(mre.WaitOne(TimeSpan.FromSeconds(15)), "User didn't loaded.");
+            Assert.True(successMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
         }
 
         [Fact]
@@ -75,7 +80,8 @@ namespace SlowTests.Issues
             using var store = GetDocumentStore(new Options()
             {
                 ReplicationFactor = 1,
-                RunInMemory = false
+                RunInMemory = false,
+                Server = node
             });
             string id = "User/33-A";
             using (var session = store.OpenAsyncSession())
@@ -97,16 +103,20 @@ namespace SlowTests.Issues
             // dispose nodes
             var result = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
 
-
             var cts = new CancellationTokenSource();
-            var mre = new ManualResetEvent(false);
+            var failMre = new ManualResetEvent(false);
+            worker.OnSubscriptionConnectionRetry += _ =>
+            {
+                failMre.Set();
+            };
+            var successMre = new ManualResetEvent(false);
             var _ = worker.Run( batch =>
             {
-                mre.Set();
+                successMre.Set();
             }, cts.Token);
 
             //revive node
-            await Task.Delay(500);
+            Assert.True(failMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't fail as expected.");
             var cs = new Dictionary<string, string>(DefaultClusterSettings);
             cs[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url;
             var revivedServer = GetNewServer(new ServerCreationOptions
@@ -116,7 +126,7 @@ namespace SlowTests.Issues
                 DataDirectory = result.DataDirectory,
                 CustomSettings = cs
             });
-            Assert.True(mre.WaitOne(TimeSpan.FromSeconds(15)), "User didn't loaded.");
+            Assert.True(successMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
         }
 
         private class User
