@@ -12,6 +12,8 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -176,6 +178,77 @@ loadToOrders(partitionBy(key),
 
                         changed = BlittableOperation.EntityChanged(destinationOlapConnectionStringJson, new DocumentInfo { Id = "", Document = sourceOlapConnectionStringJson }, changes: null);
                         Assert.False(changed);
+                    }
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(false, false)]
+        public async Task BackupDatabaseOnceUsingBackupTempPath(bool assignBackupTempPath, bool assignStorageTempPath)
+        {
+            string backupTempPath = assignBackupTempPath ? NewDataPath(suffix: "__BackupTempPath") : null;
+            string storageTempPath = assignStorageTempPath ? NewDataPath(suffix: "__StorageTempPath") : null;
+
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options
+                   {
+                       Server = server,
+                       RunInMemory = false,
+                       ModifyDatabaseRecord = record =>
+                       {
+                           record.Settings[RavenConfiguration.GetKey(x => x.Backup.TempPath)] = backupTempPath;
+                           record.Settings[RavenConfiguration.GetKey(x => x.Storage.TempPath)] = storageTempPath;
+                       }
+                   }))
+            {
+                var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+                var coreDataDirectoryPath = databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)];
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await Backup.FillDatabaseWithRandomDataAsync(databaseSizeInMb: 10, session);
+                }
+
+                await store.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    S3Settings = new S3Settings { BucketName = "ravendb-bucket", RemoteFolderName = "lev/backups_RavenDB_19495" },
+                }));
+
+                if ((assignBackupTempPath && assignStorageTempPath) || assignBackupTempPath)
+                {
+                    await AssertBackupTempPath(shouldBeUsed: backupTempPath, shouldNotBeUsed: new []{ storageTempPath, coreDataDirectoryPath });
+                    return;
+                }
+                
+                if (assignStorageTempPath)
+                {
+                    await AssertBackupTempPath(shouldBeUsed: storageTempPath, shouldNotBeUsed: new[] { backupTempPath, coreDataDirectoryPath });
+                    return;
+                }
+
+                await AssertBackupTempPath(shouldBeUsed: coreDataDirectoryPath, shouldNotBeUsed: new[] { backupTempPath, storageTempPath });
+                
+                async Task AssertBackupTempPath(string shouldBeUsed, string[] shouldNotBeUsed)
+                {
+                    var oneTimeBackupTempFolderPath = new PathSetting(shouldBeUsed).Combine("OneTimeBackupTemp").FullPath;
+                    await WaitForValueAsync(() => Directory.Exists(oneTimeBackupTempFolderPath), true);
+                    await WaitForValueAsync(() =>
+                    {
+                        var tempFiles = Directory.GetFiles(oneTimeBackupTempFolderPath);
+                        return tempFiles.Length > 0 && tempFiles[0].Contains("in-progress");
+                    }, true);
+
+                    foreach (var s in shouldNotBeUsed)
+                    {
+                        if (s == null) continue;
+
+                        var shouldBeEmptyDirectory = new PathSetting(s).Combine("OneTimeBackupTemp").FullPath;
+                        Assert.False(Directory.Exists(shouldBeEmptyDirectory));
                     }
                 }
             }

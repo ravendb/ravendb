@@ -2,11 +2,13 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using Org.BouncyCastle.Math.EC;
+using FastTests.Graph;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
@@ -467,6 +469,27 @@ namespace FastTests
                             PrintBackupStatus(pb.BackupStatus) + Environment.NewLine + "BackupResult Messages:" + Environment.NewLine +
                             PrintBackupResultMessagesStatus(result));
                     }
+                }
+            }
+
+            public async Task FillDatabaseWithRandomDataAsync(int databaseSizeInMb, IAsyncDocumentSession session, int? timeout = default)
+            {
+                var random = new Random();
+                const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                var timeoutTimeSpan = TimeSpan.FromMilliseconds(timeout ?? _reasonableTimeout);
+
+                using (var cts = new CancellationTokenSource(timeoutTimeSpan))
+                {
+                    for (int i = 0; i < databaseSizeInMb; i++)
+                    {
+                        var entry = new User
+                        {
+                            Name = new string(Enumerable.Repeat(chars, 1024 * 1024)
+                                .Select(s => s[random.Next(s.Length)]).ToArray())
+                        };
+                        await session.StoreAsync(entry, cts.Token);
+                    }
+                    await session.SaveChangesAsync(cts.Token);
                 }
             }
         }
