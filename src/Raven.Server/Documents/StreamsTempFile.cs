@@ -178,8 +178,11 @@ namespace Raven.Server.Documents
 
                 return new DisposableAction(() =>
                 {
-                    stream.Dispose();
-                    safeFileHandle.Dispose();
+                    using (safeFileHandle)
+                    using (stream)
+                    {
+                        // disposing
+                    }
                 });
             }
         }
