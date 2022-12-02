@@ -55,10 +55,10 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
         id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
         var singleEntryWriterScope = new SingleEntryWriterScope(Allocator);
 
-        if (TryGetBoostedValue(documentToProcess, out var boostedValue, out var documentBoost))
-            ThrowWhenBoostingIsInDocument();
-
-        //Write id/key
+        TryGetBoostedValue(documentToProcess, out var boostedValue, out var documentBoost);
+        if (documentBoost != null)
+            WriteDocumentBoostIntoEntry(ref entryWriter, documentBoost.Value);
+        
         singleEntryWriterScope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
         var indexingScope = CurrentIndexingScope.Current;
         foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
@@ -134,7 +134,6 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             boost = (float)boostValue.AsNumber();
             value = valueValue;
 
-            ThrowWhenBoostingIsInDocument();
             return false;
         }
 
@@ -151,7 +150,8 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                 if (isObject)
                 {
                     if (TryGetBoostedValue(actualValue.AsObject(), out _, out _))
-                    { //todo leftover to implement boosting inside index someday, now it will throw
+                    { 
+                        ThrowWhenBoostingIsInDocument();
                     }
 
                     //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
@@ -381,7 +381,7 @@ public abstract class JintCoraxDocumentConverterBase : CoraxDocumentConverterBas
 
     protected static void ThrowWhenBoostingIsInDocument()
     {
-        throw new NotImplementedInCoraxException("Indexing-time boosting is not implemented.");
+        throw new NotImplementedInCoraxException("Indexing-time boosting of field is not implemented.");
     }
 
     public override void Dispose()
