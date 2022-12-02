@@ -87,7 +87,7 @@ function NoIndexes(props: NoIndexesProps) {
             <EmptySet>No indexes have been created for this database.</EmptySet>
 
             {canReadWriteDatabase(database) && (
-                <Button outline color="primary" className="mt-4" href={newIndexUrl}>
+                <Button outline color="primary" href={newIndexUrl}>
                     Create new index
                 </Button>
             )}
