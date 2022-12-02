@@ -135,10 +135,10 @@ namespace Raven.Client.Util
             return result;
         }
 
-        private class ExclusiveSynchronizationContext : SynchronizationContext
+        private sealed class ExclusiveSynchronizationContext : SynchronizationContext
         {
             private readonly AutoResetEvent _workItemsWaiting = new AutoResetEvent(false);
-            private readonly ConcurrentQueue<Tuple<SendOrPostCallback, object>> _items = new ConcurrentQueue<Tuple<SendOrPostCallback, object>>();
+            private readonly ConcurrentQueue<(SendOrPostCallback Callback, object State)> _items = new ConcurrentQueue<(SendOrPostCallback, object)>();
 
             private bool _done;
             public Exception InnerException { get; set; }
@@ -150,7 +150,7 @@ namespace Raven.Client.Util
 
             public override void Post(SendOrPostCallback d, object state)
             {
-                _items.Enqueue(Tuple.Create(d, state));
+                _items.Enqueue((d, state));
                 _workItemsWaiting.Set();
             }
 
@@ -182,10 +182,10 @@ namespace Raven.Client.Util
                         _workItemsWaiting.WaitOne();
 
                     // Queue is no longer empty (unless someone won) therefore we are ready to process.
-                    while (_items.TryDequeue(out var task))
+                    while (_items.TryDequeue(out var work))
                     {
                         // Execute the operation.
-                        task.Item1(task.Item2);
+                        work.Callback(work.State);
                         if (InnerException != null) // the method threw an exception
                         {
                             throw new AggregateException("AsyncHelpers.Run method threw an exception.", InnerException);
