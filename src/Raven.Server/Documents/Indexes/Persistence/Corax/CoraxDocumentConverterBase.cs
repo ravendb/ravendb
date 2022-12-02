@@ -423,6 +423,11 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         return new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope, CoraxSpatialPointEntryListForEnumerableScope, BlittableJsonReaderObjectsListForEnumerableScope, Allocator);
     }
 
+    protected void WriteDocumentBoostIntoEntry(ref IndexEntryWriter writer, float boost)
+    {
+        writer.WriteDynamic(global::Corax.Constants.DocumentBoost, ReadOnlySpan<byte>.Empty, (long)boost, boost);
+    }
+
     public override void Dispose()
     {
         _indexEntryWriter.Dispose();

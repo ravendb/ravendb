@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
-using Corax;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -47,6 +45,9 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         // We prepare for the next entry.
         ref var entryWriter = ref GetEntriesWriter();
 
+        if (boostedValue != null)
+            WriteDocumentBoostIntoEntry(ref entryWriter, boostedValue.Boost);
+        
         foreach (var property in accessor.GetPropertiesInOrder(documentToProcess))
         {
             var value = property.Value;

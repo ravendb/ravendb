@@ -210,8 +210,19 @@ namespace Corax.Queries
                 // Then sort again to select the appropriate matches.
                 sorter.Sort(scoresSpan[0..temporaryTotalMatches], matchesSpan[0..temporaryTotalMatches]);
             }
-
             totalMatches = Math.Min(take, temporaryTotalMatches);
+
+            if (match._searcher.DocumentsAreBoosted)
+            {
+                for (int bIdx = 0; bIdx < totalMatches; ++bIdx)
+                {
+                    match._searcher.GetReaderFor(matchesSpan[bIdx]).GetReaderFor(Constants.DocumentBoostSlice).Read(out double boost);
+                    scoresSpan[bIdx] *= (float)boost;
+                }
+                
+                sorter.Sort(scoresSpan[0..totalMatches], matchesSpan[0..totalMatches]);
+            }
+
 
             // Copy must happen before we return the backing arrays.
             matchesSpan[..totalMatches].CopyTo(matches);

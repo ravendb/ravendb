@@ -142,12 +142,6 @@ namespace Raven.Server.Documents.Indexes.Static
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }
 
-            if (configuration.Indexing.StaticIndexingEngineType is SearchEngineType.Corax)
-            {
-                if (index.HasBoostedFields)
-                    throw new IndexCreationException($"{nameof(Corax)} is not supporting boosting inside index yet. Please use Lucene engine.");
-            }
-
             return index;
         }
 
