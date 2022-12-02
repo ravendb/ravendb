@@ -101,18 +101,20 @@ export function DatabasesPage() {
     }, [serverNotifications, fetchDatabases]);
 
     return (
-        <div>
-            <div className="flex-header">
-                <div className="databasesToolbar">
-                    <DatabasesToolbarActions />
+        <div className="content-margin">
+            <Row className="mb-4">
+                <Col sm="auto">
                     <DatabasesFilter
                         filter={filter}
                         setFilter={setFilter}
                         selectionState={databasesSelectionState}
                         toggleSelectAll={toggleSelectAll}
                     />
-                </div>
-            </div>
+                </Col>
+                <Col>
+                    <DatabasesToolbarActions />
+                </Col>
+            </Row>
             <div className="flex-grow scroll js-scroll-container">
                 <DatabasesCounter />
                 <div>

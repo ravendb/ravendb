@@ -5,7 +5,7 @@
 
         a {
             color: @text-color;
-            margin: 0 @gutter/4;
+            margin: 0 @gutter / 4;
             white-space: nowrap;
 
             &:hover {
@@ -14,13 +14,13 @@
         }
 
         div {
-            margin: 0 @gutter/4;
+            margin: 0 @gutter / 4;
         }
     }
 
     .panel-addon {
         .encryption {
-            min-width: @gutter + @gutter/2;
+            min-width: @gutter + @gutter / 2;
         }
 
         .database-access {
@@ -47,10 +47,22 @@
             min-width: @gutter*5;
         }
 
-        .encryption, .database-access, .storage, .documents, .indexes, .uptime, .backup, .indexing-errors, .indexing-paused, .indexing-disabled, .alerts, .performance-hints, .clients-rejection {
+        .encryption,
+        .database-access,
+        .storage,
+        .documents,
+        .indexes,
+        .uptime,
+        .backup,
+        .indexing-errors,
+        .indexing-paused,
+        .indexing-disabled,
+        .alerts,
+        .performance-hints,
+        .clients-rejection {
             line-height: 18px;
             white-space: nowrap;
-            padding: @gutter/4;
+            padding: @gutter / 4;
             margin: 0 !important;
 
             a {
@@ -62,7 +74,8 @@
             }
         }
 
-        .database-properties, .database-properties-right {
+        .database-properties,
+        .database-properties-right {
             display: flex;
             flex-wrap: wrap;
             flex-grow: 1;
@@ -75,7 +88,6 @@
 }
 
 .databases {
-
     .database-counter {
         font-size: 10px;
         text-transform: uppercase;
@@ -84,7 +96,7 @@
         span {
             display: inline-block;
             margin-right: @gutter-sm;
-            letter-spacing: .1em;
+            letter-spacing: 0.1em;
         }
 
         strong {
@@ -106,42 +118,8 @@
         cursor: default;
     }
 
-    .databasesToolbar {
-        display: flex;
-        flex-wrap: wrap;
-        flex-direction: row-reverse;
-        margin: -@gutter-sm/2;
-
-        .databasesToolbar-filter {
-            display: flex;
-        }
-
-        .databasesToolbar-filter, .databasesToolbar-actions {
-            padding: @gutter-sm/2;
-            flex-grow: 1;
-        }
-
-        .databasesToolbar-toggleCompactView {
-            display: inline-block;
-            margin-left: 10px;
-        }
-
-        .databasesToolbar-actions {
-            display: flex;
-            justify-content: flex-end;
-        }
-
-        .databasesToolbar-typeSelector {
-            .btn {
-                .badge {
-                    margin-left: 5px;
-                }
-            }
-        }
-    }
-
     .align-checkboxes {
-        margin-left: @gutter+@gutter/2;
+        margin-left: @gutter+ @gutter / 2;
         margin-right: 0;
         position: relative;
         top: -2px;
@@ -165,8 +143,9 @@
             border: 1px dashed @gray-dark;
 
             &:not(:hover) {
-                .dbgroup-node-type, .properties-item {
-                    opacity: .6;
+                .dbgroup-node-type,
+                .properties-item {
+                    opacity: 0.6;
                 }
             }
         }
@@ -174,7 +153,7 @@
         .database-encryption-status {
             text-align: center;
             width: 21px;
-            margin-right: @grid-gutter-width/4;
+            margin-right: @grid-gutter-width / 4;
             align-self: flex-start;
         }
 
@@ -190,10 +169,11 @@
         .database-header {
             display: flex;
             flex-wrap: wrap;
-            margin: -@gutter-sm/2;
+            margin: -@gutter-sm / 2;
 
-            .info-container, .actions-container {
-                padding: @gutter-sm/2;
+            .info-container,
+            .actions-container {
+                padding: @gutter-sm / 2;
             }
 
             .info-container {
@@ -208,7 +188,7 @@
 
                 .label {
                     font-size: 11px;
-                    margin-right: @grid-gutter-width/2;
+                    margin-right: @grid-gutter-width / 2;
                     flex-shrink: 0;
                 }
 
@@ -216,16 +196,17 @@
                     display: flex;
                     flex-grow: 1;
 
-                    @media(min-width: @screen-md) {
+                    @media (min-width: @screen-md) {
                         width: 270px;
                         flex-grow: 0;
                     }
 
                     i {
-                        margin-right: @gutter/4;
+                        margin-right: @gutter / 4;
                     }
 
-                    a, span {
+                    a,
+                    span {
                         overflow: hidden;
                         text-overflow: ellipsis;
                         white-space: nowrap;
@@ -276,25 +257,24 @@
         -o-transform: translateX(-50%) translateY(-50%);
         -ms-transform: translateX(-50%) translateY(-50%);
         transform: translateX(-50%) translateY(-50%);
-        content: '';
+        content: "";
         width: 90px;
         height: 90px;
         background-image: url(../../img/qr_logo.png);
         background-size: contain;
     }
 
-    img, canvas {
+    img,
+    canvas {
         padding: 30px;
         background-color: white;
     }
 }
 
 #newDatabase {
-
     .restore-point-dropdown {
-
         &.dropdown-menu {
-            padding: 0!important;
+            padding: 0 !important;
 
             .divider {
                 height: 0;
@@ -331,7 +311,7 @@
         display: flex;
         align-items: center;
         margin-bottom: 1px;
-        padding: @gutter/6 @gutter/3;
+        padding: @gutter / 6 @gutter / 3;
         text-align: center;
 
         .date {
@@ -368,12 +348,15 @@
             white-space: break-spaces;
         }
 
-        .node, .files {
+        .node,
+        .files {
             text-align: center;
             line-height: 14px;
         }
 
-        .type, .node, .files {
+        .type,
+        .node,
+        .files {
             flex-shrink: 0;
         }
 
@@ -389,17 +372,21 @@
     }
 
     .restore-point-row > div {
-        margin: 0 @gutter/4;
+        margin: 0 @gutter / 4;
     }
 
     .restore-point-legend {
         padding: 2.5px 0 !important;
 
-        .encryption, .date, .type, .node, .files {
+        .encryption,
+        .date,
+        .type,
+        .node,
+        .files {
             line-height: 11px;
             text-transform: uppercase;
             font-size: 9px;
-            letter-spacing: .1em;
+            letter-spacing: 0.1em;
             color: @text-color;
         }
 
@@ -436,13 +423,13 @@ ul.databases-list {
 
 .more-nodes-tooltip {
     max-width: 340px;
-    
+
     a {
         color: @gray-light;
 
         &:hover {
             color: lighten(@gray-light, 25%);
-            transition: color .15s ease;
+            transition: color 0.15s ease;
         }
     }
 }

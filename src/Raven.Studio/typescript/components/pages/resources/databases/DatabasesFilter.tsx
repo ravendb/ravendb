@@ -24,7 +24,7 @@ export function DatabasesFilter(props: DatabasesFilterProps) {
     );
 
     return (
-        <Row className="databasesToolbar-filter">
+        <Row>
             <Col sm="auto">
                 <CheckboxTriple onChanged={toggleSelectAll} state={selectionState} title="Select all or none" />
             </Col>

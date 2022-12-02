@@ -2,8 +2,10 @@ import shardViewModelBase from "viewmodels/shardViewModelBase";
 import { OngoingTasksPage } from "../../../components/pages/database/tasks/list/OngoingTasksPage";
 
 class ongoingTasks extends shardViewModelBase {
-    view = { default: `<section class="destinations flex-vertical absolute-fill content-margin manage-ongoing-tasks"
- data-bind="react: reactOptions"></section>` };
+    view = {
+        default: `<section class="destinations flex-vertical absolute-fill content-margin manage-ongoing-tasks"
+ data-bind="react: reactOptions"></section>`,
+    };
 
     props: Parameters<typeof OngoingTasksPage>[0];
 
@@ -12,13 +14,17 @@ class ongoingTasks extends shardViewModelBase {
 
         this.props = {
             database: this.db,
-        }
+        };
     }
 
     reactOptions = ko.pureComputed(() => ({
         component: OngoingTasksPage,
-        props: this.props
+        props: this.props,
     }));
+
+    isUsingBootstrap5() {
+        return true;
+    }
 }
 
 export = ongoingTasks;

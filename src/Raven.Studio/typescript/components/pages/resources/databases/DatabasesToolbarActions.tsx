@@ -14,7 +14,7 @@ export function DatabasesToolbarActions() {
     }, []);
 
     return (
-        <div className="databasesToolbar-actions d-flex justify-content-end">
+        <div className="actions d-flex justify-content-end">
             {/*
             <div className="btn-group-label"
                  data-bind="css: { active: selectedDatabases().length }, visible: accessManager.canSetState || accessManager.canDelete"
