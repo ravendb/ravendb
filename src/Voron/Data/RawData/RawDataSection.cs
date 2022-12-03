@@ -308,7 +308,7 @@ namespace Voron.Data.RawData
             _llt.FreePage(_sectionHeader->PageNumber);
         }
 
-        public double Free(long id)
+        public RawDataSection Free(long id)
         {
             if (_llt.Flags == TransactionFlags.Read)
                 ThrowReadOnlyTransaction(id);
@@ -352,7 +352,7 @@ namespace Voron.Data.RawData
             _sectionHeader->AllocatedSize -= sizeFreed;
             AvailableSpace[pageHeader->PageNumberInSection] += (ushort)sizeFreed;
 
-            return Density;
+            return this;
         }
 
         public event DataMovedDelegate DataMoved;
