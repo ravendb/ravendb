@@ -509,8 +509,12 @@ namespace Voron.Data.Tables
             if (largeValue)
                 return;
 
-            var density = ActiveDataSmallSection.Free(id);
-            if (ActiveDataSmallSection.Contains(id) || density > 0.5)
+            var rawDataSection = ActiveDataSmallSection.Free(id);
+            if (ActiveDataSmallSection.Contains(id))
+                return;
+
+            var density = rawDataSection.Density;
+            if (density > 0.5)
                 return;
 
             var sectionPageNumber = RawDataSection.GetSectionPageNumber(_tx.LowLevelTransaction, id);
