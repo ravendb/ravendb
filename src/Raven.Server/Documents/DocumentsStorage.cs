@@ -1796,8 +1796,11 @@ namespace Raven.Server.Documents
                 if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks);
 
-                CountersStorage.DeleteCountersForDocument(context, id, collectionName);
-                TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName);
+                if ((flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
+                    CountersStorage.DeleteCountersForDocument(context, id, collectionName);
+
+                if ((flags & DocumentFlags.HasTimeSeries) == DocumentFlags.HasTimeSeries)
+                    TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
