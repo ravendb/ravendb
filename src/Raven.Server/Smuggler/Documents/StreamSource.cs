@@ -875,14 +875,14 @@ namespace Raven.Server.Smuggler.Documents
             return SmugglerSourceType.Import;
         }
 
-        public IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToOperate, INewDocumentActions actions)
         {
-            return ReadDocumentsAsync(actions);
+            return ReadDocumentsAsync(collectionsToOperate, actions);
         }
 
-        public IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToOperate, INewDocumentActions actions)
         {
-            return ReadDocumentsAsync(actions);
+            return ReadDocumentsAsync(collectionsToOperate, actions);
         }
 
         public IAsyncEnumerable<DocumentItem> GetLegacyAttachmentsAsync(INewDocumentActions actions)
@@ -1283,7 +1283,7 @@ namespace Raven.Server.Smuggler.Documents
             return context.ReadObject(djv, details.Id);
         }
 
-        private async IAsyncEnumerable<DocumentItem> ReadDocumentsAsync(INewDocumentActions actions = null)
+        private async IAsyncEnumerable<DocumentItem> ReadDocumentsAsync(List<string> collectionsToOperate, INewDocumentActions actions = null)
         {
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
@@ -1331,28 +1331,38 @@ namespace Raven.Server.Smuggler.Documents
                     var data = builder.CreateReader();
                     builder.Reset();
 
-                    if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                        metadata.TryGet(DocumentItem.ExportDocumentType.Key, out string type))
+                    if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                     {
-                        if (type != DocumentItem.ExportDocumentType.Attachment)
+                        if (metadata.TryGet(Constants.Documents.Metadata.Collection, out string collectionName))
                         {
-                            var msg = $"Ignoring an item of type `{type}`. " + data;
-                            if (_log.IsOperationsEnabled)
-                                _log.Operations(msg);
-                            _result.AddWarning(msg);
+                            if (collectionsToOperate != null && collectionsToOperate.Contains(collectionName) == false)
+                            {
+                                _result.Documents.SkippedCount++;
+                                if (_result.Documents.SkippedCount % 1000 == 0)
+                                    _result.AddInfo($"Skipped {_result.Documents.SkippedCount:#,#;;0} documents.");
+                                continue;
+                            }
+                        }
+                        
+                        if (metadata.TryGet(DocumentItem.ExportDocumentType.Key, out string type))
+                        {
+                            if (type != DocumentItem.ExportDocumentType.Attachment)
+                            {
+                                var msg = $"Ignoring an item of type `{type}`. " + data;
+                                if (_log.IsOperationsEnabled)
+                                    _log.Operations(msg);
+                                _result.AddWarning(msg);
+                                continue;
+                            }
+
+                            if (attachments == null)
+                                attachments = new List<DocumentItem.AttachmentStream>();
+
+                            var attachment = new DocumentItem.AttachmentStream { Stream = actions.GetTempStream() };
+                            attachment = await ProcessAttachmentStreamAsync(context, data, attachment);
+                            attachments.Add(attachment);
                             continue;
                         }
-
-                        if (attachments == null)
-                            attachments = new List<DocumentItem.AttachmentStream>();
-
-                        var attachment = new DocumentItem.AttachmentStream
-                        {
-                            Stream = actions.GetTempStream()
-                        };
-                        attachment = await ProcessAttachmentStreamAsync(context, data, attachment);
-                        attachments.Add(attachment);
-                        continue;
                     }
 
                     if (legacyImport)
