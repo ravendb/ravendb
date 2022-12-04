@@ -1075,7 +1075,8 @@ namespace Raven.Server.Documents.Handlers
                                     cmd.DestinationId,
                                     docCollection,
                                     cmd.DestinationName,
-                                    reader.AllValues()
+                                    reader.AllValues(),
+                                    verifyName: false
                                 );
 
                             Reply.Add(new DynamicJsonValue
