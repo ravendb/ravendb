@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Raven.Server.Documents
 {
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Explicit, Pack = 1)]
     internal struct BucketStats
     {
         [FieldOffset(0)]

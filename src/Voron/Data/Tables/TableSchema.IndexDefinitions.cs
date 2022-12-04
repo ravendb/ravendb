@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
@@ -226,6 +227,7 @@ namespace Voron.Data.Tables
                 }
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnIndexEntryChanged(Transaction tx, Slice key, long oldSize, long newSize)
             {
                 OnEntryChanged?.Invoke(tx, key, oldSize, newSize);
