@@ -5,6 +5,7 @@ using System.Reflection;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
+using Voron.Impl;
 
 namespace Voron.Data.Tables
 {
@@ -200,6 +201,10 @@ namespace Voron.Data.Tables
 
             public delegate ByteStringContext.Scope IndexEntryKeyGenerator(ByteStringContext context, ref TableValueReader value, out Slice slice);
 
+            public delegate void ÒnIndexEntryChangedDelegate(Transaction tx, Slice key, int oldSize, int newSize);
+
+            public ÒnIndexEntryChangedDelegate IndexEntryChangedDelegate;
+
             public IndexEntryKeyGenerator GenerateKey;
 
             public ByteStringContext.Scope GetValue(ByteStringContext context, ref TableValueReader value,
@@ -219,6 +224,11 @@ namespace Voron.Data.Tables
                     var reader = value.CreateReader(buffer.Ptr);
                     return GenerateKey(context, ref reader, out slice);
                 }
+            }
+
+            public void OnIndexEntryChanged(Transaction tx, Slice key, int oldSize, int newSize)
+            {
+                IndexEntryChangedDelegate?.Invoke(tx, key, oldSize, newSize);
             }
 
             public byte[] Serialize()
@@ -258,6 +268,7 @@ namespace Voron.Data.Tables
                         return serialized;
                     }
                 }
+                //  todo 
             }
 
             public static DynamicKeyIndexDef ReadFrom(ByteStringContext context, ref TableValueReader input)
@@ -296,6 +307,8 @@ namespace Voron.Data.Tables
                 var @delegate = Delegate.CreateDelegate(typeof(IndexEntryKeyGenerator), method);
                 indexDef.GenerateKey = (IndexEntryKeyGenerator)@delegate;
 
+                // todo 
+
                 return indexDef;
             }
 
@@ -330,6 +343,8 @@ namespace Voron.Data.Tables
                         $"Expected index {Name} to have {nameof(GenerateKey)}.Method.DeclaringType='{GenerateKey.Method.DeclaringType}', " +
                         $"got {nameof(GenerateKey)}.Method.DeclaringType='{actual.GenerateKey.Method.DeclaringType}' instead",
                         nameof(actual));
+
+                // todo
             }
 
             public void Validate()
@@ -348,6 +363,8 @@ namespace Voron.Data.Tables
 
                 if (GenerateKey.Method.GetCustomAttribute<StorageIndexEntryKeyGeneratorAttribute>() == null)
                     throw new ArgumentOutOfRangeException(nameof(GenerateKey), $"{nameof(GenerateKey)} must be marked with custom attribute '{nameof(StorageIndexEntryKeyGeneratorAttribute)}'");
+
+                // todo
             }
         }
 

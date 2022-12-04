@@ -11,13 +11,10 @@ namespace Raven.Server.ServerWide.Context
     {
         private readonly DocumentDatabase _documentDatabase;
 
-
-
         public DocumentsOperationContext(DocumentDatabase documentDatabase, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
             : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             _documentDatabase = documentDatabase;
-
         }
 
         internal ChangeVector LastDatabaseChangeVector
@@ -76,8 +73,6 @@ namespace Raven.Server.ServerWide.Context
             var shortTermSingleUse = new DocumentsOperationContext(documentDatabase, 4096, 1024, 8 * 1024, SharedMultipleUseFlag.None);
             return shortTermSingleUse;
         }
-
-
 
         protected override DocumentsTransaction CloneReadTransaction(DocumentsTransaction previous)
         {

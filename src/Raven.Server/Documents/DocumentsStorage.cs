@@ -57,6 +57,8 @@ namespace Raven.Server.Documents
         public DocumentPutAction DocumentPut;
         public StorageEnvironment Environment { get; private set; }
 
+        internal static readonly Slice BucketStatsSlice;
+
         private readonly Action<string> _addToInitLog;
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
@@ -87,6 +89,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
+                Slice.From(ctx, "BucketStats", ByteStringType.Immutable, out BucketStatsSlice);
             }
         }
 
@@ -217,6 +220,9 @@ namespace Raven.Server.Documents
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
+
+                    tx.CreateTree(BucketStatsSlice);
+
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
@@ -434,7 +440,6 @@ namespace Raven.Server.Documents
 
         public void SetFullDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
-
             var fullChangeVector = ChangeVectorUtils.MergeVectors(changeVector, GetFullDatabaseChangeVector(context));
 
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
