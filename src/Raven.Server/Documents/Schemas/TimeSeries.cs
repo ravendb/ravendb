@@ -81,6 +81,7 @@ namespace Raven.Server.Documents.Schemas
                 TimeSeriesSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForTimeSeries,
+                    OnEntryChanged = DocumentsStorage.UpdateBucketStats,
                     IsGlobal = true,
                     Name = TimeSeriesBucketAndEtagSlice
                 });

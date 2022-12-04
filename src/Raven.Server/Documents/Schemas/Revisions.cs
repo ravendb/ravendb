@@ -149,6 +149,7 @@ namespace Raven.Server.Documents.Schemas
             schema.DefineIndex(new TableSchema.DynamicKeyIndexDef
             {
                 GenerateKey = RevisionsStorage.GenerateBucketAndEtagIndexKeyForRevisions,
+                OnEntryChanged = DocumentsStorage.UpdateBucketStats,
                 IsGlobal = true,
                 Name = RevisionsBucketAndEtagSlice
             });

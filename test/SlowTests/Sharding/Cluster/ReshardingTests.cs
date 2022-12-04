@@ -399,7 +399,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(1411, stats.Size);
+                    Assert.Equal(1846, stats.Size);
                     Assert.Equal(5, stats.NumberOfItems);
                     Assert.True(stats.LastModified > before);
                     Assert.True(stats.LastModified < after);
@@ -464,32 +464,6 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 var after = DateTime.UtcNow;
-
-                // TODO
-                /* 
-                var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, 1));
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-
-                    var stats = ShardedDocumentsStorage.GetBucketStatistics(ctx, start: 0).ToList();
-                    Assert.Equal(3, stats.Count);
-
-                    foreach (var bucketStats in stats)
-                    {
-                        Assert.True(buckets.TryGetValue(bucketStats.Bucket, out (int NumOfDocs, int Size) val));
-
-                        Assert.Equal(val.Size, bucketStats.Size);
-                        Assert.Equal(val.NumOfDocs, bucketStats.NumberOfItems);
-                        Assert.True(bucketStats.LastAccessed > before);
-                        Assert.True(bucketStats.LastAccessed < after);
-                    }
-
-                    Assert.True(stats[0].Bucket < stats[1].Bucket);
-                    Assert.True(stats[1].Bucket < stats[2].Bucket);
-                }
-                */
-
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket1);
 
@@ -507,7 +481,6 @@ namespace SlowTests.Sharding.Cluster
                     Assert.True(stats.LastModified < after);
                 }
 
-
                 shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket2);
                 db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -522,7 +495,6 @@ namespace SlowTests.Sharding.Cluster
                     Assert.True(stats.LastModified > before);
                     Assert.True(stats.LastModified < after);
                 }
-
 
                 shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket3);
                 db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
