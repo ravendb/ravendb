@@ -480,7 +480,8 @@ namespace Raven.Server.Documents
             if (GetCountOfAttachmentsForHash(context, hash) == expectedCount)
             {
                 var tree = context.Transaction.InnerTransaction.CreateTree(AttachmentsSlice);
-                var size = tree.DeleteStream(hash).Size;
+                var deleteResult = tree.DeleteStream(hash);
+                var size = deleteResult.Size;
                 UpdateBucketStatsOnPutOrDeleteStream(context, key, -size);
             }
         }
