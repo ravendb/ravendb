@@ -2575,12 +2575,18 @@ namespace Raven.Server.Documents
             return GenerateBucketAndEtagIndexKey(context, idIndex: (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
         }
 
-        internal static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize)
+        // TODO : use a dedicated attribute
+        internal static void UpdateBucketStatsForDocument(Transaction tx, Slice key, int oldSize, int newSize)
         {
             UpdateBucketStats(tx, key, oldSize, newSize, isDocument: true);
         }
 
-        internal static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize, bool isDocument)
+        internal static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize)
+        {
+            UpdateBucketStats(tx, key, oldSize, newSize, isDocument: false);
+        }
+
+        private static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize, bool isDocument)
         {
             var nowTicks = DateTime.UtcNow.Ticks;
             var bucket = *(int*)key.Content.Ptr;

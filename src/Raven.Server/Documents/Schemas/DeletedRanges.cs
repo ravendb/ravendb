@@ -77,6 +77,7 @@ namespace Raven.Server.Documents.Schemas
                 DeleteRangesSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForDeletedRanges,
+                    OnEntryChanged = DocumentsStorage.UpdateBucketStats,
                     IsGlobal = true,
                     Name = DeletedRangesBucketAndEtagSlice
                 });
