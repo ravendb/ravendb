@@ -88,6 +88,7 @@ class appUrl {
         databaseSettings: ko.pureComputed(() => appUrl.forDatabaseSettings(appUrl.currentDatabase())),
         databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
         databaseIDs: ko.pureComputed(() => appUrl.forDatabaseIDs(appUrl.currentDatabase())),
+        tombstonesState: ko.pureComputed(() => appUrl.forTombstonesState(appUrl.currentDatabase())),
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
         revertRevisions: ko.pureComputed(() => appUrl.forRevertRevisions(appUrl.currentDatabase())),
         expiration: ko.pureComputed(() => appUrl.forExpiration(appUrl.currentDatabase())),
@@ -355,6 +356,10 @@ class appUrl {
 
     static forDatabaseIDs(db: database | databaseInfo): string {
         return "#databases/advanced/databaseIDs?" + appUrl.getEncodedDbPart(db);
+    }
+
+    static forTombstonesState(db: database | databaseInfo): string {
+        return "#databases/advanced/tombstonesState?" + appUrl.getEncodedDbPart(db);
     }
 
     static forRevisions(db: database | databaseInfo): string {

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -290,16 +291,22 @@ namespace Raven.Server.ServerWide.Commands
                 throw new InvalidOperationException($"Cannot use '{nameof(ClusterTransactionCommand)}' with a sharded database ('{databaseName}').");
         }
 
-        internal static void ValidateCommands(ArraySegment<BatchRequestParser.CommandData> parsedCommands)
+        internal static void ValidateCommands(ArraySegment<BatchRequestParser.CommandData> parsedCommands, bool disableAtomicDocumentWrites)
         {
             foreach (var document in parsedCommands)
             {
                 switch (document.Type)
                 {
-                    case CommandType.PUT:
-                    case CommandType.DELETE:
                     case CommandType.CompareExchangePUT:
                     case CommandType.CompareExchangeDELETE:
+                        if (disableAtomicDocumentWrites == false)
+                        {
+                            if (IsAtomicGuardKey(document.Id, out _))
+                                throw new CompareExchangeInvalidKeyException($"You cannot manipulate the atomic guard '{document.Id}' via the cluster-wide session");
+                        }
+                        break;
+                    case CommandType.PUT:
+                    case CommandType.DELETE:
                         if (document.Type == CommandType.PUT)
                         {
                             if (document.SeenAttachments)
@@ -446,7 +453,11 @@ namespace Raven.Server.ServerWide.Commands
                     case nameof(CommandType.PUT):
                         clusterTransactionDataCommand.Type = CommandType.CompareExchangePUT;
 
-                        var dynamicJsonValue = new DynamicJsonValue { ["Id"] = docId };
+                        var dynamicJsonValue = new DynamicJsonValue
+                        {
+                            [Constants.CompareExchange.ObjectFieldName] = new DynamicJsonValue { ["Id"] = docId }
+                        };
+
                         if (dbCmd.TryGet(nameof(ClusterTransactionDataCommand.Document), out BlittableJsonReaderObject document)
                             && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
                             && metadata.TryGet(Constants.Documents.Metadata.Expires, out LazyStringValue expires))
@@ -486,22 +497,21 @@ namespace Raven.Server.ServerWide.Commands
             return null;
         }
 
-        const string RvnAtomicPrefix = "rvn-atomic/";
         public static bool IsAtomicGuardKey(string id, out string docId)
         {
-            if (id.StartsWith(RvnAtomicPrefix) == false)
+            if (id.StartsWith(Constants.CompareExchange.RvnAtomicPrefix) == false)
             {
                 docId = null;
                 return false;
             }
 
-            docId = id.Substring(RvnAtomicPrefix.Length);
+            docId = id.Substring(Constants.CompareExchange.RvnAtomicPrefix.Length);
             return true;
         }
 
         public static string GetAtomicGuardKey(string docId)
         {
-            return RvnAtomicPrefix + docId;
+            return Constants.CompareExchange.RvnAtomicPrefix + docId;
         }
 
         private struct CommandsPerShard

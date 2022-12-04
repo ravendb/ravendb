@@ -181,6 +181,15 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-database-id',
             dynamicHash: appUrls.databaseIDs,
             requiredAccess: "Operator"
+        }),
+        new leafMenuItem({
+            route: 'databases/advanced/tombstonesState',
+            moduleId: 'viewmodels/database/advanced/tombstonesState',
+            title: 'Tombstones',
+            nav: true,
+            css: 'icon-revisions-bin',
+            dynamicHash: appUrls.tombstonesState,
+            requiredAccess: "Operator"
         })
     ];
 

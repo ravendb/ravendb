@@ -136,6 +136,9 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
         private bool CanMergeIndexes(IndexData other, IndexData current)
         {
+            if (current.Collection != other.Collection)
+                return false;
+            
             if (current.IndexName == other.IndexName)
                 return false;
 
@@ -272,7 +275,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
                 if (TryMergeSelectExpressionsAndFields(mergeProposal, selectExpressionDict, mergeSuggestion, out var mergingComment) == false)
                 {
-                    indexMergeResults.Unmergables.Add(mergeProposal.MergedData.IndexName, mergingComment);
+                    indexMergeResults.Unmergables.Add(mergeProposal.MergedData.IndexName, mergingComment); 
                     continue;
                 }
 
@@ -387,14 +390,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             List<ArgumentSyntax> rewrittenArguments = new();
             foreach (var argument in ies.ArgumentList.Arguments)
             {
-                ExpressionSyntax result = argument.Expression switch
-                {
-                    MemberAccessExpressionSyntax maes => ChangeParentInMemberSyntaxToDoc(maes),
-                    InvocationExpressionSyntax iesInner => RecursivelyTransformInvocationExpressionSyntax(curProposedData, iesInner, out message),
-                    SimpleLambdaExpressionSyntax => argument.Expression,
-                    IdentifierNameSyntax ins => ChangeIdentifierToIndexMergerDefaultWhenNeeded(ins),
-                    _ => null
-                };
+                ExpressionSyntax result = RewriteExpressionSyntax(curProposedData, argument.Expression, out message);
 
                 if (result == null)
                 {
@@ -410,13 +406,42 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             return SyntaxFactory.InvocationExpression(invocationExpression,
                 SyntaxFactory.ArgumentList(SyntaxFactory.SeparatedList<ArgumentSyntax>(rewrittenArguments)));
             
+            
+        }
+
+        private static ExpressionSyntax RewriteExpressionSyntax(IndexData indexData, ExpressionSyntax originalExpression, out string message)
+        {
+            if (RuntimeHelpers.TryEnsureSufficientExecutionStack() == false)
+            {
+                message = "Index is too complex. Cannot apply merging on it.";
+                return null;
+            }
+            message = null;
+            return originalExpression switch
+            {
+                MemberAccessExpressionSyntax maes => ChangeParentInMemberSyntaxToDoc(maes),
+                InvocationExpressionSyntax iesInner => RecursivelyTransformInvocationExpressionSyntax(indexData, iesInner, out message),
+                SimpleLambdaExpressionSyntax =>  originalExpression,
+                IdentifierNameSyntax ins => ChangeIdentifierToIndexMergerDefaultWhenNeeded(ins), 
+                BinaryExpressionSyntax bes => RewriteBinaryExpression(indexData, bes), 
+                _ => null
+            };
+            
             IdentifierNameSyntax ChangeIdentifierToIndexMergerDefaultWhenNeeded(IdentifierNameSyntax original)
             {
-                if (original.ToFullString() == curProposedData.FromIdentifier)
+                if (original.ToFullString() == indexData.FromIdentifier)
                     return SyntaxFactory.IdentifierName("doc");
 
                 return original;
             }
+        }
+        
+        private static BinaryExpressionSyntax RewriteBinaryExpression(IndexData indexData, BinaryExpressionSyntax original)
+        {
+            var leftSide = RewriteExpressionSyntax(indexData, original.Left, out var _);
+            var rightSide = RewriteExpressionSyntax(indexData, original.Right, out var _);
+
+            return SyntaxFactory.BinaryExpression(original.Kind(), leftSide, original.OperatorToken, rightSide);
         }
         
         private static MemberAccessExpressionSyntax ChangeParentInMemberSyntaxToDoc(MemberAccessExpressionSyntax memberAccessExpression)

@@ -37,6 +37,7 @@ import documentHelpers = require("common/helpers/database/documentHelpers");
 import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
 import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
 import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaultsCommand");
+import optimizeDialog = require("viewmodels/database/indexes/optimizeDialog");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
 import IndexUtils from "../../../components/utils/IndexUtils";
@@ -108,6 +109,8 @@ class editIndex extends shardViewModelBase {
 
     inheritSearchEngineText: KnockoutComputed<string>;
     effectiveSearchEngineText: KnockoutComputed<string>;
+    
+    canOptimizeIndex = ko.observable<boolean>(false);
 
     static readonly searchEngineConfigurationLabel = configurationConstants.indexing.staticIndexingEngineType;
 
@@ -311,7 +314,9 @@ class editIndex extends shardViewModelBase {
                 this.defaultSearchEngine(indexDefaults.StaticIndexingEngineType === "None" ? "Lucene" : indexDefaults.StaticIndexingEngineType);
                 
                 this.extractSearchEngineFromConfig();
-                
+
+                this.canOptimizeIndex((this.searchEngineConfiguration() || this.defaultSearchEngine()) === "Lucene");
+
                 this.editedIndex().registerCustomAnalyzers(analyzersList);
                 
                 this.defaultDeploymentMode(indexDefaults.StaticIndexDeploymentMode);
@@ -969,6 +974,11 @@ class editIndex extends shardViewModelBase {
     openDumpDialog() {
         eventsCollector.default.reportEvent("index", "dump-index");
         app.showBootstrapDialog(new dumpDialog(this.editedIndex().name(), this.db));
+    }
+
+    openOptimizeDialog() {
+        eventsCollector.default.reportEvent("index", "optimize");
+        app.showBootstrapDialog(new optimizeDialog(this.editedIndex().name()));
     }
 
     formatIndex(mapIndex: number) {

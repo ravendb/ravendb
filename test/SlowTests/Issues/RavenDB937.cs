@@ -61,7 +61,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var enumerator = await session.Advanced
+                    await using var enumerator = await session.Advanced
                         .StreamAsync(session.Query<User, Users_ByActive>().OrderBy(Constants.Documents.Indexing.Fields.DocumentIdFieldName));
 
                     var count = 0;
@@ -96,7 +96,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var enumerator = await session.Advanced.StreamAsync(session.Query<User>(new Users_ByActive().IndexName));
+                    await using var enumerator = await session.Advanced.StreamAsync(session.Query<User>(new Users_ByActive().IndexName));
                     int count = 0;
                     while (await enumerator.MoveNextAsync())
                     {
@@ -139,7 +139,7 @@ namespace SlowTests.Issues
                 {
                     var query = session.Query<User>("Users/ByActive")
                                        .Where(x => x.Active);
-                    var enumerator = await session.Advanced.StreamAsync(query);
+                    await using var enumerator = await session.Advanced.StreamAsync(query);
                     int count = 0;
                     while (await enumerator.MoveNextAsync())
                     {
@@ -172,7 +172,7 @@ namespace SlowTests.Issues
                 Indexes.WaitForIndexing(store);
                 using (var session = store.OpenAsyncSession())
                 {
-                    var enumerator = await session.Advanced
+                    await using var enumerator = await session.Advanced
                         .StreamAsync(session.Query<User, Users_ByActive>().OrderBy(Constants.Documents.Indexing.Fields.DocumentIdFieldName));
                     var count = 0;
                     while (await enumerator.MoveNextAsync())

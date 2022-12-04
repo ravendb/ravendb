@@ -56,6 +56,7 @@ using Raven.Server.Config;
 using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP;
@@ -292,6 +293,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexTypeInfo));
             scripter.AddType(typeof(AdminIndexHandler.DumpIndexResult));
             scripter.AddType(typeof(IndexDefaults));
+            scripter.AddType(typeof(IndexOptimizeResult));
 
             // cluster
             scripter.AddType(typeof(ClusterTopology));
@@ -576,6 +578,7 @@ namespace TypingsGenerator
             // debug
             scripter.AddType(typeof(ThreadsInfo));
             scripter.AddType(typeof(MemoryDebugHandler.MemoryInfo));
+            scripter.AddType(typeof(TombstoneCleaner.TombstonesState));
 
             // counters
             scripter.AddType(typeof(CounterBatch));
