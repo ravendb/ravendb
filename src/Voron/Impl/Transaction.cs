@@ -14,20 +14,13 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.RawData;
 using Voron.Data.Sets;
+using BucketStats = Voron.Data.BucketStats;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl
 {
     public unsafe class Transaction : IDisposable
     {
-        private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
-        private Dictionary<long, ByteString> _cachedDecompressedBuffersByStorageId;
-
-        internal Dictionary<long, ByteString> CachedDecompressedBuffersByStorageId =>
-            _cachedDecompressedBuffersByStorageId ??= new Dictionary<long, ByteString>();
-
-        private LowLevelTransaction _lowLevelTransaction;
-
         public LowLevelTransaction LowLevelTransaction
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -36,19 +29,24 @@ namespace Voron.Impl
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
-        private Dictionary<Slice, Set> _sets;
-        
-        private Dictionary<Slice, Table> _tables;
-
-        private Dictionary<Slice, Tree> _trees;
-
-        private Dictionary<Slice, FixedSizeTree> _globalFixedSizeTree;
-
         public IEnumerable<Tree> Trees => _trees?.Values ?? Enumerable.Empty<Tree>();
 
         public IEnumerable<Table> Tables => _tables?.Values ?? Enumerable.Empty<Table>();
 
         public bool IsWriteTransaction => _lowLevelTransaction.Flags == TransactionFlags.ReadWrite;
+
+        internal Dictionary<long, ByteString> CachedDecompressedBuffersByStorageId =>
+            _cachedDecompressedBuffersByStorageId ??= new Dictionary<long, ByteString>();
+        internal Dictionary<int, BucketStats> BucketStatistics => _bucketStatistics ??= new Dictionary<int, BucketStats>();
+
+        private LowLevelTransaction _lowLevelTransaction;
+        private Dictionary<Slice, Set> _sets;
+        private Dictionary<Slice, Table> _tables;
+        private Dictionary<Slice, Tree> _trees;
+        private Dictionary<Slice, FixedSizeTree> _globalFixedSizeTree;
+        private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
+        private Dictionary<long, ByteString> _cachedDecompressedBuffersByStorageId;
+        private Dictionary<int, BucketStats> _bucketStatistics;
 
         public Transaction(LowLevelTransaction lowLevelTransaction)
         {
@@ -281,6 +279,22 @@ namespace Voron.Impl
                 }
             }
 
+            if (_bucketStatistics != null)
+            {
+                var tree = ReadTree("BucketStats"); // todo 
+                foreach ((int bucket, BucketStats stats) in _bucketStatistics)
+                {
+                    using (Allocator.Allocate(sizeof(int), out var keyBuffer))
+                    {
+                        *(int*)keyBuffer.Ptr = bucket;
+                        var keySlice = new Slice(keyBuffer);
+
+                        using (tree.DirectAdd(keySlice, sizeof(BucketStats), out byte* ptr))
+                            *(BucketStats*)ptr = stats;
+                    }
+                }
+            }
+
             _lowLevelTransaction.PrepareForCommit();
         }
 
@@ -309,7 +323,6 @@ namespace Voron.Impl
             return _multiValueTrees.Remove(keyToRemove);
         }
 
-
         [MethodImpl(MethodImplOptions.NoInlining)]
         internal void AddTree(string name, Tree tree)
         {
@@ -330,7 +343,6 @@ namespace Voron.Impl
             // Either we haven't added this tree, or we added it as null (meaning it didn't exist)
             _trees[name] = tree;
         }
-
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void DeleteTree(string name)
@@ -364,7 +376,6 @@ namespace Voron.Impl
             if (isInRoot)
                 _lowLevelTransaction.RootObjects.Delete(tree.Name);
         }
-
 
         public void DeleteTree(Slice name)
         {

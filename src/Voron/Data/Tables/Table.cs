@@ -619,6 +619,7 @@ namespace Voron.Data.Tables
                     {
                         ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, dynamicKeyIndexDef.Name);
                     }
+                    dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldSize: value.Size, newSize: 0);
                 }
             }
 
@@ -857,6 +858,8 @@ namespace Voron.Data.Tables
                             fst = GetFixedSizeTree(indexTree, newVal.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
                             fst.Add(id);
                         }
+
+                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, key: newVal, oldSize: oldVer.Size, newSize: newVer.Size);
                     }
                 }
 
@@ -982,6 +985,8 @@ namespace Voron.Data.Tables
                         var indexTree = GetTree(dynamicKeyIndexDef);
                         var index = GetFixedSizeTree(indexTree, val, 0, dynamicKeyIndexDef.IsGlobal);
                         index.Add(id);
+
+                        dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldSize: 0, newSize: value.Size);
                     }
                 }
 

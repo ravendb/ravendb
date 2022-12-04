@@ -49,6 +49,123 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         }
     }
 
+    public class BucketStatistics
+    {
+        public int Bucket;
+
+        public long Size;
+
+        public long NumberOfItems;
+
+        public DateTime LastAccessed;
+    }
+
+
+    internal static void UpdateBucketStats_old(Transaction tx, Slice key, int oldSize, int newSize)
+    {
+        if (tx.IsWriteTransaction == false)
+            return; // todo 
+
+        var nowTicks = DateTime.UtcNow.Ticks;
+        var bucket = Bits.SwapBytes(*(int*)key.Content.Ptr);
+
+        if (tx.BucketStatistics.TryGetValue(bucket, out var bucketStats) == false)
+        {
+            var bucketStatsTree = tx.ReadTree(BucketStatsSlice);
+
+            using (tx.Allocator.Allocate(sizeof(int), out var keyBuffer))
+            using (tx.Allocator.Allocate(sizeof(long) * 3, out var statsBuffer))
+            {
+                *(int*)keyBuffer.Ptr = bucket;
+                var keySlice = new Slice(keyBuffer);
+
+                var readResult = bucketStatsTree.Read(keySlice);
+                if (readResult != null)
+                {
+                    // we only need to read 'Size' and 'NumberOfItems', 'LastAccessedTicks' will be overriden  
+                    readResult.Reader.Read(statsBuffer.Ptr, sizeof(long) * 2);
+                }
+                else
+                {
+                    *(long*)statsBuffer.Ptr = 0; // size
+                    *(long*)(statsBuffer.Ptr + sizeof(long)) = 0; // number of items
+                }
+
+                bucketStats = *(Voron.Data.BucketStats*)statsBuffer.Ptr;
+            }
+        }
+
+        bucketStats.Size += (newSize - oldSize);
+
+        if (oldSize == 0)
+            bucketStats.NumberOfItems++;
+        else if (newSize == 0)
+            bucketStats.NumberOfItems--;
+
+        bucketStats.LastAccessedTicks = nowTicks;
+
+        tx.BucketStatistics[bucket] = bucketStats;
+    }
+
+    internal static void UpdateBucketStats(Transaction tx, Slice key, int oldSize, int newSize)
+    {
+        if (tx.IsWriteTransaction == false)
+            return; // todo 
+
+        var nowTicks = DateTime.UtcNow.Ticks;
+        var bucket = Bits.SwapBytes(*(int*)key.Content.Ptr);
+
+        if (tx.BucketStatistics.TryGetValue(bucket, out var bucketStats) == false)
+        {
+            var bucketStatsTree = tx.ReadTree(BucketStatsSlice);
+
+            using (tx.Allocator.Allocate(sizeof(int), out var keyBuffer))
+            {
+                *(int*)keyBuffer.Ptr = bucket;
+                var keySlice = new Slice(keyBuffer);
+
+                var readResult = bucketStatsTree.Read(keySlice);
+                if (readResult != null)
+                    bucketStats = *(Voron.Data.BucketStats*)readResult.Reader.Base;
+            }
+        }
+
+        bucketStats.Size += newSize - oldSize;
+
+        if (oldSize == 0)
+            bucketStats.NumberOfItems++;
+        else if (newSize == 0)
+            bucketStats.NumberOfItems--;
+
+        bucketStats.LastAccessedTicks = nowTicks;
+
+        tx.BucketStatistics[bucket] = bucketStats;
+    }
+
+    public static BucketStatistics GetBucketStatistics(DocumentsOperationContext context, int bucket)
+    {
+        // todo throw if no read tx open 
+
+        var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsSlice);
+
+        using (context.Transaction.InnerTransaction.Allocator.Allocate(sizeof(int), out var keyBuffer))
+        {
+            *(int*)keyBuffer.Ptr = bucket;
+            var readResult = tree.Read(new Slice(keyBuffer));
+            if (readResult == null)
+                return null;
+
+            var stats = *(Voron.Data.BucketStats*)readResult.Reader.Base;
+
+            return new BucketStatistics
+            {
+                Bucket = bucket,
+                Size = stats.Size,
+                NumberOfItems = stats.NumberOfItems,
+                LastAccessed = new DateTime(stats.LastAccessedTicks)
+            };
+        }
+    }
     public ChangeVector GetLastChangeVectorInBucket(DocumentsOperationContext context, int bucket)
     {
         var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
