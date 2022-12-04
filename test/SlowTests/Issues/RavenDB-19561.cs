@@ -84,22 +84,7 @@ namespace SlowTests.Issues
 
         }
 
-        private string GenRandomString(int size)
-        {
-            var sb = new StringBuilder(size);
-            var ran = new Random();
-            var firstCharAsInt = Convert.ToInt32('a');
-            var lastCharAsInt = Convert.ToInt32('z');
-            for (int i = 0; i < size; i++)
-            {
-                sb.Append(Convert.ToChar(ran.Next(firstCharAsInt, lastCharAsInt + 1)));
-            }
-
-            return sb.ToString();
-        }
-
-
-        private async Task WaitAndAssertDocReplicationAsync<T>(DocumentStore store, string id, int timeout = 15_000_000) where T : class
+        private async Task WaitAndAssertDocReplicationAsync<T>(DocumentStore store, string id, int timeout = 15_000) where T : class
         {
             var result = await WaitForDocumentToReplicateAsync<User>(store, id, timeout);
             Assert.True(result!=null, $"doc \"{id}\" didn't replicated.");
