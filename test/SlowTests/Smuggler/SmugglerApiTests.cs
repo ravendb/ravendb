@@ -1523,6 +1523,81 @@ namespace SlowTests.Smuggler
             }
         }
 
+        [Fact]
+        public async Task CanImportJustOneCollection()
+        {
+            const int numberOfUsers = 11;
+            const int numberOfOrders = 7;
+
+            var file = GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_1"
+                }))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_2"
+                }))
+                {
+                    // Fill the database
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        for (int i = 1; i <= numberOfUsers; i++)
+                        {
+                            await session.StoreAsync(new User { Name = $"Name{i}" }, $"users/{i}");
+                        }
+
+                        for (int i = 1; i <= numberOfOrders; i++)
+                        {
+                            await session.StoreAsync(new Order { Employee = $"users/{i}" }, $"orders/{i}");
+                        }
+                        
+                        await session.SaveChangesAsync();
+                    }
+
+                    // We'll export both collections
+                    var exportOptions = new DatabaseSmugglerExportOptions
+                    {
+                        Collections = new List<string>{ "Users", "Orders"}
+                    };
+                    var operation = await store1.Smuggler.ExportAsync(exportOptions, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    // Check that all documents are exported
+                    var statsOfStore1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfDocuments); 
+                    
+                    // We'll import only one of two collection
+                    var importOptions = new DatabaseSmugglerImportOptions
+                    {
+                        Collections = new List<string> { "Users" }
+                    };
+                    operation = await store2.Smuggler.ImportAsync(importOptions, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    // Check that just one collection imported (by count)
+                    var statsOfStore2 = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(numberOfUsers, statsOfStore2.CountOfDocuments); 
+
+                    // Check that just one collection imported (by content)
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        for (int i = 1; i <= statsOfStore2.CountOfDocuments; i++)
+                        {
+                            var user = await session.LoadAsync<User>($"users/{i}");
+                            Assert.Equal($"Name{i}", user.Name);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
         private async Task SetupExpiration(DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
