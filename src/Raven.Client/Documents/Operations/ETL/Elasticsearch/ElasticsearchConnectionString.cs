@@ -59,6 +59,7 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         {
             DynamicJsonValue json = base.ToJson();
             json[nameof(Nodes)] = new DynamicJsonArray(Nodes);
+            json[nameof(EnableCompatibilityMode)] = EnableCompatibilityMode;
             json[nameof(Authentication)] = Authentication == null ? null : new DynamicJsonValue()
             {
                 [nameof(Authentication.Basic)] = Authentication.Basic == null ? null : new DynamicJsonValue()
