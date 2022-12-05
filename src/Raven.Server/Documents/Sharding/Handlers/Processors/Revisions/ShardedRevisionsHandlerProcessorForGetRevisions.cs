@@ -75,15 +75,15 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, id);
             var result = await RequestHandler.ExecuteSingleShardAsync(context, cmd, shardNumber, token);
 
-            string actualChangeVector = cmd.Etag;
-            if (NotModified(actualChangeVector))
+            string actualEtag = cmd.Etag;
+            if (NotModified(actualEtag))
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
             }
 
-            if (string.IsNullOrEmpty(actualChangeVector) == false)
-                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualChangeVector + "\"";
+            if (string.IsNullOrEmpty(actualEtag) == false)
+                HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
 
             var array = result.Results.Items.Select(x => (BlittableJsonReaderObject)x).ToArray();
             await WriteRevisionsResultAsync(context, RequestHandler, array, result.TotalResults);
