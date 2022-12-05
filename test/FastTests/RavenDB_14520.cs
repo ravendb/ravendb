@@ -3,6 +3,10 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
+using Sparrow.Json;
+using Sparrow.Server;
+using Sparrow.Threading;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
