@@ -8,30 +8,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
-using NuGet.Packaging;
 using Raven.Client;
-using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Client.Extensions;
-using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Admin;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -2168,32 +2158,20 @@ namespace FastTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
 
-                var serverNode = new ServerNode
+                using (var session = store.OpenSession())
                 {
-                    Database = store.Database,
-                    Url = store.Urls.First()
-                };
+                    HttpStatusCode status = default;
+                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) => { status = args.Response.StatusCode; };
 
-                using (var re = store.GetRequestExecutor())
-                using (re.ContextPool.AllocateOperationContext(out var ctx))
-                {
-                    var revisionsCommand = new GetRevisionsCommand(company.Id, before: DateTime.MaxValue);
-                    var request = revisionsCommand.CreateRequest(ctx, serverNode, out var url);
-                    request.RequestUri = new UriBuilder(url).Uri;
+                    var revision = session.Advanced.Revisions.Get<Company>(company.Id, DateTime.MaxValue);
 
-                    var response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+                    Assert.NotNull(revision);
+                    Assert.True(status != HttpStatusCode.NotModified);
 
-                    Assert.True(response.StatusCode != HttpStatusCode.NotModified);
+                    revision = session.Advanced.Revisions.Get<Company>(company.Id, DateTime.MaxValue);
 
-                    var etagFromResponse = response.Headers.ETag?.Tag;
-
-                    request = revisionsCommand.CreateRequest(ctx, serverNode, out url);
-                    request.RequestUri = new UriBuilder(url).Uri;
-                    request.Headers.IfNoneMatch.ParseAdd(etagFromResponse);
-
-                    response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
-                    
-                    Assert.True(response.StatusCode == HttpStatusCode.NotModified);
+                    Assert.NotNull(revision);
+                    Assert.True(status == HttpStatusCode.NotModified);
                 }
             }
         }
@@ -2230,33 +2208,18 @@ namespace FastTests.Server.Documents.Revisions
                     var changeVectors = revisionsMetadata.Select(x => x.GetString(Constants.Documents.Metadata.ChangeVector)).ToList();
                     changeVectors.Add("NotExistsChangeVector");
 
-                    var serverNode = new ServerNode
-                    {
-                        Database = store.Database,
-                        Url = store.Urls.First()
-                    };
+                    HttpStatusCode status = default;
+                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) => { status = args.Response.StatusCode; };
 
-                    using (var re = store.GetRequestExecutor())
-                    using (re.ContextPool.AllocateOperationContext(out var ctx))
-                    {
-                        var revisionsCommand = new GetRevisionsCommand(changeVectors.ToArray());
-                        var request = revisionsCommand.CreateRequest(ctx, serverNode, out var url);
-                        request.RequestUri = new UriBuilder(url).Uri;
+                    var revision = await session.Advanced.Revisions.GetAsync<Company>(changeVectors.ToArray());
 
-                        var response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+                    Assert.NotNull(revision);
+                    Assert.True(status != HttpStatusCode.NotModified);
 
-                        Assert.True(response.StatusCode != HttpStatusCode.NotModified);
+                    revision = await session.Advanced.Revisions.GetAsync<Company>(changeVectors.ToArray());
 
-                        var etagFromResponse = response.Headers.ETag?.Tag;
-
-                        request = revisionsCommand.CreateRequest(ctx, serverNode, out url);
-                        request.RequestUri = new UriBuilder(url).Uri;
-                        request.Headers.IfNoneMatch.ParseAdd(etagFromResponse);
-
-                        response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
-
-                        Assert.True(response.StatusCode == HttpStatusCode.NotModified);
-                    }
+                    Assert.NotNull(revision);
+                    Assert.True(status == HttpStatusCode.NotModified);
                 }
             }
         }
