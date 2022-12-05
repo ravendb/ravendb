@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Raven.Client;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
@@ -6,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class ExtractedItem
+    public abstract class ExtractedItem : IDisposable
     {
         public bool Filtered;
 
@@ -68,5 +69,22 @@ namespace Raven.Server.Documents.ETL
         public TimeSeriesDeletedRangeItem TimeSeriesDeletedRangeItem { get; protected set; }
         
         public LazyStringValue CounterTombstoneId { get; protected set; }
+
+        public void Dispose()
+        {
+            Document?.Dispose();
+
+            if (DocumentId != null && DocumentId.IsDisposed == false)
+                DocumentId.Dispose();
+
+            if (CollectionFromMetadata != null && CollectionFromMetadata.IsDisposed == false)
+                CollectionFromMetadata.Dispose();
+
+            if (CounterTombstoneId != null && CounterTombstoneId.IsDisposed)
+                CounterTombstoneId?.Dispose();
+
+            CounterGroupDocument?.Dispose();
+            TimeSeriesDeletedRangeItem?.Dispose();
+        }
     }
 }
