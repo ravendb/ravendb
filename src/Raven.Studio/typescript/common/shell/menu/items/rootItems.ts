@@ -1,5 +1,7 @@
 ﻿import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import appUrl = require("common/appUrl");
+import { bridgeToReact } from "common/reactUtils";
+import { BootstrapPlaygroundPage } from "components/pages/BootstrapPlaygroundPage";
 
 function aboutItem() {
     return new leafMenuItem({
@@ -16,7 +18,7 @@ function aboutItem() {
 function bs5Item() {
     return new leafMenuItem({
         route: 'bs5',
-        moduleId: require('viewmodels/shell/bs5'),
+        moduleId: bridgeToReact(BootstrapPlaygroundPage, "nonShardedView"),
         title: 'Bootstrap 5',
         tooltip: "Boostrap 5",
         nav: false,

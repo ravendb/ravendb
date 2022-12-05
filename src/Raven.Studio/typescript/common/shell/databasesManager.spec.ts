@@ -7,8 +7,9 @@ import endpointConstants from "endpoints";
 import shardedDatabase from "models/resources/shardedDatabase";
 import shard from "models/resources/shard";
 import { ajaxMock } from "../../test/mocks";
-import { DatabaseStubs } from "../../test/DatabaseStubs";
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
+import DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
+import { DatabasesStubs } from "../../test/stubs/DatabasesStubs";
 
 describe("databasesManager", () => {
     
@@ -17,7 +18,9 @@ describe("databasesManager", () => {
     });
     
     it("can handle non-sharded database", async () => {
-        const response = DatabaseStubs.singleDatabaseResponse();
+        const response: DatabasesInfo = { 
+            Databases: [ DatabasesStubs.nonShardedSingleNodeDatabaseDto() ]
+        }
         
         ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
             if (args.url === endpointConstants.global.databases.databases) {
@@ -40,7 +43,9 @@ describe("databasesManager", () => {
     })
     
     it("can handle sharded database", async () => {
-        const response = DatabaseStubs.shardedDatabasesResponse();
+        const response: DatabasesInfo = {
+            Databases: DatabasesStubs.shardedDatabaseDto()
+        }
         
         ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
             if (args.url === endpointConstants.global.databases.databases) {
@@ -67,7 +72,7 @@ describe("databasesManager", () => {
         const sharded = firstDb as shardedDatabase;
         const shards = sharded.shards();
         expect(shards)
-            .toHaveLength(2);
+            .toHaveLength(3);
         
         expect(shards[0].name)
             .toEqual(response.Databases[0].Name);
@@ -81,7 +86,9 @@ describe("databasesManager", () => {
     });
     
     it("can get single shard by name", async () => {
-        const response = DatabaseStubs.shardedDatabasesResponse();
+        const response: DatabasesInfo = {
+            Databases: DatabasesStubs.shardedDatabaseDto()
+        }
 
         ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
             if (args.url === endpointConstants.global.databases.databases) {
@@ -107,11 +114,13 @@ describe("databasesManager", () => {
         expect(shardGroup)
             .toBeInstanceOf(shardedDatabase);
         expect(shardGroup.shards())
-            .toHaveLength(2);
+            .toHaveLength(3);
     });
 
     it("can get sharded database by name", async () => {
-        const response = DatabaseStubs.shardedDatabasesResponse();
+        const response: DatabasesInfo = {
+            Databases: DatabasesStubs.shardedDatabaseDto()
+        }
 
         ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
             if (args.url === endpointConstants.global.databases.databases) {
@@ -131,11 +140,13 @@ describe("databasesManager", () => {
         expect(shard)
             .toBeInstanceOf(shardedDatabase);
         expect(shard.shards())
-            .toHaveLength(2);
+            .toHaveLength(3);
     });
     
     it("can update manager after db was deleted", async () => {
-        const response = DatabaseStubs.shardedDatabasesResponse();
+        const response: DatabasesInfo = {
+            Databases: DatabasesStubs.shardedDatabaseDto()
+        }
 
         ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
             if (args.url === endpointConstants.global.databases.databases) {
@@ -161,7 +172,9 @@ describe("databasesManager", () => {
     });
 
     it("can update manager after single shard was deleted", async () => {
-        const response = DatabaseStubs.shardedDatabasesResponse();
+        const response: DatabasesInfo = {
+            Databases: DatabasesStubs.shardedDatabaseDto()
+        }
 
         ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
             if (args.url === endpointConstants.global.databases.databases) {
@@ -185,9 +198,9 @@ describe("databasesManager", () => {
         expect(manager.databases())
             .toHaveLength(1);
         
-        const db1 = manager.getDatabaseByName("db") as shardedDatabase;
+        const db1 = manager.getDatabaseByName("sharded") as shardedDatabase;
         expect(db1.shards())
-            .toHaveLength(1);
+            .toHaveLength(2);
     })
 })
 

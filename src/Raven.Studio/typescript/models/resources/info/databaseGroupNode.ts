@@ -14,40 +14,7 @@ class databaseGroupNode {
         return generalUtils.trimMessage(longError);
     });
 
-    cssIcon = ko.pureComputed(() => {
-        const type = this.type();
-        switch (type) {
-            case "Member":
-                return "icon-dbgroup-member";
-            case "Promotable":
-                return "icon-dbgroup-promotable";
-            case "Rehab":
-                return "icon-dbgroup-rehab";
-        }
-        return "";
-    });
-
-    badgeClass = ko.pureComputed(() => {
-        switch (this.lastStatus()) {
-            case "Ok":
-                return "state-success";
-            case "NotResponding":
-                return "state-danger";
-            default:
-                return "state-warning";
-        }
-    });
-
-    badgeText = ko.pureComputed(() => {
-        switch (this.lastStatus()) {
-            case "Ok":
-                return "Active";
-            case "NotResponding":
-                return "Error";
-            default:
-                return "Catching up";
-        }
-    });
+   
 
     static for(tag: string, serverUrl: string, responsibleNode: string, type: databaseGroupNodeType) {
         const node = new databaseGroupNode();

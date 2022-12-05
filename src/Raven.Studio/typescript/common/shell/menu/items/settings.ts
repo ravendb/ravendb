@@ -1,6 +1,8 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
+import { bridgeToReact } from "common/reactUtils";
+import { ManageDatabaseGroupPage } from "components/pages/resources/manageDatabaseGroup/ManageDatabaseGroupPage";
 
 export = getSettingsMenuItem;
 
@@ -144,7 +146,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/manageDatabaseGroup',
-            moduleId: require('viewmodels/resources/manageDatabaseGroup'),
+            moduleId: bridgeToReact(ManageDatabaseGroupPage, "nonShardedView"),
             title: 'Manage Database Group',
             nav: true,
             css: 'icon-manage-dbgroup',

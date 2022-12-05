@@ -1,13 +1,13 @@
 ﻿import React, { ChangeEvent, useCallback, useState } from "react";
 import classNames from "classnames";
 import { shardingTodo } from "common/developmentHelper";
-import { IndexStatus, IndexFilterCriteria, IndexSharedInfo } from "../../../../models/indexes";
+import { IndexStatus, IndexFilterCriteria, IndexSharedInfo } from "components/models/indexes";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import IndexUtils from "../../../../utils/IndexUtils";
 import { Badge, Button, DropdownItem, FormGroup, Input, InputGroup, Label } from "reactstrap";
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
-import { DropdownPanel } from "../../../../common/DropdownPanel";
+import { DropdownPanel } from "components/common/DropdownPanel";
 
 interface IndexFilterStatusItemProps {
     label: string;

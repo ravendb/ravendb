@@ -5,6 +5,8 @@ import IndexType = Raven.Client.Documents.Indexes.IndexType;
 import collection from "models/database/documents/collection";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 
+//TODO: do we want that here?
+
 export default class IndexUtils {
     static readonly DefaultIndexGroupName = "Other";
     static readonly AutoIndexPrefix = "Auto/";
