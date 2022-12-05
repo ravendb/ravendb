@@ -1,10 +1,12 @@
 ﻿import React from "react";
 import viewModelBase from "viewmodels/viewModelBase";
+import database from "models/resources/database";
 
 abstract class reactViewModelBase extends viewModelBase {
 
     view = { default: `<div class="react-container" data-bind="react: reactOptions"></div>` };
 
+    private readonly db?: database;
     private readonly reactView: React.FC<any>;
     private readonly bootstrap5: boolean; //TODO: will be removed once we migrate all react views to bs5 (I assume one left)
 
@@ -25,7 +27,8 @@ abstract class reactViewModelBase extends viewModelBase {
         super.activate(args, parameters);
 
         this.reactOptions = this.createReactOptions(this.reactView, {
-            ...args
+            ...args,
+            db: this.activeDatabase()
         });
     }
 

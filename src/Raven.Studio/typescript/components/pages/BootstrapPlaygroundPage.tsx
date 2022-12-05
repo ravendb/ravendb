@@ -966,7 +966,7 @@ To edit settings, press <kbd><kbd>ctrl</kbd> + <kbd>,</kbd></kbd>
 `;
 
     return (
-        <div className="bs5 panel">
+        <div className="bs5 panel content-margin">
             <h1>Bootstrap 5 playground</h1>
 
             <div>

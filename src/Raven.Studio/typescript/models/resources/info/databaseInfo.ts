@@ -59,7 +59,7 @@ class databaseInfo {
     documentsCount = ko.observable<number>();
     indexesCount = ko.observable<number>();
 
-    nodes = ko.observableArray<databaseGroupNode>([]);
+    nodes = ko.observableArray<databaseGroupNode>([]); //TODO: remove?
     deletionInProgress = ko.observableArray<string>([]);
 
     constructor(dto: Raven.Client.ServerWide.Operations.DatabaseInfo) {

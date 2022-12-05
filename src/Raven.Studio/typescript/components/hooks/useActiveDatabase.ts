@@ -3,7 +3,7 @@ import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import database from "models/resources/database";
 
 export function useActiveDatabase() {
-    const [db, setDb] = useState<database>();
+    const [db, setDb] = useState<database>(activeDatabaseTracker.default.database());
 
     useEffect(() => {
         const activeDatabaseSubscription = activeDatabaseTracker.default.database.subscribe(setDb);
