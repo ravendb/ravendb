@@ -775,7 +775,7 @@ namespace Raven.Server.Documents.Handlers
                 return Database.DocumentsStorage.ExtractCollectionName(context, conflicts[0].Collection);
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new ClusterTransactionMergedCommandDto
                 {
@@ -819,7 +819,7 @@ namespace Raven.Server.Documents.Handlers
                 return sb.ToString();
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new MergedBatchCommandDto
                 {

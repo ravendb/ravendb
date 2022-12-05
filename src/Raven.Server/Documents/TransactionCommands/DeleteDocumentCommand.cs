@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.TransactionCommands
             return 1;
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
         {
             return new DeleteDocumentCommandDto()
             {

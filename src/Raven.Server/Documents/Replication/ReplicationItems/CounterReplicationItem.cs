@@ -3,6 +3,7 @@ using System.IO;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
@@ -80,7 +81,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 stats.RecordCountersRead(counters.Count);
         }
 
-        protected override ReplicationBatchItem CloneInternal(JsonOperationContext context)
+        protected override ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator)
         {
             return new CounterReplicationItem
             {
