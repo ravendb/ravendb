@@ -14,7 +14,6 @@ import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import messagePublisher = require("common/messagePublisher");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 import databaseNotificationCenterClient = require("common/databaseNotificationCenterClient");
 import changeSubscription = require("common/changeSubscription");
 import generalUtils = require("common/generalUtils");
@@ -293,6 +292,7 @@ class databases extends viewModelBase {
     
     private initTooltips() {
         // eslint-disable-next-line @typescript-eslint/no-this-alias
+        /* TODO
         const self = this;
 
         const contentProvider = (dbInfo: databaseInfo) => {
@@ -345,9 +345,12 @@ class databases extends viewModelBase {
                 </div>`
             }
         });
+        
+         */
     }
 
     private filterDatabases(): void {
+        /* TODO
         const filters = this.filters;
         let searchText = filters.searchText();
         const hasSearchText = !!searchText;
@@ -384,6 +387,7 @@ class databases extends viewModelBase {
                 this.selectedDatabases.remove(db.name);
             }
         });
+         */
     }
 
     createManageDbGroupUrlObsevable(dbInfo: databaseInfo): KnockoutComputed<string> {
@@ -410,6 +414,8 @@ class databases extends viewModelBase {
         });
     }
 
+    
+    /*
     createAllDocumentsUrlObservableForNode(dbInfo: databaseInfo, node: databaseGroupNode) {
         return ko.pureComputed(() => {
             const currentNodeTag = this.clusterManager.localNodeTag();
@@ -421,13 +427,16 @@ class databases extends viewModelBase {
                 return appUrl.toExternalUrl(node.serverUrl(), link);
             }
         });
-    }
+    }*/
 
     private static toExternalUrl(dbInfo: databaseInfo, url: string) {
+        return ""; //TODO:
+        /* TODO
         // we have to redirect to different node, let's find first member where selected database exists
         const firstMember = dbInfo.nodes().find(x => x.type() === "Member");
         const serverUrl = firstMember ? firstMember.serverUrl() : clusterTopologyManager.default.localNodeUrl();
         return appUrl.toExternalUrl(serverUrl, url);
+         */
     }
 
     indexErrorsUrl(dbInfo: databaseInfo): string {
@@ -652,8 +661,11 @@ class databases extends viewModelBase {
     }
     
     private isLocalDatabase(dbName: string) {
+        return true; //tODO: 
+        /* TODO:
         const nodeTag = this.clusterManager.localNodeTag();
         return this.databases().getByName(dbName).isLocal(nodeTag);
+         */
     }
     
     openNotificationCenter(dbInfo: databaseInfo) {

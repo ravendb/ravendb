@@ -3,7 +3,6 @@ import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import addNodeToDatabaseGroupCommand = require("commands/database/dbGroup/addNodeToDatabaseGroupCommand");
-import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 
 class addNewNodeToDatabaseGroup extends dialogViewModelBase {
 
@@ -20,7 +19,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     key = ko.observable<string>();
     confirmation = ko.observable<boolean>(false);
     databaseName: string;
-    nodes: databaseGroupNode[];
+    //TODO: nodes: databaseGroupNode[];
     
     encryptionSection = ko.observable<setupEncryptionKey>();
     validationGroup: KnockoutValidationGroup;
@@ -31,7 +30,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     spinners = {
         addNode: ko.observable<boolean>(false)
     };
-
+/*
     constructor(databaseName: string, nodes: databaseGroupNode[], isEncrypted: boolean) {
         super();
         
@@ -144,6 +143,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     selectedMentor(tag: string) {
         this.mentorNode(tag);
     }
+ */
 }
 
 export = addNewNodeToDatabaseGroup;
