@@ -100,6 +100,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
                 if (_forTestingPurposes != null && _forTestingPurposes.OnBackupTaskRunHoldBackupExecution != null)
                     _forTestingPurposes.OnBackupTaskRunHoldBackupExecution.Task.Wait();
+                if (_database.ForTestingPurposes != null && _database.ForTestingPurposes.ActionToCallOnGetTempPath != null)
+                    _database.ForTestingPurposes.ActionToCallOnGetTempPath.Invoke(_tempBackupPath);
 
                 if (runningBackupStatus.LocalBackup == null)
                     runningBackupStatus.LocalBackup = new LocalBackup();

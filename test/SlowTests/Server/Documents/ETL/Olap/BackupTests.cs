@@ -190,8 +190,10 @@ loadToOrders(partitionBy(key),
         [InlineData(false, false)]
         public async Task BackupDatabaseOnceUsingBackupTempPath(bool assignBackupTempPath, bool assignStorageTempPath)
         {
-            string backupTempPath = assignBackupTempPath ? NewDataPath(suffix: "__BackupTempPath") : null;
-            string storageTempPath = assignStorageTempPath ? NewDataPath(suffix: "__StorageTempPath") : null;
+            const string subDirName = "OneTimeBackupTemp";
+
+            var backupTempPath = assignBackupTempPath ? new PathSetting(NewDataPath(suffix: "_BackupTempPath")) : null;
+            var storageTempPath = assignStorageTempPath ? new PathSetting(NewDataPath(suffix: "_StorageTempPath")) : null;
 
             using (var server = GetNewServer())
             using (var store = GetDocumentStore(new Options
@@ -200,18 +202,25 @@ loadToOrders(partitionBy(key),
                        RunInMemory = false,
                        ModifyDatabaseRecord = record =>
                        {
-                           record.Settings[RavenConfiguration.GetKey(x => x.Backup.TempPath)] = backupTempPath;
-                           record.Settings[RavenConfiguration.GetKey(x => x.Storage.TempPath)] = storageTempPath;
+                           record.Settings[RavenConfiguration.GetKey(x => x.Backup.TempPath)] = backupTempPath?.FullPath;
+                           record.Settings[RavenConfiguration.GetKey(x => x.Storage.TempPath)] = storageTempPath?.FullPath;
                        }
                    }))
             {
                 var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
-                var coreDataDirectoryPath = databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)];
+                var coreDataDirectoryPath = new PathSetting(databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)]);
 
                 using (var session = store.OpenAsyncSession())
                 {
                     await Backup.FillDatabaseWithRandomDataAsync(databaseSizeInMb: 10, session);
                 }
+
+                PathSetting tempPath = null;
+                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                documentDatabase.ForTestingPurposesOnly().ActionToCallOnGetTempPath = pathSetting =>
+                {
+                    tempPath = pathSetting;
+                };
 
                 await store.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
                 {
@@ -219,38 +228,21 @@ loadToOrders(partitionBy(key),
                     S3Settings = new S3Settings { BucketName = "ravendb-bucket", RemoteFolderName = "lev/backups_RavenDB_19495" },
                 }));
 
+                WaitForValue(() => tempPath != null, true);
+
                 if ((assignBackupTempPath && assignStorageTempPath) || assignBackupTempPath)
                 {
-                    await AssertBackupTempPath(shouldBeUsed: backupTempPath, shouldNotBeUsed: new []{ storageTempPath, coreDataDirectoryPath });
-                    return;
+                    
+                    Assert.Equal(backupTempPath.Combine(subDirName), tempPath);
                 }
-                
-                if (assignStorageTempPath)
+                else if (assignStorageTempPath)
                 {
-                    await AssertBackupTempPath(shouldBeUsed: storageTempPath, shouldNotBeUsed: new[] { backupTempPath, coreDataDirectoryPath });
-                    return;
+                    Assert.Equal(storageTempPath.Combine(subDirName), tempPath);
                 }
-
-                await AssertBackupTempPath(shouldBeUsed: coreDataDirectoryPath, shouldNotBeUsed: new[] { backupTempPath, storageTempPath });
-                
-                async Task AssertBackupTempPath(string shouldBeUsed, string[] shouldNotBeUsed)
+                else
                 {
-                    var oneTimeBackupTempFolderPath = new PathSetting(shouldBeUsed).Combine("OneTimeBackupTemp").FullPath;
-                    await WaitForValueAsync(() => Directory.Exists(oneTimeBackupTempFolderPath), true);
-                    await WaitForValueAsync(() =>
-                    {
-                        var tempFiles = Directory.GetFiles(oneTimeBackupTempFolderPath);
-                        return tempFiles.Length > 0 && tempFiles[0].Contains("in-progress");
-                    }, true);
-
-                    foreach (var s in shouldNotBeUsed)
-                    {
-                        if (s == null) continue;
-
-                        var shouldBeEmptyDirectory = new PathSetting(s).Combine("OneTimeBackupTemp").FullPath;
-                        Assert.False(Directory.Exists(shouldBeEmptyDirectory));
-                    }
-                }
+                    Assert.Equal(coreDataDirectoryPath.Combine(subDirName), tempPath);
+                } 
             }
         }
 
