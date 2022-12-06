@@ -60,9 +60,7 @@ namespace SlowTests.Server.Documents.Revisions
                 await session.SaveChangesAsync();
             }
 
-            await Task.Delay(100);
-            DateTime last = DateTime.UtcNow;
-            await Task.Delay(100);
+            var last = DateTime.UtcNow;
 
             using (var session = store.OpenAsyncSession())
             {
@@ -77,12 +75,9 @@ namespace SlowTests.Server.Documents.Revisions
                 await session.SaveChangesAsync();
             }
 
-            var db = database;//await Databases.GetDocumentDatabaseInstanceFor(store);
-
-            RevertResult result;
-            using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
+            using (var token = new OperationCancelToken(database.Configuration.Databases.OperationTimeout.AsTimeSpan, database.DatabaseShutdown, CancellationToken.None))
             {
-                result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                var result = (RevertResult)await database.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
                     token: token, collections: collections);
             }
 
