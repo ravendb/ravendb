@@ -359,7 +359,7 @@ namespace Raven.Server.Documents
                     }
                 }, null);
 
-                Task.Run(async () =>
+                _clusterTransactionsTask = Task.Run(async () =>
                 {
                     try
                     {
@@ -428,6 +428,7 @@ namespace Raven.Server.Documents
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
         public bool IsEncrypted => MasterKey != null;
 
+        private Task _clusterTransactionsTask;
         private int _clusterTransactionDelayOnFailure = 1000;
         private FileLocker _fileLocker;
 
@@ -844,6 +845,17 @@ namespace Raven.Server.Documents
                 DocumentsStorage?.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed DocumentsStorage");
+
+            var clusterTransactionsTask = _clusterTransactionsTask;
+            if (clusterTransactionsTask != null)
+            {
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Waiting for cluster transactions executor task to complete");
+                exceptionAggregator.Execute(() =>
+                {
+                    clusterTransactionsTask.Wait();
+                });
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished waiting for cluster transactions executor task to complete");
+            }
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _databaseShutdown");
             exceptionAggregator.Execute(() =>
