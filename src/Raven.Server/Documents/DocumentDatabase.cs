@@ -489,11 +489,20 @@ namespace Raven.Server.Documents
             }
 
             var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
+
+            ForTestingPurposes?.BeforeExecutingClusterTransactions?.Invoke();
+
             try
             {
                 //If we get a database shutdown while we process a cluster tx command this
                 //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
                 await TxMerger.Enqueue(mergedCommands);
+            }
+            catch (ObjectDisposedException) when (_databaseShutdown.IsCancellationRequested)
+            {
+                HandleDatabaseShutdown(batch);
+
+                return batch;
             }
             catch (Exception e)
             {
@@ -529,6 +538,11 @@ namespace Raven.Server.Documents
 
                     _clusterTransactionDelayOnFailure = 1000;
                 }
+                catch (ObjectDisposedException) when (_databaseShutdown.IsCancellationRequested)
+                {
+                    HandleDatabaseShutdown(singleCommand);
+                    // not returning here on purpose, we need to set the exception for the rest of the commands
+                }
                 catch (Exception e)
                 {
                     OnClusterTransactionCompletion(command, mergedCommand, exception: e);
@@ -548,6 +562,15 @@ namespace Raven.Server.Documents
 
                     return;
                 }
+            }
+        }
+
+        private void HandleDatabaseShutdown(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
+        {
+            var exception = CreateDatabaseShutdownException();
+            foreach (var command in batch)
+            {
+                ClusterTransactionWaiter.SetException(command.Options.TaskId, command.Index, exception);
             }
         }
 
@@ -711,6 +734,8 @@ namespace Raven.Server.Documents
                 TxMerger?.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TxMerger");
+
+            ForTestingPurposes?.AfterTxMergerDispose?.Invoke();
 
             // must acquire the lock in order to prevent concurrent access to index files
             if (lockTaken == false)
@@ -1805,6 +1830,10 @@ namespace Raven.Server.Documents
             internal Action CollectionRunnerBeforeOpenReadTransaction;
 
             internal Action CompactionAfterDatabaseUnload;
+
+            internal Action AfterTxMergerDispose;
+
+            internal Action BeforeExecutingClusterTransactions;
 
             internal bool SkipDrainAllRequests = false;
 
