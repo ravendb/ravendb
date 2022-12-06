@@ -58,9 +58,12 @@ namespace SlowTests.Issues
 
             var cts = new CancellationTokenSource();
             var failMre = new ManualResetEvent(false);
-            worker.OnSubscriptionConnectionRetry += _ =>
+            worker.OnSubscriptionConnectionRetry += e =>
             {
-                failMre.Set();
+                if (e is DatabaseDisabledException)
+                {
+                    failMre.Set();
+                }
             };
             var successMre = new ManualResetEvent(false);
             var _ = worker.Run( batch =>
@@ -79,12 +82,12 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Should_Retry_When_AllTopologyNodesDownException_Was_Thrown()
         {
-            var node = GetNewServer(new ServerCreationOptions { RunInMemory = false });
+            var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, shouldRunInMemory: false);
             using var store = GetDocumentStore(new Options()
             {
-                ReplicationFactor = 1,
+                ReplicationFactor = 2,
                 RunInMemory = false,
-                Server = node
+                Server = leader
             });
             string id = "User/33-A";
             using (var session = store.OpenAsyncSession())
@@ -103,13 +106,17 @@ namespace SlowTests.Issues
             using var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("BackgroundSubscriptionWorker"));
 
             // dispose nodes
-            var result = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+            var result0 = await DisposeServerAndWaitForFinishOfDisposalAsync(nodes[0]);
+            var result1 = await DisposeServerAndWaitForFinishOfDisposalAsync(nodes[1]);
 
             var cts = new CancellationTokenSource();
             var failMre = new ManualResetEvent(false);
-            worker.OnSubscriptionConnectionRetry += _ =>
+            worker.OnSubscriptionConnectionRetry += e =>
             {
-                failMre.Set();
+                if (e is AllTopologyNodesDownException)
+                {
+                    failMre.Set();
+                }
             };
             var successMre = new ManualResetEvent(false);
             var _ = worker.Run( batch =>
@@ -119,16 +126,22 @@ namespace SlowTests.Issues
 
             //revive node
             Assert.True(failMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't fail as expected.");
+            ReviveNode(result0.DataDirectory, result0.Url);
+            ReviveNode(result1.DataDirectory, result1.Url);
+            Assert.True(successMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
+        }
+
+        private void ReviveNode(string nodeDataDirectory, string nodeUrl)
+        {
             var cs = new Dictionary<string, string>(DefaultClusterSettings);
-            cs[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = result.Url;
+            cs[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = nodeUrl;
             var revivedServer = GetNewServer(new ServerCreationOptions
             {
                 DeletePrevious = false,
                 RunInMemory = false,
-                DataDirectory = result.DataDirectory,
+                DataDirectory = nodeDataDirectory,
                 CustomSettings = cs
             });
-            Assert.True(successMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
         }
 
         [Fact]
@@ -165,29 +178,36 @@ namespace SlowTests.Issues
             Assert.True(disableSucceeded.Disabled);
 
             var cts = new CancellationTokenSource();
-            
+
             var aggregateException = await Assert.ThrowsAsync<AggregateException>(() => worker.Run(batch => { }, cts.Token));
             var actualExceptionWasThrown = false;
+            var subscriptionInvalidStateExceptionWasThrown = false;
             foreach (var e in aggregateException.InnerExceptions)
             {
                 if (e is SubscriptionInvalidStateException)
                 {
-                    actualExceptionWasThrown = true;
-                    break;
+                    subscriptionInvalidStateExceptionWasThrown = true;
                 }
+                if (e is DatabaseDisabledException)
+                {
+                    actualExceptionWasThrown = true;
+                }
+
+                if (subscriptionInvalidStateExceptionWasThrown && actualExceptionWasThrown)
+                    break;
             }
-            Assert.True(actualExceptionWasThrown);
+            Assert.True(subscriptionInvalidStateExceptionWasThrown && actualExceptionWasThrown);
         }
 
         [Fact]
         public async Task Should_Throw_SubscriptionInvalidStateException_When_AllTopologyNodesDownException_Was_Thrown_And_MaxErroneousPeriod_Was_Passed()
         {
-            var node = GetNewServer(new ServerCreationOptions { RunInMemory = false });
+            var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, shouldRunInMemory: false);
             using var store = GetDocumentStore(new Options()
             {
-                ReplicationFactor = 1,
+                ReplicationFactor = 2,
                 RunInMemory = false,
-                Server = node
+                Server = leader
             });
             string id = "User/33-A";
             using (var session = store.OpenAsyncSession())
@@ -209,21 +229,29 @@ namespace SlowTests.Issues
             });
 
             // dispose nodes
-            var result = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+            var result0 = await DisposeServerAndWaitForFinishOfDisposalAsync(nodes[0]);
+            var result1 = await DisposeServerAndWaitForFinishOfDisposalAsync(nodes[1]);
 
             var cts = new CancellationTokenSource();
             
             var aggregateException = await Assert.ThrowsAsync<AggregateException>( () => worker.Run(batch => { }, cts.Token));
             var actualExceptionWasThrown = false;
+            var subscriptionInvalidStateExceptionWasThrown = false;
             foreach (var e in aggregateException.InnerExceptions)
             {
                 if (e is SubscriptionInvalidStateException)
                 {
-                    actualExceptionWasThrown = true;
-                    break;
+                    subscriptionInvalidStateExceptionWasThrown = true;
                 }
+                if (e is AllTopologyNodesDownException)
+                {
+                    actualExceptionWasThrown = true;
+                }
+
+                if (subscriptionInvalidStateExceptionWasThrown && actualExceptionWasThrown)
+                    break;
             }
-            Assert.True(actualExceptionWasThrown);
+            Assert.True(subscriptionInvalidStateExceptionWasThrown && actualExceptionWasThrown);
         }
 
         private class User
