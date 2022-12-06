@@ -202,8 +202,12 @@ namespace Corax.Queries
                 }
             }
 
-            if (!isSorted)
+            bool documentBoostIsAdded = false;
+            if (isSorted == false)
             {
+                AddDocumentBoost(ref match, matchesSpan, scoresSpan, temporaryTotalMatches);
+                documentBoostIsAdded = true;
+                
                 // We need to first sort by match to remove the duplicates.
                 temporaryTotalMatches = Sorting.SortAndRemoveDuplicates(matchesSpanPtr, scoresSpanPtr, temporaryTotalMatches);
 
@@ -212,23 +216,31 @@ namespace Corax.Queries
             }
             totalMatches = Math.Min(take, temporaryTotalMatches);
 
-            if (match._searcher.DocumentsAreBoosted)
+            if (documentBoostIsAdded == false)
             {
-                for (int bIdx = 0; bIdx < totalMatches; ++bIdx)
-                {
-                    match._searcher.GetReaderFor(matchesSpan[bIdx]).GetReaderFor(Constants.DocumentBoostSlice).Read(out double boost);
-                    scoresSpan[bIdx] *= (float)boost;
-                }
-                
+                AddDocumentBoost(ref match, matchesSpan, scoresSpan, totalMatches);
                 sorter.Sort(scoresSpan[0..totalMatches], matchesSpan[0..totalMatches]);
             }
-
 
             // Copy must happen before we return the backing arrays.
             matchesSpan[..totalMatches].CopyTo(matches);
             match.TotalResults = totalMatches;
 
             return totalMatches;
+
+            void AddDocumentBoost(ref SortingMatch<TInner, TComparer> match, Span<long> matchesSpan, Span<float> scoresSpan, int limit)
+            {
+                if (match._searcher.DocumentsAreBoosted == false) 
+                    return;
+                
+                for (int bIdx = 0; bIdx < limit; ++bIdx)
+                {
+                    if (match._searcher.GetReaderFor(matchesSpan[bIdx]).GetReaderFor(Constants.DocumentBoostSlice).Read(out double boost) == false)
+                        continue;
+                    
+                    scoresSpan[bIdx] *= MathF.Log((float)boost+1);
+                }
+            }
         }
 
         [SkipLocalsInit]
