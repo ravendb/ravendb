@@ -209,12 +209,7 @@ loadToOrders(partitionBy(key),
             {
                 var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
                 var coreDataDirectoryPath = new PathSetting(databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)]);
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    await Backup.FillDatabaseWithRandomDataAsync(databaseSizeInMb: 10, session);
-                }
-
+                
                 PathSetting tempPath = null;
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                 documentDatabase.ForTestingPurposesOnly().ActionToCallOnGetTempPath = pathSetting =>
@@ -232,7 +227,6 @@ loadToOrders(partitionBy(key),
 
                 if ((assignBackupTempPath && assignStorageTempPath) || assignBackupTempPath)
                 {
-                    
                     Assert.Equal(backupTempPath.Combine(subDirName), tempPath);
                 }
                 else if (assignStorageTempPath)
