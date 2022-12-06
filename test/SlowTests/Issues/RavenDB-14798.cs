@@ -36,6 +36,7 @@ namespace SlowTests.Issues
                     testingStuff.AfterTxMergerDispose = () => afterTxMergerDispose.Set();
                     testingStuff.BeforeExecutingClusterTransactions = () =>
                     {
+                        // doing it async because we cannot dispose the database until we are finished with the cluster transactions task
                         unloadTask = Task.Run(() => Server.ServerStore.DatabasesLandlord.UnloadDirectly(database.Name));
                         afterTxMergerDispose.WaitOne();
                     };
