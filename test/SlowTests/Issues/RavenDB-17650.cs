@@ -145,7 +145,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task Should_Throw_SubscriptionInvalidStateException_When_DatabaseDisabledException_Was_Thrown_And_MaxErroneousPeriod_Was_Passed()
+        public async Task Should_Throw_DatabaseDisabledException_When_MaxErroneousPeriod_Was_Passed()
         {
             using var store = GetDocumentStore(new Options()
             {
@@ -200,7 +200,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task Should_Throw_SubscriptionInvalidStateException_When_AllTopologyNodesDownException_Was_Thrown_And_MaxErroneousPeriod_Was_Passed()
+        public async Task Should_Throw_AllTopologyNodesDownException_When_MaxErroneousPeriod_Was_Passed()
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, shouldRunInMemory: false);
             using var store = GetDocumentStore(new Options()
