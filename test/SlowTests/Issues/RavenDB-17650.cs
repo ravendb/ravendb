@@ -8,6 +8,9 @@ using Amazon.S3.Model;
 using FastTests;
 using Microsoft.Azure.Documents.Spatial;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using SlowTests.MailingList;
@@ -74,7 +77,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task Should_Retry_When_AllNodesTopologyDownException_Was_Thrown()
+        public async Task Should_Retry_When_AllTopologyNodesDownException_Was_Thrown()
         {
             var node = GetNewServer(new ServerCreationOptions { RunInMemory = false });
             using var store = GetDocumentStore(new Options()
@@ -90,7 +93,6 @@ namespace SlowTests.Issues
                 await session.StoreAsync(new User { Name = "2" });
                 await session.SaveChangesAsync();
             }
-            WaitForUserToContinueTheTest(store);
 
             await store.Subscriptions
                 .CreateAsync(new SubscriptionCreationOptions<User>
@@ -127,6 +129,101 @@ namespace SlowTests.Issues
                 CustomSettings = cs
             });
             Assert.True(successMre.WaitOne(TimeSpan.FromSeconds(15)), "Subscription didn't success as expected.");
+        }
+
+        [Fact]
+        public async Task Should_Throw_SubscriptionInvalidStateException_When_DatabaseDisabledException_Was_Thrown_And_MaxErroneousPeriod_Was_Passed()
+        {
+            using var store = GetDocumentStore(new Options()
+            {
+                ReplicationFactor = 1,
+                RunInMemory = false
+            });
+
+            string id = "User/33-A";
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = id, Name = "1" });
+                await session.StoreAsync(new User { Name = "2" });
+                await session.SaveChangesAsync();
+            }
+
+            await store.Subscriptions
+                .CreateAsync(new SubscriptionCreationOptions<User>
+                {
+                    Name = "BackgroundSubscriptionWorker"
+                });
+
+            using var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("BackgroundSubscriptionWorker")
+            {
+                MaxErroneousPeriod = TimeSpan.Zero
+            });
+
+            // disable database
+            var disableSucceeded = store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
+            Assert.True(disableSucceeded.Success);
+            Assert.True(disableSucceeded.Disabled);
+
+            var cts = new CancellationTokenSource();
+            
+            var aggregateException = await Assert.ThrowsAsync<AggregateException>(() => worker.Run(batch => { }, cts.Token));
+            var actualExceptionWasThrown = false;
+            foreach (var e in aggregateException.InnerExceptions)
+            {
+                if (e is SubscriptionInvalidStateException)
+                {
+                    actualExceptionWasThrown = true;
+                    break;
+                }
+            }
+            Assert.True(actualExceptionWasThrown);
+        }
+
+        [Fact]
+        public async Task Should_Throw_SubscriptionInvalidStateException_When_AllTopologyNodesDownException_Was_Thrown_And_MaxErroneousPeriod_Was_Passed()
+        {
+            var node = GetNewServer(new ServerCreationOptions { RunInMemory = false });
+            using var store = GetDocumentStore(new Options()
+            {
+                ReplicationFactor = 1,
+                RunInMemory = false,
+                Server = node
+            });
+            string id = "User/33-A";
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Id = id, Name = "1" });
+                await session.StoreAsync(new User { Name = "2" });
+                await session.SaveChangesAsync();
+            }
+
+            await store.Subscriptions
+                .CreateAsync(new SubscriptionCreationOptions<User>
+                {
+                    Name = "BackgroundSubscriptionWorker"
+                });
+
+            using var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("BackgroundSubscriptionWorker")
+            {
+                MaxErroneousPeriod = TimeSpan.Zero
+            });
+
+            // dispose nodes
+            var result = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+
+            var cts = new CancellationTokenSource();
+            
+            var aggregateException = await Assert.ThrowsAsync<AggregateException>( () => worker.Run(batch => { }, cts.Token));
+            var actualExceptionWasThrown = false;
+            foreach (var e in aggregateException.InnerExceptions)
+            {
+                if (e is SubscriptionInvalidStateException)
+                {
+                    actualExceptionWasThrown = true;
+                    break;
+                }
+            }
+            Assert.True(actualExceptionWasThrown);
         }
 
         private class User
