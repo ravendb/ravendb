@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Replication;
 using FastTests.Utils;
 using Orders;
 using Raven.Client;
@@ -1531,6 +1532,7 @@ namespace SlowTests.Smuggler
             DateTime baseTimeline = DateTime.Today.ToUniversalTime();
             
             var file = GetTempFileName();
+            var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
                 using (var store1 = GetDocumentStore(new Options
@@ -1543,40 +1545,94 @@ namespace SlowTests.Smuggler
                 }))
                 {
                     // Fill the database
-                    using (var session = store1.OpenAsyncSession())
+                    for (int i = 1; i <= numberOfUsers; i++)
                     {
-                        for (int i = 1; i <= numberOfUsers; i++)
+                        using (var session = store1.OpenAsyncSession())
                         {
                             await session.StoreAsync(new User { Name = $"Name{i}" }, $"users/{i}");
+                            
                             var docCounters = session.CountersFor($"users/{i}");
-
                             docCounters.Increment($"TestCounter{i}", i * i);
 
-                            session.TimeSeriesFor($"users/{i}", "Heartrate").Append(baseTimeline.AddDays(i * i), new[] { i * 3d  }, "watches/1");
-                        }
+                            session.TimeSeriesFor($"users/{i}", "Heartrate").Append(baseTimeline.AddDays(i * i), new[] { i * 3d }, "watches/1");
 
-                        for (int i = 1; i <= numberOfOrders; i++)
+                            await session.SaveChangesAsync();
+                        }
+                    }
+
+                    for (int i = 1; i <= numberOfOrders; i++)
+                    {
+                        using (var session = store1.OpenAsyncSession())
                         {
                             await session.StoreAsync(new Order { Employee = $"users/{i}" }, $"orders/{i}");
+                            
                             var docCounters = session.CountersFor($"orders/{i}");
-
                             docCounters.Increment($"TestCounter{i}", i);
 
                             session.TimeSeriesFor($"orders/{i}", "Heartrate2").Append(baseTimeline.AddHours(1), new[] { i * 7d }, "watches/2");
+
+                            await session.SaveChangesAsync();
                         }
-                        await session.SaveChangesAsync();
                     }
-                    // Check database statistics before export
                     var statsOfStore1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                    Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfDocuments);
+
+                    // Making tombstones
+                    for (int i = numberOfUsers + 1; i <= numberOfUsers * 2; i++)
+                    {
+                        using (var session = store1.OpenAsyncSession())
+                        {
+                            await session.StoreAsync(new User { Name = $"Name{i}" }, $"users/{i}");
+                            await session.SaveChangesAsync();
+                        }
+                    }
+
+                    for (int i = numberOfOrders + 1; i <= numberOfOrders * 2; i++)
+                    {
+                        using (var session = store1.OpenAsyncSession())
+                        {
+                            await session.StoreAsync(new Order { Employee = $"users/{i}" }, $"orders/{i}");
+                            await session.SaveChangesAsync();
+                        }
+                    }
+                    
+                    var config = Backup.CreateBackupConfiguration(backupPath);
+                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store1);
+
+                    for (int i = numberOfUsers + 1; i <= numberOfUsers * 2; i++)
+                    {
+                        using (var session = store1.OpenAsyncSession())
+                        {
+                            session.Delete($"users/{i}");
+                            await session.SaveChangesAsync();
+                        }
+                    }
+
+                    for (int i = numberOfOrders + 1; i <= numberOfOrders * 2; i++)
+                    {
+                        using (var session = store1.OpenAsyncSession())
+                        {
+                            session.Delete($"orders/{i}");
+                            await session.SaveChangesAsync();
+                        }
+                    }
+
+                    await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store1, isFullBackup: false);
+                    
+                    // Check database statistics before export
+                    statsOfStore1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfDocuments);
                     Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfCounterEntries);
                     Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfTimeSeriesSegments);
-
+                    Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfTombstones);
+                    
                     // We'll export both collections
                     var exportOptions = new DatabaseSmugglerExportOptions
                     {
                         Collections = new List<string> { "Users", "Orders" }
                     };
+                    exportOptions.OperateOnTypes |= DatabaseItemType.Tombstones;
                     var operation = await store1.Smuggler.ExportAsync(exportOptions, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -1585,6 +1641,7 @@ namespace SlowTests.Smuggler
                     {
                         Collections = new List<string> { "Users" }
                     };
+                    importOptions.OperateOnTypes |= DatabaseItemType.Tombstones;
                     operation = await store2.Smuggler.ImportAsync(importOptions, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -1593,29 +1650,39 @@ namespace SlowTests.Smuggler
                     Assert.Equal(numberOfUsers, statsOfStore2.CountOfDocuments);
                     Assert.Equal(numberOfUsers, statsOfStore2.CountOfCounterEntries);
                     Assert.Equal(numberOfUsers, statsOfStore2.CountOfTimeSeriesSegments);
+                    Assert.Equal(numberOfUsers, statsOfStore2.CountOfTombstones);
 
                     // Check that just one collection imported (by content)
-                    for (int i = 1; i <= numberOfUsers; i++)
+                    using (var databaseCommands = store2.Commands())
                     {
-                        using (var session = store2.OpenAsyncSession())
+                        var getTombstonesCommand = new ReplicationTestBase.GetReplicationTombstonesCommand();
+                        await databaseCommands.RequestExecutor.ExecuteAsync(getTombstonesCommand, databaseCommands.Context);
+
+                        for (int i = 1; i <= numberOfUsers; i++)
                         {
-                            // Document check
-                            var user = await session.LoadAsync<User>($"users/{i}");
-                            Assert.Equal($"Name{i}", user.Name);
+                            using (var session = store2.OpenAsyncSession())
+                            {
+                                // Document check
+                                var user = await session.LoadAsync<User>($"users/{i}");
+                                Assert.Equal($"Name{i}", user.Name);
 
-                            // Counters check
-                            var docCounters = await session.CountersFor(user).GetAllAsync();
-                            Assert.NotNull(docCounters);
-                            Assert.Equal(1, docCounters.Count);
-                            Assert.Equal(i * i, docCounters[$"TestCounter{i}"]);
+                                // Counters check
+                                var docCounters = await session.CountersFor(user).GetAllAsync();
+                                Assert.NotNull(docCounters);
+                                Assert.Equal(1, docCounters.Count);
+                                Assert.Equal(i * i, docCounters[$"TestCounter{i}"]);
 
-                            // TimeSeries check
-                            var timeSeries = await session.TimeSeriesFor(user, "Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue);
-                            Assert.Equal(1, timeSeries.Length);
-                            Assert.Equal(i * 3d, timeSeries[0].Value);
-                            Assert.Equal(baseTimeline.AddDays(i * i), timeSeries[0].Timestamp);
-                            Assert.Equal(1, timeSeries[0].Values.Length);
-                            Assert.Equal(i * 3d, timeSeries[0].Values[0]);
+                                // TimeSeries check
+                                var timeSeries = await session.TimeSeriesFor(user, "Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue);
+                                Assert.Equal(1, timeSeries.Length);
+                                Assert.Equal(i * 3d, timeSeries[0].Value);
+                                Assert.Equal(baseTimeline.AddDays(i * i), timeSeries[0].Timestamp);
+                                Assert.Equal(1, timeSeries[0].Values.Length);
+                                Assert.Equal(i * 3d, timeSeries[0].Values[0]);
+
+                                // Tombstones check
+                                Assert.Equal(getTombstonesCommand.Result[i - 1], $"users/{numberOfUsers + i}");
+                            }
                         }
                     }
                 }

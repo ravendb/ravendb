@@ -922,9 +922,9 @@ namespace Raven.Server.Smuggler.Documents
             return ReadLegacyDeletionsAsync();
         }
 
-        public IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToOperate, INewDocumentActions actions)
         {
-            return ReadTombstonesAsync(actions);
+            return ReadTombstonesAsync(collectionsToOperate, actions);
         }
 
         public IAsyncEnumerable<DocumentConflict> GetConflictsAsync(List<string> collectionsToOperate, INewDocumentActions actions)
@@ -1432,7 +1432,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private async IAsyncEnumerable<Tombstone> ReadTombstonesAsync(INewDocumentActions actions = null)
+        private async IAsyncEnumerable<Tombstone> ReadTombstonesAsync(List<string> collectionsToOperate, INewDocumentActions actions = null)
         {
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
@@ -1442,6 +1442,8 @@ namespace Raven.Server.Smuggler.Documents
 
             var context = _context;
             var builder = CreateBuilder(context);
+            var collectionsHashSet = new HashSet<string>(collectionsToOperate, StringComparer.OrdinalIgnoreCase);
+
             try
             {
                 while (true)
@@ -1472,9 +1474,20 @@ namespace Raven.Server.Smuggler.Documents
                     builder.Reset();
 
                     var tombstone = new Tombstone();
+                    if (data.TryGet(nameof(Tombstone.Collection), out tombstone.Collection))
+                    {
+                        if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(tombstone.Collection) == false)
+                        {
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        SkipEntry(data);
+                    }
+
                     if (data.TryGet("Key", out tombstone.LowerId) &&
                         data.TryGet(nameof(Tombstone.Type), out string type) &&
-                        data.TryGet(nameof(Tombstone.Collection), out tombstone.Collection) &&
                         data.TryGet(nameof(Tombstone.LastModified), out tombstone.LastModified))
                     {
                         if (Enum.TryParse<Tombstone.TombstoneType>(type, out var tombstoneType) == false)
@@ -1510,18 +1523,23 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     else
                     {
-                        var msg = "Ignoring an invalid tombstone which you try to import. " + data;
-                        if (_log.IsOperationsEnabled)
-                            _log.Operations(msg);
-
-                        _result.Tombstones.ErroredCount++;
-                        _result.AddWarning(msg);
+                        SkipEntry(data);
                     }
                 }
             }
             finally
             {
                 builder.Dispose();
+            }
+
+            void SkipEntry(BlittableJsonReaderObject data)
+            {
+                var msg = "Ignoring an invalid tombstone which you try to import. " + data;
+                if (_log.IsOperationsEnabled)
+                    _log.Operations(msg);
+
+                _result.Tombstones.ErroredCount++;
+                _result.AddWarning(msg);
             }
         }
 
