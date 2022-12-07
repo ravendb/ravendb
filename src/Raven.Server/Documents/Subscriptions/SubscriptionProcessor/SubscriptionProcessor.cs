@@ -63,11 +63,11 @@ public abstract class SubscriptionProcessor : IDisposable
         return new ShardedDocumentsDatabaseSubscriptionProcessor(server, database, connection);
     }
 
-    protected SubscriptionProcessor(ServerStore server, SubscriptionConnectionBase connection)
+    protected SubscriptionProcessor(ServerStore server, SubscriptionConnectionBase connection, string databaseName)
     {
         Server = server;
         Connection = connection;
-        Logger = LoggingSource.Instance.GetLogger(connection.DatabaseName, GetType().FullName);
+        Logger = LoggingSource.Instance.GetLogger(databaseName, GetType().FullName);
     }
 
     public virtual void InitializeProcessor()
