@@ -17,13 +17,98 @@ public class RavenIntegration : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanIndexWithDocumentBoostAndDeleteTheItems(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            using var session = store.OpenSession();
+            session.Store(new Doc() {Name = "Two", BoostFactor = 2});
+            session.Store(new Doc() {Name = "Three", BoostFactor = 3});
+            session.Store(new Doc() {Name = "Four", BoostFactor = 4});
+            session.SaveChanges();
+        }
+
+        new DocIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+        {
+            using var session = store.OpenSession();
+            var results = session.Query<Doc, DocIndex>().OrderByScore().ToList();
+            Assert.Equal(results.Count, 3);
+            Assert.Equal(results[0].Name, "Four");
+            Assert.Equal(results[1].Name, "Three");
+            Assert.Equal(results[2].Name, "Two");
+        }
+
+        
+        {
+            using var session = store.OpenSession();
+            var doc = session.Query<Doc, DocIndex>().Single(i => i.Name == "Two");
+            session.Delete(doc);
+            session.SaveChanges();
+        }
+        
+        Indexes.WaitForIndexing(store);
+        {
+            using var session = store.OpenSession();
+            var results = session.Query<Doc, DocIndex>().OrderByScore().ToList();
+            Assert.Equal(results.Count, 2);
+            Assert.Equal(results[0].Name, "Four");
+            Assert.Equal(results[1].Name, "Three");
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanIndexWithDocumentBoostAndUpdateTheItems(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            using var session = store.OpenSession();
+            session.Store(new Doc() {Name = "Two", BoostFactor = 2});
+            session.Store(new Doc() {Name = "Three", BoostFactor = 3});
+            session.Store(new Doc() {Name = "Four", BoostFactor = 4});
+            session.SaveChanges();
+        }
+
+        new DocIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+        {
+            using var session = store.OpenSession();
+            var results = session.Query<Doc, DocIndex>().OrderByScore().ToList();
+            Assert.Equal(results.Count, 3);
+            Assert.Equal(results[0].Name, "Four");
+            Assert.Equal(results[1].Name, "Three");
+            Assert.Equal(results[2].Name, "Two");
+        }
+
+        
+        {
+            using var session = store.OpenSession();
+            var doc = session.Query<Doc, DocIndex>().Single(i => i.Name == "Two");
+            doc.BoostFactor = 5;
+            session.SaveChanges();
+        }
+        
+        Indexes.WaitForIndexing(store);
+        {
+            using var session = store.OpenSession();
+            var results = session.Query<Doc, DocIndex>().OrderByScore().ToList();
+            Assert.Equal(results.Count, 3);
+            Assert.Equal(results[0].Name, "Two");
+            Assert.Equal(results[1].Name, "Four");
+            Assert.Equal(results[2].Name, "Three");
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void IndexTimeDocumentBoostViaLinq(Options options) => IndexTimeDocumentBoost<DocIndex>(options);
     
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void IndexTimeDocumentBoostViaJs(Options options) => IndexTimeDocumentBoost<JsDocIndex>(options);
     
-    private void IndexTimeDocumentBoost<T>(Options options) where T : AbstractIndexCreationTask, new()
+    private void IndexTimeDocumentBoost<T>(Options options, IDocumentStore defaultStore = null) where T : AbstractIndexCreationTask, new()
     {
         using var store = GetDocumentStore(options);
         {

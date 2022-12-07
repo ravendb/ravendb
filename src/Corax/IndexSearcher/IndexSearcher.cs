@@ -17,6 +17,7 @@ using Corax.Queries;
 using Sparrow.Compression;
 using Sparrow.Server;
 using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 
 namespace Corax;
 
@@ -306,17 +307,22 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         var readResult = _persistedDynamicTreeAnalyzer?.Read(name);
         if (readResult == null)
             return FieldIndexingMode.Normal;
-        
-        
+
+
         var mode = (FieldIndexingMode)readResult.Reader.ReadByte();
         return mode;
     }
-    
+
+    internal FixedSizeTree GetDocumentBoostTree()
+    {
+        return _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+    }
+
     public void Dispose()
     {
         if (_ownsTransaction)
             _transaction?.Dispose();
-        
+
         if (_ownsIndexMapping)
             _fieldMapping?.Dispose();
     }

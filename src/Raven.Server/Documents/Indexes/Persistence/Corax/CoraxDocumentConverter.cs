@@ -27,8 +27,9 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
     public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext, out LazyStringValue id,
-        out ByteString output)
+        out ByteString output, out float? documentBoost)
     {
+        documentBoost = null; // documents in autoindexes cannot have document boost
         var document = (Document)doc;
         id = document.LowerId ?? key;
 

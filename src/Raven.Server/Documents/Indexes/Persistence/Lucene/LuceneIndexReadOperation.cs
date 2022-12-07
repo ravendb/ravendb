@@ -543,7 +543,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             var minPageSize = LuceneGetPageSize(_searcher, (long)pageSize + start);
-
+    
             if (sort != null)
             {
                 _searcher.SetDefaultFieldSortScoring(true, false);

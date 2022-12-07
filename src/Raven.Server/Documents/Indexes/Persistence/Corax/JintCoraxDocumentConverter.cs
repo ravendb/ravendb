@@ -40,8 +40,9 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
     public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext, out LazyStringValue id,
-        out ByteString output)
+        out ByteString output, out float? documentBoost)
     {
+        documentBoost = null;
         // We prepare for the next entry.
         ref var entryWriter = ref GetEntriesWriter();
         if (doc is not ObjectInstance documentToProcess)
@@ -55,9 +56,8 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
         id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
         var singleEntryWriterScope = new SingleEntryWriterScope(Allocator);
 
-        TryGetBoostedValue(documentToProcess, out var boostedValue, out var documentBoost);
-        if (documentBoost != null)
-            WriteDocumentBoostIntoEntry(ref entryWriter, documentBoost.Value);
+        TryGetBoostedValue(documentToProcess, out var boostedValue, out documentBoost);
+        
         
         singleEntryWriterScope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
         var indexingScope = CurrentIndexingScope.Current;
