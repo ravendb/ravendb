@@ -494,29 +494,42 @@ namespace Raven.Server.Documents
 
             try
             {
-                //If we get a database shutdown while we process a cluster tx command this
-                //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
-                await TxMerger.Enqueue(mergedCommands);
-            }
-            catch (ObjectDisposedException) when (_databaseShutdown.IsCancellationRequested)
-            {
-                HandleDatabaseShutdown(batch);
-
-                return batch;
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
+                try
                 {
-                    _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
+                    //If we get a database shutdown while we process a cluster tx command this
+                    //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
+                    await TxMerger.Enqueue(mergedCommands);
                 }
-                await ExecuteClusterTransactionOneByOne(batch);
-                return batch;
-            }
+                catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
+                    }
+                    await ExecuteClusterTransactionOneByOne(batch);
+                    return batch;
+                }
 
-            foreach (var command in batch)
+                foreach (var command in batch)
+                {
+                    OnClusterTransactionCompletion(command, mergedCommands);
+                }
+            }
+            catch
             {
-                OnClusterTransactionCompletion(command, mergedCommands);
+                if (_databaseShutdown.IsCancellationRequested == false)
+                    throw;
+
+                // we got an exception while the database was shutting down
+                // setting it only for commands that we didn't process yet (can only be if we used ExecuteClusterTransactionOneByOne)
+                var exception = CreateDatabaseShutdownException();
+                foreach (var command in batch)
+                {
+                    if (command.Processed)
+                        continue;
+
+                    ClusterTransactionWaiter.SetException(command.Options.TaskId, command.Index, exception);
+                }
             }
 
             return batch;
@@ -537,13 +550,9 @@ namespace Raven.Server.Documents
                     OnClusterTransactionCompletion(command, mergedCommand);
 
                     _clusterTransactionDelayOnFailure = 1000;
+                    command.Processed = true;
                 }
-                catch (ObjectDisposedException) when (_databaseShutdown.IsCancellationRequested)
-                {
-                    HandleDatabaseShutdown(singleCommand);
-                    // not returning here on purpose, we need to set the exception for the rest of the commands
-                }
-                catch (Exception e)
+                catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
                     OnClusterTransactionCompletion(command, mergedCommand, exception: e);
                     NotificationCenter.Add(AlertRaised.Create(
@@ -562,15 +571,6 @@ namespace Raven.Server.Documents
 
                     return;
                 }
-            }
-        }
-
-        private void HandleDatabaseShutdown(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
-        {
-            var exception = CreateDatabaseShutdownException();
-            foreach (var command in batch)
-            {
-                ClusterTransactionWaiter.SetException(command.Options.TaskId, command.Index, exception);
             }
         }
 
