@@ -14,10 +14,12 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -200,6 +202,59 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private class ReplicationBatchState : PulsedEnumerationState<ReplicationBatchItem>
+        {
+            private ReplicationDocumentSender _parent;
+            private ReplicationState _replicationState;
+            public bool WasInterrupted { get; private set; }
+            public long Next { get; private set; }
+
+            public ReplicationBatchState(DocumentsOperationContext context, Size pulseLimit, ReplicationDocumentSender parent, ReplicationState replicationState, long next) : base(context, pulseLimit)
+            {
+                _parent = parent;
+                _replicationState = replicationState;
+                WasInterrupted = false;
+                Next = next;
+            }
+
+            public override void OnMoveNext(ReplicationBatchItem current)
+            {
+                _parent._parent.ForTestingPurposes?.OnDocumentSenderFetchNewItem?.Invoke();
+                _parent._parent.CancellationToken.ThrowIfCancellationRequested();
+                _parent.AssertNoLegacyReplicationViolation(current);
+
+                if (_replicationState.LastTransactionMarker != current.TransactionMarker)
+                {
+                    _replicationState.Item = current;
+                    long next = Next;
+                    if (_parent.CanContinueBatch(_replicationState, ref next) == false)
+                    {
+                        WasInterrupted = true;
+                        return;
+                    }
+
+                    Next = next;
+                    _replicationState.LastTransactionMarker = current.TransactionMarker;
+                }
+            }
+
+            public override bool ShouldPulseTransaction()
+            {
+                if (_replicationState.NumberOfItemsSent == 0)
+                {
+                    var size = Context.Transaction.InnerTransaction.LowLevelTransaction.GetTotal32BitsMappedSize() +
+                               Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize;
+                
+                    if (size >= PulseLimit)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
         public bool ExecuteReplicationOnce(TcpConnectionOptions tcpConnectionOptions, OutgoingReplicationStatsScope stats, ref long next)
         {
             EnsureValidStats(stats);
@@ -239,33 +294,25 @@ namespace Raven.Server.Documents.Replication
                         Context = documentsContext,
                         LastTransactionMarker = -1,
                         NumberOfItemsSent = 0,
-                        Size = 0L,
-                        ScannedItems = 0
+                        Size = 0L
                     };
 
                     using (_stats.Storage.Start())
                     {
-                        foreach (var item in GetReplicationItems(_parent._database, documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication.CaseInsensitiveCounters))
+                        var state = new ReplicationBatchState(documentsContext, _parent._database.Configuration.Databases.PulseReadTransactionLimit, this, replicationState, next);
+                        using var enumerator = new PulsedTransactionEnumerator<ReplicationBatchItem, ReplicationBatchState>(documentsContext, _ => GetReplicationItems(_parent._database, documentsContext, this._lastEtag, _stats,
+                            _parent.SupportedFeatures.Replication.CaseInsensitiveCounters), state);
+
+                        while (enumerator.MoveNext())
                         {
-                            replicationState.ScannedItems++;
-                            _parent.ForTestingPurposes?.OnDocumentSenderFetchNewItem?.Invoke();
-
-                            _parent.CancellationToken.ThrowIfCancellationRequested();
-
-                            AssertNoLegacyReplicationViolation(item);
-
-                            if (replicationState.LastTransactionMarker != item.TransactionMarker)
+                            next = state.Next;
+                            if (state.WasInterrupted)
                             {
-                                replicationState.Item = item;
-
-                                if (CanContinueBatch(replicationState, ref next) == false)
-                                {
-                                    wasInterrupted = true;
-                                    break;
-                                }
-
-                                replicationState.LastTransactionMarker = item.TransactionMarker;
+                                wasInterrupted = true;
+                                break;
                             }
+
+                            var item = enumerator.Current;
 
                             _stats.Storage.RecordInputAttempt();
 
@@ -306,6 +353,7 @@ namespace Raven.Server.Documents.Replication
                             }
 
                             replicationState.Size += item.Size;
+
                             replicationState.NumberOfItemsSent++;
                         }
                     }
@@ -431,19 +479,9 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            if (state.ScannedItems == 1)
+            if (state.NumberOfItemsSent == 0)
             {
-                /*
-                 always scan at least one item.
-                after scanning 1 item we can move to the batch size limit check.
-                We need to check here the "ScannedItems" and not the "NumberOfItemsSent"
-                because there's an option that we will scan a lot of items (documents) but we won't send them.
-                When we load the items from an encrypted database, the memory is locked until the transaction is closed
-                (for preventing the decrypted data from being moved to the "swap-file" by the OS in case of low memory).
-                In that case, if we will check here if the "NumberOfItemsSent" is 0 instead, there's an option 
-                that we will load a lot of "not relevant" items to memory and it will be locked until we'll fill 
-                the batch and it can cause eventually to OOM.
-                 */
+                // always send at least one item
                 return true;
             }
 
@@ -805,7 +843,6 @@ namespace Raven.Server.Documents.Replication
             public short LastTransactionMarker;
             public int? BatchSize;
             public Size? MaxSizeToSend;
-            public int ScannedItems;
         }
     }
 }
