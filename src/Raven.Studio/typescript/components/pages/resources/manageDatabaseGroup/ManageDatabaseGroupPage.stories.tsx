@@ -1,11 +1,13 @@
-﻿import { withBootstrap5, withStorybookContexts } from "../../../../test/storybookTestUtils";
+﻿import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import { ManageDatabaseGroupPage } from "components/pages/resources/manageDatabaseGroup/ManageDatabaseGroupPage";
-import { mockServices } from "../../../../test/mocks/MockServices";
+import { mockServices } from "test/mocks/services/MockServices";
 import React from "react";
 import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { DatabasesStubs } from "../../../../test/stubs/DatabasesStubs";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
+import { ClusterStubs } from "test/stubs/ClusterStubs";
+import licenseModel from "models/auth/licenseModel";
 
 export default {
     title: "Pages/Manage Database Group",

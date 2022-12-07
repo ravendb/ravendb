@@ -1,10 +1,10 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useServices } from "hooks/useServices";
-import { locationAwareLoadableData } from "../../../../models/common";
+import { locationAwareLoadableData } from "components/models/common";
 import database from "models/resources/database";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import { produce } from "immer";
-import { databaseLocationComparator, withPreventDefault } from "../../../../utils/common";
+import { databaseLocationComparator, withPreventDefault } from "components/utils/common";
 import IndexType = Raven.Client.Documents.Indexes.IndexType;
 import genUtils from "common/generalUtils";
 import shardedDatabase from "models/resources/shardedDatabase";

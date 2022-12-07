@@ -1,6 +1,6 @@
 import database from "models/resources/database";
 import shard from "models/resources/shard";
-import DatabaseUtils from "../../components/utils/DatabaseUtils";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 class shardedDatabase extends database {
     

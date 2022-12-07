@@ -5,12 +5,12 @@ import { forceStoryRerender, withStorybookContexts, withBootstrap5 } from "../..
 import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
 import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { mockServices } from "../../../../../test/mocks/MockServices";
+import { mockServices } from "../../../../../test/mocks/services/MockServices";
 import { TasksStubs } from "../../../../../test/stubs/TasksStubs";
 import { boundCopy } from "../../../../utils/common";
 import OngoingTaskRavenEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView;
 import OngoingTaskSqlEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView;
-import MockTasksService from "../../../../../test/mocks/MockTasksService";
+import MockTasksService from "../../../../../test/mocks/services/MockTasksService";
 import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtlListView;
 import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlListView;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlListView;

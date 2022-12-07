@@ -1,5 +1,5 @@
 import shardViewModelBase from "viewmodels/shardViewModelBase";
-import { BackupsPage } from "../../../components/pages/database/tasks/backups/BackupsPage";
+import { BackupsPage } from "components/pages/database/tasks/backups/BackupsPage";
 
 class backups extends shardViewModelBase {
     view = { default: `<section class="flex-vertical absolute-fill content-margin backups"

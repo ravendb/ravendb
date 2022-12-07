@@ -1,12 +1,12 @@
 ﻿import React from "react";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
-import { withBootstrap5, forceStoryRerender, withStorybookContexts } from "../../../../../test/storybookTestUtils";
-import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
+import { withBootstrap5, forceStoryRerender, withStorybookContexts } from "test/storybookTestUtils";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { mockServices } from "../../../../../test/mocks/MockServices";
-import { TasksStubs } from "../../../../../test/stubs/TasksStubs";
-import { boundCopy } from "../../../../utils/common";
+import { mockServices } from "test/mocks/services/MockServices";
+import { TasksStubs } from "test/stubs/TasksStubs";
+import { boundCopy } from "components/utils/common";
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 import { BackupsPage } from "./BackupsPage";
 

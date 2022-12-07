@@ -9,6 +9,9 @@ overrideSystem();
 overrideComposition();
 overrideViews();
 
+import system from "durandal/system";
+system.debug(true);
+
 require('../wwwroot/Content/css/fonts/icomoon.font');
 
 const ko = require("knockout");

@@ -1,6 +1,6 @@
 ﻿import { ComponentMeta } from "@storybook/react";
 import { boundCopy } from "../utils/common";
-import { withBootstrap5, withStorybookContexts } from "../../test/storybookTestUtils";
+import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import {
     RichPanel,
     RichPanelDetailItem,

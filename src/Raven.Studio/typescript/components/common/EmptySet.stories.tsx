@@ -1,7 +1,7 @@
 ﻿import { ComponentMeta } from "@storybook/react";
 import { EmptySet } from "./EmptySet";
 import React from "react";
-import { withBootstrap5, withStorybookContexts } from "../../test/storybookTestUtils";
+import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 
 export default {
     title: "Bits/EmptySet",

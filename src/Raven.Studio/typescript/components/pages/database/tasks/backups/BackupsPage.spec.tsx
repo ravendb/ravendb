@@ -1,9 +1,9 @@
-﻿import { rtlRender } from "../../../../../test/rtlTestUtils";
+﻿import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
 
 import * as stories from "./BackupsPage.stories";
 import { composeStories, composeStory } from "@storybook/testing-react";
-import { boundCopy } from "../../../../utils/common";
+import { boundCopy } from "components/utils/common";
 
 const { EmptyView, FullView } = composeStories(stories);
 

@@ -1,14 +1,14 @@
 ﻿import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
-import { rtlRender } from "../../../../../test/rtlTestUtils";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
+import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
 import { StatisticsPage } from "./StatisticsPage";
-import { mockServices } from "../../../../../test/mocks/MockServices";
+import { mockServices } from "test/mocks/services/MockServices";
 import { composeStory } from "@storybook/testing-react";
-import { boundCopy } from "../../../../utils/common";
+import { boundCopy } from "components/utils/common";
 import * as stories from "../../status/statistics/StatisticsPage.stories";
-import { IndexesStubs } from "../../../../../test/stubs/IndexesStubs";
+import { IndexesStubs } from "test/stubs/IndexesStubs";
 
 function render() {
     const db = DatabasesStubs.shardedDatabase();

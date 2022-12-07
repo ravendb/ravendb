@@ -9,9 +9,9 @@ import {
     screen,
     cleanup,
 } from "@testing-library/react";
-import { mockServices } from "./mocks/MockServices";
+import { mockServices } from "./mocks/services/MockServices";
 import { Screen } from "@testing-library/dom/types/screen";
-import { ServiceProvider } from "../components/hooks/useServices";
+import { ServiceProvider } from "components/hooks/useServices";
 import * as byNameQueries from "./byNameQueries";
 import * as byClassNameQueries from "./byClassNameQueries";
 

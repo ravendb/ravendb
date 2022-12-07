@@ -1,6 +1,6 @@
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 import IndexProgress = Raven.Client.Documents.Indexes.IndexProgress;
-import IndexUtils from "../../components/utils/IndexUtils";
+import IndexUtils from "components/utils/IndexUtils";
 import CollectionStats = Raven.Client.Documents.Indexes.IndexProgress.CollectionStats;
 
 const statsFixture = require("../fixtures/indexes_stats.json");

@@ -295,6 +295,7 @@ module.exports = (env, args) => {
                 overrides: path.resolve(__dirname, 'typescript/overrides'),
                 widgets: path.resolve(__dirname, 'typescript/widgets'),
                 views: path.resolve(__dirname, 'wwwroot/App/views'),
+                test: path.resolve(__dirname, 'typescript/test'),
 
                 endpoints: path.resolve(__dirname, 'typings/server/endpoints'),
                 configuration: path.resolve(__dirname, 'typings/server/configuration'),

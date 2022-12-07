@@ -17,7 +17,7 @@ import fileImporter = require("common/fileImporter");
 import moment = require("moment");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
-import TaskUtils from "../../../components/utils/TaskUtils";
+import TaskUtils from "components/utils/TaskUtils";
 import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
 
 type treeActionType = "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" |

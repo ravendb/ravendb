@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
-import { DatabaseSharedInfo } from "../../components/models/databases";
+import { DatabaseSharedInfo } from "components/models/databases";
 
 class saveDatabaseLockModeCommand extends commandBase {
 

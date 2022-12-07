@@ -6,10 +6,10 @@ import databasesManager from "common/shell/databasesManager";
 import endpointConstants from "endpoints";
 import shardedDatabase from "models/resources/shardedDatabase";
 import shard from "models/resources/shard";
-import { ajaxMock } from "../../test/mocks";
+import { ajaxMock } from "test/mocks";
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
 import DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
-import { DatabasesStubs } from "../../test/stubs/DatabasesStubs";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 describe("databasesManager", () => {
     
