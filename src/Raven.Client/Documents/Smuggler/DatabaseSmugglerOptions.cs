@@ -1,4 +1,6 @@
-﻿namespace Raven.Client.Documents.Smuggler
+﻿using System.Collections.Generic;
+
+namespace Raven.Client.Documents.Smuggler
 {
     public class DatabaseSmugglerOptions : IDatabaseSmugglerOptions
     {
@@ -45,6 +47,7 @@
             MaxStepsForTransformScript = DefaultMaxStepsForTransformScript;
             IncludeExpired = true;
             IncludeArtificial = false;
+            Collections = new List<string>();
         }
 
         public DatabaseItemType OperateOnTypes { get; set; }
@@ -62,6 +65,8 @@
         public int MaxStepsForTransformScript { get; set; }
 
         public string EncryptionKey { get; set; }
+
+        public List<string> Collections { get; set; }
     }
 
     internal interface IDatabaseSmugglerOptions
@@ -73,5 +78,6 @@
         bool RemoveAnalyzers { get; set; }
         string TransformScript { get; set; }
         int MaxStepsForTransformScript { get; set; }
+        public List<string> Collections { get; set; }
     }
 }

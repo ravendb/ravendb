@@ -6,7 +6,6 @@ namespace Raven.Client.Documents.Smuggler
     {
         public DatabaseSmugglerImportOptions()
         {
-            Collections = new List<string>();
         }
 
         public DatabaseSmugglerImportOptions(DatabaseSmugglerOptions options)
@@ -20,12 +19,10 @@ namespace Raven.Client.Documents.Smuggler
         }
 
         public bool SkipRevisionCreation { get; set; }
-        public List<string> Collections { get; set; }
     }
 
     internal interface IDatabaseSmugglerImportOptions : IDatabaseSmugglerOptions
     {
         bool SkipRevisionCreation { get; set; }
-        public List<string> Collections { get; set; }
     }
 }

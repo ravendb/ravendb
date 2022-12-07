@@ -1526,9 +1526,10 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task CanImportJustOneCollection()
         {
-            const int numberOfUsers = 11;
-            const int numberOfOrders = 7;
-
+            const int numberOfUsers = 7;
+            const int numberOfOrders = 3;
+            DateTime baseTimeline = DateTime.Today.ToUniversalTime();
+            
             var file = GetTempFileName();
             try
             {
@@ -1547,28 +1548,38 @@ namespace SlowTests.Smuggler
                         for (int i = 1; i <= numberOfUsers; i++)
                         {
                             await session.StoreAsync(new User { Name = $"Name{i}" }, $"users/{i}");
+                            var docCounters = session.CountersFor($"users/{i}");
+
+                            docCounters.Increment($"TestCounter{i}", i * i);
+
+                            session.TimeSeriesFor($"users/{i}", "Heartrate").Append(baseTimeline.AddDays(i * i), new[] { i * 3d  }, "watches/1");
                         }
 
                         for (int i = 1; i <= numberOfOrders; i++)
                         {
                             await session.StoreAsync(new Order { Employee = $"users/{i}" }, $"orders/{i}");
+                            var docCounters = session.CountersFor($"orders/{i}");
+
+                            docCounters.Increment($"TestCounter{i}", i);
+
+                            session.TimeSeriesFor($"orders/{i}", "Heartrate2").Append(baseTimeline.AddHours(1), new[] { i * 7d }, "watches/2");
                         }
-                        
                         await session.SaveChangesAsync();
                     }
+                    // Check database statistics before export
+                    var statsOfStore1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfDocuments);
+                    Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfCounterEntries);
+                    Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfTimeSeriesSegments);
 
                     // We'll export both collections
                     var exportOptions = new DatabaseSmugglerExportOptions
                     {
-                        Collections = new List<string>{ "Users", "Orders"}
+                        Collections = new List<string> { "Users", "Orders" }
                     };
                     var operation = await store1.Smuggler.ExportAsync(exportOptions, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    // Check that all documents are exported
-                    var statsOfStore1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
-                    Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfDocuments); 
-                    
                     // We'll import only one of two collection
                     var importOptions = new DatabaseSmugglerImportOptions
                     {
@@ -1579,15 +1590,32 @@ namespace SlowTests.Smuggler
 
                     // Check that just one collection imported (by count)
                     var statsOfStore2 = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
-                    Assert.Equal(numberOfUsers, statsOfStore2.CountOfDocuments); 
+                    Assert.Equal(numberOfUsers, statsOfStore2.CountOfDocuments);
+                    Assert.Equal(numberOfUsers, statsOfStore2.CountOfCounterEntries);
+                    Assert.Equal(numberOfUsers, statsOfStore2.CountOfTimeSeriesSegments);
 
                     // Check that just one collection imported (by content)
-                    using (var session = store2.OpenAsyncSession())
+                    for (int i = 1; i <= numberOfUsers; i++)
                     {
-                        for (int i = 1; i <= statsOfStore2.CountOfDocuments; i++)
+                        using (var session = store2.OpenAsyncSession())
                         {
+                            // Document check
                             var user = await session.LoadAsync<User>($"users/{i}");
                             Assert.Equal($"Name{i}", user.Name);
+
+                            // Counters check
+                            var docCounters = await session.CountersFor(user).GetAllAsync();
+                            Assert.NotNull(docCounters);
+                            Assert.Equal(1, docCounters.Count);
+                            Assert.Equal(i * i, docCounters[$"TestCounter{i}"]);
+
+                            // TimeSeries check
+                            var timeSeries = await session.TimeSeriesFor(user, "Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue);
+                            Assert.Equal(1, timeSeries.Length);
+                            Assert.Equal(i * 3d, timeSeries[0].Value);
+                            Assert.Equal(baseTimeline.AddDays(i * i), timeSeries[0].Timestamp);
+                            Assert.Equal(1, timeSeries[0].Values.Length);
+                            Assert.Equal(i * 3d, timeSeries[0].Values[0]);
                         }
                     }
                 }
