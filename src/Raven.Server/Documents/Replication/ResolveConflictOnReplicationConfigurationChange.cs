@@ -10,6 +10,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
@@ -208,7 +209,7 @@ namespace Raven.Server.Documents.Replication
                 return count;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 // The LowerId created as in memory LazyStringValue that doesn't have escape characters
                 // so EscapePositions set to empty to avoid reference to escape bytes (after string bytes) while serializing

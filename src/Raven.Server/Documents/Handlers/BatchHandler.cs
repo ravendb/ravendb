@@ -25,6 +25,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -45,6 +46,8 @@ namespace Raven.Server.Documents.Handlers
 {
     public class BatchHandler : DatabaseRequestHandler
     {
+        private static TimeSeriesStorage.AppendOptions AppendOptionsForTimeSeriesCopy = new() { VerifyName = false };
+
         [RavenAction("/databases/*/bulk_docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task BulkDocs()
         {
@@ -174,7 +177,7 @@ namespace Raven.Server.Documents.Handlers
                             if (ClusterTransactionCommand.IsAtomicGuardKey(commandData.Id, out _))
                                 throw new CompareExchangeInvalidKeyException($"You cannot manipulate the atomic guard '{commandData.Id}' via the cluster-wide session");
                         }
-                        
+
                         break;
                     case CommandType.PUT:
                     case CommandType.DELETE:
@@ -512,7 +515,7 @@ namespace Raven.Server.Documents.Handlers
             protected readonly DocumentDatabase Database;
             public HashSet<string> ModifiedCollections;
             public string LastChangeVector;
-            
+
             public long LastTombstoneEtag;
             public long LastDocumentEtag;
 
@@ -775,7 +778,7 @@ namespace Raven.Server.Documents.Handlers
                 return Database.DocumentsStorage.ExtractCollectionName(context, conflicts[0].Collection);
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new ClusterTransactionMergedCommandDto
                 {
@@ -819,7 +822,7 @@ namespace Raven.Server.Documents.Handlers
                 return sb.ToString();
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new MergedBatchCommandDto
                 {
@@ -915,7 +918,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
 
                         case CommandType.JsonPatch:
-                            
+
                             cmd.JsonPatchCommand.ExecuteDirectly(context);
 
                             var lastChangeVectorJsonPatch = cmd.JsonPatchCommand.HandleReply(Reply, ModifiedCollections, Database);
@@ -1086,7 +1089,8 @@ namespace Raven.Server.Documents.Handlers
                                     cmd.DestinationId,
                                     docCollection,
                                     cmd.DestinationName,
-                                    reader.AllValues()
+                                    reader.AllValues(),
+                                    AppendOptionsForTimeSeriesCopy
                                 );
 
                             Reply.Add(new DynamicJsonValue
@@ -1187,7 +1191,7 @@ namespace Raven.Server.Documents.Handlers
 
                             Reply.Add(forceRevisionReply);
                             break;
-                        
+
                     }
                 }
 
