@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -186,17 +184,17 @@ namespace SlowTests.Client.Operations
 
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Studio)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ShouldGetNotModifiedStatusForGetStudioCollectionFields(Options options)
+        public void ShouldGetNotModifiedStatusForGetStudioCollectionFields(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
-                    var o1 = new MultipleFieldsClass1() { Name1 = "SomeName1", Name2 = "SomeName2" };
+                    var o1 = new MultipleFieldsClass1() {Name1 = "SomeName1", Name2 = "SomeName2"};
                     session.Store(o1, "user/A-1");
                     session.Advanced.GetMetadataFor(o1)[Constants.Documents.Metadata.Collection] = "User";
 
-                    var o2 = new MultipleFieldsClass2() { Name3 = "SomeName3", Name4 = "SomeName4" };
+                    var o2 = new MultipleFieldsClass2() {Name3 = "SomeName3", Name4 = "SomeName4"};
                     session.Store(o2, "user/B-2");
                     session.Advanced.GetMetadataFor(o2)[Constants.Documents.Metadata.Collection] = "User";
 
@@ -206,76 +204,50 @@ namespace SlowTests.Client.Operations
                     session.SaveChanges();
                 }
 
-                var serverNode = new ServerNode
+                using (var session = store.OpenSession())
                 {
-                    Database = store.Database,
-                    Url = store.Urls.First()
-                };
+                    HttpStatusCode status = default;
+                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) => { status = args.Response.StatusCode; };
 
-                using (var re = store.GetRequestExecutor())
-                using (re.ContextPool.AllocateOperationContext(out var ctx))
-                {
-                    var command = new GetCollectionFieldsCommand("User", "");
-                    var request = command.CreateRequest(ctx, serverNode, out var url);
-                    request.RequestUri = new UriBuilder(url).Uri;
+                    var result = session.Advanced.Collection.GetCollectionFields("User", "");
 
-                    var response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+                    Assert.NotNull(result);
+                    Assert.True(status != HttpStatusCode.NotModified);
 
-                    Assert.True(response.StatusCode != HttpStatusCode.NotModified);
+                    result = session.Advanced.Collection.GetCollectionFields("User", "");
 
-                    var etagFromResponse = response.Headers.ETag?.Tag;
-
-                    command = new GetCollectionFieldsCommand("User", "");
-                    request = command.CreateRequest(ctx, serverNode, out url);
-                    request.RequestUri = new UriBuilder(url).Uri;
-                    request.Headers.IfNoneMatch.ParseAdd(etagFromResponse);
-
-                    response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
-
-                    Assert.True(response.StatusCode == HttpStatusCode.NotModified);
+                    Assert.NotNull(result);
+                    Assert.True(status == HttpStatusCode.NotModified);
                 }
             }
         }
 
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Studio)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ShouldGetNotModifiedStatusForPreviewCollection(Options options)
+        public void ShouldGetNotModifiedStatusForPreviewCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "SomeDoc" });
+                    session.Store(new User {Name = "SomeDoc"});
                     session.SaveChanges();
                 }
 
-                var serverNode = new ServerNode
+                using (var session = store.OpenSession())
                 {
-                    Database = store.Database,
-                    Url = store.Urls.First()
-                };
+                    HttpStatusCode status = default;
+                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) => { status = args.Response.StatusCode; };
 
-                using (var re = store.GetRequestExecutor())
-                using (re.ContextPool.AllocateOperationContext(out var ctx))
-                {
-                    var request = new HttpRequestMessage {Method = HttpMethod.Get };
-                    var url = $"{serverNode.Url}/databases/{serverNode.Database}/studio/collections/preview";
-                    request.RequestUri = new UriBuilder(url).Uri;
-                   
-                    var response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
+                    var result = session.Advanced.Collection.PreviewCollection("Users");
 
-                    Assert.True(response.StatusCode != HttpStatusCode.NotModified);
+                    Assert.NotNull(result);
+                    Assert.True(status != HttpStatusCode.NotModified);
 
-                    var etagFromResponse = response.Headers.ETag?.Tag;
+                    result = session.Advanced.Collection.PreviewCollection("Users");
 
-                    request = new HttpRequestMessage { Method = HttpMethod.Get };
-                    url = $"{serverNode.Url}/databases/{serverNode.Database}/studio/collections/preview";
-                    request.RequestUri = new UriBuilder(url).Uri;
-                    request.Headers.IfNoneMatch.ParseAdd(etagFromResponse);
-
-                    response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
-
-                    Assert.True(response.StatusCode == HttpStatusCode.NotModified);
+                    Assert.NotNull(result);
+                    Assert.True(status == HttpStatusCode.NotModified);
                 }
             }
         }

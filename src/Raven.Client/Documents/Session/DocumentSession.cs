@@ -59,6 +59,9 @@ namespace Raven.Client.Documents.Session
         public IClusterTransactionOperations ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionOperations(this));
         private IClusterTransactionOperations _clusterTransaction;
 
+        public ICollectionSessionOperations Collection => _collection ?? (_collection = new DocumentSessionCollectionOperations(this));
+        private ICollectionSessionOperations _collection;
+
         protected override bool HasClusterSession => _clusterTransaction != null;
 
         protected override void ClearClusterSession()
