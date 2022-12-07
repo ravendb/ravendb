@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public bool DropSubscriptionConnections(long subscriptionId, SubscriptionException ex)
         {
-            if (_subscriptions.TryGetValue(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
+            if (_subscriptions.TryRemove(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
                 return false;
 
             foreach (var subscriptionConnection in subscriptionConnectionsState.GetConnections())

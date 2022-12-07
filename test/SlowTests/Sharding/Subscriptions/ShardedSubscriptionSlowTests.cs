@@ -177,17 +177,17 @@ namespace SlowTests.Sharding.Subscriptions
             var shards = Sharding.GetShardsDocumentDatabaseInstancesFor(store);
             await foreach (var db in shards)
             {
-                using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (ctx.OpenReadTransaction())
+                var query = WaitForValue(() =>
                 {
-                    var query = WaitForValue(() =>
+                    using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
                     {
                         var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
                         return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState.Query;
-                    }, newQuery);
+                    }
+                }, newQuery);
 
-                    Assert.Equal(newQuery, query);
-                }
+                Assert.Equal(newQuery, query);
             }
         }
 
@@ -243,7 +243,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                 const string newQuery = "from Users where Age > 18";
 
-                store.Subscriptions.Update(new SubscriptionUpdateOptions
+                await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
                 {
                     Name = state.SubscriptionName,
                     Query = newQuery,
