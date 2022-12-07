@@ -53,13 +53,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private readonly Tree _metadataTree;
     private readonly Tree _fieldsTree;
 
-    private readonly bool _documentsAreBoosted;
-    public bool DocumentsAreBoosted => _documentsAreBoosted;
+    public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
 
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
-    public IndexSearcher(StorageEnvironment environment, IndexFieldsMapping fieldsMapping = null) : this(fieldsMapping, documentsAreBoosted: false)
+    public IndexSearcher(StorageEnvironment environment, IndexFieldsMapping fieldsMapping = null) : this(fieldsMapping)
     {
         _ownsTransaction = true;
         _transaction = environment.ReadTransaction();
@@ -67,7 +66,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
     }
 
-    public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null, bool documentsAreBoosted = false) : this(fieldsMapping, documentsAreBoosted)
+    public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null) : this(fieldsMapping)
     {
         _ownsTransaction = false;
         _transaction = tx;
@@ -75,7 +74,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
     }
 
-    private IndexSearcher(IndexFieldsMapping fieldsMapping, bool documentsAreBoosted)
+    private IndexSearcher(IndexFieldsMapping fieldsMapping)
     {
         if (fieldsMapping is null)
         {
@@ -87,8 +86,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         {
             _fieldMapping = fieldsMapping;
         }
-
-        _documentsAreBoosted = documentsAreBoosted;
     }
 
     public UnmanagedSpan GetIndexEntryPointer(long id)

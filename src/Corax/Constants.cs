@@ -9,7 +9,7 @@ namespace Corax
         public const string NullValue = "NULL_VALUE";
         public const string EmptyString = "EMPTY_STRING";
         public const string IndexMetadata = "@index_metadata";
-        public const string DocumentBoost = "_docBoost";
+        public const string DocumentBoost = "@document_boost";
         
         public static readonly Slice NullValueSlice, EmptyStringSlice, IndexMetadataSlice, DocumentBoostSlice;
 

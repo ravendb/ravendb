@@ -13,6 +13,7 @@ using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Compression;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
@@ -277,6 +278,8 @@ namespace Corax
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
+            _documentBoost = Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+
         }
 
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, bool hasDynamics) : this(tx, fieldsMapping)
@@ -292,6 +295,8 @@ namespace Corax
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
+            _documentBoost = Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+
         }
 
         public long Index(string id, Span<byte> data)
@@ -307,32 +312,40 @@ namespace Corax
             return entryId;
         }
 
-        private unsafe void AppendDocumentBoost(long entryId, float documentBoost)
+        //Document Boost should add priority to some documents but also should not be the main component of boosting.
+        //The natural logarithm slows down our scoring increase for a document so that the ranking calculated at query time is not forgotten.
+        private unsafe void AppendDocumentBoost(long entryId, float documentBoost, bool isUpdate = false)
         {
-            _documentBoost ??= Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
-            
-            documentBoost = documentBoost switch
+            if (documentBoost.AlmostEquals(1f))
             {
-                <= 1 => MathF.Log(2),
-                _ => MathF.Log(documentBoost)
-            };
+                
+                // We don't store `1` but if user update boost value to 1 we've to delete the previous one
+                if (isUpdate)
+                    _documentBoost.Delete(entryId);
+                
+                return;
+            }
+
+            // probably user want this to be at the same end.
+            if (documentBoost <= 0f)
+                documentBoost = 0;
+
+            documentBoost = MathF.Log(documentBoost + 1); // ensure we've positive number
             
-            var buffer = stackalloc byte[sizeof(float)];
-            Unsafe.WriteUnaligned(buffer, documentBoost);
-            using var _ = Slice.From(Transaction.Allocator, buffer, sizeof(float), out var floatSlice);
-            _documentBoost.Add(entryId, floatSlice);
+            using var __ = _documentBoost.DirectAdd(entryId, out _, out byte* boostPtr);
+            float* floatBoostPtr = (float*)boostPtr;
+            *floatBoostPtr = documentBoost;
         }
 
         private unsafe void RemoveDocumentBoost(long entryId)
         {
-            _documentBoost ??= Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
             _documentBoost.Delete(entryId);
         }
 
         public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries, float documentBoost)
         {
             var entryId = Update(field, key, id, data, ref numberOfEntries);
-            AppendDocumentBoost(entryId, documentBoost);
+            AppendDocumentBoost(entryId, documentBoost, true);
             return entryId;
         }
         
