@@ -58,13 +58,13 @@ namespace Raven.Server.Documents.Handlers
             return GetAttachment(true);
         }
 
-        [RavenAction("/databases/*/attachments", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        [RavenAction("/databases/*/attachments", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task GetPost()
         {
             return GetAttachment(false);
         }
 
-        [RavenAction("/databases/*/attachments/bulk", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        [RavenAction("/databases/*/attachments/bulk", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetAttachments()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
