@@ -113,6 +113,9 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
 
     public override void DropSubscription(SubscriptionException e)
     {
+        if (_databaseContext.Subscriptions.SubscriptionsConnectionsState.TryRemove(SubscriptionId, out _) == false)
+            return;
+
         var connections = GetConnections();
         DisposeWorkers();
 

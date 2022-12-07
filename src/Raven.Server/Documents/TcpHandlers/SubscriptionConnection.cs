@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public SubscriptionConnectionsState GetSubscriptionConnectionState()
         {
-            var subscriptions = TcpConnection.DocumentDatabase.SubscriptionStorage.Subscriptions;
+            var subscriptions = _database.SubscriptionStorage.Subscriptions;
             _subscriptionConnectionsState =  subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsState(_database.Name, subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
             return _subscriptionConnectionsState;
         }

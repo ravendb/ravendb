@@ -951,9 +951,9 @@ namespace SlowTests.Client.Subscriptions
                 Assert.True(mre1.Wait(TimeSpan.FromSeconds(15)));
                 mre1.Reset();
 
-                await Assert.ThrowsAsync<SubscriptionInUseException>(() => subscription2.Run((_) => { }));
+                await Assert.ThrowsAsync<SubscriptionInUseException>(() => subscription2.Run((_) => { }).WaitAsync(TimeSpan.FromSeconds(5)));
                 await store.Subscriptions.DropSubscriptionWorkerAsync(subscription1);
-                await Assert.ThrowsAsync<SubscriptionClosedException>(() => t);
+                await Assert.ThrowsAsync<SubscriptionClosedException>(() => t.WaitAsync(TimeSpan.FromSeconds(5)));
             }
         }
 
