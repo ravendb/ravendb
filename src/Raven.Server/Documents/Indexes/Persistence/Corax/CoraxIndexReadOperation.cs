@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             _allocator = readTransaction.Allocator;
             _fieldMappings = fieldsMapping;
-            _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings, documentsAreBoosted: index.HasBoostedFields);
+            _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
         }
 
         public override long EntriesCount() => _entriesCount;

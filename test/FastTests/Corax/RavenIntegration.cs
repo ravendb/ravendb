@@ -22,7 +22,7 @@ public class RavenIntegration : RavenTestBase
         using var store = GetDocumentStore(options);
         {
             using var session = store.OpenSession();
-            session.Store(new Doc() {Name = "Two", BoostFactor = 2});
+            session.Store(new Doc() {Name = "Two", BoostFactor = 1});
             session.Store(new Doc() {Name = "Three", BoostFactor = 3});
             session.Store(new Doc() {Name = "Four", BoostFactor = 4});
             session.SaveChanges();
@@ -54,6 +54,31 @@ public class RavenIntegration : RavenTestBase
             Assert.Equal(results.Count, 2);
             Assert.Equal(results[0].Name, "Four");
             Assert.Equal(results[1].Name, "Three");
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CanUsePosititiveAndNegativeBoostFactors(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            using var session = store.OpenSession();
+            session.Store(new Doc() {Name = "Two", BoostFactor = -4});
+            session.Store(new Doc() {Name = "Three", BoostFactor = -3});
+            session.Store(new Doc() {Name = "Four", BoostFactor = -2});
+            session.Store(new Doc() {Name = "Five", BoostFactor = 5});
+
+            session.SaveChanges();
+        }
+
+        new DocIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+        {
+            using var session = store.OpenSession();
+            var results = session.Query<Doc, DocIndex>().OrderByScore().ToList();
+            Assert.Equal(results.Count, 4);
+            Assert.Equal(results[0].Name, "Five");
         }
     }
     
