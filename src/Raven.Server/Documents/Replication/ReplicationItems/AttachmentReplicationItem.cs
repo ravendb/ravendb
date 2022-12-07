@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             }
         }
 
-        protected override ReplicationBatchItem CloneInternal(JsonOperationContext context)
+        protected override ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator)
         {
             MemoryStream stream = null;
             if (Stream != null)
@@ -127,15 +127,15 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Name = Name.Clone(context), 
                 Stream = stream
             };
-            
-            var baseMem = Base64Hash.CloneToJsonContext(context, out item.Base64Hash);
-            var keyMem = Key.CloneToJsonContext(context, out item.Key);
+
+            item.Base64Hash = Base64Hash.Clone(allocator);
+            item.Key = Key.Clone(allocator);
             
 
             item.ToDispose(new DisposableAction(() =>
             {
-                context.ReturnMemory(baseMem);
-                context.ReturnMemory(keyMem);
+                item.Base64Hash.Release(allocator);
+                item.Key.Release(allocator);
             }));
 
             return item;

@@ -962,7 +962,7 @@ namespace Raven.Server.Documents.Replication
                 return result.IsValid ? 1 : 0;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new UpdateSiblingCurrentEtagDto
                 {

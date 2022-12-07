@@ -7,6 +7,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
@@ -31,11 +32,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public abstract void Read(DocumentsOperationContext context, IncomingReplicationStatsScope stats);
 
-        protected abstract ReplicationBatchItem CloneInternal(JsonOperationContext context);
+        protected abstract ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator);
 
-        public ReplicationBatchItem Clone(JsonOperationContext context)
+        public ReplicationBatchItem Clone(JsonOperationContext context, ByteStringContext allocator)
         {
-            var item = CloneInternal(context);
+            var item = CloneInternal(context, allocator);
 
             item.Type = Type;
             item.ChangeVector = ChangeVector;
