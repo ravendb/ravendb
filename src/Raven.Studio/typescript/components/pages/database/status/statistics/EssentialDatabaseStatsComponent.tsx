@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
-import { UncontrolledTooltip } from "../../../../common/UncontrolledTooltip";
+import { UncontrolledTooltip } from "components/common/UncontrolledTooltip";
 import { Card, Col, Row } from "reactstrap";
 
 interface EssentialDatabaseStatsComponentProps {

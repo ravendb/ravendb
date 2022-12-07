@@ -1,6 +1,6 @@
-import { mockServices } from "./mocks/MockServices";
+import { mockServices } from "./mocks/services/MockServices";
 import React from "react";
-import { ServiceProvider } from "../components/hooks/useServices";
+import { ServiceProvider } from "components/hooks/useServices";
 
 export function storybookContainerPublicContainer(storyFn: any) {
     return (

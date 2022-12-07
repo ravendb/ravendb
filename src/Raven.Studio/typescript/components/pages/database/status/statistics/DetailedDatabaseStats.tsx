@@ -1,14 +1,14 @@
 ﻿import database from "models/resources/database";
 import { useCallback, useEffect, useState } from "react";
-import { useServices } from "../../../../hooks/useServices";
+import { useServices } from "hooks/useServices";
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
-import { locationAwareLoadableData } from "../../../../models/common";
+import { locationAwareLoadableData } from "components/models/common";
 import React from "react";
 import { produce } from "immer";
-import { databaseLocationComparator } from "../../../../utils/common";
+import { databaseLocationComparator } from "components/utils/common";
 import genUtils from "common/generalUtils";
 import changeVectorUtils from "common/changeVectorUtils";
-import { UncontrolledTooltip } from "../../../../common/UncontrolledTooltip";
+import { UncontrolledTooltip } from "components/common/UncontrolledTooltip";
 import { Card, Table } from "reactstrap";
 
 interface DetailedDatabaseStatsProps {

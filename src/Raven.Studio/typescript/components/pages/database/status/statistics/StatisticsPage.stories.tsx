@@ -1,15 +1,15 @@
-import { withBootstrap5, withStorybookContexts } from "../../../../../test/storybookTestUtils";
+import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { ComponentMeta } from "@storybook/react";
 import { StatisticsPage } from "./StatisticsPage";
-import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { mockServices } from "../../../../../test/mocks/MockServices";
+import { mockServices } from "test/mocks/services/MockServices";
 import React from "react";
 import database from "models/resources/database";
-import { boundCopy } from "../../../../utils/common";
+import { boundCopy } from "components/utils/common";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
-import { IndexesStubs } from "../../../../../test/stubs/IndexesStubs";
+import { IndexesStubs } from "test/stubs/IndexesStubs";
 
 export default {
     title: "Pages/Statistics page",

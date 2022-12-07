@@ -1,6 +1,6 @@
 import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
-import { IndexSharedInfo } from "../../../components/models/indexes";
-import { MultipleDatabaseLocationSelector } from "../../../components/common/MultipleDatabaseLocationSelector";
+import { IndexSharedInfo } from "components/models/indexes";
+import { MultipleDatabaseLocationSelector } from "components/common/MultipleDatabaseLocationSelector";
 
 interface bulkIndexOperationConfirmResult extends confirmDialogResult {
     locations: databaseLocationSpecifier[];

@@ -54,6 +54,7 @@
           "models/*":  ["typescript/models/*"],
           "common/*": ["typescript/common/*"],
           "external/*": ["typescript/external/*"],
+          "test/*": ["typescript/test/*"],
           "widgets/*": ["typescript/widgets/*"],
           "commands/*": ["typescript/commands/*"],
           "knockout": ["node_modules/@types/knockout"],

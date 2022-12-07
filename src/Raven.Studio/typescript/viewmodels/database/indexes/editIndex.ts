@@ -40,7 +40,7 @@ import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaul
 import optimizeDialog = require("viewmodels/database/indexes/optimizeDialog");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
-import IndexUtils from "../../../components/utils/IndexUtils";
+import IndexUtils from "components/utils/IndexUtils";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";

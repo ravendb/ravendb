@@ -1,9 +1,9 @@
 ﻿import database from "models/resources/database";
 import React, { useCallback, useEffect, useState } from "react";
-import { useServices } from "../../../../hooks/useServices";
+import { useServices } from "hooks/useServices";
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 import { EssentialDatabaseStatsComponent } from "./EssentialDatabaseStatsComponent";
-import { useAppUrls } from "../../../../hooks/useAppUrls";
+import { useAppUrls } from "hooks/useAppUrls";
 import { DetailedDatabaseStats } from "./DetailedDatabaseStats";
 import { IndexesDatabaseStats } from "./IndexesDatabaseStats";
 import { Button, Col, Row } from "reactstrap";

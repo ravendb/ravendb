@@ -25,4 +25,3 @@ jest.mock('plugins/dialog', () => ({
 }));
 jest.mock('durandal/app', () => ({
 }));
-

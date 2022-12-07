@@ -14,7 +14,7 @@ import generalUtils = require("common/generalUtils");
 import mergedIndexesStorage from "common/storage/mergedIndexesStorage";
 import shardedDatabase from "models/resources/shardedDatabase";
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
-import DatabaseUtils from "../../components/utils/DatabaseUtils";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 class databasesManager {
 

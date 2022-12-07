@@ -1,15 +1,15 @@
 ﻿import React, { MouseEventHandler, useCallback, useState } from "react";
 import { DatabaseSharedInfo } from "../../../models/databases";
 import classNames from "classnames";
-import { useActiveDatabase } from "../../../hooks/useActiveDatabase";
-import { useAppUrls } from "../../../hooks/useAppUrls";
+import { useActiveDatabase } from "hooks/useActiveDatabase";
+import { useAppUrls } from "hooks/useAppUrls";
 import databaseInfo from "models/resources/info/databaseInfo";
 import deleteDatabaseConfirm from "viewmodels/resources/deleteDatabaseConfirm";
 import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
 import app from "durandal/app";
-import { useEventsCollector } from "../../../hooks/useEventsCollector";
+import { useEventsCollector } from "hooks/useEventsCollector";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import { useServices } from "../../../hooks/useServices";
+import { useServices } from "hooks/useServices";
 import {
     Badge,
     Button,

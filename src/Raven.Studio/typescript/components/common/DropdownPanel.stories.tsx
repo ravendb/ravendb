@@ -1,5 +1,4 @@
-﻿import { withBootstrap5, withStorybookContexts } from "../../test/storybookTestUtils";
-import { Checkbox } from "./Checkbox";
+﻿import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { ComponentMeta } from "@storybook/react";
 import { DropdownPanel, UncontrolledButtonWithDropdownPanel } from "./DropdownPanel";
 import React, { useCallback, useState } from "react";

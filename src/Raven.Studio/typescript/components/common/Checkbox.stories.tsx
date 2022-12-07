@@ -2,7 +2,7 @@
 import { Checkbox } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
 import React from "react";
-import { withBootstrap5, withStorybookContexts } from "../../test/storybookTestUtils";
+import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { boundCopy } from "../utils/common";
 
 export default {

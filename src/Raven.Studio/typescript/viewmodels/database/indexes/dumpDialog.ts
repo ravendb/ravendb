@@ -3,7 +3,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dumpIndexCommand = require("commands/database/index/dumpIndexCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import database from "models/resources/database";
-import { SingleDatabaseLocationSelector } from "../../../components/common/SingleDatabaseLocationSelector";
+import { SingleDatabaseLocationSelector } from "components/common/SingleDatabaseLocationSelector";
 
 class dumpDialog extends dialogViewModelBase {
     

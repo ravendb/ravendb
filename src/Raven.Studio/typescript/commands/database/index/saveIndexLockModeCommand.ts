@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
-import { IndexSharedInfo } from "../../../components/models/indexes";
+import { IndexSharedInfo } from "components/models/indexes";
 
 class saveIndexLockModeCommand extends commandBase {
 

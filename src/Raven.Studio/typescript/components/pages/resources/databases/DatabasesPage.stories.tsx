@@ -1,8 +1,8 @@
-﻿import { withBootstrap5, withStorybookContexts } from "../../../../test/storybookTestUtils";
+﻿import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { mockServices } from "../../../../test/mocks/MockServices";
+import { mockServices } from "test/mocks/services/MockServices";
 import React from "react";
 import { DatabasesPage } from "./DatabasesPage";
 
@@ -14,11 +14,13 @@ export default {
 
 export const Sharded: ComponentStory<typeof DatabasesPage> = () => {
     accessManager.default.securityClearance("ClusterAdmin");
+
+    //TODO: mock + use hook
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 
     const { databasesService } = mockServices;
 
-    databasesService.withGetDatabasesSharded();
+    databasesService.withGetDatabases_Sharded();
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>
@@ -33,7 +35,7 @@ export const Single: ComponentStory<typeof DatabasesPage> = () => {
 
     const { databasesService } = mockServices;
 
-    databasesService.withGetDatabasesSingle();
+    databasesService.withGetDatabases_Single();
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>

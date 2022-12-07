@@ -8,18 +8,18 @@ import { ongoingTasksReducer, ongoingTasksReducerInitializer } from "../list/Ong
 import useInterval from "hooks/useInterval";
 import useTimeout from "hooks/useTimeout";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { OngoingTaskInfo, OngoingTaskPeriodicBackupInfo, OngoingTaskSharedInfo } from "../../../../models/tasks";
+import { OngoingTaskInfo, OngoingTaskPeriodicBackupInfo, OngoingTaskSharedInfo } from "components/models/tasks";
 import { BaseOngoingTaskPanelProps, taskKey } from "../shared";
 import router from "plugins/router";
 import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.PeriodicBackupStatus;
-import { loadableData } from "../../../../models/common";
+import { loadableData } from "components/models/common";
 import genUtils from "common/generalUtils";
 import moment from "moment";
 import { Button, Card, CardHeader, Row, Spinner } from "reactstrap";
-import { HrHeader } from "../../../../../components/common/HrHeader";
-import { RichPanelDetailItem, RichPanelDetails } from "../../../../../components/common/RichPanel";
-import { FlexGrow } from "../../../../../components/common/FlexGrow";
-import { EmptySet } from "../../../../../components/common/EmptySet";
+import { HrHeader } from "components/common/HrHeader";
+import { RichPanelDetailItem, RichPanelDetails } from "components/common/RichPanel";
+import { FlexGrow } from "components/common/FlexGrow";
+import { EmptySet } from "components/common/EmptySet";
 
 interface manualBackupListModel {
     backupType: Raven.Client.Documents.Operations.Backups.BackupType;

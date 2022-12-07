@@ -19,7 +19,7 @@ import backupSettings = require("models/database/tasks/periodicBackup/backupSett
 import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testPeriodicBackupCredentialsCommand");
 import popoverUtils = require("common/popoverUtils");
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import TaskUtils from "../../../components/utils/TaskUtils";
+import TaskUtils from "components/utils/TaskUtils";
 
 class connectionStrings extends viewModelBase {
 
