@@ -61,7 +61,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     public abstract ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext, out LazyStringValue id,
-        out ByteString output);
+        out ByteString output, out float? documentBoost);
 
     protected CoraxDocumentConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
         string storeValueFieldName, ICollection<IndexField> fields = null) : base(index, storeValue, indexImplicitNull, indexEmptyEntries, numberOfBaseFields,
@@ -422,12 +422,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         
         return new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope, CoraxSpatialPointEntryListForEnumerableScope, BlittableJsonReaderObjectsListForEnumerableScope, Allocator);
     }
-
-    protected void WriteDocumentBoostIntoEntry(ref IndexEntryWriter writer, float boost)
-    {
-        writer.WriteDynamic(global::Corax.Constants.DocumentBoost, ReadOnlySpan<byte>.Empty, (long)boost, boost);
-    }
-
+    
     public override void Dispose()
     {
         _indexEntryWriter.Dispose();

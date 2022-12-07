@@ -232,13 +232,17 @@ namespace Corax.Queries
             {
                 if (match._searcher.DocumentsAreBoosted == false) 
                     return;
+                var tree = match._searcher.GetDocumentBoostTree();
+                if (tree == null || tree.NumberOfEntries == 0)
+                    return;
                 
                 for (int bIdx = 0; bIdx < limit; ++bIdx)
                 {
-                    if (match._searcher.GetReaderFor(matchesSpan[bIdx]).GetReaderFor(Constants.DocumentBoostSlice).Read(out double boost) == false)
+                    using var __ = tree.Read(matchesSpan[bIdx], out var slice);
+                    if (slice.HasValue == false)
                         continue;
-                    
-                    scoresSpan[bIdx] *= MathF.Log((float)boost+1);
+                    var boostFactor = MemoryMarshal.Cast<byte, float>(slice.AsSpan());
+                    scoresSpan[bIdx] *= boostFactor[0];
                 }
             }
         }

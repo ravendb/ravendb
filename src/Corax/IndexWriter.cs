@@ -43,6 +43,7 @@ namespace Corax
     {
         private long _numberOfModifications;
         private readonly IndexFieldsMapping _fieldsMapping;
+        private FixedSizeTree _documentBoost;
         private readonly Tree _indexMetadata;
         private readonly Tree _persistedDynamicFieldsAnalyzers;
         private readonly StorageEnvironment _environment;
@@ -299,6 +300,42 @@ namespace Corax
             return Index(idSlice, data);
         }
 
+        public unsafe long Index(string id, Span<byte> data, float documentBoost)
+        {
+            var entryId = Index(id, data);
+            AppendDocumentBoost(entryId, documentBoost);
+            return entryId;
+        }
+
+        private unsafe void AppendDocumentBoost(long entryId, float documentBoost)
+        {
+            _documentBoost ??= Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+            
+            documentBoost = documentBoost switch
+            {
+                <= 1 => MathF.Log(2),
+                _ => MathF.Log(documentBoost)
+            };
+            
+            var buffer = stackalloc byte[sizeof(float)];
+            Unsafe.WriteUnaligned(buffer, documentBoost);
+            using var _ = Slice.From(Transaction.Allocator, buffer, sizeof(float), out var floatSlice);
+            _documentBoost.Add(entryId, floatSlice);
+        }
+
+        private unsafe void RemoveDocumentBoost(long entryId)
+        {
+            _documentBoost ??= Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+            _documentBoost.Delete(entryId);
+        }
+
+        public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries, float documentBoost)
+        {
+            var entryId = Update(field, key, id, data, ref numberOfEntries);
+            AppendDocumentBoost(entryId, documentBoost);
+            return entryId;
+        }
+        
         public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries)
         {
             if (TryGetEntryTermId(field, key, out var entryId) == false)
@@ -1094,6 +1131,7 @@ namespace Corax
             Page lastVisitedPage = default;
             foreach (long entryToDelete in _deletedEntries)
             {
+                RemoveDocumentBoost(entryToDelete);
                 RecordTermsToDeleteFrom(entryToDelete, llt, ref lastVisitedPage);
             }
         }
