@@ -827,7 +827,6 @@ namespace Raven.Client.Documents.Subscriptions
                 case AllTopologyNodesDownException:
                 {
                     AssertLastConnectionFailure();
-                    _redirectNode = null;
                     return true;
                 }
                 case NodeIsPassiveException e:
