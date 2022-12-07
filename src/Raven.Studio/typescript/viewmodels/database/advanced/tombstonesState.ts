@@ -22,6 +22,9 @@ class tombstonesState extends viewModelBase {
         force: ko.observable<boolean>(false),
         refresh: ko.observable<boolean>(false)
     };
+    
+    private readonly maxValue = 9223372036854776000;
+    // in general Long.MAX_Value is 9223372036854775807 but we loose precision here
 
     canActivate(args: any) {
         return $.when<any>(super.canActivate(args))
@@ -53,25 +56,25 @@ class tombstonesState extends viewModelBase {
                 new textColumn<TombstoneItem>(collectionsGrid, x => x.Collection, "Collection", "26%", {
                     sortable: "string"
                 }),
-                new textColumn<TombstoneItem>(collectionsGrid, x => x.Documents.Component, "Doc Component", "15%", {
+                new textColumn<TombstoneItem>(collectionsGrid, x => x.Documents.Component, "Document Task", "15%", {
                     sortable: "string"
                 }),
-                new textColumn<TombstoneItem>(collectionsGrid, x => this.formatEtag(x.Documents.Etag), "Doc Etag", "8%", {
-                    sortable: "number"
+                new textColumn<TombstoneItem>(collectionsGrid, x => this.formatEtag(x.Documents.Etag), "Document Etag", "8%", {
+                    sortable: "number", title: (x) => this.getEtagTitle(x.Documents.Etag)
                 }),
 
-                new textColumn<TombstoneItem>(collectionsGrid, x => x.TimeSeries.Component, "Time Series Component", "15%", {
+                new textColumn<TombstoneItem>(collectionsGrid, x => x.TimeSeries.Component, "Time Series Task", "15%", {
                     sortable: "string"
                 }),
                 new textColumn<TombstoneItem>(collectionsGrid, x => this.formatEtag(x.TimeSeries.Etag), "Time Series Etag", "8%", {
-                    sortable: "number"
+                    sortable: "number", title: (x) => this.getEtagTitle(x.TimeSeries.Etag)
                 }),
 
-                new textColumn<TombstoneItem>(collectionsGrid, x => x.Counters.Component, "Counter Component", "15%", {
+                new textColumn<TombstoneItem>(collectionsGrid, x => x.Counters.Component, "Counter Task", "15%", {
                     sortable: "string"
                 }),
                 new textColumn<TombstoneItem>(collectionsGrid, x => this.formatEtag(x.Counters.Etag), "Counter Etag", "8%", {
-                    sortable: "number"
+                    sortable: "number", title: (x) => this.getEtagTitle(x.Counters.Etag)
                 }),
             ]
         });
@@ -81,7 +84,7 @@ class tombstonesState extends viewModelBase {
 
         subscriptionsGrid.init(() => this.subscriptionsFetcher(), () => {
             return [
-                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Identifier, "Identifier", "30%", {
+                new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Identifier, "Process", "30%", {
                     sortable: "string"
                 }),
                 new textColumn<SubscriptionInfo>(subscriptionsGrid, x => x.Type, "Type", "20%", {
@@ -91,7 +94,7 @@ class tombstonesState extends viewModelBase {
                     sortable: "string"
                 }),
                 new textColumn<SubscriptionInfo>(subscriptionsGrid, x => this.formatEtag(x.Etag), "Etag", "25%", {
-                    sortable: "string"
+                    sortable: "string", title: (x) => this.getEtagTitle(x.Etag)
                 }),
             ]
         });
@@ -162,12 +165,23 @@ class tombstonesState extends viewModelBase {
     }
     
     formatEtag(value: number) {
-        if (value === 9223372036854776000) { 
-            // in general Long.MAX_Value is 9223372036854775807 but we loose precision here
+        if (value === this.maxValue) {
             return "(max value)";
         }
         
         return value;
+    }
+
+    private getEtagTitle(etagValue: number) {
+        if (etagValue === 0) {
+            return "No tombstones can be removed";
+        }
+        
+        if (etagValue < this.maxValue) {
+            return `Can remove tombstones for Etags <= ${etagValue}`;
+        }
+        
+        return "Can remove any tombstone";
     }
 }
 

@@ -1721,7 +1721,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private const int SchemaSize = 2 * 1024 * 1024;
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new MergedBatchPutCommandDto
                 {
@@ -1878,7 +1878,7 @@ namespace Raven.Server.Smuggler.Documents
                 _returnContext.Dispose();
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new MergedBatchFixDocumentMetadataCommandDto
                 {
@@ -1960,7 +1960,7 @@ namespace Raven.Server.Smuggler.Documents
                 _returnContext.Dispose();
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new MergedBatchDeleteRevisionCommandDto
                 {

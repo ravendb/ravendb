@@ -355,7 +355,7 @@ namespace Raven.Server.Documents.TransactionCommands
             return member.Replace("~0", "~").Replace("~1", "/");
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
         {
             return new JsonPatchCommandDto
             {

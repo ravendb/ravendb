@@ -114,7 +114,12 @@ namespace SlowTests.Server.Replication
             var hubDatabaseInstance = await Databases.GetDocumentDatabaseInstanceFor(hubStore);
             bool expectedError = false;
             string lastError = null;
-            hubDatabaseInstance.ReplicationLoader.IncomingHandlers.ToArray()[0].Failed += (handler, exception) =>
+            Exception lastException = null;
+            var incomingHandlers = hubDatabaseInstance.ReplicationLoader.IncomingHandlers.ToArray();
+            var incomingStr = string.Join(",", incomingHandlers.Select(x => x.GetType()));
+            Assert.True(incomingHandlers.Length == 1, $"hub should have 1 incoming handler but has {incomingHandlers.Length}, {incomingStr}");
+
+            incomingHandlers[0].Failed += (handler, exception) =>
             {
                 if (exception.Message.Contains("This hub does not allow for tombstone replication via pull replication"))
                 {
@@ -122,6 +127,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 lastError = exception.Message;
+                lastException = exception;
             };
 
             //delete doc from sink
@@ -144,7 +150,11 @@ namespace SlowTests.Server.Replication
 
             //make sure hub threw error
             var result = await WaitForValueAsync(() => Task.FromResult(expectedError), true);
-            Assert.True(result, lastError);
+            if (result == false)
+            {
+                Assert.NotNull(lastException);
+                Assert.True(false, $"The actual exception: {lastException}");
+            }
         }
 
         [RavenFact(RavenTestCategory.Replication)]
