@@ -78,7 +78,7 @@ namespace Raven.Server.Documents
 
         public interface IRecordableCommand
         {
-            IReplayableCommandDto<MergedTransactionCommand> ToDto(JsonOperationContext context);
+            IReplayableCommandDto<MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context) where TTransaction : RavenTransaction;
         }
 
         public interface IReplayableCommandDto<out T> where T : MergedTransactionCommand
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents
                 return ExecuteCmd(context);
             }
 
-            public abstract IReplayableCommandDto<MergedTransactionCommand> ToDto(JsonOperationContext context);
+            public abstract IReplayableCommandDto<MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context) where TTransaction : RavenTransaction;
 
             [JsonIgnore]
             public readonly TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);

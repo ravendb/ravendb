@@ -17,6 +17,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
@@ -1810,6 +1811,8 @@ namespace Raven.Server.Documents
             internal Action<string, string> DisposeLog;
 
             internal bool ForceSendTombstones = false;
+
+            internal Action<PathSetting> ActionToCallOnGetTempPath;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {

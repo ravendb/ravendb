@@ -12,6 +12,8 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -178,6 +180,63 @@ loadToOrders(partitionBy(key),
                         Assert.False(changed);
                     }
                 }
+            }
+        }
+
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(false, false)]
+        public async Task BackupDatabaseOnceUsingBackupTempPath(bool assignBackupTempPath, bool assignStorageTempPath)
+        {
+            const string subDirName = "OneTimeBackupTemp";
+
+            var backupTempPath = assignBackupTempPath ? new PathSetting(NewDataPath(suffix: "_BackupTempPath")) : null;
+            var storageTempPath = assignStorageTempPath ? new PathSetting(NewDataPath(suffix: "_StorageTempPath")) : null;
+
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options
+                   {
+                       Server = server,
+                       RunInMemory = false,
+                       ModifyDatabaseRecord = record =>
+                       {
+                           record.Settings[RavenConfiguration.GetKey(x => x.Backup.TempPath)] = backupTempPath?.FullPath;
+                           record.Settings[RavenConfiguration.GetKey(x => x.Storage.TempPath)] = storageTempPath?.FullPath;
+                       }
+                   }))
+            {
+                var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+                var coreDataDirectoryPath = new PathSetting(databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)]);
+                
+                PathSetting tempPath = null;
+                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                documentDatabase.ForTestingPurposesOnly().ActionToCallOnGetTempPath = pathSetting =>
+                {
+                    tempPath = pathSetting;
+                };
+
+                await store.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    S3Settings = new S3Settings { BucketName = "ravendb-bucket", RemoteFolderName = "lev/backups_RavenDB_19495" },
+                }));
+
+                WaitForValue(() => tempPath != null, true);
+
+                if ((assignBackupTempPath && assignStorageTempPath) || assignBackupTempPath)
+                {
+                    Assert.Equal(backupTempPath.Combine(subDirName), tempPath);
+                }
+                else if (assignStorageTempPath)
+                {
+                    Assert.Equal(storageTempPath.Combine(subDirName), tempPath);
+                }
+                else
+                {
+                    Assert.Equal(coreDataDirectoryPath.Combine(subDirName), tempPath);
+                } 
             }
         }
 

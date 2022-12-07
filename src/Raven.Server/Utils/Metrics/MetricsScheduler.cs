@@ -18,8 +18,9 @@ namespace Raven.Server.Utils.Metrics
         private readonly Thread _schedulerThread;
         private readonly ManualResetEvent _done = new ManualResetEvent(false);
 
-        private readonly ConcurrentSet<WeakReference<MeterMetric>> _scheduledActions =
-            new ConcurrentSet<WeakReference<MeterMetric>>();
+        private readonly ConcurrentSet<WeakReference<MeterMetric>> _scheduledMetricActions = new ConcurrentSet<WeakReference<MeterMetric>>();
+
+        private readonly ConcurrentSet<WeakReference<Ewma>> _scheduledEwmaActions = new ConcurrentSet<WeakReference<Ewma>>();
 
         private readonly Logger _logger;
 
@@ -47,7 +48,7 @@ namespace Raven.Server.Utils.Metrics
             do
             {
                 sp.Restart();
-                foreach (var scheduledAction in _scheduledActions)
+                foreach (var scheduledAction in _scheduledMetricActions)
                 {
                     try
                     {
@@ -57,13 +58,33 @@ namespace Raven.Server.Utils.Metrics
                         }
                         else
                         {
-                            _scheduledActions.TryRemove(scheduledAction);
+                            _scheduledMetricActions.TryRemove(scheduledAction);
                         }
                     }
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info("Error occurred during MetricsScheduler ticking of a single action", e);
+                            _logger.Info("Error occurred during MetricsScheduler ticking of a single Metric action", e);
+                    }
+                }
+
+                foreach (var scheduledAction in _scheduledEwmaActions)
+                {
+                    try
+                    {
+                        if (scheduledAction.TryGetTarget(out var target))
+                        {
+                            target.Tick();
+                        }
+                        else
+                        {
+                            _scheduledEwmaActions.TryRemove(scheduledAction);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Error occurred during MetricsScheduler ticking of a single EWMA action", e);
                     }
                 }
 
@@ -76,7 +97,12 @@ namespace Raven.Server.Utils.Metrics
 
         public void StartTickingMetric(MeterMetric tickable)
         {
-            _scheduledActions.TryAdd(new WeakReference<MeterMetric>(tickable));
+            _scheduledMetricActions.TryAdd(new WeakReference<MeterMetric>(tickable));
+        }
+
+        public void StartTickingEwma(Ewma tickable)
+        {
+            _scheduledEwmaActions.TryAdd(new WeakReference<Ewma>(tickable));
         }
 
         public void Dispose()

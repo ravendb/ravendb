@@ -144,7 +144,7 @@ namespace SlowTests.Issues
                             {
                                 DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()),
                                 AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats())
-                            }, false).Select(item => item.Clone(ctx)));
+                            }, false).Select(item => item.Clone(ctx, ctx.Allocator)));
                             etag = firstReplicationOrder.Select(x => x.Etag).Max();
                         }
                         // Replication from source to firstDestination
@@ -166,7 +166,7 @@ namespace SlowTests.Issues
                             {
                                 DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()),
                                 AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats())
-                            }, false).Select(item => item.Clone(ctx)));
+                            }, false).Select(item => item.Clone(ctx, ctx.Allocator)));
                         }
 
                         var database2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(firstDestination.Database);
@@ -180,7 +180,7 @@ namespace SlowTests.Issues
                             {
                                 DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()),
                                 AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats())
-                            }, false).Select(item => item.Clone(ctx)));
+                            }, false).Select(item => item.Clone(ctx, ctx.Allocator)));
                         }
 
                         // remove the 1st doc sent, because of its change in the middle of the 1st replication, so it was sent twice

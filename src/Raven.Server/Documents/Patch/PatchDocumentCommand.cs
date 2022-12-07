@@ -418,7 +418,7 @@ namespace Raven.Server.Documents.Patch
             return null;
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
         {
             var dto = new BatchPatchDocumentCommandDto();
             FillDto(dto);
@@ -474,7 +474,7 @@ namespace Raven.Server.Documents.Patch
             return HandleReply(_id, PatchResult, reply, modifiedCollections);
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
         {
             var dto = new PatchDocumentCommandDto();
             FillDto(dto);

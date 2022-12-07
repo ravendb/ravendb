@@ -58,13 +58,13 @@ namespace Raven.Server.Documents.Handlers
             return GetAttachment(true);
         }
 
-        [RavenAction("/databases/*/attachments", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        [RavenAction("/databases/*/attachments", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task GetPost()
         {
             return GetAttachment(false);
         }
 
-        [RavenAction("/databases/*/attachments/bulk", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        [RavenAction("/databases/*/attachments/bulk", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetAttachments()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -400,7 +400,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new MergedPutAttachmentCommandDto
                 {
@@ -427,7 +427,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new MergedDeleteAttachmentCommandDto
                 {

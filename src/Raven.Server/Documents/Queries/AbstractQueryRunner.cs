@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 throw new NotSupportedException($"ToDto() of {nameof(BulkOperationCommand<T>)} Should not be called");
             }

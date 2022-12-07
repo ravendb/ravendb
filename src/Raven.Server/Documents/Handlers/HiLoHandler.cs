@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new MergedNextHiLoCommandDto
                 {
@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new MergedHiLoReturnCommandDto
                 {
