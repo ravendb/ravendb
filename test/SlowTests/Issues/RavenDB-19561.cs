@@ -75,13 +75,10 @@ namespace SlowTests.Issues
             var externalList = await SetupReplicationAsync(store1, store2);
 
             // wait for replication from store1 to store2/3
-            var waitForReplicationTasks = new List<Task>();
             foreach (var doc in docs)
             {
-                waitForReplicationTasks.Add(WaitAndAssertDocReplicationAsync<User>(store2, doc.Id));
+                await WaitAndAssertDocReplicationAsync<User>(store2, doc.Id);
             }
-            Task.WaitAll(waitForReplicationTasks.ToArray());
-
         }
 
         private async Task WaitAndAssertDocReplicationAsync<T>(DocumentStore store, string id, int timeout = 15_000) where T : class
