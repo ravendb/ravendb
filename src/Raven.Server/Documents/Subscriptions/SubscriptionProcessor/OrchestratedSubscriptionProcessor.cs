@@ -15,7 +15,7 @@ public class OrchestratedSubscriptionProcessor : SubscriptionProcessor
 
     public ShardedSubscriptionBatch CurrentBatch;
 
-    public OrchestratedSubscriptionProcessor(ServerStore server, ShardedDatabaseContext databaseContext, OrchestratedSubscriptionConnection connection) : base(server, connection)
+    public OrchestratedSubscriptionProcessor(ServerStore server, ShardedDatabaseContext databaseContext, OrchestratedSubscriptionConnection connection) : base(server, connection, connection.DatabaseName)
     {
         _databaseContext = databaseContext;
     }
