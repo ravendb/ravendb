@@ -18,6 +18,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
@@ -34,6 +35,7 @@ namespace Raven.Server.Documents.Revisions
     {
         public static readonly TableSchema RevisionsSchema = Schemas.Revisions.Current;
         public static readonly TableSchema CompressedRevisionsSchema = Schemas.Revisions.CurrentCompressed;
+        public long SizeLimitInBytes = new Size(PlatformDetails.Is32Bits == false ? 32 : 2, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
 
         public RevisionsConfiguration ConflictConfiguration;
         public const long NotDeletedRevisionMarker = 0;
@@ -1219,7 +1221,7 @@ namespace Raven.Server.Documents.Revisions
                 if (elapsed > MaxEnforceConfigurationSingleBatchTime)
                     return false;
 
-                if (context.AllocatedMemory > SizeLimit)
+                if (context.AllocatedMemory > SizeLimitInBytes)
                     return false;
 
                 return true;
@@ -1316,7 +1318,7 @@ namespace Raven.Server.Documents.Revisions
                 return _ids.Count;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new EnforceRevisionConfigurationCommandDto(_revisionsStorage, _ids);
             }
@@ -1338,8 +1340,6 @@ namespace Raven.Server.Documents.Revisions
                 }
             }
         }
-
-        private const long SizeLimit = 32 * 1_024 * 1_024;
 
         private class Parameters
         {
@@ -1468,7 +1468,7 @@ namespace Raven.Server.Documents.Revisions
 
                     RestoreRevision(readCtx, writeCtx, parameters, id, result, list);
 
-                    if (readCtx.AllocatedMemory + writeCtx.AllocatedMemory > SizeLimit)
+                    if (readCtx.AllocatedMemory + writeCtx.AllocatedMemory > SizeLimitInBytes)
                     {
                         return true;
                     }
@@ -1612,7 +1612,7 @@ namespace Raven.Server.Documents.Revisions
                 return collectionName;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new RevertDocumentsCommandDto(_list);
             }

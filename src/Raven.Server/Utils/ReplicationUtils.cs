@@ -8,12 +8,18 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Commands;
 using Sparrow.Json;
 
 namespace Raven.Server.Utils
 {
     internal static class ReplicationUtils
     {
+        public static TcpConnectionInfo GetTcpInfoForInternalReplication(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
+        {
+            return AsyncHelpers.RunSync(() => GetTcpInfoForInternalReplicationAsync(url, databaseName, databaseId, etag, tag, certificate, localNodeTag, token));
+        }
+
         public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, CancellationToken token)
         {
             return AsyncHelpers.RunSync(() => GetTcpInfoAsync(url, databaseName, databaseId, etag, tag, certificate, token));
@@ -35,6 +41,21 @@ namespace Raven.Server.Utils
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var getTcpInfoCommand = databaseId == null ? new GetTcpInfoCommand(tag, databaseName) : new GetTcpInfoCommand(tag, databaseName, databaseId, etag);
+                await requestExecutor.ExecuteAsync(getTcpInfoCommand, context, token: token);
+
+                var tcpConnectionInfo = getTcpInfoCommand.Result;
+                if (url.StartsWith("https", StringComparison.OrdinalIgnoreCase) && tcpConnectionInfo.Certificate == null)
+                    throw new InvalidOperationException("Getting TCP info over HTTPS but the server didn't return the expected certificate to use over TCP, invalid response, aborting");
+                return tcpConnectionInfo;
+            }
+        }
+
+        private static async Task<TcpConnectionInfo> GetTcpInfoForInternalReplicationAsync(string url, string databaseName, string databaseId, long etag, string tag, X509Certificate2 certificate, string localNodeTag, CancellationToken token)
+        {
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate, DocumentConventions.DefaultForServer))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+            {
+                var getTcpInfoCommand = databaseId == null ? new GetTcpInfoForReplicationCommand(localNodeTag, tag, databaseName) : new GetTcpInfoForReplicationCommand(localNodeTag, tag, databaseName, databaseId, etag);
                 await requestExecutor.ExecuteAsync(getTcpInfoCommand, context, token: token);
 
                 var tcpConnectionInfo = getTcpInfoCommand.Result;

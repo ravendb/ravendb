@@ -285,7 +285,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return base.TryUpdateChangeVector(context);
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new MergedUpdateDatabaseChangeVectorForHubCommandDto
                 {

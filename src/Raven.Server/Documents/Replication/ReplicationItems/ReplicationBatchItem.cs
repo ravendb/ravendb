@@ -34,11 +34,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public abstract void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats);
 
-        protected abstract ReplicationBatchItem CloneInternal(JsonOperationContext context);
+        protected abstract ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator);
 
-        public ReplicationBatchItem Clone(JsonOperationContext context)
+        public ReplicationBatchItem Clone(JsonOperationContext context, ByteStringContext allocator)
         {
-            var item = CloneInternal(context);
+            var item = CloneInternal(context, allocator);
 
             item.Type = Type;
             item.ChangeVector = ChangeVector;

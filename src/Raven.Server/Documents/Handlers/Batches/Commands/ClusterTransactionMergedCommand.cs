@@ -178,6 +178,14 @@ public class ClusterTransactionMergedCommand : TransactionMergedCommand
         return Reply.Count;
     }
 
+    public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+    {
+        return new ClusterTransactionMergedCommandDto
+        {
+            Batch = _batch.Slice(0, _batch.Count).ToList()
+        };
+    }
+
     private CollectionName GetCollection(DocumentsOperationContext context, DocumentsStorage.DocumentOrTombstone item)
     {
         return item.Document != null
@@ -191,14 +199,6 @@ public class ClusterTransactionMergedCommand : TransactionMergedCommand
         if (conflicts.Count == 0)
             return null;
         return Database.DocumentsStorage.ExtractCollectionName(context, conflicts[0].Collection);
-    }
-
-    public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
-    {
-        return new ClusterTransactionMergedCommandDto
-        {
-            Batch = _batch.Slice(0, _batch.Count).ToList()
-        };
     }
 
     public override void Dispose()

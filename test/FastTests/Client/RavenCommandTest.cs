@@ -66,7 +66,7 @@ namespace FastTests.Client
                 "PutDatabaseClientConfigurationCommand", "PutDatabaseSettingsCommand", "PutDatabaseStudioConfigurationCommand",
                 "GetNextServerOperationIdCommand", "KillServerOperationCommand",
                 "GetEssentialStatisticsCommand", "GetMultipleTimeSeriesRangesCommand", "GetShardedPeriodicBackupStatusCommand",
-                "AddNodeToOrchestratorTopologyCommand", "RemoveNodeFromOrchestratorTopologyCommand"
+                "AddNodeToOrchestratorTopologyCommand", "RemoveNodeFromOrchestratorTopologyCommand", "GetTcpInfoForReplicationCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);

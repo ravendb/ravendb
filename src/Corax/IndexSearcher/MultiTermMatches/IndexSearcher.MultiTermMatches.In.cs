@@ -17,7 +17,7 @@ public partial class IndexSearcher
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
         }
 
-        if (inTerms.Count is > 1 and <= 16)
+        if (inTerms.Count is > 1 and <= 4)
         {
             var stack = new BinaryMatch[inTerms.Count / 2];
             for (int i = 0; i < inTerms.Count / 2; i++)
@@ -140,7 +140,7 @@ public partial class IndexSearcher
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
         }
 
-        if (inTerms.Count is > 1 and <= 16)
+        if (inTerms.Count is > 1 and <= 4)
         {
             var stack = new BinaryMatch[inTerms.Count / 2];
             for (int i = 0; i < inTerms.Count / 2; i++)

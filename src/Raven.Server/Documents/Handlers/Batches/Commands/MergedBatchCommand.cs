@@ -9,6 +9,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -24,6 +25,7 @@ public class MergedBatchCommand : TransactionMergedCommand
 
     private Dictionary<string, List<(DynamicJsonValue Reply, string FieldName)>> _documentsToUpdateAfterAttachmentChange;
     private readonly List<IDisposable> _toDispose = new();
+    private static TimeSeriesStorage.AppendOptions AppendOptionsForTimeSeriesCopy = new() { VerifyName = false };
 
     public MergedBatchCommand(DocumentDatabase database) : base(database)
     {
@@ -47,15 +49,6 @@ public class MergedBatchCommand : TransactionMergedCommand
         }
 
         return sb.ToString();
-    }
-
-    public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
-    {
-        return new MergedBatchCommandDto
-        {
-            ParsedCommands = ParsedCommands.ToArray(),
-            AttachmentStreams = AttachmentStreams
-        };
     }
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -314,7 +307,8 @@ public class MergedBatchCommand : TransactionMergedCommand
                             cmd.DestinationId,
                             docCollection,
                             cmd.DestinationName,
-                            reader.AllValues()
+                            reader.AllValues(),
+                            AppendOptionsForTimeSeriesCopy
                         );
 
                     Reply.Add(new DynamicJsonValue
@@ -439,6 +433,15 @@ public class MergedBatchCommand : TransactionMergedCommand
             }
         }
         return Reply.Count;
+    }
+
+    public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+    {
+        return new MergedBatchCommandDto
+        {
+            ParsedCommands = ParsedCommands.ToArray(),
+            AttachmentStreams = AttachmentStreams
+        };
     }
 
     private string EtlGetDocIdFromPrefixIfNeeded(string docId, BatchRequestParser.CommandData cmd, DocumentsStorage.PutOperationResults? lastPutResult)

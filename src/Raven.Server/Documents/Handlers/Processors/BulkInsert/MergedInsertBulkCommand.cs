@@ -157,7 +157,7 @@ public class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransac
         return NumberOfCommands;
     }
 
-    public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+    public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
     {
         return new MergedInsertBulkCommandDto
         {

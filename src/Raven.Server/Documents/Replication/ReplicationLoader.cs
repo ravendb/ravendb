@@ -1388,14 +1388,13 @@ namespace Raven.Server.Documents.Replication
 
                     case BucketMigrationReplication _:
                     case InternalReplication _:
+                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
                         {
-                            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
-                            {
-                                cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
-                                return ReplicationUtils.GetTcpInfo(node.Url, node.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
-                                    "Replication",
-                            certificate, cts.Token);
-                            }
+                            cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
+                            return ReplicationUtils.GetTcpInfoForInternalReplication(node.Url, node.Database, Database.DbId.ToString(),
+                                Database.ReadLastEtag(),
+                                "Replication",
+                                certificate, _server.NodeTag, cts.Token);
                         }
                     default:
                         throw new InvalidOperationException(
