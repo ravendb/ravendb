@@ -4,6 +4,11 @@ import distributeSecretCommand = require("commands/database/secrets/distributeSe
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import addNodeToDatabaseGroupCommand = require("commands/database/dbGroup/addNodeToDatabaseGroupCommand");
 
+interface nodeInfo {
+    tag: string;
+    type: databaseGroupNodeType;
+}
+
 class addNewNodeToDatabaseGroup extends dialogViewModelBase {
 
     view = require("views/resources/addNewNodeToDatabaseGroup.html");
@@ -19,7 +24,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     key = ko.observable<string>();
     confirmation = ko.observable<boolean>(false);
     databaseName: string;
-    //TODO: nodes: databaseGroupNode[];
+    nodes: nodeInfo[];
     
     encryptionSection = ko.observable<setupEncryptionKey>();
     validationGroup: KnockoutValidationGroup;
@@ -30,8 +35,8 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     spinners = {
         addNode: ko.observable<boolean>(false)
     };
-/*
-    constructor(databaseName: string, nodes: databaseGroupNode[], isEncrypted: boolean) {
+
+    constructor(databaseName: string, nodes: nodeInfo[], isEncrypted: boolean) {
         super();
         
         this.databaseName = databaseName;
@@ -51,14 +56,14 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     private initObservables() {
         this.nodesCanBeAdded = ko.pureComputed<string[]>(() => {
             const tags = clusterTopologyManager.default.topology().nodes().map(x => x.tag());
-            const existingTags = this.nodes.map(x => x.tag());
+            const existingTags = this.nodes.map(x => x.tag);
             return _.without(tags, ...existingTags);
         });
         
         this.possibleMentors = ko.pureComputed<string[]>(() => {
             return this.nodes
-                .filter(x => x.type() === "Member")
-                .map(x => x.tag());
+                .filter(x => x.type === "Member")
+                .map(x => x.tag);
         });
     }
     
@@ -143,7 +148,7 @@ class addNewNodeToDatabaseGroup extends dialogViewModelBase {
     selectedMentor(tag: string) {
         this.mentorNode(tag);
     }
- */
+ 
 }
 
 export = addNewNodeToDatabaseGroup;

@@ -9,6 +9,9 @@ type supportedLangs = "javascript" | "csharp" | "plain";
 class showDataDialog extends dialogViewModelBase {
 
     view = require("views/common/showDataDialog.html");
+    
+    private readonly title: string;
+    private readonly lang: supportedLangs;
 
     width = ko.observable<string>("");
     inputData = ko.observable<string>();
@@ -25,8 +28,12 @@ class showDataDialog extends dialogViewModelBase {
         return highlight(input, languages[this.lang], this.lang);
     });
 
-    constructor(private title: string, inputData: string, private lang: supportedLangs, elementToFocusOnDismissal?: string) {
+    
+
+    constructor(title: string, inputData: string, lang: supportedLangs, elementToFocusOnDismissal?: string) {
         super({ elementToFocusOnDismissal: elementToFocusOnDismissal });
+        this.lang = lang;
+        this.title = title;
 
         this.inputData(inputData);
     }

@@ -4,7 +4,6 @@ import database = require("models/resources/database");
 import databasesManager = require("common/shell/databasesManager");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import generalUtils = require("common/generalUtils");
-import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 import accessManager = require("common/shell/accessManager");
 import moment = require("moment");
 
@@ -22,7 +21,6 @@ class databaseInfo {
     lastBackupText = ko.observable<string>();
     lastFullOrIncrementalBackup = ko.observable<string>();
     dynamicDatabaseDistribution = ko.observable<boolean>();
-    priorityOrder = ko.observableArray<string>();
 
     loadError = ko.observable<string>();
 
@@ -59,7 +57,6 @@ class databaseInfo {
     documentsCount = ko.observable<number>();
     indexesCount = ko.observable<number>();
 
-    nodes = ko.observableArray<databaseGroupNode>([]); //TODO: remove?
     deletionInProgress = ko.observableArray<string>([]);
 
     constructor(dto: Raven.Client.ServerWide.Operations.DatabaseInfo) {
@@ -106,10 +103,6 @@ class databaseInfo {
         return durationInSeconds > databaseInfo.dayAsSeconds ? "text-warning" : "text-success";
     }
     
-    isLocal(currentNodeTag: string) {
-        return _.includes(this.nodes().map(x => x.tag()), currentNodeTag);
-    }
-
     private initializeObservables() {
         this.hasLoadError = ko.pureComputed(() => !!this.loadError());
 
@@ -170,37 +163,9 @@ class databaseInfo {
         this.documentsCount(dto.DocumentsCount);
         this.indexesCount(dto.IndexesCount);
         this.deletionInProgress(dto.DeletionInProgress ? Object.keys(dto.DeletionInProgress) : []);
-
-        const topologyDto = dto.NodesTopology;
-        if (topologyDto) {
-            const members = this.mapNodes("Member", topologyDto.Members);
-            const promotables = this.mapNodes("Promotable", topologyDto.Promotables);
-            const rehabs = this.mapNodes("Rehab", topologyDto.Rehabs);
-            const joinedNodes = _.concat<databaseGroupNode>(members, promotables, rehabs);
-            this.applyNodesStatuses(joinedNodes, topologyDto.Status);
-
-            this.priorityOrder(topologyDto.PriorityOrder);
-            
-            this.nodes(joinedNodes);
-        }
-
         this.databaseAccessText(accessManager.default.getDatabaseAccessLevelTextByDbName(this.name));
         this.databaseAccessColor(accessManager.default.getAccessColorByDbName(this.name));
         this.databaseAccessClass(accessManager.default.getAccessIconByDbName(this.name))
-    }
-
-    private applyNodesStatuses(nodes: databaseGroupNode[], statuses: { [key: string]: Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;}) {
-        nodes.forEach(node => {
-            if (node.tag() in statuses) {
-                const nodeStatus = statuses[node.tag()];
-                node.lastStatus(nodeStatus.LastStatus);
-                node.lastError(nodeStatus.LastError);
-            }
-        });
-    }
-
-    private mapNodes(type: databaseGroupNodeType, nodes: Array<Raven.Client.ServerWide.Operations.NodeId>): Array<databaseGroupNode> {
-        return _.map(nodes, v => databaseGroupNode.for(v.NodeTag, v.NodeUrl, v.ResponsibleNode, type));
     }
 }
 
