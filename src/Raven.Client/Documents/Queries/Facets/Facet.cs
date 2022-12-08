@@ -1,5 +1,6 @@
 using System;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
@@ -9,17 +10,15 @@ namespace Raven.Client.Documents.Queries.Facets
 {
     public class Facet : FacetBase
     {
-        internal FacetBase _parent;
-
-        /// <summary>
+        internal Func<DocumentConventions, string> _originalFieldNamePathEvaluator;
         /// Name of field the facet aggregate on
         /// </summary>
         public string FieldName { get; set; }
 
         internal override FacetToken ToFacetToken(DocumentConventions conventions, Func<object, string> addQueryParameter)
         {
-            if (_parent != null)
-                return _parent.ToFacetToken(conventions, addQueryParameter);
+            if (conventions != DocumentConventions.Default && _originalFieldNamePathEvaluator != null)
+                FieldName = _originalFieldNamePathEvaluator(conventions);
             return FacetToken.Create(this, addQueryParameter);
         }
 
@@ -54,7 +53,7 @@ namespace Raven.Client.Documents.Queries.Facets
                 Options = other.Options,
                 Aggregations = other.Aggregations,
                 DisplayFieldName = other.DisplayFieldName,
-                _parent = other
+                _originalFieldNamePathEvaluator = customConvention => other.FieldName.ToPropertyPath(customConvention, '_')
             };
         }
 
