@@ -187,7 +187,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
-                    var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, key);
+                    var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, docId);
                     await _actions[shardNumber].WriteKeyValueAsync(key, value, existingDocument);
                     return;
                 }
@@ -199,8 +199,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
-                    var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, key);
-                    ;
+                    var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, docId);
                     await _actions[shardNumber].WriteTombstoneKeyAsync(key);
                     return;
                 }
