@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             return true;
         }
 
-        protected static ValueType GetValueType(object value)
+        protected ValueType GetValueType(object value)
         {
             if (value == null)
                 return ValueType.Null;
@@ -109,6 +109,9 @@ namespace Raven.Server.Documents.Indexes.Persistence
             if (value is DynamicDictionary)
                 return ValueType.ConvertToJson;
 
+            if (value is IDictionary && _index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField)
+                return ValueType.IDictionary;
+            
             if (value is IEnumerable)
                 return ValueType.Enumerable;
 
@@ -264,6 +267,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
             CoraxSpatialPointEntry,
             
             CoraxDynamicItem,
+            
+            IDictionary
         }
 
         protected class ConversionScope : IDisposable
