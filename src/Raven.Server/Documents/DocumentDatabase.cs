@@ -1169,7 +1169,6 @@ namespace Raven.Server.Documents
             using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                //TODO: add counters and time series
                 lastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(ctx.Transaction.InnerTransaction);
             }
 
