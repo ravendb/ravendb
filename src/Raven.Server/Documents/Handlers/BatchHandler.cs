@@ -1110,6 +1110,15 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(CountersDetail)] = counterBatchCmd.CountersDetail.ToJson(),
                                 [nameof(Constants.Fields.CommandData.DocumentChangeVector)] = counterBatchCmd.LastDocumentChangeVector
                             });
+
+                            if (counterBatchCmd.DocumentCollections != null)
+                            {
+                                foreach (var collection in counterBatchCmd.DocumentCollections)
+                                {
+                                    ModifiedCollections?.Add(collection);
+                                }
+                            }
+
                             break;
 
                         case CommandType.ForceRevisionCreation:
