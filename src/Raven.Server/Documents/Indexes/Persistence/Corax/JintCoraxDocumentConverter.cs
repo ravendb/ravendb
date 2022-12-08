@@ -56,7 +56,9 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
         id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
         var singleEntryWriterScope = new SingleEntryWriterScope(Allocator);
 
-        TryGetBoostedValue(documentToProcess, out var boostedValue, out documentBoost);
+        if (TryGetBoostedValue(documentToProcess, out var boostedValue, out documentBoost))
+            documentToProcess = boostedValue.AsObject();
+
         
         
         singleEntryWriterScope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
@@ -134,7 +136,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             boost = (float)boostValue.AsNumber();
             value = valueValue;
 
-            return false;
+            return true;
         }
 
         static bool IsObject(JsValue value)
