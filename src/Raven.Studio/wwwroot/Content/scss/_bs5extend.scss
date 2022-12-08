@@ -1,4 +1,10 @@
 // TODO replace all panels widh cards -> remove css
+.on-base-background {
+    --text-color: #{$gray-100};
+    --text-muted: #{$gray-200};
+    --text-emphasis: #{$white};
+}
+
 .panel {
     background-color: $panel-bg-1;
     color: $text-color;
@@ -7,16 +13,16 @@
 .sticky-header {
     position: sticky;
     top: 0;
-    margin: $gutter*-1;
+    margin: $gutter * -1;
     margin-bottom: 0;
     padding: $gutter $gutter $gutter-sm;
-    background-color: rgba($body-bg, .9);
+    background-color: rgba($body-bg, 0.9);
     z-index: 1000;
     backdrop-filter: blur(2px);
 }
 
-.text-uppercase {    
-    letter-spacing: .1em;
+.text-uppercase {
+    letter-spacing: 0.1em;
 }
 
 .text-emphasis {
@@ -24,7 +30,8 @@
 }
 
 input {
-    &[type=checkbox], &[type=radio] {
+    &[type="checkbox"],
+    &[type="radio"] {
         cursor: pointer;
     }
 }
@@ -45,15 +52,20 @@ input {
 
     &.form-switch {
         .form-check-input {
-
-            background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{rgba($text-muted, .6)}'/></svg>"));
+            background-image: escape-svg(
+                url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{rgba($text-muted, .6)}'/></svg>")
+            );
 
             &:focus {
-                background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$text-emphasis}'/></svg>"));
+                background-image: escape-svg(
+                    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$text-emphasis}'/></svg>")
+                );
             }
 
             &:checked {
-                background-image: escape-svg(url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$text-emphasis}'/></svg>"));
+                background-image: escape-svg(
+                    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$text-emphasis}'/></svg>")
+                );
             }
         }
     }
@@ -61,13 +73,10 @@ input {
 
 @each $color, $value in $theme-colors {
     .form-check-#{$color} {
-
         @include check-variant($value);
-
     }
 }
 @mixin check-size-variant($ratio, $name) {
-
     .form-check-#{$name} {
         min-height: $form-check-min-height * $ratio;
         padding-left: $form-check-padding-start * $ratio;
@@ -82,17 +91,16 @@ input {
 
         &.form-check-reverse {
             padding-right: $form-check-padding-start * $ratio;
-            
-        
+
             .form-check-input {
-            margin-right: $form-check-padding-start * -1 * $ratio;
+                margin-right: $form-check-padding-start * -1 * $ratio;
             }
         }
     }
 }
 
 @include check-size-variant(1.61, "lg");
-@include check-size-variant(.61, "sm");
+@include check-size-variant(0.61, "sm");
 
 .btn-xs {
     @include button-size($btn-padding-y-xs, $btn-padding-x-xs, $btn-font-size-xs, $btn-border-radius-sm);
@@ -103,7 +111,11 @@ input {
     align-items: center;
     margin-bottom: $gutter-sm;
 
-    h1, h2, h3, h4, h5 {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5 {
         //margin: 0 6px 1px 0;
         text-transform: uppercase;
     }
@@ -114,17 +126,13 @@ input {
     }
 }
 
-$additional-utilities: 
-  (
+$additional-utilities: (
     "background-color": (
-      property: background-color,
-      class: bg,
-      values: map-merge(
-        $theme-colors-faded,
-        ()
-      )
+        property: background-color,
+        class: bg,
+        values: map-merge($theme-colors-faded, ()),
     ),
-  );
+);
 
 @each $key, $utility in $additional-utilities {
     @include generate-utility($utility, "-faded");
