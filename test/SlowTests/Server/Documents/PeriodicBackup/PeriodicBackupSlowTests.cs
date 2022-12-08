@@ -2672,19 +2672,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     tcs.SetResult(null);
 
                     responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
-                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
                     var val = WaitForValue(() =>
                     {
-                        var status = store.Maintenance.Send(getPeriodicBackupStatus).Status;
-                        if (status == null)
+                        var ongoingTaskBackup = store.Maintenance.Send(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                        if (ongoingTaskBackup == null)
                             return false;
 
-                        if (status.LocalBackup == null)
+                        if (ongoingTaskBackup.BackupDestinations.Count != 1 &&
+                            ongoingTaskBackup.BackupDestinations[0] != nameof(BackupConfiguration.BackupDestination.Local))
                             return false;
-                        if (string.IsNullOrEmpty(status.LocalBackup.Exception))
-                            return false;
-
-                        return true;
+                        
+                        return ongoingTaskBackup.OnGoingBackup == null;
                     }, true, timeout: 66666, interval: 444);
                     Assert.True(val, "Failed to complete the backup in time");
                 }
@@ -2867,7 +2865,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         private static async Task AssertNextBackupSchedule(RavenServer serverToObserve, TimeSpan delayDuration, string databaseName,
-            long taskId, long accuracyInSec = 5)
+            long taskId, long accuracyInSec)
         {
             using (var store = new DocumentStore
                    {
@@ -2901,10 +2899,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotEqual(onGoingTaskBackup.ResponsibleNode.NodeTag, serverToObserve.ServerStore.NodeTag);
 
                 // DelayUntil value in backup status and the time of scheduled next backup should be equal
-                var notLeaderBackupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(onGoingTaskBackup.TaskId))).Status;
-                Assert.NotNull(notLeaderBackupStatus);
-                Assert.NotNull(notLeaderBackupStatus.DelayUntil);
-                Assert.Equal(notLeaderBackupStatus.DelayUntil, onGoingTaskBackup.NextBackup.DateTime);
+                var backupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(onGoingTaskBackup.TaskId))).Status;
+                Assert.NotNull(backupStatus);
+                Assert.NotNull(backupStatus.DelayUntil);
+                Assert.Equal(backupStatus.DelayUntil, onGoingTaskBackup.NextBackup.DateTime);
             }
         }
 
@@ -2969,7 +2967,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public async Task ShouldDelayIfClusterDown()
+        public async Task ShouldDelayOnCurrentNodeIfClusterDown()
         {
             const int clusterSize = 3;
 
@@ -2978,35 +2976,43 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             var (nodes, leaderServer) = await CreateRaftCluster(clusterSize);
             await CreateDatabaseInCluster(databaseName, clusterSize, leaderServer.WebUrl);
-            var notLeaderServer = nodes.First(x => x.WebUrl != leaderServer.WebUrl);
-
-            using (var notLeaderStore = new DocumentStore
+            
+            using (var leaderStore = new DocumentStore
             {
-                Urls = new[] { notLeaderServer.WebUrl },
+                Urls = new[] { leaderServer.WebUrl },
                 Conventions = new DocumentConventions { DisableTopologyUpdates = true },
                 Database = databaseName
             })
             {
-                notLeaderStore.Initialize();
-                await Backup.FillClusterDatabaseWithRandomDataAsync(databaseSizeInMb: 10, notLeaderStore, clusterSize);
-
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: notLeaderServer.ServerStore.NodeTag);
-                var taskId = await Backup.UpdateConfigAndRunBackupAsync(notLeaderServer, config, notLeaderStore, opStatus: OperationStatus.InProgress);
-
-                var responsibleDatabase = await notLeaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(notLeaderStore.Database).ConfigureAwait(false);
+                leaderStore.Initialize();
+                await Backup.FillClusterDatabaseWithRandomDataAsync(databaseSizeInMb: 10, leaderStore, clusterSize);
+                
+                var responsibleDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database).ConfigureAwait(false);
                 Assert.NotNull(responsibleDatabase);
-
+                responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
+                
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
+                var taskId = await Backup.UpdateConfigAndRunBackupAsync(leaderServer, config, leaderStore, opStatus: OperationStatus.InProgress);
+                
+                // Simulate Cluster Down state
+                foreach (var node in nodes.Where(x => x != leaderServer))
+                {
+                   await DisposeAndRemoveServer(node);
+                }
+                
                 // Let's delay the backup task to 1 hour
-                var onGoingTaskInfo = await notLeaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                var onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                 Assert.NotNull(onGoingTaskInfo);
                 var delayDuration = TimeSpan.FromHours(1);
                 var runningBackupTaskId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
-                await notLeaderStore.Maintenance.SendAsync(new DelayBackupOperation(runningBackupTaskId, delayDuration));
+                await leaderStore.Maintenance.SendAsync(new DelayBackupOperation(runningBackupTaskId, delayDuration));
 
-                var periodicBackup = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.Single(x => x.BackupStatus.TaskId == taskId);
-                Assert.NotNull(periodicBackup);
-                var nextBackup = periodicBackup.GetNextBackup().TimeSpan;
-                Assert.True(nextBackup > delayDuration.Subtract(TimeSpan.FromSeconds(5)) && nextBackup <= delayDuration);
+                // Check that there is no ongoing backup and new task scheduled properly
+                onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                Assert.NotNull(onGoingTaskInfo);
+                Assert.Null(onGoingTaskInfo.OnGoingBackup);
+                Assert.True(onGoingTaskInfo.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromSeconds(60)) &&
+                            onGoingTaskInfo.NextBackup.TimeSpan <= delayDuration);
             }
         }
 
