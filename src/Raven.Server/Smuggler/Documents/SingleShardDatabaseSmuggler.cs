@@ -70,10 +70,10 @@ namespace Raven.Server.Smuggler.Documents
             return _processCompareExchange == false;
         }
 
-        public override Task<SmugglerResult> ExecuteAsync(bool ensureStepsProcessed = true, bool isLastFile = true)
+        public override async Task<SmugglerResult> ExecuteAsync(bool ensureStepsProcessed = true, bool isLastFile = true)
         {
             using (_allocator = new ByteStringContext(SharedMultipleUseFlag.None))
-                return base.ExecuteAsync(ensureStepsProcessed, isLastFile);
+                return await base.ExecuteAsync(ensureStepsProcessed, isLastFile);
         }
     }
 }
