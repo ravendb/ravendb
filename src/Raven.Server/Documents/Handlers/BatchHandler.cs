@@ -1063,6 +1063,9 @@ namespace Raven.Server.Documents.Handlers
                                 //[nameof(Constants.Fields.CommandData.DocumentChangeVector)] = tsCmd.LastDocumentChangeVector
                             });
 
+                            if (tsCmd.DocCollection != null)
+                                ModifiedCollections?.Add(tsCmd.DocCollection);
+
                             break;
 
                         case CommandType.TimeSeriesCopy:
