@@ -47,6 +47,9 @@ namespace Raven.Client.Documents.Operations
         /// </summary>
         public bool Is64Bit { get; set; }
 
+        /// <summary>
+        /// Storage engine component that handles the memory-mapped files
+        /// </summary>
         public string Pager { get; set; }
 
         public DateTime? LastIndexingTime { get; set; }

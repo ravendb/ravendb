@@ -12,9 +12,10 @@ using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.MultiGet;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
@@ -50,7 +51,7 @@ namespace SlowTests.Authentication
             var serverCertificateHolder = new SecretProtection(
                 new SecurityConfiguration()).LoadCertificateFromPath(
                 serverCertPath,
-                null, 
+                null,
                 Server.ServerStore.GetLicenseType(),
                 Server.ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
@@ -99,6 +100,29 @@ namespace SlowTests.Authentication
                     test1Doc = session.Load<dynamic>("test/1");
 
                 Assert.NotNull(test1Doc);
+            }
+        }
+
+        [Fact]
+        public void CanGetAttachmentWithValidPermission()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            {
+                [dbName] = DatabaseAccess.Read
+            });
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = s => dbName
+            }))
+            {
+                store.Operations.Send(new GetAttachmentOperation("test/1", "file.jpg", AttachmentType.Revision, "123"));
+                store.Operations.Send(new GetAttachmentsOperation(new List<AttachmentRequest> { new("test/1", "file.jpg") }, AttachmentType.Document));
             }
         }
 

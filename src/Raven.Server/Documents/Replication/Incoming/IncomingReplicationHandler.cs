@@ -136,6 +136,16 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return operationsCount;
             }
 
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            {
+                return new MergedUpdateDatabaseChangeVectorCommandDto
+                {
+                    ChangeVector = _changeVector,
+                    LastDocumentEtag = _lastDocumentEtag,
+                    SourceDatabaseId = _sourceDatabaseId,
+                };
+            }
+
             protected virtual bool TryUpdateChangeVector(DocumentsOperationContext context)
             {
                 var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
@@ -157,16 +167,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                 };
 
                 return true;
-            }
-
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
-            {
-                return new MergedUpdateDatabaseChangeVectorCommandDto
-                {
-                    ChangeVector = _changeVector,
-                    LastDocumentEtag = _lastDocumentEtag,
-                    SourceDatabaseId = _sourceDatabaseId,
-                };
             }
         }
 
@@ -699,7 +699,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 }
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 var replicatedAttachmentStreams = _replicationInfo.ReplicatedAttachmentStreams?
                     .Select(kv => KeyValuePair.Create(kv.Key.ToString(), kv.Value.Stream))
@@ -709,7 +709,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     LastEtag = _lastEtag,
                     SupportedFeatures = _replicationInfo.SupportedFeatures,
-                    ReplicatedItemDtos = _replicationInfo.ReplicatedItems.Select(i => i.Clone(context)).ToArray(),
+                    ReplicatedItemDtos = _replicationInfo.ReplicatedItems.Select(i => i.Clone(context, context.Allocator)).ToArray(),
                     SourceDatabaseId = _replicationInfo.SourceDatabaseId,
                     ReplicatedAttachmentStreams = replicatedAttachmentStreams
                 };
@@ -731,7 +731,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             var replicationItems = new ReplicationBatchItem[replicatedItemsCount];
             for (var i = 0; i < replicatedItemsCount; i++)
             {
-                replicationItems[i] = ReplicatedItemDtos[i].Clone(context);
+                replicationItems[i] = ReplicatedItemDtos[i].Clone(context, context.Allocator);
             }
 
             Dictionary<Slice, AttachmentReplicationItem> replicatedAttachmentStreams = null;

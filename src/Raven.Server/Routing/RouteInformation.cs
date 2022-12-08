@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -126,10 +127,25 @@ namespace Raven.Server.Routing
                         if (storedEtag < etag)
                             hasChanges = true;
                     }
-                    else
+                    else if (etag > 0)
                     {
-                        if (etag > 0)
+                        hasChanges = true;
+                    }
+
+                    if (hasChanges == false && 
+                        context.HttpContext.Request.Query.TryGetValue("nodeTag", out var nodeTag) &&
+                        string.IsNullOrEmpty(nodeTag) == false)
+                    {
+
+                        DatabaseTopology topology = null;
+                        using (context.RavenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                            topology = context.RavenServer.ServerStore.Cluster.ReadDatabaseTopology(ctx, databaseName.ToString());
+
+                        if (topology != null && topology.Rehabs.Contains(nodeTag))
+                        {
                             hasChanges = true;
+                        }
                     }
 
                     if (hasChanges == false)

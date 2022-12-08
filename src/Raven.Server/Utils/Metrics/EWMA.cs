@@ -34,6 +34,8 @@ namespace Raven.Server.Utils.Metrics
         {
             _interval = interval * Clock.NanosecondsInSecond;
             _alpha = alpha;
+
+            MetricsScheduler.Instance.StartTickingEwma(this);
         }
 
         public static Ewma OneSecondEwma()

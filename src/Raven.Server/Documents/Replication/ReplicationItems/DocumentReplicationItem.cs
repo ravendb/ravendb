@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             }
         }
 
-        protected override ReplicationBatchItem CloneInternal(JsonOperationContext context)
+        protected override ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator)
         {
             return new DocumentReplicationItem
             {

@@ -319,15 +319,21 @@ namespace Raven.Server.Documents.ETL
                 transformer.Initialize(debugMode: _testMode != null);
 
                 var batchSize = 0;
+                var extractedItemsSize = 0;
 
                 var batchStopped = false;
 
                 foreach (var item in items)
                 {
+                    extractedItemsSize++;
+
                     if (item.Filtered)
                     {
                         stats.RecordChangeVector(item.ChangeVector);
                         stats.RecordLastFilteredOutEtag(item.Etag, item.Type);
+
+                        item.Dispose();
+
                         continue;
                     }
 
@@ -340,6 +346,17 @@ namespace Raven.Server.Documents.ETL
                         stats.RecordChangeVector(item.ChangeVector);
                         stats.RecordLastFilteredOutEtag(item.Etag, item.Type);
 
+                        item.Dispose();
+
+                        if (extractedItemsSize % (Database.Configuration.Etl.MaxNumberOfExtractedItems ?? 8192) == 0)
+                        {
+                            if (CanContinueBatch(stats, item, extractedItemsSize, context) == false)
+                            {
+                                batchStopped = true;
+                                break;
+                            }
+                        }
+
                         continue;
                     }
 
@@ -350,6 +367,8 @@ namespace Raven.Server.Documents.ETL
                     {
                         stats.RecordChangeVector(item.ChangeVector);
                         stats.RecordLastFilteredOutEtag(item.Etag, item.Type);
+
+                        item.Dispose();
 
                         continue;
                     }

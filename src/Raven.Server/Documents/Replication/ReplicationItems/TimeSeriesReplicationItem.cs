@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             Debug.Assert(Collection != null);
         }
 
-        protected override ReplicationBatchItem CloneInternal(JsonOperationContext context)
+        protected override ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator)
         {
             return new TimeSeriesDeletedRangeItem
             {
@@ -181,7 +181,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         }
 
 
-        protected override ReplicationBatchItem CloneInternal(JsonOperationContext context)
+        protected override ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator)
         {
             var item = new TimeSeriesReplicationItem
             {
@@ -189,11 +189,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             };
 
             var mem = Segment.Clone(context, out item.Segment);
-            var keyMem = Key.CloneToJsonContext(context, out item.Key);
+            item.Key = Key.Clone(allocator);
 
             item.ToDispose(new DisposableAction(() =>
             {
-                context.ReturnMemory(keyMem);
+                item.Key.Release(allocator);
                 context.ReturnMemory(mem);
             }));
             

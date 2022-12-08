@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return retained;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new TimeSeriesRetentionCommandDto(_keys, _collection, _to);
             }
@@ -354,7 +354,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return Marked;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new AddedNewRollupPoliciesCommandDto(_collection, _from, _to, _skip);
             }
@@ -624,7 +624,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 return new RollupTimeSeriesCommandDto(_configuration, _now, _states, _isFirstInTopology);
             }
