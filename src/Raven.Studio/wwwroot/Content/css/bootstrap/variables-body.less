@@ -1,20 +1,18 @@
-
 @brand-success: @color-3;
-@brand-success-dark: desaturate(darken(@brand-success,@lightness-percent),@saturation-percent);
-@brand-success-light: saturate(lighten(@brand-success,@lightness-percent),@saturation-percent);
+@brand-success-dark: desaturate(darken(@brand-success, @lightness-percent), @saturation-percent);
+@brand-success-light: saturate(lighten(@brand-success, @lightness-percent), @saturation-percent);
 
 @brand-info: @color-4;
-@brand-info-dark: desaturate(darken(@brand-info,@lightness-percent),@saturation-percent);
-@brand-info-light: saturate(lighten(@brand-info,@lightness-percent),@saturation-percent);
+@brand-info-dark: desaturate(darken(@brand-info, @lightness-percent), @saturation-percent);
+@brand-info-light: saturate(lighten(@brand-info, @lightness-percent), @saturation-percent);
 
 @brand-warning: @color-2;
-@brand-warning-dark: desaturate(darken(@brand-warning,@lightness-percent),@saturation-percent);
-@brand-warning-light: saturate(lighten(@brand-warning,@lightness-percent),@saturation-percent);
+@brand-warning-dark: desaturate(darken(@brand-warning, @lightness-percent), @saturation-percent);
+@brand-warning-light: saturate(lighten(@brand-warning, @lightness-percent), @saturation-percent);
 
 @brand-danger: @color-1;
-@brand-danger-dark: desaturate(darken(@brand-danger,@lightness-percent),@saturation-percent);
-@brand-danger-light: saturate(lighten(@brand-danger,@lightness-percent),@saturation-percent);
-
+@brand-danger-dark: desaturate(darken(@brand-danger, @lightness-percent), @saturation-percent);
+@brand-danger-light: saturate(lighten(@brand-danger, @lightness-percent), @saturation-percent);
 
 @color-counters: @color-3-3;
 @color-time-series: @color-2-3;
@@ -64,7 +62,7 @@
 @font-size-h2: floor((@font-size-base * 1.7));
 @font-size-h3: ceil((@font-size-base * 1.25));
 @font-size-h4: @font-size-base;
-@font-size-h5: ceil((@font-size-base * 0.80));
+@font-size-h5: ceil((@font-size-base * 0.8));
 @font-size-h6: 9px;
 //** Unit-less `line-height` for use in components like buttons.
 @line-height-base: 1.8; // 27/15
@@ -123,9 +121,9 @@
 //** Default background color used for all tables.
 @table-bg: transparent;
 //** Background color used for `.table-striped`.
-@table-bg-accent: fadeout(@gray-lighter,97%);
+@table-bg-accent: fadeout(@gray-lighter, 97%);
 //** Background color used for `.table-hover`.
-@table-bg-hover: fadeout(@gray-lighter,90%);
+@table-bg-hover: fadeout(@gray-lighter, 90%);
 @table-bg-active: @table-bg-hover;
 //** Border color for table and cell borders.
 @table-border-color: @hr-border;
@@ -175,7 +173,7 @@
 //** `<input>` background color
 @input-bg: @well-bg;
 //** `<input disabled>` background color
-@input-bg-disabled: fadeout(@well-bg,50%);
+@input-bg-disabled: fadeout(@well-bg, 50%);
 //url("../../img/disabled-input-bkg.png");
 //** Text color for `<input>`s
 @input-color: @text-emphasis;
@@ -502,9 +500,9 @@
 //** Popover maximum width
 @popover-max-width: 276px;
 //** Popover border color
-@popover-border-color: fadeout(@popover-bg,30%);
+@popover-border-color: fadeout(@popover-bg, 30%);
 //** Popover fallback border color
-@popover-fallback-border-color: rgba(0,0,0,0);
+@popover-fallback-border-color: rgba(0, 0, 0, 0);
 //** Popover title background color
 @popover-title-bg: darken(@popover-bg, 3%);
 //** Popover arrow width
@@ -554,7 +552,7 @@
 //** Modal backdrop background color
 @modal-backdrop-bg: @gray-base;
 //** Modal backdrop opacity
-@modal-backdrop-opacity: .8;
+@modal-backdrop-opacity: 0.8;
 //** Modal header border color
 @modal-header-border-color: @hr-border;
 //** Modal footer border color
@@ -727,11 +725,11 @@
 //== Carousel
 //
 //##
-@carousel-text-shadow: 0 1px 2px rgba(0,0,0,.6);
+@carousel-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 
 @carousel-control-color: #fff;
 @carousel-control-width: 15%;
-@carousel-control-opacity: .5;
+@carousel-control-opacity: 0.5;
 @carousel-control-font-size: 20px;
 
 @carousel-indicator-active-bg: #fff;
@@ -802,8 +800,8 @@
 @token-important: @color-2-2;
 
 @row-bg: @well-bg;
-@row-bg-selection-preview: fadeout(@brand-primary,92%);
-@row-bg-selected: fadeout(@brand-primary,80%);
+@row-bg-selection-preview: fadeout(@brand-primary, 92%);
+@row-bg-selected: fadeout(@brand-primary, 80%);
 
 @notification-center-bg: @body-bg;
 @main-menu-hover: @gray-darker;
@@ -814,7 +812,7 @@
 @tooltip-shadow: 0 5px 20px -5px fadeout(@gray-base, 55%);
 @footer-color: @text-color;
 
-@loading-bg-img: url('../../img/loading_bkg.png');
+@loading-bg-img: url("../../img/loading_bkg.png");
 
 @state-bg: @gray-dark;
 

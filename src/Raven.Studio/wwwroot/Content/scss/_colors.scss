@@ -1,29 +1,32 @@
 @use "sass:color";
 //== Colors
 //
+
+$theme: "blue";
+
 $brand-ravendb: #b82e73;
 $brand-cloud: #37c4ac !default;
 $brand-hr: #f78831 !default;
 
-$white:     #f0f4f6;
-$gray-100:  #c4ced7;
-$gray-200:  #98a7b7;
-$gray-300:  #7e8c9e;
-$gray-400:  #637085;
-$gray-500:  #4f5b6d;
-$gray-600:  #3b4654;
-$gray-700:  #333d48;
-$gray-800:  #2b333b;
-$gray-900:  #252b32;
-$black:     #22252b;
+$white: #f0f4f6;
+$gray-100: #c4ced7;
+$gray-200: #98a7b7;
+$gray-300: #7e8c9e;
+$gray-400: #637085;
+$gray-500: #4f5b6d;
+$gray-600: #3b4654;
+$gray-700: #333d48;
+$gray-800: #2b333b;
+$gray-900: #252b32;
+$black: #22252b;
 
-$gray-base:         $black; 
-$gray-base-light:   $gray-900; 
-$gray-darker:       $gray-800;
-$gray-dark:         $gray-600;
-$gray:              $gray-400;
-$gray-light:        $gray-200;
-$gray-lighter:      $white;
+$gray-base: $black;
+$gray-base-light: $gray-900;
+$gray-darker: $gray-800;
+$gray-dark: $gray-600;
+$gray: $gray-400;
+$gray-light: $gray-200;
+$gray-lighter: $white;
 
 $brand-primary: $brand-ravendb;
 
@@ -68,26 +71,26 @@ $brand-warning-dark: adjust-color($color-2, $lightness: -13%, $saturation: -20%)
 $brand-warning: $color-2;
 $brand-warning-light: adjust-color($color-2, $lightness: 13%, $saturation: 20%);
 
-$brand-danger-dark: adjust-color($color-1, $lightness: -13%, $saturation: -20%); 
+$brand-danger-dark: adjust-color($color-1, $lightness: -13%, $saturation: -20%);
 $brand-danger: $color-1;
 $brand-danger-light: adjust-color($color-1, $lightness: 13%, $saturation: 20%);
 
-$primary:       $brand-primary !default;
-$secondary:     $gray-600 !default;
-$success:       $brand-success !default;
-$info:          $brand-info !default;
-$warning:       $brand-warning !default;
-$danger:        $brand-danger !default;
-$light:         $gray-100 !default;
-$dark:          $gray-900 !default;
+$primary: $brand-primary;
+$secondary: $gray-600;
+$success: $brand-success;
+$info: $brand-info;
+$warning: $brand-warning;
+$danger: $brand-danger;
+$light: $gray-100;
+$dark: $gray-900;
 // scss-docs-end theme-color-variables
 
 $node-color: $color-3;
 $shard-color: $color-4;
 $progress-color: $color-2-3;
 
-
 // Dark Theme
+
 $body-bg: $black;
 $border-color: $gray-300;
 $border-color-light: $gray-600;
@@ -97,7 +100,15 @@ $text-color: $gray-100;
 $text-muted: $gray-200;
 $text-emphasis: $white;
 
-$body-color: $text-color;
+$theme-text-color: $gray-100;
+$theme-text-muted: $gray-200;
+$theme-text-emphasis: $white;
+
+$theme-base-text-color: $theme-text-color;
+$teme-base-text-muted: $theme-text-muted;
+$theme-base-text-emphasis: $theme-text-emphasis;
+
+$panel-header-bg: $gray-900;
 $panel-bg-1: $gray-900;
 $panel-bg-2: $gray-800;
 $panel-bg-3: $gray-700;
@@ -105,6 +116,106 @@ $panel-bg-3: $gray-700;
 $well-bg: $body-bg;
 
 $link-color: #e33572;
+
+// Blue Theme
+@if $theme == "blue" {
+    $black: #172138;
+    $gray-900: #232e45;
+    $gray-800: #2f3a52;
+    $gray-700: #3d4867;
+    $gray-600: #4a567c;
+    $gray-500: #586491;
+    $gray-400: #6d779f;
+    $gray-300: #a9b0c6;
+    $gray-200: #c8ccdf;
+    $gray-100: #e1e3ef;
+    $white: #f4f5fb;
+
+    $secondary: $gray-400;
+
+    $body-bg: $black;
+    $border-color: $gray-400;
+    $border-color-light: $gray-300;
+    $border-color-disabled: $gray-200;
+
+    $theme-text-color: $gray-900;
+    $theme-text-muted: $gray-800;
+    $theme-text-emphasis: $black;
+
+    $theme-base-text-color: $gray-100;
+    $teme-base-text-muted: $gray-200;
+    $theme-base-text-emphasis: $white;
+
+    $panel-header-bg: $gray-900;
+    $panel-bg-1: $white;
+    $panel-bg-2: $gray-100;
+    $panel-bg-3: $gray-200;
+
+    $well-bg: $gray-200;
+}
+// Light Theme
+@if $theme == "light" {
+    $black: #292d3d;
+    $gray-900: #484d63;
+    $gray-800: #666d8a;
+    $gray-700: #8085a1;
+    $gray-600: #999db7;
+    $gray-500: #afb2c6;
+    $gray-400: #c5c8d4;
+    $gray-300: #dbdde3;
+    $gray-200: #e5e6ea;
+    $gray-100: #f6f7f7;
+    $white: #ffffff;
+
+    $color-1: darken(#f06582, 5%);
+    $color-1-1: darken(#f3766e, 5%);
+    $color-1-2: darken(#f38a66, 5%);
+    $color-1-3: darken(#eea361, 5%);
+    $color-2: darken(#f0b362, 5%);
+    $color-2-1: darken(#f0c254, 6%);
+    $color-2-2: darken(#edcd51, 9%);
+    $color-2-3: darken(#c4d451, 13%);
+    $color-3: darken(#7bd85d, 19%);
+    $color-3-1: darken(#51d27a, 14%);
+    $color-3-2: darken(#37c4ac, 8%);
+    $color-3-3: darken(#2fb7d2, 5%);
+    $color-4: darken(#2f9ef3, 5%);
+    $color-4-1: darken(#5186ee, 5%);
+    $color-4-2: darken(#7069ee, 5%);
+    $color-4-3: darken(#8361d4, 5%);
+    $color-5: darken(#945ab5, 5%);
+    $color-5-1: darken(#bf569f, 5%);
+    $color-5-2: darken(#d85b9a, 5%);
+    $color-5-3: darken(#ed558c, 5%);
+
+    $primary: $brand-primary;
+    $secondary: $gray-200;
+    $success: $brand-success;
+    $info: $brand-info;
+    $warning: $brand-warning;
+    $danger: $brand-danger;
+    $light: $gray-100;
+    $dark: $gray-900;
+
+    $body-bg: $gray-300;
+    $border-color: $gray-500;
+    $border-color-light: $gray-300;
+    $border-color-disabled: $gray-200;
+
+    $text-color: $gray-900;
+    $text-muted: $gray-800;
+    $text-emphasis: $black;
+
+    $text-color-base: $gray-100;
+    $text-muted-base: $gray-700;
+    $text-emphasis-base: $white;
+
+    $panel-bg-1: $gray-100;
+    $panel-bg-2: $white;
+    $panel-bg-3: $gray-300;
+
+    $well-bg: $body-bg;
+}
 
 $table-bg-scale: 30% !default;
 
