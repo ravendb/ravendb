@@ -75,7 +75,7 @@ public partial class RavenTestBase
                         if (res.Sharding.Orchestrator.Topology.Count != res.Sharding.Orchestrator.Topology.Members.Count)
                             continue;
 
-                        if (res.Sharding.Shards.Sum(t => t.Count) != res.Sharding.Shards.Sum(t => t.Members.Count))
+                        if (res.Sharding.Shards.Sum(t => t.Value.Count) != res.Sharding.Shards.Sum(t => t.Value.Members.Count))
                             continue;
 
                         return;
@@ -107,7 +107,7 @@ public partial class RavenTestBase
                                 continue;
                         }
 
-                        if (res.Sharding.Shards.Where(s => s.RelevantFor(node)).All(s => s.Rehabs.Contains(node)) == false)
+                        if (res.Sharding.Shards.Where(s => s.Value.RelevantFor(node)).All(s => s.Value.Rehabs.Contains(node)) == false)
                             continue;
 
                         return;

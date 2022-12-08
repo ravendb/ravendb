@@ -41,7 +41,7 @@ public partial class RavenTestBase
             Subscriptions = new ShardedSubscriptionTestBase(_parent);
         }
 
-        public DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, DatabaseTopology[] shards = null)
+        public DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, Dictionary<int, DatabaseTopology> shards = null)
         {
             var shardedOptions = options ?? new Options();
             shardedOptions.ModifyDatabaseRecord += r =>
@@ -50,7 +50,12 @@ public partial class RavenTestBase
 
                 if (shards == null)
                 {
-                    r.Sharding.Shards = new[] { new DatabaseTopology(), new DatabaseTopology(), new DatabaseTopology(), };
+                    r.Sharding.Shards = new Dictionary<int, DatabaseTopology>()
+                    {
+                        {0, new DatabaseTopology()},
+                        {1, new DatabaseTopology()},
+                        {2, new DatabaseTopology()},
+                    };
                 }
                 else
                 {
@@ -68,7 +73,7 @@ public partial class RavenTestBase
                 {
                     r.Sharding = new ShardingConfiguration
                     {
-                        Shards = new DatabaseTopology[shards],
+                        Shards = new Dictionary<int, DatabaseTopology>(shards),
                         Orchestrator = new OrchestratorConfiguration
                         {
                             Topology = new OrchestratorTopology
@@ -79,9 +84,9 @@ public partial class RavenTestBase
                         }
                     };
 
-                    for (int i = 0; i < r.Sharding.Shards.Length; i++)
+                    for (int shardNumber = 0; shardNumber < r.Sharding.Shards.Count; shardNumber++)
                     {
-                        r.Sharding.Shards[i] = new DatabaseTopology
+                        r.Sharding.Shards[shardNumber] = new DatabaseTopology
                         {
                             ReplicationFactor = shardReplicationFactor,
                             DynamicNodesDistribution = dynamicNodeDistribution
@@ -94,6 +99,32 @@ public partial class RavenTestBase
             return options;
         }
 
+        public static int GetNextSortedShardNumber(Dictionary<int, DatabaseTopology> shards, int shardNumber)
+        {
+            var shardsSorted = shards.Keys.OrderBy(x => x).ToArray();
+            var toShard = -1;
+            for (int i = 0; i < shardsSorted.Length; i++)
+            {
+                if (shardsSorted[i] == shardNumber)
+                {
+                    if (i + 1 < shardsSorted.Length)
+                    {
+                        toShard = shardsSorted[i + 1];
+                    }
+                    else
+                    {
+                        toShard = shardsSorted[0];
+                    }
+
+                    break;
+                }
+            }
+
+            if (shardNumber == -1)
+                throw new ArgumentException($"Shard number {shardNumber} doesn't exist in the database record.");
+
+            return toShard;
+        }
 
         public async Task<ShardingConfiguration> GetShardingConfigurationAsync(IDocumentStore store)
         {

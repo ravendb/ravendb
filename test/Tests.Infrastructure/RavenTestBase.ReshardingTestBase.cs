@@ -26,22 +26,22 @@ public partial class RavenTestBase
         {
             servers ??= _parent.GetServers();
 
+
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             var bucket = ShardHelper.GetBucket(id);
-            var location = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
-            var newLocation = (location + 1) % record.Sharding.Shards.Length;
+            var shardNumber = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+            var toShard = ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, shardNumber);
 
-            using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, location)))
+            using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
             {
-                var user = await session.Advanced.ExistsAsync(id);
-                Assert.NotNull(user);
+                Assert.True(await session.Advanced.ExistsAsync(id));
             }
 
             foreach (var server in servers)
             {
                 try
                 {
-                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, location, newLocation);
+                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, shardNumber, toShard);
                     break;
                 }
                 catch
@@ -49,10 +49,9 @@ public partial class RavenTestBase
                     //
                 }
             }
-
-
-            var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, newLocation), timeout: 30_000);
-            Assert.True(exists, $"{id} wasn't found at shard {newLocation}");
+                
+            var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard), timeout: 30_000);
+            Assert.True(exists, $"{id} wasn't found at shard {toShard}");
         }
 
         public async Task WaitForMigrationComplete(IDocumentStore store, string id)

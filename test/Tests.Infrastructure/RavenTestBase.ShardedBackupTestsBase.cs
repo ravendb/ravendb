@@ -21,6 +21,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -130,24 +131,32 @@ public partial class RavenTestBase
         {
             var settings = new ShardedRestoreSettings
             {
-                Shards = new SingleShardRestoreSetting[backupPaths.Count]
+                Shards = new Dictionary<int, SingleShardRestoreSetting>(backupPaths.Count),
+                BucketRanges = sharding.BucketRanges
             };
 
             foreach (var dir in backupPaths)
             {
-                var shardIndexPosition = dir.LastIndexOf('$') + 1;
-                var shardNumber = int.Parse(dir[shardIndexPosition].ToString());
-
-                settings.Shards[shardNumber] = new SingleShardRestoreSetting
+                var shardNumber = GetShardNumberFromBackupPath(dir);
+                    
+                settings.Shards.Add(shardNumber, new SingleShardRestoreSetting
                 {
                     ShardNumber = shardNumber,
                     FolderName = dir,
                     NodeTag = sharding.Shards[shardNumber].Members[0]
-                };
+                });
             }
 
             return settings;
         }
+
+        private int GetShardNumberFromBackupPath(string path)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "Handle shard number being a two digit integer");
+            var shardIndexPosition = path.LastIndexOf('$') + 1;
+            return int.Parse(path[shardIndexPosition].ToString());
+        }
+
 
         private class AtomicGuard
         {

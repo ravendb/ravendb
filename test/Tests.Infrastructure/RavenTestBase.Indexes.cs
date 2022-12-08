@@ -4,11 +4,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using Amazon.Runtime.Internal.Util;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -30,11 +33,40 @@ public partial class RavenTestBase
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
 
+        public async Task WaitForIndexingInTheClusterAsync(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false)
+        {
+            var database = dbName ?? store.Database;
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(database));
+            if (record.IsSharded == false)
+            {
+                foreach (var nodeTag in record.Topology.AllNodes)
+                {
+                    await WaitForIndexingAsync(store, database, timeout, allowErrors, nodeTag);
+                }
+                return;
+            }
+
+            for (var index = 0; index < record.Sharding.Shards.Count; index++)
+            {
+                var shard = record.Sharding.Shards[index];
+                var shardName = ShardHelper.ToShardName(database, index);
+                foreach (string shardNode in shard.Members)
+                {
+                    await WaitForIndexingAsync(store, shardName, timeout, allowErrors, shardNode);
+                }
+            }
+        }
+
         public void WaitForIndexing(IDocumentStore store, string databaseName = null, TimeSpan? timeout = null, bool allowErrors = false, string nodeTag = null)
+        {
+            AsyncHelpers.RunSync(() => WaitForIndexingAsync(store, databaseName, timeout, allowErrors, nodeTag));
+        }
+
+        public async Task WaitForIndexingAsync(IDocumentStore store, string databaseName = null, TimeSpan? timeout = null, bool allowErrors = false, string nodeTag = null)
         {
             databaseName ??= store.Database;
             var admin = store.Maintenance.ForDatabase(databaseName);
-            var databaseRecord = admin.Server.Send(new GetDatabaseRecordOperation(databaseName));
+            var databaseRecord = await admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
             timeout ??= (Debugger.IsAttached
                 ? TimeSpan.FromMinutes(15)
@@ -54,7 +86,7 @@ public partial class RavenTestBase
                         if (nonStaleShards.Contains(shardToTopology.Key))
                             continue;
 
-                        var shardStatus = StaleStatus(shardId: shardToTopology.Key);
+                        var shardStatus = await StaleStatusAsync(shardId: shardToTopology.Key);
                         if (shardStatus == IndexStaleStatus.NonStale)
                             nonStaleShards.Add(shardToTopology.Key);
 
@@ -63,7 +95,7 @@ public partial class RavenTestBase
                 }
                 else
                 {
-                    staleStatus = StaleStatus();
+                    staleStatus = await StaleStatusAsync();
                 }
 
                 if (staleStatus.HasFlag(IndexStaleStatus.Error))
@@ -83,30 +115,30 @@ public partial class RavenTestBase
             {
                 foreach (var shardNumber in databaseRecord.Sharding.Shards.Keys)
                 {
-                    files.Add(OutputIndexInfo(shardNumber));
+                    files.Add(await OutputIndexInfo(shardNumber));
                 }
             }
             else
             {
-                files.Add(OutputIndexInfo(null));
+                files.Add(await OutputIndexInfo(null));
             }
 
-            string OutputIndexInfo(int? shard)
+            async Task<string> OutputIndexInfo(int? shard)
             {
                 IndexPerformanceStats[] perf;
                 IndexErrors[] errors;
                 IndexStats[] stats;
                 if (shard.HasValue == false)
                 {
-                    perf = admin.Send(new GetIndexPerformanceStatisticsOperation());
-                    errors = admin.Send(new GetIndexErrorsOperation());
-                    stats = admin.Send(new GetIndexesStatisticsOperation());
+                    perf = await admin.SendAsync(new GetIndexPerformanceStatisticsOperation());
+                    errors = await admin.SendAsync(new GetIndexErrorsOperation());
+                    stats = await admin.SendAsync(new GetIndexesStatisticsOperation());
                 }
                 else
                 {
-                    perf = admin.ForShard(shard.Value).Send(new GetIndexPerformanceStatisticsOperation());
-                    errors = admin.ForShard(shard.Value).Send(new GetIndexErrorsOperation());
-                    stats = admin.ForShard(shard.Value).Send(new GetIndexesStatisticsOperation());
+                    perf = await admin.ForShard(shard.Value).SendAsync(new GetIndexPerformanceStatisticsOperation());
+                    errors = await admin.ForShard(shard.Value).SendAsync(new GetIndexErrorsOperation());
+                    stats = await admin.ForShard(shard.Value).SendAsync(new GetIndexesStatisticsOperation());
                 }
 
                 var total = new
@@ -138,13 +170,14 @@ public partial class RavenTestBase
             {
                 foreach (var shardNumber in databaseRecord.Sharding.Shards.Keys)
                 {
-                    var statistics = admin.ForShard(shardNumber).Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
+                    var statistics = await admin.ForShard(shardNumber).SendAsync(new GetStatisticsOperation("wait-for-indexing", nodeTag));
                     allIndexes.AddRange(statistics.Indexes);
                 }
             }
             else
             {
-                allIndexes.AddRange(admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag)).Indexes);
+                var result = await admin.SendAsync(new GetStatisticsOperation("wait-for-indexing", nodeTag));
+                allIndexes.AddRange(result.Indexes);
             }
 
             var corrupted = allIndexes.Where(x => x.State == IndexState.Error).ToList();
@@ -156,10 +189,10 @@ public partial class RavenTestBase
 
             throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + string.Join(", ", files));
 
-            IndexStaleStatus StaleStatus(int? shardId = null)
+            async Task<IndexStaleStatus> StaleStatusAsync(int? shardId = null)
             {
                 var executor = shardId.HasValue ? admin.ForShard(shardId.Value) : admin;
-                var databaseStatistics = executor.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
+                var databaseStatistics = await executor.SendAsync(new GetStatisticsOperation("wait-for-indexing", nodeTag));
                 var indexes = databaseStatistics.Indexes
                     .Where(x => x.State != IndexState.Disabled);
 
@@ -178,7 +211,7 @@ public partial class RavenTestBase
                     return IndexStaleStatus.Error;
                 }
 
-                Thread.Sleep(32);
+                await Task.Delay(32);
                 return IndexStaleStatus.Stale;
             }
         }
