@@ -1,9 +1,15 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Server;
+using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
+using XunitLogger;
 
 namespace SlowTests.Issues
 {
@@ -160,10 +166,11 @@ namespace SlowTests.Issues
 
                     session.Store(user);
                     session.SaveChanges();
-
+                    
+                    var trxn = 4 + GetNumOfUpdateLicenseLimitsCommands(Server); // could be 1 or more 'UpdateLicenseLimitsCommand' before the 'ClusterTransactionCommand'
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
                     Assert.True(changeVector.Contains("RAFT:1"), $"{changeVector}.Contains('RAFT:1')");
-                    Assert.True(changeVector.Contains("TRXN:5"), $"{changeVector}.Contains('TRXN:5')");
+                    Assert.True(changeVector.Contains($"TRXN:{trxn}"), $"{changeVector}.Contains('TRXN:{trxn}')");
                 }
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -196,10 +203,10 @@ namespace SlowTests.Issues
                     var user = session.Load<User>(userId);
                     user.Age++;
                     session.SaveChanges();
-
+                    var trxn = 5 + GetNumOfUpdateLicenseLimitsCommands(Server);
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
                     Assert.True(changeVector.Contains("RAFT:2"), $"{changeVector}.Contains('RAFT:2')");
-                    Assert.True(changeVector.Contains("TRXN:6"), $"{changeVector}.Contains('TRXN:6')");
+                    Assert.True(changeVector.Contains($"TRXN:{trxn}"), $"{changeVector}.Contains('TRXN:{trxn}')");
 
                 }
 
@@ -230,6 +237,21 @@ namespace SlowTests.Issues
                 }
 
                 WaitForUserToContinueTheTest(store);
+            }
+        }
+
+        private int GetNumOfUpdateLicenseLimitsCommands(RavenServer n)
+        {
+            var pattern = "\"Type\":\"UpdateLicenseLimitsCommand\"";
+            return GetLogs(n).Split(Environment.NewLine).Where(line => line.Contains(pattern)).ToList().Count;
+        }
+
+        private string GetLogs(RavenServer n)
+        {
+            using (n.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return Cluster.CollectLogs(context, n);
             }
         }
 
