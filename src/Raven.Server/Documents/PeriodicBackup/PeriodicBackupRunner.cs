@@ -339,23 +339,37 @@ namespace Raven.Server.Documents.PeriodicBackup
                     DelayUntil = delayUntil
                 };
 
-                periodicBackup.Value.BackupStatus.DelayUntil = delayUntil;
-
-                (long index, _) = await _database.ServerStore.SendToLeaderAsync(command);
-                await _database.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+                try
+                {
+                    (long index, _) = await _database.ServerStore.SendToLeaderAsync(command);
+                    await _database.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        var msg =
+                            $"Fail to delay backup task with task id '{taskId}' cluster-wide, the task was delayed until '{delayUntil}' UTC only on the current node.";
+                        
+                        _logger.Operations(msg, e);
+                    }
+                }
 
                 if (_auditLog.IsInfoEnabled)
                 {
-                    var msg = $"Backup task with task id {taskId} was delayed until '{delayUntil}' UTC";
+                    var msg = $"Backup task with task id '{taskId}' was delayed until '{delayUntil}' UTC";
 
                     if (clientCert != null)
                         msg += $" by {clientCert.Subject} ({clientCert.Thumbprint})";
 
-                    _logger.Info(msg);
+                    _auditLog.Info(msg);
                 }
 
-                _database.Operations.KillOperation(taskId);
+                periodicBackup.Value.BackupStatus.DelayUntil = delayUntil;
 
+                _forTestingPurposes?.OnBackupTaskRunHoldBackupExecution?.SetResult(null);
+                _database.Operations.KillOperation(taskId);
+                
                 try
                 {
                     await runningTask.Task; // wait for the running task to complete
@@ -364,7 +378,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     // ignore
                 }
-
+                
                 return;
             }
 

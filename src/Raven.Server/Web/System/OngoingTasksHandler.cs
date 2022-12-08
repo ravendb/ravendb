@@ -305,7 +305,7 @@ namespace Raven.Server.Web.System
             return taskInfo;
         }
 
-        [RavenAction("/databases/*/admin/backup-task/delay", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/backup-task/delay", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task DelayBackupTask()
         {
             var id = GetLongQueryString("taskId");
