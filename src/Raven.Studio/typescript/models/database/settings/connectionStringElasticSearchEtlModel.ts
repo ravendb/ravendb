@@ -281,7 +281,7 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
             Name: "",
             Nodes: [],
             Authentication: authenticationInfo.empty().toDto(),
-            EnableCompatibilityMode: true
+            EnableCompatibilityMode: false
         } as Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString, true, []);
     }
 
