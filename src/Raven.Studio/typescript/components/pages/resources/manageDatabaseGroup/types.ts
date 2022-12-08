@@ -1,4 +1,5 @@
 ﻿import DatabasePromotionStatus = Raven.Client.ServerWide.DatabasePromotionStatus;
+import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 
 export interface DatabaseInfoLoaded {
     info: Raven.Client.ServerWide.Operations.DatabaseInfo;
@@ -17,5 +18,10 @@ export interface NodeInfo {
 
 export interface ManageDatabaseGroupState {
     nodes: NodeInfo[];
-    //TODO: deleting in progress?
+    deletionInProgress: string[];
+    encrypted: boolean;
+    dynamicDatabaseDistribution: boolean;
+    priorityOrder: string[];
+    lockMode: DatabaseLockMode;
+    fixOrder: boolean;
 }

@@ -10,6 +10,8 @@ import getEssentialDatabaseStatsCommand from "commands/resources/getEssentialDat
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import getDatabaseDetailedStatsCommand from "commands/resources/getDatabaseDetailedStatsCommand";
 import getDatabaseCommand from "commands/resources/getDatabaseCommand";
+import deleteDatabaseFromNodeCommand from "commands/resources/deleteDatabaseFromNodeCommand";
+import toggleDynamicNodeAssignmentCommand from "commands/database/dbGroup/toggleDynamicNodeAssignmentCommand";
 
 export default class DatabasesService {
     async getDatabase(name: string) {
@@ -30,5 +32,13 @@ export default class DatabasesService {
 
     async getDetailedStats(db: database, location: databaseLocationSpecifier): Promise<DetailedDatabaseStatistics> {
         return new getDatabaseDetailedStatsCommand(db, location).execute();
+    }
+
+    async deleteDatabaseFromNode(db: database, nodes: string[], hardDelete: boolean) {
+        return new deleteDatabaseFromNodeCommand(db, nodes, hardDelete).execute();
+    }
+
+    async toggleDynamicNodeAssignment(db: database, enabled: boolean) {
+        return new toggleDynamicNodeAssignmentCommand(db.name, enabled).execute();
     }
 }

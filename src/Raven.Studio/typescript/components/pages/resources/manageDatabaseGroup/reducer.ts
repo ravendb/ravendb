@@ -1,6 +1,4 @@
-﻿import { DatabaseSharedInfo } from "components/models/databases";
-import { Reducer } from "react";
-import DatabasePromotionStatus = Raven.Client.ServerWide.DatabasePromotionStatus;
+﻿import { Reducer } from "react";
 import NodeId = Raven.Client.ServerWide.Operations.NodeId;
 import DatabaseGroupNodeStatus = Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;
 import {
@@ -70,6 +68,7 @@ export const manageDatabaseGroupReducer: Reducer<ManageDatabaseGroupState, Manag
     state: ManageDatabaseGroupState,
     action: ManageDatabaseGroupReducerAction
 ): ManageDatabaseGroupState => {
+    //TODO: check if we simply use react async here?
     switch (action.type) {
         case "DatabaseInfoLoaded": {
             const topology = action.info.NodesTopology;
@@ -78,8 +77,15 @@ export const manageDatabaseGroupReducer: Reducer<ManageDatabaseGroupState, Manag
             const mappedRehabs = topology.Rehabs.map((x) => mapNode(x, "Rehab", topology.Status));
             const allNodes = [...mappedMembers, ...mappedPromotables, ...mappedRehabs];
 
+            const priorityOrder = action.info.NodesTopology.PriorityOrder;
             return {
                 nodes: allNodes,
+                deletionInProgress: action.info.DeletionInProgress ? Object.keys(action.info.DeletionInProgress) : [],
+                encrypted: action.info.IsEncrypted,
+                lockMode: action.info.LockMode,
+                dynamicDatabaseDistribution: action.info.DynamicNodesDistribution,
+                priorityOrder,
+                fixOrder: priorityOrder?.length > 0,
             };
         }
         default:
