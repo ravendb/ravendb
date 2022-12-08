@@ -194,6 +194,8 @@ namespace Raven.Server.Documents
             if (maxTombstoneEtagToDelete.HasValue)
             {
                 result.MinAllDocsEtag = Math.Min(result.MinAllDocsEtag, maxTombstoneEtagToDelete.Value);
+                result.MinAllCountersEtag = Math.Min(result.MinAllCountersEtag, maxTombstoneEtagToDelete.Value);
+                result.MinAllTimeSeriesEtag = Math.Min(result.MinAllTimeSeriesEtag, maxTombstoneEtagToDelete.Value);
             }
 
             return result;
