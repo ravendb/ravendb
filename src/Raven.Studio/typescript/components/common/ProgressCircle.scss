@@ -1,4 +1,4 @@
-﻿@use 'sass:math';
+﻿@use "sass:math";
 @use "Content/scss/sizes";
 @use "Content/scss/colors";
 
@@ -8,7 +8,6 @@
 
     $state-indicator-size: 30px;
     $state-indicator-progress-radius: 13px;
-
 
     &.inline {
         display: flex;
@@ -26,14 +25,13 @@
         }
     }
 
-    
     .state-desc {
         font-size: 9px;
-        color: colors.$gray-300;
+        color: colors.$text-muted-color;
         text-transform: uppercase;
         font-weight: bold;
         margin-bottom: sizes.$gutter-xxs;
-        letter-spacing: .15em;
+        letter-spacing: 0.15em;
         height: 25px;
         display: flex;
         align-items: flex-end;
@@ -44,11 +42,11 @@
         height: $state-indicator-size;
         width: $state-indicator-size;
         border-radius: $state-indicator-size;
-        color: colors.$black;
+        color: colors.$panel-header-bg;
         display: flex;
         justify-content: center;
         align-items: center;
-        background-color: colors.$gray-300;
+        background-color: colors.$text-muted-color;
         position: relative;
 
         i {
@@ -64,39 +62,39 @@
 
     &.success {
         .state-desc {
-            color: colors.$gray-500;
+            color: colors.$text-muted-color;
         }
 
         .state-indicator {
-            background-color: colors.$brand-success;
+            background-color: colors.$success;
         }
     }
 
     &.failed {
         .state-desc {
-            color: colors.$gray-500;
+            color: colors.$text-muted-color;
         }
 
         .state-indicator {
-            background-color: colors.$brand-danger;
+            background-color: colors.$danger;
         }
     }
 
     &.running {
         .state-desc {
-            color: colors.$gray-300;
+            color: colors.$text-muted-color;
             display: flex;
             align-items: flex-end;
 
             strong {
                 font-size: 14px;
-                color: colors.$gray-100;
+                color: colors.$text-color;
                 margin-right: sizes.$gutter-xxs;
             }
         }
 
         .state-indicator {
-            background-color: colors.$black;
+            background-color: colors.$panel-header-bg;
 
             i {
                 color: colors.$progress-color;
@@ -107,6 +105,7 @@
             width: 100%;
             height: 100%;
             display: block;
+            transform: scale(0.9);
 
             circle {
                 cx: math.div($state-indicator-size, 2);

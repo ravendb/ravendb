@@ -1,9 +1,7 @@
-﻿@use 'sass:math';
-@use "Content/scss/variables";
+﻿@use "sass:math";
+
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
-
-
 
 .location-distribution {
     padding: sizes.$gutter-sm;
@@ -12,9 +10,9 @@
     grid-template-columns: repeat(auto-fill, minmax(130px, max-content));
     margin: sizes.$gutter-xs/-2;
 
-
-
-    .distribution-legend, .distribution-summary, .distribution-item {
+    .distribution-legend,
+    .distribution-summary,
+    .distribution-item {
         font-size: 12px;
         margin: sizes.$gutter-xs/2;
 
@@ -41,7 +39,8 @@
                 height: 50px;
             }
 
-            &:last-of-type, &.progress-circle {
+            &:last-of-type,
+            &.progress-circle {
                 height: auto;
             }
         }
@@ -62,21 +61,22 @@
         text-align: center;
     }
 
-    .distribution-summary, .distribution-legend {
+    .distribution-summary,
+    .distribution-legend {
         grid-row-end: span 50;
     }
 
     .distribution-item {
-        background-color: colors.$gray-800;
+        background-color: colors.$panel-bg-2;
         border-radius: sizes.$gutter-xs;
         border: 1px solid transparent;
-        transition: background-color .2s;
+        transition: background-color 0.2s;
 
         & > div {
             padding-left: sizes.$gutter-xs;
             padding-right: sizes.$gutter-xs;
             line-height: 1em;
-            transition: opacity .2s ease-in;
+            transition: opacity 0.2s ease-in;
         }
 
         .shard {
@@ -90,7 +90,7 @@
         }
 
         .top {
-            color: colors.$white;
+            color: colors.$text-emphasis-color;
 
             i {
                 color: var(--icon-color);
@@ -99,11 +99,11 @@
 
         @keyframes loadingAnimation {
             0% {
-                background-position: 150% 0
+                background-position: 150% 0;
             }
 
             100% {
-                background-position: -150% 0
+                background-position: -150% 0;
             }
         }
 
@@ -111,24 +111,23 @@
         $delay-steps: 10;
 
         &.loading {
-            border-color: colors.$gray-800;
-            background: linear-gradient(45deg, colors.$gray-900 40%, colors.$gray-800 50%, colors.$gray-900 60%), colors.$gray-900;
+            border-color: colors.$border-color-light;
+            background: linear-gradient(45deg, colors.$panel-bg-1 40%, colors.$panel-bg-2 50%, colors.$panel-bg-1 60%),
+                colors.$panel-bg-1;
             background-repeat: no-repeat;
             background-size: 350% 100%;
             animation: loadingAnimation $loading-animation-duration linear infinite;
 
             & > div {
-               opacity: 0; 
+                opacity: 0;
             }
-            .shard, .node {
+            .shard,
+            .node {
                 opacity: 1;
             }
         }
 
-
-
         @for $i from 0 through ($delay-steps - 1) {
-
             &:nth-of-type(#{$delay-steps - 1}n - #{$i}) {
                 animation-delay: -$loading-animation-duration/($delay-steps - 1) * $i;
             }

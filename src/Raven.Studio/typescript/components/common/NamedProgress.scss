@@ -5,7 +5,8 @@
     display: contents;
 }
 
-.progress-name, .named-progress {
+.progress-name,
+.named-progress {
     padding: sizes.$gutter-xs sizes.$gutter-sm;
 }
 
@@ -20,7 +21,7 @@
     .progress-item {
         font-size: 9px;
         text-transform: uppercase;
-        letter-spacing: .15em;
+        letter-spacing: 0.15em;
 
         .progress-percentage {
             font-size: 11px;
@@ -34,7 +35,7 @@
             .progress-bar {
                 background-color: colors.$progress-color;
                 &.completed {
-                    background-color: colors.$brand-success;
+                    background-color: colors.$success;
                 }
             }
         }

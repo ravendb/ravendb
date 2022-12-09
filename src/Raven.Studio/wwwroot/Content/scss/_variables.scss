@@ -6,7 +6,7 @@ $body-bg: colors.$gray-base;
 $text-color: colors.$gray-light;
 $hr-border: colors.$gray-dark;
 $link-color: colors.$color-1;
-$link-hover-color: lighten(colors.$color-1,10%);
+$link-hover-color: lighten(colors.$color-1, 10%);
 $link-hover-decoration: underline;
 
 $text-muted: colors.$gray;
@@ -38,11 +38,8 @@ $well-bg-2: colors.$gray-base-light;
 $well-border: none;
 
 $row-bg: $well-bg;
-$row-bg-selection-preview: fadeout(colors.$brand-primary,92%);
-$row-bg-selected: fadeout(colors.$brand-primary,80%);
-
-
-
+$row-bg-selection-preview: fadeout(colors.$primary, 92%);
+$row-bg-selected: fadeout(colors.$primary, 80%);
 
 //== Scaffolding
 //
@@ -74,7 +71,7 @@ $font-size-h1: floor(($font-size-base * 2.15));
 $font-size-h2: floor(($font-size-base * 1.7));
 $font-size-h3: ceil(($font-size-base * 1.25));
 $font-size-h4: $font-size-base;
-$font-size-h5: ceil(($font-size-base * 0.80));
+$font-size-h5: ceil(($font-size-base * 0.8));
 $font-size-h6: 9px;
 //** Unit-less `line-height` for use in components like buttons.
 $line-height-base: 1.8; // 27/15
@@ -118,7 +115,7 @@ $border-radius-small: 0px;
 //** Global color for active items (e.g., navs or dropdowns).
 $component-active-color: #fff;
 //** Global background color for active items (e.g., navs or dropdowns).
-$component-active-bg: colors.$brand-primary;
+$component-active-bg: colors.$primary;
 //** Width of the `border` for generating carets that indicate dropdowns.
 $caret-width-base: 4px;
 //** Carets increase slightly in size for larger components.
@@ -133,9 +130,9 @@ $table-condensed-cell-padding: 5px;
 //** Default background color used for all tables.
 $table-bg: transparent;
 //** Background color used for `.table-striped`.
-$table-bg-accent: fadeout(colors.$gray-lighter,97%);
+$table-bg-accent: fadeout(colors.$gray-lighter, 97%);
 //** Background color used for `.table-hover`.
-$table-bg-hover: fadeout(colors.$gray-lighter,90%);
+$table-bg-hover: fadeout(colors.$gray-lighter, 90%);
 $table-bg-active: $table-bg-hover;
 //** Border color for table and cell borders.
 $table-border-color: $hr-border;
@@ -150,7 +147,7 @@ $btn-default-border: colors.$gray-dark;
 $btn-default-icon: inherit;
 
 $btn-primary-color: colors.$gray-lighter;
-$btn-primary-bg: colors.$brand-primary;
+$btn-primary-bg: colors.$primary;
 $btn-primary-border: lighten($btn-primary-bg, 1%);
 $btn-primary-icon: inherit;
 
@@ -180,7 +177,6 @@ $btn-border-radius-base: $border-radius-base;
 $btn-border-radius-large: $border-radius-large;
 $btn-border-radius-small: $border-radius-small;
 
-
 $notification-center-bg: $body-bg;
 $main-menu-hover: colors.$gray-darker;
 $menu-text-color: $text-color;
@@ -190,7 +186,7 @@ $on-base-background-color-emphasis: $text-emphasis;
 $tooltip-shadow: 0 5px 20px -5px fadeout(colors.$gray-base, 55%);
 $footer-color: $text-color;
 
-$loading-bg-img: url('../../img/loading_bkg.png');
+$loading-bg-img: url("../../img/loading_bkg.png");
 
 $state-bg: colors.$gray-dark;
 
@@ -202,14 +198,13 @@ $database-origin-key-color: colors.$color-2-2;
 $copy-button-color: colors.$gray-light;
 $copy-button-hover-color: darken(colors.$color-4-1, 20%);
 
-
 //== Forms
 //
 //##
 //** `<input>` background color
 $input-bg: $well-bg;
 //** `<input disabled>` background color
-$input-bg-disabled: fadeout($well-bg,50%);
+$input-bg-disabled: fadeout($well-bg, 50%);
 //url("../../img/disabled-input-bkg.png");
 //** Text color for `<input>`s
 $input-color: $text-emphasis;
@@ -224,7 +219,7 @@ $input-border-radius-large: $border-radius-large;
 //** Small `.form-control` border radius
 $input-border-radius-small: $border-radius-small;
 //** Border color for inputs on focus
-$input-border-focus: colors.$brand-primary;
+$input-border-focus: colors.$primary;
 //** Placeholder text color
 $input-color-placeholder: $text-muted;
 //** Default `.form-control` height
@@ -452,8 +447,8 @@ $pagination-hover-bg: colors.$gray-lighter;
 $pagination-hover-border: #ddd;
 
 $pagination-active-color: #fff;
-$pagination-active-bg: colors.$brand-primary;
-$pagination-active-border: colors.$brand-primary;
+$pagination-active-bg: colors.$primary;
+$pagination-active-border: colors.$primary;
 
 $pagination-disabled-color: colors.$gray-light;
 $pagination-disabled-bg: #fff;
@@ -483,7 +478,7 @@ $jumbotron-heading-font-size: ceil(($font-size-base * 4.5));
 //== Form states and alerts
 //
 //## Define colors for form feedback states and, by default, alerts.
-$bg-success-color:  colors.$brand-success-light;
+$bg-success-color: colors.$brand-success-light;
 $bg-info-color: colors.$brand-info-light;
 $bg-warning-color: colors.$brand-warning-light;
 $bg-danger-color: colors.$brand-danger-light;
@@ -536,9 +531,9 @@ $popover-bg: $tooltip-bg;
 //** Popover maximum width
 $popover-max-width: 276px;
 //** Popover border color
-$popover-border-color: fadeout($popover-bg,30%);
+$popover-border-color: fadeout($popover-bg, 30%);
 //** Popover fallback border color
-$popover-fallback-border-color: rgba(0,0,0,0);
+$popover-fallback-border-color: rgba(0, 0, 0, 0);
 //** Popover title background color
 $popover-title-bg: darken($popover-bg, 3%);
 //** Popover arrow width
@@ -588,7 +583,7 @@ $modal-content-fallback-border-color: colors.$gray-base;
 //** Modal backdrop background color
 $modal-backdrop-bg: colors.$gray-base;
 //** Modal backdrop opacity
-$modal-backdrop-opacity: .8;
+$modal-backdrop-opacity: 0.8;
 //** Modal header border color
 $modal-header-border-color: $hr-border;
 //** Modal footer border color
@@ -629,15 +624,15 @@ $progress-bar-color: #fff;
 //** Variable for setting rounded corners on progress bar.
 $progress-border-radius: $border-radius-base;
 //** Default progress bar color
-$progress-bar-bg: colors.$brand-primary;
+$progress-bar-bg: colors.$primary;
 //** Success progress bar color
-$progress-bar-success-bg: colors.$brand-success;
+$progress-bar-success-bg: colors.$success;
 //** Warning progress bar color
-$progress-bar-warning-bg: colors.$brand-warning;
+$progress-bar-warning-bg: colors.$warning;
 //** Danger progress bar color
-$progress-bar-danger-bg: colors.$brand-danger;
+$progress-bar-danger-bg: colors.$danger;
 //** Info progress bar color
-$progress-bar-info-bg: colors.$brand-info;
+$progress-bar-info-bg: colors.$info;
 //== List group
 //
 //##
@@ -758,11 +753,11 @@ $breadcrumb-separator: "/";
 //== Carousel
 //
 //##
-$carousel-text-shadow: 0 1px 2px rgba(0,0,0,.6);
+$carousel-text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 
 $carousel-control-color: #fff;
 $carousel-control-width: 15%;
-$carousel-control-opacity: .5;
+$carousel-control-opacity: 0.5;
 $carousel-control-font-size: 20px;
 
 $carousel-indicator-active-bg: #fff;

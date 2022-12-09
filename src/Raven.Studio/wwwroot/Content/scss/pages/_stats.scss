@@ -1,5 +1,4 @@
 .stats {
-
     .identities {
         .identities-header {
             margin-bottom: $gutter-sm;
@@ -26,7 +25,7 @@
             padding-top: $gutter-xs;
             padding-bottom: $gutter-xxs;
             position: relative;
-            transition: background-color .1s ease;
+            transition: background-color 0.1s ease;
 
             &:hover {
                 background-color: $panel-bg-2;
@@ -39,7 +38,7 @@
 
             .value {
                 font-size: 18px;
-                color: $text-emphasis;
+                color: $text-emphasis-color;
                 text-align: center;
                 width: 130px;
                 overflow: hidden;
@@ -49,11 +48,13 @@
                     width: auto;
                 }
 
-                &.true, .true {
+                &.true,
+                .true {
                     color: $success;
                 }
 
-                &.false, .false {
+                &.false,
+                .false {
                     color: $warning;
                 }
             }
