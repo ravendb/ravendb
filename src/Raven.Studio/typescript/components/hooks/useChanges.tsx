@@ -1,16 +1,26 @@
-﻿import changesContext from "common/changesContext";
+﻿/* eslint-disable react-hooks/rules-of-hooks */
+import changesContext from "common/changesContext";
 import { useEffect, useState } from "react";
 import serverNotificationCenterClient from "common/serverNotificationCenterClient";
 import databaseNotificationCenterClient from "common/databaseNotificationCenterClient";
 import changesApi from "common/changesApi";
 
-export interface ChangesProps {
-    serverNotifications: serverNotificationCenterClient;
-    databaseNotifications: databaseNotificationCenterClient;
-    databaseChangesApi: changesApi;
+import { createContext, useContext } from "react";
+import * as React from "react";
+import { ChangesProps } from "hooks/types";
+
+const context = createContext<ChangesProps>(null);
+
+export function ChangesProvider(props: { changes: ChangesProps; children: JSX.Element }) {
+    return <context.Provider value={props.changes}>{props.children}</context.Provider>;
 }
 
 export function useChanges(): ChangesProps {
+    const ctx = useContext(context);
+    if (ctx) {
+        return ctx;
+    }
+
     const [serverNotifications, setServerNotifications] = useState<serverNotificationCenterClient>(
         changesContext.default.serverNotifications
     );

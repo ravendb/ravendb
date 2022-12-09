@@ -15,6 +15,7 @@ import { DeletionInProgress } from "components/pages/resources/manageDatabaseGro
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import clusterTopology from "models/database/cluster/clusterTopology";
 import { useChanges } from "hooks/useChanges";
+import { useEventsCollector } from "hooks/useEventsCollector";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface ManageDatabaseGroupPageProps {
@@ -99,7 +100,6 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     const { serverNotifications } = useChanges();
 
-    /* TODO
     useEffect(() => {
         const sub = serverNotifications.watchClusterTopologyChanges(() => refresh());
         return () => sub.off();
@@ -113,7 +113,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     useEffect(() => {
         const sub = serverNotifications.watchReconnect(() => refresh());
         return () => sub.off();
-    });*/
+    });
 
     const settingsUniqueId = useId("settings");
 

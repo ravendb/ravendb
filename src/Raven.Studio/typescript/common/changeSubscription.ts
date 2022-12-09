@@ -2,8 +2,10 @@ class changeSubscription {
 
     private executed = false;
 
-    constructor(private onOff: () => void) {
+    private readonly onOff: () => void;
 
+    constructor(onOff: () => void) {
+        this.onOff = onOff;
     }
 
     off() {
