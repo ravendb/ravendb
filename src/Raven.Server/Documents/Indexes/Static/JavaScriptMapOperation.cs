@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 return false;
             foreach (var p in oe.Properties)
             {
-                var key = p.GetKey(_engine);
+                var key = p is Property prop ? prop.GetKey(_engine) : p.GetKey(_engine);
                 var keyAsString = key.AsString();
                 if (Fields.Contains(keyAsString) == false)
                     return false;

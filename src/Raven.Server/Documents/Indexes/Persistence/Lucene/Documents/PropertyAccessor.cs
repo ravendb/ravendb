@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public static IPropertyAccessor Create(Type type, object instance)
         {
             if (type == typeof(ObjectInstance))
-                return new JintPropertyAccessor(null);
+                return new JintPropertyAccessor(null, null);
 
             if (instance is Dictionary<string, object> dict)
                 return DictionaryAccessor.Create(dict);
@@ -149,10 +149,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             public CompiledIndexField GroupByField;
         }
 
-        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, Dictionary<string, CompiledIndexField> groupByFields, bool isObjectInstance = false)
+        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, List<IndexFieldBase> orderedMapFields, Dictionary<string, CompiledIndexField> groupByFields, bool isObjectInstance = false)
         {
             if (isObjectInstance || type == typeof(ObjectInstance) || type.IsSubclassOf(typeof(ObjectInstance)))
-                return new JintPropertyAccessor(groupByFields);
+                return new JintPropertyAccessor(orderedMapFields, groupByFields);
 
             if (instance is Dictionary<string, object> dict)
                 return DictionaryAccessor.Create(dict, groupByFields);
@@ -163,10 +163,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
     internal class JintPropertyAccessor : IPropertyAccessor
     {
+        private readonly List<IndexFieldBase> _orderedMapFields;
         private readonly Dictionary<string, CompiledIndexField> _groupByFields;
 
-        public JintPropertyAccessor(Dictionary<string, CompiledIndexField> groupByFields)
+        public JintPropertyAccessor(List<IndexFieldBase> orderedMapFields, Dictionary<string, CompiledIndexField> groupByFields)
         {
+            _orderedMapFields = orderedMapFields;
             _groupByFields = groupByFields;
         }
 
@@ -174,14 +176,34 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             if (!(target is ObjectInstance oi))
                 throw new ArgumentException($"JintPropertyAccessor.GetPropertiesInOrder is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
-            foreach (var property in oi.GetOwnProperties())
+
+            if (_orderedMapFields != null)
             {
-                var propertyAsString = property.Key.AsString();
+                foreach (var outputField in _orderedMapFields)
+                {
+                    var property = oi.GetProperty(outputField.Name);
 
-                CompiledIndexField field = null;
-                var isGroupByField = _groupByFields?.TryGetValue(propertyAsString, out field) ?? false;
+                    var propertyAsString = outputField.Name;
 
-                yield return (propertyAsString, GetValue(property.Value.Value), field, isGroupByField);
+                    CompiledIndexField field = null;
+                    var isGroupByField = _groupByFields?.TryGetValue(propertyAsString, out field) ?? false;
+
+                    yield return (propertyAsString, GetValue(property.Value), field, isGroupByField);
+                }
+            }
+            else
+            {
+                // legacy mode - it does not guarantee the order of properties
+
+                foreach (var property in oi.GetOwnProperties())
+                {
+                    var propertyAsString = property.Key.AsString();
+
+                    CompiledIndexField field = null;
+                    var isGroupByField = _groupByFields?.TryGetValue(propertyAsString, out field) ?? false;
+
+                    yield return (propertyAsString, GetValue(property.Value.Value), field, isGroupByField);
+                }
             }
         }
 

@@ -475,6 +475,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private IndexingStatsScope _createBlittableResultStats;
             private readonly ReduceKeyProcessor _reduceKeyProcessor;
             private readonly Dictionary<string, CompiledIndexField> _groupByFields;
+            private readonly List<IndexFieldBase> _orderedMapFields;
             private readonly bool _isMultiMap;
             private IPropertyAccessor _propertyAccessor;
             private readonly AbstractStaticIndexBase _compiledIndex;
@@ -483,6 +484,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 _indexContext = indexContext;
                 _groupByFields = index.Definition.GroupByFields;
+
+                if (index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.GuaranteedOrderOfPropertiesInJsMapReduceIndexes)
+                {
+                    _orderedMapFields = index.Definition.MapFields.Values.OrderBy(x => x.Name, StringComparer.Ordinal).ToList();
+                }
+
                 _isMultiMap = index.IsMultiMap;
                 _reduceKeyProcessor = new ReduceKeyProcessor(index.Definition.GroupByFields.Count, index._unmanagedBuffersPool, index.Definition.Version);
                 _compiledIndex = index._compiled;
@@ -521,6 +528,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;
                 private readonly IndexingStatsScope _createBlittableResult;
                 private readonly Dictionary<string, CompiledIndexField> _groupByFields;
+                private readonly List<IndexFieldBase> _orderedMapFields;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
                 private readonly Queue<(string PropertyName, object PropertyValue)> _propertyQueue = new Queue<(string PropertyName, object PropertyValue)>();
                 private readonly CurrentIndexingScope.MetadataFieldCache _metadataFields;
@@ -531,6 +539,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     _parent = parent;
                     _createBlittableResult = createBlittableResult;
                     _groupByFields = _parent._groupByFields;
+                    _orderedMapFields = _parent._orderedMapFields;
                     _reduceKeyProcessor = _parent._reduceKeyProcessor;
 
                     _metadataFields = CurrentIndexingScope.Current.MetadataFields;
@@ -548,9 +557,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         IPropertyAccessor accessor;
 
                         if (_parent._isMultiMap == false)
-                            accessor = _parent._propertyAccessor ??= PropertyAccessor.CreateMapReduceOutputAccessor(output.GetType(), output, _groupByFields);
+                            accessor = _parent._propertyAccessor ??= PropertyAccessor.CreateMapReduceOutputAccessor(output.GetType(), output, _orderedMapFields, _groupByFields);
                         else
-                            accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(output, _groupByFields);
+                            accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(output, _orderedMapFields, _groupByFields);
 
                         _reduceKeyProcessor.Reset();
 
