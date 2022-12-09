@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             throw new InvalidOperationException(string.Format("The {0} property was not found", name));
         }
 
-        protected PropertyAccessor(Type type, Dictionary<string, CompiledIndexField> groupByFields = null)
+        protected PropertyAccessor(Type type, List<IndexFieldBase> orderedMapFields = null, Dictionary<string, CompiledIndexField> groupByFields = null)
         {
             var isValueType = type.IsValueType;
             foreach (var prop in type.GetProperties())
@@ -72,7 +72,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 Properties.Add(prop.Name, getMethod);
-                _propertiesInOrder.Add(new KeyValuePair<string, Accessor>(prop.Name, getMethod));
+
+                if (orderedMapFields == null)
+                    _propertiesInOrder.Add(new KeyValuePair<string, Accessor>(prop.Name, getMethod));
+            }
+
+            if (orderedMapFields != null)
+            {
+                foreach (var field in orderedMapFields)
+                {
+                    _propertiesInOrder.Add(new KeyValuePair<string, Accessor>(field.Name, Properties[field.Name]));
+                }
             }
         }
 
@@ -155,9 +165,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return new JintPropertyAccessor(orderedMapFields, groupByFields);
 
             if (instance is Dictionary<string, object> dict)
-                return DictionaryAccessor.Create(dict, groupByFields);
+                return DictionaryAccessor.Create(dict, orderedMapFields, groupByFields);
 
-            return new PropertyAccessor(type, groupByFields);
+            return new PropertyAccessor(type, orderedMapFields, groupByFields);
         }
     }
 

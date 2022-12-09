@@ -485,7 +485,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 _indexContext = indexContext;
                 _groupByFields = index.Definition.GroupByFields;
 
-                if (index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.GuaranteedOrderOfPropertiesInJsMapReduceIndexes)
+                if (index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.GuaranteedOrderOfPropertiesInMapReduceIndexes)
                 {
                     _orderedMapFields = index.Definition.MapFields.Values.OrderBy(x => x.Name, StringComparer.Ordinal).ToList();
                 }

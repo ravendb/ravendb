@@ -43,11 +43,14 @@ public class RavenDB_17312 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-    public void JintPropertyAccessorMustGuaranteeTheOrderOfPropertiesMultiMapIndex()
+    public void PropertyAccessorMustGuaranteeTheOrderOfPropertiesMultiMapIndex()
     {
         using (var store = GetDocumentStore())
         {
-            store.ExecuteIndex(new UsersAndEmployeesReducedByNameAndLastName());
+            store.ExecuteIndex(new UsersAndEmployeesReducedByNameAndLastNameJs());
+            store.ExecuteIndex(new UsersAndEmployeesReducedByNameAndLastNameCSharp());
+            store.ExecuteIndex(new UsersAndEmployeesReducedByNameAndLastNameUsingCSharpDictionaries());
+            
 
             using (var session = store.OpenSession())
             {
@@ -61,13 +64,29 @@ public class RavenDB_17312 : RavenTestBase
 
                 Indexes.WaitForIndexing(store);
 
-                var results = session.Query<User>("UsersAndEmployeesReducedByNameAndLastName").OfType<ReduceResults>().ToList();
+                var resultsFromJsIndex = session.Query<User>("UsersAndEmployeesReducedByNameAndLastNameJs").OfType<ReduceResults>().ToList();
 
-                Assert.Equal(1, results.Count);
+                Assert.Equal(1, resultsFromJsIndex.Count);
 
-                Assert.Equal(4, results[0].Count);
-                Assert.Equal("Joe", results[0].Name);
-                Assert.Equal("Doe", results[0].LastName);
+                Assert.Equal(4, resultsFromJsIndex[0].Count);
+                Assert.Equal("Joe", resultsFromJsIndex[0].Name);
+                Assert.Equal("Doe", resultsFromJsIndex[0].LastName);
+
+                var resultsFromCSharpIndex = session.Query<User>("UsersAndEmployeesReducedByNameAndLastNameCSharp").OfType<ReduceResults>().ToList();
+
+                Assert.Equal(1, resultsFromCSharpIndex.Count);
+
+                Assert.Equal(4, resultsFromCSharpIndex[0].Count);
+                Assert.Equal("Joe", resultsFromCSharpIndex[0].Name);
+                Assert.Equal("Doe", resultsFromCSharpIndex[0].LastName);
+
+                var resultsFromCSharpIndexWithDict = session.Query<User>("UsersAndEmployeesReducedByNameAndLastNameUsingCSharpDictionaries").OfType<ReduceResults>().ToList();
+
+                Assert.Equal(1, resultsFromCSharpIndexWithDict.Count);
+
+                Assert.Equal(4, resultsFromCSharpIndexWithDict[0].Count);
+                Assert.Equal("Joe", resultsFromCSharpIndexWithDict[0].Name);
+                Assert.Equal("Doe", resultsFromCSharpIndexWithDict[0].LastName);
             }
         }
     }
@@ -110,9 +129,9 @@ public class RavenDB_17312 : RavenTestBase
         }
     }
 
-    private class UsersAndEmployeesReducedByNameAndLastName : AbstractJavaScriptIndexCreationTask
+    private class UsersAndEmployeesReducedByNameAndLastNameJs : AbstractJavaScriptIndexCreationTask
     {
-        public UsersAndEmployeesReducedByNameAndLastName()
+        public UsersAndEmployeesReducedByNameAndLastNameJs()
         {
             Maps = new HashSet<string>
             {
@@ -147,6 +166,64 @@ public class RavenDB_17312 : RavenTestBase
                                     Count: g.values.reduce((total, val) => val.Count + total,0)
                                };})";
 
+        }
+    }
+
+    private class UsersAndEmployeesReducedByNameAndLastNameCSharp : AbstractMultiMapIndexCreationTask<ReduceResults>
+    {
+        public UsersAndEmployeesReducedByNameAndLastNameCSharp()
+        {
+            AddMap<User>(users => from u in users select new
+            {
+                Count = 1,
+                Name = u.Name,
+                u.LastName,
+            });
+
+            AddMap<Employee>(employees => from e in employees select new
+            {
+                e.LastName,
+                Name = e.FirstName,
+                Count = 1
+            });
+
+            Reduce = results => from r in results group r by new { r.Name, r.LastName } into g select new
+            {
+                g.Key.Name,
+                g.Key.LastName,
+                Count = g.Sum(x => x.Count)
+            };
+        }
+    }
+
+    private class UsersAndEmployeesReducedByNameAndLastNameUsingCSharpDictionaries : AbstractMultiMapIndexCreationTask<ReduceResults>
+    {
+        public UsersAndEmployeesReducedByNameAndLastNameUsingCSharpDictionaries()
+        {
+            AddMap<User>(users => from u in users
+                select new Dictionary<string, object>
+                {
+                    { "Count", 1 },
+                    { "Name", u.Name },
+                    { "LastName", u.LastName },
+                });
+
+            AddMap<Employee>(employees => from e in employees
+                select new Dictionary<string, object>
+                {
+                    { "LastName", e.LastName },
+                    { "Name", e.FirstName },
+                    { "Count", 1 },
+                });
+
+            Reduce = results => from r in results
+                group r by new { r.Name, r.LastName } into g
+                select new
+                {
+                    g.Key.Name,
+                    g.Key.LastName,
+                    Count = g.Sum(x => x.Count)
+                };
         }
     }
 }
