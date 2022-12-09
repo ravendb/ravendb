@@ -1,5 +1,4 @@
 ﻿@use "sass:math";
-@use "Content/scss/variables";
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
@@ -39,7 +38,7 @@
 
     .detail-item-label {
         font-size: sizes.$font-size-xs;
-        color: colors.$text-muted;
+        color: colors.$text-muted-color;
         letter-spacing: 0.1em;
         text-transform: uppercase;
         line-height: 1.1em;
@@ -58,7 +57,7 @@
     .value {
         margin-left: sizes.$gutter-xxs;
         font-weight: bold;
-        color: colors.$text-emphasis;
+        color: colors.$text-emphasis-color;
     }
 
     .progress-circle .state-indicator {

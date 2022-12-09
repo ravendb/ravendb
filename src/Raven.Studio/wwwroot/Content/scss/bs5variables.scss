@@ -71,12 +71,12 @@ $theme-colors: (
 ) !default;
 
 $theme-colors-faded: (
-    "primary": mix($body-bg, $primary, 80%),
-    "secondary": mix($body-bg, $secondary, 80%),
-    "success": mix($body-bg, $success, 80%),
-    "info": mix($body-bg, $info, 80%),
-    "warning": mix($body-bg, $warning, 80%),
-    "danger": mix($body-bg, $danger, 80%),
+    "primary": mix($panel-bg-1, $primary, 80%),
+    "secondary": mix($panel-bg-1, $secondary, 80%),
+    "success": mix($panel-bg-1, $success, 80%),
+    "info": mix($panel-bg-1, $info, 80%),
+    "warning": mix($panel-bg-1, $warning, 80%),
+    "danger": mix($panel-bg-1, $danger, 80%),
 ) !default;
 // scss-docs-end theme-colors-map
 
@@ -453,7 +453,7 @@ $headings-font-family: null !default;
 $headings-font-style: null !default;
 $headings-font-weight: 500 !default;
 $headings-line-height: 1.2 !default;
-$headings-color: null !default;
+$headings-color: $text-color-var !default;
 // scss-docs-end headings-variables
 
 // scss-docs-start display-headings
@@ -478,7 +478,7 @@ $small-font-size: 0.875em !default;
 
 $sub-sup-font-size: 0.75em !default;
 
-$text-muted: $gray-600 !default;
+$text-muted: $text-muted-var !default;
 
 $initialism-font-size: $small-font-size !default;
 
@@ -922,7 +922,7 @@ $nav-tabs-border-color: $hr-color !default;
 $nav-tabs-border-width: $border-width !default;
 $nav-tabs-border-radius: $border-radius !default;
 $nav-tabs-link-hover-border-color: $nav-tabs-border-color $nav-tabs-border-color $nav-tabs-border-color !default;
-$nav-tabs-link-active-color: $text-emphasis !default;
+$nav-tabs-link-active-color: $text-emphasis-color !default;
 $nav-tabs-link-active-bg: transparent !default;
 $nav-tabs-link-active-border-color: $nav-tabs-border-color $nav-tabs-border-color $panel-bg-1 !default;
 
@@ -987,7 +987,7 @@ $dropdown-spacer: 0.125rem !default;
 $dropdown-font-size: $font-size-base !default;
 $dropdown-color: $text-color !default;
 $dropdown-bg: $panel-bg-2 !default;
-$dropdown-border-color: $body-bg !default;
+$dropdown-border-color: $border-color-light !default;
 $dropdown-border-radius: $border-radius !default;
 $dropdown-border-width: $border-width !default;
 $dropdown-inner-border-radius: subtract($dropdown-border-radius, $dropdown-border-width) !default;
@@ -1048,7 +1048,7 @@ $pagination-focus-bg: $panel-bg-2 !default;
 $pagination-focus-box-shadow: $input-btn-focus-box-shadow !default;
 $pagination-focus-outline: 0 !default;
 
-$pagination-hover-color: $text-emphasis !default;
+$pagination-hover-color: $text-emphasis-color !default;
 $pagination-hover-bg: $panel-bg-3 !default;
 $pagination-hover-border-color: $border-color !default;
 
@@ -1129,7 +1129,7 @@ $accordion-button-active-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3
 // scss-docs-start tooltip-variables
 $tooltip-font-size: $font-size-sm !default;
 $tooltip-max-width: 200px !default;
-$tooltip-color: $text-emphasis !default;
+$tooltip-color: $text-emphasis-color !default;
 $tooltip-bg: $panel-bg-3 !default;
 $tooltip-border-radius: $border-radius !default;
 $tooltip-opacity: 0.9 !default;
@@ -1195,7 +1195,7 @@ $toast-border-radius: $border-radius !default;
 $toast-box-shadow: $box-shadow !default;
 $toast-spacing: $container-padding-x !default;
 
-$toast-header-color: $text-emphasis !default;
+$toast-header-color: $text-emphasis-color !default;
 $toast-header-background-color: rgba($panel-bg-3, 0.85) !default;
 $toast-header-border-color: rgba($border-color, 0.05) !default;
 // scss-docs-end toast-variables
@@ -1205,7 +1205,7 @@ $toast-header-border-color: rgba($border-color, 0.05) !default;
 // scss-docs-start badge-variables
 $badge-font-size: 0.75em !default;
 $badge-font-weight: $font-weight-bold !default;
-$badge-color: $text-emphasis !default;
+$badge-color: $text-emphasis-color !default;
 $badge-padding-y: 0.35em !default;
 $badge-padding-x: 0.65em !default;
 $badge-border-radius: $border-radius !default;
@@ -1278,7 +1278,7 @@ $progress-font-size: $font-size-base * 0.75 !default;
 $progress-bg: $well-bg !default;
 $progress-border-radius: $border-radius !default;
 $progress-box-shadow: $box-shadow-inset !default;
-$progress-bar-color: $text-emphasis !default;
+$progress-bar-color: $text-emphasis-color !default;
 $progress-bar-bg: $primary !default;
 $progress-bar-animation-timing: 1s linear infinite !default;
 $progress-bar-transition: width 0.6s ease !default;
@@ -1306,10 +1306,10 @@ $list-group-active-border-color: $list-group-active-bg !default;
 $list-group-disabled-color: $btn-link-disabled-color !default;
 $list-group-disabled-bg: $list-group-bg !default;
 
-$list-group-action-color: $text-emphasis !default;
+$list-group-action-color: $text-emphasis-color !default;
 $list-group-action-hover-color: $list-group-action-color !default;
 
-$list-group-action-active-color: $text-emphasis !default;
+$list-group-action-active-color: $text-emphasis-color !default;
 $list-group-action-active-bg: $panel-bg-3 !default;
 // scss-docs-end list-group-variables
 
@@ -1350,7 +1350,7 @@ $breadcrumb-border-radius: null !default;
 // Carousel
 
 // scss-docs-start carousel-variables
-$carousel-control-color: $text-emphasis !default;
+$carousel-control-color: $text-emphasis-color !default;
 $carousel-control-width: 15% !default;
 $carousel-control-opacity: 0.5 !default;
 $carousel-control-hover-opacity: 0.9 !default;
@@ -1361,12 +1361,12 @@ $carousel-indicator-height: 3px !default;
 $carousel-indicator-hit-area-height: 10px !default;
 $carousel-indicator-spacer: 3px !default;
 $carousel-indicator-opacity: 0.5 !default;
-$carousel-indicator-active-bg: $text-emphasis !default;
+$carousel-indicator-active-bg: $text-emphasis-color !default;
 $carousel-indicator-active-opacity: 1 !default;
 $carousel-indicator-transition: opacity 0.6s ease !default;
 
 $carousel-caption-width: 70% !default;
-$carousel-caption-color: $text-emphasis !default;
+$carousel-caption-color: $text-emphasis-color !default;
 $carousel-caption-padding-y: 1.25rem !default;
 $carousel-caption-spacer: 1.25rem !default;
 

@@ -1,12 +1,11 @@
-﻿
-// Required
+﻿// Required
 @import "../../../node_modules/boostrap5/scss/functions";
 
 // Default variable overrides
 @import "../scss/colors";
 @import "../scss/sizes";
 
-//@import "../scss/variables";
+@import "../scss/custom-properties";
 @import "../scss/bs5variables";
 
 // Required
@@ -17,6 +16,8 @@
 @import "../../../node_modules/boostrap5/scss/root";
 
 .bs5 {
+    @import "../scss/bs5extend";
+
     // Optional Bootstrap components
     @import "../../../node_modules/boostrap5/scss/reboot";
     @import "../../../node_modules/boostrap5/scss/type";
@@ -54,9 +55,18 @@
 
     // Pages
     @import "../scss/pages/stats.scss";
+}
 
-    // Legacy fixes
-    @import "../scss/bs5extend";
+// Storybook theme testing
+.sb-show-main {
+    background-color: $body-bg !important;
+}
+
+// bs3 row fix - TODO
+.row::after {
+    content: "";
+    display: block;
+    clear: both;
 }
 
 // Custom Utilities

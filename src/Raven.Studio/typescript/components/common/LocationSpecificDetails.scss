@@ -2,7 +2,8 @@
 @use "Content/scss/sizes";
 
 .location-specific-details-tooltip {
-    background-color: colors.$gray-700;
+    color: colors.$text-color;
+    background-color: colors.$panel-bg-1;
     border-radius: sizes.$gutter-xs;
     display: grid;
     grid-template-columns: auto auto;
@@ -14,7 +15,7 @@
         align-items: center;
         padding: sizes.$gutter-xs sizes.$gutter-xs;
         margin-right: 1px;
-        background-color: colors.$gray-600;
+        background-color: colors.$panel-header-bg;
         border-top-left-radius: sizes.$gutter-xs;
         width: 135px;
 
@@ -23,10 +24,11 @@
             margin-bottom: sizes.$gutter-sm;
         }
 
-        .shard-id, .node-id {
+        .shard-id,
+        .node-id {
             font-size: 26px;
             font-weight: bold;
-            color: colors.$white;
+            color: colors.$text-emphasis-color;
             text-align: center;
             line-height: 1.3em;
 
@@ -43,7 +45,7 @@
     .details {
         line-height: 1em;
         border-top-right-radius: sizes.$gutter-xs;
-        background-color: colors.$gray-600;
+        background-color: colors.$panel-header-bg;
         display: flex;
         flex-direction: column;
 
@@ -55,7 +57,7 @@
             align-items: center;
 
             & + .details-item {
-                border-top: 1px solid colors.$gray-700;
+                border-top: 1px solid colors.$border-color-light;
             }
 
             i {
@@ -67,7 +69,4 @@
             }
         }
     }
-
-
-    
 }

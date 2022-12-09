@@ -7,7 +7,7 @@
         background-color: transparent;
         border: none;
         border-radius: sizes.$gutter-xs;
-        box-shadow: 0 2px 10px 2px colors.$black;
+        box-shadow: 0 2px 20px -6px rgba(colors.$black, 0.5);
         padding: 0;
 
         .popover-content {
@@ -19,7 +19,6 @@
 }
 
 .indexes {
-
     .indexes-list {
         .index-name {
             margin: 0;
@@ -36,11 +35,11 @@
                 }
             }
         }
-        
+
         .index-sidebyside {
             border-left: 31px solid #d2923d;
         }
-        
+
         .sidebyside-actions {
             .panel {
                 margin-bottom: 0;
