@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly List<KeyValuePair<string, DictionaryValueAccessor>> _propertiesInOrder =
             new List<KeyValuePair<string, DictionaryValueAccessor>>();
 
-        private DictionaryAccessor(Dictionary<string, object> instance, Dictionary<string, CompiledIndexField> groupByFields = null)
+        private DictionaryAccessor(Dictionary<string, object> instance, List<IndexFieldBase> orderedMapFields = null, Dictionary<string, CompiledIndexField> groupByFields = null)
         {
             if (instance == null)
                 throw new NotSupportedException("Indexed dictionary must be of type: Dictionary<string, object>");
@@ -33,13 +33,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 _properties.Add(key, getMethod);
-                _propertiesInOrder.Add(new KeyValuePair<string, DictionaryValueAccessor>(key, getMethod));
+
+                if (orderedMapFields == null)
+                    _propertiesInOrder.Add(new KeyValuePair<string, DictionaryValueAccessor>(key, getMethod));
+            }
+
+            if (orderedMapFields != null)
+            {
+                foreach (var field in orderedMapFields)
+                {
+                    _propertiesInOrder.Add(new KeyValuePair<string, DictionaryValueAccessor>(field.Name, _properties[field.Name]));
+                }
             }
         }
 
-        internal static DictionaryAccessor Create(Dictionary<string, object> instance, Dictionary<string, CompiledIndexField> groupByFields = null)
+        internal static DictionaryAccessor Create(Dictionary<string, object> instance, List<IndexFieldBase> orderedMapFields = null, Dictionary<string, CompiledIndexField> groupByFields = null)
         {
-            return new DictionaryAccessor(instance, groupByFields);
+            return new DictionaryAccessor(instance, orderedMapFields, groupByFields);
         }
 
         public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
