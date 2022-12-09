@@ -487,7 +487,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 if (index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.GuaranteedOrderOfPropertiesInMapReduceIndexes)
                 {
-                    _orderedMapFields = index.Definition.MapFields.Values.OrderBy(x => x.Name, StringComparer.Ordinal).ToList();
+                    if (index.Definition.MapFields.Count > 0) // sometimes in JS indexes we're not able to extract field names
+                    {
+                        _orderedMapFields = index.Definition.MapFields.Values.OrderBy(x => x.Name, StringComparer.Ordinal).ToList();
+                    }
                 }
 
                 _isMultiMap = index.IsMultiMap;
