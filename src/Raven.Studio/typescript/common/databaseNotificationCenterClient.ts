@@ -6,8 +6,9 @@ import changesCallback = require("common/changesCallback");
 import endpoints = require("endpoints");
 
 import abstractNotificationCenterClient = require("common/abstractNotificationCenterClient");
+import { databaseNotificationCenterClientInterface } from "hooks/types";
 
-class databaseNotificationCenterClient extends abstractNotificationCenterClient {
+class databaseNotificationCenterClient extends abstractNotificationCenterClient implements databaseNotificationCenterClientInterface {
 
     constructor(db: database) {
         super(db);

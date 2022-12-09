@@ -26,7 +26,10 @@ module.exports = {
   ],
   "framework": "@storybook/react",
     webpackFinal: async config => {
-        config.resolve.alias = { ...config.resolve.alias, ...webpackConfig.resolve.alias };
+        config.resolve.alias = {
+            ...config.resolve.alias, 
+            ...webpackConfig.resolve.alias,
+        };
 
         config.output.publicPath = "/";
         

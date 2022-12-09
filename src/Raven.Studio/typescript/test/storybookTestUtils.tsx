@@ -1,6 +1,8 @@
 import { mockServices } from "./mocks/services/MockServices";
 import React from "react";
 import { ServiceProvider } from "components/hooks/useServices";
+import { ChangesProvider } from "hooks/useChanges";
+import { mockHooks } from "test/mocks/hooks/MockHooks";
 
 export function storybookContainerPublicContainer(storyFn: any) {
     return (
@@ -19,7 +21,9 @@ export function forceStoryRerender() {
 export function withStorybookContexts(storyFn: any) {
     return (
         <div style={{ margin: "50px" }}>
-            <ServiceProvider services={mockServices.context}>{storyFn()}</ServiceProvider>
+            <ServiceProvider services={mockServices.context}>
+                <ChangesProvider changes={mockHooks.useChanges.mock}>{storyFn()}</ChangesProvider>
+            </ServiceProvider>
         </div>
     );
 }

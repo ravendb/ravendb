@@ -14,6 +14,8 @@ import { Screen } from "@testing-library/dom/types/screen";
 import { ServiceProvider } from "components/hooks/useServices";
 import * as byNameQueries from "./byNameQueries";
 import * as byClassNameQueries from "./byClassNameQueries";
+import { ChangesProvider } from "hooks/useChanges";
+import { mockHooks } from "test/mocks/hooks/MockHooks";
 
 function genericRtlRender(
     providers: () => (props: { children: any }) => JSX.Element,
@@ -59,7 +61,11 @@ async function fillInput(element: HTMLElement, value: string) {
 const AllProviders = () => AllProvidersInner;
 
 function AllProvidersInner({ children }: any) {
-    return <ServiceProvider services={mockServices.context}>{children}</ServiceProvider>;
+    return (
+        <ServiceProvider services={mockServices.context}>
+            <ChangesProvider changes={mockHooks.useChanges.mock}>{children}</ChangesProvider>
+        </ServiceProvider>
+    );
 }
 
 export function rtlRender(
