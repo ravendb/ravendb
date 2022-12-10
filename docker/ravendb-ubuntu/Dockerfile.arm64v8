@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/runtime-deps:5.0-focal-arm64v8
+FROM mcr.microsoft.com/dotnet/runtime-deps:6.0-focal-arm64v8
 
 RUN apt-get update \
     && apt-get install -y \
