@@ -457,7 +457,7 @@ namespace Raven.Server.Documents.ETL
                 }
                 catch (Exception e)
                 {
-                    if (CancellationToken.IsCancellationRequested == false)
+                    if (CancellationToken.IsCancellationRequested == false) 
                     {
                         string msg = $"Failed to load transformed data for '{Name}'";
 
