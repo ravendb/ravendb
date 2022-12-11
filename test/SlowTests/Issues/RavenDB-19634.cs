@@ -2,12 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
-using Sparrow.Server.Collections.LockFree;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -43,6 +43,45 @@ public class RavenDB_19634 : RavenTestBase
             using (var session = store.OpenAsyncSession())
             {
                 session.TimeSeriesFor(id, "Count").Append(DateTime.Today, 3);
+                session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5));
+                await Assert.ThrowsAsync<RavenTimeoutException>(async () => await session.SaveChangesAsync());
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Should_Wait_For_Time_Series_Copy_Index_Changes()
+    {
+        using (var store = GetDocumentStore())
+        {
+            const string id = "users/1";
+            const string id2 = "users/2";
+
+            var index = new UsersTimeSeriesMapIndex();
+            await index.ExecuteAsync(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User
+                {
+                    Name = "Grisha"
+                }, id);
+                await session.StoreAsync(new User
+                {
+                    Name = "Grisha"
+                }, id2);
+                session.TimeSeriesFor(id, "Count").Append(DateTime.Today, 3);
+                await session.SaveChangesAsync();
+            }
+
+            await store.Maintenance.SendAsync(new StopIndexOperation(index.IndexName));
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.Defer(new CopyTimeSeriesCommandData(id,
+                    "Count",
+                    id2,
+                    "Count"));
+
                 session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5));
                 await Assert.ThrowsAsync<RavenTimeoutException>(async () => await session.SaveChangesAsync());
             }
