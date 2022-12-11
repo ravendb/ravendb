@@ -808,7 +808,7 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleMigrationReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
         {
-            if (ShardHelper.TryGetShardNumber(newRecord.DatabaseName, out var myShard) == false)
+            if (ShardHelper.TryGetShardNumberAndDatabaseName(newRecord.DatabaseName, out var shardedDatabaseName, out var myShard) == false)
                 return;
 
             var toRemove = new List<BucketMigrationReplication>();
@@ -871,7 +871,7 @@ namespace Raven.Server.Documents.Replication
                         var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, process, getLastResponsibleNode: null);
                         var migrationDestination = new BucketMigrationReplication(process, destNode)
                         {
-                            Database = ShardHelper.ToShardName(newRecord.DatabaseName, process.DestinationShard),
+                            Database = ShardHelper.ToShardName(shardedDatabaseName, process.DestinationShard),
                             Url = _clusterTopology.GetUrlFromTag(destNode)
                         };
 
