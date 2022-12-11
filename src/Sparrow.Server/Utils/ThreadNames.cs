@@ -245,7 +245,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"Flwr from {_connection}";
+                return $"Follower {_connection}";
             }
         }
 
@@ -262,7 +262,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"FlwrAmb for {_tag}";
+                return $"FollowAmb {_tag}";
             }
         }
 
@@ -279,7 +279,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"CnsLead-{_engineTag} IT {_term}";
+                return $"ConsensusL-{_engineTag} IT {_term}";
             }
         }
 
@@ -298,7 +298,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"HBS from {_serverNodeTag} to {_clusterTag}";
+                return $"HBeatS {_serverNodeTag} to {_clusterTag}";
             }
         }
 
@@ -315,7 +315,7 @@ public static class ThreadNames
 
             public string GetShortName()
             {
-                return $"HBWCL {_leader} IT {_term}";
+                return $"HBbeatW {_leader} IT {_term}";
             }
         }
 
