@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Xml.Linq;
 
 namespace Raven.Client.Util
@@ -8,7 +9,10 @@ namespace Raven.Client.Util
         public static string ToShardName(string database, int shardNumber)
         {
             if (IsShardName(database))
+            {
+                Debug.Assert(false, $"Expected a non shard name but got {database}");
                 throw new ArgumentException($"Expected a non shard name but got {database}");
+            }
 
             ResourceNameValidator.AssertValidDatabaseName(database);
             
