@@ -9,6 +9,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Studio;
@@ -184,7 +185,7 @@ namespace SlowTests.Client.Operations
 
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Studio)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void ShouldGetNotModifiedStatusForGetStudioCollectionFields(Options options)
+        public async Task ShouldGetNotModifiedStatusForGetStudioCollectionFields(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -203,18 +204,16 @@ namespace SlowTests.Client.Operations
                     session.Advanced.GetMetadataFor(o3)[Constants.Documents.Metadata.Collection] = "User";
                     session.SaveChanges();
                 }
-
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     HttpStatusCode status = default;
                     session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) => { status = args.Response.StatusCode; };
-
-                    var result = session.Advanced.Collection.GetCollectionFields("User", "");
+                    var result = await store.Operations.SendAsync(new GetCollectionFieldsOperation("User", ""));
 
                     Assert.NotNull(result);
                     Assert.True(status != HttpStatusCode.NotModified);
 
-                    result = session.Advanced.Collection.GetCollectionFields("User", "");
+                    result = await store.Operations.SendAsync(new GetCollectionFieldsOperation("User", ""));
 
                     Assert.NotNull(result);
                     Assert.True(status == HttpStatusCode.NotModified);
@@ -224,7 +223,7 @@ namespace SlowTests.Client.Operations
 
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Studio)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void ShouldGetNotModifiedStatusForPreviewCollection(Options options)
+        public async Task ShouldGetNotModifiedStatusForPreviewCollection(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
@@ -234,17 +233,17 @@ namespace SlowTests.Client.Operations
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     HttpStatusCode status = default;
                     session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) => { status = args.Response.StatusCode; };
 
-                    var result = session.Advanced.Collection.PreviewCollection("Users");
+                    var result = await store.Operations.SendAsync(new PreviewCollectionOperation("Users"));
 
                     Assert.NotNull(result);
                     Assert.True(status != HttpStatusCode.NotModified);
 
-                    result = session.Advanced.Collection.PreviewCollection("Users");
+                    result = await store.Operations.SendAsync(new PreviewCollectionOperation("Users"));
 
                     Assert.NotNull(result);
                     Assert.True(status == HttpStatusCode.NotModified);
@@ -265,6 +264,21 @@ namespace SlowTests.Client.Operations
             public RavenCommand<BlittableJsonReaderObject> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
             {
                 return new GetCollectionFieldsCommand(_collection, _prefix);
+            }
+        }
+
+        public class PreviewCollectionOperation : IOperation<BlittableJsonReaderObject>
+        {
+            private readonly string _collection;
+
+            public PreviewCollectionOperation(string collection)
+            {
+                _collection = collection;
+            }
+
+            public RavenCommand<BlittableJsonReaderObject> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+            {
+                return new PreviewCollectionCommand(_collection);
             }
         }
 

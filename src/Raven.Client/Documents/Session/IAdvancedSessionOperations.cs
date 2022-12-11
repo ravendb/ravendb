@@ -40,11 +40,6 @@ namespace Raven.Client.Documents.Session
         IClusterTransactionOperations ClusterTransaction { get; }
 
         /// <summary>
-        ///     Access the collection operations
-        /// </summary>
-        ICollectionSessionOperations Collection { get; }
-
-        /// <summary>
         ///     Updates entity with latest changes from server
         /// </summary>
         /// <param name="entity">Instance of an entity that will be refreshed</param>
