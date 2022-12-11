@@ -242,6 +242,10 @@ namespace Raven.Server.Web.System
 
                     if(databaseRecord.Sharding.Shards.ContainsKey(shardNumber.Value))
                         throw new InvalidOperationException($"Cannot add shard {shardNumber.Value} to database {database} because it already exists.");
+
+                    if (databaseRecord.IsShardBeingDeletedOnAnyNode(shardNumber.Value))
+                        throw new InvalidOperationException(
+                            $"Cannot add shard {shardNumber.Value} to database {database} because there is a shard with this number in the process of being deleted.");
                 }
 
                 var clusterTopology = Server.ServerStore.GetClusterTopology(context);
@@ -274,10 +278,13 @@ namespace Raven.Server.Web.System
                         {
                             newChosenShardNumber++;
                             stillBeingDeleted++;
+                            continue;
                         }
 
-                        if (databaseRecord.Sharding.Shards.ContainsKey(newChosenShardNumber))
-                            newChosenShardNumber++;
+                        if (databaseRecord.Sharding.Shards.ContainsKey(newChosenShardNumber) == false)
+                            break;
+                        
+                        newChosenShardNumber++;
                     }
                 }
 

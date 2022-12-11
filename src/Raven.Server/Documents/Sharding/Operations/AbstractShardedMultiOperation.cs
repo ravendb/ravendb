@@ -20,7 +20,7 @@ public abstract class AbstractShardedMultiOperation
 
     protected readonly Dictionary<ShardedDatabaseIdentifier, Operation> Operations;
 
-    private IOperationProgress[] _progresses;
+    private Dictionary<int, IOperationProgress> _progresses;
 
     protected AbstractShardedMultiOperation(long id, ShardedDatabaseContext shardedDatabaseContext, Action<IOperationProgress> onProgress)
     {
@@ -73,9 +73,8 @@ public abstract class AbstractShardedMultiOperation
     {
         IOperationProgress result = null;
 
-        for (var i = 0; i < _progresses.Length; i++)
+        foreach (var progress in _progresses.Values)
         {
-            var progress = _progresses[i];
             if (progress == null)
                 continue;
 
@@ -99,9 +98,9 @@ public abstract class AbstractShardedMultiOperation
     public async Task<IOperationResult> WaitForCompletionAsync<TOrchestratorResult>(CancellationToken token)
         where TOrchestratorResult : IOperationResult, new()
     {
-        _progresses = new IOperationProgress[Operations.Count];
+        _progresses = new Dictionary<int, IOperationProgress>(Operations.Count);
 
-        var tasks = new Dictionary<ShardedDatabaseIdentifier, Task<IOperationResult>>(_progresses.Length);
+        var tasks = new Dictionary<ShardedDatabaseIdentifier, Task<IOperationResult>>(Operations.Count);
 
         foreach (var operation in Operations)
         {

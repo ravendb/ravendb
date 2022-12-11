@@ -1225,7 +1225,7 @@ namespace Raven.Server.ServerWide
                     return true;
             }
 
-            return true;
+            return false;
         }
 
         public void Dispose()
