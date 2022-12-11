@@ -115,10 +115,10 @@ public class RawShardingConfiguration
 
     internal static int GetShardNumberFromPropertyDetails(BlittableJsonReaderObject.PropertyDetails propertyDetails)
     {
-        if (int.TryParse(propertyDetails.Name.ToString(), out int sharNumber) == false)
+        if (int.TryParse(propertyDetails.Name.ToString(), out int shardNumber) == false)
             throw new ArgumentException($"Error while trying to extract the shard number from the raw database record. Expected an int but got a {propertyDetails.Name}");
 
-        return sharNumber;
+        return shardNumber;
     }
 
     private List<ShardBucketRange> _shardBucketRanges;
