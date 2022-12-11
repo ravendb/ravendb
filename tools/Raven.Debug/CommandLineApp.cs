@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Diagnostics.Tools.Dump;
 using Microsoft.Diagnostics.Tools.GCDump;
@@ -68,7 +67,7 @@ namespace Raven.Debug
                 var threadIdsOption = cmd.Option("--tid", "Thread ID to get the info about", CommandOptionType.MultipleValue);
                 var includeStackObjectsOption = cmd.Option("--includeStackObjects", "Include the stack objects", CommandOptionType.NoValue);
 
-                cmd.OnExecute(() =>
+                cmd.OnExecuteAsync(async _ =>
                 {
                     if (waitOption.HasValue())
                         Console.ReadLine(); // wait for the caller to finish preparing for us
@@ -82,22 +81,20 @@ namespace Raven.Debug
                     if (pid <= 0)
                         return cmd.ExitWithError("Process ID must be greater than 0");
 
-                    HashSet<uint> threadIds = null;
+                    HashSet<int> threadIds = null;
                     if (threadIdsOption.HasValue())
                     {
                         foreach (var tid in threadIdsOption.Values)
                         {
-                            if (uint.TryParse(tid, out var tidAsInt) == false)
+                            if (int.TryParse(tid, out var tidAsInt) == false)
                                 return cmd.ExitWithError($"Could not parse --tid with value '{tid}' to number.");
 
-                            if (threadIds == null)
-                                threadIds = new HashSet<uint>();
-
+                            threadIds ??= new HashSet<int>();
                             threadIds.Add(tidAsInt);
                         }
                     }
 
-                    uint attachTimeout = 15000;
+                    uint attachTimeout = 1500;
                     if (attachTimeoutOption.HasValue() && uint.TryParse(attachTimeoutOption.Value(), out attachTimeout) == false)
                         return cmd.ExitWithError($"Could not parse --attachTimeout with value '{attachTimeoutOption.Value()}' to number.");
 
@@ -109,7 +106,7 @@ namespace Raven.Debug
 
                     try
                     {
-                        StackTracer.ShowStackTrace(pid, attachTimeout, output, cmd, threadIds, includeStackObjects);
+                        await StackTracer.ShowStackTrace(pid, attachTimeout, output, cmd.Out, threadIds);
                         return 0;
                     }
                     catch (Exception e)
@@ -237,7 +234,7 @@ namespace Raven.Debug
                 var pathArg = cmd.Option("--output-path", "Directory path to save the traffic watch log.", CommandOptionType.SingleValue);
                 var databaseArg = cmd.Option("--database", "The database name.", CommandOptionType.SingleOrNoValue);
                 var types = Enum.GetValues(typeof(TrafficWatchChangeType)).Cast<TrafficWatchChangeType>().Select(t => t.ToString());
-                var typesArg = cmd.Option("--types", $"Types to be filtered by - {string.Join(", ",types)}.", CommandOptionType.MultipleValue);
+                var typesArg = cmd.Option("--types", $"Types to be filtered by - {string.Join(", ", types)}.", CommandOptionType.MultipleValue);
                 var certArg = cmd.Option("--certificate-path", "Path to pfx certificate file.", CommandOptionType.SingleOrNoValue);
                 var certPassArg = cmd.Option("--certificate-password", "Certificate password.", CommandOptionType.SingleOrNoValue);
                 var verboseArg = cmd.Option("--verbose", "Verbose to console.", CommandOptionType.NoValue);
@@ -287,7 +284,7 @@ namespace Raven.Debug
                                 }
                             }
 
-                            if(error != null)
+                            if (error != null)
                                 cmd.ExitWithError(error.ToString());
                         }
                         catch
@@ -296,11 +293,11 @@ namespace Raven.Debug
                         }
                     }
 
-                    string cert = certArg.HasValue() ? certArg.Value() :null;
-                    string certPass = certPassArg.HasValue() ? certPassArg.Value() :null;
-                    string database = databaseArg.HasValue() ? databaseArg.Value() :null;
+                    string cert = certArg.HasValue() ? certArg.Value() : null;
+                    string certPass = certPassArg.HasValue() ? certPassArg.Value() : null;
+                    string database = databaseArg.HasValue() ? databaseArg.Value() : null;
 
-                    var  logTrafficWatch = new LogTrafficWatch.LogTrafficWatch(path, url, cert, certPass, database, changeTypes?.ToArray(), verboseArg.HasValue());
+                    var logTrafficWatch = new LogTrafficWatch.LogTrafficWatch(path, url, cert, certPass, database, changeTypes?.ToArray(), verboseArg.HasValue());
 
                     Console.CancelKeyPress += (sender, args) => logTrafficWatch.Stop();
 
@@ -314,7 +311,7 @@ namespace Raven.Debug
 
         private static void ConfigureTrafficWatchReplayCommand()
         {
-            
+
             _app.Command("replay-traffic", cmd =>
             {
                 cmd.ExtendedHelpText = cmd.Description = "Replay log traffic watch entries.";
@@ -328,7 +325,7 @@ namespace Raven.Debug
                 var certArg = cmd.Option("--certificate-path", "Path to pfx certificate file.", CommandOptionType.SingleOrNoValue);
                 var certPassArg = cmd.Option("--certificate-password", "Certificate password.", CommandOptionType.SingleOrNoValue);
                 var threadsArg = cmd.Option("--threads", $"Number of concurrent threads to run (default: {concurrentThreadsCount})", CommandOptionType.SingleValue);
-                
+
                 cmd.OnExecuteAsync(async (_) =>
                 {
                     var path = pathArg.Value();
