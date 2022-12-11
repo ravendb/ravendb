@@ -1165,7 +1165,7 @@ namespace RachisTests.DatabaseCluster
                     return shardTopology.Members.Count;
                 }, 1);
                 
-                Assert.Equal(nodeContainingShard0, shardTopology.Members[0]);
+                Assert.DoesNotContain(nodeContainingShard0, shardTopology.Members);
 
                 serverWithNewShard = Servers.Single(x => x.ServerStore.NodeTag == nodeContainingShard0);
                 Assert.False(serverWithNewShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(ShardHelper.ToShardName(store.Database, 0), out var _));
