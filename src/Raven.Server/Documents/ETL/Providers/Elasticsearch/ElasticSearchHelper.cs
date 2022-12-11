@@ -16,6 +16,9 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             StaticConnectionPool pool = new StaticConnectionPool(nodesUrls);
             ConnectionSettings settings = new ConnectionSettings(pool);
 
+            if (connectionString.EnableCompatibilityMode)
+                settings.EnableApiVersioningHeader();
+
             if (requestTimeout != null)
                 settings.RequestTimeout(requestTimeout.Value);
 

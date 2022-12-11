@@ -512,6 +512,8 @@ namespace Raven.Server.ServerWide.Commands
             public long PreviousCount;
             public string Database;
 
+            public bool Processed;
+
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
