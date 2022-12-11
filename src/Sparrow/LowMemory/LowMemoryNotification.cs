@@ -10,7 +10,7 @@ namespace Sparrow.LowMemory
 {
     public class LowMemoryNotification
     {
-        private readonly string NotificationThreadName = PlatformDetails.RunningOnLinux ? "LMNT" : "Low memory notification thread";
+        private const string NotificationThreadName = "Low memory notification thread";
 
         private readonly Logger _logger;
 

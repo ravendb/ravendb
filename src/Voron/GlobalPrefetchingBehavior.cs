@@ -16,7 +16,7 @@ namespace Voron.Impl
 {
     public class GlobalPrefetchingBehavior
     {
-        private static readonly string PrefetchingThreadName = "Voron Prefetching Thread";
+        private const string PrefetchingThreadName = "Voron Prefetching Thread";
 
         internal static readonly Lazy<GlobalPrefetchingBehavior> GlobalPrefetcher = new Lazy<GlobalPrefetchingBehavior>(() =>
         {

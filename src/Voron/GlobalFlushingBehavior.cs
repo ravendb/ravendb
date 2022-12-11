@@ -12,7 +12,7 @@ namespace Voron
 {
     public class GlobalFlushingBehavior
     {
-        private static readonly string FlushingThreadName = "Voron Flushing Thread";
+        private const string FlushingThreadName = "Voron Flushing Thread";
 
         public static int NumberOfConcurrentSyncsPerPhysicalDrive = 3;
 
