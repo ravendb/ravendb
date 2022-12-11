@@ -649,8 +649,14 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     catch (Exception e)
                     {
+                        const string errorMessage = "Wasn't able to import Sharding configuration from smuggler file. Aborting.";
+
                         if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the Sharding configuration from smuggler file. Skipping.", e);
+                        {
+                            _log.Info(errorMessage, e);
+                        }
+
+                        throw new InvalidDataException(errorMessage, e);
                     }
                 }
 
