@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
@@ -71,8 +72,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             if (_shardNumber > 0)
                 smuggler._options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
 
-            smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord => 
-                RestoreSettings.DatabaseRecord.Sharding.BucketRanges = smugglerDatabaseRecord.Sharding?.BucketRanges;
+            smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord =>
+                RestoreSettings.DatabaseRecord.Sharding.BucketRanges = 
+                    smugglerDatabaseRecord.Sharding?.BucketRanges ?? throw new InvalidDataException(
+                        $"'{nameof(DatabaseRecord.Sharding.BucketRanges)}' is missing in backup file '{filePath}'. Aborting the restore process");
         }
     }
 }
