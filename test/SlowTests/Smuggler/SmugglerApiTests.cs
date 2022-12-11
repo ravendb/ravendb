@@ -1545,40 +1545,59 @@ namespace SlowTests.Smuggler
                 }))
                 {
                     // Fill the database
+                    // Users collection
                     for (int i = 1; i <= numberOfUsers; i++)
                     {
                         using (var session = store1.OpenAsyncSession())
                         {
+                            // Documents
                             await session.StoreAsync(new User { Name = $"Name{i}" }, $"users/{i}");
                             
+                            // Counters
                             var docCounters = session.CountersFor($"users/{i}");
                             docCounters.Increment($"TestCounter{i}", i * i);
 
+                            // TimeSeries
                             session.TimeSeriesFor($"users/{i}", "Heartrate").Append(baseTimeline.AddDays(i * i), new[] { i * 3d }, "watches/1");
 
-                            await session.SaveChangesAsync();
+                            // Attachments
+                            using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                            {
+                                session.Advanced.Attachments.Store($"users/{i}", $"userName_{i}.jpg", stream, "image/jpeg");
+                                await session.SaveChangesAsync();
+                            }
                         }
                     }
 
+                    // Orders collection
                     for (int i = 1; i <= numberOfOrders; i++)
                     {
                         using (var session = store1.OpenAsyncSession())
                         {
+                            // Documents
                             await session.StoreAsync(new Order { Employee = $"users/{i}" }, $"orders/{i}");
-                            
+
+                            // Counters
                             var docCounters = session.CountersFor($"orders/{i}");
                             docCounters.Increment($"TestCounter{i}", i);
 
+                            // TimeSeries
                             session.TimeSeriesFor($"orders/{i}", "Heartrate2").Append(baseTimeline.AddHours(1), new[] { i * 7d }, "watches/2");
 
-                            await session.SaveChangesAsync();
+                            // Attachments
+                            using (var stream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                            {
+                                session.Advanced.Attachments.Store($"orders/{i}", $"order_{i}.jpg", stream, "image/jpeg");
+                                await session.SaveChangesAsync();
+                            }
                         }
                     }
+                    
                     var statsOfStore1 = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
-
                     Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfDocuments);
 
                     // Making tombstones
+                    // Users
                     for (int i = numberOfUsers + 1; i <= numberOfUsers * 2; i++)
                     {
                         using (var session = store1.OpenAsyncSession())
@@ -1588,6 +1607,7 @@ namespace SlowTests.Smuggler
                         }
                     }
 
+                    // Orders
                     for (int i = numberOfOrders + 1; i <= numberOfOrders * 2; i++)
                     {
                         using (var session = store1.OpenAsyncSession())
@@ -1596,10 +1616,10 @@ namespace SlowTests.Smuggler
                             await session.SaveChangesAsync();
                         }
                     }
-                    
                     var config = Backup.CreateBackupConfiguration(backupPath);
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store1);
 
+                    // Users
                     for (int i = numberOfUsers + 1; i <= numberOfUsers * 2; i++)
                     {
                         using (var session = store1.OpenAsyncSession())
@@ -1609,6 +1629,7 @@ namespace SlowTests.Smuggler
                         }
                     }
 
+                    // Orders
                     for (int i = numberOfOrders + 1; i <= numberOfOrders * 2; i++)
                     {
                         using (var session = store1.OpenAsyncSession())
@@ -1617,7 +1638,6 @@ namespace SlowTests.Smuggler
                             await session.SaveChangesAsync();
                         }
                     }
-
                     await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store1, isFullBackup: false);
                     
                     // Check database statistics before export
@@ -1626,7 +1646,9 @@ namespace SlowTests.Smuggler
                     Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfCounterEntries);
                     Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfTimeSeriesSegments);
                     Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfTombstones);
-                    
+                    Assert.Equal(numberOfUsers + numberOfOrders, statsOfStore1.CountOfAttachments);
+                    Assert.Equal(2, statsOfStore1.CountOfUniqueAttachments);
+
                     // We'll export both collections
                     var exportOptions = new DatabaseSmugglerExportOptions
                     {
@@ -1651,6 +1673,8 @@ namespace SlowTests.Smuggler
                     Assert.Equal(numberOfUsers, statsOfStore2.CountOfCounterEntries);
                     Assert.Equal(numberOfUsers, statsOfStore2.CountOfTimeSeriesSegments);
                     Assert.Equal(numberOfUsers, statsOfStore2.CountOfTombstones);
+                    Assert.Equal(numberOfUsers, statsOfStore2.CountOfAttachments);
+                    Assert.Equal(1, statsOfStore2.CountOfUniqueAttachments);
 
                     // Check that just one collection imported (by content)
                     using (var databaseCommands = store2.Commands())
@@ -1682,6 +1706,14 @@ namespace SlowTests.Smuggler
 
                                 // Tombstones check
                                 Assert.Equal(getTombstonesCommand.Result[i - 1], $"users/{numberOfUsers + i}");
+
+                                // Attachments
+                                using (var attachment = await session.Advanced.Attachments.GetAsync(user, $"userName_{i}.jpg"))
+                                {
+                                    Assert.NotNull(attachment);
+                                    Assert.Equal($"users/{i}", attachment.Details.DocumentId);
+                                    Assert.Equal($"userName_{i}.jpg", attachment.Details.Name);
+                                }
                             }
                         }
                     }

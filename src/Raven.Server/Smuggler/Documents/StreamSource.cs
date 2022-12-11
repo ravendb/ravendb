@@ -643,13 +643,13 @@ namespace Raven.Server.Smuggler.Documents
                     if (reader.TryGet(Constants.Documents.Blob.Document, out BlittableJsonReaderObject blobMetadata) == false ||
                         blobMetadata.TryGet(nameof(TimeSeriesItem.Collection), out string collection) == false)
                     {
-                        await SkipEntry(reader, size, skipDueToReadError: true);
+                        await SkipEntryAsync(reader, size, skipDueToReadError: true);
                         continue;
                     }
 
                     if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(collection) == false)
                     {
-                        await SkipEntry(reader, size, skipDueToReadError: false);
+                        await SkipEntryAsync(reader, size, skipDueToReadError: false);
                         continue;
                     }
 
@@ -658,7 +658,7 @@ namespace Raven.Server.Smuggler.Documents
                         blobMetadata.TryGet(nameof(TimeSeriesItem.ChangeVector), out string cv) == false ||
                         blobMetadata.TryGet(nameof(TimeSeriesItem.Baseline), out DateTime baseline) == false)
                     {
-                        await SkipEntry(reader, size, skipDueToReadError: true);
+                        await SkipEntryAsync(reader, size, skipDueToReadError: true);
                         continue;
                     }
 
@@ -675,7 +675,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
             
-            async Task SkipEntry(BlittableJsonReaderObject reader, int size, bool skipDueToReadError)
+            async Task SkipEntryAsync(BlittableJsonReaderObject reader, int size, bool skipDueToReadError)
             {
                 if (skipDueToReadError)
                 {
@@ -1484,6 +1484,7 @@ namespace Raven.Server.Smuggler.Documents
                     else
                     {
                         SkipEntry(data);
+                        continue;
                     }
 
                     if (data.TryGet("Key", out tombstone.LowerId) &&
@@ -1592,6 +1593,7 @@ namespace Raven.Server.Smuggler.Documents
                     else
                     {
                         SkipEntry(data);
+                        continue;
                     }
 
                     var conflict = new DocumentConflict();
