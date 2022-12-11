@@ -696,11 +696,11 @@ class databaseCreationModel {
             settings[configuration.core.dataDirectory] = dataDir;
         }
 
-        const shards: Raven.Client.ServerWide.DatabaseTopology[] = [];
+        const shards: Record<string, Raven.Client.ServerWide.DatabaseTopology> = {};
         const numberOfShards = this.sharding.numberOfShards();
         if (numberOfShards && this.getShardingConfigSection().enabled()) {
             for (let i = 0; i < numberOfShards; i++) {
-                shards.push({} as Raven.Client.ServerWide.DatabaseTopology);
+                shards[i.toString()] = {} as Raven.Client.ServerWide.DatabaseTopology;
             }
         }
         
