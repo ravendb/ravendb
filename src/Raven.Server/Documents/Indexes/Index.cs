@@ -3781,7 +3781,7 @@ namespace Raven.Server.Documents.Indexes
 
         private static void ThrowInvalidField(string f, string indexName)
         {
-            throw new ArgumentException($"The field '{f}' is not indexed for index {indexName}, cannot query/sort on fields that are not indexed");
+            throw new ArgumentException($"The field '{f}' is not indexed for index '{indexName}', cannot query/sort on fields that are not indexed");
         }
 
         private void FillFacetedQueryResult(FacetedQueryResult result, bool isStale, long facetSetupEtag, QueryMetadata q,
