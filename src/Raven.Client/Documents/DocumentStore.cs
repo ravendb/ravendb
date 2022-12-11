@@ -345,12 +345,25 @@ namespace Raven.Client.Documents
         /// </remarks>
         public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
         {
+            return AsyncHelpers.RunSync(() => AggressivelyCacheForAsync(cacheDuration, mode, database));
+        }
+        
+        /// <summary>
+        /// Setup the context for aggressive caching.
+        /// </summary>
+        /// <remarks>
+        /// Aggressive caching means that we will not check the server to see whether the response
+        /// we provide is current or not, but will serve the information directly from the local cache
+        /// without touching the server.
+        /// </remarks>
+        public override async Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
+        {
             AssertInitialized();
 
             database = this.GetDatabase(database);
 
             if (mode != AggressiveCacheMode.DoNotTrackChanges)
-                ListenToChangesAndUpdateTheCache(database);
+                await ListenToChangesAndUpdateTheCacheAsync(database).ConfigureAwait(false);
 
             var re = GetRequestExecutor(database);
             var old = re.AggressiveCaching.Value;
@@ -361,7 +374,7 @@ namespace Raven.Client.Documents
             return new DisposableAction(() => re.AggressiveCaching.Value = old);
         }
 
-        private void ListenToChangesAndUpdateTheCache(string database)
+        private Task ListenToChangesAndUpdateTheCacheAsync(string database)
         {
             Debug.Assert(database != null);
 
@@ -371,7 +384,7 @@ namespace Raven.Client.Documents
                     () => new EvictItemsFromCacheBasedOnChanges(this, database)));
             }
             GC.KeepAlive(lazy.Value); // here we force it to be evaluated
-            lazy.Value.EnsureConnected();
+            return lazy.Value.EnsureConnectedAsync();
         }
 
         private AsyncDocumentSession OpenAsyncSessionInternal(SessionOptions options)
