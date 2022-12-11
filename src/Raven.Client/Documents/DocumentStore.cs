@@ -345,9 +345,35 @@ namespace Raven.Client.Documents
         /// </remarks>
         public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
         {
-            return AsyncHelpers.RunSync(() => AggressivelyCacheForAsync(cacheDuration, mode, database));
+            AssertInitialized();
+
+            database = this.GetDatabase(database);
+
+            if (mode != AggressiveCacheMode.DoNotTrackChanges)
+                AsyncHelpers.RunSync(() => ListenToChangesAndUpdateTheCacheAsync(database));
+
+            var re = GetRequestExecutor(database);
+            var old = re.AggressiveCaching.Value;
+            var @new = new AggressiveCacheOptions(cacheDuration, mode);
+
+            re.AggressiveCaching.Value = @new;
+
+            return new DisposableAction(() => re.AggressiveCaching.Value = old);
         }
-        
+
+        /// <summary>
+        /// Setup the context for aggressive caching.
+        /// </summary>
+        /// <remarks>
+        /// Aggressive caching means that we will not check the server to see whether the response
+        /// we provide is current or not, but will serve the information directly from the local cache
+        /// without touching the server.
+        /// </remarks>
+        public override Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, string database = null)
+        {
+            return AggressivelyCacheForAsync(cacheDuration, Conventions.AggressiveCache.Mode, database);
+        }
+
         /// <summary>
         /// Setup the context for aggressive caching.
         /// </summary>

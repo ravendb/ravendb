@@ -97,7 +97,19 @@ namespace Raven.Client.Documents
         /// without touching the server.
         /// </remarks>
         IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
-        
+
+        /// <summary>
+        /// Setup the context for aggressive caching.
+        /// </summary>
+        /// <param name="cacheDuration">Specify the aggressive cache duration</param>
+        /// <param name="database">The database to cache, if not specified, the default database will be used</param>
+        /// <remarks>
+        /// Aggressive caching means that we will not check the server to see whether the response
+        /// we provide is current or not, but will serve the information directly from the local cache
+        /// without touching the server.
+        /// </remarks>
+        Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, string database = null);
+
         /// <summary>
         /// Setup the context for aggressive caching.
         /// </summary>

@@ -60,7 +60,7 @@ namespace SlowTests.Issues
         private async Task LoadDataAsync(IDocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
-            using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMilliseconds(300)))
+            using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMilliseconds(300)))
             {
                 var docLazy = session.Advanced.Lazily.LoadAsync<Doc>("doc-1");
                 var doc = await docLazy.Value;
