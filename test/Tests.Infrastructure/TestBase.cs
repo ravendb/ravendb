@@ -731,7 +731,7 @@ namespace FastTests
                 var task = Task.Run(server.Dispose);
 
                 if (mre.Wait(timeout) == false)
-                    ThrowCouldNotDisposeServerException(url, debugTag, timeout);
+                    ThrowCouldNotDisposeServerExceptionAsync(url, debugTag, timeout).GetAwaiter().GetResult();
 
                 task.GetAwaiter().GetResult();
             }
@@ -756,13 +756,13 @@ namespace FastTests
                 var task = Task.Run(server.Dispose);
 
                 if (await mre.WaitAsync(timeout) == false)
-                    ThrowCouldNotDisposeServerException(url, debugTag, timeout);
+                    await ThrowCouldNotDisposeServerExceptionAsync(url, debugTag, timeout);
 
                 await task;
             }
         }
 
-        private static void ThrowCouldNotDisposeServerException(string url, string debugTag, TimeSpan timeout)
+        private static async Task ThrowCouldNotDisposeServerExceptionAsync(string url, string debugTag, TimeSpan timeout)
         {
             using (var process = Process.GetCurrentProcess())
             using (var ms = new MemoryStream())
@@ -772,7 +772,7 @@ namespace FastTests
 
                 try
                 {
-                    StackTracer.ShowStackTraceWithSnapshot(process.Id, outputWriter);
+                    await StackTracer.ShowStackTrace(process.Id, 1500, outputPath: null, outputWriter, threadIds: null);
                     ms.Position = 0;
 
                     using (var outputReader = new StreamReader(ms, leaveOpen: true))
