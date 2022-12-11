@@ -78,6 +78,6 @@ namespace Raven.Client.Documents.Smuggler
         bool RemoveAnalyzers { get; set; }
         string TransformScript { get; set; }
         int MaxStepsForTransformScript { get; set; }
-        public List<string> Collections { get; set; }
+        List<string> Collections { get; set; }
     }
 }
