@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Changes
 
         public void EnsureConnected()
         {
-            AsyncHelpers.RunSync(_changes.EnsureConnectedNow);
+            AsyncHelpers.RunSync(EnsureConnectedAsync);
         }
 
         public Task EnsureConnectedAsync() => _changes.EnsureConnectedNow();

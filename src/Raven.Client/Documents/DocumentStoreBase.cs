@@ -53,7 +53,9 @@ namespace Raven.Client.Documents
         public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null);
 
         public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
-        
+
+        public abstract Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, string database = null);
+
         public abstract Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
 
         public abstract IDisposable DisableAggressiveCaching(string database = null);
