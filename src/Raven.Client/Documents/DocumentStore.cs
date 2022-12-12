@@ -346,9 +346,9 @@ namespace Raven.Client.Documents
         /// </remarks>
         public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
         {
-            var release = AggressivelyCacheForInternal(cacheDuration, mode, ref database);
+            var release = SetAggressiveCache(cacheDuration, mode, ref database);
 
-            return AsyncHelpers.RunSync(() => InternalAggressivelyCacheForAsync(release, mode, database));
+            return AsyncHelpers.RunSync(() => FinalizeAggressiveCacheAsync(release, mode, database));
         }
 
         /// <summary>
@@ -374,12 +374,12 @@ namespace Raven.Client.Documents
         /// </remarks>
         public override Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
         {
-            var release = AggressivelyCacheForInternal(cacheDuration, mode, ref database);
+            var release = SetAggressiveCache(cacheDuration, mode, ref database);
 
-            return InternalAggressivelyCacheForAsync(release, mode, database);
+            return FinalizeAggressiveCacheAsync(release, mode, database);
         }
 
-        private IDisposable AggressivelyCacheForInternal(TimeSpan cacheDuration, AggressiveCacheMode mode, ref string database)
+        private IDisposable SetAggressiveCache(TimeSpan cacheDuration, AggressiveCacheMode mode, ref string database)
         {
             AssertInitialized();
 
@@ -395,7 +395,7 @@ namespace Raven.Client.Documents
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private async Task<IDisposable> InternalAggressivelyCacheForAsync(IDisposable release, AggressiveCacheMode mode, string database)
+        private async Task<IDisposable> FinalizeAggressiveCacheAsync(IDisposable release, AggressiveCacheMode mode, string database)
         {
             // this method is separated from the AggressivelyCacheForAsync because of how AsyncLocal works
             try
