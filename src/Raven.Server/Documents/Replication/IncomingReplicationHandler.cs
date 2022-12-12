@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Replication
         private readonly TcpClient _tcpClient;
         private readonly Stream _stream;
         private readonly ReplicationLoader _parent;
-        private PoolOfThreads.LongRunningWork _incomingWork;
+        public PoolOfThreads.LongRunningWork IncomingWork { get; private set; }
         private readonly CancellationTokenSource _cts;
         private readonly Logger _log;
 
@@ -152,15 +152,15 @@ namespace Raven.Server.Documents.Replication
 
         public void Start()
         {
-            if (_incomingWork != null)
+            if (IncomingWork != null)
                 return;
 
             lock (this)
             {
-                if (_incomingWork != null)
+                if (IncomingWork != null)
                     return; // already set by someone else, they can start it
 
-                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadName);
+                IncomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadName);
             }
 
             if (_log.IsInfoEnabled)
@@ -200,6 +200,7 @@ namespace Raven.Server.Documents.Replication
             NativeMemory.EnsureRegistered();
             try
             {
+                _parent.ForTestingPurposes?.OnIncomingReplicationHandlerStart?.Invoke();
                 using (_connectionOptionsDisposable = _connectionOptions.ConnectionProcessingInProgress("Replication"))
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
@@ -293,7 +294,6 @@ namespace Raven.Server.Documents.Replication
 
 
                     _parent.ForTestingPurposes?.OnIncomingReplicationHandlerFailure?.Invoke(e);
-
 
 
                     OnFailed(e, this);
@@ -953,19 +953,18 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 _replicationFromAnotherSource.Set();
-
-                if (_incomingWork != PoolOfThreads.LongRunningWork.Current)
+                if (IncomingWork != PoolOfThreads.LongRunningWork.Current)
                 {
                     try
                     {
-                        _incomingWork?.Join(int.MaxValue);
+                        IncomingWork?.Join(int.MaxValue);
                     }
                     catch (ThreadStateException)
                     {
                         // expected if the thread hasn't been started yet
                     }
                 }
-                _incomingWork = null;
+                IncomingWork = null;
 
                 try
                 {
