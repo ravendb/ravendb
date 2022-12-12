@@ -96,7 +96,8 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
-                new TestIndex().Execute(store);
+                var index  = new TestIndex();
+                index.Execute(store);
 
                 var e = Assert.Throws<RavenException>(() =>
                 {
@@ -107,7 +108,7 @@ namespace SlowTests.Issues
                     }
                 });
 
-                Assert.Contains("The field 'LastName' is not indexed for index '{index.IndexName}', cannot query/sort on fields that are not indexed", e.InnerException.Message);
+                Assert.Contains($"The field 'LastName' is not indexed for index '{index.IndexName}', cannot query/sort on fields that are not indexed", e.InnerException.Message);
 
                 var mre = new ManualResetEventSlim();
 
