@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Server;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
@@ -111,22 +111,22 @@ namespace Voron.Data.Containers
             root.Header.NumberOfOverflowPages = 0;
             root.Header.NextFreePage = page.PageNumber;
 
-            root.Allocate(sizeof(SetState), ContainerPageHeader.FreeListOffset, out var freeListSet);
-            root.Allocate(sizeof(SetState), ContainerPageHeader.AllPagesOffset, out var allPagesSet);
+            root.Allocate(sizeof(PostingListState), ContainerPageHeader.FreeListOffset, out var freeListSet);
+            root.Allocate(sizeof(PostingListState), ContainerPageHeader.AllPagesOffset, out var allPagesSet);
             root.Allocate(sizeof(long), ContainerPageHeader.NumberOfEntriesOffset, out var numberOfEntriesBuffer);
             ref var numberOfEntries = ref MemoryMarshal.AsRef<long>(numberOfEntriesBuffer);
             numberOfEntries = 3;
 
             // We are creating a set where we will store the free list.
-            ref var freeListState = ref MemoryMarshal.AsRef<SetState>(freeListSet);
-            Set.Create(llt, ref freeListState);
+            ref var freeListState = ref MemoryMarshal.AsRef<PostingListState>(freeListSet);
+            PostingList.Create(llt, ref freeListState);
 
             // We are creating a set where we will store the list of all pages.
-            ref var allPagesState = ref MemoryMarshal.AsRef<SetState>(allPagesSet);
-            Set.Create(llt, ref allPagesState);
+            ref var allPagesState = ref MemoryMarshal.AsRef<PostingListState>(allPagesSet);
+            PostingList.Create(llt, ref allPagesState);
 
             // We are adding the root to the list of all pages.
-            Set allPages = new Set(llt, AllPagesSetName, MemoryMarshal.AsRef<SetState>(allPagesSet));
+            PostingList allPages = new PostingList(llt, AllPagesSetName, MemoryMarshal.AsRef<PostingListState>(allPagesSet));
             allPages.Add(page.PageNumber);
             allPages.PrepareForCommit();
             allPagesState = allPages.State;
@@ -276,7 +276,7 @@ namespace Voron.Data.Containers
             for (; i < tries; i++)  
             {                
                 var freeListStateSpan = rootContainer.GetItem(ContainerPageHeader.FreeListOffset);
-                var freeList = new Set(llt, FreePagesSetName, MemoryMarshal.AsRef<SetState>(freeListStateSpan));
+                var freeList = new PostingList(llt, FreePagesSetName, MemoryMarshal.AsRef<PostingListState>(freeListStateSpan));
                 var it = freeList.Iterate();
                 if (it.MoveNext() == false)
                     break;
@@ -397,14 +397,14 @@ namespace Voron.Data.Containers
             throw new VoronErrorException("The page is not a container page");
         }
 
-        public static Set GetAllPagesSet(LowLevelTransaction llt, long containerId)
+        public static PostingList GetAllPagesSet(LowLevelTransaction llt, long containerId)
         {
             var rootPage = llt.GetPage(containerId);
             var rootContainer = new Container(rootPage);
             
             var span = rootContainer.GetItem(ContainerPageHeader.AllPagesOffset);
-            ref var state = ref MemoryMarshal.AsRef<SetState>(span);
-            var set = new Set(llt, AllPagesSetName, state);
+            ref var state = ref MemoryMarshal.AsRef<PostingListState>(span);
+            var set = new PostingList(llt, AllPagesSetName, state);
             return set;
         }
 
@@ -417,8 +417,8 @@ namespace Voron.Data.Containers
 
         private static void ModifyMetadataList(LowLevelTransaction llt, in Container rootContainer, Slice name, int offset, bool add, long value)
         {
-            ref var state = ref MemoryMarshal.AsRef<SetState>(rootContainer.GetItem(offset));
-            var set = new Set(llt, name, state);
+            ref var state = ref MemoryMarshal.AsRef<PostingListState>(rootContainer.GetItem(offset));
+            var set = new PostingList(llt, name, state);
             if (add)
                 set.Add(value);
             else

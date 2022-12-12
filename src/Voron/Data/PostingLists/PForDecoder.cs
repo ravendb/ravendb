@@ -12,7 +12,7 @@ using System.Runtime.Intrinsics.X86;
 using Sparrow.Json;
 using Sparrow.Server;
 
-namespace Voron.Data.Sets
+namespace Voron.Data.PostingLists
 {
 
     public unsafe static class PForDecoder

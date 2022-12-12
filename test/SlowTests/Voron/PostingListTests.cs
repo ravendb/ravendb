@@ -3,18 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests.Voron;
 using Tests.Infrastructure;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Voron;
 
-public class SetTests : StorageTest
+public class PostingListTests : StorageTest
 {
     private readonly List<long> _data;
     private readonly List<long> _random;
 
-    public SetTests(ITestOutputHelper output) : base(output)
+    public PostingListTests(ITestOutputHelper output) : base(output)
     {
         const int Size = 400_000;
         var diff = new[] { 17, 250, 4828, 28, 12, 3 };
@@ -30,9 +30,9 @@ public class SetTests : StorageTest
         _random = _data.OrderBy(x => random.Next()).ToList();
     }
 
-    private List<long> AllValues(Set set)
+    private List<long> AllValues(PostingList postingList)
     {
-        var it = set.Iterate();
+        var it = postingList.Iterate();
         var l = new List<long>();
         if (it.Seek(0) == false)
             return l;
@@ -49,7 +49,7 @@ public class SetTests : StorageTest
     {
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = wtx.OpenSet("test");
+            var tree = wtx.OpenPostingList("test");
             foreach (long i in _data)
             {
                 tree.Add(i);
@@ -60,7 +60,7 @@ public class SetTests : StorageTest
 
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = wtx.OpenSet("test");
+            var tree = wtx.OpenPostingList("test");
             foreach (long i in _random)
             {
                 tree.Remove(i);
@@ -71,7 +71,7 @@ public class SetTests : StorageTest
 
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = rtx.OpenSet("test");
+            var tree = rtx.OpenPostingList("test");
             Assert.Empty(AllValues(tree));
             Assert.Equal(0, tree.State.BranchPages);
             Assert.Equal(1, tree.State.LeafPages);
@@ -84,7 +84,7 @@ public class SetTests : StorageTest
     {
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = wtx.OpenSet("test");
+            var tree = wtx.OpenPostingList("test");
             foreach (long i in _data)
             {
                 tree.Add(i);
@@ -95,7 +95,7 @@ public class SetTests : StorageTest
 
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = rtx.OpenSet("test");
+            var tree = rtx.OpenPostingList("test");
             Assert.Equal(_data, AllValues(tree));
         }
     }
@@ -105,7 +105,7 @@ public class SetTests : StorageTest
     {
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = wtx.OpenSet("test");
+            var tree = wtx.OpenPostingList("test");
 
             for (int i = 0; i < 10_000; i++)
             {
@@ -122,7 +122,7 @@ public class SetTests : StorageTest
 
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = rtx.OpenSet("test");
+            var tree = rtx.OpenPostingList("test");
             var it = tree.Iterate();
             Assert.True(it.Seek(0));
             bool movedNext = true;
@@ -147,7 +147,7 @@ public class SetTests : StorageTest
     {
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = wtx.OpenSet("test");
+            var tree = wtx.OpenPostingList("test");
             foreach (long i in _data)
             {
                 tree.Add(i);
@@ -158,7 +158,7 @@ public class SetTests : StorageTest
 
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = wtx.OpenSet("test");
+            var tree = wtx.OpenPostingList("test");
             foreach (long i in _data)
             {
                 tree.Remove(i);
@@ -169,7 +169,7 @@ public class SetTests : StorageTest
 
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = rtx.OpenSet("test");
+            var tree = rtx.OpenPostingList("test");
             Assert.Empty(AllValues(tree));
             Assert.Equal(0, tree.State.BranchPages);
             Assert.Equal(1, tree.State.LeafPages);
@@ -182,7 +182,7 @@ public class SetTests : StorageTest
     {
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = wtx.OpenSet("test");
+            var tree = wtx.OpenPostingList("test");
             foreach (long i in _random)
             {
                 tree.Add(i);
@@ -193,7 +193,7 @@ public class SetTests : StorageTest
 
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = rtx.OpenSet("test");
+            var tree = rtx.OpenPostingList("test");
             List<long> allValues = AllValues(tree);
             IEnumerable<long> diff = _data.Except(allValues).ToArray();
             Assert.Empty(diff);
@@ -206,7 +206,7 @@ public class SetTests : StorageTest
     {
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = wtx.OpenSet("test");
+            var tree = wtx.OpenPostingList("test");
             foreach (long i in _random)
             {
                 tree.Add(i);
@@ -217,7 +217,7 @@ public class SetTests : StorageTest
 
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = wtx.OpenSet("test");
+            var tree = wtx.OpenPostingList("test");
             foreach (long i in _random)
             {
                 tree.Remove(i);
@@ -228,7 +228,7 @@ public class SetTests : StorageTest
 
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = rtx.OpenSet("test");
+            var tree = rtx.OpenPostingList("test");
             Assert.Empty(AllValues(tree));
             Assert.Equal(0, tree.State.BranchPages);
             Assert.Equal(1, tree.State.LeafPages);
@@ -241,7 +241,7 @@ public class SetTests : StorageTest
     {
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = wtx.OpenSet("test");
+            var tree = wtx.OpenPostingList("test");
             foreach (long i in _data)
             {
                 tree.Add(i);
@@ -252,7 +252,7 @@ public class SetTests : StorageTest
 
         using (var wtx = Env.WriteTransaction())
         {
-            var tree = wtx.OpenSet("test");
+            var tree = wtx.OpenPostingList("test");
             for (int i = _data.Count - 1; i >= 0; i--)
             {
                 tree.Remove(_data[i]);
@@ -263,7 +263,7 @@ public class SetTests : StorageTest
 
         using (var rtx = Env.ReadTransaction())
         {
-            var tree = rtx.OpenSet("test");
+            var tree = rtx.OpenPostingList("test");
             Assert.Empty(AllValues(tree));
             Assert.Equal(0, tree.State.BranchPages);
             Assert.Equal(1, tree.State.LeafPages);

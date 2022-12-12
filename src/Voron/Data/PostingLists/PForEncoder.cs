@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using Sparrow.Compression;
 
-namespace Voron.Data.Sets
+namespace Voron.Data.PostingLists
 {
     
     /*

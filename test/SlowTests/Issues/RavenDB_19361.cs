@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests.Voron;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +18,7 @@ public class RavenDB_19361 : StorageTest
     {
         using (var wtx = Env.WriteTransaction())
         {
-            var set = wtx.OpenSet("test");
+            var set = wtx.OpenPostingList("test");
 
             for (int i = 0; i < 3; i++)
             {
@@ -32,7 +32,7 @@ public class RavenDB_19361 : StorageTest
 
         using (var rtx = Env.ReadTransaction())
         {
-            var set = rtx.OpenSet("test");
+            var set = rtx.OpenPostingList("test");
             Assert.Equal(128 + 1, set.State.NumberOfEntries);
         }
     }
@@ -43,7 +43,7 @@ public class RavenDB_19361 : StorageTest
         var mem = new HashSet<long>();
         using (var wtx = Env.WriteTransaction())
         {
-            var set = wtx.OpenSet("test");
+            var set = wtx.OpenPostingList("test");
 
             for (int j = 0; j < 128 * 4; j++)
             {
@@ -55,7 +55,7 @@ public class RavenDB_19361 : StorageTest
         
         using (var wtx = Env.WriteTransaction())
         {
-            var set = wtx.OpenSet("test");
+            var set = wtx.OpenPostingList("test");
 
             set.Add(10_000);
             mem.Add(10_000);
@@ -71,7 +71,7 @@ public class RavenDB_19361 : StorageTest
 
         using (var rtx = Env.ReadTransaction())
         {
-            var set = rtx.OpenSet("test");
+            var set = rtx.OpenPostingList("test");
             Assert.Equal(mem.Count, set.State.NumberOfEntries);
         }
     }

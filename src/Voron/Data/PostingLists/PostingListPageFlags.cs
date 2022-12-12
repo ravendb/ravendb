@@ -1,9 +1,9 @@
 ﻿using System;
 
-namespace Voron.Data.Sets
+namespace Voron.Data.PostingLists
 {
     [Flags]
-    public enum SetFlags : byte
+    public enum PostingListPageFlags : byte
     {
         None = 0,
         Branch = 1,

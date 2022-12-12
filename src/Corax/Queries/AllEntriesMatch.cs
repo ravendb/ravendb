@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Voron;
 using Voron.Data.Containers;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Voron.Global;
 using Voron.Impl;
 
@@ -16,7 +16,7 @@ namespace Corax.Queries
     {
         private readonly Transaction _tx;
         private readonly long _count;
-        private Set.Iterator _entriesPagesIt;
+        private PostingList.Iterator _entriesPagesIt;
         private int _offset;
         private int _itemsLeftOnCurrentPage;
         private Page _currentPage;

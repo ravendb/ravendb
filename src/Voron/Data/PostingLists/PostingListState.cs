@@ -1,9 +1,9 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Voron.Data.Sets
+namespace Voron.Data.PostingLists
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
-    public unsafe struct SetState
+    public unsafe struct PostingListState
     {
         [FieldOffset(0)]
         public RootObjectType RootObjectType;

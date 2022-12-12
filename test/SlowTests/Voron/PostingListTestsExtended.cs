@@ -4,9 +4,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Voron;
 
-public class SetTestsExtended : NoDisposalNoOutputNeeded
+public class PostingListTestsExtended : NoDisposalNoOutputNeeded
 {
-    public SetTestsExtended(ITestOutputHelper output) : base(output)
+    public PostingListTestsExtended(ITestOutputHelper output) : base(output)
     {
     }
     
@@ -14,7 +14,7 @@ public class SetTestsExtended : NoDisposalNoOutputNeeded
     [InlineData(1337, 200000)]
     public void CanDeleteAndInsertInRandomOrder(int seed, int size)
     {
-        using var testClass = new FastTests.Voron.Sets.SetTests(Output);
+        using var testClass = new FastTests.Voron.Sets.PostingListTests(Output);
         testClass.CanDeleteAndInsertInRandomOrder(seed, size);
     }
 }
