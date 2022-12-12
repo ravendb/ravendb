@@ -1809,7 +1809,6 @@ namespace Raven.Server.Documents.Replication
                 ForTestingPurposes?.BeforeDisposingIncomingReplicationHandlers?.Invoke();
                 foreach (var incoming in _incoming)
                 {
-                    incoming.Value.IncomingWork?.Join(Int32.MaxValue);
                     ea.Execute(incoming.Value.Dispose);
                 }
 

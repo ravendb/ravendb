@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Replication
         private readonly TcpClient _tcpClient;
         private readonly Stream _stream;
         private readonly ReplicationLoader _parent;
-        public PoolOfThreads.LongRunningWork IncomingWork { get; private set; }
+        private PoolOfThreads.LongRunningWork _incomingWork;
         private readonly CancellationTokenSource _cts;
         private readonly Logger _log;
 
@@ -152,15 +152,15 @@ namespace Raven.Server.Documents.Replication
 
         public void Start()
         {
-            if (IncomingWork != null)
+            if (_incomingWork != null)
                 return;
 
             lock (this)
             {
-                if (IncomingWork != null)
+                if (_incomingWork != null)
                     return; // already set by someone else, they can start it
 
-                IncomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadName);
+                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => { DoIncomingReplication(); }, null, IncomingReplicationThreadName);
             }
 
             if (_log.IsInfoEnabled)
@@ -910,6 +910,18 @@ namespace Raven.Server.Documents.Replication
 
         public void Dispose()
         {
+            if (_incomingWork != PoolOfThreads.LongRunningWork.Current)
+            {
+                try
+                {
+                    _incomingWork?.Join(int.MaxValue);
+                }
+                catch (ThreadStateException)
+                {
+                    // expected if the thread hasn't been started yet
+                }
+            }
+            _incomingWork = null;
             _disposeOnce.Dispose();
         }
 
@@ -953,18 +965,6 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 _replicationFromAnotherSource.Set();
-                if (IncomingWork != PoolOfThreads.LongRunningWork.Current)
-                {
-                    try
-                    {
-                        IncomingWork?.Join(int.MaxValue);
-                    }
-                    catch (ThreadStateException)
-                    {
-                        // expected if the thread hasn't been started yet
-                    }
-                }
-                IncomingWork = null;
 
                 try
                 {
