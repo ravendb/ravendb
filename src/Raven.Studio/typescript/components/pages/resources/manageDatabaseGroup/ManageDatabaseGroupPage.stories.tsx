@@ -16,8 +16,6 @@ export default {
 } as ComponentMeta<typeof ManageDatabaseGroupPage>;
 
 function commonInit() {
-    //TODO: use mockHooks
-
     accessManager.default.securityClearance("ClusterAdmin");
     clusterTopologyManager.default.topology(ClusterStubs.singleNodeTopology());
     licenseModel.licenseStatus({

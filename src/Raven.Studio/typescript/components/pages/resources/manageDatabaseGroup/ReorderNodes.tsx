@@ -1,6 +1,7 @@
 ﻿import React from "react";
 
 export function ReorderNodes() {
+    //TODO review data-bind
     return <h1>TODO</h1>;
 }
 

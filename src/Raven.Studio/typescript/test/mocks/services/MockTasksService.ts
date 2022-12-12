@@ -1,7 +1,7 @@
 import { AutoMockService, MockedValue } from "./AutoMockService";
 import TasksService from "components/services/TasksService";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
-import { TasksStubs } from "../../stubs/TasksStubs"; //TODO: use global path!
+import { TasksStubs } from "test/stubs/TasksStubs";
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import GetPeriodicBackupStatusOperationResult = Raven.Client.Documents.Operations.Backups.GetPeriodicBackupStatusOperationResult;
 
