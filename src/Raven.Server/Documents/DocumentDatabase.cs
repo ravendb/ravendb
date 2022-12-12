@@ -433,6 +433,20 @@ namespace Raven.Server.Documents
         private int _clusterTransactionDelayOnFailure = 1000;
         private FileLocker _fileLocker;
 
+        private static readonly List<StorageEnvironmentWithType.StorageEnvironmentType> DefaultStorageEnvironmentTypes = new()
+        {
+            StorageEnvironmentWithType.StorageEnvironmentType.Documents,
+            StorageEnvironmentWithType.StorageEnvironmentType.Configuration,
+            StorageEnvironmentWithType.StorageEnvironmentType.Index
+        };
+
+        private static readonly List<StorageEnvironmentWithType.StorageEnvironmentType> DefaultStorageEnvironmentTypesForBackup = new()
+        {
+            StorageEnvironmentWithType.StorageEnvironmentType.Index,
+            StorageEnvironmentWithType.StorageEnvironmentType.Documents,
+            StorageEnvironmentWithType.StorageEnvironmentType.Configuration,
+        };
+
         private async Task ExecuteClusterTransactionTask()
         {
             while (DatabaseShutdown.IsCancellationRequested == false)
@@ -1056,47 +1070,67 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<StorageEnvironmentWithType> GetAllStoragesEnvironment()
+        public IEnumerable<StorageEnvironmentWithType> GetAllStoragesEnvironment(List<StorageEnvironmentWithType.StorageEnvironmentType> types = null)
         {
-            // TODO :: more storage environments ?
-            var documentsStorage = DocumentsStorage;
-            if (documentsStorage != null)
-                yield return
-                    new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
-                        documentsStorage.Environment);
-            var configurationStorage = ConfigurationStorage;
-            if (configurationStorage != null)
-                yield return
-                    new StorageEnvironmentWithType("Configuration",
-                        StorageEnvironmentWithType.StorageEnvironmentType.Configuration, configurationStorage.Environment);
+            types ??= DefaultStorageEnvironmentTypes;
 
-            //check for null to prevent NRE when disposing the DocumentDatabase
-            foreach (var index in (IndexStore?.GetIndexes()).EmptyIfNull())
+            // TODO :: more storage environments ?
+            foreach (var type in types)
             {
-                var env = index?._indexStorage?.Environment();
-                if (env != null)
-                    yield return
-                        new StorageEnvironmentWithType(index.Name,
-                            StorageEnvironmentWithType.StorageEnvironmentType.Index, env)
+                switch (type)
+                {
+                    case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
+                        var documentsStorage = DocumentsStorage;
+                        if (documentsStorage != null)
+                            yield return
+                                new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
+                                    documentsStorage.Environment);
+                        break;
+                    
+                    case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
+                        var configurationStorage = ConfigurationStorage;
+                        if (configurationStorage != null)
+                            yield return
+                                new StorageEnvironmentWithType("Configuration",
+                                    StorageEnvironmentWithType.StorageEnvironmentType.Configuration, configurationStorage.Environment);
+                        break;
+
+                    case StorageEnvironmentWithType.StorageEnvironmentType.Index:
+                        //check for null to prevent NRE when disposing the DocumentDatabase
+                        foreach (var index in (IndexStore?.GetIndexes()).EmptyIfNull())
                         {
-                            LastIndexQueryTime = index.GetLastQueryingTime()
-                        };
+                            var env = index?._indexStorage?.Environment();
+                            if (env != null)
+                                yield return
+                                    new StorageEnvironmentWithType(index.Name,
+                                        StorageEnvironmentWithType.StorageEnvironmentType.Index, env)
+                                    {
+                                        LastIndexQueryTime = index.GetLastQueryingTime()
+                                    };
+                        }
+                        break;
+                }
             }
         }
 
         private IEnumerable<FullBackup.StorageEnvironmentInformation> GetAllStoragesForBackup(bool excludeIndexes)
         {
-            foreach (var storageEnvironmentWithType in GetAllStoragesEnvironment())
+            foreach (var storageEnvironmentWithType in GetAllStoragesEnvironment(DefaultStorageEnvironmentTypesForBackup))
             {
                 switch (storageEnvironmentWithType.Type)
                 {
                     case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
+                        ForTestingPurposes?.BeforeSnapshotOfDocuments?.Invoke();
+
                         yield return new FullBackup.StorageEnvironmentInformation
                         {
                             Name = string.Empty,
                             Folder = Constants.Documents.PeriodicBackup.Folders.Documents,
                             Env = storageEnvironmentWithType.Environment
                         };
+
+                        ForTestingPurposes?.AfterSnapshotOfDocuments?.Invoke();
+
                         break;
 
                     case StorageEnvironmentWithType.StorageEnvironmentType.Index:
@@ -1131,6 +1165,14 @@ namespace Raven.Server.Documents
         {
             SmugglerResult smugglerResult;
 
+            long lastTombstoneEtag = 0;
+            using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                lastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(ctx.Transaction.InnerTransaction);
+            }
+
+            using (TombstoneCleaner.PreventTombstoneCleaningUpToEtag(lastTombstoneEtag))
             using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
             {
@@ -1846,6 +1888,10 @@ namespace Raven.Server.Documents
             internal Action AfterTxMergerDispose;
 
             internal Action BeforeExecutingClusterTransactions;
+
+            internal Action BeforeSnapshotOfDocuments;
+
+            internal Action AfterSnapshotOfDocuments;
 
             internal bool SkipDrainAllRequests = false;
 
