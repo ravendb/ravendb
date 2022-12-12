@@ -17,12 +17,16 @@ public readonly unsafe struct PostingListLeafPage
 
     public Span<byte> SpanFor(int idx)
     {
-        if (idx >= Header->NumberOfCompressedRuns)
+        return SpanFor(Header, idx);
+    }
+    private static Span<byte> SpanFor(PostingListLeafPageHeader* header, int idx)
+    {
+        if (idx >= header->NumberOfCompressedRuns)
             throw new ArgumentOutOfRangeException(nameof(idx));
 
-        var runs = (CompressedHeader*)((byte*)Header + PageHeader.SizeOf);
+        var runs = (CompressedHeader*)((byte*)header + PageHeader.SizeOf);
 
-        return new Span<byte>((byte*)Header + runs[idx].Position, runs[idx].Length);
+        return new Span<byte>((byte*)header + runs[idx].Position, runs[idx].Length);
     }
 
     public CompressedHeader* Runs => (CompressedHeader*)((byte*)Header + PageHeader.SizeOf);
@@ -374,6 +378,14 @@ public readonly unsafe struct PostingListLeafPage
                     {
                         // we are now writing to *another* page, but we consumed all the
                         // compressed entries on this page, so we should return back to the caller
+
+                        // we may have checked-out addition/removal, and need to "return" them so we'll
+                        // process them in the next page
+                        if (_additionCurrent != InvalidValue)
+                            AdditionsIdx--;
+                        if (_removalCurrent != InvalidValue)
+                            RemovalsIdx--;
+                        
                         FlushEncoder(ref encoder, tmp, newHeader);
                         return;
                     }
@@ -551,16 +563,28 @@ public readonly unsafe struct PostingListLeafPage
         public int NumberOfEntries;
     }
 
-    public void CopyEntriesToEndOf(PostingListLeafPage other)
+    public static void Merge(LowLevelTransaction llt, PostingListLeafPageHeader* dest, PostingListLeafPageHeader* first, PostingListLeafPageHeader* second)
     {
-        VerifyOtherLastValueBeforeMyFirstOne(other);
-        
-        for (int i = 0; i < Header->NumberOfCompressedRuns; i++)
+        using(llt.Environment.GetTemporaryPage(llt, out var tmp))
         {
-            ref CompressedHeader compressedHeader = ref Runs[i];
-            var span = new Span<byte>((byte*)Header + compressedHeader.Position, compressedHeader.Length);
-            if (TryAdd(other.Header, span) == false)
-                throw new InvalidOperationException("This is a bug, caller should ensure that there is sufficient space");
+            PostingListLeafPageHeader* newHeader = (PostingListLeafPageHeader*)tmp.TempPagePointer;
+            newHeader->PageNumber = dest->PageNumber;
+            InitLeaf(newHeader, dest->Baseline);
+            for (int i = 0; i < first->NumberOfCompressedRuns; i++)
+            {
+                if (TryAdd(newHeader, SpanFor(first, i)) == false)
+                {
+                    throw new InvalidOperationException("Not enough space in new page, should never happen, caller handled that");
+                }
+            } 
+            for (int i = 0; i < second->NumberOfCompressedRuns; i++)
+            {
+                if (TryAdd(newHeader, SpanFor(second, i)) == false)
+                {
+                    throw new InvalidOperationException("Not enough space in new page, should never happen, caller handled that");
+                }
+            }
+            tmp.AsSpan().CopyTo(new Span<byte>(dest, Constants.Storage.PageSize));
         }
     }
 
