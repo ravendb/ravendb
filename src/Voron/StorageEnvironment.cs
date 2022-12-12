@@ -23,7 +23,7 @@ using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
 using Voron.Data.Fixed;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Voron.Data.Tables;
 using Voron.Debugging;
 using Voron.Exceptions;
@@ -1146,7 +1146,7 @@ namespace Voron
                                 detailedReportInput.Containers[currentKey] = container;
                                 break;
                             case RootObjectType.Set:
-                                var set = tx.OpenSet(currentKey);
+                                var set = tx.OpenPostingList(currentKey);
                                 detailedReportInput.Sets.Add(set);
                                 break;
                             case RootObjectType.CompactTree:

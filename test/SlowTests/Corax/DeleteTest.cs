@@ -11,7 +11,7 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
 using Voron.Data.Containers;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -89,9 +89,9 @@ public class DeleteTest : StorageTest
             Assert.NotEqual(0, containerId & (long)TermIdMask.Set);
             var setId = containerId & ~0b11;
             var setStateSpan = Container.GetMutable(llt, setId);
-            ref var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
+            ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             using var _ = Slice.From(llt.Allocator, "Content", ByteStringType.Immutable, out var fieldName);
-            var set = new Set(llt, fieldName, in setState);
+            var set = new PostingList(llt, fieldName, in setState);
             setState = set.State;
             Assert.Equal(count - previousIds.Count, setState.NumberOfEntries);
 

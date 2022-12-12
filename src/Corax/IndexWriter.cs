@@ -21,7 +21,7 @@ using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Voron.Impl;
 using static Voron.Data.CompactTrees.CompactTree;
 
@@ -1234,9 +1234,9 @@ namespace Corax
             {
                 var id = idInTree & Constants.StorageMask.ContainerType;
                 var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, id);
-                ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
+                ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
                 
-                using var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
+                using var set = new PostingList(Transaction.LowLevelTransaction, Slices.Empty, setState);
                 var iterator = set.Iterate();
                 while (iterator.MoveNext())
                 {
@@ -1580,9 +1580,9 @@ namespace Corax
             entries.SortAndRemoveDuplicates();
 
             var setSpace = Container.GetMutable(llt, id);
-            ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
+            ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             
-            using var set = new Set(llt, Slices.Empty, setState);
+            using var set = new PostingList(llt, Slices.Empty, setState);
             set.Remove(entries.Removals);
             set.Add(entries.Additions);
             set.PrepareForCommit();
@@ -1735,11 +1735,11 @@ namespace Corax
 
         private unsafe void AddNewTermToSet(ReadOnlySpan<long> additions, out long termId)
         {
-            long setId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, sizeof(SetState), out var setSpace);
-            ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
-            Set.Create(Transaction.LowLevelTransaction, ref setState);
+            long setId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
+            ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
+            PostingList.Create(Transaction.LowLevelTransaction, ref setState);
             
-            using var set = new Set(Transaction.LowLevelTransaction, Slices.Empty, setState);
+            using var set = new PostingList(Transaction.LowLevelTransaction, Slices.Empty, setState);
             set.Add(additions);
             set.PrepareForCommit();
             setState = set.State;

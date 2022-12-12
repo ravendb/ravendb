@@ -4,7 +4,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 
-namespace Voron.Data.Sets;
+namespace Voron.Data.PostingLists;
 
 public unsafe struct NativeIntegersList : IDisposable
 {

@@ -8,13 +8,13 @@ using Sparrow.Compression;
 using Voron.Global;
 using Voron.Impl;
 
-namespace Voron.Data.Sets
+namespace Voron.Data.PostingLists
 {
-    public readonly unsafe struct SetBranchPage
+    public readonly unsafe struct PostingListBranchPage
     {
         private readonly Page _page;
 
-        public SetBranchPage(Page page)
+        public PostingListBranchPage(Page page)
         {
             _page = page;
         }
@@ -40,7 +40,7 @@ namespace Voron.Data.Sets
         /// </summary>
         public const int MinNumberOfValuesBeforeMerge = 180;
         
-        public SetBranchPageHeader* Header => (SetBranchPageHeader*)_page.Pointer;
+        public PostingListBranchPageHeader* Header => (PostingListBranchPageHeader*)_page.Pointer;
         
         private Span<ushort> Positions => new Span<ushort>(_page.Pointer + PageHeader.SizeOf, Header->NumberOfEntries);
 
@@ -70,7 +70,7 @@ namespace Voron.Data.Sets
             using var _ = tx.Environment.GetTemporaryPage(tx, out var tmp);
             Span<byte> tmpSpan = tmp.AsSpan();
             Span.CopyTo(tmpSpan);
-            var header = (SetBranchPageHeader*)tmp.TempPagePointer;
+            var header = (PostingListBranchPageHeader*)tmp.TempPagePointer;
             header->Upper = Constants.Storage.PageSize;
             var positions = MemoryMarshal.Cast<byte, ushort>(tmpSpan.Slice(PageHeader.SizeOf)).Slice(0, header->NumberOfEntries);
             int endOfPositionsArray = PageHeader.SizeOf + sizeof(ushort) * positions.Length;
@@ -108,10 +108,10 @@ namespace Voron.Data.Sets
 
         public struct Iterator
         {
-            private readonly SetBranchPage _parent;
+            private readonly PostingListBranchPage _parent;
             private int _pos;
 
-            public Iterator(SetBranchPage parent)
+            public Iterator(PostingListBranchPage parent)
             {
                 _parent = parent;
                 _pos = 0;

@@ -58,7 +58,7 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
     
     private static JArray  ReadDocFromResource(string file)
     {
-        var reader = new StreamReader(typeof(SetAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file));
+        var reader = new StreamReader(typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file));
         return JArray.Parse(reader.ReadToEnd());
     }
 }

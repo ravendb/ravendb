@@ -2,34 +2,30 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Sparrow;
-using Sparrow.Compression;
-using Sparrow.Json;
 using Voron.Impl;
-using Voron.Impl.FileHeaders;
 using Constants = Voron.Global.Constants;
 
-namespace Voron.Data.Sets;
+namespace Voron.Data.PostingLists;
 
-public readonly unsafe struct SetLeafPage
+public readonly unsafe struct PostingListLeafPage
 {
     private readonly Page _page;
-    public SetLeafPageHeader* Header => (SetLeafPageHeader*)_page.Pointer;
+    public PostingListLeafPageHeader* Header => (PostingListLeafPageHeader*)_page.Pointer;
 
     public int SpaceUsed => Header->Floor + (Constants.Storage.PageSize - Header->Ceiling);
 
     public Span<byte> SpanFor(int idx)
     {
-        if (idx >= Header->NumberOfCompressedPositions)
+        if (idx >= Header->NumberOfCompressedRuns)
             throw new ArgumentOutOfRangeException(nameof(idx));
 
-        var positions = (CompressedHeader*)((byte*)Header + PageHeader.SizeOf);
+        var runs = (CompressedHeader*)((byte*)Header + PageHeader.SizeOf);
 
-        return new Span<byte>((byte*)Header + positions[idx].Position, positions[idx].Length);
+        return new Span<byte>((byte*)Header + runs[idx].Position, runs[idx].Length);
     }
 
-    public CompressedHeader* Positions => (CompressedHeader*)((byte*)Header + PageHeader.SizeOf);
+    public CompressedHeader* Runs => (CompressedHeader*)((byte*)Header + PageHeader.SizeOf);
 
     public struct CompressedHeader
     {
@@ -42,23 +38,23 @@ public readonly unsafe struct SetLeafPage
         }
     }
 
-    public SetLeafPage(Page page)
+    public PostingListLeafPage(Page page)
     {
         _page = page;
     }
 
-    public static void InitLeaf(SetLeafPageHeader* header, long baseline)
+    public static void InitLeaf(PostingListLeafPageHeader* header, long baseline)
     {
         header->Baseline = baseline & int.MinValue;
         header->Flags = PageFlags.Single | PageFlags.Other;
         header->SetFlags = ExtendedPageType.SetLeaf;
-        header->NumberOfCompressedPositions = 0;
+        header->NumberOfCompressedRuns = 0;
         header->Ceiling = Constants.Storage.PageSize;
         header->NumberOfEntries = 0;
     }
     
 
-    public static bool TryAdd(SetLeafPageHeader* header, Span<byte> compressed)
+    public static bool TryAdd(PostingListLeafPageHeader* header, Span<byte> compressed)
     {
         int floor = header->Floor + sizeof(CompressedHeader);
         int ceilingAfterNewVal = header->Ceiling - compressed.Length;
@@ -70,8 +66,8 @@ public readonly unsafe struct SetLeafPage
         header->Ceiling = (ushort)ceilingAfterNewVal;
         var buf = new Span<byte>(header, Constants.Storage.PageSize);
         compressed.CopyTo(buf[ceilingAfterNewVal..]);
-        CompressedHeader* newMetadata = (CompressedHeader*)((byte*)header + PageHeader.SizeOf) + header->NumberOfCompressedPositions;
-        header->NumberOfCompressedPositions++;
+        CompressedHeader* newMetadata = (CompressedHeader*)((byte*)header + PageHeader.SizeOf) + header->NumberOfCompressedRuns;
+        header->NumberOfCompressedRuns++;
         header->NumberOfEntries += countOfItems;
         newMetadata->Length = (ushort)compressed.Length;
         newMetadata->Position = (ushort)ceilingAfterNewVal;
@@ -83,7 +79,7 @@ public readonly unsafe struct SetLeafPage
     [SkipLocalsInit]
     public struct Iterator
     {
-        private readonly SetLeafPage _parent;
+        private readonly PostingListLeafPage _parent;
         private int _idx;
         private bool _hasDecoder;
         private PForDecoder.DecoderState _decoderState;
@@ -94,11 +90,11 @@ public readonly unsafe struct SetLeafPage
         private fixed int _pforBuffer[PForEncoder.BufferLen];
         private fixed long _moveNextBuffer[MoveNextBufferSize];
         
-        public Iterator(SetLeafPage parent)
+        public Iterator(PostingListLeafPage parent)
         {
             _parent = parent;
-            _hasDecoder = _parent.Header->NumberOfCompressedPositions > 0;
-            _decoderState = _hasDecoder ? new PForDecoder.DecoderState(_parent.Positions[0].Length) : default;
+            _hasDecoder = _parent.Header->NumberOfCompressedRuns > 0;
+            _decoderState = _hasDecoder ? new PForDecoder.DecoderState(_parent.Runs[0].Length) : default;
             _moveNextIndex = 0;
             _moveNextLength = 0;
             _compressIndex = 0;
@@ -128,13 +124,13 @@ public readonly unsafe struct SetLeafPage
             if ((val & int.MinValue) > _parent.Header->Baseline)
             {
                 // not a match
-                _idx = _parent.Header->NumberOfCompressedPositions;
+                _idx = _parent.Header->NumberOfCompressedRuns;
                 _hasDecoder = false;
                 return;
             }
 
             var iVal = (int)val & int.MaxValue;
-            for (; _idx < _parent.Header->NumberOfCompressedPositions; _idx++)
+            for (; _idx < _parent.Header->NumberOfCompressedRuns; _idx++)
             {
                 Span<byte> compressed = _parent.SpanFor(_idx);
                 int lastValue = PForDecoder.ReadLast(compressed);
@@ -256,9 +252,9 @@ public readonly unsafe struct SetLeafPage
                     if (_compressLength > 0)
                         return;
                     _idx++;
-                    if (_idx >= _parent.Header->NumberOfCompressedPositions)
+                    if (_idx >= _parent.Header->NumberOfCompressedRuns)
                         break;
-                    _decoderState = new PForDecoder.DecoderState(_parent.Positions[_idx].Length);
+                    _decoderState = new PForDecoder.DecoderState(_parent.Runs[_idx].Length);
                 }
 
                 _hasDecoder = false;
@@ -287,7 +283,7 @@ public readonly unsafe struct SetLeafPage
         private const int DesirableMaxCompressedBits = (MaximumCompressedSizeBytes / 2) * 8; // about 1 KB
         private const long InvalidValue = long.MaxValue;
 
-        private readonly SetLeafPage _parent;
+        private readonly PostingListLeafPage _parent;
         private readonly LowLevelTransaction _tx;
         private readonly Span<long> _additions;
         private readonly Span<long> _removals;
@@ -298,7 +294,7 @@ public readonly unsafe struct SetLeafPage
         public int RemovalsIdx;
 
         public List<ExtraSegmentDetails> Extras;
-        private SetLeafPageHeader* Header => _parent.Header;
+        private PostingListLeafPageHeader* Header => _parent.Header;
         
         private bool _hasDecoder;
         private PForDecoder.DecoderState _decoderState;
@@ -307,9 +303,9 @@ public readonly unsafe struct SetLeafPage
         private long _removalCurrent;
         private int _uncompressedIdx;
         private int _uncompressedLen;
-        private int _positionsIdx;
+        private int _runIdx;
         
-        public Updater(SetLeafPage parent, Span<long> additions, Span<long> removals, LowLevelTransaction tx, long maxValidValue)
+        public Updater(PostingListLeafPage parent, Span<long> additions, Span<long> removals, LowLevelTransaction tx, long maxValidValue)
         {
             _parent = parent;
             _compressedCurrent = InvalidValue;
@@ -326,7 +322,7 @@ public readonly unsafe struct SetLeafPage
             _tx = tx;
             _maxValidValue = maxValidValue;
             Extras = null;
-            _positionsIdx = 0;
+            _runIdx = 0;
         }
 
 
@@ -339,7 +335,7 @@ public readonly unsafe struct SetLeafPage
                 return; // nothing to do
 
             using var _ = _tx.Environment.GetTemporaryPage(_tx, out var newPage);
-            SetLeafPageHeader* newHeader = (SetLeafPageHeader*)newPage.TempPagePointer;
+            PostingListLeafPageHeader* newHeader = (PostingListLeafPageHeader*)newPage.TempPagePointer;
             Memory.Copy(newPage.TempPagePointer, Header, PageHeader.SizeOf);
             InitLeaf(newHeader, Header->Baseline);
 
@@ -350,12 +346,12 @@ public readonly unsafe struct SetLeafPage
             Memory.Copy(_parent.Header, newPage.TempPagePointer, Constants.Storage.PageSize);
         }
 
-        private void MergeCompressedAdditionsAndRemovals(SetLeafPageHeader* newHeader)
+        private void MergeCompressedAdditionsAndRemovals(PostingListLeafPageHeader* newHeader)
         {
             using var __ = _tx.Allocator.Allocate(MaximumCompressedSizeBytes, out Span<byte> tmp);
             fixed (uint* pScratch = _scratch)
             {
-                FindFirstRelevantPositionAndCopyPreviousOnes(newHeader);
+                FindFirstRelevantRunAndCopyPreviousOnes(newHeader);
                 var encoder = new PForEncoder(tmp, pScratch);
                 while (true)
                 {
@@ -457,7 +453,7 @@ public readonly unsafe struct SetLeafPage
             }
         }
 
-        private void FlushEncoder(ref PForEncoder encoder, Span<byte> tmp, SetLeafPageHeader* newHeader)
+        private void FlushEncoder(ref PForEncoder encoder, Span<byte> tmp, PostingListLeafPageHeader* newHeader)
         {
             if (encoder.NumberOfAdditions == 0)
                 return;
@@ -491,10 +487,10 @@ public readonly unsafe struct SetLeafPage
 
         private void TryFillUncompressed()
         {
-            CompressedHeader* position = _parent.Positions;
+            CompressedHeader* runs = _parent.Runs;
             fixed (int* pUncompressed = _uncompressed)
             {
-                _uncompressedLen = PForDecoder.Decode(ref _decoderState, (byte*)Header + position[_positionsIdx].Position, position[_positionsIdx].Length,
+                _uncompressedLen = PForDecoder.Decode(ref _decoderState, (byte*)Header + runs[_runIdx].Position, runs[_runIdx].Length,
                     pUncompressed, PForEncoder.BufferLen);
             }
 
@@ -502,10 +498,10 @@ public readonly unsafe struct SetLeafPage
             if (_uncompressedLen != 0) 
                 return;
             
-            _positionsIdx++;
-            if (_positionsIdx < Header->NumberOfCompressedPositions)
+            _runIdx++;
+            if (_runIdx < Header->NumberOfCompressedRuns)
             {
-                _decoderState = new PForDecoder.DecoderState(position[_positionsIdx].Length);
+                _decoderState = new PForDecoder.DecoderState(runs[_runIdx].Length);
             }
             else
             {
@@ -513,7 +509,7 @@ public readonly unsafe struct SetLeafPage
             }
         }
 
-        private void FindFirstRelevantPositionAndCopyPreviousOnes(SetLeafPageHeader* newHeader)
+        private void FindFirstRelevantRunAndCopyPreviousOnes(PostingListLeafPageHeader* newHeader)
         {
             uint first = int.MaxValue;
             if (_additions.Length > 0 && _additions[0] <= _maxValidValue)
@@ -526,10 +522,10 @@ public readonly unsafe struct SetLeafPage
                 first = Math.Min((uint)_removals[0] & int.MaxValue, first);
             }
 
-            _positionsIdx = 0;
-            for (; _positionsIdx < Header->NumberOfCompressedPositions; _positionsIdx++)
+            _runIdx = 0;
+            for (; _runIdx < Header->NumberOfCompressedRuns; _runIdx++)
             {
-                var compressed = _parent.SpanFor(_positionsIdx);
+                var compressed = _parent.SpanFor(_runIdx);
                 if (first > PForDecoder.ReadLast(compressed))
                 {
                     if (TryAdd(newHeader, compressed) == false)
@@ -555,13 +551,13 @@ public readonly unsafe struct SetLeafPage
         public int NumberOfEntries;
     }
 
-    public void CopyEntriesToEndOf(SetLeafPage other)
+    public void CopyEntriesToEndOf(PostingListLeafPage other)
     {
         VerifyOtherLastValueBeforeMyFirstOne(other);
         
-        for (int i = 0; i < Header->NumberOfCompressedPositions; i++)
+        for (int i = 0; i < Header->NumberOfCompressedRuns; i++)
         {
-            ref CompressedHeader compressedHeader = ref Positions[i];
+            ref CompressedHeader compressedHeader = ref Runs[i];
             var span = new Span<byte>((byte*)Header + compressedHeader.Position, compressedHeader.Length);
             if (TryAdd(other.Header, span) == false)
                 throw new InvalidOperationException("This is a bug, caller should ensure that there is sufficient space");
@@ -569,18 +565,18 @@ public readonly unsafe struct SetLeafPage
     }
 
     [Conditional("DEBUG")]
-    private void VerifyOtherLastValueBeforeMyFirstOne(SetLeafPage other)
+    private void VerifyOtherLastValueBeforeMyFirstOne(PostingListLeafPage other)
     {
         Debug.Assert(other.Header->Baseline == Header->Baseline);
 
-        if (other.Header->NumberOfCompressedPositions == 0)
+        if (other.Header->NumberOfCompressedRuns == 0)
             return;
 
         Iterator iterator = GetIterator();
         if (iterator.MoveNext(out var first) == false)
             return;
 
-        int lastValueOfLastEntry = PForDecoder.ReadLast(SpanFor(other.Header->NumberOfCompressedPositions - 1));
+        int lastValueOfLastEntry = PForDecoder.ReadLast(SpanFor(other.Header->NumberOfCompressedRuns - 1));
         Debug.Assert(lastValueOfLastEntry > first);
     }
     
@@ -597,10 +593,10 @@ public readonly unsafe struct SetLeafPage
 
     public (long First, long Last) GetRange()
     {
-        if (Header->NumberOfCompressedPositions == 0)
+        if (Header->NumberOfCompressedRuns == 0)
             return (-1, -1);
         GetIterator().MoveNext(out var first);
-        int last = PForDecoder.ReadLast(SpanFor(Header->NumberOfCompressedPositions-1));
+        int last = PForDecoder.ReadLast(SpanFor(Header->NumberOfCompressedRuns-1));
 
         return ((Header->Baseline | (uint)first), (Header->Baseline | (uint)last));
     }

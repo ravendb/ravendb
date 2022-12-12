@@ -8,7 +8,7 @@ using Sparrow.Compression;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 
 namespace Corax;
 
@@ -80,8 +80,8 @@ public partial class IndexSearcher
         {
             var setId = containerId & Constants.StorageMask.ContainerType;
             var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
-            ref readonly var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
-            var set = new Set(_transaction.LowLevelTransaction, Slices.Empty, setState);
+            ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
+            var set = new PostingList(_transaction.LowLevelTransaction, Slices.Empty, setState);
             matches = TermMatch.YieldSet(Allocator, set, IsAccelerated);
         }
         else if ((containerId & (long)TermIdMask.Small) != 0)
@@ -129,7 +129,7 @@ public partial class IndexSearcher
         {
             var setId = value & Constants.StorageMask.ContainerType;
             var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
-            ref readonly var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
+            ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             return setState.NumberOfEntries;
         }
         
