@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -126,10 +127,8 @@ namespace Voron.Data.Containers
             PostingList.Create(llt, ref allPagesState);
 
             // We are adding the root to the list of all pages.
-            PostingList allPages = new PostingList(llt, AllPagesSetName, MemoryMarshal.AsRef<PostingListState>(allPagesSet));
-            allPages.Add(page.PageNumber);
-            allPages.PrepareForCommit();
-            allPagesState = allPages.State;
+            ReadOnlySpan<long> addition = stackalloc long[] { page.PageNumber };
+            PostingList.Update(llt, ref allPagesState, addition, ReadOnlySpan<long>.Empty);
             return page.PageNumber;
         }
 
@@ -200,7 +199,7 @@ namespace Voron.Data.Containers
                 overflowPageHeader->ContainerFlags = ExtendedPageType.ContainerOverflow;
 
                 rootContainer.Header.NumberOfOverflowPages += numberOfPages;
-                ModifyMetadataList(llt, rootContainer, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: true, overflowPage.PageNumber);
+                ModifyMetadataList(llt, rootContainer, ContainerPageHeader.AllPagesOffset, add: true, overflowPage.PageNumber);
 
                 allocatedSpace = overflowPage.AsSpan(PageHeader.SizeOf, size);
                 return overflowPage.PageNumber * Constants.Storage.PageSize; 
@@ -317,13 +316,13 @@ namespace Voron.Data.Containers
             void RemovePageFromContainerFreeList(Container parent, Container page)
             {
                 page.Header.OnFreeList = false;
-                ModifyMetadataList(llt, parent, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.Header.PageNumber);
+                ModifyMetadataList(llt, parent, ContainerPageHeader.FreeListOffset, add: false, page.Header.PageNumber);
             }
 
             void AddPageToContainerFreeList(Container parent, Container page)
             {
                 page.Header.OnFreeList = true;
-                ModifyMetadataList(llt, parent, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: true, page.Header.PageNumber);
+                ModifyMetadataList(llt, parent, ContainerPageHeader.AllPagesOffset, add: true, page.Header.PageNumber);
             }
         }
 
@@ -415,16 +414,12 @@ namespace Voron.Data.Containers
             return _page.AsSpan(item.Offset, item.Size);
         }
 
-        private static void ModifyMetadataList(LowLevelTransaction llt, in Container rootContainer, Slice name, int offset, bool add, long value)
+        private static void ModifyMetadataList(LowLevelTransaction llt, in Container rootContainer, int offset, bool add, long value)
         {
             ref var state = ref MemoryMarshal.AsRef<PostingListState>(rootContainer.GetItem(offset));
-            var set = new PostingList(llt, name, state);
-            if (add)
-                set.Add(value);
-            else
-                set.Remove(value);
-            set.PrepareForCommit();
-            state = set.State;
+            ReadOnlySpan<long> addition = add ? stackalloc long[] { value } : ReadOnlySpan<long>.Empty;
+            ReadOnlySpan<long> removal = add ? ReadOnlySpan<long>.Empty : stackalloc long[] { value };
+            PostingList.Update(llt, ref state, addition, removal);
         }
 
         private bool HasEnoughSpaceFor(int reqSize)
@@ -460,7 +455,7 @@ namespace Voron.Data.Containers
             {
                 Debug.Assert(page.IsOverflow);
                rootContainer.Header.NumberOfOverflowPages -= VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize);
-                ModifyMetadataList(llt,  rootContainer, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: false, pageNum);
+                ModifyMetadataList(llt,  rootContainer, ContainerPageHeader.AllPagesOffset, add: false, pageNum);
                 llt.FreePage(pageNum);
                 return;
             }
@@ -505,9 +500,9 @@ namespace Voron.Data.Containers
                     rootContainer.Header.NextFreePage = containerId;
                 }
                 
-                ModifyMetadataList(llt, rootContainer, AllPagesSetName, ContainerPageHeader.AllPagesOffset, add: false, page.PageNumber);
+                ModifyMetadataList(llt, rootContainer, ContainerPageHeader.AllPagesOffset, add: false, page.PageNumber);
                 if (container.Header.OnFreeList)
-                    ModifyMetadataList(llt, rootContainer, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: false, page.PageNumber);
+                    ModifyMetadataList(llt, rootContainer, ContainerPageHeader.FreeListOffset, add: false, page.PageNumber);
                 
                 llt.FreePage(pageNum);
                 return;
@@ -522,7 +517,7 @@ namespace Voron.Data.Containers
                 containerSpaceUsed + averageSize * 2 <= Constants.Storage.PageSize) // has enough space to be on the free list? 
             {
                 container.Header.OnFreeList = true;
-                ModifyMetadataList(llt, rootContainer, FreePagesSetName, ContainerPageHeader.FreeListOffset, add: true, page.PageNumber);
+                ModifyMetadataList(llt, rootContainer, ContainerPageHeader.FreeListOffset, add: true, page.PageNumber);
             }
         }
 
