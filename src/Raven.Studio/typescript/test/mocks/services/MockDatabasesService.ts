@@ -4,7 +4,7 @@ import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.Essential
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 import DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
-import { DatabasesStubs } from "../../stubs/DatabasesStubs";
+import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
 export default class MockDatabasesService extends AutoMockService<DatabasesService> {
     constructor() {

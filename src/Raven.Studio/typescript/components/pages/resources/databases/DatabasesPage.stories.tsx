@@ -15,7 +15,6 @@ export default {
 export const Sharded: ComponentStory<typeof DatabasesPage> = () => {
     accessManager.default.securityClearance("ClusterAdmin");
 
-    //TODO: mock + use hook
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 
     const { databasesService } = mockServices;

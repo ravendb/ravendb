@@ -15,7 +15,7 @@ import { DeletionInProgress } from "components/pages/resources/manageDatabaseGro
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import clusterTopology from "models/database/cluster/clusterTopology";
 import { useChanges } from "hooks/useChanges";
-import { useEventsCollector } from "hooks/useEventsCollector";
+import { useAccessManager } from "hooks/useAccessManager";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface ManageDatabaseGroupPageProps {
@@ -63,8 +63,6 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     //TODO: reorder nodes
 
-    //TODO: permissions! (Requried role etc)
-
     const [state, dispatch] = useReducer(manageDatabaseGroupReducer, null); // TODO initial state?
 
     const { databasesService } = useServices();
@@ -72,6 +70,14 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     const { status: licenseStatus } = useLicenseStatus();
 
     const clusterTopology = clusterTopologyManager.default.topology();
+
+    const { isOperatorOrAbove } = useAccessManager();
+
+    const {
+        value: dynamicDatabaseDistribution,
+        toggle: toggleDynamicDatabaseDistribution,
+        setValue: setDynamicDatabaseDistribution,
+    } = useBoolean(false);
 
     //TODO: error handling!
     const fetchDatabaseInfo = useCallback(
@@ -81,18 +87,23 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                 type: "DatabaseInfoLoaded",
                 info,
             });
+            return info;
         },
         [databasesService]
     );
 
     useEffect(() => {
-        if (db) {
-            fetchDatabaseInfo(db.name);
-        }
-    }, [fetchDatabaseInfo, db]);
+        const fetchData = async () => {
+            if (db) {
+                const dbInfo = await fetchDatabaseInfo(db.name);
+                setDynamicDatabaseDistribution(dbInfo.DynamicNodesDistribution);
+            }
+        };
+
+        fetchData();
+    }, [fetchDatabaseInfo, db, setDynamicDatabaseDistribution]);
 
     const refresh = useCallback(() => {
-        //TODO bind this event
         if (!sortableMode) {
             fetchDatabaseInfo(db.name);
         }
@@ -117,8 +128,6 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     const settingsUniqueId = useId("settings");
 
-    const { value: dynamicDatabaseDistribution, toggle: toggleDynamicDatabaseDistribution } = useBoolean(false); //TODO: init with value!
-
     const addNode = useCallback(() => {
         const addKeyView = new addNewNodeToDatabaseGroup(db.name, state.nodes, state.encrypted);
         app.showBootstrapDialog(addKeyView);
@@ -136,14 +145,16 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     const clusterNodeTags = clusterTopology.nodes().map((x) => x.tag());
     const existingTags = state.nodes ? state.nodes.map((x) => x.tag) : [];
-    const addNodeEnabled = clusterNodeTags.some((x) => !existingTags.includes(x));
+    const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
 
     const dynamicDatabaseDistributionWarning = getDynamicDatabaseDistributionWarning(
         licenseStatus,
         state.encrypted,
         state.nodes.length
     );
-    const enableDynamicDatabaseDistribution = !dynamicDatabaseDistributionWarning;
+    const enableDynamicDatabaseDistribution = isOperatorOrAbove() && !dynamicDatabaseDistributionWarning;
+
+    //TODO: review data-bind
 
     return (
         <div className="content-margin">
@@ -151,12 +162,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                 <Button data-bind="click: enableNodesSort, enable: nodes().length > 1, requiredAccess: 'Operator'">
                     <i className="icon-reorder"></i> Reorder nodes
                 </Button>
-                <Button
-                    color="primary"
-                    disabled={!addNodeEnabled}
-                    onClick={addNode}
-                    data-bind="requiredAccess: 'Operator'"
-                >
+                <Button color="primary" disabled={!addNodeEnabled} onClick={addNode}>
                     <i className="icon-plus"></i>
                     <span>Add node to group</span>
                 </Button>
@@ -170,7 +176,6 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                                 disabled={!enableDynamicDatabaseDistribution}
                                 checked={dynamicDatabaseDistribution}
                                 onChange={changeDynamicDatabaseDistribution}
-                                data-bind="checked: dynamicDatabaseDistribution, enable: enableDynamicDatabaseDistribution, requiredAccess: 'Operator', requiredAccessOptions: { strategy: 'disable' }"
                             />
                             <Label htmlFor={settingsUniqueId} check>
                                 Allow dynamic database distribution

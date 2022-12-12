@@ -7,44 +7,6 @@ import {
     NodeInfo,
 } from "components/pages/resources/manageDatabaseGroup/types";
 
-/* TODO node tag
-    lastErrorShort = ko.pureComputed(() => {
-        const longError = this.lastError();
-        return generalUtils.trimMessage(longError);
-    });
-
-    cssIcon = ko.pureComputed(() => {
-        const type = this.type();
-        switch (type) {
-            case "Member":
-                return "icon-dbgroup-member";
-            case "Promotable":
-                return "icon-dbgroup-promotable";
-            case "Rehab":
-                return "icon-dbgroup-rehab";
-        }
-        return "";
-    });
-
-    static for(tag: string, serverUrl: string, responsibleNode: string, type: databaseGroupNodeType) {
-        const node = new databaseGroupNode();
-        node.tag(tag);
-        node.serverUrl(serverUrl);
-        node.responsibleNode(responsibleNode);
-        node.type(type);
-        return node;
-    }
-    
-    update(incoming: databaseGroupNode) {
-        this.tag(incoming.tag());
-        this.serverUrl(incoming.serverUrl());
-        this.type(incoming.type());
-        this.responsibleNode(incoming.responsibleNode());
-        this.lastStatus(incoming.lastStatus());
-        this.lastError(incoming.lastError());
-    }
- */
-
 type ManageDatabaseGroupReducerAction = DatabaseInfoLoaded;
 
 function mapNode(
