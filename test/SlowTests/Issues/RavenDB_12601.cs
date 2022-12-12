@@ -6,6 +6,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Server;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
@@ -148,7 +149,8 @@ namespace SlowTests.Issues
         public async Task Can_use_cluster_tx_mixed_with_tx()
         {
             DoNotReuseServer();
-
+            long trxn1 = -1;
+            long trxn2 = -1;
             using (var store = GetDocumentStore())
             {
                 const string userId = "users/1";
@@ -166,11 +168,11 @@ namespace SlowTests.Issues
 
                     session.Store(user);
                     session.SaveChanges();
-                    
-                    var trxn = 4 + GetNumOfUpdateLicenseLimitsCommands(Server); // could be 1 or more 'UpdateLicenseLimitsCommand' before the 'ClusterTransactionCommand'
+
+                    trxn1 = Cluster.LastRaftIndexForCommand(Server, "ClusterTransactionCommand");
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
                     Assert.True(changeVector.Contains("RAFT:1"), $"{changeVector}.Contains('RAFT:1')");
-                    Assert.True(changeVector.Contains($"TRXN:{trxn}"), $"{changeVector}.Contains('TRXN:{trxn}')");
+                    Assert.True(changeVector.Contains($"TRXN:{trxn1}"), $"{changeVector}.Contains('TRXN:{trxn1}')");
                 }
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -203,10 +205,11 @@ namespace SlowTests.Issues
                     var user = session.Load<User>(userId);
                     user.Age++;
                     session.SaveChanges();
-                    var trxn = 5 + GetNumOfUpdateLicenseLimitsCommands(Server);
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    trxn2 = Cluster.LastRaftIndexForCommand(Server, "ClusterTransactionCommand");
+                    Assert.True(trxn2 > trxn1);
                     Assert.True(changeVector.Contains("RAFT:2"), $"{changeVector}.Contains('RAFT:2')");
-                    Assert.True(changeVector.Contains($"TRXN:{trxn}"), $"{changeVector}.Contains('TRXN:{trxn}')");
+                    Assert.True(changeVector.Contains($"TRXN:{trxn2}"), $"{changeVector}.Contains('TRXN:{trxn2}')");
 
                 }
 
@@ -237,21 +240,6 @@ namespace SlowTests.Issues
                 }
 
                 WaitForUserToContinueTheTest(store);
-            }
-        }
-
-        private int GetNumOfUpdateLicenseLimitsCommands(RavenServer n)
-        {
-            var pattern = "\"Type\":\"UpdateLicenseLimitsCommand\"";
-            return GetLogs(n).Split(Environment.NewLine).Where(line => line.Contains(pattern)).ToList().Count;
-        }
-
-        private string GetLogs(RavenServer n)
-        {
-            using (n.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return Cluster.CollectLogs(context, n);
             }
         }
 
