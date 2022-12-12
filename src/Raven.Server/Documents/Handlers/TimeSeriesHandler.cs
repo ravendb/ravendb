@@ -1048,6 +1048,7 @@ namespace Raven.Server.Documents.Handlers
             private readonly bool _fromEtl;
 
             public string LastChangeVector;
+            public string DocCollection;
 
             public ExecuteTimeSeriesBatchCommand(DocumentDatabase database, string documentId, TimeSeriesOperation operation, bool fromEtl)
             {
@@ -1059,9 +1060,9 @@ namespace Raven.Server.Documents.Handlers
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                string docCollection = GetDocumentCollection(_database, context, _documentId, _fromEtl);
+                DocCollection = GetDocumentCollection(_database, context, _documentId, _fromEtl);
 
-                if (docCollection == null)
+                if (DocCollection == null)
                     return 0L;
 
                 var changes = 0L;
@@ -1074,7 +1075,7 @@ namespace Raven.Server.Documents.Handlers
                         var deletionRange = new TimeSeriesStorage.DeletionRangeRequest
                         {
                             DocumentId = _documentId,
-                            Collection = docCollection,
+                            Collection = DocCollection,
                             Name = _operation.Name,
                             From = removal.From ?? DateTime.MinValue,
                             To = removal.To ?? DateTime.MaxValue
@@ -1090,7 +1091,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     LastChangeVector = tss.IncrementTimestamp(context,
                         _documentId,
-                        docCollection,
+                        DocCollection,
                         _operation.Name,
                         _operation.Increments
                     );
@@ -1103,7 +1104,7 @@ namespace Raven.Server.Documents.Handlers
 
                 LastChangeVector = tss.AppendTimestamp(context,
                     _documentId,
-                    docCollection,
+                    DocCollection,
                     _operation.Name,
                     _operation.Appends
                 );

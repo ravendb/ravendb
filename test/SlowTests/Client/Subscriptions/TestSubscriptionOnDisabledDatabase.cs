@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -33,7 +34,8 @@ namespace SlowTests.Client.Subscriptions
                 });
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1") {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    MaxErroneousPeriod = TimeSpan.Zero
                 });
 
                 using (var session = store.OpenSession())
@@ -66,7 +68,24 @@ namespace SlowTests.Client.Subscriptions
 
                 store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
 
-                await Assert.ThrowsAsync<DatabaseDisabledException>(async () => await subscriptionTask);
+                var aggregateException = await Assert.ThrowsAsync<AggregateException>(async () => await subscriptionTask);
+                var actualExceptionWasThrown = false;
+                var subscriptionInvalidStateExceptionWasThrown = false;
+                foreach (var e in aggregateException.InnerExceptions)
+                {
+                    if (e is SubscriptionInvalidStateException)
+                    {
+                        subscriptionInvalidStateExceptionWasThrown = true;
+                    }
+                    if (e is DatabaseDisabledException)
+                    {
+                        actualExceptionWasThrown = true;
+                    }
+
+                    if (subscriptionInvalidStateExceptionWasThrown && actualExceptionWasThrown)
+                        break;
+                }
+                Assert.True(subscriptionInvalidStateExceptionWasThrown && actualExceptionWasThrown);
 
                 store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
 
