@@ -295,6 +295,11 @@ namespace Raven.Server.Documents.Replication
                     if (_log.IsInfoEnabled)
                         _log.Info($"Connection error {FromToString}: an exception was thrown during receiving incoming document replication batch.", e);
 
+
+                    _parent.ForTestingPurposes?.OnIncomingReplicationHandlerFailure?.Invoke(e);
+
+
+
                     OnFailed(e, this);
                 }
             }
