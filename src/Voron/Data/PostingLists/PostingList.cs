@@ -686,5 +686,16 @@ namespace Voron.Data.PostingLists
             state.LastMatch = -1;
             state.LastSearchPosition = 0;
         }
+
+        public static long Update(LowLevelTransaction transactionLowLevelTransaction, ref PostingListState postingListState, ReadOnlySpan<long> additions, ReadOnlySpan<long> removals)
+        {
+            using var pl = new PostingList(transactionLowLevelTransaction, Slices.Empty, postingListState);
+            pl.Add(additions);
+            pl.Remove(removals);
+            pl.PrepareForCommit();
+            postingListState = pl.State;
+
+            return pl.State.NumberOfEntries;
+        }
     }
 }

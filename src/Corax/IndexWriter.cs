@@ -1580,23 +1580,19 @@ namespace Corax
             entries.SortAndRemoveDuplicates();
 
             var setSpace = Container.GetMutable(llt, id);
-            ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
+            ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
             
-            using var set = new PostingList(llt, Slices.Empty, setState);
-            set.Remove(entries.Removals);
-            set.Add(entries.Additions);
-            set.PrepareForCommit();
+            var numberOfEntries = PostingList.Update(Transaction.LowLevelTransaction, ref postingListState, entries.Additions, entries.Removals);
 
             termId = -1;
 
-            if (set.State.NumberOfEntries == 0)
+            if (numberOfEntries == 0)
             {
-                llt.FreePage(set.State.RootPage);
+                llt.FreePage(postingListState.RootPage);
                 Container.Delete(llt, _postingListContainerId, id);
                 return AddEntriesToTermResult.RemoveTermId;
             }
 
-            setState = set.State;
             return AddEntriesToTermResult.NothingToDo;
         }
 
@@ -1736,13 +1732,10 @@ namespace Corax
         private unsafe void AddNewTermToSet(ReadOnlySpan<long> additions, out long termId)
         {
             long setId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
-            ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
-            PostingList.Create(Transaction.LowLevelTransaction, ref setState);
-            
-            using var set = new PostingList(Transaction.LowLevelTransaction, Slices.Empty, setState);
-            set.Add(additions);
-            set.PrepareForCommit();
-            setState = set.State;
+            ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
+            PostingList.Create(Transaction.LowLevelTransaction, ref postingListState);
+
+            PostingList.Update(Transaction.LowLevelTransaction, ref postingListState, additions, ReadOnlySpan<long>.Empty);
             termId = setId | (long)TermIdMask.Set;
         }
 
