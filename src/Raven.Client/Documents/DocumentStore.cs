@@ -8,6 +8,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
@@ -224,7 +225,7 @@ namespace Raven.Client.Documents
 
             RequestExecutor.ValidateUrls(Urls, Certificate);
 
-            if(Certificate != null && Certificate.HasPrivateKey == false)
+            if (Certificate != null && Certificate.HasPrivateKey == false)
                 throw new InvalidOperationException(
                     $"The supplied {Certificate.FriendlyName} certificate contains no private key. " +
                     "Constructing the certificate with the 'X509KeyStorageFlags.MachineKeySet' flag may solve this problem.");
@@ -345,20 +346,9 @@ namespace Raven.Client.Documents
         /// </remarks>
         public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
         {
-            AssertInitialized();
+            var release = AggressivelyCacheForInternal(cacheDuration, mode, ref database);
 
-            database = this.GetDatabase(database);
-
-            if (mode != AggressiveCacheMode.DoNotTrackChanges)
-                AsyncHelpers.RunSync(() => ListenToChangesAndUpdateTheCacheAsync(database));
-
-            var re = GetRequestExecutor(database);
-            var old = re.AggressiveCaching.Value;
-            var @new = new AggressiveCacheOptions(cacheDuration, mode);
-
-            re.AggressiveCaching.Value = @new;
-
-            return new DisposableAction(() => re.AggressiveCaching.Value = old);
+            return AsyncHelpers.RunSync(() => InternalAggressivelyCacheForAsync(release, mode, database));
         }
 
         /// <summary>
@@ -382,22 +372,44 @@ namespace Raven.Client.Documents
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>
-        public override async Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
+        public override Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
+        {
+            var release = AggressivelyCacheForInternal(cacheDuration, mode, ref database);
+
+            return InternalAggressivelyCacheForAsync(release, mode, database);
+        }
+
+        private IDisposable AggressivelyCacheForInternal(TimeSpan cacheDuration, AggressiveCacheMode mode, ref string database)
         {
             AssertInitialized();
 
             database = this.GetDatabase(database);
 
-            if (mode != AggressiveCacheMode.DoNotTrackChanges)
-                await ListenToChangesAndUpdateTheCacheAsync(database).ConfigureAwait(false);
+            var requestExecutor = GetRequestExecutor(database);
+            var oldValue = requestExecutor.AggressiveCaching.Value;
+            var newValue = new AggressiveCacheOptions(cacheDuration, mode);
 
-            var re = GetRequestExecutor(database);
-            var old = re.AggressiveCaching.Value;
-            var @new = new AggressiveCacheOptions(cacheDuration, mode);
+            requestExecutor.AggressiveCaching.Value = newValue;
 
-            re.AggressiveCaching.Value = @new;
+            return new DisposableAction(() => requestExecutor.AggressiveCaching.Value = oldValue);
+        }
 
-            return new DisposableAction(() => re.AggressiveCaching.Value = old);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private async Task<IDisposable> InternalAggressivelyCacheForAsync(IDisposable release, AggressiveCacheMode mode, string database)
+        {
+            // this method is separated from the AggressivelyCacheForAsync because of how AsyncLocal works
+            try
+            {
+                if (mode != AggressiveCacheMode.DoNotTrackChanges)
+                    await ListenToChangesAndUpdateTheCacheAsync(database).ConfigureAwait(false);
+
+                return release;
+            }
+            catch
+            {
+                release.Dispose();
+                throw;
+            }
         }
 
         private Task ListenToChangesAndUpdateTheCacheAsync(string database)
