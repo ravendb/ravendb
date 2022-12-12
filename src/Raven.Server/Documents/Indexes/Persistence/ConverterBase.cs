@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 return ValueType.ConvertToJson;
 
             if (value is IDictionary && _index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseDictionaryToStoredField)
-                return ValueType.IDictionary;
+                return ValueType.Dictionary;
             
             if (value is IEnumerable)
                 return ValueType.Enumerable;
@@ -268,7 +268,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             
             CoraxDynamicItem,
             
-            IDictionary
+            Dictionary
         }
 
         protected class ConversionScope : IDisposable

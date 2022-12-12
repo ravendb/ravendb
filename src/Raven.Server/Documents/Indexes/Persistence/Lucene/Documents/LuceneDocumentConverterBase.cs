@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     defaultIndexing = Field.Index.ANALYZED;
                     break;
 
-                case ValueType.IDictionary:
+                case ValueType.Dictionary:
                     defaultIndexing = Field.Index.NOT_ANALYZED_NO_NORMS; // RavenDB-19560
                     break;
                 
@@ -468,7 +468,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return newFields;
             }
 
-            if (valueType == ValueType.ConvertToJson || valueType == ValueType.IDictionary)
+            if (valueType == ValueType.ConvertToJson || valueType == ValueType.Dictionary)
             {
                 var val = TypeConverter.ToBlittableSupportedType(value);
                 if (!(val is DynamicJsonValue json))
