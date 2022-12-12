@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Http;
 using Sparrow.Collections;
 using Xunit;
 using Xunit.Abstractions;
@@ -57,7 +57,7 @@ namespace SlowTests.Issues
             Assert.Equal(requests + 1, requestExecutor.NumberOfServerRequests);
         }
 
-        private async Task LoadDataAsync(IDocumentStore store)
+        private static async Task LoadDataAsync(IDocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
             using (await session.Advanced.DocumentStore.AggressivelyCacheForAsync(TimeSpan.FromMilliseconds(300)))
@@ -97,7 +97,7 @@ namespace SlowTests.Issues
             };
             Thread.Sleep(500); // cache timed out
 
-            LoadData(store); 
+            LoadData(store);
 
             // additional request expected after cache timed out
             Assert.True(requests + 1 == requestExecutor.NumberOfServerRequests, $"Request number should be {requests + 1} but was {requestExecutor.NumberOfServerRequests}, Requests Urls: {string.Join(" ", urls)}");
@@ -108,7 +108,7 @@ namespace SlowTests.Issues
             Assert.Equal(requests + 1, requestExecutor.NumberOfServerRequests);
         }
 
-        private void LoadData(IDocumentStore store)
+        private static void LoadData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMilliseconds(300)))
