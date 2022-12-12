@@ -1071,8 +1071,7 @@ namespace Corax
 
             void RecordTupleToDelete(IndexedField indexedField, ReadOnlySpan<byte> termValue, double termDouble, long termLong)
             {
-                // Is there any reason to analyze string of number?
-                RecordExactTermToDelete(termValue, indexedField);
+                RecordTermToDelete(termValue, indexedField);
 
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
                 ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(indexedField.Doubles, termDouble, out bool fieldDoublesExist);
