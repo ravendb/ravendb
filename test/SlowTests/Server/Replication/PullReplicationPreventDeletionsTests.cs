@@ -119,7 +119,7 @@ namespace SlowTests.Server.Replication
             var incomingStr = string.Join(",", incomingHandlers.Select(x => x.GetType()));
             Assert.True(incomingHandlers.Length == 1, $"hub should have 1 incoming handler but has {incomingHandlers.Length}, {incomingStr}");
 
-            incomingHandlers[0].Failed += (handler, exception) =>
+            hubDatabaseInstance.ReplicationLoader.ForTestingPurposesOnly().OnIncomingReplicationHandlerFailure += (exception) =>
             {
                 if (exception.Message.Contains("This hub does not allow for tombstone replication via pull replication"))
                 {
