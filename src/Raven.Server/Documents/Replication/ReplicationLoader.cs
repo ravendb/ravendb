@@ -1806,8 +1806,12 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info("Closing and disposing document replication connections.");
 
+                ForTestingPurposes?.BeforeDisposingIncomingReplicationHandlers?.Invoke();
                 foreach (var incoming in _incoming)
+                {
+                    incoming.Value.IncomingWork?.Join(Int32.MaxValue);
                     ea.Execute(incoming.Value.Dispose);
+                }
 
                 foreach (var outgoing in _outgoing)
                     ea.Execute(outgoing.Dispose);
@@ -2067,6 +2071,8 @@ namespace Raven.Server.Documents.Replication
         {
             public Action<OutgoingReplicationHandler> OnOutgoingReplicationStart;
             public Action<Exception> OnIncomingReplicationHandlerFailure;
+            public Action OnIncomingReplicationHandlerStart;
+            public Action BeforeDisposingIncomingReplicationHandlers;
         }
     }
 
