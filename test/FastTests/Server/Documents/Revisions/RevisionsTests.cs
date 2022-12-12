@@ -2161,7 +2161,12 @@ namespace FastTests.Server.Documents.Revisions
                 using (var session = store.OpenSession())
                 {
                     HttpStatusCode status = default;
-                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) => { status = args.Response.StatusCode; };
+                    string url = $"/revisions?&id={Uri.EscapeDataString(company.Id)}";
+                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) =>
+                    {
+                        Assert.True(args.Url.Contains(url));
+                        status = args.Response.StatusCode;
+                    };
 
                     var revision = session.Advanced.Revisions.Get<Company>(company.Id, DateTime.MaxValue);
 
@@ -2209,7 +2214,15 @@ namespace FastTests.Server.Documents.Revisions
                     changeVectors.Add("NotExistsChangeVector");
 
                     HttpStatusCode status = default;
-                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) => { status = args.Response.StatusCode; };
+                    string url = "/revisions?";
+                    foreach (var changeVector in changeVectors)
+                        url += $"&changeVector={Uri.EscapeDataString(changeVector)}";
+                    
+                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) =>
+                    {
+                        Assert.True(args.Url.Contains(url));
+                        status = args.Response.StatusCode;
+                    };
 
                     var revision = await session.Advanced.Revisions.GetAsync<Company>(changeVectors.ToArray());
 

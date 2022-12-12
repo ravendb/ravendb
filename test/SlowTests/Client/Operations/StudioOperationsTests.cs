@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -207,7 +208,12 @@ namespace SlowTests.Client.Operations
                 using (var session = store.OpenAsyncSession())
                 {
                     HttpStatusCode status = default;
-                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) => { status = args.Response.StatusCode; };
+                    string url = $"/studio/collections/fields?collection={Uri.EscapeDataString("User")}";
+                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) =>
+                    {
+                        Assert.True(args.Url.Contains(url));
+                        status = args.Response.StatusCode;
+                    };
                     var result = await store.Operations.SendAsync(new GetCollectionFieldsOperation("User", ""));
 
                     Assert.NotNull(result);
@@ -236,7 +242,12 @@ namespace SlowTests.Client.Operations
                 using (var session = store.OpenAsyncSession())
                 {
                     HttpStatusCode status = default;
-                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) => { status = args.Response.StatusCode; };
+                    string url = $"/studio/collections/preview?collection={Uri.EscapeDataString("User")}";
+                    session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) =>
+                    {
+                        Assert.True(args.Url.Contains(url));
+                        status = args.Response.StatusCode;
+                    };
 
                     var result = await store.Operations.SendAsync(new PreviewCollectionOperation("Users"));
 
