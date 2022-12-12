@@ -440,10 +440,12 @@ namespace Voron.Data.PostingLists
                     if (sibling.SpaceUsed + leafPage.SpaceUsed > Constants.Storage.PageSize / 2 + Constants.Storage.PageSize / 4)
                         continue; // if the two pages together will be bigger than 75%, can skip merging
 
-                    if (parent.LastSearchPosition == 0) // copy from the right to the left
-                        sibling.CopyEntriesToEndOf(leafPage);
-                    else
-                        leafPage.CopyEntriesToEndOf(sibling);
+                    
+                    PostingListLeafPage.Merge(_llt, 
+                        leafPage.Header,
+                        parent.LastSearchPosition == 0 ? leafPage.Header : siblingHeader,
+                        parent.LastSearchPosition == 0 ? siblingHeader : leafPage.Header
+                        );
 
                     MergeSiblingsAtParent();
                 } 
