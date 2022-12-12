@@ -1908,7 +1908,8 @@ namespace Raven.Client.Util
                 writer.Write('(');
                 context.Visitor.Visit(binaryExpression.Left);
                 writer.Write("??");
-                context.Visitor.Visit(binaryExpression.Right);
+                using (writer.Operation(binaryExpression.Right))
+                    context.Visitor.Visit(binaryExpression.Right);
                 writer.Write(')');
             }
         }
