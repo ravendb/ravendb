@@ -197,11 +197,11 @@
                         <div class="flex-grow margin-right margin-right-sm" data-bind="validationElement: documentIdColumn">
                             <input type="text" class="form-control input-sm" placeholder="Document Id Column Name" data-bind="textInput: documentIdColumn">
                         </div>
-                        <div class="flex-noshrink toggle input-sm">
+                        <div class="flex-shrink-0 toggle input-sm">
                             <input id="toggle1" class="styled" type="checkbox" data-bind="checked: insertOnlyMode">
                             <label for="toggle1">Insert only</label>
                         </div>
-                        <div class="flex-noshrink">
+                        <div class="flex-shrink-0">
                             <button type="button" class="btn btn-success btn-sm" title="Add this sql table" data-bind="click: $root.saveEditedSqlTable"><i class="icon-tick"></i></button>
                             <button type="button" class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedSqlTable"><i class="icon-cancel"></i></button>
                         </div>
@@ -227,7 +227,7 @@
                                 </div>
                                 <div class="col-sm-4" data-bind="if: insertOnlyMode">Insert only</div>
                             </div>
-                            <div class="flex-noshrink">
+                            <div class="flex-shrink-0">
                                 <button type="button" class="btn btn-default btn-sm" title="Edit this SQL table" data-bind="click: $root.editSqlTable.bind($data)"><i class="icon-edit"></i></button>
                                 <button type="button" class="btn btn-danger btn-sm" title="Remove this SQL table" data-bind="click: $root.deleteSqlTable.bind($data)"><i class="icon-trash"></i></button>
                             </div>

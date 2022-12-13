@@ -391,7 +391,7 @@
                             <li data-bind="css: { selected: $data === $parent.previewItem() }, event: { mouseenter: $parent.previewQuery }">
                                 <a href="#" class="patch-link close-panel" data-bind="click: $parent.useQueryItem.bind($parent, $data)">
                                     <span class="name" data-bind="text: name"></span>
-                                    <span class="modified flex-noshrink" data-bind="text: modificationDate"></span>
+                                    <span class="modified flex-shrink-0" data-bind="text: modificationDate"></span>
                                 </a>
                                 <a href="#" data-bind="click: $parent.removeQuery" class="patch-remove"><i class="icon-trash"></i></a>
                             </li>

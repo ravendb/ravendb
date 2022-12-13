@@ -91,7 +91,7 @@
                                 <div class="help-block" data-bind="validationMessage: script"></div>
                             </div>
                         </div>
-                        <div class="flex-noshrink">
+                        <div class="flex-shrink-0">
                             <button type="button" class="btn btn-success"
                                     data-bind="click: $root.saveEditedScript, attr: { title : ($root.model().scriptSelectedForEdit() ? 'Update' : 'Add') + ' this conflict resolution script' }, requiredAccess: 'DatabaseAdmin'">
                                 <i class="icon-tick"></i> <span data-bind="text: $root.model().scriptSelectedForEdit() ? 'Update' : 'Add'"></span>

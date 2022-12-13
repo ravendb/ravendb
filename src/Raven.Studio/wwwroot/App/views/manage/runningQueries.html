@@ -1,5 +1,5 @@
 <div class="flex-vertical absolute-fill content-margin running-queries">
-    <div class="flex-horizontal flex-noshrink">
+    <div class="flex-horizontal flex-shrink-0">
         <div>
             <input class="form-control filter" placeholder="Filter by index name or query" data-bind="textInput: filter">
         </div>
@@ -8,7 +8,7 @@
                     data-bind="options: allDbNames, selectedOptions: selectedDbNames"></select>
         </div>
     </div>
-    <div class="flex-horizontal flex-noshrink">
+    <div class="flex-horizontal flex-shrink-0">
         <div class="flex-separator"></div>
         <div class="btn-group">
             <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">

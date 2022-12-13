@@ -136,11 +136,11 @@
                         <div class="flex-grow margin-right margin-right-sm" data-bind="validationElement: idProperty">
                             <input type="text" class="form-control input-sm" placeholder="Document ID Property Name" data-bind="textInput: idProperty">
                         </div>
-                        <div class="flex-noshrink toggle input-sm">
+                        <div class="flex-shrink-0 toggle input-sm">
                             <input id="toggleMode" class="styled" type="checkbox" data-bind="checked: insertOnlyMode">
                             <label for="toggleMode">Insert only</label>
                         </div>
-                        <div class="flex-noshrink">
+                        <div class="flex-shrink-0">
                             <button type="button" class="btn btn-success btn-sm" title="Add this Elasticsearch index" data-bind="click: $root.saveEditedElasticSearchIndex"><i class="icon-tick"></i></button>
                             <button type="button" class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedElasticSearchIndex"><i class="icon-cancel"></i></button>
                         </div>
@@ -166,7 +166,7 @@
                                 </div>
                                 <div class="col-sm-4" data-bind="if: insertOnlyMode">Insert only</div>
                             </div>
-                            <div class="flex-noshrink">
+                            <div class="flex-shrink-0">
                                 <button type="button" class="btn btn-default btn-sm" title="Edit this Elasticsearch index" data-bind="click: $root.editElasticSearchIndex.bind($data)"><i class="icon-edit"></i></button>
                                 <button type="button" class="btn btn-danger btn-sm" title="Remove this Elasticsearch index" data-bind="click: $root.deleteElasticSearchIndex.bind($data)"><i class="icon-trash"></i></button>
                             </div>
