@@ -523,12 +523,15 @@ public static class QueryBuilderHelper
     {
         if (exact)
             return Corax.Constants.IndexSearcher.NonAnalyzer;
-
+        
         RuntimeHelpers.EnsureSufficientExecutionStack();
         if (fieldName.Equals(Client.Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) ||
             fieldName is Constants.Documents.Indexing.Fields.DocumentIdFieldName)
             return 0;
 
+        if (index.IndexFieldsPersistence.HasTimeValues(fieldName))
+            return Corax.Constants.IndexSearcher.NonAnalyzer;
+        
         if (isForQuery == false)
         {
             if (fieldName is "score" or "score()")

@@ -296,7 +296,6 @@ namespace Corax
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
             _documentBoost = Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
-
         }
 
         public long Index(string id, Span<byte> data)
@@ -759,7 +758,7 @@ namespace Corax
                             }
                             else
                             {
-                                Insert(iterator.Sequence);
+                                ExactInsert(iterator.Sequence);
                                 NumericInsert(iterator.Long, iterator.Double);
                             }
                         }
@@ -770,7 +769,7 @@ namespace Corax
                         if (_fieldReader.Read(out _, out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
                             break;
 
-                        Insert(valueInEntry);
+                        ExactInsert(valueInEntry);
                         NumericInsert(lVal, dVal);
                         break;
 
@@ -1071,7 +1070,7 @@ namespace Corax
 
             void RecordTupleToDelete(IndexedField indexedField, ReadOnlySpan<byte> termValue, double termDouble, long termLong)
             {
-                RecordTermToDelete(termValue, indexedField);
+                RecordExactTermToDelete(termValue, indexedField);
 
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
                 ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(indexedField.Doubles, termDouble, out bool fieldDoublesExist);
