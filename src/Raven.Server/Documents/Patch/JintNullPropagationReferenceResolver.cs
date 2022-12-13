@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Patch
         protected JsValue _selfInstance;
         protected BlittableObjectInstance _args;
 
-        public virtual bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
+        public bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
         {
             JsValue referencedName = reference.GetReferencedName();
 

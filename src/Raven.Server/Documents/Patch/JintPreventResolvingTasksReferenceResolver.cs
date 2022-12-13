@@ -8,7 +8,7 @@ using Jint.Runtime.References;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class JintPreventResolvingTasksReferenceResolver : JintNullPropagationReferenceResolver
+    public sealed class JintPreventResolvingTasksReferenceResolver : JintNullPropagationReferenceResolver
     {
         public void ExplodeArgsOn(JsValue self, BlittableObjectInstance args)
         {
@@ -18,8 +18,7 @@ namespace Raven.Server.Documents.Patch
 
         public override bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
         {
-            if (value.IsObject() &&
-                value.AsObject() is ObjectWrapper objectWrapper &&
+            if (value is ObjectWrapper objectWrapper &&
                 objectWrapper.Target is Task task &&
                 reference.GetReferencedName() == nameof(Task<int>.Result) &&
                 task.IsCompleted == false)

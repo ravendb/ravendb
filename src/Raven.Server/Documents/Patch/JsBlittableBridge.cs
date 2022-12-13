@@ -15,6 +15,7 @@ using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Extensions;
@@ -69,6 +70,10 @@ namespace Raven.Server.Documents.Patch
                     _writer.WriteValue(js.AsBoolean());
                 else if (js.IsUndefined() || js.IsNull())
                     _writer.WriteValueNull();
+                else if (js is LazyCompressedJsString lazyCompressedJsString)
+                    _writer.WriteValue(lazyCompressedJsString._lazyValue);
+                else if (js is LazyJsString lazyJsString)
+                    _writer.WriteValue(lazyJsString._lazyValue);
                 else if (js.IsString())
                     _writer.WriteValue(js.AsString());
                 else if (js.IsDate())

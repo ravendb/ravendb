@@ -106,7 +106,13 @@ namespace Raven.Server.Documents.Patch
         {
             try
             {
-                ScriptsSource.Add(Engine.PrepareScript(script));
+                var strict = _parent.Configuration.Patching.StrictMode;
+                if (script.StartsWith("function __selectOutput(", StringComparison.OrdinalIgnoreCase))
+                {
+                    // we cannot be sure about projected elements, they might use strict mode reserved words like 'package'
+                    strict = false;
+                }
+                ScriptsSource.Add(Engine.PrepareScript(script, strict: strict));
             }
             catch (Exception e)
             {
