@@ -93,6 +93,9 @@ module.exports = (env, args) => {
             "styles": "./wwwroot/Content/css/styles.less",
             "styles-blue": "./wwwroot/Content/css/styles-blue.less",
             "styles-light": "./wwwroot/Content/css/styles-light.less",
+            "bs5-styles": "./wwwroot/Content/css/bs5-styles.scss",
+            "bs5-styles-blue": "./wwwroot/Content/css/bs5-styles-blue.scss",
+            "bs5-styles-light": "./wwwroot/Content/css/bs5-styles-light.scss",
             "rql_worker": path.resolve(__dirname, './languageService/src/index.ts')
         },
         output: {
@@ -208,9 +211,7 @@ module.exports = (env, args) => {
                     test: /\.scss$/,
                     use: [
                         {
-                            loader: isProductionMode
-                                ? MiniCssExtractPlugin.loader
-                                : 'style-loader'
+                            loader: MiniCssExtractPlugin.loader
                         },
                         {
                             loader: "css-loader",

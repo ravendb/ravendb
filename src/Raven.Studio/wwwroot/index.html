@@ -31,13 +31,20 @@
                 ? savedTheme 
                 : "dark";
 
+            var head = document.getElementsByTagName("head")[0];
+            
             var link = document.createElement("link");
             link.rel = "stylesheet";
             link.id  = "raven-theme";
             link.href = "styles/" + themeToCss[themeToUse];
 
-            var head = document.getElementsByTagName("head")[0];
+            var bs5link = document.createElement("link");
+            bs5link.rel = "stylesheet";
+            bs5link.id  = "raven-theme-bs5";
+            bs5link.href = "styles/bs5-" + themeToCss[themeToUse];
+            
             head.appendChild(link);
+            head.appendChild(bs5link);
         </script>
 
         <script type="text/javascript">
