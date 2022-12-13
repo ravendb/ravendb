@@ -28,11 +28,11 @@ public readonly struct CoraxBooleanItem : IQueryMatch
     {
         _scoreFunction = scoreFunction;
         Name = name;
-        FieldId = fieldId;
         var ticks = default(long);
+        
         _isTime = term is not null && index.IndexFieldsPersistence.HasTimeValues(name) && QueryBuilderHelper.TryGetTime(index, term, out ticks);
         Term = _isTime ? ticks : term;
-
+        FieldId = fieldId;
         Operation = operation;
         _indexSearcher = searcher;
 
