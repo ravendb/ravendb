@@ -1,18 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.ServerWide.Sharding;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups.Sharding
 {
     public class ShardedRestoreSettings : IDynamicJson
     {
+        public List<ShardBucketRange> BucketRanges;
         public Dictionary<int, SingleShardRestoreSetting> Shards { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
+                [nameof(BucketRanges)] = new DynamicJsonArray(BucketRanges),
                 [nameof(Shards)] = Shards != null ? DynamicJsonValue.Convert(Shards)
                     : null
             };
@@ -27,6 +30,7 @@ namespace Raven.Client.Documents.Operations.Backups.Sharding
             if (other == null)
                 throw new ArgumentException(nameof(other));
 
+            BucketRanges = other.BucketRanges;
             Shards = new Dictionary<int, SingleShardRestoreSetting>(other.Shards.Count);
             foreach (var shardToSetting in other.Shards)
             {
