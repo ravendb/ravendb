@@ -23,6 +23,13 @@ import useId from "hooks/useId";
 import classNames from "classnames";
 import { FlexGrow } from "components/common/FlexGrow";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
+import {
+    RichPanel,
+    RichPanelDetailItem,
+    RichPanelDetails,
+    RichPanelHeader,
+    RichPanelName,
+} from "components/common/RichPanel";
 
 interface NodeInfoComponentProps {
     node: NodeInfo;
@@ -68,14 +75,14 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
     }, [node]);
 
     return (
-        <Card>
-            <CardHeader>
-                <div className="d-flex">
-                    <Badge color={nodeBadgeColor(node)}>status: {nodeBadgeText(node)}</Badge>
-                    <div title={node.type}>
+        <RichPanel className="flex-row">
+            <Badge color={nodeBadgeColor(node)}>status: {nodeBadgeText(node)}</Badge>
+            <div className="flex-grow-1">
+                <RichPanelHeader>
+                    <RichPanelName title={node.type}>
                         <i className={cssIcon(node)} />
                         Node: {node.tag}
-                    </div>
+                    </RichPanelName>
 
                     <FlexGrow />
 
@@ -98,12 +105,14 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
                                 <DropdownItem onClick={() => deleteNodeFromGroup(false)}>
                                     <i className="icon-trash" />
                                     <span>Soft Delete</span>&nbsp;
-                                    <small>(stop replication and keep database files on the node)</small>
+                                    <br />
+                                    <small>stop replication and keep database files on the node</small>
                                 </DropdownItem>
                                 <DropdownItem onClick={() => deleteNodeFromGroup(true)}>
                                     <i className="icon-alerts text-danger"></i>{" "}
                                     <span className="text-danger">Hard Delete</span>
-                                    &nbsp;<small>(stop replication and remove database files on the node)</small>
+                                    <br />
+                                    &nbsp;<small>stop replication and remove database files on the node</small>
                                 </DropdownItem>
                             </DropdownMenu>
                         </UncontrolledDropdown>
@@ -125,17 +134,25 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
                             </UncontrolledTooltip>
                         </React.Fragment>
                     )}
-                </div>
-            </CardHeader>
-            {lastErrorShort && (
-                <CardBody color={nodeBadgeColor(node)}>
-                    {lastErrorShort}
-                    <Button color="link" onClick={showErrorsDetails}>
-                        show details
-                    </Button>
-                </CardBody>
-            )}
-        </Card>
+                </RichPanelHeader>
+                {lastErrorShort && (
+                    <RichPanelDetails>
+                        <RichPanelDetailItem
+                            label={
+                                <>
+                                    <i className="icon-warning me-1" />
+                                    Error
+                                </>
+                            }
+                        >
+                            <a className="link" onClick={showErrorsDetails}>
+                                {lastErrorShort}
+                            </a>
+                        </RichPanelDetailItem>
+                    </RichPanelDetails>
+                )}
+            </div>
+        </RichPanel>
     );
 }
 

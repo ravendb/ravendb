@@ -1258,7 +1258,7 @@ $modal-scale-transform: scale(1.02) !default;
 // Define alert colors, border radius, and padding.
 
 // scss-docs-start alert-variables
-$alert-padding-y: $spacer !default;
+$alert-padding-y: $spacer-xs !default;
 $alert-padding-x: $spacer !default;
 $alert-margin-bottom: 1rem !default;
 $alert-border-radius: $border-radius !default;

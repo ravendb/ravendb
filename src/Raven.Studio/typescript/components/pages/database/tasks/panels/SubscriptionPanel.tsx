@@ -133,7 +133,7 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
                       
                         </div>
                     </div>
-                    <div className="flex-noshrink flex-grow flex-start text-right">
+                    <div className="flex-shrink-0 flex-grow flex-start text-right">
                         <button
                             className="btn btn-default"
                             data-bind="click: refreshSubscriptionInfo"

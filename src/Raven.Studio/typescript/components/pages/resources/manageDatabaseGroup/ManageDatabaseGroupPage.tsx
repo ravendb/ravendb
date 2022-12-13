@@ -158,34 +158,36 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     return (
         <div className="content-margin">
-            <div>
-                <Button data-bind="click: enableNodesSort, enable: nodes().length > 1, requiredAccess: 'Operator'">
-                    <i className="icon-reorder"></i> Reorder nodes
+            <div className="sticky-header">
+                <Button
+                    className="me-2"
+                    data-bind="click: enableNodesSort, enable: nodes().length > 1, requiredAccess: 'Operator'"
+                >
+                    <i className="icon-reorder me-1" /> Reorder nodes
                 </Button>
-                <Button color="primary" disabled={!addNodeEnabled} onClick={addNode}>
-                    <i className="icon-plus"></i>
-                    <span>Add node to group</span>
+                <Button className="me-2" color="primary" disabled={!addNodeEnabled} onClick={addNode}>
+                    <i className="icon-plus me-1" />
+                    Add node to group
                 </Button>
                 <UncontrolledButtonWithDropdownPanel buttonText="Settings">
-                    <div>
-                        <FormGroup switch className="form-check-reverse">
-                            <Input
-                                id={settingsUniqueId}
-                                type="switch"
-                                role="switch"
-                                disabled={!enableDynamicDatabaseDistribution}
-                                checked={dynamicDatabaseDistribution}
-                                onChange={changeDynamicDatabaseDistribution}
-                            />
-                            <Label htmlFor={settingsUniqueId} check>
+                    <>
+                        <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
+                            <div className={"form-switch form-check-reverse"}>
+                                <Input
+                                    id={settingsUniqueId}
+                                    type="switch"
+                                    role="switch"
+                                    disabled={!enableDynamicDatabaseDistribution}
+                                    checked={dynamicDatabaseDistribution}
+                                    onChange={changeDynamicDatabaseDistribution}
+                                />
                                 Allow dynamic database distribution
-                            </Label>
-
-                            {dynamicDatabaseDistributionWarning && (
-                                <Alert color="warning">{dynamicDatabaseDistributionWarning}</Alert>
-                            )}
-                        </FormGroup>
-                    </div>
+                            </div>
+                        </Label>
+                        {dynamicDatabaseDistributionWarning && (
+                            <div className="bg-faded-warning px-4 py-2">{dynamicDatabaseDistributionWarning}</div>
+                        )}
+                    </>
                 </UncontrolledButtonWithDropdownPanel>
             </div>
             <div>
