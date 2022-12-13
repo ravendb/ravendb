@@ -2164,8 +2164,8 @@ namespace FastTests.Server.Documents.Revisions
                     string url = $"/revisions?&id={Uri.EscapeDataString(company.Id)}";
                     session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) =>
                     {
-                        Assert.True(args.Url.Contains(url));
-                        status = args.Response.StatusCode;
+                        if (args.Url.Contains(url))
+                            status = args.Response.StatusCode;
                     };
 
                     var revision = session.Advanced.Revisions.Get<Company>(company.Id, DateTime.MaxValue);
@@ -2220,8 +2220,8 @@ namespace FastTests.Server.Documents.Revisions
                     
                     session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) =>
                     {
-                        Assert.True(args.Url.Contains(url));
-                        status = args.Response.StatusCode;
+                        if (args.Url.Contains(url))
+                            status = args.Response.StatusCode;
                     };
 
                     var revision = await session.Advanced.Revisions.GetAsync<Company>(changeVectors.ToArray());
