@@ -211,9 +211,10 @@ namespace SlowTests.Client.Operations
                     string url = $"/studio/collections/fields?collection={Uri.EscapeDataString("User")}";
                     session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) =>
                     {
-                        Assert.True(args.Url.Contains(url));
-                        status = args.Response.StatusCode;
+                        if (args.Url.Contains(url))
+                            status = args.Response.StatusCode;
                     };
+
                     var result = await store.Operations.SendAsync(new GetCollectionFieldsOperation("User", ""));
 
                     Assert.NotNull(result);
@@ -245,8 +246,8 @@ namespace SlowTests.Client.Operations
                     string url = $"/studio/collections/preview?collection={Uri.EscapeDataString("User")}";
                     session.Advanced.RequestExecutor.OnSucceedRequest += (_, args) =>
                     {
-                        Assert.True(args.Url.Contains(url));
-                        status = args.Response.StatusCode;
+                        if (args.Url.Contains(url))
+                            status = args.Response.StatusCode;
                     };
 
                     var result = await store.Operations.SendAsync(new PreviewCollectionOperation("Users"));
