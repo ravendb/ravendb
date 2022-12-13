@@ -446,7 +446,7 @@
                             </div>
                         </div>
                         <div class="flex-horizontal flex-stretch-items margin-top">
-                            <ul class="item-list flex-noshrink" data-bind="foreach: editedIndex().additionalSources">
+                            <ul class="item-list flex-shrink-0" data-bind="foreach: editedIndex().additionalSources">
                                 <li class="item" data-bind="css: { active: $data === $root.selectedSourcePreview() }">
                                     <a href="#" data-bind="click: $root.previewAdditionalSource, text: name" class="column-name"></a>
                                     <a title="Download this file" class="download" data-bind="click: $root.downloadAdditionalSource" href="#"><i class="icon-export"></i></a>

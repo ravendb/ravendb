@@ -380,7 +380,7 @@
                             <li data-bind="css: { selected: $data === $parent.previewItem() }, event: { mouseenter: $parent.previewPatch }">                             
                                 <a href="#" class="patch-link close-panel" data-bind="click: $parent.usePatchItem.bind($parent, $data)">
                                     <span class="name" data-bind="text: Name"></span>
-                                    <span class="modified flex-noshrink" data-bind="text: ModificationDate"></span>
+                                    <span class="modified flex-shrink-0" data-bind="text: ModificationDate"></span>
                                 </a>
                                 <a href="#" data-bind="click: $parent.removePatch" class="patch-remove"><i class="icon-trash"></i></a>
                             </li>

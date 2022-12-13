@@ -21,14 +21,14 @@
                             <!--</a>-->
                             <span class="obj-name on-base-background" data-bind="text: userSpecifiedId, attr: { title: userSpecifiedId }"></span>
                             <a href="#" class="copy-button-hidden inherit-position" title="Copy document Id" data-bind="click: copyDocumentIdToClipboard"><i class="icon-copy"></i></a>
-                            <span data-bind="visible: revisionText(), text: revisionText()" class="text-primary revision flex-noshrink"></span>
-                            <a target="_blank" href="#" title="Click to view the raw content of the document" class="flex-noshrink margin-left margin-left-sm"
+                            <span data-bind="visible: revisionText(), text: revisionText()" class="text-primary revision flex-shrink-0"></span>
+                            <a target="_blank" href="#" title="Click to view the raw content of the document" class="flex-shrink-0 margin-left margin-left-sm"
                                data-bind="attr: { href: rawJsonUrl }, visible: !isDeleteRevision()"><i class="icon-json"></i>
                             </a>
                         </div>
                     </div>
                 </div>
-                <div class="flex-noshrink" data-bind="visible: !inDiffMode()">
+                <div class="flex-shrink-0" data-bind="visible: !inDiffMode()">
                     <p class="pull-right-md text-right-md padding padding-xs on-base-background" data-bind="if: displayLastModifiedDate()">
                         <i class="icon-recent"></i>
                         <small>Last modified <span data-bind="text: $root.lastModifiedAsAgo"></span></small>

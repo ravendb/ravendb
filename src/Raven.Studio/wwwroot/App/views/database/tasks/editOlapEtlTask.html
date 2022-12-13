@@ -208,7 +208,7 @@
                                 <input type="text" class="form-control input-sm" placeholder="Enter ID column name (override the default '_id')"
                                        data-bind="textInput: documentIdColumn" />
                             </div>
-                            <div class="flex-noshrink">
+                            <div class="flex-shrink-0">
                                 <button type="button" class="btn btn-success btn-sm" title="Add this ID column name" data-bind="click: $root.saveEditedOlapTable"><i class="icon-tick"></i></button>
                                 <button type="button" class="btn btn-default btn-sm" title="Cancel" data-bind="click: $root.cancelEditedOlapTable"><i class="icon-cancel"></i></button>
                             </div>
@@ -232,7 +232,7 @@
                                     <div class="widthlabel"><label class="superscript">ID Column Name</label><strong data-bind="text: documentIdColumn"></strong></div>
                                 </div>
                             </div>
-                            <div class="flex-noshrink">
+                            <div class="flex-shrink-0">
                                 <button type="button" class="btn btn-default btn-sm" title="Edit this ID column name" data-bind="click: $root.editOlapTable.bind($data)"><i class="icon-edit"></i></button>
                                 <button type="button" class="btn btn-danger btn-sm" title="Remove this ID column name" data-bind="click: $root.deleteOlapTable.bind($data)"><i class="icon-trash"></i></button>
                             </div>

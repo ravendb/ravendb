@@ -23,7 +23,7 @@
                 <a data-bind="attr: { href: documentsCompressionUrl }"><i class="icon-link margin-right margin-right-xs"></i>Document Compression</a>
             </small>
         </div>
-        <div class="flex-horizontal flex-noshrink" data-bind="visible: accessManager.canCompactDatabase" title="Click to compact this database">
+        <div class="flex-horizontal flex-shrink-0" data-bind="visible: accessManager.canCompactDatabase" title="Click to compact this database">
             <button class="btn btn-sm btn-default" data-bind="click: compactDatabase">
                 <i class="icon-compact"></i><span>Compact Database</span>
             </button>
