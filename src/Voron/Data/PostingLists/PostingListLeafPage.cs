@@ -161,8 +161,10 @@ public readonly unsafe struct PostingListLeafPage
                         loc = ~loc;
                     _compressIndex = loc;
                 }
-                break;
+                return;
             }
+
+            _hasDecoder = false;
         }
         
         public int TryFill(Span<long> matches, long pruneGreaterThanOptimization)
