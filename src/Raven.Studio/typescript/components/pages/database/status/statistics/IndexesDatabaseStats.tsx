@@ -289,7 +289,7 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
                                                                 <a
                                                                     href="#"
                                                                     title="Show stale reason"
-                                                                    className="flex-noshrink badge badge-warning"
+                                                                    className="flex-shrink-0 badge badge-warning"
                                                                     onClick={withPreventDefault(() =>
                                                                         showStaleReasons(index, location)
                                                                     )}

@@ -30,6 +30,10 @@ input {
     }
 }
 
+a.link {
+    cursor: pointer;
+}
+
 @mixin check-variant($color) {
     .form-check-input {
         border-color: $color;
@@ -126,6 +130,19 @@ $additional-utilities: (
         class: bg,
         values: map-merge($theme-colors-faded, ()),
     ),
+    // Automatic color adjustment for backckround-color utility TODO - NOT WORKING :(
+    // "background-color": (
+    //     property: color,
+    //     class: bg,
+    //     values: (
+    //         primary : color-contrast($primary),
+    //         success : color-contrast($success),
+    //         warning : color-contrast($warning),
+    //         danger : color-contrast($danger),
+    //         info : color-contrast($info)
+    //       ),
+        
+    //   )
 );
 
 @each $key, $utility in $additional-utilities {
