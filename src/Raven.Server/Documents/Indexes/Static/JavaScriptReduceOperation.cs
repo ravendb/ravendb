@@ -7,11 +7,8 @@ using System.Runtime.CompilerServices;
 using Esprima.Ast;
 using Jint;
 using Jint.Native;
-using Jint.Native.Array;
 using Jint.Native.Function;
-using Jint.Native.Object;
 using Jint.Runtime;
-using Jint.Runtime.Descriptors;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
@@ -257,8 +254,8 @@ namespace Raven.Server.Documents.Indexes.Static
                         {
                             BlittableJsonReaderObject bjro => new BlittableObjectInstance(Engine, null, bjro, null, null, null),
                             Document doc => new BlittableObjectInstance(Engine, null, doc.Data, doc),
-                            LazyStringValue lsv => new JsString(lsv.ToString()),
-                            LazyCompressedStringValue lcsv => new JsString(lcsv.ToString()),
+                            LazyStringValue lsv => new LazyJsString(lsv),
+                            LazyCompressedStringValue lcsv => new LazyCompressedJsString(lcsv),
                             LazyNumberValue lnv => new JsNumber(lnv.ToDouble(CultureInfo.InvariantCulture)),
                             _ => JsValue.FromObject(Engine, value)
                         };

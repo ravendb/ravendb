@@ -11,6 +11,7 @@ using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Queries.Results;
 using Sparrow.Json;
@@ -206,7 +207,7 @@ namespace Raven.Server.Documents.Patch
                             return true;
 
                         case Client.Constants.Documents.Indexing.Fields.EmptyString:
-                            value = string.Empty;
+                            value = JsString.Empty;
                             return true;
                     }
                 }
@@ -240,7 +241,7 @@ namespace Raven.Server.Documents.Patch
                 get => _value;
                 set
                 {
-                    if (Equals(value, _value))
+                    if (Equals(_value, value))
                         return;
                     _value = value;
                     _parent.MarkChanged();
@@ -293,10 +294,10 @@ namespace Raven.Server.Documents.Patch
                         return GetJsValueForLazyNumber(owner?.Engine, (LazyNumberValue)value);
 
                     case BlittableJsonToken.String:
-                        return value.ToString();
+                        return new LazyJsString((LazyStringValue)value);
 
                     case BlittableJsonToken.CompressedString:
-                        return value.ToString();
+                        return new LazyCompressedJsString((LazyCompressedStringValue)value);
 
                     case BlittableJsonToken.StartObject:
                         Changed = true;
@@ -310,10 +311,10 @@ namespace Raven.Server.Documents.Patch
                                 return GetArrayInstanceFromBlittableArray(owner.Engine, blittableArray, owner);
 
                             case LazyStringValue asLazyStringValue:
-                                return asLazyStringValue.ToString();
+                                return new LazyJsString(asLazyStringValue);
 
                             case LazyCompressedStringValue asLazyCompressedStringValue:
-                                return asLazyCompressedStringValue.ToString();
+                                return new LazyCompressedJsString(asLazyCompressedStringValue);
 
                             default:
                                 blittable.NoCache = true;
@@ -396,7 +397,7 @@ namespace Raven.Server.Documents.Patch
             if (property.IsString() == false)
                 return PropertyDescriptor.Undefined;
 
-            return GetOwnProperty(property.AsString());
+            return GetOwnProperty(property.ToString());
         }
 
         public PropertyDescriptor GetOwnProperty(string property)
