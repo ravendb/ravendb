@@ -4,7 +4,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations;
+namespace Raven.Client.Documents.Operations.Backups;
 
 public class DelayBackupOperation : IMaintenanceOperation<OperationState>
 {
@@ -36,7 +36,7 @@ public class DelayBackupOperation : IMaintenanceOperation<OperationState>
         public override bool IsReadRequest => true;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/admin/backup-task/delay?taskId={_taskId}&duration={_duration}";
+            url = $"{node.Url}/admin/backup-task/delay?taskId={_taskId}&duration={_duration}&databaseName={node.Database}";
 
             return new HttpRequestMessage
             {

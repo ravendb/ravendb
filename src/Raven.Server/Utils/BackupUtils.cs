@@ -157,7 +157,7 @@ internal static class BackupUtils
         Debug.Assert(parameters.Configuration.TaskId != 0);
 
         var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag );
-        var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus.DelayUntil);
+        var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus.DelayUntil, out var originalBackupTime);
         var nowLocalTime = SystemTime.UtcNow.ToLocalTime();
         var timeSpan = nextBackupTimeLocal - nowLocalTime;
 
@@ -187,6 +187,7 @@ internal static class BackupUtils
         {
             TimeSpan = nextBackupTimeSpan,
             DateTime = nextBackupTimeLocal.ToUniversalTime(),
+            OriginalBackupTime = originalBackupTime,
             IsFull = isFullBackup,
             TaskId = parameters.Configuration.TaskId
         };
@@ -215,7 +216,7 @@ internal static class BackupUtils
         }
     }
 
-    private static DateTime GetNextBackupDateTime(DateTime? nextFullBackup, DateTime? nextIncrementalBackup, DateTime? delayUntil)
+    private static DateTime GetNextBackupDateTime(DateTime? nextFullBackup, DateTime? nextIncrementalBackup, DateTime? delayUntil, out DateTime? originalBackupTime)
     {
         Debug.Assert(nextFullBackup != null || nextIncrementalBackup != null);
         DateTime? nextBackup;
@@ -227,9 +228,14 @@ internal static class BackupUtils
         else
             nextBackup = nextFullBackup <= nextIncrementalBackup ? nextFullBackup.Value : nextIncrementalBackup.Value;
 
-        return delayUntil != null && (delayUntil.Value.ToLocalTime() > nextBackup.Value) 
-            ? delayUntil.Value.ToLocalTime() 
-            : nextBackup.Value;
+        if (delayUntil != null && delayUntil.Value.ToLocalTime() > nextBackup.Value)
+        {
+            originalBackupTime = nextBackup.Value;
+            return delayUntil.Value.ToLocalTime();
+        }
+
+        originalBackupTime = null;
+        return nextBackup.Value;
     }
 
     private static bool IsFullBackup(PeriodicBackupStatus backupStatus,

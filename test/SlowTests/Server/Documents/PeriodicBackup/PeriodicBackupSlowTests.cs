@@ -2712,6 +2712,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (var session = store.OpenAsyncSession())
                     await Backup.FillDatabaseWithRandomDataAsync(databaseSizeInMb: 10, session);
 
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                Assert.NotNull(database);
+                database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
+
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
                 var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
 
@@ -2768,6 +2772,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
                 var taskId = await Backup.UpdateConfigAndRunBackupAsync(leaderServer, config, leaderStore);
 
+                var responsibleDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database).ConfigureAwait(false);
+                Assert.NotNull(responsibleDatabase);
+                responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
+
                 await Backup.RunBackupInClusterAsync(leaderStore, taskId, opStatus: OperationStatus.InProgress);
 
                 // Just to be sure, the DelayUntil value was not set before the task delaying
@@ -2795,8 +2803,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await leaderStore.Maintenance.SendAsync(new DelayBackupOperation(runningBackupTaskId, delayDuration));
 
                 // The next backup should be scheduled in almost 1 hour on the current periodic backup task
-                var responsibleDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database).ConfigureAwait(false);
-                Assert.NotNull(responsibleDatabase);
                 var periodicBackup = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.Single(x => x.BackupStatus.TaskId == taskId);
                 Assert.NotNull(periodicBackup);
                 Assert.Null(periodicBackup.RunningTask);
@@ -2840,6 +2846,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
                 var taskId = await Backup.UpdateConfigAndRunBackupAsync(leaderServer, config, leaderStore);
+
+                var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database).ConfigureAwait(false);
+                Assert.NotNull(database);
+                database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
 
                 await Backup.RunBackupInClusterAsync(leaderStore, taskId, opStatus: OperationStatus.InProgress);
 
@@ -2931,6 +2941,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
                 var taskId = await Backup.UpdateConfigAndRunBackupAsync(leaderServer, config, leaderStore);
+
+                var responsibleDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database).ConfigureAwait(false);
+                Assert.NotNull(responsibleDatabase);
+                responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
 
                 await Backup.RunBackupInClusterAsync(leaderStore, taskId, opStatus: OperationStatus.InProgress);
 
