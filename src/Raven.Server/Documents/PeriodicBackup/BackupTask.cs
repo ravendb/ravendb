@@ -220,18 +220,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 operationCanceled = TaskCancelToken.Token.IsCancellationRequested;
 
-                var backupStatus = _database.PeriodicBackupRunner.GetBackupStatus(runningBackupStatus.TaskId);
-                if (backupStatus.DelayUntil > DateTime.UtcNow)
-                {
-                    _database.NotificationCenter.Add(AlertRaised.Create(
-                        _database.Name,
-                        "The task was delayed",
-                        $"The backup task '{_taskName}' was delayed by user and will start again at {backupStatus.DelayUntil.Value.ToLocalTime():MMMM d, yyyy h:mm tt}.",
-                        AlertType.PeriodicBackup,
-                        NotificationSeverity.Info,
-                        details: new ExceptionDetails(oce)));
-                }
-
                 throw;
             }
             catch (Exception e)
@@ -278,7 +266,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         runningBackupStatus.Version = ++_previousBackupStatus.Version;
                         // save the backup status
                         AddInfo("Saving backup status");
-                        SaveBackupStatus(runningBackupStatus, _database, _logger, _backupResult, _forTestingPurposes);
+                        SaveBackupStatus(runningBackupStatus, _database, _logger, _backupResult);
                     }
                 }
             }

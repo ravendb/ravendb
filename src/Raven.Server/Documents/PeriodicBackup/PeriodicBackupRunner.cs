@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return CreateBackupTask(periodicBackup, isFullBackup, SystemTime.UtcNow);
         }
 
-        public async Task Delay(long taskId, TimeSpan delay, X509Certificate2 clientCert)
+        public async Task DelayAsync(long taskId, TimeSpan delay, X509Certificate2 clientCert)
         {
             foreach (var periodicBackup in _periodicBackups)
             {
@@ -374,15 +374,15 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     await runningTask.Task; // wait for the running task to complete
                 }
-                catch (TaskCanceledException)
+                catch
                 {
-                    // ignore
+                    // task has ended, nothing we can do here
                 }
                 
                 return;
             }
 
-            throw new ArgumentException($"Operation {taskId} was not registered");
+            throw new ArgumentException($"Backup task {taskId} isn't registered");
         }
 
         public DateTime? GetWakeDatabaseTimeUtc(string databaseName)
@@ -1142,11 +1142,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (context.OpenReadTransaction())
             {
                 var state = (DelayBackupCommand.DelayBackupCommandState)changeState;
-                var periodicBackup = _periodicBackups.Single(x => x.Key == state.TaskId);
-                
-                periodicBackup.Value.BackupStatus ??= new PeriodicBackupStatus();
-                periodicBackup.Value.BackupStatus.DelayUntil = state.DelayUntil;
-                ScheduleNextBackup(periodicBackup.Value, state.DelayUntil.Subtract(DateTime.UtcNow), lockTaken: false);
+                if (_periodicBackups.TryGetValue(state.TaskId, out var periodicBackup) == false)
+                    throw new InvalidOperationException($"Backup task id: {state.TaskId} doesn't exist");
+
+                periodicBackup.BackupStatus ??= new PeriodicBackupStatus();
+                periodicBackup.BackupStatus.DelayUntil = state.DelayUntil;
+                ScheduleNextBackup(periodicBackup, state.DelayUntil.Subtract(DateTime.UtcNow), lockTaken: false);
             }
         }
 

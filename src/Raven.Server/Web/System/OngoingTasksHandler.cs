@@ -305,18 +305,6 @@ namespace Raven.Server.Web.System
             return taskInfo;
         }
 
-        [RavenAction("/databases/*/admin/backup-task/delay", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task DelayBackupTask()
-        {
-            var id = GetLongQueryString("taskId");
-            var delay = GetTimeSpanQueryString("duration");
-
-            if (delay <= TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(nameof(delay));
-
-            await Database.PeriodicBackupRunner.Delay(id, delay.Value, GetCurrentCertificate());
-        }
-
         [RavenAction("/databases/*/admin/periodic-backup/config", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetConfiguration()
         {
