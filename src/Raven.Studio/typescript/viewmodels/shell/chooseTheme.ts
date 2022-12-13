@@ -35,8 +35,13 @@ class chooseTheme extends dialogViewModelBase {
     }
     
     private updateStylesheet(fileName: string) {
+        // old less styles
         const themeLink = document.getElementById("raven-theme") as HTMLLinkElement;
         themeLink.href = chooseTheme.stylesheetPrefix + fileName;
+
+        // new bs5 styles
+        const bs5ThemeLink = document.getElementById("raven-theme-bs5") as HTMLLinkElement;
+        bs5ThemeLink.href = chooseTheme.stylesheetPrefix + "bs5-" + fileName;
     }
 }
 

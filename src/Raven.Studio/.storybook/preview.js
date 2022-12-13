@@ -1,4 +1,4 @@
-﻿import "../wwwroot/Content/css/bs5.scss";
+﻿import "../wwwroot/Content/css/bs5-styles.scss";
 import "../wwwroot/Content/css/styles.less"
 
 import { overrideViews } from "../typescript/overrides/views";

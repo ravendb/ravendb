@@ -2,7 +2,7 @@
 //== Colors
 //
 // AVAILABLE: default, blue, light
-$theme: "blue";
+$theme: "default" !default;
 
 $brand-ravendb: #b82e73;
 $brand-cloud: #37c4ac !default;
@@ -119,7 +119,7 @@ $link-color: #e33572;
     $well-bg: $gray-200;
 }
 // Light Theme
-@if $theme == "default" {
+@if $theme == "light" {
     $black: #292d3d;
     $gray-900: #484d63;
     $gray-800: #666d8a;
