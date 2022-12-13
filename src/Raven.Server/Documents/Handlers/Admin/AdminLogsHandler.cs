@@ -156,13 +156,10 @@ namespace Raven.Server.Documents.Handlers.Admin
 
         private IDisposable AcquireLockAndGetLoggers(out SwitchLogger generic, out SwitchLogger server)
         {
-            var genericLogger = LoggingSource.Instance.LoggersHolder.Generic;
-            var serverLogger = Server.Logger;
+            var genericLogger = generic = LoggingSource.Instance.LoggersHolder.Generic;
+            var serverLogger = server = Server.Logger;
             Monitor.Enter(genericLogger);
             Monitor.Enter(serverLogger);
-
-            generic = genericLogger;
-            server = serverLogger;
             return new DisposableAction(() =>
             {
                 Monitor.Exit(genericLogger);
@@ -178,18 +175,14 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 await using var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream());
 
-                lock (generic)
-                lock (server)
+                var djv = new DynamicJsonValue
                 {
-                    var djv = new DynamicJsonValue
-                    {
-                        ["IsInfoEnabled"] = LoggingSource.Instance.IsInfoEnabled,
-                        ["IsOperationsEnabled"] = LoggingSource.Instance.IsOperationsEnabled,
-                        ["Loggers"] = new DynamicJsonValue {[generic.Name] = generic.ToJson(), [server.Name] = server.ToJson()}
-                    };
-                    var json = context.ReadObject(djv, "logs/loggers");
-                    writer.WriteObject(json);
-                }
+                    ["IsInfoEnabled"] = LoggingSource.Instance.IsInfoEnabled,
+                    ["IsOperationsEnabled"] = LoggingSource.Instance.IsOperationsEnabled,
+                    ["Loggers"] = new DynamicJsonValue {[generic.Name] = generic.ToJson(), [server.Name] = server.ToJson()}
+                };
+                var json = context.ReadObject(djv, "logs/loggers");
+                writer.WriteObject(json);
             }
         }
 

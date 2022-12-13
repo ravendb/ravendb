@@ -2466,8 +2466,8 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations("Failed to get index error count", e);
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Failed to get index error count", e);
 
                     return 1;
                 }
@@ -4748,8 +4748,8 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations("Unable to complete optimization, index is not usable and may require reset of the index to recover", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Unable to complete optimization, index is not usable and may require reset of the index to recover", e);
 
                 throw;
             }

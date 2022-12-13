@@ -1631,8 +1631,8 @@ namespace Raven.Server.Documents
         {
             string title = $"Non Durable File System - {Name ?? "Unknown Database"}";
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"{title}. {e.Message}", e.Exception);
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"{title}. {e.Message}", e.Exception);
 
             _serverStore?.NotificationCenter.Add(AlertRaised.Create(
                 Name,
@@ -1686,8 +1686,8 @@ namespace Raven.Server.Documents
 
             string message = $"{e.Message}{Environment.NewLine}{Environment.NewLine}Environment: {environment}";
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"{title}. {message}", e.Exception);
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"{title}. {message}", e.Exception);
 
             nc?.Add(AlertRaised.Create(Name,
                 title,
@@ -1755,8 +1755,8 @@ namespace Raven.Server.Documents
             var title = $"Recoverable Voron error in '{Name}' database";
             var message = $"Failure {e.FailureMessage} in the following environment: {e.EnvironmentPath}";
 
-            if (_logger.IsOperationsEnabled)
-                _logger.Operations($"{title}. {message}", e.Exception);
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"{title}. {message}", e.Exception);
 
             try
             {
