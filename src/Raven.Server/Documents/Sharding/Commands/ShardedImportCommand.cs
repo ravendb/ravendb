@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -42,7 +41,7 @@ namespace Raven.Server.Documents.Sharding.Commands
 
         public HttpRequest HttpRequest { get; }
 
-        public BlittableJsonReaderObject Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<BlittableJsonReaderObject>> results) => null;
+        public BlittableJsonReaderObject Combine(Dictionary<int, ShardExecutionResult<BlittableJsonReaderObject>> results) => null;
 
         public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => new ShardedImportCommand(_options, _holders[shardNumber].OutStream, _operationId);
 

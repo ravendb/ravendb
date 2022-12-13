@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-        public DynamicJsonArray Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<BlittableJsonReaderObject>> results)
+        public DynamicJsonArray Combine(Dictionary<int, ShardExecutionResult<BlittableJsonReaderObject>> results)
         {
             var reply = new object[_totalCommands];
             foreach (var c in _commands.Values)

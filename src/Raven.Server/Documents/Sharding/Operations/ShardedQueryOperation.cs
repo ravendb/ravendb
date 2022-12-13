@@ -48,7 +48,7 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
     public Dictionary<string, List<TimeSeriesRange>> MissingTimeSeriesIncludes { get; set; }
 
-    public string CombineCommandsEtag(Dictionary<int, AbstractExecutor.ShardExecutionResult<QueryResult>> commands)
+    public string CombineCommandsEtag(Dictionary<int, ShardExecutionResult<QueryResult>> commands)
     {
         _combinedResultEtag = 0;
 
@@ -60,7 +60,7 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         return CharExtensions.ToInvariantString(_combinedResultEtag);
     }
 
-    public ShardedQueryResult CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<QueryResult>> results)
+    public ShardedQueryResult CombineResults(Dictionary<int, ShardExecutionResult<QueryResult>> results)
     {
         var result = new ShardedQueryResult
         {

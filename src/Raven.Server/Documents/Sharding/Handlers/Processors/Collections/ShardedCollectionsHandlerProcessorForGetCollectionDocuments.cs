@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -13,7 +12,6 @@ using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -94,7 +92,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
 
         public string ExpectedEtag { get; }
 
-        public CombinedStreamResult CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<StreamResult>> results)
+        public CombinedStreamResult CombineResults(Dictionary<int, ShardExecutionResult<StreamResult>> results)
         {
             return new CombinedStreamResult { Results = results };
         }

@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Sharding.Streaming;
 
 public class CombinedStreamResult
 {
-    public Dictionary<int, AbstractExecutor.ShardExecutionResult<StreamResult>> Results;
+    public Dictionary<int, ShardExecutionResult<StreamResult>> Results;
 
     public async ValueTask<CombinedReadContinuationState> InitializeAsync(ShardedDatabaseContext databaseContext, CancellationToken token)
     {

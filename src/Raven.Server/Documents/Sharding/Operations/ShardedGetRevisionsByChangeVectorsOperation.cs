@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
@@ -29,7 +28,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
 		public string ExpectedEtag { get; }
 
-        public BlittableJsonReaderObject[] CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<BlittableArrayResult>> results)
+        public BlittableJsonReaderObject[] CombineResults(Dictionary<int, ShardExecutionResult<BlittableArrayResult>> results)
         {
             int len = 0;
             foreach (var s in results.Values)

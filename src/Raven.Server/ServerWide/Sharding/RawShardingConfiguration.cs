@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Amqp.Framing;
 using JetBrains.Annotations;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;

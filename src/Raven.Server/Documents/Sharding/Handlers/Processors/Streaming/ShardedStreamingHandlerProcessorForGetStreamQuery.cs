@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -12,7 +11,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Streaming;
@@ -20,6 +18,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.Streaming;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication.Senders;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.NotificationCenter;
@@ -27,8 +26,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Utils;
-using static Raven.Server.Documents.Sharding.Executors.AbstractExecutor;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 {

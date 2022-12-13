@@ -153,9 +153,9 @@ namespace Raven.Server.Documents
             return str;
         }
 
-        public static string CombineEtags<T>(Dictionary<int, AbstractExecutor.ShardExecutionResult<T>> cmds) => CombineEtags(EnumerateEtags(cmds));
+        public static string CombineEtags<T>(Dictionary<int, ShardExecutionResult<T>> cmds) => CombineEtags(EnumerateEtags(cmds));
 
-        public static IEnumerable<string> EnumerateEtags<T>(Dictionary<int, AbstractExecutor.ShardExecutionResult<T>> cmds)
+        public static IEnumerable<string> EnumerateEtags<T>(Dictionary<int, ShardExecutionResult<T>> cmds)
         {
             foreach (var shardInfo in cmds.Values)
             {

@@ -847,7 +847,7 @@ namespace SlowTests.Sharding.Backup
                 }, timeout: TimeSpan.FromSeconds(60)))
                 {
                     var newDatabaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredDatabaseName));
-                    Assert.Equal(3, newDatabaseRecord.Sharding.Shards.Length);
+                    Assert.Equal(3, newDatabaseRecord.Sharding.Shards.Count);
                     Assert.Equal(100, newDatabaseRecord.Sharding.BucketRanges[1].BucketRangeStart);
 
                     using (var session = store.OpenAsyncSession(database: restoredDatabaseName))

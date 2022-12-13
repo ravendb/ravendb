@@ -26,7 +26,7 @@ public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedO
 
     public HttpRequest HttpRequest => _shardedSubscriptionsHandler.HttpContext.Request;
 
-    public LastChangeVectorForCollectionCombinedResult Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<LastChangeVectorForCollectionResult>> results)
+    public LastChangeVectorForCollectionCombinedResult Combine(Dictionary<int, ShardExecutionResult<LastChangeVectorForCollectionResult>> results)
     {
         var dic = new Dictionary<string, string>();
         
