@@ -67,7 +67,7 @@ namespace FastTests.Client
                 "GetNextServerOperationIdCommand", "KillServerOperationCommand",
                 "GetEssentialStatisticsCommand", "GetMultipleTimeSeriesRangesCommand", "GetShardedPeriodicBackupStatusCommand",
                 "AddNodeToOrchestratorTopologyCommand", "RemoveNodeFromOrchestratorTopologyCommand", "GetTcpInfoForReplicationCommand", "GetCollectionFieldsCommand", "PreviewCollectionCommand",
-				"CreateShardCommand"
+				"AddDatabaseShardCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);

@@ -112,9 +112,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
             var clusterTransactionIdBase64 = Guid.NewGuid().ToBase64Unpadded();
             var nodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var (_, shardRestoreSetting) in RestoreConfiguration.ShardRestoreSettings.Shards)
+            foreach (var (shardNumber, shardRestoreSetting) in RestoreConfiguration.ShardRestoreSettings.Shards)
             {
-                var shardNumber = shardRestoreSetting.ShardNumber;
+                Debug.Assert(shardRestoreSetting.ShardNumber == shardNumber);
                 
                 databaseRecord.Sharding.Shards[shardNumber] = new DatabaseTopology
                 {

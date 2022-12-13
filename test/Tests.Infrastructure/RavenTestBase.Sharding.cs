@@ -33,6 +33,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -359,14 +360,14 @@ public partial class RavenTestBase
             {
                 var settings = new ShardedRestoreSettings
                 {
-                    Shards = new Dictionary<int, SingleShardRestoreSetting>(backupPaths.Count)
+                    Shards = new Dictionary<int, SingleShardRestoreSetting>(backupPaths.Count),
+                    BucketRanges = sharding.BucketRanges
                 };
 
                 foreach (var dir in backupPaths)
                 {
-                    var shardIndexPosition = dir.LastIndexOf('$') + 1;
-                    var shardNumber = int.Parse(dir[shardIndexPosition].ToString());
-
+                    var shardNumber = GetShardNumberFromBackupPath(dir);
+                    
                     settings.Shards.Add(shardNumber, new SingleShardRestoreSetting
                     {
                         ShardNumber = shardNumber,
@@ -376,6 +377,13 @@ public partial class RavenTestBase
                 }
 
                 return settings;
+            }
+
+            private int GetShardNumberFromBackupPath(string path)
+            {
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "Handle shard number being a two digit integer");
+                var shardIndexPosition = path.LastIndexOf('$') + 1;
+                return int.Parse(path[shardIndexPosition].ToString());
             }
 
             public async Task CheckData(IDocumentStore store, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, long expectedRevisionsCount = 28, string database = null)
@@ -663,13 +671,12 @@ public partial class RavenTestBase
 
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
                 {
-                    var user = await session.Advanced.ExistsAsync(id);
-                    Assert.NotNull(user);
+                    Assert.True(await session.Advanced.ExistsAsync(id));
                 }
 
                 await server.Sharding.StartBucketMigration(store.Database, bucket, shardNumber, toShard);
-
-                var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard), timeout: 1000 * 1000);
+                
+                var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard));
                 Assert.True(exists, $"{id} wasn't found at shard {toShard}");
             }
 

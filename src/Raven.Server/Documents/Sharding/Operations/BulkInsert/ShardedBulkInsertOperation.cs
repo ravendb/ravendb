@@ -55,7 +55,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
     public CompressionLevel CompressionLevel { get; set; } = CompressionLevel.NoCompression;
 
     public HttpRequest HttpRequest => _requestHandler.HttpContext.Request;
-    public HttpResponseMessage Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<HttpResponseMessage>> results) => null;
+    public HttpResponseMessage Combine(Dictionary<int, ShardExecutionResult<HttpResponseMessage>> results) => null;
 
     public RavenCommand<HttpResponseMessage> CreateCommandForShard(int shardNumber)
     {

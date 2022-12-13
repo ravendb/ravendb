@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Sharding.Operations
         }
 
         public HttpRequest HttpRequest => null;
-        public object Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<object>> results) => throw new NotImplementedException();
+        public object Combine(Dictionary<int, ShardExecutionResult<object>> results) => throw new NotImplementedException();
 
         public RavenCommand<object> CreateCommandForShard(int shardNumber) => new WaitForIndexNotificationCommand(_indexes);
     }

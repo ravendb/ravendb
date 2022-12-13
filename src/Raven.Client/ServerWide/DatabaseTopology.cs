@@ -155,7 +155,7 @@ namespace Raven.Client.ServerWide
         }
     }
 
-    public class DatabaseTopology
+    public class DatabaseTopology : IDynamicJson
     {
         public List<string> Members = new List<string>();
         public List<string> Promotables = new List<string>();

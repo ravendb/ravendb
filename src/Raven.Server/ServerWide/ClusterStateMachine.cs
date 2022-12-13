@@ -1246,7 +1246,7 @@ namespace Raven.Server.ServerWide
                                 continue;
                             }
                         }
-                        //TODO stav: handle removal of cluster node with last shardNumber
+                        
                         if (record.IsSharded == false)
                         {
                             if (record.Topology.RelevantFor(removed))

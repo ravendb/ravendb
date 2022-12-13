@@ -35,7 +35,7 @@ public readonly struct ShardedSubscriptionTryoutOperation : IShardedOperation<Ge
 
     public HttpRequest HttpRequest => _httpContext.Request;
 
-    public GetDocumentsResult Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<GetDocumentsResult>> results)
+    public GetDocumentsResult Combine(Dictionary<int, ShardExecutionResult<GetDocumentsResult>> results)
     {
         var getDocumentsResult = new GetDocumentsResult();
         var objList = new List<BlittableJsonReaderObject>();

@@ -21,7 +21,7 @@ internal class ShardedTimeSeriesOperation : IShardedOperation<GetMultipleTimeSer
 
     public HttpRequest HttpRequest { get; }
 
-    public GetMultipleTimeSeriesRangesCommand.Response Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<GetMultipleTimeSeriesRangesCommand.Response>> results)
+    public GetMultipleTimeSeriesRangesCommand.Response Combine(Dictionary<int, ShardExecutionResult<GetMultipleTimeSeriesRangesCommand.Response>> results)
     {
         GetMultipleTimeSeriesRangesCommand.Response result = new()
         {

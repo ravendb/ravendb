@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
 		public string ExpectedEtag { get; }
 
-        public Dictionary<LazyStringValue, FieldType> CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<BlittableJsonReaderObject>> results)
+        public Dictionary<LazyStringValue, FieldType> CombineResults(Dictionary<int, ShardExecutionResult<BlittableJsonReaderObject>> results)
         {
             var combined = new Dictionary<LazyStringValue, FieldType>(LazyStringValueComparer.Instance);
             

@@ -10,14 +10,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Sharding
 {
-    internal class CreateShardOperation : IServerOperation<CreateShardResult>
+    internal class AddDatabaseShardOperation : IServerOperation<AddDatabaseShardResult>
     {
         private readonly string _databaseName;
         private readonly int? _shardNumber;
         private readonly string[] _nodes;
         private readonly int? _replicationFactor;
 
-        public CreateShardOperation(string databaseName, int? shardNumber = null, string[] nodes = null, int? replicationFactor = null)
+        public AddDatabaseShardOperation(string databaseName, int? shardNumber = null, string[] nodes = null, int? replicationFactor = null)
         {
             ResourceNameValidator.AssertValidDatabaseName(databaseName);
             _databaseName = databaseName;
@@ -26,19 +26,19 @@ namespace Raven.Client.ServerWide.Sharding
             _replicationFactor = replicationFactor;
         }
 
-        public RavenCommand<CreateShardResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<AddDatabaseShardResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new CreateShardCommand(_databaseName, _shardNumber, _nodes, _replicationFactor);
+            return new AddDatabaseShardCommand(_databaseName, _shardNumber, _nodes, _replicationFactor);
         }
 
-        internal class CreateShardCommand : RavenCommand<CreateShardResult>, IRaftCommand
+        internal class AddDatabaseShardCommand : RavenCommand<AddDatabaseShardResult>, IRaftCommand
         {
             private readonly string _databaseName;
             private readonly int? _shardNumber;
             private readonly string[] _nodes;
             private readonly int? _replicationFactor;
 
-            public CreateShardCommand(string databaseName, int? shardNumber = null, string[] nodes = null, int? replicationFactor = null)
+            public AddDatabaseShardCommand(string databaseName, int? shardNumber = null, string[] nodes = null, int? replicationFactor = null)
             {
                 _databaseName = databaseName;
                 _shardNumber = shardNumber;
@@ -86,11 +86,11 @@ namespace Raven.Client.ServerWide.Sharding
         }
     }
 
-    public class CreateShardResult
+    public class AddDatabaseShardResult
     {
         public string DatabaseName { get; set; }
-        public int NewShardNumber { get; set; }
-        public DatabaseTopology NewShardTopology { get; set; }
+        public int ShardNumber { get; set; }
+        public DatabaseTopology ShardTopology { get; set; }
         public long RaftCommandIndex { get; set; }
     }
 }

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -70,17 +71,28 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
                 "RavenDB-19202 : consider using the most up-to-date database record");
-
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal,
-                "Should ensure the shard topologies are always sorted. Need this functionality here to check this is always the first element.");
-
-            if (databaseRecord.Sharding.Shards.ElementAtOrDefault(0).Key != _shardNumber)
+            
+            // add the subscription data to all but one of the shards
+            // get the minimum in order to ensure we get the same shard every time we reach here
+            if (GetMinShard(RestoreSettings.DatabaseRecord.Sharding) != _shardNumber)
                 smuggler._options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
 
             smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord =>
                 RestoreSettings.DatabaseRecord.Sharding.BucketRanges = 
                     smugglerDatabaseRecord.Sharding?.BucketRanges ?? throw new InvalidDataException(
                         $"'{nameof(DatabaseRecord.Sharding.BucketRanges)}' is missing in backup file '{filePath}'. Aborting the restore process");
+        }
+        
+        private int GetMinShard(ShardingConfiguration config)
+        {
+            int min = int.MaxValue;
+            foreach (var shardNumber in config.Shards.Keys)
+            {
+                if (shardNumber < min)
+                    min = shardNumber;
+            }
+
+            return min;
         }
     }
 }

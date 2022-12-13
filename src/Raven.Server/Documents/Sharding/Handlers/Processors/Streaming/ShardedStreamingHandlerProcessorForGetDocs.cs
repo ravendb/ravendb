@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 
         public string ExpectedEtag { get; }
 
-        public CombinedStreamResult CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<StreamResult>> results)
+        public CombinedStreamResult CombineResults(Dictionary<int, ShardExecutionResult<StreamResult>> results)
         {
             return new CombinedStreamResult { Results = results };
         }

@@ -1252,10 +1252,10 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 //create new shard
-                var res = store.Maintenance.Server.Send(new CreateShardOperation(store.Database, shardNumber: 4));
-                Assert.Equal(4, res.NewShardNumber);
-                Assert.Equal(2, res.NewShardTopology.ReplicationFactor);
-                Assert.Equal(2, res.NewShardTopology.AllNodes.Count());
+                var res = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, shardNumber: 4));
+                Assert.Equal(4, res.ShardNumber);
+                Assert.Equal(2, res.ShardTopology.ReplicationFactor);
+                Assert.Equal(2, res.ShardTopology.AllNodes.Count());
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
 
                 await AssertWaitForValueAsync(async () =>
@@ -1297,11 +1297,11 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(2, shardTopology.ReplicationFactor);
                 
                 //create new shard
-                var res = store.Maintenance.Server.Send(new CreateShardOperation(store.Database));
-                var shardNumber = res.NewShardNumber;
+                var res = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database));
+                var shardNumber = res.ShardNumber;
                 Assert.Equal(2, shardNumber);
-                Assert.Equal(2, res.NewShardTopology.ReplicationFactor);
-                Assert.Equal(2, res.NewShardTopology.AllNodes.Count());
+                Assert.Equal(2, res.ShardTopology.ReplicationFactor);
+                Assert.Equal(2, res.ShardTopology.AllNodes.Count());
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
 
                 await AssertWaitForValueAsync(async () =>
@@ -1342,11 +1342,11 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(2, shardTopology.ReplicationFactor);
 
                 //create new shard
-                var res = store.Maintenance.Server.Send(new CreateShardOperation(store.Database, nodes: new []{ "A", "C" }));
-                var shardNumber = res.NewShardNumber;
+                var res = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, nodes: new []{ "A", "C" }));
+                var shardNumber = res.ShardNumber;
                 Assert.Equal(2, shardNumber);
-                Assert.Equal(2, res.NewShardTopology.ReplicationFactor);
-                Assert.Equal(2, res.NewShardTopology.AllNodes.Count());
+                Assert.Equal(2, res.ShardTopology.ReplicationFactor);
+                Assert.Equal(2, res.ShardTopology.AllNodes.Count());
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
 
                 await AssertWaitForValueAsync(async () =>

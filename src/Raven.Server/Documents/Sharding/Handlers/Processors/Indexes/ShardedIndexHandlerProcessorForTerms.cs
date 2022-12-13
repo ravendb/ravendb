@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
 
             public string ExpectedEtag { get; }
 
-            public TermsQueryResultServerSide CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<TermsQueryResultServerSide>> results)
+            public TermsQueryResultServerSide CombineResults(Dictionary<int, ShardExecutionResult<TermsQueryResultServerSide>> results)
             {
                 var pageSize = _pageSize;
                 var terms = new SortedSet<string>();
@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes
 
             public RavenCommand<TermsQueryResultServerSide> CreateCommandForShard(int shardNumber) => new GetIndexTermsCommand(indexName: _indexName, field: _field, _fromValue, _pageSize);
 
-            public string CombineCommandsEtag(Dictionary<int, AbstractExecutor.ShardExecutionResult<TermsQueryResultServerSide>> commands)
+            public string CombineCommandsEtag(Dictionary<int, ShardExecutionResult<TermsQueryResultServerSide>> commands)
             {
                 var etags = ComputeHttpEtags.EnumerateEtags(commands);
 

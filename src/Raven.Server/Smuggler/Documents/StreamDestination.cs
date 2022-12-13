@@ -898,7 +898,7 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteStartObject();
 
                 _writer.WritePropertyName(nameof(shardingConfiguration.Shards));
-                _context.Write(_writer, new DynamicJsonArray(shardingConfiguration.Shards.Select(x => x.ToJson())));
+                _context.Write(_writer, DynamicJsonValue.Convert(shardingConfiguration.Shards));
 
                 _writer.WritePropertyName(nameof(shardingConfiguration.BucketRanges));
                 _context.Write(_writer, new DynamicJsonArray(shardingConfiguration.BucketRanges.Select(x => x.ToJson())));

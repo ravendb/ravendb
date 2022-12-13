@@ -4,11 +4,20 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Sharding.Executors;
+namespace Raven.Server.Documents.Sharding.Executors
+{
+    public class ShardExecutionResult<T>
+    {
+        public int ShardNumber;
+        public T Result;
+        public RavenCommand<T> Command;
+    }
+};
 
 public abstract class AbstractExecutor : IDisposable
 {
@@ -121,13 +130,6 @@ public abstract class AbstractExecutor : IDisposable
         }
 
         return result;
-    }
-
-    public class ShardExecutionResult<T>
-    {
-        public int ShardNumber;
-        public T Result;
-        public RavenCommand<T> Command;
     }
 
     private async Task<int> ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(

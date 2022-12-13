@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Executors;
 using Sparrow.Utils;
@@ -25,7 +24,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-        public OperationState Combine(Dictionary<int, AbstractExecutor.ShardExecutionResult<OperationState>> results)
+        public OperationState Combine(Dictionary<int, ShardExecutionResult<OperationState>> results)
         {
             var combined = new OperationState();
 

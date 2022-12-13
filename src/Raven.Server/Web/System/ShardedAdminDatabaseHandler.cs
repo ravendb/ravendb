@@ -17,6 +17,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -266,26 +267,21 @@ namespace Raven.Server.Web.System
 
                 var newShardTopology = new DatabaseTopology();
 
-                var newChosenShardNumber = shardNumber ?? 0;
-                var stillBeingDeleted = 0;
+                int newChosenShardNumber;
+                
                 if (shardNumber.HasValue == false)
                 {
-                    newChosenShardNumber = 0;
-                    for (int i = 0; i < databaseRecord.Sharding.Shards.Count + 1 + stillBeingDeleted; i++)
-                    {
-                        // A shard might still be in the progress of deletion and removed from topology so we don't want to add it right now
-                        if (databaseRecord.IsShardBeingDeletedOnAnyNode(newChosenShardNumber))
-                        {
-                            newChosenShardNumber++;
-                            stillBeingDeleted++;
-                            continue;
-                        }
+                    newChosenShardNumber = GetMaxShardNumber(databaseRecord.Sharding) + 1;
 
-                        if (databaseRecord.Sharding.Shards.ContainsKey(newChosenShardNumber) == false)
-                            break;
-                        
+                    // A shard might still be in the progress of deletion and removed from topology so we don't want to add it right now
+                    while (databaseRecord.IsShardBeingDeletedOnAnyNode(newChosenShardNumber))
+                    {
                         newChosenShardNumber++;
                     }
+                }
+                else
+                {
+                    newChosenShardNumber = shardNumber.Value;
                 }
 
                 if (replicationFactor.HasValue && replicationFactor.Value > clusterTopology.AllNodes.Count)
@@ -311,13 +307,26 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(CreateShardResult.DatabaseName)] = database,
-                        [nameof(CreateShardResult.NewShardNumber)] = newChosenShardNumber,
-                        [nameof(CreateShardResult.NewShardTopology)] = newShardTopology.ToJson(),
-                        [nameof(CreateShardResult.RaftCommandIndex)] = newIndex
+                        [nameof(AddDatabaseShardResult.DatabaseName)] = database,
+                        [nameof(AddDatabaseShardResult.ShardNumber)] = newChosenShardNumber,
+                        [nameof(AddDatabaseShardResult.ShardTopology)] = newShardTopology.ToJson(),
+                        [nameof(AddDatabaseShardResult.RaftCommandIndex)] = newIndex
                     });
                 }
             }
+        }
+
+        private int GetMaxShardNumber(RawShardingConfiguration config)
+        {
+            var max = 0;
+            foreach (var shardNumber in config.Shards.Keys)
+            {
+                if (shardNumber > max)
+                {
+                    max = shardNumber;
+                }
+            }
+            return max;
         }
     }
 }

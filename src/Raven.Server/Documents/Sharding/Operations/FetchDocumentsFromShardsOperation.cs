@@ -16,7 +16,6 @@ using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
@@ -59,7 +58,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public string ExpectedEtag { get; }
 
-        public GetShardedDocumentsResult CombineResults(Dictionary<int, AbstractExecutor.ShardExecutionResult<GetDocumentsResult>> results)
+        public GetShardedDocumentsResult CombineResults(Dictionary<int, ShardExecutionResult<GetDocumentsResult>> results)
         {
             var docs = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
