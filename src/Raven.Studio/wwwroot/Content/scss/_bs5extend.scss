@@ -47,25 +47,16 @@ a.link {
             border-color: $color;
         }
     }
+}
 
-    &.form-switch {
-        .form-check-input {
+.form-switch {
+    .form-check-input {
+        &[disabled], &:disabled {
             background-image: escape-svg(
-                url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{rgba($text-muted-color, .6)}'/></svg>")
+                url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><path fill='#{$text-emphasis-color}' d='M0.1-2.9c-1.7,0-3,1.3-3,3s1.3,3,3,3s3-1.3,3-3S1.8-2.9,0.1-2.9z M0.1,2.3C-1,2.3-2,1.3-2,0.1S-1-2,0.1-2 s2.1,1,2.1,2.1S1.3,2.3,0.1,2.3z'/></svg>")
             );
-
-            &:focus {
-                background-image: escape-svg(
-                    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$text-emphasis-color}'/></svg>")
-                );
-            }
-
-            &:checked {
-                background-image: escape-svg(
-                    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$panel-bg-1}'/></svg>")
-                );
-            }
-        }
+            cursor: not-allowed;
+        }        
     }
 }
 
@@ -123,28 +114,33 @@ a.link {
         margin: 0;
     }
 }
+@each $key, $value in $theme-colors {
+    
+    .bg-faded-#{$key} {
+        background-color: mix($panel-bg-1, $value, 80%);
+        color: mix($text-emphasis-color, $value, 30%);
+    }
+    
+}
+
 
 $additional-utilities: (
-    "background-color": (
-        property: background-color,
-        class: bg,
-        values: map-merge($theme-colors-faded, ()),
-    ),
+   
     // Automatic color adjustment for backckround-color utility TODO - NOT WORKING :(
-    // "background-color": (
-    //     property: color,
-    //     class: bg,
-    //     values: (
-    //         primary : color-contrast($primary),
-    //         success : color-contrast($success),
-    //         warning : color-contrast($warning),
-    //         danger : color-contrast($danger),
-    //         info : color-contrast($info)
-    //       ),
+    "bg-text-color": (
+        property: color,
+        class: bg,
+        values: (
+            primary : color-contrast($primary),
+            success : color-contrast($success),
+            warning : color-contrast($warning),
+            danger : color-contrast($danger),
+            info : color-contrast($info)
+          ),
         
-    //   )
+      )
 );
 
-@each $key, $utility in $additional-utilities {
-    @include generate-utility($utility, "-faded");
+@each $key, $utility in $additional-utilities {    
+    @include generate-utility($utility, null);
 }

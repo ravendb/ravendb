@@ -70,14 +70,6 @@ $theme-colors: (
     "progress": $progress-color,
 ) !default;
 
-$theme-colors-faded: (
-    "primary": mix($panel-bg-1, $primary, 80%),
-    "secondary": mix($panel-bg-1, $secondary, 80%),
-    "success": mix($panel-bg-1, $success, 80%),
-    "info": mix($panel-bg-1, $info, 80%),
-    "warning": mix($panel-bg-1, $warning, 80%),
-    "danger": mix($panel-bg-1, $danger, 80%),
-) !default;
 // scss-docs-end theme-colors-map
 
 // The contrast ratio to reach against white, to determine if color changes from "light" to "dark". Acceptable values for WCAG 2.0 are 3, 4.5 and 7.
@@ -756,17 +748,17 @@ $form-check-inline-margin-end: 1rem !default;
 // scss-docs-end form-check-variables
 
 // scss-docs-start form-switch-variables
-$form-switch-color: $text-color;
+$form-switch-color: rgba($text-muted-color, .6);
 $form-switch-width: $spacer !default;
 $form-switch-padding-start: $form-switch-width + $spacer-sm !default;
 $form-switch-bg-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$form-switch-color}'/></svg>") !default;
 $form-switch-border-radius: $form-switch-width !default;
 $form-switch-transition: background-position 0.15s ease-in-out !default;
 
-$form-switch-focus-color: $input-focus-border-color !default;
+$form-switch-focus-color: $text-emphasis-color !default;
 $form-switch-focus-bg-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$form-switch-focus-color}'/></svg>") !default;
 
-$form-switch-checked-color: $component-active-color !default;
+$form-switch-checked-color: $panel-bg-1 !default;
 $form-switch-checked-bg-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$form-switch-checked-color}'/></svg>") !default;
 $form-switch-checked-bg-position: right center !default;
 // scss-docs-end form-switch-variables
