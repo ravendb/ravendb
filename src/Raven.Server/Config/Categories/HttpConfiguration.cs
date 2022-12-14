@@ -43,13 +43,13 @@ namespace Raven.Server.Config.Categories
         [Description("Set Kestrel's HTTP2 keep alive ping timeout")]
         [DefaultValue(null)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Http.KeepAlivePingTimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Http.Http2.KeepAlivePingTimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting? KeepAlivePingTimeout { get; set; }
 
         [Description("Set Kestrel's HTTP2 keep alive ping delay")]
         [DefaultValue(null)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Http.KeepAlivePingDelayInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Http.Http2.KeepAlivePingDelayInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting? KeepAlivePingDelay { get; set; }
 
         [Description("Whether Raven's HTTP server should compress its responses")]
