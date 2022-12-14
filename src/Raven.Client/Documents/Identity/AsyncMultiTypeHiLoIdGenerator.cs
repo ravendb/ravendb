@@ -127,7 +127,7 @@ namespace Raven.Client.Documents.Identity
 
         protected virtual AsyncHiLoIdGenerator CreateGeneratorFor(string tag)
         {
-            return new AsyncHiLoIdGenerator(tag, Store, DbName, _identityPartsSeparator);
+            return new DefaultAsyncHiLoIdGenerator(tag, Store, DbName, _identityPartsSeparator);
         }
 
         public async Task ReturnUnusedRange()
