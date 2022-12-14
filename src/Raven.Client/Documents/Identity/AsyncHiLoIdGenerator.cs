@@ -46,11 +46,6 @@ namespace Raven.Client.Documents.Identity
             return $"{Prefix}{nextId}-{ServerTag}";
         }
 
-        protected virtual string GetDocumentIdFromId(NextId result)
-        {
-            return $"{Prefix}{result.Id}-{result.ServerTag}";
-        }
-
         protected RangeValue Range
         {
             get => _range;
@@ -89,10 +84,9 @@ namespace Raven.Client.Documents.Identity
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        public async Task<string> GenerateDocumentIdAsync(object entity)
+        public virtual async Task<string> GenerateDocumentIdAsync(object entity)
         {
-            var result = await GetNextIdAsync().ConfigureAwait(false);
-            _forTestingPurposes?.BeforeGeneratingDocumentId?.Invoke();
+            var result = await NextIdAsync().ConfigureAwait(false);
             return GetDocumentIdFromId(result);
         }
 
@@ -182,21 +176,6 @@ namespace Raven.Client.Documents.Identity
             {
                 await re.ExecuteAsync(returnCommand, context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
             }
-        }
-
-        internal TestingStuff _forTestingPurposes;
-
-        internal TestingStuff ForTestingPurposesOnly()
-        {
-            if (_forTestingPurposes != null)
-                return _forTestingPurposes;
-
-            return _forTestingPurposes = new TestingStuff();
-        }
-
-        internal class TestingStuff
-        {
-            internal Action BeforeGeneratingDocumentId;
         }
 
         public struct NextId
