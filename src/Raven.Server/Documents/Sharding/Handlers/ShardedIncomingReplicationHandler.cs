@@ -83,13 +83,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         protected override void HandleHeartbeatMessage(TransactionOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject)
         {
             blittableJsonReaderObject.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector);
-            
+
             using (var replicationBatches = new ReplicationBatches(this))
             {
                 var batches = replicationBatches.Batches;
                 var tasks = new Task[_parent.Context.ShardCount];
-				int i = 0;
-				
+                int i = 0;
+
                 foreach (var (shardNumber, batch) in batches)
                 {
                     batch.LastAcceptedChangeVector = changeVector ?? _lastAcceptedChangeVector;
@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Optimization possibility: instead of iterating over materialized batch, we can do it while reading from the stream");
             var replicationBatches = new ReplicationBatches(this);
             var batches = replicationBatches.Batches;
-            
+
             foreach (var item in dataForReplicationCommand.ReplicatedItems)
             {
                 int shardNumber = GetShardNumberForReplicationItem(context, item);
