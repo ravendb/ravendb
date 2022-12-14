@@ -676,7 +676,7 @@ public partial class RavenTestBase
 
                 await server.Sharding.StartBucketMigration(store.Database, bucket, shardNumber, toShard);
                 
-                var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard));
+                var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard), timeout: 30_000);
                 Assert.True(exists, $"{id} wasn't found at shard {toShard}");
             }
 
