@@ -9,7 +9,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Identity
@@ -38,12 +37,18 @@ namespace Raven.Client.Documents.Identity
             _tag = tag;
             _dbName = dbName;
             _identityPartsSeparator = identityPartsSeparator;
-            _range = new RangeValue(1, 0);
+            _range = new RangeValue(1, 0, null);
         }
 
+        [Obsolete("Will be removed in next major version of the product. Use the GetDocumentIdFromId(NextIdResult) overload")]
         protected virtual string GetDocumentIdFromId(long nextId)
         {
             return $"{Prefix}{nextId}-{ServerTag}";
+        }
+
+        protected virtual string GetDocumentIdFromId(NextId result)
+        {
+            return $"{Prefix}{result.Id}-{result.ServerTag}";
         }
 
         protected RangeValue Range
@@ -58,16 +63,28 @@ namespace Raven.Client.Documents.Identity
             public readonly long Min;
             public readonly long Max;
             public long Current;
+            public string ServerTag;
 
+            [Obsolete("Will be removed in next major version of the product. Use RangeValue(min, max, serverTag) instead")]
             public RangeValue(long min, long max)
             {
                 Min = min;
                 Max = max;
                 Current = min - 1;
             }
+
+            public RangeValue(long min, long max, string serverTag)
+            {
+                Min = min;
+                Max = max;
+                Current = min - 1;
+                ServerTag = serverTag;
+            }
         }
 
         private Lazy<Task> _nextRangeTask = new Lazy<Task>(() => Task.CompletedTask);
+
+        [Obsolete("Use field Range.ServerTag")]
         protected string ServerTag;
 
         /// <summary>
@@ -77,11 +94,12 @@ namespace Raven.Client.Documents.Identity
         /// <returns></returns>
         public async Task<string> GenerateDocumentIdAsync(object entity)
         {
-            var nextId = await NextIdAsync().ConfigureAwait(false);
-            return GetDocumentIdFromId(nextId);
+            var nextIdResult = await GetNextIdAsync().ConfigureAwait(false);
+            _forTestingPurposes?.BeforeGeneratingDocumentId?.Invoke();
+            return GetDocumentIdFromId(nextIdResult);
         }
 
-        public async Task<long> NextIdAsync()
+        public async Task<NextId> GetNextIdAsync()
         {
             while (true)
             {
@@ -91,7 +109,13 @@ namespace Raven.Client.Documents.Identity
                 var range = Range;
                 var id = Interlocked.Increment(ref range.Current);
                 if (id <= range.Max)
-                    return id;
+                {
+                    return new NextId
+                    {
+                        Id = id,
+                        ServerTag = range.ServerTag
+                    };
+                }
 
                 try
                 {
@@ -126,6 +150,13 @@ namespace Raven.Client.Documents.Identity
             }
         }
 
+        [Obsolete("Will be removed in next major version of the product. Use GetNextIdAsync instead")]
+        public async Task<long> NextIdAsync()
+        {
+            var result = await GetNextIdAsync().ConfigureAwait(false);
+            return result.Id;
+        }
+
         private async Task GetNextRangeAsync()
         {
             var hiloCommand = new NextHiLoCommand(_tag, _lastBatchSize, _lastRangeDate, _identityPartsSeparator, Range.Max);
@@ -141,7 +172,7 @@ namespace Raven.Client.Documents.Identity
             ServerTag = hiloCommand.Result.ServerTag;
             _lastRangeDate = hiloCommand.Result.LastRangeAt;
             _lastBatchSize = hiloCommand.Result.LastSize;
-            Range = new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High);
+            Range = new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High, hiloCommand.Result.ServerTag);
         }
 
         public async Task ReturnUnusedRangeAsync()
@@ -154,6 +185,28 @@ namespace Raven.Client.Documents.Identity
             {
                 await re.ExecuteAsync(returnCommand, context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
             }
+        }
+
+        internal TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action BeforeGeneratingDocumentId;
+        }
+
+        public class NextId
+        {
+            public long Id;
+
+            public string ServerTag;
         }
     }
 }
