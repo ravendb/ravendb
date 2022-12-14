@@ -204,14 +204,14 @@ namespace SlowTests.Sharding.Cluster
         {
             using var store = Sharding.GetDocumentStore();
 
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User(), "users/1-A");
+                session.SaveChanges();
+            }
+
             var writes = Task.Run(() =>
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User(), "users/1-A");
-                    session.SaveChanges();
-                }
-
                 for (int i = 0; i < 100; i++)
                 {
                     using (var session = store.OpenSession())
