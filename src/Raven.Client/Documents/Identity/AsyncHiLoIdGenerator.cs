@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Identity
             _range = new RangeValue(1, 0, null);
         }
 
-        [Obsolete("Will be removed in next major version of the product. Use the GetDocumentIdFromId(NextIdResult) overload")]
+        [Obsolete("Will be removed in next major version of the product. Use the GetDocumentIdFromId(NextId) overload")]
         protected virtual string GetDocumentIdFromId(long nextId)
         {
             return $"{Prefix}{nextId}-{ServerTag}";
@@ -66,11 +66,8 @@ namespace Raven.Client.Documents.Identity
             public string ServerTag;
 
             [Obsolete("Will be removed in next major version of the product. Use RangeValue(min, max, serverTag) instead")]
-            public RangeValue(long min, long max)
+            public RangeValue(long min, long max) : this(min, max, null)
             {
-                Min = min;
-                Max = max;
-                Current = min - 1;
             }
 
             public RangeValue(long min, long max, string serverTag)
@@ -94,9 +91,9 @@ namespace Raven.Client.Documents.Identity
         /// <returns></returns>
         public async Task<string> GenerateDocumentIdAsync(object entity)
         {
-            var nextIdResult = await GetNextIdAsync().ConfigureAwait(false);
+            var result = await GetNextIdAsync().ConfigureAwait(false);
             _forTestingPurposes?.BeforeGeneratingDocumentId?.Invoke();
-            return GetDocumentIdFromId(nextIdResult);
+            return GetDocumentIdFromId(result);
         }
 
         public async Task<NextId> GetNextIdAsync()
@@ -202,7 +199,7 @@ namespace Raven.Client.Documents.Identity
             internal Action BeforeGeneratingDocumentId;
         }
 
-        public class NextId
+        public struct NextId
         {
             public long Id;
 
