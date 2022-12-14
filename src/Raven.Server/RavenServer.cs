@@ -190,6 +190,12 @@ namespace Raven.Server
                     if (Configuration.Http.MaxRequestBufferSize.HasValue)
                         options.Limits.MaxRequestBufferSize = Configuration.Http.MaxRequestBufferSize.Value.GetValue(SizeUnit.Bytes);
 
+                    if (Configuration.Http.KeepAlivePingDelay.HasValue)
+                        options.Limits.Http2.KeepAlivePingDelay = Configuration.Http.KeepAlivePingDelay.Value.AsTimeSpan;
+
+                    if (Configuration.Http.KeepAlivePingTimeout.HasValue)
+                        options.Limits.Http2.KeepAlivePingTimeout = Configuration.Http.KeepAlivePingTimeout.Value.AsTimeSpan;
+
                     options.ConfigureEndpointDefaults(listenOptions => listenOptions.Protocols = Configuration.Http.Protocols);
 
                     if (Certificate.Certificate != null)
