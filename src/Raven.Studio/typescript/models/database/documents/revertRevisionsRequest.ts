@@ -13,6 +13,9 @@ class revertRevisionsRequest {
     windowValue = ko.observable<number>();
     windowMagnitude = ko.observable<timeMagnitude>("hours");
 
+    revertAllCollections = ko.observable<boolean>(true);
+    collectionsToRevert = ko.observableArray<string>();
+
     pointInTimeFormatted: KnockoutComputed<string>;
 
     validationGroup = ko.validatedObservable({
@@ -59,7 +62,7 @@ class revertRevisionsRequest {
         return {
             Time: date,
             WindowInSec: window,
-            Collections: null
+            Collections: this.revertAllCollections() ? [] : this.collectionsToRevert()
         }
     }
 }
