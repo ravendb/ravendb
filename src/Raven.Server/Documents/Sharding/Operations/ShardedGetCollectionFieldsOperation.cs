@@ -27,12 +27,12 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-		public string ExpectedEtag { get; }
+        public string ExpectedEtag { get; }
 
         public Dictionary<LazyStringValue, FieldType> CombineResults(Dictionary<int, ShardExecutionResult<BlittableJsonReaderObject>> results)
         {
             var combined = new Dictionary<LazyStringValue, FieldType>(LazyStringValueComparer.Instance);
-            
+
             foreach (var collectionFields in results.Values)
             {
                 if (collectionFields.Result == null)
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                 for (int i = 0; i < collectionFields.Result.Count; i++)
                 {
                     collectionFields.Result.GetPropertyByIndex(i, ref propDetails);
-                    if(Enum.TryParse(propDetails.Value.ToString(), out FieldType type))
+                    if (Enum.TryParse(propDetails.Value.ToString(), out FieldType type))
                         combined.TryAdd(propDetails.Name.Clone(_context), type);
                 }
             }

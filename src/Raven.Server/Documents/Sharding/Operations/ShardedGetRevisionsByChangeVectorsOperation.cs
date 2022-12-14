@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-		public string ExpectedEtag { get; }
+        public string ExpectedEtag { get; }
 
         public BlittableJsonReaderObject[] CombineResults(Dictionary<int, ShardExecutionResult<BlittableArrayResult>> results)
         {

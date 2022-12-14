@@ -48,10 +48,10 @@ namespace FastTests.Client
                 "ReorderDatabaseMembersCommand", "ReplaceClusterCertificateCommand", "ResetEtlCommand", "ResetIndexCommand", "SetDatabaseDynamicDistributionCommand",
                 "SetIndexLockCommand", "SetIndexPriorityCommand", "SetLogsConfigurationCommand", "StartIndexCommand", "StartIndexingCommand",
                 "StartTransactionsRecordingCommand", "StopIndexCommand", "StopIndexingCommand", "StopTransactionsRecordingCommand",
-                "UpdateUnusedDatabasesCommand", "WaitForRaftIndexCommand", "ConfigureTimeSeriesCommand", "ConfigureTimeSeriesPolicyCommand", 
+                "UpdateUnusedDatabasesCommand", "WaitForRaftIndexCommand", "ConfigureTimeSeriesCommand", "ConfigureTimeSeriesPolicyCommand",
                 "UpdateSubscriptionCommand", "RemoveTimeSeriesPolicyCommand", "GetTimeSeriesStatisticsCommand", "GetTimeSeriesCommand", "GetMultipleTimeSeriesCommand",
                 "GetAttachmentsCommand", "ConfigureTimeSeriesValueNamesCommand", "DeleteIndexErrorsCommand", "TimeSeriesBatchCommand", "GetRevisionsResultCommand", "SetIndexStateCommand",
-                "BackupCommand", "GetReplicationHubAccessCommand", "GetServerWideExternalReplicationCommand", "GetServerWideExternalReplicationsCommand", 
+                "BackupCommand", "GetReplicationHubAccessCommand", "GetServerWideExternalReplicationCommand", "GetServerWideExternalReplicationsCommand",
                 "PutServerWideBackupConfigurationCommand", "PutServerWideExternalReplicationCommand", "ConditionalGetDocumentsCommand", "GetStudioConfigurationCommand", "GetTimeSeriesConfigurationCommand",
                 "EnforceRevisionsConfigurationCommand",
                 "DeleteServerWideTaskCommand", "RegisterReplicationHubAccessCommand", "ToggleServerWideTaskStateCommand", "UnregisterReplicationHubAccessCommand", "GetRevisionsCountCommand",
@@ -67,7 +67,7 @@ namespace FastTests.Client
                 "GetNextServerOperationIdCommand", "KillServerOperationCommand",
                 "GetEssentialStatisticsCommand", "GetMultipleTimeSeriesRangesCommand", "GetShardedPeriodicBackupStatusCommand",
                 "AddNodeToOrchestratorTopologyCommand", "RemoveNodeFromOrchestratorTopologyCommand", "GetTcpInfoForReplicationCommand", "GetCollectionFieldsCommand", "PreviewCollectionCommand",
-				"AddDatabaseShardCommand"
+                "AddDatabaseShardCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);
