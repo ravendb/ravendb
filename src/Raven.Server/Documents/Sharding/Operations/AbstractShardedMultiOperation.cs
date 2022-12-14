@@ -72,9 +72,13 @@ public abstract class AbstractShardedMultiOperation
     private void MaybeNotifyAboutProgress()
     {
         IOperationProgress result = null;
-
-        foreach (var progress in _progresses.Values)
+        
+        foreach (var shardNumber in ShardedDatabaseContext.ShardsTopology.Keys)
         {
+            if(_progresses.ContainsKey(shardNumber) == false)
+                continue;
+
+            var progress = _progresses[shardNumber];
             if (progress == null)
                 continue;
 
