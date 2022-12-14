@@ -1,16 +1,5 @@
 ﻿import React, { useCallback } from "react";
-import {
-    Badge,
-    Button,
-    Card,
-    CardBody,
-    CardHeader,
-    DropdownItem,
-    DropdownMenu,
-    DropdownToggle,
-    UncontrolledDropdown,
-    UncontrolledTooltip,
-} from "reactstrap";
+import { DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown, UncontrolledTooltip } from "reactstrap";
 import { NodeInfo } from "components/pages/resources/manageDatabaseGroup/types";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
@@ -29,6 +18,7 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelName,
+    RichPanelStatus,
 } from "components/common/RichPanel";
 
 interface NodeInfoComponentProps {
@@ -76,11 +66,12 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
 
     return (
         <RichPanel className="flex-row">
-            <Badge color={nodeBadgeColor(node)}>status: {nodeBadgeText(node)}</Badge>
+            <RichPanelStatus color={nodeBadgeColor(node)}>{nodeBadgeText(node)}</RichPanelStatus>
+
             <div className="flex-grow-1">
                 <RichPanelHeader>
                     <RichPanelName title={node.type}>
-                        <i className={cssIcon(node)} />
+                        <i className={classNames(cssIcon(node), "me-1")} />
                         Node: {node.tag}
                     </RichPanelName>
 
