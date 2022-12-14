@@ -14,7 +14,7 @@ using Sparrow.Json;
 namespace Raven.Client.Documents.Identity
 {
     /// <summary>
-    /// Generate hilo numbers against a RavenDB document
+    /// Generate HiLo numbers against a RavenDB document
     /// </summary>
     public class AsyncHiLoIdGenerator
     {
