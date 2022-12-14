@@ -1,7 +1,7 @@
 ﻿import React, { ReactNode } from "react";
 import "./RichPanel.scss";
 import classNames from "classnames";
-import { Card, CardBody, CardHeader, FormGroup } from "reactstrap";
+import { Badge, Card, CardBody, CardHeader, FormGroup } from "reactstrap";
 
 interface RichPanelProps {
     className?: string;
@@ -15,6 +15,22 @@ export function RichPanel(props: RichPanelProps) {
         <Card className={classNames("rich-panel-item", className)} ref={innerRef}>
             {children}
         </Card>
+    );
+}
+
+interface RichPanelStatusProps {
+    color?: string;
+    children: ReactNode | ReactNode[];
+    className?: string;
+    title?: string;
+}
+
+export function RichPanelStatus(props: RichPanelStatusProps) {
+    const { children, className, color, ...rest } = props;
+    return (
+        <Badge className={classNames("rich-panel-status", className)} color={color} {...rest}>
+            {children}
+        </Badge>
     );
 }
 

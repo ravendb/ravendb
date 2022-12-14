@@ -21,6 +21,14 @@
     }
 }
 
+.rich-panel-status {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-size: 8px;
+}
+
 .rich-panel-details {
     padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
     padding-left: sizes.$gutter-md;
