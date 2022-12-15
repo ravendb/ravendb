@@ -1553,6 +1553,15 @@ namespace Raven.Server.Documents.Revisions
                     }
                     var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
                     var revisions = readCtx.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
+                    if (revisions == null)
+                    {
+                        var msg = $"collection {collection} doesn't have revisions";
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(msg);
+                        result.WarnAboutFailedCollection(msg);
+                        return false;
+                    }
+
                     tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], parameters.LastScannedEtag);
                 }
                 else
