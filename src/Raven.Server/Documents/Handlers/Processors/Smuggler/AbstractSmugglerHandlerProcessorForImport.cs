@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
+using Org.BouncyCastle.Utilities.Zlib;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -21,6 +22,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.Smuggler
 {
+    public delegate Task<SmugglerResult> ImportDelegate(JsonOperationContext context,
+        Stream stream,
+        DatabaseSmugglerOptionsServerSide options,
+        SmugglerResult result,
+        Action<IOperationProgress> onProgress,
+        long operationId,
+        OperationCancelToken token);
+
     internal abstract class AbstractSmugglerHandlerProcessorForImport<TRequestHandler, TOperationContext> : AbstractSmugglerHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
         where TOperationContext : JsonOperationContext
@@ -39,14 +48,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                 await ImportAsync(context, operationId);
             }
         }
-
-        public delegate Task ImportDelegate(JsonOperationContext context,
-            Stream stream,
-            DatabaseSmugglerOptionsServerSide options,
-            SmugglerResult result,
-            Action<IOperationProgress> onProgress,
-            long operationId,
-            OperationCancelToken token);
 
         internal async Task Import<TOperation>(JsonOperationContext context, string databaseName, ImportDelegate onImport,
             AbstractOperations<TOperation> operations, long operationId)

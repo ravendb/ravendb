@@ -115,15 +115,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/admin/smuggler/import-dir", "GET", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostImportDirectory()
         {
-            var extension = GetStringQueryString("extension", required: false) ?? "dump";
-
-            var directory = GetQueryStringValueAndAssertIfSingleAndNotEmpty("dir");
-            var files = new BlockingCollection<Func<Task<Stream>>>(new ConcurrentQueue<Func<Task<Stream>>>(
-                    Directory.GetFiles(directory, $"*.{extension}")
-                        .Select(x => (Func<Task<Stream>>)(() => Task.FromResult<Stream>(File.OpenRead(x)))))
-            );
-            files.CompleteAdding();
-            await BulkImport(files, directory);
+            using (var processor = new SmugglerHandlerProcessorForImportDir(this)) 
+                await processor.ExecuteAsync();
         }
 
         private async Task BulkImport(BlockingCollection<Func<Task<Stream>>> files, string directory)
@@ -600,7 +593,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        public async Task DoImportInternalAsync(
+        public async Task<SmugglerResult> DoImportInternalAsync(
             JsonOperationContext jsonOperationContext,
             Stream stream,
             DatabaseSmugglerOptionsServerSide options,
@@ -617,7 +610,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var destination = Database.Smuggler.CreateDestination(token.Token);
                 var smuggler = Database.Smuggler.Create(source, destination, jsonOperationContext, options, result, onProgress, token.Token);
 
-                await smuggler.ExecuteAsync();
+                return await smuggler.ExecuteAsync();
             }
         }
 

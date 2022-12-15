@@ -30,5 +30,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new ShardedSmugglerHandlerProcessorForImport(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/admin/smuggler/import-dir", "GET")]
+        public async Task PostImportDirectory()
+        {
+            using (var processor = new ShardedSmugglerHandlerProcessorForImportDir(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

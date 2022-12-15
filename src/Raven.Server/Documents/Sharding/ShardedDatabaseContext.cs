@@ -70,6 +70,7 @@ namespace Raven.Server.Documents.Sharding
             Operations = new ShardedOperations(this);
             Subscriptions = new ShardedSubscriptions(this, serverStore);
             QueryRunner = new ShardedQueryRunner();
+            Smuggler = new ShardedSmugglerContext(this, serverStore);
 
             RachisLogIndexNotifications = new RachisLogIndexNotifications(_databaseShutdown.Token);
             Replication = new ShardedReplicationContext(this, serverStore);

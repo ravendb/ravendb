@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
             await Import(context, RequestHandler.DatabaseContext.DatabaseName, DoImportInternalAsync, RequestHandler.DatabaseContext.Operations, operationId.Value);
         }
 
-        private async Task DoImportInternalAsync(
+        internal async Task<SmugglerResult> DoImportInternalAsync(
             JsonOperationContext jsonOperationContext,
             Stream stream,
             DatabaseSmugglerOptionsServerSide options,
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
                 var smuggler = new ShardedDatabaseSmuggler(source, new MultiShardedDestination(source, RequestHandler.DatabaseContext, RequestHandler, operationId),
                     jsonOperationContext, record, ServerStore, options, result, onProgress, token: token.Token);
 
-                await smuggler.ExecuteAsync();
+                return await smuggler.ExecuteAsync();
             }
         }
     }
