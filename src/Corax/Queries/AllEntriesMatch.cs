@@ -16,7 +16,7 @@ namespace Corax.Queries
     {
         private readonly Transaction _tx;
         private readonly long _count;
-        private PostingList.Iterator _entriesPagesIt;
+        private IEnumerator<long> _entriesPagesIt;
         private int _offset;
         private int _itemsLeftOnCurrentPage;
         private Page _currentPage;
@@ -38,7 +38,7 @@ namespace Corax.Queries
             }
             
             _entriesContainerId = tx.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
-            _entriesPagesIt = Container.GetAllPagesSet(tx.LowLevelTransaction, _entriesContainerId).Iterate();
+            _entriesPagesIt = Container.GetAllPagesSet(tx.LowLevelTransaction, _entriesContainerId).GetEnumerator();
             _offset = 0;
             _itemsLeftOnCurrentPage = 0;
             _currentPage = new Page(null);
