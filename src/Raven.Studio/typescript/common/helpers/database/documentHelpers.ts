@@ -6,18 +6,21 @@ class documentHelpers {
     static findRelatedDocumentsCandidates(doc: documentBase): string[] {
         const results: string[] = [];
         const initialDocumentFields = doc.getDocumentPropertyNames();
-        const documentNodesFlattenedList: any[] = [];
-
         // get initial nodes list to work with
-        initialDocumentFields.forEach(curField => {
-            documentNodesFlattenedList.push(doc[curField]);
-        });
+        const documentNodesFlattenedList = initialDocumentFields.map(curField => doc[curField]);
+        const guidRegex = /^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$/;
+        const serverIdRegex = /\w+\/\w+/gi;
+
+        const isGuid: (string: string) => boolean = string => string.length === 36 && guidRegex.test(string);
+        const isMaybeServerId: (string: string) => boolean = string =>
+            string.length < 512 && serverIdRegex.test(string);
+        const isMaybeId: (field: string) => boolean = field =>
+            typeof field === "string" && (isGuid(field) || isMaybeServerId(field));
 
         for (let documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
             const curField = documentNodesFlattenedList[documentNodesCursor];
-            if (typeof curField === "string" && curField.length < 512 && /\w+\/\w+/ig.test(curField)) {
-
-                if (!results.find(x => x === curField.toString())) {
+            if (isMaybeId(curField)) {
+                if (!results.some(x => x === curField.toString())) {
                     results.push(curField.toString());
                 }
             } else if (typeof curField == "object" && !!curField) {
