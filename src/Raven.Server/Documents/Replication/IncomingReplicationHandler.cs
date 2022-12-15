@@ -910,6 +910,7 @@ namespace Raven.Server.Documents.Replication
 
         public void Dispose()
         {
+            _disposeOnce.Dispose();
             if (_incomingWork != PoolOfThreads.LongRunningWork.Current)
             {
                 try
@@ -922,7 +923,6 @@ namespace Raven.Server.Documents.Replication
                 }
             }
             _incomingWork = null;
-            _disposeOnce.Dispose();
         }
 
         private void DisposeInternal()
