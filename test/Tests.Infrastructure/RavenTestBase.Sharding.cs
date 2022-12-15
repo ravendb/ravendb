@@ -70,7 +70,8 @@ public partial class RavenTestBase
                     {
                         {0, new DatabaseTopology()},
                         {1, new DatabaseTopology()},
-                        {2, new DatabaseTopology()},
+                        {3, new DatabaseTopology()},
+                        //{2, new DatabaseTopology()},
                     };
                 }
                 else
@@ -102,6 +103,15 @@ public partial class RavenTestBase
 
                     for (int shardNumber = 0; shardNumber < shards ; shardNumber++)
                     {
+                        if (shardNumber == 1)
+                        {
+                            r.Sharding.Shards[7] = new DatabaseTopology
+                            {
+                                ReplicationFactor = shardReplicationFactor
+                            };
+                            continue;
+                        }
+
                         r.Sharding.Shards[shardNumber] = new DatabaseTopology
                         {
                             ReplicationFactor = shardReplicationFactor
