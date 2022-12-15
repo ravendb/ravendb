@@ -450,11 +450,10 @@ namespace Voron.Debugging
 
             if (includeDetails)
             {
-                var allPages = Container.GetAllPagesSet(_tx, page).Iterate();
                 pageDensities = new();
-                while (allPages.MoveNext())
+                foreach (var pageNum in Container.GetAllPagesSet(_tx, page))
                 {
-                    Page cur = _tx.GetPage(allPages.Current);
+                    Page cur = _tx.GetPage(pageNum);
                     if (cur.IsOverflow)
                     {
                         int numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(cur.OverflowSize);
