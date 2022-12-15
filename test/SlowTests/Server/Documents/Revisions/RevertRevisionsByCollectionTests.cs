@@ -166,8 +166,6 @@ namespace SlowTests.Server.Documents.Revisions
                         collections, token);
                 }
 
-                WaitForUserToContinueTheTest(store);
-
                 using (var session = store.OpenAsyncSession())
                 {
                     var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
@@ -176,6 +174,72 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal("Company Name", companiesRevisions[0].Name);
                     Assert.Equal("Hibernating Rhinos", companiesRevisions[1].Name);
                     Assert.Equal("Company Name", companiesRevisions[2].Name);
+
+                    var usersRevisions = await session.Advanced.Revisions.GetForAsync<Company>(user.Id);
+                    Assert.Equal(2, usersRevisions.Count);
+
+                    Assert.Equal("Shahar", usersRevisions[0].Name);
+                    Assert.Equal("User Name", usersRevisions[1].Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RevertByCollectionForNonRevisionsConfiguredCollection()
+        {
+            var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Products", "User" };
+            var product = new Product { Name = "Product Name" };
+            var user = new User { Name = "User Name" };
+            using (var store = GetDocumentStore())
+            {
+                DateTime last = default;
+                var config = new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration { Disabled = true, MinimumRevisionsToKeep = 5 },
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                    {
+                        ["Users"] = new RevisionsCollectionConfiguration { Disabled = false, PurgeOnDelete = true, MinimumRevisionsToKeep = 123 },
+                        ["People"] = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 },
+                        ["Comments"] = new RevisionsCollectionConfiguration { Disabled = true },
+                    }
+                };
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: c =>
+                {
+                    c.Default = null;
+                    c.Collections = config.Collections;
+                });
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(product);
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                    last = DateTime.UtcNow;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    product.Name = "RavenDB";
+                    user.Name = "Shahar";
+                    await session.StoreAsync(product);
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                }
+
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+                RevertResult result;
+                using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
+                {
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
+                        collections, token);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.Equal("RavenDB", (await session.LoadAsync<Product>(product.Id)).Name);
+
+                    var productsRevisions = await session.Advanced.Revisions.GetForAsync<Product>(product.Id);
+                    Assert.Equal(0, productsRevisions.Count);
 
                     var usersRevisions = await session.Advanced.Revisions.GetForAsync<Company>(user.Id);
                     Assert.Equal(2, usersRevisions.Count);
@@ -414,6 +478,66 @@ namespace SlowTests.Server.Documents.Revisions
                     var usersRevisions = await session.Advanced.Revisions.GetForAsync<Company>(user.Id);
                     Assert.Equal(2, usersRevisions.Count);
 
+                    Assert.Equal("Shahar", usersRevisions[0].Name);
+                    Assert.Equal("User Name", usersRevisions[1].Name);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RevertByCollectionForNonRevisionsConfiguredCollection_EndPointCheck()
+        {
+            var collections = new string[] { "Products", "User" };
+            var product = new Product { Name = "Product Name" };
+            var user = new User { Name = "User Name" };
+            using (var store = GetDocumentStore())
+            {
+                DateTime last = default;
+                var config = new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration { Disabled = true, MinimumRevisionsToKeep = 5 },
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                    {
+                        ["Users"] = new RevisionsCollectionConfiguration { Disabled = false, PurgeOnDelete = true, MinimumRevisionsToKeep = 123 },
+                        ["People"] = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 },
+                        ["Comments"] = new RevisionsCollectionConfiguration { Disabled = true },
+                    }
+                };
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: c =>
+                {
+                    c.Default = null;
+                    c.Collections = config.Collections;
+                });
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(product);
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                    last = DateTime.UtcNow;
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    product.Name = "RavenDB";
+                    user.Name = "Shahar";
+                    await session.StoreAsync(product);
+                    await session.StoreAsync(user);
+                    await session.SaveChangesAsync();
+                }
+
+                var operation = await store.Maintenance.SendAsync(new RevertRevisionsOperation(last, 60, collections));
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.Equal("RavenDB", (await session.LoadAsync<Product>(product.Id)).Name);
+
+                    var productsRevisions = await session.Advanced.Revisions.GetForAsync<Product>(product.Id);
+                    Assert.Equal(0, productsRevisions.Count);
+
+                    var usersRevisions = await session.Advanced.Revisions.GetForAsync<Company>(user.Id);
+                    Assert.Equal(2, usersRevisions.Count);
+                
                     Assert.Equal("Shahar", usersRevisions[0].Name);
                     Assert.Equal("User Name", usersRevisions[1].Name);
                 }
@@ -700,5 +824,10 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
+        class Product
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
     }
 }
