@@ -162,11 +162,6 @@ namespace Raven.Client.Documents.Smuggler
 
         public bool ShouldPersist => true;
 
-        public void MergeWith(IOperationResult result)
-        {
-            throw new NotSupportedException();
-        }
-
         public string LegacyLastDocumentEtag { get; set; }
         public string LegacyLastAttachmentEtag { get; set; }
 

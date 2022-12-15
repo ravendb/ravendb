@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
-using Org.BouncyCastle.Utilities.Zlib;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -123,10 +122,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                                     continue;
 
                                 ApplyBackwardCompatibility(options);
-                                var inputStream = GetInputStream(section.Body, options);
-                                var stream = new GZipStream(inputStream, CompressionMode.Decompress);
-                                await onImport(context, stream, options, result, onProgress, operationId, token);
-
+                                await using (var inputStream = GetInputStream(section.Body, options))
+                                await using (var stream = new GZipStream(inputStream, CompressionMode.Decompress))
+                                {
+                                    await onImport(context, stream, options, result, onProgress, operationId, token);
+                                }
                             }
                         }
                         catch (Exception e)

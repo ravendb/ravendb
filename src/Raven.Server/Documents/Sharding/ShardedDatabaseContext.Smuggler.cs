@@ -26,9 +26,9 @@ namespace Raven.Server.Documents.Sharding
 
             public ImportDelegate GetImportDelegateForHandler(ShardedDatabaseRequestHandler handler)
             {
-                return async (jsonOperationContext, stream, options, result, onProgress, operationId, token) =>
+                return async (context, stream, options, result, onProgress, operationId, token) =>
                 {
-                    using (var source = new StreamSource(stream, jsonOperationContext, _context.DatabaseName, options))
+                    using (var source = new StreamSource(stream, context, _context.DatabaseName, options))
                     {
                         DatabaseRecord record;
                         using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -37,8 +37,8 @@ namespace Raven.Server.Documents.Sharding
                             record = _serverStore.Cluster.ReadDatabase(ctx, _context.DatabaseName);
                         }
 
-                        var smuggler = new ShardedDatabaseSmuggler(source, new MultiShardedDestination(source, _context, handler, operationId),
-                            jsonOperationContext, record, _serverStore, options, result, onProgress, token: token.Token);
+                        var destination = new MultiShardedDestination(source, _context, handler, operationId);
+                        var smuggler = new ShardedDatabaseSmuggler(source, destination, context, record, _serverStore, options, result, onProgress, token.Token);
 
                         return await smuggler.ExecuteAsync();
                     }
@@ -46,5 +46,4 @@ namespace Raven.Server.Documents.Sharding
             }
         }
     }
-
 }

@@ -594,7 +594,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         }
 
         public async Task<SmugglerResult> DoImportInternalAsync(
-            JsonOperationContext jsonOperationContext,
+            JsonOperationContext context,
             Stream stream,
             DatabaseSmugglerOptionsServerSide options,
             SmugglerResult result,
@@ -602,13 +602,12 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             long operationId,
             OperationCancelToken token)
         {
-            ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
             await using (stream)
             using (token)
             using (var source = new StreamSource(stream, context, Database.Name))
             {
                 var destination = Database.Smuggler.CreateDestination(token.Token);
-                var smuggler = Database.Smuggler.Create(source, destination, jsonOperationContext, options, result, onProgress, token.Token);
+                var smuggler = Database.Smuggler.Create(source, destination, context, options, result, onProgress, token.Token);
 
                 return await smuggler.ExecuteAsync();
             }
