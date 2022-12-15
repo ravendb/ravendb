@@ -1,15 +1,7 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Smuggler;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers.Processors.Smuggler;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Documents;
-using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
@@ -22,33 +14,10 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler
 
         protected override async ValueTask ImportAsync(JsonOperationContext context, long? operationId)
         {
+            var databaseContext = RequestHandler.DatabaseContext;
             operationId ??= RequestHandler.DatabaseContext.Operations.GetNextOperationId();
-            await Import(context, RequestHandler.DatabaseContext.DatabaseName, DoImportInternalAsync, RequestHandler.DatabaseContext.Operations, operationId.Value);
-        }
-
-        internal async Task<SmugglerResult> DoImportInternalAsync(
-            JsonOperationContext jsonOperationContext,
-            Stream stream,
-            DatabaseSmugglerOptionsServerSide options,
-            SmugglerResult result,
-            Action<IOperationProgress> onProgress,
-            long operationId,
-            OperationCancelToken token)
-        {
-            using (var source = new StreamSource(stream, jsonOperationContext, RequestHandler.DatabaseContext.DatabaseName, options))
-            {
-                DatabaseRecord record;
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    record = ServerStore.Cluster.ReadDatabase(ctx, RequestHandler.DatabaseContext.DatabaseName);
-                }
-
-                var smuggler = new ShardedDatabaseSmuggler(source, new MultiShardedDestination(source, RequestHandler.DatabaseContext, RequestHandler, operationId),
-                    jsonOperationContext, record, ServerStore, options, result, onProgress, token: token.Token);
-
-                return await smuggler.ExecuteAsync();
-            }
+            await Import(context, databaseContext.DatabaseName, databaseContext.Smuggler.GetImportDelegateForHandler(RequestHandler), databaseContext.Operations,
+                operationId.Value);
         }
     }
 }

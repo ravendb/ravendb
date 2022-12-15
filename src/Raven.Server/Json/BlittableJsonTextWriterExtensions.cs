@@ -1958,34 +1958,54 @@ namespace Raven.Server.Json
                 }
             }
 
-            if (first == false)
+            if (document.ChangeVector != null)
             {
-                writer.WriteComma();
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
+                writer.WritePropertyName(Constants.Documents.Metadata.ChangeVector);
+                writer.WriteString(document.ChangeVector);
             }
-            writer.WritePropertyName(Constants.Documents.Metadata.ChangeVector);
-            writer.WriteString(document.ChangeVector);
 
             if (document.Flags != DocumentFlags.None)
             {
-                writer.WriteComma();
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
                 writer.WritePropertyName(Constants.Documents.Metadata.Flags);
                 writer.WriteString(document.Flags.ToString());
             }
             if (document.Id != null)
             {
-                writer.WriteComma();
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
                 writer.WritePropertyName(Constants.Documents.Metadata.Id);
                 writer.WriteString(document.Id);
             }
             if (document.IndexScore != null)
             {
-                writer.WriteComma();
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
                 writer.WritePropertyName(Constants.Documents.Metadata.IndexScore);
                 writer.WriteDouble(document.IndexScore.Value);
             }
             if (document.Distance != null)
             {
-                writer.WriteComma();
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
                 var result = document.Distance.Value;
                 writer.WritePropertyName(Constants.Documents.Metadata.SpatialResult);
                 writer.WriteStartObject();
@@ -2001,15 +2021,22 @@ namespace Raven.Server.Json
             }
             if (document.LastModified != DateTime.MinValue)
             {
-                writer.WriteComma();
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
                 writer.WritePropertyName(Constants.Documents.Metadata.LastModified);
                 writer.WriteDateTime(document.LastModified, isUtc: true);
             }
 
             if (document is DocumentWithOrderByFields documentForQuery && documentForQuery.OrderByFields != null)
             {
-                writer.WriteComma();
-
+                if (first == false)
+                {
+                    writer.WriteComma();
+                }
+                first = false;
                 writer.WritePropertyName(Constants.Documents.Metadata.OrderByFields);
                 writer.WriteStartArray();
 

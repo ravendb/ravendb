@@ -5,8 +5,10 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide;
+using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -46,6 +48,7 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportDir<TRequestHan
         var tasks = new Task[Math.Max(1, maxTasks)];
 
         var finalResult = new SmugglerResult();
+        var token = RequestHandler.CreateOperationToken();
 
         for (int i = 0; i < tasks.Length; i++)
         {
@@ -68,7 +71,6 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportDir<TRequestHan
                         await using (var file = await getFile())
                         await using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                         {
-                            var token = RequestHandler.CreateOperationToken();
                             var result = await DoImport(context, stream, options: null, result: null, onProgress: null, operationId, token);
                             results.Enqueue(result);
                         }
@@ -81,7 +83,7 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportDir<TRequestHan
 
         while (results.TryDequeue(out SmugglerResult importResult))
         {
-            finalResult.MergeWith(importResult);
+            ((IOperationResult)importResult).MergeWith(finalResult);
         }
         
         using (ContextPool.AllocateOperationContext(out JsonOperationContext finalContext))

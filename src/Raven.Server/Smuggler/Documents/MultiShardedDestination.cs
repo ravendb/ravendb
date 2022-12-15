@@ -112,16 +112,16 @@ namespace Raven.Server.Smuggler.Documents
             new ShardedCompareExchangeActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.CompareExchangeTombstones(databaseName, context)), _options);
 
         public IDocumentActions Documents(bool throwOnCollectionMismatchError = true) =>
-            new SharededDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Documents(throwOnDuplicateCollection: false)), _options);
+            new ShardedDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Documents(throwOnDuplicateCollection: false)), _options);
 
         public IDocumentActions RevisionDocuments() =>
-            new SharededDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.RevisionDocuments()), _options);
+            new ShardedDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.RevisionDocuments()), _options);
 
         public IDocumentActions Tombstones() =>
-            new SharededDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Tombstones()), _options);
+            new ShardedDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Tombstones()), _options);
 
         public IDocumentActions Conflicts() =>
-            new SharededDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Conflicts()), _options);
+            new ShardedDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Conflicts()), _options);
 
         public ICounterActions Counters(SmugglerResult result) =>
             new ShardedCounterActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Counters(result)), _options);
@@ -207,11 +207,11 @@ namespace Raven.Server.Smuggler.Documents
         }
 
 
-        private class SharededDocumentActions : ShardedActions<IDocumentActions>, IDocumentActions
+        private class ShardedDocumentActions : ShardedActions<IDocumentActions>, IDocumentActions
         {
             private readonly ByteStringContext _allocator;
 
-            public SharededDocumentActions(ShardedDatabaseContext databaseContext, Dictionary<int, IDocumentActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
+            public ShardedDocumentActions(ShardedDatabaseContext databaseContext, Dictionary<int, IDocumentActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
                 _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             }
