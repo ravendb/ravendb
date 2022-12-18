@@ -116,7 +116,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     {
                         step.Commit(context);
                         step.RenewTransactions();
-
+                        table = tableName == null
+                            ? new Table(schema, step.WriteTx)
+                            : step.WriteTx.OpenTable(schema, tableName);
                         indexTree = step.WriteTx.ReadTree(indexName, isIndexTree: true);
                         _processedInCurrentTx = 0;
 
