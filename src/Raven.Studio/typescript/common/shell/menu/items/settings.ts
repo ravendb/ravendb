@@ -169,7 +169,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/advanced/tombstonesState',
-            moduleId: 'viewmodels/database/advanced/tombstonesState',
+            moduleId: require('viewmodels/database/advanced/tombstonesState'),
             title: 'Tombstones',
             nav: true,
             css: 'icon-revisions-bin',
