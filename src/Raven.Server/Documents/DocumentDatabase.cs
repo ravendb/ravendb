@@ -590,6 +590,9 @@ namespace Raven.Server.Documents
 
             var batch = batchCollector.GetData();
             var mergedCommands = new ClusterTransactionMergedCommand(this, batch);
+
+            ForTestingPurposes?.BeforeExecutingClusterTransactions?.Invoke();
+
             try
             {
                 try
@@ -714,7 +717,7 @@ namespace Raven.Server.Documents
             try
             {
                 var index = command.Index;
-                var options = mergedCommands.Options[index];
+                var options = command.Options;
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, exception);
                 ServerStore.Cluster.ClusterTransactionWaiter.TrySetException(options.TaskId, exception);
