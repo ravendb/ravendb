@@ -78,9 +78,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
                 smuggler._options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
 
             smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord =>
-                RestoreSettings.DatabaseRecord.Sharding.BucketRanges = 
-                    smugglerDatabaseRecord.Sharding?.BucketRanges ?? throw new InvalidDataException(
-                        $"'{nameof(DatabaseRecord.Sharding.BucketRanges)}' is missing in backup file '{filePath}'. Aborting the restore process");
+            {
+                if (smugglerDatabaseRecord.Sharding == null)
+                    throw new InvalidDataException($"'{nameof(DatabaseRecord.Sharding)}' is missing in backup file '{filePath}'. Aborting the restore process");
+
+                RestoreSettings.DatabaseRecord.Sharding.BucketRanges = smugglerDatabaseRecord.Sharding.BucketRanges;
+                RestoreSettings.DatabaseRecord.Sharding.Prefixed = smugglerDatabaseRecord.Sharding.Prefixed;
+            };
+
         }
         
         private int GetMinShard(ShardingConfiguration config)
