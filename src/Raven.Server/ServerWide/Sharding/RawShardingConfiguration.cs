@@ -146,9 +146,9 @@ public class RawShardingConfiguration
         }
     }
 
-    private Dictionary<string, List<ShardBucketRange>> _prefixed;
+    private Dictionary<string, PrefixedShardingSetting> _prefixed;
 
-    public Dictionary<string, List<ShardBucketRange>> Prefixed
+    public Dictionary<string, PrefixedShardingSetting> Prefixed
     {
         get
         {
@@ -160,21 +160,25 @@ public class RawShardingConfiguration
 
             if (_configuration.TryGet(nameof(ShardingConfiguration.Prefixed), out BlittableJsonReaderObject obj) && obj != null)
             {
-                _prefixed = new Dictionary<string, List<ShardBucketRange>>();
+                _prefixed = new Dictionary<string, PrefixedShardingSetting>();
 
                 var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                 for (var index = 0; index < obj.Count; index++)
                 {
                     obj.GetPropertyByIndex(index, ref propertyDetails);
-                    var array = propertyDetails.Value as BlittableJsonReaderArray;
-                    if (array == null)
+                    if (propertyDetails.Value is not BlittableJsonReaderObject settingBlittable ||
+                        settingBlittable.TryGet(nameof(PrefixedShardingSetting.Shards), out BlittableJsonReaderArray array) == false)
                         continue;
 
-                    var items = new List<ShardBucketRange>();
-                    foreach (BlittableJsonReaderObject item in array)
-                        items.Add(JsonDeserializationCluster.ShardBucketRange(item));
+                    var setting = new PrefixedShardingSetting
+                    {
+                        Shards = new List<int>()
+                    };
 
-                    _prefixed[propertyDetails.Name] = items;
+                    foreach (int shardNumber in array)
+                        setting.Shards.Add(shardNumber);
+
+                    _prefixed[propertyDetails.Name] = setting;
                 }
             }
 

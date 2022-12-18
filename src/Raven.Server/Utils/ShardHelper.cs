@@ -179,13 +179,13 @@ namespace Raven.Server.Utils
         {
             int bucket = GetBucketFor(context, id);
             int index = 0;
-            foreach (var (prefix, ranges) in configuration.Prefixed)
+            foreach (var (prefix, _) in configuration.Prefixed)
             {
                 index++;
                 if (id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 {
                     bucket += index << 20;
-                    return FindBucketShard(ranges, bucket);
+                    break;
                 }
             }
 
@@ -196,14 +196,14 @@ namespace Raven.Server.Utils
         {
             int bucket = GetBucketFromSlice(id);
             int index = 0;
-            foreach (var (prefix, ranges) in configuration.Prefixed)
+            foreach (var (prefix, _) in configuration.Prefixed)
             {
                 index++;
 
                 if (id.ToString().StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 {
                     bucket += index << 20;
-                    return FindBucketShard(ranges, bucket);
+                    break;
                 }
             }
 
@@ -215,10 +215,12 @@ namespace Raven.Server.Utils
             int prefixRange = bucket >> 20;
             for (int i = 0; i < ranges.Count - 1; i++)
             {
-                int bucketRangeStart = ranges[i + 1].BucketRangeStart;
+                int bucketRangeStart = ranges[i].BucketRangeStart;
                 if ((bucketRangeStart >> 20) != prefixRange)
                     continue;
-                if (bucket < bucketRangeStart)
+
+                int nextBucketRangeStart = ranges[i + 1].BucketRangeStart;
+                if (bucket < nextBucketRangeStart)
                     return ranges[i].ShardNumber;
             }
 
@@ -396,7 +398,7 @@ namespace Raven.Server.Utils
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 Optimize this");
 
             int bucket = GetBucketFor(context.Allocator, actualIdAsString);
-            return FindBucketShard(configuration.For(actualIdAsString), bucket);
+            return FindBucketShard(configuration.BucketRanges, bucket);
         }
 
         public static unsafe void ExtractStickyId(ref char* buffer, ref int size)

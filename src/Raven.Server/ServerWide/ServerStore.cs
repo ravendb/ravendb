@@ -879,15 +879,24 @@ namespace Raven.Server.ServerWide
                     }
                     else
                     {
-                        if (addDatabase.Record.Sharding.BucketRanges == null ||
-                            addDatabase.Record.Sharding.BucketRanges.Count == 0)
+                        FillShardingConfiguration(addDatabase, clusterTopology);
+                    }
+                    break;
+            }
+        }
+
+        private void FillShardingConfiguration(AddDatabaseCommand addDatabase, ClusterTopology clusterTopology)
                         {
-                            addDatabase.Record.Sharding.BucketRanges = new List<ShardBucketRange>();
+            var shardingConfiguration = addDatabase.Record.Sharding;
+            if (shardingConfiguration.BucketRanges == null ||
+                shardingConfiguration.BucketRanges.Count == 0)
+            {
+                shardingConfiguration.BucketRanges = new List<ShardBucketRange>();
                             var start = 0;
-                            var step = ShardHelper.NumberOfBuckets / addDatabase.Record.Sharding.Shards.Count;
+                var step = ShardHelper.NumberOfBuckets / shardingConfiguration.Shards.Length;
                             foreach (var (shardNumber, shardTopology) in addDatabase.Record.Sharding.Shards)
                             {
-                                addDatabase.Record.Sharding.BucketRanges.Add(new ShardBucketRange
+                    shardingConfiguration.BucketRanges.Add(new ShardBucketRange
                                 {
                                     ShardNumber = shardNumber,
                                     BucketRangeStart = start
@@ -896,13 +905,36 @@ namespace Raven.Server.ServerWide
                             }
                         }
 
-                        var orchestratorTopology = addDatabase.Record.Sharding.Orchestrator.Topology;
+            if (shardingConfiguration.Prefixed != null)
+            {
+                var prefixedSettings = shardingConfiguration.Prefixed.Values.ToList();
+
+                for (int i = 0; i < prefixedSettings.Count; i++)
+                {
+                    var shards = prefixedSettings[i].Shards;
+                    var start = ShardHelper.NumberOfBuckets << i;
+                    var step = ShardHelper.NumberOfBuckets / shards.Count;
+
+                    foreach (var shardNumber in shards)
+                    {
+                        shardingConfiguration.BucketRanges.Add(new ShardBucketRange
+                        {
+                            ShardNumber = shardNumber,
+                            BucketRangeStart = start
+                        });
+                        start += step;
+                    }
+
+                }
+            }
+
+            var orchestratorTopology = shardingConfiguration.Orchestrator.Topology;
                         if (orchestratorTopology.Count == 0)
                             AssignNodesToDatabase(clusterTopology, addDatabase.Record.DatabaseName, addDatabase.Encrypted, orchestratorTopology);
 
                         Debug.Assert(orchestratorTopology.Count != 0, "Empty orchestrator topology after AssignNodesToDatabase");
 
-                        var pool = GetNodesDistribution(clusterTopology, addDatabase.Record.Sharding.Shards);
+            var pool = GetNodesDistribution(clusterTopology, shardingConfiguration.Shards);
 
                         var index = 0;
                         var keys = pool.Keys.ToList();
@@ -925,9 +957,6 @@ namespace Raven.Server.ServerWide
                             Debug.Assert(shardTopology.Count != 0, "Empty shard topology after AssignNodesToDatabase");
                         }
                     }
-                    break;
-            }
-        }
 
         private static Dictionary<string, int> GetNodesDistribution(ClusterTopology clusterTopology, Dictionary<int, DatabaseTopology> shards)
         {
