@@ -202,22 +202,49 @@ namespace Corax.Queries
                 }
             }
 
-            if (!isSorted)
+            bool documentBoostIsAdded = false;
+            if (isSorted == false)
             {
+                AddDocumentBoost(ref match, matchesSpan, scoresSpan, temporaryTotalMatches);
+                documentBoostIsAdded = true;
+                
                 // We need to first sort by match to remove the duplicates.
                 temporaryTotalMatches = Sorting.SortAndRemoveDuplicates(matchesSpanPtr, scoresSpanPtr, temporaryTotalMatches);
 
                 // Then sort again to select the appropriate matches.
                 sorter.Sort(scoresSpan[0..temporaryTotalMatches], matchesSpan[0..temporaryTotalMatches]);
             }
-
             totalMatches = Math.Min(take, temporaryTotalMatches);
+
+            if (documentBoostIsAdded == false)
+            {
+                AddDocumentBoost(ref match, matchesSpan, scoresSpan, totalMatches);
+                sorter.Sort(scoresSpan[0..totalMatches], matchesSpan[0..totalMatches]);
+            }
 
             // Copy must happen before we return the backing arrays.
             matchesSpan[..totalMatches].CopyTo(matches);
             match.TotalResults = totalMatches;
 
             return totalMatches;
+
+            void AddDocumentBoost(ref SortingMatch<TInner, TComparer> match, Span<long> matchesSpan, Span<float> scoresSpan, int limit)
+            {
+                if (match._searcher.DocumentsAreBoosted == false) 
+                    return;
+                var tree = match._searcher.GetDocumentBoostTree();
+                if (tree == null || tree.NumberOfEntries == 0)
+                    return;
+                
+                for (int bIdx = 0; bIdx < limit; ++bIdx)
+                {
+                    using var __ = tree.Read(matchesSpan[bIdx], out var slice);
+                    if (slice.HasValue == false)
+                        continue;
+                    var boostFactor = MemoryMarshal.Cast<byte, float>(slice.AsSpan());
+                    scoresSpan[bIdx] *= boostFactor[0];
+                }
+            }
         }
 
         [SkipLocalsInit]

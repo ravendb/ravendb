@@ -406,7 +406,7 @@ namespace Raven.Server.Documents
                     }
                 }, null);
 
-                Task.Run(async () =>
+                _clusterTransactionsTask = Task.Run(async () =>
                 {
                     try
                     {
@@ -475,8 +475,23 @@ namespace Raven.Server.Documents
         public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
         public bool IsEncrypted => MasterKey != null;
 
+        private Task _clusterTransactionsTask;
         private int _clusterTransactionDelayOnFailure = 1000;
         private FileLocker _fileLocker;
+
+        private static readonly List<StorageEnvironmentWithType.StorageEnvironmentType> DefaultStorageEnvironmentTypes = new()
+        {
+            StorageEnvironmentWithType.StorageEnvironmentType.Documents,
+            StorageEnvironmentWithType.StorageEnvironmentType.Configuration,
+            StorageEnvironmentWithType.StorageEnvironmentType.Index
+        };
+
+        private static readonly List<StorageEnvironmentWithType.StorageEnvironmentType> DefaultStorageEnvironmentTypesForBackup = new()
+        {
+            StorageEnvironmentWithType.StorageEnvironmentType.Index,
+            StorageEnvironmentWithType.StorageEnvironmentType.Documents,
+            StorageEnvironmentWithType.StorageEnvironmentType.Configuration,
+        };
 
         private async Task ExecuteClusterTransactionTask()
         {
@@ -577,18 +592,37 @@ namespace Raven.Server.Documents
             var mergedCommands = new ClusterTransactionMergedCommand(this, batch);
             try
             {
-                //If we get a database shutdown while we process a cluster tx command this
-                //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
-                await TxMerger.Enqueue(mergedCommands);
-                batchCollector.AllCommandsBeenProcessed = true;
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to execute cluster transaction batch (count: {batchCollector.Count}), will retry them one-by-one.", e);
-
-                if (await ExecuteClusterTransactionOneByOne(batch))
+                try
+                {
+                    //If we get a database shutdown while we process a cluster tx command this
+                    //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
+                    await TxMerger.Enqueue(mergedCommands);
                     batchCollector.AllCommandsBeenProcessed = true;
+                }
+                catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Failed to execute cluster transaction batch (count: {batchCollector.Count}), will retry them one-by-one.", e);
+
+                    if (await ExecuteClusterTransactionOneByOne(batch))
+                        batchCollector.AllCommandsBeenProcessed = true;
+                }
+            }
+            catch
+            {
+                if (_databaseShutdown.IsCancellationRequested == false)
+                    throw;
+
+                // we got an exception while the database was shutting down
+                // setting it only for commands that we didn't process yet (can only be if we used ExecuteClusterTransactionOneByOne)
+                var exception = CreateDatabaseShutdownException();
+                foreach (var command in batch)
+                {
+                    if (command.Processed)
+                        continue;
+
+                    OnClusterTransactionCompletion(command, mergedCommands, exception);
+                }
             }
 
             var commandsCount = 0;
@@ -615,8 +649,9 @@ namespace Raven.Server.Documents
                     OnClusterTransactionCompletion(command, mergedCommand);
 
                     _clusterTransactionDelayOnFailure = 1000;
+                    command.Processed = true;
                 }
-                catch (Exception e)
+                catch (Exception e) when (_databaseShutdown.IsCancellationRequested == false)
                 {
                     OnClusterTransactionCompletion(command, mergedCommand, exception: e);
                     NotificationCenter.Add(AlertRaised.Create(
@@ -815,6 +850,8 @@ namespace Raven.Server.Documents
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed TxMerger");
 
+            ForTestingPurposes?.AfterTxMergerDispose?.Invoke();
+
             // must acquire the lock in order to prevent concurrent access to index files
             if (lockTaken == false)
             {
@@ -923,6 +960,17 @@ namespace Raven.Server.Documents
                 DocumentsStorage?.Dispose();
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed DocumentsStorage");
+
+            var clusterTransactionsTask = _clusterTransactionsTask;
+            if (clusterTransactionsTask != null)
+            {
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Waiting for cluster transactions executor task to complete");
+                exceptionAggregator.Execute(() =>
+                {
+                    clusterTransactionsTask.Wait();
+                });
+                ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished waiting for cluster transactions executor task to complete");
+            }
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _databaseShutdown");
             exceptionAggregator.Execute(() =>
@@ -1130,47 +1178,67 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<StorageEnvironmentWithType> GetAllStoragesEnvironment()
+        public IEnumerable<StorageEnvironmentWithType> GetAllStoragesEnvironment(List<StorageEnvironmentWithType.StorageEnvironmentType> types = null)
         {
-            // TODO :: more storage environments ?
-            var documentsStorage = DocumentsStorage;
-            if (documentsStorage != null)
-                yield return
-                    new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
-                        documentsStorage.Environment);
-            var configurationStorage = ConfigurationStorage;
-            if (configurationStorage != null)
-                yield return
-                    new StorageEnvironmentWithType("Configuration",
-                        StorageEnvironmentWithType.StorageEnvironmentType.Configuration, configurationStorage.Environment);
+            types ??= DefaultStorageEnvironmentTypes;
 
-            //check for null to prevent NRE when disposing the DocumentDatabase
-            foreach (var index in (IndexStore?.GetIndexes()).EmptyIfNull())
+            // TODO :: more storage environments ?
+            foreach (var type in types)
             {
-                var env = index?._indexStorage?.Environment();
-                if (env != null)
-                    yield return
-                        new StorageEnvironmentWithType(index.Name,
-                            StorageEnvironmentWithType.StorageEnvironmentType.Index, env)
+                switch (type)
+                {
+                    case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
+                        var documentsStorage = DocumentsStorage;
+                        if (documentsStorage != null)
+                            yield return
+                                new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
+                                    documentsStorage.Environment);
+                        break;
+                    
+                    case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
+                        var configurationStorage = ConfigurationStorage;
+                        if (configurationStorage != null)
+                            yield return
+                                new StorageEnvironmentWithType("Configuration",
+                                    StorageEnvironmentWithType.StorageEnvironmentType.Configuration, configurationStorage.Environment);
+                        break;
+
+                    case StorageEnvironmentWithType.StorageEnvironmentType.Index:
+                        //check for null to prevent NRE when disposing the DocumentDatabase
+                        foreach (var index in (IndexStore?.GetIndexes()).EmptyIfNull())
                         {
-                            LastIndexQueryTime = index.GetLastQueryingTime()
-                        };
+                            var env = index?._indexStorage?.Environment();
+                            if (env != null)
+                                yield return
+                                    new StorageEnvironmentWithType(index.Name,
+                                        StorageEnvironmentWithType.StorageEnvironmentType.Index, env)
+                                    {
+                                        LastIndexQueryTime = index.GetLastQueryingTime()
+                                    };
+                        }
+                        break;
+                }
             }
         }
 
         private IEnumerable<FullBackup.StorageEnvironmentInformation> GetAllStoragesForBackup(bool excludeIndexes)
         {
-            foreach (var storageEnvironmentWithType in GetAllStoragesEnvironment())
+            foreach (var storageEnvironmentWithType in GetAllStoragesEnvironment(DefaultStorageEnvironmentTypesForBackup))
             {
                 switch (storageEnvironmentWithType.Type)
                 {
                     case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
+                        ForTestingPurposes?.BeforeSnapshotOfDocuments?.Invoke();
+
                         yield return new FullBackup.StorageEnvironmentInformation
                         {
                             Name = string.Empty,
                             Folder = Constants.Documents.PeriodicBackup.Folders.Documents,
                             Env = storageEnvironmentWithType.Environment
                         };
+
+                        ForTestingPurposes?.AfterSnapshotOfDocuments?.Invoke();
+
                         break;
 
                     case StorageEnvironmentWithType.StorageEnvironmentType.Index:
@@ -1205,6 +1273,14 @@ namespace Raven.Server.Documents
         {
             SmugglerResult smugglerResult;
 
+            long lastTombstoneEtag = 0;
+            using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                lastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(ctx.Transaction.InnerTransaction);
+            }
+
+            using (TombstoneCleaner.PreventTombstoneCleaningUpToEtag(lastTombstoneEtag))
             using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
             {
@@ -1871,6 +1947,14 @@ namespace Raven.Server.Documents
             internal Action CollectionRunnerBeforeOpenReadTransaction;
 
             internal Action CompactionAfterDatabaseUnload;
+
+            internal Action AfterTxMergerDispose;
+
+            internal Action BeforeExecutingClusterTransactions;
+
+            internal Action BeforeSnapshotOfDocuments;
+
+            internal Action AfterSnapshotOfDocuments;
 
             internal bool SkipDrainAllRequests = false;
 

@@ -1939,6 +1939,7 @@ namespace Raven.Server.Documents.Replication
         internal class TestingStuff
         {
             public Action<DatabaseOutgoingReplicationHandler> OnOutgoingReplicationStart;
+            public Action<Exception> OnIncomingReplicationHandlerFailure;
         }
     }
 

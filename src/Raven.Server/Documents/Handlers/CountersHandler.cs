@@ -33,6 +33,7 @@ namespace Raven.Server.Documents.Handlers
             public bool HasWrites;
             public string LastChangeVector;
             public string LastDocumentChangeVector;
+            public HashSet<string> DocumentCollections;
 
             public CountersDetail CountersDetail = new CountersDetail
             {
@@ -84,6 +85,8 @@ namespace Raven.Server.Documents.Handlers
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
+                DocumentCollections?.Clear();
+                
                 var countersToAdd = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
                 var countersToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -184,6 +187,8 @@ namespace Raven.Server.Documents.Handlers
                     docId = counterOperation.DocumentId;
 
                     docCollection = GetDocumentCollection(docId, _database, context, _fromEtl, out doc);
+                    DocumentCollections ??= new HashSet<string>();
+                    DocumentCollections.Add(docCollection);
                 }
 
                 ApplyChangesForPreviousDocument(context, doc, docId, countersToAdd, countersToRemove);

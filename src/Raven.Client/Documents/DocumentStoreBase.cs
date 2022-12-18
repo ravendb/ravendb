@@ -54,6 +54,10 @@ namespace Raven.Client.Documents
 
         public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
 
+        public abstract Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, string database = null);
+
+        public abstract Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
+
         public abstract IDisposable DisableAggressiveCaching(string database = null);
 
         public abstract IHiLoIdGenerator HiLoIdGenerator { get; }
@@ -334,6 +338,15 @@ namespace Raven.Client.Documents
         public IDisposable AggressivelyCache(string database = null)
         {
             return AggressivelyCacheFor(Conventions.AggressiveCache.Duration, Conventions.AggressiveCache.Mode, database);
+        }
+
+        
+        /// <summary>
+        /// Setup the context for aggressive caching.
+        /// </summary>
+        public Task<IDisposable> AggressivelyCacheAsync(string database = null)
+        {
+            return AggressivelyCacheForAsync(Conventions.AggressiveCache.Duration, Conventions.AggressiveCache.Mode, database);
         }
 
         protected void RegisterEvents(InMemoryDocumentSessionOperations session)

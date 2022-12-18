@@ -61,7 +61,7 @@ loadToOrders" + IndexSuffix + @"(orderData);";
         };
 
         protected ElasticSearchEtlConfiguration SetupElasticEtl(DocumentStore store, string script, IEnumerable<ElasticSearchIndex> indexes, IEnumerable<string> collections, bool applyToAllDocuments = false,
-            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, string configurationName = null, string transformationName = null, string[] nodes = null)
+            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, string configurationName = null, string transformationName = null, string[] nodes = null, bool enableCompatibilityMode = false)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to ELASTIC";
 
@@ -84,10 +84,17 @@ loadToOrders" + IndexSuffix + @"(orderData);";
                         Script = script,
                         ApplyToAllDocuments = applyToAllDocuments
                     }
-                }
+                },
             };
 
-            AddEtl(store, config, new ElasticSearchConnectionString { Name = connectionStringName, Nodes = nodes ?? ElasticSearchTestNodes.Instance.VerifiedNodes.Value, Authentication = authentication });
+            AddEtl(store, config,
+                new ElasticSearchConnectionString
+                {
+                    Name = connectionStringName,
+                    Nodes = nodes ?? ElasticSearchTestNodes.Instance.VerifiedNodes.Value,
+                    Authentication = authentication,
+                    EnableCompatibilityMode = enableCompatibilityMode
+                });
 
             return config;
         }

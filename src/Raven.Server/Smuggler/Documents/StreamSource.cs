@@ -765,9 +765,11 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
         }
-
-        public async IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(List<string> collectionsToExport)
+        
+        public async IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(List<string> collectionsToOperate)
         {
+            var collectionsHashSet = new HashSet<string>(collectionsToOperate, StringComparer.OrdinalIgnoreCase);
+
             await foreach (var reader in ReadArrayAsync())
             {
                 using (reader)
@@ -776,15 +778,24 @@ namespace Raven.Server.Smuggler.Documents
                         throw new InvalidOperationException($"Trying to read time series entry without size specified: doc: {reader}");
 
                     if (reader.TryGet(Constants.Documents.Blob.Document, out BlittableJsonReaderObject blobMetadata) == false ||
-                        blobMetadata.TryGet(nameof(TimeSeriesItem.DocId), out string docId) == false ||
+                        blobMetadata.TryGet(nameof(TimeSeriesItem.Collection), out string collection) == false)
+                    {
+                        await SkipEntryAsync(reader, size, skipDueToReadError: true);
+                        continue;
+                    }
+
+                    if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(collection) == false)
+                    {
+                        await SkipEntryAsync(reader, size, skipDueToReadError: false);
+                        continue;
+                    }
+
+                    if (blobMetadata.TryGet(nameof(TimeSeriesItem.DocId), out string docId) == false ||
                         blobMetadata.TryGet(nameof(TimeSeriesItem.Name), out string name) == false ||
                         blobMetadata.TryGet(nameof(TimeSeriesItem.ChangeVector), out string cv) == false ||
-                        blobMetadata.TryGet(nameof(TimeSeriesItem.Collection), out string collection) == false ||
                         blobMetadata.TryGet(nameof(TimeSeriesItem.Baseline), out DateTime baseline) == false)
                     {
-                        _result.TimeSeries.ErroredCount++;
-                        _result.AddWarning($"Could not read time series entry. {reader}");
-                        await SkipAsync(size);
+                        await SkipEntryAsync(reader, size, skipDueToReadError: true);
                         continue;
                     }
 
@@ -800,6 +811,16 @@ namespace Raven.Server.Smuggler.Documents
                         Segment = segment
                     };
                 }
+            }
+            
+            async Task SkipEntryAsync(BlittableJsonReaderObject reader, int size, bool skipDueToReadError)
+            {
+                if (skipDueToReadError)
+                {
+                    _result.TimeSeries.ErroredCount++;
+                    _result.AddWarning($"Could not read time series entry. {reader}");
+                }
+                await SkipAsync(size);
             }
         }
 
@@ -1011,14 +1032,14 @@ namespace Raven.Server.Smuggler.Documents
             return SmugglerSourceType.Import;
         }
 
-        public IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToOperate, INewDocumentActions actions)
         {
-            return ReadDocumentsAsync(actions);
+            return ReadDocumentsAsync(collectionsToOperate, actions);
         }
 
-        public IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToOperate, INewDocumentActions actions)
         {
-            return ReadDocumentsAsync(actions);
+            return ReadDocumentsAsync(collectionsToOperate, actions);
         }
 
         public IAsyncEnumerable<DocumentItem> GetLegacyAttachmentsAsync(INewDocumentActions actions)
@@ -1037,14 +1058,14 @@ namespace Raven.Server.Smuggler.Documents
             return ReadLegacyDeletionsAsync();
         }
 
-        public IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToOperate, INewDocumentActions actions)
         {
-            return ReadTombstonesAsync(actions);
+            return ReadTombstonesAsync(collectionsToOperate, actions);
         }
 
-        public IAsyncEnumerable<DocumentConflict> GetConflictsAsync(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentConflict> GetConflictsAsync(List<string> collectionsToOperate, INewDocumentActions actions)
         {
-            return ReadConflictsAsync(actions);
+            return ReadConflictsAsync(collectionsToOperate, actions);
         }
 
         public async IAsyncEnumerable<IndexDefinitionAndType> GetIndexesAsync()
@@ -1424,7 +1445,7 @@ namespace Raven.Server.Smuggler.Documents
             return context.ReadObject(djv, details.Id);
         }
 
-        private async IAsyncEnumerable<DocumentItem> ReadDocumentsAsync(INewDocumentActions actions = null)
+        private async IAsyncEnumerable<DocumentItem> ReadDocumentsAsync(List<string> collectionsToOperate, INewDocumentActions actions = null)
         {
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
@@ -1436,6 +1457,8 @@ namespace Raven.Server.Smuggler.Documents
             var legacyImport = _buildVersionType == BuildVersionType.V3;
             var modifier = new BlittableMetadataModifier(context, legacyImport, _readLegacyEtag, _operateOnTypes);
             var builder = CreateBuilder(context, modifier);
+            var collectionsHashSet = new HashSet<string>(collectionsToOperate, StringComparer.OrdinalIgnoreCase);
+
             try
             {
                 List<DocumentItem.AttachmentStream> attachments = null;
@@ -1473,29 +1496,41 @@ namespace Raven.Server.Smuggler.Documents
                     var data = builder.CreateReader();
                     builder.Reset();
 
-                    if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                        metadata.TryGet(DocumentItem.ExportDocumentType.Key, out string type))
+                    if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                     {
-                        if (type != DocumentItem.ExportDocumentType.Attachment)
+                        if (metadata.TryGet(Constants.Documents.Metadata.Collection, out string collectionName))
                         {
-                            var msg = $"Ignoring an item of type `{type}`. " + data;
-                            if (_log.IsOperationsEnabled)
-                                _log.Operations(msg);
-                            _result.AddWarning(msg);
+                            if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(collectionName) == false)
+                            {
+                                _result.Documents.SkippedCount++;
+                                if (_result.Documents.SkippedCount % 1000 == 0)
+                                    _result.AddInfo($"Skipped {_result.Documents.SkippedCount:#,#;;0} documents.");
+                                continue;
+                            }
+                        }
+                        
+                        if (metadata.TryGet(DocumentItem.ExportDocumentType.Key, out string type))
+                        {
+                            if (type != DocumentItem.ExportDocumentType.Attachment)
+                            {
+                                var msg = $"Ignoring an item of type `{type}`. " + data;
+                                if (_log.IsOperationsEnabled)
+                                    _log.Operations(msg);
+                                _result.AddWarning(msg);
+                                continue;
+                            }
+
+                            if (attachments == null)
+                                attachments = new List<DocumentItem.AttachmentStream>();
+
+                            var attachment = new DocumentItem.AttachmentStream
+                            {
+                                Stream = actions != null ? actions.GetTempStream() : GetTempStream()
+                            };
+                            attachment = await ProcessAttachmentStreamAsync(context, data, attachment);
+                            attachments.Add(attachment);
                             continue;
                         }
-
-                        if (attachments == null)
-                            attachments = new List<DocumentItem.AttachmentStream>();
-
-                        var attachment = new DocumentItem.AttachmentStream
-                        {
-                            Stream = actions != null ? actions.GetTempStream() : GetTempStream()
-                        };
-
-                        attachment = await ProcessAttachmentStreamAsync(context, data, attachment);
-                        attachments.Add(attachment);
-                        continue;
                     }
 
                     if (legacyImport)
@@ -1544,7 +1579,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public Stream GetTempStream() => StreamDestination.GetTempStream(_options);
 
-        private async IAsyncEnumerable<Tombstone> ReadTombstonesAsync(INewDocumentActions actions = null)
+        private async IAsyncEnumerable<Tombstone> ReadTombstonesAsync(List<string> collectionsToOperate, INewDocumentActions actions = null)
         {
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
@@ -1554,6 +1589,8 @@ namespace Raven.Server.Smuggler.Documents
 
             var context = _context;
             var builder = CreateBuilder(context);
+            var collectionsHashSet = new HashSet<string>(collectionsToOperate, StringComparer.OrdinalIgnoreCase);
+
             try
             {
                 while (true)
@@ -1584,9 +1621,21 @@ namespace Raven.Server.Smuggler.Documents
                     builder.Reset();
 
                     var tombstone = new Tombstone();
+                    if (data.TryGet(nameof(Tombstone.Collection), out tombstone.Collection))
+                    {
+                        if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(tombstone.Collection) == false)
+                        {
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        SkipEntry(data);
+                        continue;
+                    }
+
                     if (data.TryGet("Key", out tombstone.LowerId) &&
                         data.TryGet(nameof(Tombstone.Type), out string type) &&
-                        data.TryGet(nameof(Tombstone.Collection), out tombstone.Collection) &&
                         data.TryGet(nameof(Tombstone.LastModified), out tombstone.LastModified))
                     {
                         if (Enum.TryParse<Tombstone.TombstoneType>(type, out var tombstoneType) == false)
@@ -1622,12 +1671,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     else
                     {
-                        var msg = "Ignoring an invalid tombstone which you try to import. " + data;
-                        if (_log.IsOperationsEnabled)
-                            _log.Operations(msg);
-
-                        _result.Tombstones.ErroredCount++;
-                        _result.AddWarning(msg);
+                        SkipEntry(data);
                     }
                 }
             }
@@ -1635,9 +1679,19 @@ namespace Raven.Server.Smuggler.Documents
             {
                 builder.Dispose();
             }
+
+            void SkipEntry(BlittableJsonReaderObject data)
+            {
+                var msg = "Ignoring an invalid tombstone which you try to import. " + data;
+                if (_log.IsOperationsEnabled)
+                    _log.Operations(msg);
+
+                _result.Tombstones.ErroredCount++;
+                _result.AddWarning(msg);
+            }
         }
 
-        private async IAsyncEnumerable<DocumentConflict> ReadConflictsAsync(INewDocumentActions actions)
+        private async IAsyncEnumerable<DocumentConflict> ReadConflictsAsync(List<string> collectionsToOperate, INewDocumentActions actions = null)
         {
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
@@ -1647,6 +1701,8 @@ namespace Raven.Server.Smuggler.Documents
 
             var context = _context;
             var builder = CreateBuilder(context);
+            var collectionsHashSet = new HashSet<string>(collectionsToOperate, StringComparer.OrdinalIgnoreCase);
+
             try
             {
                 while (true)
@@ -1676,6 +1732,17 @@ namespace Raven.Server.Smuggler.Documents
                     var data = builder.CreateReader();
                     builder.Reset();
 
+                    if (data.TryGet(nameof(DocumentConflict.Collection), out string collectionName))
+                    {
+                        if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(collectionName) == false)
+                            continue;
+                    }
+                    else
+                    {
+                        SkipEntry(data);
+                        continue;
+                    }
+
                     var conflict = new DocumentConflict();
                     if (data.TryGet(nameof(DocumentConflict.Id), out conflict.Id) &&
                         data.TryGet(nameof(DocumentConflict.Collection), out conflict.Collection) &&
@@ -1692,18 +1759,23 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     else
                     {
-                        var msg = "Ignoring an invalid conflict which you try to import. " + data;
-                        if (_log.IsOperationsEnabled)
-                            _log.Operations(msg);
-
-                        _result.Conflicts.ErroredCount++;
-                        _result.AddWarning(msg);
+                        SkipEntry(data);
                     }
                 }
             }
             finally
             {
                 builder.Dispose();
+            }
+
+            void SkipEntry(BlittableJsonReaderObject data)
+            {
+                var msg = "Ignoring an invalid conflict which you try to import. " + data;
+                if (_log.IsOperationsEnabled)
+                    _log.Operations(msg);
+
+                _result.Conflicts.ErroredCount++;
+                _result.AddWarning(msg);
             }
         }
 

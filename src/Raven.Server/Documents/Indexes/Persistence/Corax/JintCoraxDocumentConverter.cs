@@ -40,8 +40,9 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
     public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext, out LazyStringValue id,
-        out ByteString output)
+        out ByteString output, out float? documentBoost)
     {
+        documentBoost = null;
         // We prepare for the next entry.
         ref var entryWriter = ref GetEntriesWriter();
         if (doc is not ObjectInstance documentToProcess)
@@ -55,10 +56,11 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
         id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
         var singleEntryWriterScope = new SingleEntryWriterScope(Allocator);
 
-        if (TryGetBoostedValue(documentToProcess, out var boostedValue, out var documentBoost))
-            ThrowWhenBoostingIsInDocument();
+        if (TryGetBoostedValue(documentToProcess, out var boostedValue, out documentBoost))
+            documentToProcess = boostedValue.AsObject();
 
-        //Write id/key
+        
+        
         singleEntryWriterScope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
         var indexingScope = CurrentIndexingScope.Current;
         foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
@@ -134,8 +136,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             boost = (float)boostValue.AsNumber();
             value = valueValue;
 
-            ThrowWhenBoostingIsInDocument();
-            return false;
+            return true;
         }
 
         static bool IsObject(JsValue value)
@@ -151,7 +152,8 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                 if (isObject)
                 {
                     if (TryGetBoostedValue(actualValue.AsObject(), out _, out _))
-                    { //todo leftover to implement boosting inside index someday, now it will throw
+                    { 
+                        ThrowWhenBoostingIsInDocument();
                     }
 
                     //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name
@@ -381,7 +383,7 @@ public abstract class JintCoraxDocumentConverterBase : CoraxDocumentConverterBas
 
     protected static void ThrowWhenBoostingIsInDocument()
     {
-        throw new NotImplementedInCoraxException("Indexing-time boosting is not implemented.");
+        throw new NotImplementedInCoraxException("Indexing-time boosting of field is not implemented.");
     }
 
     public override void Dispose()

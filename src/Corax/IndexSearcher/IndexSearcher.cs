@@ -17,6 +17,7 @@ using Corax.Queries;
 using Sparrow.Compression;
 using Sparrow.Server;
 using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 
 namespace Corax;
 
@@ -52,6 +53,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private readonly Tree _metadataTree;
     private readonly Tree _fieldsTree;
 
+    public bool DocumentsAreBoosted => GetDocumentBoostTree().NumberOfEntries > 0;
+
     // The reason why we want to have the transaction open for us is so that we avoid having
     // to explicitly provide the index searcher with opening semantics and also every new
     // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -76,7 +79,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (fieldsMapping is null)
         {
             _ownsIndexMapping = true;
-            using var builder =  IndexFieldsMappingBuilder.CreateForReader();
+            using var builder = IndexFieldsMappingBuilder.CreateForReader();
             _fieldMapping = builder.Build();
         }
         else
@@ -301,17 +304,22 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         var readResult = _persistedDynamicTreeAnalyzer?.Read(name);
         if (readResult == null)
             return FieldIndexingMode.Normal;
-        
-        
+
+
         var mode = (FieldIndexingMode)readResult.Reader.ReadByte();
         return mode;
     }
-    
+
+    internal FixedSizeTree GetDocumentBoostTree()
+    {
+        return _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+    }
+
     public void Dispose()
     {
         if (_ownsTransaction)
             _transaction?.Dispose();
-        
+
         if (_ownsIndexMapping)
             _fieldMapping?.Dispose();
     }

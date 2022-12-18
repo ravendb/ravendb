@@ -710,17 +710,17 @@ namespace Raven.Server.Utils
             return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.Create(type, value));
         }
 
-        public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, Dictionary<string, CompiledIndexField> groupByFields)
+        public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, List<IndexFieldBase> orderedMapFields, Dictionary<string, CompiledIndexField> groupByFields)
         {
             var type = value.GetType();
 
             if (type == typeof(JsObject)) // We don't cache JS types
-                return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields, true);
+                return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, orderedMapFields, groupByFields, true);
 
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries
-                return PropertyAccessor.Create(type, value);
+                return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, orderedMapFields, groupByFields);
 
-            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields));
+            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, orderedMapFields, groupByFields));
         }
 
 

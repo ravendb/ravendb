@@ -947,6 +947,60 @@ output('test output')"
             }
         }
 
+        [RequiresElasticSearchRetryFact]
+        public void CanEnableCompatibilityMode()
+        {
+            using (var store = GetDocumentStore())
+            using (GetElasticClient(out var client))
+            {
+                var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections, enableCompatibilityMode: true);
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        OrderLines = new List<OrderLine>
+                        {
+                            new OrderLine {Cost = 3, Product = "Cheese", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                        }
+                    });
+                    session.SaveChanges();
+                }
+
+                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+
+                var ordersCount = client.Count<object>(c => c.Index(OrdersIndexName));
+                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
+
+                Assert.True(ordersCount.IsValid);
+                Assert.True(orderLinesCount.IsValid);
+
+                Assert.Equal(1, ordersCount.Count);
+                Assert.Equal(2, orderLinesCount.Count);
+
+                etlDone.Reset();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("orders/1-A");
+
+                    session.SaveChanges();
+                }
+
+                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+
+                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrdersIndexName));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
+
+                Assert.True(ordersCount.IsValid);
+                Assert.True(orderLinesCount.IsValid);
+
+                Assert.Equal(0, ordersCountAfterDelete.Count);
+                Assert.Equal(0, orderLinesCountAfterDelete.Count);
+            }
+        }
+
         private class Order
         {
             public Address Address { get; set; }

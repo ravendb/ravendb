@@ -1,9 +1,16 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Server;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
+using XunitLogger;
 
 namespace SlowTests.Issues
 {
@@ -142,7 +149,8 @@ namespace SlowTests.Issues
         public async Task Can_use_cluster_tx_mixed_with_tx()
         {
             DoNotReuseServer();
-
+            long trxn1 = -1;
+            long trxn2 = -1;
             using (var store = GetDocumentStore())
             {
                 const string userId = "users/1";
@@ -161,9 +169,10 @@ namespace SlowTests.Issues
                     session.Store(user);
                     session.SaveChanges();
 
+                    trxn1 = Cluster.LastRaftIndexForCommand(Server, "ClusterTransactionCommand");
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
                     Assert.True(changeVector.Contains("RAFT:1"), $"{changeVector}.Contains('RAFT:1')");
-                    Assert.True(changeVector.Contains("TRXN:5"), $"{changeVector}.Contains('TRXN:5')");
+                    Assert.True(changeVector.Contains($"TRXN:{trxn1}"), $"{changeVector}.Contains('TRXN:{trxn1}')");
                 }
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -196,10 +205,11 @@ namespace SlowTests.Issues
                     var user = session.Load<User>(userId);
                     user.Age++;
                     session.SaveChanges();
-
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    trxn2 = Cluster.LastRaftIndexForCommand(Server, "ClusterTransactionCommand");
+                    Assert.True(trxn2 > trxn1);
                     Assert.True(changeVector.Contains("RAFT:2"), $"{changeVector}.Contains('RAFT:2')");
-                    Assert.True(changeVector.Contains("TRXN:6"), $"{changeVector}.Contains('TRXN:6')");
+                    Assert.True(changeVector.Contains($"TRXN:{trxn2}"), $"{changeVector}.Contains('TRXN:{trxn2}')");
 
                 }
 

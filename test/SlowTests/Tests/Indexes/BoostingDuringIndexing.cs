@@ -60,8 +60,7 @@ namespace SlowTests.Tests.Indexes
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanBoostFullDocument(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -89,6 +88,7 @@ namespace SlowTests.Tests.Indexes
                     var results = session.Query<UsersAndAccounts.Result, UsersAndAccounts>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Name == "Oren")
+                        .OrderByScore()
                         .As<object>()
                         .ToList();
 
@@ -101,7 +101,7 @@ namespace SlowTests.Tests.Indexes
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Field boosting is not supported")]
         public void CanGetBoostedValues(Options options)
         {
             using (var store = GetDocumentStore(options))

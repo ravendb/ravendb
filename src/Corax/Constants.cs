@@ -9,8 +9,9 @@ namespace Corax
         public const string NullValue = "NULL_VALUE";
         public const string EmptyString = "EMPTY_STRING";
         public const string IndexMetadata = "@index_metadata";
-
-        public static readonly Slice NullValueSlice, EmptyStringSlice, IndexMetadataSlice;
+        public const string DocumentBoost = "@document_boost";
+        
+        public static readonly Slice NullValueSlice, EmptyStringSlice, IndexMetadataSlice, DocumentBoostSlice;
 
         static Constants()
         {
@@ -19,6 +20,7 @@ namespace Corax
                 Slice.From(ctx, NullValue, ByteStringType.Immutable, out NullValueSlice);
                 Slice.From(ctx, EmptyString, ByteStringType.Immutable, out EmptyStringSlice);
                 Slice.From(ctx, IndexMetadata, ByteStringType.Immutable, out IndexMetadataSlice);
+                Slice.From(ctx, DocumentBoost, ByteStringType.Immutable, out DocumentBoostSlice);
             }
         }
         

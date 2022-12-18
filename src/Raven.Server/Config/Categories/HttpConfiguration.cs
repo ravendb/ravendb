@@ -40,6 +40,18 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Http.MaxRequestLineSizeInKb", ConfigurationEntryScope.ServerWideOnly)]
         public Size MaxRequestLineSize { get; set; }
 
+        [Description("Set Kestrel's HTTP2 keep alive ping timeout")]
+        [DefaultValue(null)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Http.Http2.KeepAlivePingTimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting? KeepAlivePingTimeout { get; set; }
+
+        [Description("Set Kestrel's HTTP2 keep alive ping delay")]
+        [DefaultValue(null)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Http.Http2.KeepAlivePingDelayInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting? KeepAlivePingDelay { get; set; }
+
         [Description("Whether Raven's HTTP server should compress its responses")]
         [DefaultValue(true)]
         [ConfigurationEntry("Http.UseResponseCompression", ConfigurationEntryScope.ServerWideOnly)]

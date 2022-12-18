@@ -295,21 +295,26 @@ public class MergedBatchCommand : TransactionMergedCommand
                         //[nameof(Constants.Fields.CommandData.DocumentChangeVector)] = tsCmd.LastDocumentChangeVector
                     });
 
+                    if (tsCmd.DocCollection != null)
+                        ModifiedCollections?.Add(tsCmd.DocCollection);
+                    
                     break;
 
                 case CommandType.TimeSeriesCopy:
 
                     var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, cmd.Id, cmd.Name, cmd.From ?? DateTime.MinValue, cmd.To ?? DateTime.MaxValue);
 
-                    var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.DestinationId, fromEtl: false);
+                    var destinationDocCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.DestinationId, fromEtl: false);
 
                     var cv = Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
                             cmd.DestinationId,
-                            docCollection,
+                            destinationDocCollection,
                             cmd.DestinationName,
                             reader.AllValues(),
                             AppendOptionsForTimeSeriesCopy
                         );
+                    
+                    LastChangeVector = cv;
 
                     Reply.Add(new DynamicJsonValue
                     {
@@ -317,6 +322,9 @@ public class MergedBatchCommand : TransactionMergedCommand
                         [nameof(BatchRequestParser.CommandData.ChangeVector)] = cv,
                         [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.TimeSeriesCopy),
                     });
+
+                    ModifiedCollections?.Add(destinationDocCollection);
+
                     break;
 
                 case CommandType.Counters:
@@ -339,6 +347,15 @@ public class MergedBatchCommand : TransactionMergedCommand
                         [nameof(CountersDetail)] = counterBatchCmd.CountersDetail.ToJson(),
                         [nameof(Constants.Fields.CommandData.DocumentChangeVector)] = counterBatchCmd.LastDocumentChangeVector
                     });
+
+                    if (counterBatchCmd.DocumentCollections != null)
+                    {
+                        foreach (var collection in counterBatchCmd.DocumentCollections)
+                        {
+                            ModifiedCollections?.Add(collection);
+                        }
+                    }
+
                     break;
 
                 case CommandType.ForceRevisionCreation:

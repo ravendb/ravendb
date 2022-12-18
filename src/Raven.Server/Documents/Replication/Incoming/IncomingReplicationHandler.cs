@@ -271,7 +271,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override void InvokeOnAttachmentStreamsReceived(int attachmentStreamCount) => AttachmentStreamsReceived?.Invoke(this, attachmentStreamCount);
 
-        protected override void InvokeOnFailed(Exception exception) => Failed?.Invoke(this, exception);
+        protected override void InvokeOnFailed(Exception exception)
+        {
+            _parent.ForTestingPurposes?.OnIncomingReplicationHandlerFailure?.Invoke(exception);
+            Failed?.Invoke(this, exception);
+        }
 
         protected override void InvokeOnDocumentsReceived() => DocumentsReceived?.Invoke(this);
 

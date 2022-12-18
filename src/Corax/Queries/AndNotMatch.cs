@@ -198,8 +198,8 @@ namespace Corax.Queries
             }
 
             // Allocate the new buffer based on the size the original buffer had in bytes.
-            var newBufferHandler = _context.Allocate(sizeInBytes, out var newBuffer);
-            
+            var newBufferHandler = _context.Allocate(sizeInBytes * sizeof(long), out var newBuffer);
+
             // Ensure we copy the content and then switch the buffers. 
             new Span<long>(buffer.Ptr, currentlyUsed).CopyTo(new Span<long>(newBuffer.Ptr, newBuffer.Length));
 
