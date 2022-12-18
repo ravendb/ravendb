@@ -517,6 +517,13 @@ namespace Raven.Server.Web.System
                                 })
                         };
 
+                        if (HttpContext.Request.IsFromStudio())
+                        {
+                            // remove this as this isn't needed for the studio
+                            // cannot remove this entirely since this is used by the client API
+                            databaseInfoJson.Modifications.Remove(nameof(DatabaseInfo.MountPointsUsage));
+                        }
+
                         context.Write(writer, databaseInfoJson);
                     }))
                     {
