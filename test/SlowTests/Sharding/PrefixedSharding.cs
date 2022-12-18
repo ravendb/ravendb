@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -20,68 +21,63 @@ public class PrefixedSharding : RavenTestBase
     [Fact]
     public async Task CanShardByDocumentsPrefix()
     {
-        const int prefixedRangeStart = ShardHelper.NumberOfBuckets;
-
         using var store = Sharding.GetDocumentStore(new Options
         {
             ModifyDatabaseRecord = record =>
             {
                 record.Sharding ??= new ShardingConfiguration();
-                record.Sharding.Prefixed = new Dictionary<string, List<ShardBucketRange>>
+                record.Sharding.Prefixed = new Dictionary<string, PrefixedShardingSetting>
                 {
-                    ["eu/"] = new List<ShardBucketRange>()
+                    ["eu/"] = new PrefixedShardingSetting
                     {
                         // range for 'eu/' is : 
                         // shard 0 : [1M, 2M]
-                        new ShardBucketRange
-                        {
-                            ShardNumber = 0,
-                            BucketRangeStart = prefixedRangeStart
-                        }
+                        Shards = new List<int> { 0 }
                     },
-                    ["asia/"] = new List<ShardBucketRange>()
+                    ["asia/"] = new PrefixedShardingSetting
                     {
                         // range for 'asia/' is :
                         // shard 1 : [2M, 2.5M]
                         // shard 2 : [2.5M, 3M]
-
-                        new ShardBucketRange
-                        {
-                            ShardNumber = 1,
-                            BucketRangeStart = prefixedRangeStart * 2
-                        },
-                        new ShardBucketRange
-                        {
-                            ShardNumber = 2,
-                            BucketRangeStart = (int)(prefixedRangeStart * 2.5)
-                        }
+                        Shards = new List<int> { 1, 2 }
                     }
                 };
             }
         });
 
+        var shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(6, shardingConfiguration.BucketRanges.Count);
 
-        var sharding = await Sharding.GetShardingConfigurationAsync(store);
+        // 'eu' range
+        Assert.Equal(0, shardingConfiguration.BucketRanges[3].ShardNumber);
+        Assert.Equal(ShardHelper.NumberOfBuckets, shardingConfiguration.BucketRanges[3].BucketRangeStart);
+
+        // 'asia' ranges
+        Assert.Equal(1, shardingConfiguration.BucketRanges[4].ShardNumber);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.BucketRanges[4].BucketRangeStart);
+
+        Assert.Equal(2, shardingConfiguration.BucketRanges[5].ShardNumber);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2.5, shardingConfiguration.BucketRanges[5].BucketRangeStart);
+
         using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
             using (Slice.From(context.Allocator, "eu/0", out Slice idSlice))
             {
-                var shardNumber = ShardHelper.GetShardNumberFor(sharding, idSlice);
+                var shardNumber = ShardHelper.GetShardNumberFor(shardingConfiguration, idSlice);
                 Assert.Equal(0, shardNumber);
             }
 
             using (Slice.From(context.Allocator, "asia/1", out Slice idSlice))
             {
-                var shardNumber = ShardHelper.GetShardNumberFor(sharding, idSlice);
+                var shardNumber = ShardHelper.GetShardNumberFor(shardingConfiguration, idSlice);
                 Assert.Equal(1, shardNumber);
             }
 
             using (Slice.From(context.Allocator, "asia/2", out Slice idSlice))
             {
-                var shardNumber = ShardHelper.GetShardNumberFor(sharding, idSlice);
+                var shardNumber = ShardHelper.GetShardNumberFor(shardingConfiguration, idSlice);
                 Assert.Equal(2, shardNumber);
             }
-
         }
 
         var rand = new System.Random(2022_04_19);

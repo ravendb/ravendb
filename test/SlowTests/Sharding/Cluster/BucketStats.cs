@@ -644,38 +644,24 @@ namespace SlowTests.Sharding.Cluster
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanGetBucketStats_Prefixed()
         {
-            const int prefixedRangeStart = ShardHelper.NumberOfBuckets;
-
             using (var store = Sharding.GetDocumentStore(new Options
             {
-                   ModifyDatabaseRecord = record =>
+               ModifyDatabaseRecord = record =>
+               {
+                   record.Sharding ??= new ShardingConfiguration();
+                   record.Sharding.Prefixed = new Dictionary<string, PrefixedShardingSetting>
                    {
-                       record.Sharding ??= new ShardingConfiguration();
-                       record.Sharding.Prefixed = new Dictionary<string, List<ShardBucketRange>>
+                       ["Users/"] = new PrefixedShardingSetting()
                        {
-                           ["Users/"] = new List<ShardBucketRange>()
-                           {
-                               // range for 'users/' is : 
-                               // shard 0 : [1M, 2M]
-                               new ShardBucketRange
-                               {
-                                   ShardNumber = 0,
-                                   BucketRangeStart = prefixedRangeStart
-                               }
-                           },
-                           ["Orders/"] = new List<ShardBucketRange>()
-                           {
-                               // range for 'orders/' is :
-                               // shard 1 : [2M, 3M]
-                               new ShardBucketRange
-                               {
-                                   ShardNumber = 1,
-                                   BucketRangeStart = prefixedRangeStart * 2
-                               }
-                           }
-                       };
-                   }
-               }))
+                           Shards = new List<int> { 0 }
+                       },
+                       ["Orders/"] = new PrefixedShardingSetting()
+                       {
+                           Shards = new List<int> { 1 }
+                       }
+                   };
+               }
+            }))
             {
                 var before1 = DateTime.UtcNow;
                 using (var session = store.OpenAsyncSession())
@@ -715,7 +701,6 @@ namespace SlowTests.Sharding.Cluster
                     {
                         var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                         Assert.Equal(bucket, stats.Bucket);
-                        Assert.Equal(2811, stats.Size);
                         Assert.Equal(10, stats.NumberOfDocuments);
                         Assert.True(stats.LastModified > before1);
                         Assert.True(stats.LastModified < after1);
@@ -734,7 +719,6 @@ namespace SlowTests.Sharding.Cluster
                     {
                         var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                         Assert.Equal(bucket, stats.Bucket);
-                        Assert.Equal(4101, stats.Size);
                         Assert.Equal(10, stats.NumberOfDocuments);
                         Assert.True(stats.LastModified > after1);
                         Assert.True(stats.LastModified < after2);
