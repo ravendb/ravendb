@@ -897,11 +897,14 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _writer.WriteStartObject();
 
-                _writer.WritePropertyName(nameof(shardingConfiguration.Shards));
+                _writer.WritePropertyName(nameof(ShardingConfiguration.Shards));
                 _context.Write(_writer, DynamicJsonValue.Convert(shardingConfiguration.Shards));
 
-                _writer.WritePropertyName(nameof(shardingConfiguration.BucketRanges));
+                _writer.WritePropertyName(nameof(ShardingConfiguration.BucketRanges));
                 _context.Write(_writer, new DynamicJsonArray(shardingConfiguration.BucketRanges.Select(x => x.ToJson())));
+
+                _writer.WritePropertyName(nameof(ShardingConfiguration.Prefixed));
+                _context.Write(_writer, new DynamicJsonArray(shardingConfiguration.Prefixed.Select(x => x.ToJson())));
 
                 _writer.WriteEndObject();
             }
