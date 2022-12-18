@@ -396,7 +396,7 @@ public readonly unsafe struct PostingListLeafPage
                     {
                         if (AdditionsIdx < _additions.Length && _additions[AdditionsIdx] < _maxValidValue)
                         {
-                            _additionCurrent = _additions[AdditionsIdx++];
+                            _additionCurrent = _additions[AdditionsIdx++] & int.MaxValue;
                             Debug.Assert(_additionCurrent != InvalidValue);
                         }
                     }
@@ -405,7 +405,7 @@ public readonly unsafe struct PostingListLeafPage
                     {
                         if (RemovalsIdx < _removals.Length && _removals[RemovalsIdx] < _maxValidValue)
                         {
-                            _removalCurrent = _removals[RemovalsIdx++];
+                            _removalCurrent = _removals[RemovalsIdx++] & int.MaxValue;
                             Debug.Assert(_removalCurrent != InvalidValue);
                         }
                     }
@@ -456,7 +456,7 @@ public readonly unsafe struct PostingListLeafPage
                         continue; // skip the entry
                     }
 
-                    if (encoder.TryAdd((int)current & int.MaxValue) == false)
+                    if (encoder.TryAdd((int)current) == false)
                         throw new InvalidOperationException("This should not be possible, we max at ~1KB, and have ~2KB available");
                     if (DesirableMaxCompressedBits > encoder.ConsumedBits)
                         continue;
