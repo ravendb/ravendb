@@ -210,6 +210,7 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
     selectedUrlToTest = ko.observable<string>();
     
     authentication = ko.observable<authenticationInfo>();
+    enableCompatibilityMode = ko.observable<boolean>();
 
     validationGroup: KnockoutValidationGroup;
 
@@ -230,6 +231,7 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
         this.nodesUrls(dto.Nodes.map((x) => new discoveryUrl(x)));
 
         this.authentication(new authenticationInfo(dto.Authentication));
+        this.enableCompatibilityMode(dto.EnableCompatibilityMode);
     }
 
     initValidation(): void {
@@ -268,7 +270,8 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
             this.connectionStringName,
             urlsCount,
             urlsAreDirty,
-            this.authentication().dirtyFlag().isDirty
+            this.authentication().dirtyFlag().isDirty,
+            this.enableCompatibilityMode
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -277,7 +280,8 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
             Type: "ElasticSearch",
             Name: "",
             Nodes: [],
-            Authentication: authenticationInfo.empty().toDto()
+            Authentication: authenticationInfo.empty().toDto(),
+            EnableCompatibilityMode: false
         } as Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString, true, []);
     }
 
@@ -286,7 +290,8 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
             Type: "ElasticSearch",
             Name: this.connectionStringName(),
             Nodes: this.nodesUrls().map((x) => x.discoveryUrlName()),
-            Authentication: this.authentication().toDto()
+            Authentication: this.authentication().toDto(),
+            EnableCompatibilityMode: this.enableCompatibilityMode()
         };
     }
 

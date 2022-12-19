@@ -513,7 +513,7 @@ namespace FastTests.Server.Replication
             }
         }
 
-        private class GetReplicationTombstonesCommand : RavenCommand<List<string>>
+        protected internal class GetReplicationTombstonesCommand : RavenCommand<List<string>>
         {
             public override bool IsReadRequest => true;
 

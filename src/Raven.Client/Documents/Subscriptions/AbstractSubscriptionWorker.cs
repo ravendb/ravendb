@@ -883,6 +883,11 @@ namespace Raven.Client.Documents.Subscriptions
 
                     return (true, nodeToRedirectTo);
 
+                case DatabaseDisabledException:
+                case AllTopologyNodesDownException:
+                    AssertLastConnectionFailure();
+                    return (true, null);
+
                 case NodeIsPassiveException _:
                 case SubscriptionChangeVectorUpdateConcurrencyException _:
                     return (true, null);
@@ -902,7 +907,6 @@ namespace Raven.Client.Documents.Subscriptions
                 case SubscriptionInvalidStateException _:
                 case DatabaseDoesNotExistException _:
                 case AuthorizationException _:
-                case AllTopologyNodesDownException _:
                 case SubscriberErrorException _:
                 case NotSupportedInShardingException _:
                     _processingCts.Cancel();

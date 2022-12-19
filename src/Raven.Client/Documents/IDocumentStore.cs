@@ -101,12 +101,47 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Setup the context for aggressive caching.
         /// </summary>
+        /// <param name="cacheDuration">Specify the aggressive cache duration</param>
+        /// <param name="database">The database to cache, if not specified, the default database will be used</param>
+        /// <remarks>
+        /// Aggressive caching means that we will not check the server to see whether the response
+        /// we provide is current or not, but will serve the information directly from the local cache
+        /// without touching the server.
+        /// </remarks>
+        Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, string database = null);
+
+        /// <summary>
+        /// Setup the context for aggressive caching.
+        /// </summary>
+        /// <param name="cacheDuration">Specify the aggressive cache duration</param>
+        /// <param name="database">The database to cache, if not specified, the default database will be used</param>
+        /// <param name="mode">Aggressive caching mode, if not specified, TrackChanges mode will be used</param>
+        /// <remarks>
+        /// Aggressive caching means that we will not check the server to see whether the response
+        /// we provide is current or not, but will serve the information directly from the local cache
+        /// without touching the server.
+        /// </remarks>
+        Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
+
+        /// <summary>
+        /// Setup the context for aggressive caching.
+        /// </summary>
         /// <remarks>
         /// Aggressive caching means that we will not check the server to see whether the response
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>
         IDisposable AggressivelyCache(string database = null);
+        
+        /// <summary>
+        /// Setup the context for aggressive caching.
+        /// </summary>
+        /// <remarks>
+        /// Aggressive caching means that we will not check the server to see whether the response
+        /// we provide is current or not, but will serve the information directly from the local cache
+        /// without touching the server.
+        /// </remarks>
+        Task<IDisposable> AggressivelyCacheAsync(string database = null);
 
         /// <summary>
         /// Setup the context for no aggressive caching

@@ -1,4 +1,5 @@
 ﻿using Sparrow.Json;
+﻿using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Smuggler
 {
@@ -58,6 +59,7 @@ namespace Raven.Client.Documents.Smuggler
             MaxStepsForTransformScript = DefaultMaxStepsForTransformScript;
             IncludeExpired = true;
             IncludeArtificial = false;
+            Collections = new List<string>();
         }
 
         public DatabaseItemType OperateOnTypes { get; set; }
@@ -76,6 +78,8 @@ namespace Raven.Client.Documents.Smuggler
 
         public string EncryptionKey { get; set; }
 
+        public List<string> Collections { get; set; }
+
         [ForceJsonSerialization]
         internal bool IsShard { get; set; }
     }
@@ -89,5 +93,6 @@ namespace Raven.Client.Documents.Smuggler
         bool RemoveAnalyzers { get; set; }
         string TransformScript { get; set; }
         int MaxStepsForTransformScript { get; set; }
+        List<string> Collections { get; set; }
     }
 }

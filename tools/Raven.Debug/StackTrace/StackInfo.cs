@@ -9,8 +9,7 @@ namespace Raven.Debug.StackTrace
 {
     internal class StackInfo
     {
-        public List<uint> ThreadIds = new List<uint>();
-        public bool NativeThreads;
+        public List<int> ThreadIds = new List<int>();
         public List<string> StackTrace = new List<string>();
     }
 }

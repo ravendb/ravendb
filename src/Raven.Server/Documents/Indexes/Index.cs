@@ -3790,7 +3790,7 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var field in metadata.IndexFieldNames)
             {
-                AssertKnownField(field);
+                AssertKnownField(field, metadata.IndexName);
             }
 
             if (metadata.OrderBy != null)
@@ -3810,24 +3810,24 @@ namespace Raven.Server.Documents.Indexes
                         continue;
 #endif
 
-                    AssertKnownField(f);
+                    AssertKnownField(f, metadata.IndexName);
                 }
             }
         }
 
-        private void AssertKnownField(string f)
+        private void AssertKnownField(string f, string indexName)
         {
             // the catch all field name means that we have dynamic fields names
 
             if (Definition.HasDynamicFields || IndexPersistence.ContainsField(f))
                 return;
 
-            ThrowInvalidField(f);
+            ThrowInvalidField(f, indexName);
         }
 
-        private static void ThrowInvalidField(string f)
+        private static void ThrowInvalidField(string f, string indexName)
         {
-            throw new ArgumentException($"The field '{f}' is not indexed, cannot query/sort on fields that are not indexed");
+            throw new ArgumentException($"The field '{f}' is not indexed for index '{indexName}', cannot query/sort on fields that are not indexed");
         }
 
         private void FillFacetedQueryResult(FacetedQueryResult result, bool isStale, long facetSetupEtag, QueryMetadata q,

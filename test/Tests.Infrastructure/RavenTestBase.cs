@@ -962,5 +962,24 @@ namespace FastTests
 
             return port;
         }
+
+        public static string GenRandomString(int size)
+        {
+            return GenRandomString(new Random(), size);
+        }
+
+        public static string GenRandomString(Random random, int size)
+        {
+            var sb = new StringBuilder(size);
+            // var ran = new Random();
+            var firstCharAsInt = Convert.ToInt32('a');
+            var lastCharAsInt = Convert.ToInt32('z');
+            for (int i = 0; i < size; i++)
+            {
+                sb.Append(Convert.ToChar(random.Next(firstCharAsInt, lastCharAsInt + 1)));
+            }
+
+            return sb.ToString();
+        }
     }
 }

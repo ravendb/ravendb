@@ -6,6 +6,7 @@ import appUrl = require("common/appUrl");
 import moment = require("moment");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import collectionsTracker from "common/helpers/database/collectionsTracker";
 
 class revertRevisions extends shardViewModelBase {
     
@@ -13,6 +14,10 @@ class revertRevisions extends shardViewModelBase {
 
     model = new revertRevisionsRequest();
     revisionsUrl: KnockoutComputed<string>;
+
+    allExistingCollections: KnockoutComputed<string[]>;
+    collectionToAdd = ko.observable<string>();
+    canAddAllCollections: KnockoutComputed<boolean>;
     
     datePickerOptions = {
         format: revertRevisionsRequest.defaultDateFormat,
@@ -28,12 +33,21 @@ class revertRevisions extends shardViewModelBase {
     constructor(db: database) {
         super(db);
 
+        this.initObservables();
+        
+        this.bindToCurrentInstance("setMagnitude", "createCollectionNameAutocompleter", "addWithBlink", "removeCollection");
+        datePickerBindingHandler.install();
+    }
+    
+    private initObservables() {
         this.revisionsUrl = ko.pureComputed(() => {
             return appUrl.forRevisions(this.db);
         });
-        
-        this.bindToCurrentInstance("setMagnitude");
-        datePickerBindingHandler.install();
+        this.allExistingCollections = ko.pureComputed(() => collectionsTracker.default.getCollectionNames().filter(x => x !== "@empty" && x !== "@hilo"));
+
+        this.canAddAllCollections = ko.pureComputed(() => {
+            return _.difference(this.allExistingCollections(), this.model.collectionsToRevert()).length > 0;
+        });
     }
     
     setMagnitude(value: timeMagnitude) {
@@ -62,6 +76,45 @@ class revertRevisions extends shardViewModelBase {
                     }
                 })
         }
+    }
+
+    createCollectionNameAutocompleter() {
+        return ko.pureComputed(() => {
+            const key = this.collectionToAdd();
+
+            const options = this.allExistingCollections();
+            const usedOptions = this.model.collectionsToRevert();
+            const filteredOptions = _.difference(options, usedOptions);
+
+            if (key) {
+                return filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return filteredOptions;
+            }
+        });
+    }
+
+    addCollection() {
+        this.addWithBlink(this.collectionToAdd());
+    }
+
+    addWithBlink(collectionName: string) {
+        if (!this.model.collectionsToRevert().find(x => x === collectionName)) {
+            this.model.collectionsToRevert.unshift(collectionName);
+        }
+
+        this.collectionToAdd("");
+
+        $(".collection-list li").first().addClass("blink-style");
+    }
+
+    addAllCollections() {
+        const collections = _.uniq(this.model.collectionsToRevert().concat(this.allExistingCollections())).sort();
+        this.model.collectionsToRevert(collections);
+    }
+
+    removeCollection(collectionName: string) {
+        this.model.collectionsToRevert.remove(collectionName);
     }
 }
 

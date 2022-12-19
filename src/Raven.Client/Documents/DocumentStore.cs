@@ -8,6 +8,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
@@ -224,7 +225,7 @@ namespace Raven.Client.Documents
 
             RequestExecutor.ValidateUrls(Urls, Certificate);
 
-            if(Certificate != null && Certificate.HasPrivateKey == false)
+            if (Certificate != null && Certificate.HasPrivateKey == false)
                 throw new InvalidOperationException(
                     $"The supplied {Certificate.FriendlyName} certificate contains no private key. " +
                     "Constructing the certificate with the 'X509KeyStorageFlags.MachineKeySet' flag may solve this problem.");
@@ -329,23 +330,73 @@ namespace Raven.Client.Documents
         /// </remarks>
         public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
         {
+            var release = SetAggressiveCache(cacheDuration, mode, ref database);
+
+            return AsyncHelpers.RunSync(() => FinalizeAggressiveCacheAsync(release, mode, database));
+        }
+
+        /// <summary>
+        /// Setup the context for aggressive caching.
+        /// </summary>
+        /// <remarks>
+        /// Aggressive caching means that we will not check the server to see whether the response
+        /// we provide is current or not, but will serve the information directly from the local cache
+        /// without touching the server.
+        /// </remarks>
+        public override Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, string database = null)
+        {
+            return AggressivelyCacheForAsync(cacheDuration, Conventions.AggressiveCache.Mode, database);
+        }
+
+        /// <summary>
+        /// Setup the context for aggressive caching.
+        /// </summary>
+        /// <remarks>
+        /// Aggressive caching means that we will not check the server to see whether the response
+        /// we provide is current or not, but will serve the information directly from the local cache
+        /// without touching the server.
+        /// </remarks>
+        public override Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
+        {
+            var release = SetAggressiveCache(cacheDuration, mode, ref database);
+
+            return FinalizeAggressiveCacheAsync(release, mode, database);
+        }
+
+        private IDisposable SetAggressiveCache(TimeSpan cacheDuration, AggressiveCacheMode mode, ref string database)
+        {
             AssertInitialized();
 
             database = this.GetDatabase(database);
 
-            if (mode != AggressiveCacheMode.DoNotTrackChanges)
-                ListenToChangesAndUpdateTheCache(database);
+            var requestExecutor = GetRequestExecutor(database);
+            var oldValue = requestExecutor.AggressiveCaching.Value;
+            var newValue = new AggressiveCacheOptions(cacheDuration, mode);
 
-            var re = GetRequestExecutor(database);
-            var old = re.AggressiveCaching.Value;
-            var @new = new AggressiveCacheOptions(cacheDuration, mode);
+            requestExecutor.AggressiveCaching.Value = newValue;
 
-            re.AggressiveCaching.Value = @new;
-
-            return new DisposableAction(() => re.AggressiveCaching.Value = old);
+            return new DisposableAction(() => requestExecutor.AggressiveCaching.Value = oldValue);
         }
 
-        private void ListenToChangesAndUpdateTheCache(string database)
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private async Task<IDisposable> FinalizeAggressiveCacheAsync(IDisposable release, AggressiveCacheMode mode, string database)
+        {
+            // this method is separated from the AggressivelyCacheForAsync because of how AsyncLocal works
+            try
+            {
+                if (mode != AggressiveCacheMode.DoNotTrackChanges)
+                    await ListenToChangesAndUpdateTheCacheAsync(database).ConfigureAwait(false);
+
+                return release;
+            }
+            catch
+            {
+                release.Dispose();
+                throw;
+            }
+        }
+
+        private Task ListenToChangesAndUpdateTheCacheAsync(string database)
         {
             Debug.Assert(database != null);
 
@@ -355,7 +406,7 @@ namespace Raven.Client.Documents
                     () => new EvictItemsFromCacheBasedOnChanges(this, database)));
             }
             GC.KeepAlive(lazy.Value); // here we force it to be evaluated
-            lazy.Value.EnsureConnected();
+            return lazy.Value.EnsureConnectedAsync();
         }
 
         private AsyncDocumentSession OpenAsyncSessionInternal(SessionOptions options)

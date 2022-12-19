@@ -164,7 +164,7 @@ namespace Corax.Queries
             }
 
             // Allocate the new buffer
-            var bufferHandler = _context.Allocate(2 * size, out var buffer);
+            var bufferHandler = _context.Allocate(2 * size * sizeof(long), out var buffer);
 
             // Ensure we copy the content and then switch the buffers. 
 

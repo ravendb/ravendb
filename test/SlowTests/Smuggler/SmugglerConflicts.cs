@@ -93,6 +93,46 @@ namespace SlowTests.Smuggler
         }
 
         [Fact]
+        public async Task CanExportAndImportWithConflicts_ToNewDatabase_JustOneCollection()
+        {
+            Initialize();
+            await GenerateConflict(_store1, _store2);
+
+            var exportOperation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
+            await exportOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            using (var store3 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_store3"
+            }))
+            {
+                var importOptions = new DatabaseSmugglerImportOptions { Collections = new List<string> { "Users" } };
+
+                for (int i = 0; i < 3; i++)
+                {
+                    var importOperation = await store3.Smuggler.ImportAsync(importOptions, _file);
+                    await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store3.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(0, stats.CountOfDocuments);          // Should be 0 Documents of 3 exported
+                    Assert.Equal(1, stats.CountOfDocumentsConflicts); // only 1 DocumentConflict of 4
+                    Assert.Equal(2, stats.CountOfConflicts);          // and only 2 Conflicts of 8
+
+                    var conflicts = (await store3.Commands().GetConflictsForAsync("users/fitzchak")).ToList();
+                    Assert.Equal(2, conflicts.Count);
+
+                    Assert.Equal("A:3-EREREREREREREREREREREQ", conflicts[0].ChangeVector);
+                    Assert.True(conflicts[0].Doc.TryGet(nameof(User.Name), out string name));
+                    Assert.Equal("Fitzchak 1", name);
+
+                    Assert.Equal("A:3-IiIiIiIiIiIiIiIiIiIiIg", conflicts[1].ChangeVector);
+                    Assert.True(conflicts[1].Doc.TryGet(nameof(User.Name), out name));
+                    Assert.Equal("Fitzchak 2", name);
+                }
+            }
+        }
+
+        [Fact]
         public async Task ToDatabaseWithSameDocumentWithoutConflicts_DeleteTheDocumentAndGenerateTheSameConflicts()
         {
             Initialize();

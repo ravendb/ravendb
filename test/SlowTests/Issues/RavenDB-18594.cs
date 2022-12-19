@@ -18,7 +18,7 @@ public class RavenDB_18594 : RavenTestBase
     }
     
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-18146")]
     public void ShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticIndex(Options options)
     {
@@ -27,6 +27,32 @@ public class RavenDB_18594 : RavenTestBase
             InsertUsers(store);
         }
 
+        
+        new SearchIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        {
+            using var s = store.OpenSession();
+            const string term = "Engineer";
+               
+            var query = s.Query<SearchIndex.ReduceResult, SearchIndex>().Search(r => r.ProfileTitle, term, boost: 10).Search(r => r.PreviousRolesSpecialties, term, boost: 5, SearchOptions.Or).OrderByScore();
+            var results = query.As<UserDocument>().ToArray();
+            Assert.Equal(2, results.Length);
+            Assert.Equal(2, results.First().FifoId);
+            Assert.Equal(1, results.Last().FifoId);
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void LuceneShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticIndex(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            InsertUsers(store);
+        }
+
+        
         new SearchIndex().Execute(store);
         Indexes.WaitForIndexing(store);
 
@@ -49,8 +75,7 @@ public class RavenDB_18594 : RavenTestBase
     
     [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-18146")]
-    public void ShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticJavaScriptIndex(Options options)
+    public void LuceneShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticJavaScriptIndex(Options options)
     {
         using var store = GetDocumentStore(options);
         {
@@ -60,8 +85,6 @@ public class RavenDB_18594 : RavenTestBase
         new SearchJavaScriptIndex().Execute(store);
         Indexes.WaitForIndexing(store);
         
-        WaitForUserToContinueTheTest(store);
-
         {
             using var s = store.OpenSession();
             const string term = "Engineer";
@@ -76,6 +99,30 @@ public class RavenDB_18594 : RavenTestBase
             Assert.Equal(2, results.First().FifoId);
             Assert.Equal(1, results.Last().FifoId);
             Assert.Contains("0.875 = fieldNorm(field=PreviousRolesSpecialties, doc=0)", explanations["Doc1"][0]);
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CoraxShouldApplyBoostingToDocumentInsteadOfIndividualFieldsInStaticJavaScriptIndex(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            InsertUsers(store);
+        }
+
+        new SearchJavaScriptIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+        
+        {
+            using var s = store.OpenSession();
+            const string term = "Engineer";
+               
+            var query = s.Query<SearchJavaScriptIndex.ReduceResult, SearchJavaScriptIndex>().Search(r => r.ProfileTitle, term, boost: 10).Search(r => r.PreviousRolesSpecialties, term, boost: 5, SearchOptions.Or).OrderByScore();
+            var results = query.As<UserDocument>().ToArray();
+            Assert.Equal(2, results.Length);
+            Assert.Equal(2, results.First().FifoId);
+            Assert.Equal(1, results.Last().FifoId);
         }
     }
 

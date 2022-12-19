@@ -137,13 +137,15 @@ namespace Raven.Server.Documents.Replication.Senders
                         Context = documentsContext,
                         LastTransactionMarker = -1,
                         NumberOfItemsSent = 0,
-                        Size = 0L
+                        Size = 0L,
+                        ScannedItems = 0
                     };
 
                     using (_stats.Storage.Start())
                     {
                         foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication.CaseInsensitiveCounters))
                         {
+                            replicationState.ScannedItems++;
                             _parent.ForTestingPurposes?.OnDocumentSenderFetchNewItem?.Invoke();
 
                             _parent.CancellationToken.ThrowIfCancellationRequested();
@@ -202,7 +204,6 @@ namespace Raven.Server.Documents.Replication.Senders
                             }
 
                             replicationState.Size += item.Size;
-
                             replicationState.NumberOfItemsSent++;
                         }
                     }
@@ -333,9 +334,19 @@ namespace Raven.Server.Documents.Replication.Senders
                 }
             }
 
-            if (state.NumberOfItemsSent == 0)
+            if (state.ScannedItems == 1)
             {
-                // always send at least one item
+                /*
+                 always scan at least one item.
+                after scanning 1 item we can move to the batch size limit check.
+                We need to check here the "ScannedItems" and not the "NumberOfItemsSent"
+                because there's an option that we will scan a lot of items (documents) but we won't send them.
+                When we load the items from an encrypted database, the memory is locked until the transaction is closed
+                (for preventing the decrypted data from being moved to the "swap-file" by the OS in case of low memory).
+                In that case, if we will check here if the "NumberOfItemsSent" is 0 instead, there's an option 
+                that we will load a lot of "not relevant" items to memory and it will be locked until we'll fill 
+                the batch and it can cause eventually to OOM.
+                 */
                 return true;
             }
 
@@ -733,6 +744,7 @@ namespace Raven.Server.Documents.Replication.Senders
             public short LastTransactionMarker;
             public int? BatchSize;
             public Size? MaxSizeToSend;
+            public int ScannedItems;
         }
 
         public virtual void Dispose()

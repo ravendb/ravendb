@@ -89,10 +89,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             LazyStringValue lowerId;
             ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
             ByteString data;
-            
+            float? documentBoost = null;
             using (Stats.ConvertStats.Start())
             {
-                scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data);
+                scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data, out documentBoost);
             }
             
             if (_dynamicFieldsBuilder != null && _dynamicFieldsBuilder.Count != _indexingScope.CreatedFieldsCount)
@@ -108,8 +108,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     DeleteByField(keyFieldName, key, stats);
                     return;
                 }
-                
-                _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan(), ref _entriesCount);
+
+                if (documentBoost.HasValue)
+                    _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan(), ref _entriesCount, documentBoost.Value);
+                else
+                    _indexWriter.Update(keyFieldName, key.AsSpan(), lowerId, data.ToSpan(), ref _entriesCount);
             }
         }
 
@@ -122,9 +125,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             LazyStringValue lowerId;
             ByteString data;
             ByteStringContext<ByteStringMemoryCache>.InternalScope scope = default;
+            float? documentBoost;
             using (Stats.ConvertStats.Start())
             {
-                scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data);
+                scope = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId, out data, out documentBoost);
             }
             
             using (scope)
@@ -134,7 +138,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 using (Stats.AddStats.Start())
                 {
-                    _indexWriter.Index(lowerId, data.ToSpan());
+                    if (documentBoost.HasValue)
+                        _indexWriter.Index(lowerId, data.ToSpan(), documentBoost.Value);
+                    else
+                        _indexWriter.Index(lowerId, data.ToSpan());
                 }
 
                 stats.RecordIndexingOutput();

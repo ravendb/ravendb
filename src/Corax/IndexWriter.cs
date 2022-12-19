@@ -13,6 +13,7 @@ using Corax.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Compression;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
@@ -43,6 +44,7 @@ namespace Corax
     {
         private long _numberOfModifications;
         private readonly IndexFieldsMapping _fieldsMapping;
+        private FixedSizeTree _documentBoost;
         private readonly Tree _indexMetadata;
         private readonly Tree _persistedDynamicFieldsAnalyzers;
         private readonly StorageEnvironment _environment;
@@ -276,6 +278,8 @@ namespace Corax
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
+            _documentBoost = Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+
         }
 
         public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping, bool hasDynamics) : this(tx, fieldsMapping)
@@ -291,6 +295,8 @@ namespace Corax
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _indexMetadata = Transaction.CreateTree(Constants.IndexMetadataSlice);
+            _documentBoost = Transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+
         }
 
         public long Index(string id, Span<byte> data)
@@ -299,6 +305,50 @@ namespace Corax
             return Index(idSlice, data);
         }
 
+        public unsafe long Index(string id, Span<byte> data, float documentBoost)
+        {
+            var entryId = Index(id, data);
+            AppendDocumentBoost(entryId, documentBoost);
+            return entryId;
+        }
+
+        //Document Boost should add priority to some documents but also should not be the main component of boosting.
+        //The natural logarithm slows down our scoring increase for a document so that the ranking calculated at query time is not forgotten.
+        private unsafe void AppendDocumentBoost(long entryId, float documentBoost, bool isUpdate = false)
+        {
+            if (documentBoost.AlmostEquals(1f))
+            {
+                
+                // We don't store `1` but if user update boost value to 1 we've to delete the previous one
+                if (isUpdate)
+                    _documentBoost.Delete(entryId);
+                
+                return;
+            }
+
+            // probably user want this to be at the same end.
+            if (documentBoost <= 0f)
+                documentBoost = 0;
+
+            documentBoost = MathF.Log(documentBoost + 1); // ensure we've positive number
+            
+            using var __ = _documentBoost.DirectAdd(entryId, out _, out byte* boostPtr);
+            float* floatBoostPtr = (float*)boostPtr;
+            *floatBoostPtr = documentBoost;
+        }
+
+        private unsafe void RemoveDocumentBoost(long entryId)
+        {
+            _documentBoost.Delete(entryId);
+        }
+
+        public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries, float documentBoost)
+        {
+            var entryId = Update(field, key, id, data, ref numberOfEntries);
+            AppendDocumentBoost(entryId, documentBoost, true);
+            return entryId;
+        }
+        
         public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries)
         {
             if (TryGetEntryTermId(field, key, out var entryId) == false)
@@ -1094,6 +1144,7 @@ namespace Corax
             Page lastVisitedPage = default;
             foreach (long entryToDelete in _deletedEntries)
             {
+                RemoveDocumentBoost(entryToDelete);
                 RecordTermsToDeleteFrom(entryToDelete, llt, ref lastVisitedPage);
             }
         }

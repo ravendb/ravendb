@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanBoostFullDocument()
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanBoostFullDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UsersAndAccounts().Execute(store);
 
@@ -40,9 +42,10 @@ namespace SlowTests.Issues
                     var results = session.Query<UsersAndAccounts.Result, UsersAndAccounts>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Name == "Oren")
+                        .OrderByScore()
                         .As<object>()
                         .ToList();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(2, results.Count);
                     Assert.IsType<Account>(results[0]);
                     Assert.IsType<User>(results[1]);

@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using Amazon.SimpleNotificationService.Model;
-using Corax;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -27,11 +25,12 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
     public override ByteStringContext<ByteStringMemoryCache>.InternalScope SetDocumentFields(
         LazyStringValue key, LazyStringValue sourceDocumentId,
         object doc, JsonOperationContext indexContext, out LazyStringValue id,
-        out ByteString output)
+        out ByteString output, out float? documentBoost)
     {
         var boostedValue = doc as BoostedValue;
         var documentToProcess = boostedValue == null ? doc : boostedValue.Value;
         id = default;
+        documentBoost = null;
         
         IPropertyAccessor accessor;
         if (_isMultiMap == false)
@@ -47,6 +46,9 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         // We prepare for the next entry.
         ref var entryWriter = ref GetEntriesWriter();
 
+        if (boostedValue != null)
+            documentBoost = boostedValue.Boost;
+        
         foreach (var property in accessor.GetPropertiesInOrder(documentToProcess))
         {
             var value = property.Value;

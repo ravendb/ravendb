@@ -8,16 +8,9 @@ namespace Raven.Server.Smuggler.Documents.Data
 {
     public class DatabaseSmugglerOptionsServerSide : DatabaseSmugglerOptions, IDatabaseSmugglerImportOptions, IDatabaseSmugglerExportOptions
     {
-        public DatabaseSmugglerOptionsServerSide()
-        {
-            Collections = new List<string>();
-        }
-
         public bool ReadLegacyEtag { get; set; }
 
         public string FileName { get; set; }
-
-        public List<string> Collections { get; set; }
 
         public AuthorizationStatus AuthorizationStatus { get; set; } = AuthorizationStatus.ValidUser;
 

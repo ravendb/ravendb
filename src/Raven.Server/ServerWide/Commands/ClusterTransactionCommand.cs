@@ -790,6 +790,8 @@ namespace Raven.Server.ServerWide.Commands
             public string Database;
             public int? ShardNumber;
 
+            public bool Processed;
+
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue

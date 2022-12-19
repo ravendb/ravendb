@@ -6,6 +6,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.Util;
 
@@ -32,8 +33,10 @@ namespace Raven.Client.Documents.Changes
 
         public void EnsureConnected()
         {
-            AsyncHelpers.RunSync(_changes.EnsureConnectedNow);
+            AsyncHelpers.RunSync(EnsureConnectedAsync);
         }
+
+        public Task EnsureConnectedAsync() => _changes.EnsureConnectedNow();
 
         public void OnNext(DocumentChange change)
         {

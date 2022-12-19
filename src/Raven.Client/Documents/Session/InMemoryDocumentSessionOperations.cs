@@ -2490,7 +2490,10 @@ more responsive application.
             bool isProjectInto)
         {
             var metadata = json.GetMetadata();
-            var changeVector = metadata.GetChangeVector();
+
+            // Projection / MapReduce return results without @change-vector property
+            metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector);
+            
             //MapReduce indexes return reduce results that don't have @id property
             metadata.TryGetId(out string id);
 

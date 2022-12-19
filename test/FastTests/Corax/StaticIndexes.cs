@@ -18,21 +18,6 @@ public class StaticIndexes : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void BoostInIndexDefinitionException(Options options)
-    {
-        using (var store = GetDocumentStore(options))
-        {
-            var exception = Assert.Throws<IndexCreationException>(() =>
-                store.Maintenance.Send(new PutIndexesOperation(new[]
-                {
-                    new IndexDefinition {Name = "test", Maps = {"from p in docs.Products select new { p.Price} .Boost(2)"}}
-                })));
-            Assert.True(exception.Message.Contains($"{nameof(Corax)} is not supporting boosting inside index yet. Please use Lucene engine."));
-        }
-    }
-    
     private class Product
     {
         public string Id { get; set; }
