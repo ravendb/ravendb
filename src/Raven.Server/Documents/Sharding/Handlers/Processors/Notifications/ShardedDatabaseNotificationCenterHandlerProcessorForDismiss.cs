@@ -22,6 +22,6 @@ internal class ShardedDatabaseNotificationCenterHandlerProcessorForDismiss : Abs
     {
         return TryGetShardNumber(out int shardNumber) 
             ? RequestHandler.DatabaseContext.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber, token.Token) 
-            : RequestHandler.DatabaseContext.AllNodesExecutor.ExecuteForNodeAsync(command, command.SelectedNodeTag, token.Token);
+            : RequestHandler.DatabaseContext.AllOrchestratorNodesExecutor.ExecuteForNodeAsync(command, command.SelectedNodeTag, token.Token);
     }
 }

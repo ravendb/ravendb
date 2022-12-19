@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Sharding.Executors;
 public class AllOrchestratorNodesExecutor : AbstractExecutor
 {
     private readonly ServerStore _store;
-    private readonly ShardedDatabaseContext _database;
+    private readonly DatabaseRecord _record;
 
     private ClusterTopology _clusterTopology;
 
@@ -24,18 +24,18 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
     private AllNodesExecutorState _state;
 
     // this executor will contact every single node in the cluster
-    public AllOrchestratorNodesExecutor(ServerStore store, ShardedDatabaseContext database) : base(store)
+    public AllOrchestratorNodesExecutor(ServerStore store, DatabaseRecord record) : base(store)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
             "RavenDB-19065 We might want to kill this entire class and do it differently by returning an index to the client which he will pass on for the next request");
 
         _store = store;
-        _database = database;
+        _record = record;
 
         RegisterForTopologyChange();
 
         _clusterTopology = _store.GetClusterTopology();
-        UpdateExecutors(_clusterTopology, _database.DatabaseRecord.Sharding.Orchestrator.Topology);
+        UpdateExecutors(_clusterTopology, _record.Sharding.Orchestrator.Topology);
     }
 
     public async Task<TResult> ExecuteForNodeAsync<TResult>(RavenCommand<TResult> command, string tag, CancellationToken token = default)
@@ -64,7 +64,7 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
             var topology = _store.GetClusterTopology();
             Interlocked.Exchange(ref _clusterTopology, topology);
 
-            UpdateExecutors(topology, _database.DatabaseRecord.Sharding.Orchestrator.Topology);
+            UpdateExecutors(topology, _record.Sharding.Orchestrator.Topology);
         }, TaskContinuationOptions.OnlyOnRanToCompletion);
     }
 
@@ -88,7 +88,7 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
 
                 if (_current.TryGetValue(tag, out var requestExecutor) == false)
                 {
-                    _current[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _database.DatabaseName, _store.Server.Certificate.Certificate,
+                    _current[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
                         DocumentConventions.DefaultForServer);
                     continue;
                 }
@@ -96,7 +96,7 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
                 if (string.Equals(requestExecutor.Url, url, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     disposables.Add(requestExecutor); // will dispose outside the lock
-                    _current[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _database.DatabaseName, _store.Server.Certificate.Certificate,
+                    _current[tag] = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _record.DatabaseName, _store.Server.Certificate.Certificate,
                         DocumentConventions.DefaultForServer);
                 }
             }
@@ -148,7 +148,7 @@ public class AllOrchestratorNodesExecutor : AbstractExecutor
     protected override void OnCertificateChange(object sender, EventArgs e)
     {
         Dispose();
-        UpdateExecutors(_clusterTopology, _database.DatabaseRecord.Sharding.Orchestrator.Topology);
+        UpdateExecutors(_clusterTopology, _record.Sharding.Orchestrator.Topology);
     }
 
     private class AllNodesExecutorState

@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             var shardedDbContext = dbSearchResult.DatabaseContext;
 
             var op = new WaitForIndexNotificationOnServerOperation(index);
-            await shardedDbContext.AllNodesExecutor.ExecuteParallelForAllAsync(op);
+            await shardedDbContext.AllOrchestratorNodesExecutor.ExecuteParallelForAllAsync(op);
 
             return null;
         }

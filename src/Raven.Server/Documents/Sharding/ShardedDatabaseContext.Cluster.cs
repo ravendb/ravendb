@@ -26,7 +26,7 @@ public partial class ShardedDatabaseContext
         public async ValueTask WaitForExecutionOnAllNodesAsync(long index, CancellationToken token = default)
         {
             var op = new WaitForIndexNotificationOperation(index);
-            await _context.AllNodesExecutor.ExecuteParallelForAllAsync(op, token);
+            await _context.AllOrchestratorNodesExecutor.ExecuteParallelForAllAsync(op, token);
         }
 
         /// <summary>
