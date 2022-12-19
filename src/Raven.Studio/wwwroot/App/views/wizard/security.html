@@ -1,15 +1,15 @@
 <div class="on-base-background">
-    <h2 class="margin-bottom margin-top">
+    <h2 class="margin-bottom margin-top-sm">
         <strong class="margin-right">2.</strong> Security Level
     </h2>
-    <p class="margin-top-lg">
+    <p class="margin-top margin-bottom">
         Select the security option that best addresses your needs.
     </p>
 </div>
 <div class="row flex-row security">
     <div class="col-sm-8 flex-vertical">
         <div class="panel flex-vertical flex-grow margin-none">
-            <div class="padding padding-lg flex-grow">
+            <div class="padding-md flex-grow">
                 <h2 class="text-center margin-bottom margin-lg text-success">SECURE</h2>
                 <div class="row">
                     <div class="col-sm-6" data-bind="attr: { 'data-original-title': model.disableLetsEncrypt() ? 'Not available on Mac OS' : '' }">
@@ -60,7 +60,7 @@
     </div>
     <div class="col-sm-4 flex-vertical">
         <div class="panel flex-vertical flex-grow margin-none">
-            <div class="padding padding-lg flex-grow">
+            <div class="padding-md flex-grow">
                 <h2 class="text-center margin-bottom margin-lg text-warning">UNSECURE</h2>
                 <button class="btn btn-icon btn-default" title="Setup an Unsecure server"
                         data-bind="click: clickUnsecured, css: { 'btn-selected-warning' : model.mode() === 'Unsecured' }">
@@ -115,7 +115,7 @@
         </ul>
     </div>
 </div>
-<div class="navigation padding padding-lg flex-horizontal">
+<div class="navigation padding-md flex-horizontal">
     <button type="button" class="btn btn-default btn-lg" data-bind="click: back">
         <i class="icon-arrow-left"></i><span>Back</span>
     </button>

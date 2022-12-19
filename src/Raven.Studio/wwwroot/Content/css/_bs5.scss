@@ -62,11 +62,23 @@
     background-color: $body-bg !important;
 }
 
-// bs3 row fix - TODO
-.row::after {
+// Check $font-size-base not working TODO
+body {
+    font-size: 14px;
+}
+
+// bs3 row fix - remove when we drop bs3 TODO
+.row, .form-group {
+    &::after {
     content: "";
     display: block;
     clear: both;
+    }
+}
+
+// bs3 textarea fix
+textarea.form-control {
+    height: auto !important;
 }
 
 // Custom Utilities
