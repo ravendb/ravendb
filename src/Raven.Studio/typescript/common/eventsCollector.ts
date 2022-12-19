@@ -18,6 +18,11 @@ class eventsCollector {
     enabled = false;
     initialized = false;
 
+
+    constructor() {
+        _.bindAll(this, "reportEvent");
+    }
+
     initialize(version: string, build: number, env: string, fullVersion: string, enabled: boolean) {
         this.version = version;
         this.build = build;
