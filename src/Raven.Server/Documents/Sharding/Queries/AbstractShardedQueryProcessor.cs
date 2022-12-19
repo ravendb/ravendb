@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -207,9 +208,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     {
         const string listParameterName = "p0";
 
-        var documentQuery = new DocumentQuery<dynamic>(null, null, _query.Metadata.CollectionName, false);
-        documentQuery.WhereIn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, new List<object>());
-
+        var documentQuery = new DocumentQuery<dynamic>(null, null, _query.Metadata.CollectionName, isGroupBy: false, fromAlias: _query.Metadata.Query.From.Alias?.ToString());
+        documentQuery.WhereIn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, Enumerable.Empty<object>());
+        
         IncludeBuilder includeBuilder = null;
 
         if (_query.Metadata.Includes is { Length: > 0 })
@@ -258,6 +259,17 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         if (includeBuilder != null)
             documentQuery.Include(includeBuilder);
 
+        var queryText = documentQuery.ToString();
+
+        if (_query.Metadata.Query.Select is { Count: > 0 })
+        {
+            var selectStartPosition = _query.Metadata.QueryText.IndexOf("select", StringComparison.OrdinalIgnoreCase);
+
+            var selectClause = _query.Metadata.QueryText.Substring(selectStartPosition);
+
+            queryText += $" {selectClause}";
+        }
+        
         Dictionary<int, BlittableJsonReaderObject> queryTemplates = new();
 
         var shards = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, ids);
@@ -272,7 +284,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 {
                     [listParameterName] = GetIds()
                 },
-                [nameof(IndexQuery.Query)] = documentQuery.ToString()
+                [nameof(IndexQuery.Query)] = queryText
             };
 
             queryTemplates[shardId] = _context.ReadObject(q, "query");
