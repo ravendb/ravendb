@@ -63,7 +63,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void Integration(Options options)
         {
             using (var store = GetDocumentStore(options))

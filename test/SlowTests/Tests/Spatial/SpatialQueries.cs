@@ -37,7 +37,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanRunSpatialQueriesInMemory(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -54,7 +54,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         //Failing test from http://groups.google.com/group/ravendb/browse_thread/thread/7a93f37036297d48/
         public void CanSuccessfullyDoSpatialQueryOfNearbyLocations(Options options)
         {
@@ -113,7 +113,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanSuccessfullyQueryByMiles(Options options)
         {
             var myHouse = new DummyGeoDoc(44.757767, -93.355322);

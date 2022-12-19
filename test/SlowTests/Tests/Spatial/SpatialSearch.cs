@@ -32,7 +32,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_do_spatial_search_with_client_api(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -113,7 +113,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_do_spatial_search_with_client_api2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -139,7 +139,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_do_spatial_search_with_client_api_within_given_capacity(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -207,7 +207,19 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void PolandTestOrderByDistanceLucene(Options options)
+        {
+            PolandTestOrderByDistance(options);
+        }
+
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single)]
+        public void PolandTestOrderByDistanceCorax(Options options)
+        {
+            PolandTestOrderByDistance(options);
+        }
+
         public void PolandTestOrderByDistance(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -250,7 +262,19 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_do_spatial_search_with_client_api_addorderLucene(Options options)
+        {
+            Can_do_spatial_search_with_client_api_addorder(options);
+        }
+
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single)]
+        public void Can_do_spatial_search_with_client_api_addorderCorax(Options options)
+        {
+            Can_do_spatial_search_with_client_api_addorder(options);
+        }
+
         public void Can_do_spatial_search_with_client_api_addorder(Options options)
         {
             using (var store = GetDocumentStore(options))

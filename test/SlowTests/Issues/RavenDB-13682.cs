@@ -24,7 +24,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryByRoundedSpatialRanges(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -120,7 +120,7 @@ order by spatial.distance(spatial.point(a.Lat, a.Lng), spatial.point(35.1, -106.
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseDynamicQueryOrderBySpatial_WithAlias(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -145,7 +145,7 @@ limit 1")
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseDynamicQueryOrderBySpatial(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -170,7 +170,7 @@ limit 1")
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanProjectDistanceComputation(Options options)
         {
             using (var store = GetDocumentStore(options))

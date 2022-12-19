@@ -58,7 +58,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryByMultipleLocations(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -93,7 +93,7 @@ WaitForUserToContinueTheTest(store);
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryByMultipleLocations2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -128,7 +128,7 @@ WaitForUserToContinueTheTest(store);
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryByMultipleLocationsOverHttp(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -159,7 +159,7 @@ WaitForUserToContinueTheTest(store);
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryByMultipleLocationsHttp2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -190,7 +190,7 @@ WaitForUserToContinueTheTest(store);
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryByMultipleLocationsRaw(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -225,7 +225,7 @@ WaitForUserToContinueTheTest(store);
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryByMultipleLocationsRawOverHttp(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -37,7 +37,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void TDSQ(Options options)
         {
             using (var store = GetDocumentStore(options))
