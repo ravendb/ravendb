@@ -1,8 +1,8 @@
-<h2 class="margin-bottom margin-top"><strong class="margin-right">3.</strong>Enter License Key</h2>
+<h2 class="margin-bottom margin-top-sm"><strong class="margin-right">3.</strong>Enter License Key</h2>
 <form class="flex-form" data-bind="with: model.license, submit: save">
     <div class="row flex-row">
         <div class="col-sm-8">
-            <div class="panel padding padding-lg">
+            <div class="panel padding-md">
                 <label for="inputLicenseKey" class="control-label">License <i class="required"></i></label>
                 <div data-bind="validationElement: license">
                     
@@ -23,7 +23,7 @@
             </div>
         </div>
         <div class="col-sm-4 flex-vertical">
-            <div class="panel panel-info padding padding-lg flex-grow flex-vertical">
+            <div class="panel panel-info padding-md flex-grow flex-vertical">
                 <div>
                     <i class="icon-license icon-xl"></i>
                 </div>
@@ -38,7 +38,7 @@
             </div>
         </div>
     </div>
-    <div class="navigation padding padding-lg flex-horizontal">
+    <div class="navigation padding-md flex-horizontal">
         <a href="#security" class="btn btn-lg btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
         <div class="flex-separator"></div>
         <button type="submit" class="btn btn-lg btn-primary" data-bind="css: { 'btn-spinner': $root.spinners.next }, disable: $root.spinners.next">

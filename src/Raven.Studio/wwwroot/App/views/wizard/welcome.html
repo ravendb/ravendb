@@ -1,9 +1,9 @@
 <div data-bind="compose: { model: browserAlert }"></div>
 <div class="on-base-background">
-    <h2 class="margin-bottom margin-top">
+    <h2 class="margin-bottom margin-top-sm">
         <strong class="margin-right">1.</strong> Welcome
     </h2>
-    <p class="margin-top-lg">
+    <p class="margin-top margin-bottom">
         This Setup Wizard will assist you with setting up your RavenDB server.<br />
         First, select whether to set up a new cluster from scratch or continue the setup using an existing Setup Package.
     </p>
@@ -11,8 +11,8 @@
 <div class="row flex-row welcome">
     <div class="col-sm-6 flex-vertical">
         <div class="panel flex-vertical flex-grow margin-none">
-            <div class="padding padding-lg flex-grow">
-                <h2 class="text-center margin-bottom-lg text-success">New Cluster</h2>
+            <div class="padding-md flex-grow">
+                <h2 class="text-center margin-bottom text-success">New Cluster</h2>
                 <button class="btn btn-icon btn-default" title="Set up a new Cluster"
                         data-bind="click: setupNewClusterFlow, css: { 'btn-selected-success' : model.mode() !== 'Continue' }">
                     <i class="icon-server icon-xl"></i>
@@ -40,8 +40,8 @@
     </div>
     <div class="col-sm-6 flex-vertical">
         <div class="panel flex-vertical flex-grow margin-none">
-            <div class="padding padding-lg flex-grow">
-                <h2 class="text-center margin-bottom margin-lg text-info">Use Setup Package</h2>
+            <div class="padding-md flex-grow">
+                <h2 class="text-center margin-bottom text-info">Use Setup Package</h2>
                 <button class="btn btn-icon btn-default" title="Setup using a Setup Package"
                         data-bind="click: useSetupPackageFlow, css: { 'btn-selected-info' : model.mode() === 'Continue' }">
                     <i class="icon-cluster icon-xl"></i>
@@ -59,7 +59,7 @@
         </div>
     </div>
 </div>
-<div class="navigation padding padding-lg flex-horizontal">
+<div class="navigation padding-md flex-horizontal">
     <div class="flex-separator"></div>
     <button class="btn btn-primary btn-lg" data-bind="click: goToNextView">
         <span>Next</span> <i class="icon-arrow-right"></i>
