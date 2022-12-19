@@ -44,8 +44,8 @@ public class RavenDB_19283 : StorageTest
         using var ___ = writer.Finish(out var element);
 
         var reader = new IndexEntryReader(element.Ptr, element.Length);
-        reader.GetReaderFor(0).Read(out Span<byte> id);
-        var it = reader.GetReaderFor(1).ReadMany();
+        reader.GetFieldReaderFor(0).Read(out Span<byte> id);
+        var it = reader.GetFieldReaderFor(1).ReadMany();
         while (it.ReadNext())
         {
         }

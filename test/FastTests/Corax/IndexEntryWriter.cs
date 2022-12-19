@@ -72,9 +72,9 @@ namespace FastTests.Corax
             using var __ = writer.Finish(out var element);
 
             var reader = new IndexEntryReader(element.Ptr, element.Length);
-            reader.GetReaderFor(0).Read(out long longValue);
+            reader.GetFieldReaderFor(0).Read(out long longValue);
             Assert.Equal(1, longValue);
-            reader.GetReaderFor(0).Read(out int intValue);
+            reader.GetFieldReaderFor(0).Read(out int intValue);
             Assert.Equal(1, intValue);
             
             Assert.True(reader.GetFieldType(0, out var _).HasFlag(IndexEntryFieldType.Tuple));
@@ -84,24 +84,24 @@ namespace FastTests.Corax
             Assert.True(reader.GetFieldType(2, out var _).HasFlag(IndexEntryFieldType.Simple));
             Assert.True(reader.GetFieldType(3, out var _).HasFlag(IndexEntryFieldType.Simple));
 
-            reader.GetReaderFor(0).Read(out double doubleValue);
+            reader.GetFieldReaderFor(0).Read(out double doubleValue);
             Assert.True(doubleValue.AlmostEquals(1.001));
-            reader.GetReaderFor(0).Read(out double floatValue);
+            reader.GetFieldReaderFor(0).Read(out double floatValue);
             Assert.True(floatValue.AlmostEquals(1.001));
             
-            reader.GetReaderFor(0).TryReadTuple(out longValue, out doubleValue, out var sequenceValue);
+            reader.GetFieldReaderFor(0).TryReadTuple(out longValue, out doubleValue, out var sequenceValue);
             Assert.True(doubleValue.AlmostEquals(1.001));
             Assert.Equal(1, longValue);
             Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes("1.001").AsSpan()) == 0);
 
-            reader.GetReaderFor(2).Read(value: out sequenceValue);
+            reader.GetFieldReaderFor(2).Read(value: out sequenceValue);
             Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes("CCCC").AsSpan()) == 0);
-            reader.GetReaderFor(3).Read(value: out sequenceValue);
+            reader.GetFieldReaderFor(3).Read(value: out sequenceValue);
             Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes("DDDDDDDDDD").AsSpan()) == 0);
 
-            reader.GetReaderFor(1).Read(value: out sequenceValue, elementIdx: 0);
+            reader.GetFieldReaderFor(1).Read(value: out sequenceValue, elementIdx: 0);
             Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes("AAA").AsSpan()) == 0);
-            reader.GetReaderFor(1).Read(value: out sequenceValue, elementIdx: 2);
+            reader.GetFieldReaderFor(1).Read(value: out sequenceValue, elementIdx: 2);
             Assert.True(sequenceValue.SequenceCompareTo(Encoding.UTF8.GetBytes("CE").AsSpan()) == 0);
         }
 
@@ -148,15 +148,15 @@ namespace FastTests.Corax
             var reader = new IndexEntryReader(element.Ptr, element.Length);
 
             // Get the first
-            Assert.True(reader.GetReaderFor(1).TryReadMany( out var fieldIterator));
+            Assert.True(reader.GetFieldReaderFor(1).TryReadMany( out var fieldIterator));
             Assert.True(fieldIterator.ReadNext());
             Assert.True(fieldIterator.Double.AlmostEquals(1.01));
             Assert.Equal(1, fieldIterator.Long);
             Assert.True(fieldIterator.Sequence.SequenceCompareTo(Encoding.UTF8.GetBytes(values[0]).AsSpan()) == 0);
 
-            Assert.False(reader.GetReaderFor(2).TryReadMany(out  fieldIterator));
+            Assert.False(reader.GetFieldReaderFor(2).TryReadMany(out  fieldIterator));
 
-            fieldIterator = reader.GetReaderFor(1).ReadMany();
+            fieldIterator = reader.GetFieldReaderFor(1).ReadMany();
             Assert.Equal(5, fieldIterator.Count);
 
             int i = 0;
@@ -172,7 +172,7 @@ namespace FastTests.Corax
             try { var __ = fieldIterator.Long; } catch (IndexOutOfRangeException) {}
             try { var __ = fieldIterator.Sequence; } catch (IndexOutOfRangeException) { }
 
-            fieldIterator = reader.GetReaderFor(1).ReadMany();
+            fieldIterator = reader.GetFieldReaderFor(1).ReadMany();
             Assert.Equal(5, fieldIterator.Count);
 
             i = 0;
@@ -223,16 +223,16 @@ namespace FastTests.Corax
             var reader = new IndexEntryReader(element.Ptr, element.Length);                        
             
             // Get the first
-            Assert.True(reader.GetReaderFor(1).TryReadMany( out var fieldIterator));
+            Assert.True(reader.GetFieldReaderFor(1).TryReadMany( out var fieldIterator));
             Assert.True(fieldIterator.ReadNext());
             Assert.True(fieldIterator.Double.AlmostEquals(1.01));
             Assert.Equal(1, fieldIterator.Long);
             Assert.True(fieldIterator.Sequence.SequenceCompareTo(Encoding.UTF8.GetBytes(values[0]).AsSpan()) == 0);
 
-            Assert.False(reader.GetReaderFor(2).Read(out var _));
-            Assert.False(reader.GetReaderFor(2).TryReadMany( out fieldIterator));
+            Assert.False(reader.GetFieldReaderFor(2).Read(out var _));
+            Assert.False(reader.GetFieldReaderFor(2).TryReadMany( out fieldIterator));
 
-            fieldIterator = reader.GetReaderFor(1).ReadMany();
+            fieldIterator = reader.GetFieldReaderFor(1).ReadMany();
             Assert.Equal(3, fieldIterator.Count);
 
             int i = 0;
@@ -262,7 +262,7 @@ namespace FastTests.Corax
                 i++;
             }
 
-            fieldIterator = reader.GetReaderFor(0).ReadMany();
+            fieldIterator = reader.GetFieldReaderFor(0).ReadMany();
             Assert.Equal(3, fieldIterator.Count);
 
             i = 0;
@@ -328,27 +328,27 @@ namespace FastTests.Corax
 
             var reader = new IndexEntryReader(element.Ptr, element.Length);
 
-            Assert.True(reader.GetReaderFor(1).Read(out var type, out var longValue, out var doubleValue, out var sequenceValue));
+            Assert.True(reader.GetFieldReaderFor(1).Read(out var type, out var longValue, out var doubleValue, out var sequenceValue));
             Assert.True(type.HasFlag(IndexEntryFieldType.Empty));
             Assert.True(type.HasFlag(IndexEntryFieldType.List));
             Assert.Equal(0, sequenceValue.Length);
 
-            Assert.True(reader.GetReaderFor(1).Read(out type, out sequenceValue));
+            Assert.True(reader.GetFieldReaderFor(1).Read(out type, out sequenceValue));
             Assert.True(type.HasFlag(IndexEntryFieldType.Empty));
             Assert.True(type.HasFlag(IndexEntryFieldType.List));
             Assert.Equal(0, sequenceValue.Length);
 
             reader = new IndexEntryReader(element.Ptr, element.Length);
-            Assert.True(reader.GetReaderFor(1).TryReadMany( out var iterator));
+            Assert.True(reader.GetFieldReaderFor(1).TryReadMany( out var iterator));
             type = reader.GetFieldType(1, out var offset);
             Assert.True(type.HasFlag(IndexEntryFieldType.Empty));
             Assert.True(type.HasFlag(IndexEntryFieldType.List));
             Assert.False(iterator.ReadNext());
             Assert.Equal(0, iterator.Count);
             
-            Assert.False(reader.GetReaderFor(2).TryReadMany( out var fieldIterator));
+            Assert.False(reader.GetFieldReaderFor(2).TryReadMany( out var fieldIterator));
 
-            fieldIterator = reader.GetReaderFor(1).ReadMany();
+            fieldIterator = reader.GetFieldReaderFor(1).ReadMany();
             Assert.Equal(0, fieldIterator.Count);
             Assert.True(fieldIterator.IsEmptyCollection);
 
@@ -365,7 +365,7 @@ namespace FastTests.Corax
             { var __ = fieldIterator.Long; }
             catch (IndexOutOfRangeException) { }
 
-            fieldIterator = reader.GetReaderFor(0).ReadMany();
+            fieldIterator = reader.GetFieldReaderFor(0).ReadMany();
             Assert.Equal(0, fieldIterator.Count);
             Assert.True(fieldIterator.IsEmptyCollection);
 
@@ -442,7 +442,7 @@ namespace FastTests.Corax
 
             var reader = new IndexEntryReader(element.Ptr, element.Length);
 
-            var iterator = reader.GetReaderFor(0).ReadMany();
+            var iterator = reader.GetFieldReaderFor(0).ReadMany();
             Assert.True(iterator.IsValid);
             Assert.False(iterator.IsEmptyCollection);
             int i = 0;
@@ -463,11 +463,11 @@ namespace FastTests.Corax
 
             Assert.Equal(64, i);
 
-            iterator = reader.GetReaderFor(1).ReadMany();
+            iterator = reader.GetFieldReaderFor(1).ReadMany();
             Assert.True(iterator.IsValid);
             Assert.True(iterator.IsEmptyCollection);
 
-            iterator = reader.GetReaderFor(2).ReadMany();
+            iterator = reader.GetFieldReaderFor(2).ReadMany();
             Assert.True(iterator.IsValid);
             Assert.False(iterator.IsEmptyCollection);
 
@@ -489,7 +489,7 @@ namespace FastTests.Corax
                 i++;
             }
 
-            iterator = reader.GetReaderFor(3).ReadMany();
+            iterator = reader.GetFieldReaderFor(3).ReadMany();
             Assert.True(iterator.IsValid);
             Assert.False(iterator.IsEmptyCollection);
 

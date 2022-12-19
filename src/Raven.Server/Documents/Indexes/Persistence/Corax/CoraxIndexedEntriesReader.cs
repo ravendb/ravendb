@@ -39,7 +39,7 @@ public class CoraxIndexedEntriesReader : IDisposable
         var doc = new DynamicJsonValue();
         foreach (var binding in _fieldsMapping)
         {
-            var fieldReader = entryReader.GetReaderFor(binding.FieldId);
+            var fieldReader = entryReader.GetFieldReaderFor(binding.FieldId);
 
             if (fieldReader.Type == IndexEntryFieldType.Invalid)
                 continue;
@@ -49,7 +49,7 @@ public class CoraxIndexedEntriesReader : IDisposable
 
         foreach (var (fieldAsString, fieldAsBytes) in _dynamicMapping)
         {
-            var fieldReader = entryReader.GetReaderFor(fieldAsBytes);
+            var fieldReader = entryReader.GetFieldReaderFor(fieldAsBytes);
 
             if (fieldReader.Type == IndexEntryFieldType.Invalid)
                 continue;

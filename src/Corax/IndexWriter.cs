@@ -365,7 +365,7 @@ namespace Corax
             }
 
             Page lastVisitedPage = default;
-            var oldEntryReader = IndexSearcher.GetReaderFor(Transaction, ref lastVisitedPage, entryId, out var rawSize);
+            var oldEntryReader = IndexSearcher.GetEntryReaderFor(Transaction, ref lastVisitedPage, entryId, out var rawSize);
 
             if (oldEntryReader.Buffer.SequenceEqual(data))
                 return entryId; // no change, can skip all work here, joy!
@@ -415,8 +415,8 @@ namespace Corax
                 var newType = newEntryReader.GetFieldType(fieldBinding.FieldId, out var _);
 
                 var indexedField = _knownFieldsTerms[fieldBinding.FieldId];
-                var newFieldReader = newEntryReader.GetReaderFor(fieldBinding.FieldId);
-                var oldFieldReader = oldEntryReader.GetReaderFor(fieldBinding.FieldId);
+                var newFieldReader = newEntryReader.GetFieldReaderFor(fieldBinding.FieldId);
+                var oldFieldReader = oldEntryReader.GetFieldReaderFor(fieldBinding.FieldId);
                 if (oldType != newType)
                 {
                     RemoveSingleTerm(indexedField, oldFieldReader, entryId);
@@ -565,14 +565,14 @@ namespace Corax
                     if (binding.FieldIndexingMode is FieldIndexingMode.No)
                         continue;
 
-                    var indexer = new TermIndexer(this, context, entryReader.GetReaderFor(binding.FieldId), _knownFieldsTerms[binding.FieldId], entryId);
+                    var indexer = new TermIndexer(this, context, entryReader.GetFieldReaderFor(binding.FieldId), _knownFieldsTerms[binding.FieldId], entryId);
                     indexer.InsertToken();
                 }
 
                 var it = new IndexEntryReader.DynamicFieldEnumerator(entryReader);
                 while (it.MoveNext())
                 {
-                    var fieldReader = entryReader.GetReaderFor(it.CurrentFieldName);
+                    var fieldReader = entryReader.GetFieldReaderFor(it.CurrentFieldName);
 
                     var indexedField = GetDynamicIndexedField(context, ref it);
 
@@ -941,13 +941,13 @@ namespace Corax
 
         private void RecordTermsToDeleteFrom(long entryToDelete,  LowLevelTransaction llt, ref Page lastVisitedPage)
         {
-            var entryReader = IndexSearcher.GetReaderFor(Transaction, ref lastVisitedPage, entryToDelete, out var _);
+            var entryReader = IndexSearcher.GetEntryReaderFor(Transaction, ref lastVisitedPage, entryToDelete, out var _);
             foreach (var binding in _fieldsMapping) // todo maciej: this part needs to be rebuilt after implementing DynamicFields
             {
                 if (binding.IsIndexed == false)
                     continue;
 
-                RemoveSingleTerm(_knownFieldsTerms[binding.FieldId], entryReader.GetReaderFor(binding.FieldId), entryToDelete);
+                RemoveSingleTerm(_knownFieldsTerms[binding.FieldId], entryReader.GetFieldReaderFor(binding.FieldId), entryToDelete);
             }
 
             var context = Transaction.Allocator;
@@ -955,7 +955,7 @@ namespace Corax
             while (it.MoveNext())
             {
                 var indexedField = GetDynamicIndexedField(context, ref it);
-                var fieldReader = entryReader.GetReaderFor(it.CurrentFieldName);
+                var fieldReader = entryReader.GetFieldReaderFor(it.CurrentFieldName);
                 RemoveSingleTerm(indexedField, fieldReader, entryToDelete);
             }
 

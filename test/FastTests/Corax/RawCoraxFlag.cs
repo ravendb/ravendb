@@ -63,10 +63,11 @@ public class RawCoraxFlag : StorageTest
         Span<long> mem = stackalloc long[1024];
         {
             using IndexSearcher searcher = new IndexSearcher(Env, _analyzers);
-            var match = searcher.SearchQuery("Id", "1", Constants.Search.Operator.Or, false, IndexId);
+            ;
+            var match = searcher.SearchQuery(_analyzers.GetByFieldId(0).Metadata, "1", Constants.Search.Operator.Or, false);
             Assert.Equal(1, match.Fill(mem));
-            var result = searcher.GetReaderFor(mem[0]);
-            result.GetReaderFor(fieldName).Read(out Span<byte> blittableBinary);
+            var result = searcher.GetEntryReaderFor(mem[0]);
+            result.GetFieldReaderFor(fieldName).Read(out Span<byte> blittableBinary);
 
             fixed (byte* ptr = &blittableBinary.GetPinnableReference())
             {
@@ -124,10 +125,10 @@ public class RawCoraxFlag : StorageTest
         Span<long> mem = stackalloc long[1024];
         {
             using IndexSearcher searcher = new IndexSearcher(Env, _analyzers);
-            var match = searcher.SearchQuery("Id", "1", Constants.Search.Operator.Or, false, IndexId);
+            var match = searcher.SearchQuery(_analyzers.GetByFieldId(0).Metadata, "1", Constants.Search.Operator.Or, false);
             Assert.Equal(1, match.Fill(mem));
-            var result = searcher.GetReaderFor(mem[0]);
-            result.GetReaderFor(1).Read(out Span<byte> blittableBinary);
+            var result = searcher.GetEntryReaderFor(mem[0]);
+            result.GetFieldReaderFor(1).Read(out Span<byte> blittableBinary);
 
             fixed (byte* ptr = &blittableBinary.GetPinnableReference())
             {

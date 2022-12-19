@@ -60,7 +60,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         {
             for (int docId = 0; docId < read; docId++)
             {
-                var entryReader = _indexSearcher.GetReaderFor(ids[docId]);
+                var entryReader = _indexSearcher.GetEntryReaderFor(ids[docId]);
                 foreach (var result in results)
                 {
                     token.ThrowIfCancellationRequested();
@@ -333,12 +333,12 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         if (_fieldMappings.TryGetByFieldName(_allocator, name, out var binding))
         {
             // In this case we've to check if field is dynamic also
-            fieldReader = reader.GetReaderFor(binding.FieldId);
+            fieldReader = reader.GetFieldReaderFor(binding.FieldId);
             return;
         }
 
         var slicedFieldName = GetFieldNameAsSlice(name);
-        fieldReader = reader.GetReaderFor(slicedFieldName);
+        fieldReader = reader.GetFieldReaderFor(slicedFieldName);
     }
 
     private void ApplyAggregation(Dictionary<FacetAggregationField, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValues values,

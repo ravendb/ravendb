@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Corax.Mappings;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Spatial4n.Shapes;
@@ -20,7 +21,7 @@ namespace Corax.Queries
     {        
         MatchCompareFieldType FieldType { get; }
 
-        int FieldId { get; }
+        FieldMetadata Field { get; }
 
         int CompareById(long idx, long idy);
 

@@ -4,6 +4,7 @@ using System.Text;
 using Corax.Queries;
 using Corax;
 using Corax.Mappings;
+using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
 using Voron;
@@ -33,7 +34,9 @@ namespace FastTests.Corax
                 var allEntries = searcher.AllEntries();
                 var match1 = searcher.StartWithQuery("Id", "l");
                 var concat = searcher.And(allEntries, match1);
-                var match = searcher.OrderByDescending(concat, ContentId, MatchCompareFieldType.Integer);
+
+                var match = searcher.OrderByDescending(concat,
+                    new OrderMetadata(searcher.FieldMetadataBuilder("Content", ContentId), false, MatchCompareFieldType.Integer));
 
                 List<string> sortedByCorax = new();
                 Span<long> ids = stackalloc long[2048];

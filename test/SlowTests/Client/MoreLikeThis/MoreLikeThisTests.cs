@@ -536,7 +536,7 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMakeDynamicDocumentQueries(Options options)
         {
             using (var store = GetDocumentStore(options))

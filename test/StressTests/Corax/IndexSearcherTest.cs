@@ -328,7 +328,7 @@ public class IndexSearcherTest : StorageTest
 
             using var searcher = new IndexSearcher(Env, mapping);
             {
-                var match = searcher.ContainsQuery("Content", "ing");
+                var match = searcher.ContainsQuery(searcher.FieldMetadataBuilder("Content"), "ing");
                 int read;
                 int whole = 0;
                 while ((read = match.Fill(ids)) != 0)
@@ -336,8 +336,8 @@ public class IndexSearcherTest : StorageTest
                     whole += read;
                     foreach (var id in ids)
                     {
-                        var reader = searcher.GetReaderFor(id);
-                        reader.GetReaderFor(ContentIndex).Read(out var value);
+                        var reader = searcher.GetEntryReaderFor(id);
+                        reader.GetFieldReaderFor(ContentIndex).Read(out var value);
                         Assert.True(Encoding.UTF8.GetString(value).Contains("ing"));
                     }
                 }

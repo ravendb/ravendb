@@ -93,8 +93,9 @@ namespace FastTests.Corax
             longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> { Id = $"list/{i}", Content1 = i % mod }).ToList();
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
+            var contentMetadata = searcher.FieldMetadataBuilder("Content1");
             {
-                IQueryMatch match = searcher.InQuery("Content1", new() { "1", "2", "3" }, new ConstantScoreFunction(10f));
+                IQueryMatch match = searcher.InQuery(contentMetadata, new() { "1", "2", "3" }, new ConstantScoreFunction(10f));
                 
                 match = searcher.OrderByScore(match);
                 Span<long> ids = stackalloc long[amount];
@@ -126,8 +127,9 @@ namespace FastTests.Corax
             longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> { Id = $"list/{i}", Content1 = i % mod }).ToList();
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
+            var contentMetadata = searcher.FieldMetadataBuilder("Content", 1);
             {
-                var match = searcher.Boost(searcher.UnaryQuery(searcher.AllEntries(), 1, 10L, UnaryMatchOperation.GreaterThan), 100);
+                var match = searcher.Boost(searcher.UnaryQuery(searcher.AllEntries(), contentMetadata, 10L, UnaryMatchOperation.GreaterThan), 100);
                 Span<long> ids = stackalloc long[amount];
                 var read = match.Fill(ids);
                 // Assert.Equal(longList.Count, read);
@@ -273,8 +275,9 @@ namespace FastTests.Corax
 
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
+            var contentMetadata = searcher.FieldMetadataBuilder("Content1");
             {
-                var query = searcher.InQuery("Content1", new List<string>() { "0", "1" }, default(TermFrequencyScoreFunction));
+                var query = searcher.InQuery(contentMetadata, new List<string>() { "0", "1" }, default(TermFrequencyScoreFunction));
 
                 Span<long> ids = stackalloc long[1024];
                 var read = query.Fill(ids);
@@ -307,9 +310,10 @@ namespace FastTests.Corax
 
             longList.Sort(CompareAscending);
             using var searcher = new IndexSearcher(Env);
+            var contentMetadata = searcher.FieldMetadataBuilder("Content1", Content1);
             {                
                 var query = MultiTermBoostingMatch<InTermProvider>.Create(searcher, 
-                    new InTermProvider(searcher, "Content1", new List<string>() { "0", "1", "2", "3" }, Content1), 
+                    new InTermProvider(searcher, contentMetadata, new List<string>() { "0", "1", "2", "3" }), 
                     default(TermFrequencyScoreFunction));
                 var sortedMatch = searcher.OrderByScore(query);
 
@@ -319,7 +323,7 @@ namespace FastTests.Corax
                 List<long> sortedByCorax = new();
                 for (int i = 0; i < read; ++i)
                 {
-                    searcher.GetReaderFor(ids[i]).GetReaderFor(Content1).Read(out long value);
+                    searcher.GetEntryReaderFor(ids[i]).GetFieldReaderFor(Content1).Read(out long value);
                     sortedByCorax.Add(value);
                 }                    
 
@@ -335,11 +339,12 @@ namespace FastTests.Corax
             longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> { Id = $"list/{i}", Content1 = i % mod }).ToList();
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
+            var contentMetadata = searcher.FieldMetadataBuilder("Content1", Content1);
             {
-                IQueryMatch match = searcher.StartWithQuery("Content1", "0", new ConstantScoreFunction(0f));
+                IQueryMatch match = searcher.StartWithQuery(contentMetadata, "0", new ConstantScoreFunction(0f));
                 for (int i = 0; i < mod; ++i)
                 {
-                    match = searcher.Or(match, searcher.StartWithQuery("Content1", $"{i}", new ConstantScoreFunction(i)));
+                    match = searcher.Or(match, searcher.StartWithQuery(contentMetadata, $"{i}", new ConstantScoreFunction(i)));
                 }
 
                 match = searcher.OrderByScore(match);

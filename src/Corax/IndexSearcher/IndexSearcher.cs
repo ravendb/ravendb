@@ -95,12 +95,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return data.ToUnmanagedSpan().Slice(size + len);
     }
 
-    public IndexEntryReader GetReaderFor(long id)
+    public IndexEntryReader GetEntryReaderFor(long id)
     {
-        return GetReaderFor(_transaction, ref _lastPage, id, out _);
+        return GetEntryReaderFor(_transaction, ref _lastPage, id, out _);
     }
 
-    public static IndexEntryReader GetReaderFor(Transaction transaction, ref Page page, long id, out int rawSize)
+    public static IndexEntryReader GetEntryReaderFor(Transaction transaction, ref Page page, long id, out int rawSize)
     {
         var item = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id);
         int size = ZigZagEncoding.Decode<int>(item.Address, out var len);
@@ -119,7 +119,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         var idSpan = new ReadOnlySpan<byte>(item.Address + len, size);
         key = Encoding.UTF8.GetString(idSpan);
-        
+
         int headerSize = size + len;
         return new(item.Address + headerSize, item.Length - headerSize);
     }
@@ -142,7 +142,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     //We cannot dispose them before the whole query is executed because they are an integral part of IQueryMatch.
     //We know that the Slices are automatically disposed when the transaction is closed so we don't need to track them.
     [SkipLocalsInit]
-    internal Slice EncodeAndApplyAnalyzer(string term, int fieldId)
+    internal Slice EncodeAndApplyAnalyzer(FieldMetadata binding, string term)
     {
         if (term is null)
             return default;
@@ -153,7 +153,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (term == Constants.NullValue)
             return Constants.NullValueSlice;
 
-        ApplyAnalyzer(term, fieldId, out var encodedTerm);
+        ApplyAnalyzer(binding, Encodings.Utf8.GetBytes(term), out var encodedTerm);
         return encodedTerm;
     }
 
@@ -164,19 +164,41 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             return ApplyAnalyzer(originalTermSliced, fieldId, out value);
         }
     }
-    
+
+    internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(FieldMetadata binding, ReadOnlySpan<byte> originalTerm, out Slice value)
+    {
+        Analyzer analyzer = binding.Analyzer;
+        if (binding.FieldId == Constants.IndexWriter.DynamicField && binding.Mode is not (FieldIndexingMode.Exact or FieldIndexingMode.No))
+        {
+            analyzer = _fieldMapping.DefaultAnalyzer;
+        }
+        else
+        {
+            if (binding.Mode is FieldIndexingMode.Exact || binding.Analyzer is null)
+            {
+                var disposable = Allocator.AllocateDirect(originalTerm.Length, ByteStringType.Immutable, out var originalTermSliced);
+                originalTerm.CopyTo(new Span<byte>(originalTermSliced._pointer->Ptr, originalTerm.Length));
+
+                value = new Slice(originalTermSliced);
+                return disposable;
+            }
+        }
+
+        return AnalyzeTerm(analyzer, originalTerm, out value);
+    }
+
     internal ByteStringContext<ByteStringMemoryCache>.InternalScope ApplyAnalyzer(ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
     {
         Analyzer analyzer = null;
         IndexFieldBinding binding = null;
-        
+
         if (fieldId == Constants.IndexWriter.DynamicField)
         {
             analyzer = _fieldMapping.DefaultAnalyzer;
         }
         else if (_fieldMapping.TryGetByFieldId(fieldId, out binding) == false
-            || binding.FieldIndexingMode is FieldIndexingMode.Exact
-            || binding.Analyzer is null)
+                 || binding.FieldIndexingMode is FieldIndexingMode.Exact
+                 || binding.Analyzer is null)
         {
             var disposable = Allocator.AllocateDirect(originalTerm.Length, ByteStringType.Immutable, out var originalTermSliced);
             originalTerm.CopyTo(new Span<byte>(originalTermSliced._pointer->Ptr, originalTerm.Length));
@@ -185,11 +207,11 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             return disposable;
         }
 
-        analyzer ??= binding.FieldIndexingMode is FieldIndexingMode.Search 
+        analyzer ??= binding.FieldIndexingMode is FieldIndexingMode.Search
             ? Analyzer.DefaultLowercaseAnalyzer // lowercase only when search is used in non-full-text-search match 
             : binding.Analyzer!;
-        
-        return AnalyzeTerm(analyzer, originalTerm, fieldId, out value);
+
+        return AnalyzeTerm(analyzer, originalTerm, out value);
     }
 
     [SkipLocalsInit]
@@ -199,7 +221,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ByteStringContext<ByteStringMemoryCache>.InternalScope AnalyzeTerm(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, int fieldId, out Slice value)
+    private ByteStringContext<ByteStringMemoryCache>.InternalScope AnalyzeTerm(Analyzer analyzer, ReadOnlySpan<byte> originalTerm, out Slice value)
     {
         analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
 
@@ -212,7 +234,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         Span<byte> bufferSpan = buffer.AsSpan();
         Span<Token> tokensSpan = tokens.AsSpan();
         analyzer.Execute(originalTerm, ref bufferSpan, ref tokensSpan);
-        Debug.Assert(tokensSpan.Length == 1, $"{nameof(ApplyAnalyzer)} should create only 1 token as a result.");
+        if (tokensSpan.Length != 1)
+            Debug.Assert(tokensSpan.Length == 1, $"{nameof(ApplyAnalyzer)} should create only 1 token as a result.");
         var disposable = Slice.From(Allocator, bufferSpan, ByteStringType.Immutable, out value);
 
         Analyzer.TokensPool.Return(tokens);
@@ -225,20 +248,19 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         return new AllEntriesMatch(this, _transaction);
     }
-    
+
     public TermMatch EmptySet() => TermMatch.CreateEmpty(Allocator);
 
-    public long GetEntriesAmountInField(string name)
+    public long GetEntriesAmountInField(FieldMetadata field)
     {
-        var terms = _fieldsTree?.CompactTreeFor(name);
+        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
 
         return terms?.NumberOfEntries ?? 0;
     }
 
-    public bool TryGetTermsOfField(string field, out ExistsTermProvider existsTermProvider)
+    public bool TryGetTermsOfField(FieldMetadata field, out ExistsTermProvider existsTermProvider)
     {
-        using var _ = Slice.From(Allocator, field, ByteStringType.Immutable, out var fieldName);
-        var terms = _fieldsTree?.CompactTreeFor(fieldName);
+        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
 
         if (terms == null)
         {
@@ -246,10 +268,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             return false;
         }
 
-        existsTermProvider = new ExistsTermProvider(this, _transaction.Allocator, terms, fieldName);
+        existsTermProvider = new ExistsTermProvider(this, terms, field);
         return true;
     }
-    
+
     public List<string> GetFields()
     {
         List<string> fieldsInIndex = new();
@@ -258,8 +280,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         //Return an empty set when the index doesn't contain any fields. Case when index has 0 entries.
         if (fields is null)
             return fieldsInIndex;
-        
-        
+
+
         using (var it = fields.Iterate(false))
         {
             if (it.Seek(Slices.BeforeAllKeys))
@@ -268,34 +290,13 @@ public sealed unsafe partial class IndexSearcher : IDisposable
                 {
                     if (it.CurrentKey.EndsWith(Constants.IndexWriter.DoubleTreeSuffix) || it.CurrentKey.EndsWith(Constants.IndexWriter.LongTreeSuffix))
                         continue;
-                    
+
                     fieldsInIndex.Add(it.CurrentKey.ToString());
                 } while (it.MoveNext());
             }
         }
-       
-        return fieldsInIndex;
-    }
-    
-    
-    public (Slice FieldName, Slice NumericTree) GetSliceForRangeQueries<T>(string name, T value)
-    {
-        Slice.From(Allocator, name, ByteStringType.Immutable, out var fieldName);
-        Slice numericTree;
-        switch (value)
-        {
-            case long l:
-                Slice.From(Allocator, $"{name}-L", ByteStringType.Immutable, out numericTree);
-                break;
-            case double d:
-                Slice.From(Allocator, $"{name}-D", ByteStringType.Immutable, out numericTree);
-                break;
-            default:
-                numericTree = default;
-                break;
-        }
 
-        return (fieldName, numericTree);
+        return fieldsInIndex;
     }
 
     public FieldIndexingMode GetFieldIndexingModeForDynamic(Slice name)
@@ -310,9 +311,55 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return mode;
     }
 
+    public FieldMetadata GetWriterFieldMetadata(string fieldName)
+    {
+        var handler = Slice.From(Allocator, fieldName, ByteStringType.Immutable, out var fieldNameSlice);
+        if (_fieldMapping.TryGetByFieldName(fieldNameSlice, out var binding))
+        {
+            handler.Dispose();
+            return binding.Metadata;
+        }
+
+        var mode = GetFieldIndexingModeForDynamic(fieldNameSlice);
+
+        return FieldMetadata.Build(fieldNameSlice, Constants.IndexWriter.DynamicField, mode, mode switch
+        {
+            FieldIndexingMode.Search => _fieldMapping.SearchAnalyzer(fieldName),
+            FieldIndexingMode.Exact => _fieldMapping.ExactAnalyzer(fieldName),
+            FieldIndexingMode.Normal => _fieldMapping.DefaultAnalyzer,
+            _ => null,
+        });
+    }
+
+    public FieldMetadata GetFieldMetadata(string fieldName, FieldIndexingMode mode = FieldIndexingMode.Normal)
+    {
+        var handler = Slice.From(Allocator, fieldName, ByteStringType.Immutable, out var fieldNameSlice);
+        if (_fieldMapping.TryGetByFieldName(fieldNameSlice, out var binding))
+        {
+            handler.Dispose();
+            return binding.Metadata;
+        }
+
+        return FieldMetadata.Build(fieldNameSlice, Constants.IndexWriter.DynamicField, mode, mode switch
+        {
+            FieldIndexingMode.Search => _fieldMapping.SearchAnalyzer(fieldName),
+            FieldIndexingMode.Exact => _fieldMapping.ExactAnalyzer(fieldName),
+            FieldIndexingMode.Normal => _fieldMapping.DefaultAnalyzer,
+            _ => null,
+        });
+    }
+
     internal FixedSizeTree GetDocumentBoostTree()
     {
         return _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+    }
+    
+
+    public FieldMetadata FieldMetadataBuilder(string fieldName, int fieldId = Constants.IndexSearcher.NonAnalyzer, Analyzer analyzer = null,
+        FieldIndexingMode fieldIndexingMode = default)
+    {
+        Slice.From(Allocator, fieldName, ByteStringType.Immutable, out var fieldNameAsSlice);
+        return FieldMetadata.Build(fieldNameAsSlice, fieldId, fieldIndexingMode, analyzer);
     }
 
     public void Dispose()

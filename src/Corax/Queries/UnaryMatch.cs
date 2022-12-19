@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using Corax.Mappings;
 using Voron;
 
 namespace Corax.Queries
@@ -37,7 +38,7 @@ namespace Corax.Queries
         private TInner _inner;
         private UnaryMatchOperation _operation;
         private readonly IndexSearcher _searcher;
-        private readonly int _fieldId;
+        private readonly FieldMetadata _field;
         private readonly TValueType _value;
         private readonly TValueType _valueAux;
         private readonly int _take;
@@ -56,7 +57,7 @@ namespace Corax.Queries
         private UnaryMatch(in TInner inner,
             UnaryMatchOperation operation,
             IndexSearcher searcher,
-            int fieldId,
+            FieldMetadata field,
             TValueType value,
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> fillFunc,
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int, int> andWithFunc,
@@ -74,7 +75,7 @@ namespace Corax.Queries
             _inner = inner;
             _operation = operation;
             _searcher = searcher;
-            _fieldId = fieldId;
+            _field = field;
             _value = value;
             _valueAux = default;
             _confidence = confidence;
@@ -85,7 +86,7 @@ namespace Corax.Queries
         private UnaryMatch(in TInner inner,
             UnaryMatchOperation operation,
             IndexSearcher searcher,
-            int fieldId,
+            FieldMetadata field,
             TValueType value1,
             TValueType value2,
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> fillFunc,
@@ -104,7 +105,7 @@ namespace Corax.Queries
             _inner = inner;
             _operation = operation;
             _searcher = searcher;
-            _fieldId = fieldId;
+            _field = field;
             _value = value1;
             _valueAux = value2;
             _confidence = confidence;
@@ -139,7 +140,7 @@ namespace Corax.Queries
                     { nameof(IsBoosting), IsBoosting.ToString() },
                     { nameof(Count), $"{Count} [{Confidence}]" },
                     { "Operation", _operation.ToString() },
-                    { "FieldId", $"{_fieldId}" },
+                    { "Field", $"{_field.ToString()}" },
                     { "Value", GetValue()},
                     { "AuxValue", GetAuxValue()}
                 });

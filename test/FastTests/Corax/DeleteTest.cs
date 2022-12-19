@@ -76,7 +76,7 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-                var match = indexSearcher.GreatThanOrEqualsQuery("Content", 0L, default(NullScoreFunction));
+                var match = indexSearcher.GreatThanOrEqualsQuery(indexSearcher.FieldMetadataBuilder("Content"), 0L, default(NullScoreFunction));
                 Assert.Equal(_longList.Count, match.Fill(ids));
             }
 
@@ -89,7 +89,7 @@ namespace FastTests.Corax
             {
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-                var match = indexSearcher.GreatThanOrEqualsQuery("Content", 0L, default(NullScoreFunction));
+                var match = indexSearcher.GreatThanOrEqualsQuery(indexSearcher.FieldMetadataBuilder("Content"), 0L, default(NullScoreFunction));
                 Assert.Equal(_longList.Count -1, match.Fill(ids));
             }
         }
@@ -195,8 +195,8 @@ namespace FastTests.Corax
                 using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 var match = indexSearcher.TermQuery("Content", "0");
                 Assert.Equal(1, match.Fill(ids));
-                var entity = indexSearcher.GetReaderFor(ids[0]);
-                Assert.True(entity.GetReaderFor(IndexId).Read(out var idInIndex));
+                var entity = indexSearcher.GetEntryReaderFor(ids[0]);
+                Assert.True(entity.GetFieldReaderFor(IndexId).Read(out var idInIndex));
                 Assert.True(Encodings.Utf8.GetBytes("list/0").AsSpan().SequenceEqual(idInIndex));
 
             }

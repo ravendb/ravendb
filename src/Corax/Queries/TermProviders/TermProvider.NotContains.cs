@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Sparrow.Server;
+using Corax.Mappings;
 using Voron;
 using Voron.Data.CompactTrees;
 
@@ -10,16 +10,16 @@ namespace Corax.Queries
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
-        private readonly Slice _fieldName;
+        private readonly FieldMetadata _field;
         private readonly Slice _term;
 
         private CompactTree.Iterator _iterator;
 
-        public NotContainsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice term)
+        public NotContainsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice term)
         {
             _tree = tree;
             _searcher = searcher;
-            _fieldName = fieldName;
+            _field = field;
             _iterator = tree.Iterate();
             _iterator.Reset();
             _term = term;
@@ -52,7 +52,7 @@ namespace Corax.Queries
             return new QueryInspectionNode($"{nameof(NotContainsTermProvider)}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _fieldName.ToString() },
+                                { "Field", _field.ToString() },
                                 { "Term", _term.ToString()}
                             });
         }

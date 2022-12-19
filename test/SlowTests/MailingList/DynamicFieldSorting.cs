@@ -71,25 +71,25 @@ namespace SlowTests.MailingList
                       select new
                       {
                           SongId = item.SongId,
-                          NumericAttributes = item.NumericAttributes,
+                          //NumericAttributes = item.NumericAttributes,
                           _ = item.NumericAttributes.Select(x => CreateField(x.Name, x.Value))
                       };
 
                 Stores = new Dictionary<Expression<Func<ProjectionItem, object>>, FieldStorage>()
                      {
                          { e=>e.SongId, FieldStorage.Yes},
-                         { e=>e.NumericAttributes, FieldStorage.Yes}
+                     //    { e=>e.NumericAttributes, FieldStorage.Yes}
                      };
             }
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSortDynamically(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
-                new WithDynamicIndex().Execute(store);
+                
                 using (var session = store.OpenSession())
                 {
                     session.Store(new DataSet
@@ -104,7 +104,8 @@ namespace SlowTests.MailingList
 
                     session.SaveChanges();
                 }
-
+                new WithDynamicIndex().Execute(store);
+                WaitForUserToContinueTheTest(store);
                 using (var s = store.OpenSession())
                 {
                     var items = s.Advanced.DocumentQuery<WithDynamicIndex.ProjectionItem, WithDynamicIndex>()
@@ -123,7 +124,8 @@ namespace SlowTests.MailingList
                 }
             }
         }
-
+        
+        //TODO MACIEJ THIS IS FAILING ON CORAX
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanSortDynamically_Desc(Options options)

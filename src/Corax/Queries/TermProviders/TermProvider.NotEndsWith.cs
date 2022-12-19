@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Corax.Mappings;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -15,14 +16,14 @@ namespace Corax.Queries
     {
         private readonly IndexSearcher _searcher;
         private readonly CompactTree.Iterator _iterator;
-        private readonly Slice _fieldName;
+        private readonly FieldMetadata _field;
         private readonly Slice _endsWith;
         private readonly CompactTree _tree;
 
-        public NotEndsWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice endsWith)
+        public NotEndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice endsWith)
         {
             _searcher = searcher;
-            _fieldName = fieldName;
+            _field = field;
             _iterator = tree.Iterate();
             _iterator.Reset();
             _endsWith = endsWith;
@@ -56,7 +57,7 @@ namespace Corax.Queries
             return new QueryInspectionNode($"{nameof(NotEndsWithTermProvider)}",
                 parameters: new Dictionary<string, string>()
                 {
-                    { "Field", _fieldName.ToString() },
+                    { "Field", _field.ToString() },
                     { "Terms", _endsWith.ToString()}
                 });
         }
