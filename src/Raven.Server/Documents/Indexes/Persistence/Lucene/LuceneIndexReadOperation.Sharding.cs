@@ -35,6 +35,9 @@ public partial class LuceneIndexReadOperation
                 case OrderByFieldType.Random:
                     // we order by random when merging results from shards
                     break;
+                case OrderByFieldType.Distance:
+                    documentWithOrderByFields.AddDoubleOrderByField(d.Distance.Value.Distance);
+                    break;
                 default:
                     documentWithOrderByFields.AddStringOrderByField(_searcher.IndexReader.GetStringValueFor(field.OrderByName, doc, _state));
                     break;

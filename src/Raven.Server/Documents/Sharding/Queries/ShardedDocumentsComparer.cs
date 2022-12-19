@@ -58,6 +58,7 @@ public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
                     return xLng.CompareTo(yLng);
                 }
             case OrderByFieldType.Double:
+            case OrderByFieldType.Distance:
                 {
                     var hasX = TryGetDoubleValue(x, order.Name, index, out double xDbl);
                     var hasY = TryGetDoubleValue(y, order.Name, index, out double yDbl);
@@ -87,12 +88,9 @@ public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
             case OrderByFieldType.Custom:
                 throw new NotSupportedInShardingException("Custom sorting is not supported in sharding as of yet");
             case OrderByFieldType.Score:
-            case OrderByFieldType.Distance:
             default:
                 throw new ArgumentException("Unknown OrderingType: " + order.OrderingType);
         }
-
-
     }
 
     private string GetString(BlittableJsonReaderObject blittable, string fieldName, int index)
