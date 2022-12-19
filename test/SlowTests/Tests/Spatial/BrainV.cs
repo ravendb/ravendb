@@ -18,7 +18,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformSpatialSearchWithNulls(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -64,7 +64,7 @@ namespace SlowTests.Tests.Spatial
 
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseNullCoalescingOperator(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -66,7 +66,7 @@ namespace SlowTests.Tests.Spatial
         }
         
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void WeirdSpatialResults(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -111,7 +111,7 @@ namespace SlowTests.Tests.Spatial
         }
         
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void MatchSpatialResults(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -175,7 +175,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void WeirdSpatialResults2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -211,7 +211,7 @@ namespace SlowTests.Tests.Spatial
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void SpatialSearchWithSwedishCulture(Options options)
         {
             using (var store = GetDocumentStore(options))
