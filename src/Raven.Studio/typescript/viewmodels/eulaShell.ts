@@ -95,7 +95,7 @@ class eulaShell extends viewModelBase {
         super.compositionComplete();
         $("body")
             .removeClass('loading-active')
-            .addClass("setup-shell");
+            .addClass("setup-shell bs3");
         $(".loading-overlay").remove();
 
         this.studioLoadingFakeRequest.markCompleted();
