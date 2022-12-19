@@ -17,12 +17,20 @@ namespace Raven.Client.ServerWide.Sharding
         private readonly string[] _nodes;
         private readonly int? _replicationFactor;
 
-        public AddDatabaseShardOperation(string databaseName, int? shardNumber = null, string[] nodes = null, int? replicationFactor = null)
+        public AddDatabaseShardOperation(string databaseName, int? shardNumber = null)
         {
             ResourceNameValidator.AssertValidDatabaseName(databaseName);
             _databaseName = databaseName;
             _shardNumber = shardNumber;
+        }
+
+        public AddDatabaseShardOperation(string databaseName, string[] nodes, int? shardNumber = null) : this(databaseName, shardNumber)
+        {
             _nodes = nodes;
+        }
+
+        public AddDatabaseShardOperation(string databaseName, int? replicationFactor, int? shardNumber = null) : this(databaseName, shardNumber)
+        {
             _replicationFactor = replicationFactor;
         }
 

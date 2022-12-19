@@ -17,11 +17,13 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
- using Raven.Client.Documents.Session;
- using Raven.Client.ServerWide.Operations;
+using Raven.Client.Documents.Session;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Client.Util;
 using Raven.Server.Utils;
@@ -153,7 +155,7 @@ namespace SlowTests.Sharding.Cluster
                 var id = "foo/bar";
                 var bucket = ShardHelper.GetBucket(id);
                 var location = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
-                var newLocation = (location + 1) % record.Sharding.Shards.Count;
+                var newLocation = ShardingTestBase.ReshardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, location);
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = new User
@@ -198,6 +200,105 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var user = await session.LoadAsync<User>(id);
                     Assert.Equal("New shard", user.Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task CanMoveOneBucketToNewShard()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 2, orchestratorReplicationFactor: 2);
+
+            using (var store = GetDocumentStore(options))
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var shardTopology = record.Sharding.Shards[0];
+                Equal(2, shardTopology.Members.Count);
+                Equal(0, shardTopology.Promotables.Count);
+                Equal(2, shardTopology.ReplicationFactor);
+
+                //create new shard
+                var res = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database));
+                var newShardNumber = res.ShardNumber;
+                Equal(2, newShardNumber);
+                Equal(2, res.ShardTopology.ReplicationFactor);
+                Equal(2, res.ShardTopology.AllNodes.Count());
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Shards.Count;
+                }, 3);
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    record.Sharding.Shards.TryGetValue(newShardNumber, out shardTopology);
+                    return shardTopology?.Members?.Count;
+                }, 2);
+
+                var nodesContainingNewShard = shardTopology.Members;
+
+                foreach (var node in nodesContainingNewShard)
+                {
+                    var serverWithNewShard = Servers.Single(x => x.ServerStore.NodeTag == node);
+                    True(serverWithNewShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(ShardHelper.ToShardName(store.Database, newShardNumber), out _));
+                }
+                
+                //migrate doc to new shard
+                var id = "foo/bar";
+                var bucket = ShardHelper.GetBucket(id);
+                var originalDocShard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+                var toShard = newShardNumber;
+
+                NotEqual(toShard, originalDocShard);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = new User
+                    {
+                        Name = "Original shard"
+                    };
+                    await session.StoreAsync(user, id);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, originalDocShard)))
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    NotNull(user);
+                }
+
+                await Sharding.Resharding.MoveShardForId(store, id, toShard);
+
+                var exists = WaitForDocument<User>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard));
+                True(exists);
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, toShard)))
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    NotNull(user);
+                }
+
+                // the document will be written to the new location
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    user.Name = "New shard";
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, originalDocShard)))
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Null(user);
+                }
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, toShard)))
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    Equal("New shard", user.Name);
                 }
             }
         }
@@ -261,6 +362,15 @@ namespace SlowTests.Sharding.Cluster
                 Server = cluster.Leader
             });
             
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User
+                {
+                    Count = 10
+                }, "users/1-A");
+                session.SaveChanges();
+            }
+
             using (var session = store.OpenSession())
             {
                 session.Store(new User

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -17,9 +18,8 @@ namespace Raven.Server.Documents.Sharding.Executors
         private readonly Dictionary<int, RequestExecutor> _requestExecutors;
         private readonly int[] _fullRange;
 
-        public ShardExecutor(ServerStore store, ShardedDatabaseContext databaseContext) : base(store)
+        public ShardExecutor(ServerStore store, DatabaseRecord record, string databaseName) : base(store)
         {
-            var record = databaseContext.DatabaseRecord;
             _fullRange = record.Sharding.Shards.Keys.ToArray();
             
             _requestExecutors = new Dictionary<int, RequestExecutor>(record.Sharding.Shards.Count);
@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Sharding.Executors
                 var urls = record.Sharding.Shards[shardToTopology.Key].AllNodes.Select(tag => allNodes[tag]).ToArray();
                 _requestExecutors[shardToTopology.Key] = RequestExecutor.CreateForServer(
                     urls,
-                    ShardHelper.ToShardName(databaseContext.DatabaseName, shardToTopology.Key),
+                    ShardHelper.ToShardName(databaseName, shardToTopology.Key),
                     store.Server.Certificate.Certificate,
                     DocumentConventions.DefaultForServer);
             }

@@ -26,14 +26,14 @@ public class ShardedServerMultiOperation : AbstractShardedMultiOperation
         
         var nodeTag = ShardedDatabaseContext.ShardsTopology[shardNumber].Members[0];
         
-        await ShardedDatabaseContext.AllNodesExecutor.ExecuteForNodeAsync(command, nodeTag, token);
+        await ShardedDatabaseContext.AllOrchestratorNodesExecutor.ExecuteForNodeAsync(command, nodeTag, token);
 
         return command.Result;
     }
 
     public override Operation CreateOperationInstance(ShardedDatabaseIdentifier key, long operationId)
     {
-        var executor = ShardedDatabaseContext.AllNodesExecutor.GetRequestExecutorForNode(key.NodeTag);
+        var executor = ShardedDatabaseContext.AllOrchestratorNodesExecutor.GetRequestExecutorForNode(key.NodeTag);
         return new ServerWideOperation(executor, DocumentConventions.DefaultForServer, operationId, key.NodeTag);
     }
 
@@ -45,7 +45,7 @@ public class ShardedServerMultiOperation : AbstractShardedMultiOperation
             foreach (var (key, operation) in Operations)
             {
                 var command = new KillServerOperationCommand(operation.Id);
-                tasks.Add(ShardedDatabaseContext.AllNodesExecutor.ExecuteForNodeAsync(command, key.NodeTag, token));
+                tasks.Add(ShardedDatabaseContext.AllOrchestratorNodesExecutor.ExecuteForNodeAsync(command, key.NodeTag, token));
             }
 
             await Task.WhenAll(tasks);

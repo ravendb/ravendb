@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             var result = task.Result;
 
             var op = new WaitForIndexNotificationOperation(result.Index);
-            _shardedDatabase.DatabaseContext.AllNodesExecutor.ExecuteParallelForAllAsync(op).Wait(_shardedDatabase.DatabaseShutdown);
+            _shardedDatabase.DatabaseContext.AllOrchestratorNodesExecutor.ExecuteParallelForAllAsync(op).Wait(_shardedDatabase.DatabaseShutdown);
         }
 
         public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger) => 
