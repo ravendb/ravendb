@@ -822,6 +822,50 @@ select project(o)")
             }
         }
 
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Simple_collection_query_with_projection()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Grisha", Age = 1 }, "users/1");
+                    session.SaveChanges();
+
+                    var queryResult = session.Query<User>()
+                        .Where(x => x.Id == "users/1")
+                        .Select(x => new
+                        {
+                            x.Age
+                        })
+                        .ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal(1, queryResult[0].Age);
+
+                    var queryResult2 = session.Query<User>()
+                        .Where(x => x.Id == "users/1")
+                        .Select(x => new
+                        {
+                            x.Age,
+                            x.Name
+                        })
+                        .ToList();
+
+                    Assert.Equal(1, queryResult2.Count);
+                    Assert.Equal(1, queryResult2[0].Age);
+                    Assert.Equal("Grisha", queryResult2[0].Name);
+
+                    var queryResult3 = session.Advanced.RawQuery<User>("from Users as u where id() = 'users/1' select { Age: u.Age, Name: u.Name }")
+                        .ToList();
+
+                    Assert.Equal(1, queryResult3.Count);
+                    Assert.Equal(1, queryResult3[0].Age);
+                    Assert.Equal("Grisha", queryResult3[0].Name);
+                }
+            }
+        }
+
         private class AgeResult
         {
             public int Age { get; set; }
