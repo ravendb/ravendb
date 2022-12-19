@@ -44,7 +44,7 @@ namespace FastTests.Corax
             {
                 using var searcher = new IndexSearcher(Env, mapping);
 
-                var match = searcher.Suggest(ContentId, "road", false, StringDistanceAlgorithm.None, 0);
+                var match = searcher.Suggest(searcher.FieldMetadataBuilder("Content", 1), "road", false, StringDistanceAlgorithm.None, 0);
 
                 Span<byte> terms = stackalloc byte[1024];
                 Span<Token> tokens = stackalloc Token[16];
@@ -66,7 +66,7 @@ namespace FastTests.Corax
             {
                 using var searcher = new IndexSearcher(Env, mapping);
 
-                var match = searcher.Suggest(ContentId, "road", false, StringDistanceAlgorithm.NGram, 0.35f);
+                var match = searcher.Suggest(searcher.FieldMetadataBuilder("Content", 1), "road", false, StringDistanceAlgorithm.NGram, 0.35f);
 
                 Span<byte> terms = stackalloc byte[1024];
                 Span<Token> tokens = stackalloc Token[16];
@@ -99,6 +99,7 @@ namespace FastTests.Corax
             using var mapping = CreateKnownFields(bsc);
 
             IndexEntries(bsc, new[] { entry1, entry2, entry3 }, mapping);
+            mapping.TryGetByFieldId(1, out var contentField);
 
             {
                 using var indexWriter = new IndexWriter(Env, mapping);
@@ -109,7 +110,7 @@ namespace FastTests.Corax
             {
                 using var searcher = new IndexSearcher(Env, mapping);
 
-                var match = searcher.Suggest(ContentId, "road", false, StringDistanceAlgorithm.None, 0f);
+                var match = searcher.Suggest(contentField.Metadata, "road", false, StringDistanceAlgorithm.None, 0f);
 
                 Span<byte> terms = stackalloc byte[1024];
                 Span<Token> tokens = stackalloc Token[16];
@@ -134,12 +135,13 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
             using var mapping = CreateKnownFields(bsc, Analyzer.DefaultAnalyzer);
+            mapping.TryGetByFieldId(1, out var contentField);
 
             IndexEntries(bsc, new[] { entry1, entry2, entry3, entry4, entry5 }, mapping);
             {
                 using var searcher = new IndexSearcher(Env, mapping);
-
-                var match = searcher.Suggest(ContentId, "road lakz", true, StringDistanceAlgorithm.Levenshtein, 0.5f);
+                searcher.FieldMetadataBuilder("Content", 1);
+                var match = searcher.Suggest(contentField.Metadata, "road lakz", true, StringDistanceAlgorithm.Levenshtein, 0.5f);
 
                 Span<byte> terms = stackalloc byte[1024];
                 Span<Token> tokens = stackalloc Token[16];

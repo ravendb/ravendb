@@ -83,11 +83,11 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
         var sortByPopularity = options.SortMode == SuggestionSortMode.Popularity;
         var match = options.Distance switch
         {
-            StringDistanceTypes.JaroWinkler => _indexSearcher.Suggest(_binding.FieldId, word, sortByPopularity, StringDistanceAlgorithm.JaroWinkler,
+            StringDistanceTypes.JaroWinkler => _indexSearcher.Suggest(_binding.Metadata, word, sortByPopularity, StringDistanceAlgorithm.JaroWinkler,
                 options.Accuracy ?? SuggestionOptions.DefaultAccuracy, options.PageSize),
-            StringDistanceTypes.NGram => _indexSearcher.Suggest(_binding.FieldId, word, sortByPopularity, StringDistanceAlgorithm.NGram,
+            StringDistanceTypes.NGram => _indexSearcher.Suggest(_binding.Metadata, word, sortByPopularity, StringDistanceAlgorithm.NGram,
                 options.Accuracy ?? SuggestionOptions.DefaultAccuracy, options.PageSize),
-            _ => _indexSearcher.Suggest(_binding.FieldId, word, sortByPopularity, StringDistanceAlgorithm.Levenshtein,
+            _ => _indexSearcher.Suggest(_binding.Metadata, word, sortByPopularity, StringDistanceAlgorithm.Levenshtein,
                 options.Accuracy ?? SuggestionOptions.DefaultAccuracy, options.PageSize)
         };
         

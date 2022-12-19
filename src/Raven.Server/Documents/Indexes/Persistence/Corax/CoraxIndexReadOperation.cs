@@ -443,7 +443,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             HashSet<string> results = new();
             
-            if (_indexSearcher.TryGetTermsOfField(field, out var terms) == false)
+            if (_indexSearcher.TryGetTermsOfField(_indexSearcher.FieldMetadataBuilder(field), out var terms) == false)
                 return results;
             
             if (fromValue is not null)
@@ -516,7 +516,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             builderParameters = new (_indexSearcher, _allocator, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
                 _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, null);
-            var mlt = new RavenRavenMoreLikeThis(builderParameters, options);
+            using var mlt = new RavenRavenMoreLikeThis(builderParameters, options);
             long? baseDocId = null;
 
             if (moreLikeThisQuery.BaseDocument == null)

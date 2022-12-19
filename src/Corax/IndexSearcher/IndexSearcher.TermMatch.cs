@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Corax.Mappings;
 using Corax.Queries;
 using Sparrow.Compression;
 using Voron;
@@ -13,83 +14,53 @@ namespace Corax;
 
 public partial class IndexSearcher
 {
-    public TermMatch TermQuery(Slice field, string term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    /// <summary>
+    ///  Test API, should not be used anywhere else
+    /// </summary>
+    public TermMatch TermQuery(string field, string term) => TermQuery(FieldMetadataBuilder(field), term);
+    public TermMatch TermQuery(string field, Slice term) => TermQuery(FieldMetadataBuilder(field), term);
+    public TermMatch TermQuery(Slice field, Slice term) => TermQuery(FieldMetadata.Build(field, default, default, default), term);
+
+    
+    public TermMatch TermQuery(FieldMetadata field, string term, CompactTree termsTree = null)
     {
-        var terms = _fieldsTree?.CompactTreeFor(field);
+        var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 
             return TermMatch.CreateEmpty(Allocator);
         }
 
-        Slice termSlice;
-        if (term == Constants.NullValue)
-            termSlice = Constants.NullValueSlice;
-        else if (term == Constants.EmptyString)
-            termSlice = Constants.EmptyStringSlice;
-        else
-            termSlice = EncodeAndApplyAnalyzer(term, fieldId);
-
-        return TermQuery(terms, termSlice, fieldId);
-    }
-
-    public TermMatch TermQuery(string field, string term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
-    {
-        var terms = _fieldsTree?.CompactTreeFor(field);
-        if (terms == null)
+        var termSlice = term switch
         {
-            // If either the term or the field does not exist the request will be empty. 
-            return TermMatch.CreateEmpty(Allocator);
-        }
-
-        Slice termSlice;
-        if (term == Constants.NullValue)
-            termSlice = Constants.NullValueSlice;
-        else if (term == Constants.EmptyString)
-            termSlice = Constants.EmptyStringSlice;
-        else
-            termSlice = EncodeAndApplyAnalyzer(term, fieldId);
-
-        return TermQuery(terms, termSlice, fieldId);
-    }
-
-    //This overload will die with current impl of InQuery
-    internal TermMatch TermQuery(CompactTree tree, string term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
-    {
-        return TermQuery(tree, EncodeAndApplyAnalyzer(term, fieldId), fieldId);
-    }
-
-    internal TermMatch TermQuery(string field, Slice term)
-    {
-        var terms = _fieldsTree?.CompactTreeFor(field);
-        if (terms == null)
-        {
-            // If either the term or the field does not exist the request will be empty. 
-            return TermMatch.CreateEmpty(Allocator);
-        }
-
-        return TermQuery(terms, term);
-    }
-
-    internal TermMatch TermQuery(Slice field, Slice term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
-    {
-        var terms = _fieldsTree?.CompactTreeFor(field);
-        if (terms == null)
-        {
-            // If either the term or the field does not exist the request will be empty. 
-            return TermMatch.CreateEmpty(Allocator);
-        }
-
-        return TermQuery(terms, term, fieldId);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal TermMatch TermQuery(CompactTree tree, Slice term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
-    {
-        return TermQuery(tree, term.AsReadOnlySpan(), fieldId);
+            Constants.NullValue => Constants.NullValueSlice,
+            Constants.EmptyString => Constants.EmptyStringSlice,
+            _ => EncodeAndApplyAnalyzer(field, term)
+        };
+        
+        return TermQuery(terms, termSlice.AsReadOnlySpan());
     }
     
-    internal TermMatch TermQuery(CompactTree tree, ReadOnlySpan<byte> term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    //Should be already analyzed...
+    public TermMatch TermQuery(FieldMetadata field, Slice term, CompactTree termsTree = null)
+    {
+        var terms = termsTree ?? _fieldsTree?.CompactTreeFor(field.FieldName);
+        if (terms == null)
+        {
+            // If either the term or the field does not exist the request will be empty. 
+            return TermMatch.CreateEmpty(Allocator);
+        }
+        
+        return TermQuery(terms, term);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal TermMatch TermQuery(CompactTree tree, Slice term)
+    {
+        return TermQuery(tree, term.AsReadOnlySpan());
+    }
+    
+    internal TermMatch TermQuery(CompactTree tree, ReadOnlySpan<byte> term)
     {
         if (tree.TryGetValue(term, out var value) == false)
             return TermMatch.CreateEmpty(Allocator);
@@ -127,22 +98,20 @@ public partial class IndexSearcher
         return matches;
     }
 
-    public long TermAmount(string field, string term, int fieldId)
+    public long TermAmount(FieldMetadata binding, string term)
     {
-        var terms = _fieldsTree?.CompactTreeFor(field);
+        var terms = _fieldsTree?.CompactTreeFor(binding.FieldName);
         if (terms == null)
-        {
-            // If either the term or the field does not exist the request will be empty. 
             return 0;
-        }
-
-        if (term is null)
-            return TermAmount(terms, Constants.NullValueSlice);
-        if (term.Length == 0)
-            return TermAmount(terms, Constants.EmptyStringSlice);
-
-        var encodedSlice = EncodeAndApplyAnalyzer(term, fieldId);
-        return TermAmount(terms, encodedSlice);
+        
+        var termSlice = term switch
+        {
+            Constants.NullValue => Constants.NullValueSlice,
+            Constants.EmptyString => Constants.EmptyStringSlice,
+            _ => EncodeAndApplyAnalyzer(binding, term)
+        };
+        
+        return TermAmount(terms, termSlice);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -8,6 +8,7 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Corax.Mappings;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -28,18 +29,17 @@ namespace Corax.Queries
         where THigh  : struct, Range.Marker
     {
         private readonly IndexSearcher _searcher;
-        private readonly Slice _fieldName;
+        private readonly FieldMetadata _field;
         private readonly Slice _low, _high;
         private readonly CompactTree _tree;
         private CompactTree.Iterator _iterator;
         private bool _skipLowCheck;
         private readonly bool _skipHighCheck;
 
-        public TermRangeProvider(IndexSearcher searcher, CompactTree tree, Slice fieldName, 
-            Slice low, Slice high)
+        public TermRangeProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice low, Slice high)
         {
             _searcher = searcher;
-            _fieldName = fieldName;
+            _field = field;
             _iterator = tree.Iterate();
             _low = low;
             _high = high;
@@ -106,7 +106,7 @@ namespace Corax.Queries
             return new QueryInspectionNode($"{GetType().Name}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _fieldName.ToString() },
+                                { "Field", _field.ToString() },
                                 { "Low", _low.ToString()},
                                 { "High", _high.ToString()}
                             });
@@ -122,7 +122,7 @@ namespace Corax.Queries
         where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>, INumber<TVal>
     {
         private readonly IndexSearcher _searcher;
-        private readonly Slice _fieldName;
+        private readonly FieldMetadata _field;
         private readonly TVal _low, _high;
         private readonly CompactTree _tree;
         private readonly FixedSizeTree<TVal> _set;
@@ -133,10 +133,10 @@ namespace Corax.Queries
         private fixed byte _termsBuffer[TermBufferSize];
 
         public TermNumericRangeProvider(IndexSearcher searcher, FixedSizeTree<TVal> set,
-            CompactTree tree, Slice fieldName, TVal low, TVal high)
+            CompactTree tree, FieldMetadata field, TVal low, TVal high)
         {
             _searcher = searcher;
-            _fieldName = fieldName;
+            _field = field;
             _iterator = set.Iterate();
             _low = low;
             _high = high;
@@ -199,7 +199,7 @@ namespace Corax.Queries
             return new QueryInspectionNode($"{GetType().Name}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _fieldName.ToString() },
+                                { "Field", _field.ToString() },
                                 { "Low", _low.ToString()},
                                 { "High", _high.ToString()}
                             });

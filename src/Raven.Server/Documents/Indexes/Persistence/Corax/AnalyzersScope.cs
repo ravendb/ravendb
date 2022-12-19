@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Mappings;
 using Corax.Pipeline;
@@ -23,13 +24,35 @@ internal class AnalyzersScope : IDisposable
         _knownFields = fieldsMapping;
         _hasDynamics = hasDynamics;
         _analyzersCache = new(SliceComparer.Instance);
-        
+        UnlikelyGrowBuffer(128, 128);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Execute(Slice fieldName, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens)
     {
         Analyzer analyzer = GetAnalyzer(fieldName);
+        ExecuteAnalyze(analyzer, source, out buffer, out tokens);
+    }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Execute(FieldMetadata field, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens, bool exact)
+    {
+        
+        if (field.Mode == FieldIndexingMode.Exact || field.Analyzer == null || exact)
+        {
+            buffer = source;
+            _tokensBuffer[0] = new Token() {Length = (uint)source.Length, Offset = 0, Type = TokenType.Term};
+            tokens = _tokensBuffer.AsSpan(0, 1);
+            return;
+        }
+
+        var analyzer = field.Analyzer;
+        
+        ExecuteAnalyze(analyzer, source, out buffer, out tokens);
+    }
+    
+    private void ExecuteAnalyze(Analyzer analyzer, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens)
+    {
         analyzer.GetOutputBuffersSize(source.Length, out var outputSize, out var tokensSize);
 
         if ((_tokensBuffer?.Length ?? 0) < tokensSize && (_outputBuffer?.Length ?? 0 ) < outputSize)
@@ -44,7 +67,7 @@ internal class AnalyzersScope : IDisposable
         tokens = tokenOutput;
     }
 
-    private Analyzer GetAnalyzer(Slice fieldName)
+    private Analyzer GetAnalyzer(Slice fieldName, FieldMetadata field = default)
     {
         Analyzer analyzer;
         if (_analyzersCache.ContainsKey(fieldName))

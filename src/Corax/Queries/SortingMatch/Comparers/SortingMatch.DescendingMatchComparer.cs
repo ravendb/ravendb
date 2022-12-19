@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Corax.Mappings;
+using Corax.Utils;
 
 namespace Corax.Queries;
 
@@ -8,26 +10,26 @@ unsafe partial struct SortingMatch
     public unsafe struct DescendingMatchComparer : IMatchComparer
     {
         private readonly IndexSearcher _searcher;
-        private readonly int _fieldId;
+        private readonly FieldMetadata _field;
         private readonly delegate*<ref DescendingMatchComparer, long, long, int> _compareFunc;
         private readonly MatchCompareFieldType _fieldType;
 
-        public int FieldId => _fieldId;
+        public FieldMetadata Field => _field;
         public MatchCompareFieldType FieldType => _fieldType;
 
-        public DescendingMatchComparer(IndexSearcher searcher, int fieldId, MatchCompareFieldType entryFieldType)
+        public DescendingMatchComparer(IndexSearcher searcher, OrderMetadata orderMetadata)
         {
             _searcher = searcher;
-            _fieldId = fieldId;
-            _fieldType = entryFieldType;
+            _field = orderMetadata.Field;
+            _fieldType = orderMetadata.FieldType;
 
             static int CompareWithLoadSequence(ref DescendingMatchComparer comparer, long x, long y)
             {
-                var readerX = comparer._searcher.GetReaderFor(x);
-                var readX = readerX.GetReaderFor(comparer._fieldId).Read( out var resultX);
+                var readerX = comparer._searcher.GetEntryReaderFor(x);
+                var readX = readerX.GetFieldReaderFor(comparer._field).Read( out var resultX);
 
-                var readerY = comparer._searcher.GetReaderFor(y);
-                var readY = readerY.GetReaderFor(comparer._fieldId).Read( out var resultY);
+                var readerY = comparer._searcher.GetEntryReaderFor(y);
+                var readY = readerY.GetFieldReaderFor(comparer._field).Read( out var resultY);
 
                 if (readX && readY)
                 {
@@ -41,11 +43,11 @@ unsafe partial struct SortingMatch
 
             static int CompareWithLoadNumerical<T>(ref DescendingMatchComparer comparer, long x, long y) where T : unmanaged
             {
-                var readerX = comparer._searcher.GetReaderFor(x);
-                var readX = readerX.GetReaderFor(comparer.FieldId).Read<T>(out var resultX);
+                var readerX = comparer._searcher.GetEntryReaderFor(x);
+                var readX = readerX.GetFieldReaderFor(comparer._field).Read<T>(out var resultX);
 
-                var readerY = comparer._searcher.GetReaderFor(y);
-                var readY = readerY.GetReaderFor(comparer.FieldId).Read<T>(out var resultY);
+                var readerY = comparer._searcher.GetEntryReaderFor(y);
+                var readY = readerY.GetFieldReaderFor(comparer._field).Read<T>(out var resultY);
 
                 if (readX && readY)
                 {
@@ -57,7 +59,7 @@ unsafe partial struct SortingMatch
                 return 1;
             }
 
-            _compareFunc = entryFieldType switch
+            _compareFunc = _fieldType switch
             {
                 MatchCompareFieldType.Sequence => &CompareWithLoadSequence,
                 MatchCompareFieldType.Integer => &CompareWithLoadNumerical<long>,

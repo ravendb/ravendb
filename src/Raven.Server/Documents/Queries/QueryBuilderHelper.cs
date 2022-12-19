@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Utils;
 using Mono.Unix.Native;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -509,55 +510,56 @@ public static class QueryBuilderHelper
         throw new InvalidQueryException("Expected field, got: " + field, query.QueryText, parameters);
     }
 
-    internal static int GetFieldIdForOrderBy(ByteStringContext allocator, string fieldName, Index index, bool hasDynamics, Lazy<List<string>> dynamicFields, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
+    internal static FieldMetadata GetFieldIdForOrderBy(ByteStringContext allocator, string fieldName, Index index, bool hasDynamics, Lazy<List<string>> dynamicFields, IndexFieldsMapping indexMapping = null, FieldsToFetch queryMapping = null,
         bool isForQuery = true)
     {
         if (fieldName is "score()")
-            return ScoreId;
+            return FieldMetadata.Build(allocator, fieldName, -1, FieldIndexingMode.Normal, null);
 
-        return GetFieldId(allocator, fieldName, index, indexMapping, queryMapping, hasDynamics, dynamicFields, isForQuery);
+        
+        
+        return GetFieldMetadata(allocator, fieldName, index, indexMapping, queryMapping, hasDynamics, dynamicFields, isForQuery, isSorting: true);
     }
 
-    internal static int GetFieldId(ByteStringContext allocator, string fieldName, Index index, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
-        bool exact = false)
+    internal static FieldMetadata GetFieldMetadata(ByteStringContext allocator, string fieldName, Index index, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
+        bool exact = false, bool isSorting = false)
     {
-        if (exact)
-            return Corax.Constants.IndexSearcher.NonAnalyzer;
-        
         RuntimeHelpers.EnsureSufficientExecutionStack();
-        if (fieldName.Equals(Client.Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) ||
-            fieldName is Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-            return 0;
 
-        if (index.IndexFieldsPersistence.HasTimeValues(fieldName))
-            return Corax.Constants.IndexSearcher.NonAnalyzer;
+        if (fieldName.Equals(Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase) 
+            || fieldName is Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+        {
+            var metadata = indexMapping.GetByFieldId(0).Metadata;
+            return exact 
+                ? FieldMetadata.Build(metadata.FieldName, 0, FieldIndexingMode.Exact, null) 
+                : metadata;
+        }
         
         if (isForQuery == false)
         {
             if (fieldName is "score" or "score()")
-                return ScoreId;
+                return FieldMetadata.Build(default, default, default, default);
         }
 
-        IndexField indexField = null;
-        IndexFieldBinding binding = null;
-        if (queryMapping?.IndexFields.TryGetValue(fieldName, out indexField) is null or false &&
-            indexMapping?.TryGetByFieldName(allocator, fieldName, out binding) is null or false)
+        var shouldTurnOffAnalyzersForTime = index.IndexFieldsPersistence.HasTimeValues(fieldName) && isSorting == false;
+
+        if (indexMapping.TryGetByFieldName(allocator, fieldName, out var indexFinding))
         {
-            if (hasDynamics && dynamicFields.Value.Contains(fieldName))
-                return Corax.Constants.IndexWriter.DynamicField;
-            
-            ThrowNotFoundInIndex();
+            return exact || shouldTurnOffAnalyzersForTime
+                ? indexFinding.Metadata.ChangeAnalyzer(FieldIndexingMode.Exact) 
+                : indexFinding.Metadata;
         }
-
-        if (indexField?.Indexing == FieldIndexing.No || binding?.FieldIndexingMode == FieldIndexingMode.No)
+        else
         {
-            ThrowFieldIsNotIndexed();
+            if (hasDynamics == false)
+                ThrowNotFoundInIndex();
+
+            var mode = shouldTurnOffAnalyzersForTime || exact 
+                ? FieldIndexingMode.Exact 
+                : FieldIndexingMode.Normal;
+            return FieldMetadata.Build(allocator, fieldName, Corax.Constants.IndexWriter.DynamicField, mode, indexMapping.DefaultAnalyzer);
         }
-
-        return indexField?.Id ?? binding?.FieldId ??
-            throw new InvalidQueryException($"{nameof(IndexFieldBinding)} or {nameof(IndexFieldsMapping)} not found in {nameof(CoraxQueryBuilder)}.");
-
-
+        
         void ThrowFieldIsNotIndexed() =>
             throw new InvalidQueryException($"Field {fieldName} is not indexed in Index {index.Name}. You can index it by changing `Indexing` option from `No`.");
 
@@ -619,7 +621,7 @@ public static class QueryBuilderHelper
         _ => value?.ToString()
     };
 
-    internal static ComparerType GetComparerType(bool ascending, MatchCompareFieldType original, int fieldId) => (ascending, original, fieldId) switch
+    internal static ComparerType GetComparerType(bool ascending, OrderMetadata order) => (ascending, order.FieldType, order.Field.FieldId) switch
     {
         (true, MatchCompareFieldType.Spatial, _) => ComparerType.AscendingSpatial,
         (false, MatchCompareFieldType.Spatial, _) => ComparerType.DescendingSpatial,

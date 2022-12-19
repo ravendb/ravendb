@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -38,8 +39,8 @@ namespace StressTests.Corax
             {
                 var match1 = searcher.AllEntries();
 
-                var comparer1 = new DescendingMatchComparer(searcher, Content1, MatchCompareFieldType.Integer);
-                var comparer2 = new AscendingMatchComparer(searcher, Content2, MatchCompareFieldType.Integer);
+                var comparer1 = new DescendingMatchComparer(searcher, new OrderMetadata(searcher.FieldMetadataBuilder("Content1", Content1), false, MatchCompareFieldType.Integer));
+                var comparer2 = new AscendingMatchComparer(searcher, new OrderMetadata(searcher.FieldMetadataBuilder("Content2", Content2), true, MatchCompareFieldType.Integer));
                 var match = SortingMultiMatch.Create(searcher, match1, comparer1, comparer2);
 
                 List<string> sortedByCorax = new();
@@ -72,8 +73,8 @@ namespace StressTests.Corax
             {
                 var match1 = searcher.AllEntries();
 
-                var comparer1 = new AscendingMatchComparer(searcher, Content1, MatchCompareFieldType.Integer);
-                var comparer2 = new DescendingMatchComparer(searcher, Content2, MatchCompareFieldType.Integer);
+                var comparer1 = new DescendingMatchComparer(searcher, new OrderMetadata(searcher.FieldMetadataBuilder("Content1", Content1), false, MatchCompareFieldType.Integer));
+                var comparer2 = new AscendingMatchComparer(searcher, new OrderMetadata(searcher.FieldMetadataBuilder("Content2", Content2), true, MatchCompareFieldType.Integer));
                
                 var match = SortingMultiMatch.Create(searcher, match1, comparer1, comparer2);
 
@@ -112,9 +113,9 @@ namespace StressTests.Corax
             {
                 //var match = searcher.Or(searcher.Boost(searcher.GreaterThan(searcher.AllEntries(), Content1, 2137), 1000),
                 //    searcher.LessThan(searcher.AllEntries(), Content1, 99L));
-                var match = searcher.Boost(searcher.UnaryQuery(searcher.AllEntries(), Content1, 2137, UnaryMatchOperation.GreaterThanOrEqual), 1000);
+                var match = searcher.Boost(searcher.UnaryQuery(searcher.AllEntries(), searcher.FieldMetadataBuilder("Content1", Content1), 2137, UnaryMatchOperation.GreaterThanOrEqual), 1000);
                 var sorted = SortingMultiMatch.Create(searcher, match, default(BoostingComparer),
-                    new AscendingMatchComparer(searcher, IndexId, MatchCompareFieldType.Sequence));
+                    new AscendingMatchComparer(searcher, new OrderMetadata(searcher.FieldMetadataBuilder("Id", IndexId), true, MatchCompareFieldType.Sequence)));
                 var read = sorted.Fill(_buffer);
 
                 var localResult = longList.Where(x => x.Content1 >= 2137).OrderBy(o => o.Content1).ThenBy(o => o.Id).Select(ll => ll.Id).ToList();

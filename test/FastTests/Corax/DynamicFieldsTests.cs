@@ -41,7 +41,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         using var __ = writer.Finish(out ByteString element);
         IndexEntryReader reader = new(element.Ptr, element.Length);
         
-        var fieldReader = reader.GetReaderFor(Encoding.UTF8.GetBytes(fieldName));
+        var fieldReader = reader.GetFieldReaderFor(Encoding.UTF8.GetBytes(fieldName));
         Assert.Equal(IndexEntryFieldType.Empty, fieldReader.Type);
     }
 
@@ -75,21 +75,21 @@ public unsafe class DynamicFieldsTests : StorageTest
         using ByteStringContext<ByteStringMemoryCache>.InternalScope __ = writer.Finish(out ByteString element);
 
         IndexEntryReader reader = new(element.Ptr, element.Length);
-        reader.GetReaderFor(0).Read(out long longValue);
+        reader.GetFieldReaderFor(0).Read(out long longValue);
         Assert.Equal(1, longValue);
-        reader.GetReaderFor(Encoding.UTF8.GetBytes("Name_123")).Read(out Span<byte> value);
+        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Name_123")).Read(out Span<byte> value);
         Assert.Equal("Oren", Encoding.UTF8.GetString(value));
-        reader.GetReaderFor(Encoding.UTF8.GetBytes("Name_433")).Read(out value);
+        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Name_433")).Read(out value);
         Assert.Equal("Eini", Encoding.UTF8.GetString(value));
 
-        reader.GetReaderFor(Encoding.UTF8.GetBytes("Age_0")).Read(out long lv);
+        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Age_0")).Read(out long lv);
         Assert.Equal(30, lv);
-        reader.GetReaderFor(Encoding.UTF8.GetBytes("Age_0")).Read(out double dl);
+        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Age_0")).Read(out double dl);
         Assert.Equal(30.31, dl);
         
-        reader.GetReaderFor(Encoding.UTF8.GetBytes("Age_1")).Read(out  lv);
+        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Age_1")).Read(out  lv);
         Assert.Equal(10, lv);
-        reader.GetReaderFor(Encoding.UTF8.GetBytes("Age_1")).Read(out  dl);
+        reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Age_1")).Read(out  dl);
         Assert.Equal(10, dl);
         
         using (var indexer = new IndexWriter(Env, knownFields))
@@ -101,7 +101,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         using (var searcher = new IndexSearcher(Env, knownFields))
         {
             Span<long> ids = new long[16];
-            var entries = searcher.GreaterThanQuery("Age_1", 5L, new NullScoreFunction());
+            var entries = searcher.GreaterThanQuery(searcher.FieldMetadataBuilder("Age_1"), 5L, new NullScoreFunction());
             Assert.Equal(1, entries.Fill(ids));
         }
         
@@ -162,9 +162,9 @@ public unsafe class DynamicFieldsTests : StorageTest
                 var entries = searcher.TermQuery("Coordinates_Home", partialGeohash);
                 Assert.Equal(1, entries.Fill(ids));
 
-                var reader = searcher.GetReaderFor(ids[0]);
+                var reader = searcher.GetEntryReaderFor(ids[0]);
 
-                reader.GetReaderFor(Encoding.UTF8.GetBytes("Coordinates_Home")).Read(out (double, double) coords);
+                reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("Coordinates_Home")).Read(out (double, double) coords);
                 Assert.Equal(coords.Item1, latitude);
                 Assert.Equal(coords.Item2, longitude);
             }
@@ -216,7 +216,7 @@ public unsafe class DynamicFieldsTests : StorageTest
 
         var reader = new IndexEntryReader(buffer.Ptr, buffer.Length);
 
-        var fieldReader = reader.GetReaderFor(Encoding.UTF8.GetBytes("CoordinatesIndex"));
+        var fieldReader = reader.GetFieldReaderFor(Encoding.UTF8.GetBytes("CoordinatesIndex"));
 
         Assert.True(fieldReader.TryReadManySpatialPoint(out SpatialPointFieldIterator iterator));
         List<CoraxSpatialPointEntry> entriesInIndex = new();

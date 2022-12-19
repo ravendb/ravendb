@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Mappings;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
@@ -41,7 +41,7 @@ namespace Corax.Queries
             {
                 _fillFunc = _comparer.FieldType switch
                 {
-                    MatchCompareFieldType.Sequence => &Fill<SequenceItem>,
+                    MatchCompareFieldType.Sequence or MatchCompareFieldType.Alphanumeric => &Fill<SequenceItem>,
                     MatchCompareFieldType.Integer => &Fill<NumericalItem<long>>,
                     MatchCompareFieldType.Floating => &Fill<NumericalItem<double>>,
                     MatchCompareFieldType.Spatial => &Fill<NumericalItem<double>>,
@@ -51,7 +51,7 @@ namespace Corax.Queries
             }
         }
 
-        public long Count => throw new NotSupportedException();
+        public long Count => _inner.Count;
 
         public QueryCountConfidence Confidence => throw new NotSupportedException();
 
@@ -69,18 +69,18 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool Get<TOut, TIn>(IndexSearcher searcher, int fieldId, long x, out TOut storedValue, in TIn comparer) 
+        private static bool Get<TOut, TIn>(IndexSearcher searcher, FieldMetadata binding, long entryId, out TOut storedValue, in TIn comparer) 
             where TOut : struct
             where TIn : IMatchComparer
         {
-            var reader = searcher.GetReaderFor(x);
+            var reader = searcher.GetEntryReaderFor(entryId);
     
             if (typeof(TIn) == typeof(SpatialAscendingMatchComparer))
             {
                 if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
                     goto Failed;
 
-                var readX = reader.GetReaderFor(fieldId).Read(out (double lat, double lon) coordinates);
+                var readX = reader.GetFieldReaderFor(binding).Read(out (double lat, double lon) coordinates);
                 var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
                 
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
@@ -91,7 +91,7 @@ namespace Corax.Queries
                 if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
                     goto Failed;
                 
-                var readX = reader.GetReaderFor(fieldId).Read( out (double lat, double lon) coordinates);
+                var readX = reader.GetFieldReaderFor(binding).Read( out (double lat, double lon) coordinates);
                 var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
 
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
@@ -99,7 +99,7 @@ namespace Corax.Queries
             }
             else if (typeof(TOut) == typeof(SequenceItem))
             {
-                var readX = reader.GetReaderFor(fieldId).Read( out var sv);
+                var readX = reader.GetFieldReaderFor(binding).Read( out var sv);
                 fixed (byte* svp = sv)
                 {
                     storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
@@ -108,13 +108,13 @@ namespace Corax.Queries
             }
             else if (typeof(TOut) == typeof(NumericalItem<long>))
             {
-                var readX = reader.GetReaderFor(fieldId).Read<long>(out var value);
+                var readX = reader.GetFieldReaderFor(binding).Read<long>(out var value);
                 storedValue = (TOut)(object)new NumericalItem<long>(value);
                 return readX;
             }
             else if (typeof(TOut) == typeof(NumericalItem<double>))
             {
-                var readX = reader.GetReaderFor(fieldId).Read<double>(out var value);
+                var readX = reader.GetFieldReaderFor(binding).Read<double>(out var value);
                 storedValue = (TOut)(object)new NumericalItem<double>(value);
                 return readX;
             }
@@ -280,11 +280,11 @@ namespace Corax.Queries
             match.TotalResults += totalMatches;
 
             var searcher = match._searcher;
-            var fieldId = match._comparer.FieldId;
+            var field = match._comparer.Field;
             var comparer = new MatchComparer<TComparer, TOut>(match._comparer);
             for (int i = 0; i < totalMatches; i++)
             {
-                var read = Get(searcher, fieldId, matches[i], out matchesKeys[i].Value, match._comparer);
+                var read = Get(searcher, field, matches[i], out matchesKeys[i].Value, match._comparer);
                 matchesKeys[i].Key = read ? matches[i] : -matches[i];
             }
 
@@ -309,7 +309,7 @@ namespace Corax.Queries
                 // We get the keys to sort.
                 for (int i = 0; i < bTotalMatches; i++)
                 {
-                    var read = Get(searcher, fieldId, bValues[i], out bKeys[i].Value, match._comparer);
+                    var read = Get(searcher, field, bValues[i], out bKeys[i].Value, match._comparer);
                     bKeys[i].Key = read ? bValues[i] : -bValues[i];
                 }
 

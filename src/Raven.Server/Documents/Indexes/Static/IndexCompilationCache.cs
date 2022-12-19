@@ -141,6 +141,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 default:
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }
+            
 
             return index;
         }
