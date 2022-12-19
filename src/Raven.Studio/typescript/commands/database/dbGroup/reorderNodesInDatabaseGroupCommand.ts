@@ -3,8 +3,15 @@ import endpoints = require("endpoints");
 
 class reorderNodesInDatabaseGroupCommand extends commandBase {
 
-    constructor(private databaseName: string, private nodesOrder: string[], private fixedTopology: boolean) {
+    private readonly databaseName: string;
+    private readonly nodesOrder: string[];
+    private readonly fixedTopology: boolean;
+
+    constructor(databaseName: string, nodesOrder: string[], fixedTopology: boolean) {
         super();
+        this.fixedTopology = fixedTopology;
+        this.nodesOrder = nodesOrder;
+        this.databaseName = databaseName;
     }
 
     execute(): JQueryPromise<void> {

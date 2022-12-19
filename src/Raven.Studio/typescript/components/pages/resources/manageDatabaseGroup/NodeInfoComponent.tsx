@@ -20,6 +20,7 @@ import {
     RichPanelName,
     RichPanelStatus,
 } from "components/common/RichPanel";
+import { useDrag, useDrop } from "react-dnd";
 
 interface NodeInfoComponentProps {
     node: NodeInfo;
@@ -144,6 +145,82 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
                 )}
             </div>
         </RichPanel>
+    );
+}
+
+interface NodeInfoReorderComponentProps {
+    node: NodeInfo;
+    findCard: (tag: string) => { index: number; card: NodeInfo };
+    moveCard: (tag: string, to: number) => void;
+}
+
+type NodeAndIndex = { node: NodeInfo; originalIndex: number };
+
+export function NodeInfoReorderComponent(props: NodeInfoReorderComponentProps) {
+    const { node, moveCard, findCard } = props;
+
+    const originalIndex = findCard(node.tag).index;
+
+    const [{ isDragging }, drag] = useDrag(
+        () => ({
+            type: "node",
+            item: { node, originalIndex } as NodeAndIndex,
+            collect: (monitor) => ({
+                isDragging: monitor.isDragging(),
+            }),
+            end: (item, monitor) => {
+                const { node: droppedNode, originalIndex } = item;
+                const didDrop = monitor.didDrop();
+                if (!didDrop) {
+                    moveCard(droppedNode.tag, originalIndex);
+                }
+            },
+        }),
+        [node.tag, originalIndex, moveCard]
+    );
+
+    const [, drop] = useDrop(
+        () => ({
+            accept: "node",
+            hover({ node: draggedNode }: NodeAndIndex) {
+                if (draggedNode.tag !== node.tag) {
+                    const { index: overIndex } = findCard(node.tag);
+                    moveCard(draggedNode.tag, overIndex);
+                }
+            },
+        }),
+        [findCard, moveCard]
+    );
+
+    const opacity = isDragging ? 0 : 1;
+
+    return (
+        <div ref={(node) => drag(drop(node))} style={{ opacity }}>
+            <RichPanel className="flex-row">
+                <RichPanelStatus color={nodeBadgeColor(node)}>{nodeBadgeText(node)}</RichPanelStatus>
+
+                <div className="flex-grow-1">
+                    <RichPanelHeader>
+                        <RichPanelName title={node.type}>
+                            <i className={classNames(cssIcon(node), "me-1")} />
+                            Node: {node.tag}
+                        </RichPanelName>
+
+                        <FlexGrow />
+
+                        {node.responsibleNode && (
+                            <div
+                                className="text-center"
+                                title="Database group node that is responsible for caught up of this node"
+                            >
+                                <i className="icon-cluster-node"></i>
+                                <span>{node.responsibleNode}</span>
+                            </div>
+                        )}
+                    </RichPanelHeader>
+                </div>
+            </RichPanel>
+        </div>
     );
 }
 

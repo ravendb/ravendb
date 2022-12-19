@@ -12,6 +12,7 @@ import getDatabaseDetailedStatsCommand from "commands/resources/getDatabaseDetai
 import getDatabaseCommand from "commands/resources/getDatabaseCommand";
 import deleteDatabaseFromNodeCommand from "commands/resources/deleteDatabaseFromNodeCommand";
 import toggleDynamicNodeAssignmentCommand from "commands/database/dbGroup/toggleDynamicNodeAssignmentCommand";
+import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/reorderNodesInDatabaseGroupCommand");
 
 export default class DatabasesService {
     async getDatabase(name: string) {
@@ -40,5 +41,9 @@ export default class DatabasesService {
 
     async toggleDynamicNodeAssignment(db: database, enabled: boolean) {
         return new toggleDynamicNodeAssignmentCommand(db.name, enabled).execute();
+    }
+
+    async reorderNodesInGroup(db: database, tagsOrder: string[], fixOrder: boolean) {
+        return new reorderNodesInDatabaseGroupCommand(db.name, tagsOrder, fixOrder).execute();
     }
 }

@@ -16,11 +16,14 @@ import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import clusterTopology from "models/database/cluster/clusterTopology";
 import { useChanges } from "hooks/useChanges";
 import { useAccessManager } from "hooks/useAccessManager";
+import { ReorderNodes } from "components/pages/resources/manageDatabaseGroup/ReorderNodes";
+import messagePublisher from "common/messagePublisher";
+import { useEventsCollector } from "hooks/useEventsCollector";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { DndProvider } from "react-dnd";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface ManageDatabaseGroupPageProps {
     db: database;
-    //TODO:
 }
 
 function anyNodeHasError(topology: clusterTopology) {
@@ -61,11 +64,11 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     const [sortableMode, setSortableMode] = useState(false);
 
-    //TODO: reorder nodes
-
-    const [state, dispatch] = useReducer(manageDatabaseGroupReducer, null); // TODO initial state?
+    const [state, dispatch] = useReducer(manageDatabaseGroupReducer, null);
 
     const { databasesService } = useServices();
+
+    const { reportEvent } = useEventsCollector();
 
     const { status: licenseStatus } = useLicenseStatus();
 
@@ -126,6 +129,17 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
         return () => sub.off();
     });
 
+    useEffect(() => {
+        const anyError = anyNodeHasError(clusterTopology);
+        //TODO: test this part!
+        if (sortableMode && anyError) {
+            messagePublisher.reportWarning(
+                "Can't reorder nodes, when at least one node is down or voting is in progress."
+            );
+            setSortableMode(false);
+        }
+    }, [clusterTopology, sortableMode]);
+
     const settingsUniqueId = useId("settings");
 
     const addNode = useCallback(() => {
@@ -138,6 +152,24 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
         await databasesService.toggleDynamicNodeAssignment(db, !dynamicDatabaseDistribution);
     }, [dynamicDatabaseDistribution, toggleDynamicDatabaseDistribution, databasesService, db]);
+
+    const enableNodesSort = useCallback(() => {
+        setSortableMode(true);
+    }, []);
+
+    const cancelReorder = useCallback(() => {
+        setSortableMode(false);
+    }, []);
+
+    const saveNewOrder = useCallback(
+        async (tagsOrder: string[], fixOrder: boolean) => {
+            reportEvent("db-group", "save-order");
+            await databasesService.reorderNodesInGroup(db, tagsOrder, fixOrder);
+            setSortableMode(false);
+            await fetchDatabaseInfo(db.name);
+        },
+        [databasesService, db, reportEvent, fetchDatabaseInfo]
+    );
 
     if (!state) {
         return <Spinner />;
@@ -154,60 +186,59 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     );
     const enableDynamicDatabaseDistribution = isOperatorOrAbove() && !dynamicDatabaseDistributionWarning;
 
-    //TODO: review data-bind
-
     return (
         <div className="content-margin">
-            <div className="sticky-header">
-                <Button
-                    className="me-2"
-                    data-bind="click: enableNodesSort, enable: nodes().length > 1, requiredAccess: 'Operator'"
-                >
-                    <i className="icon-reorder me-1" /> Reorder nodes
-                </Button>
-                <Button className="me-2" color="primary" disabled={!addNodeEnabled} onClick={addNode}>
-                    <i className="icon-plus me-1" />
-                    Add node to group
-                </Button>
-                <UncontrolledButtonWithDropdownPanel buttonText="Settings">
-                    <>
-                        <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
-                            <div className={"form-switch form-check-reverse"}>
-                                <Input
-                                    id={settingsUniqueId}
-                                    type="switch"
-                                    role="switch"
-                                    disabled={!enableDynamicDatabaseDistribution}
-                                    checked={dynamicDatabaseDistribution}
-                                    onChange={changeDynamicDatabaseDistribution}
-                                />
-                                Allow dynamic database distribution
-                            </div>
-                        </Label>
-                        {dynamicDatabaseDistributionWarning && (
-                            <div className="bg-faded-warning px-4 py-2">{dynamicDatabaseDistributionWarning}</div>
-                        )}
-                    </>
-                </UncontrolledButtonWithDropdownPanel>
-            </div>
-            <div>
-                {state.nodes.map((node) => (
-                    <NodeInfoComponent key={node.tag} node={node} db={db} databaseLockMode={state.lockMode} />
-                ))}
+            {!sortableMode && (
+                <div className="sticky-header">
+                    <Button
+                        disabled={state.nodes.length === 1 || !isOperatorOrAbove()}
+                        onClick={enableNodesSort}
+                        className="me-2"
+                    >
+                        <i className="icon-reorder me-1" /> Reorder nodes
+                    </Button>
+                    <Button className="me-2" color="primary" disabled={!addNodeEnabled} onClick={addNode}>
+                        <i className="icon-plus me-1" />
+                        Add node to group
+                    </Button>
+                    <UncontrolledButtonWithDropdownPanel buttonText="Settings">
+                        <>
+                            <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
+                                <div className="form-switch form-check-reverse">
+                                    <Input
+                                        id={settingsUniqueId}
+                                        type="switch"
+                                        role="switch"
+                                        disabled={!enableDynamicDatabaseDistribution}
+                                        checked={dynamicDatabaseDistribution}
+                                        onChange={changeDynamicDatabaseDistribution}
+                                    />
+                                    Allow dynamic database distribution
+                                </div>
+                            </Label>
+                            {dynamicDatabaseDistributionWarning && (
+                                <div className="bg-faded-warning px-4 py-2">{dynamicDatabaseDistributionWarning}</div>
+                            )}
+                        </>
+                    </UncontrolledButtonWithDropdownPanel>
+                </div>
+            )}
+            {sortableMode && (
+                <DndProvider backend={HTML5Backend}>
+                    <ReorderNodes nodes={state.nodes} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
+                </DndProvider>
+            )}
+            {!sortableMode && (
+                <div>
+                    {state.nodes.map((node) => (
+                        <NodeInfoComponent key={node.tag} node={node} db={db} databaseLockMode={state.lockMode} />
+                    ))}
 
-                {state.deletionInProgress.map((deleting) => (
-                    <DeletionInProgress key={deleting} nodeTag={deleting} />
-                ))}
-            </div>
+                    {state.deletionInProgress.map((deleting) => (
+                        <DeletionInProgress key={deleting} nodeTag={deleting} />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
-
-/* todo
-    this.anyNodeHasError.subscribe((error) => {
-        if (error && this.inSortableMode()) {
-            messagePublisher.reportWarning("Can't reorder nodes, when at least one node is down or voting is in progress.");
-            this.cancelReorder();
-        }
-    }));
- */

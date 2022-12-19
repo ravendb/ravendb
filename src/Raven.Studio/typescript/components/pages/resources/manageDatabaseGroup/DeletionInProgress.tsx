@@ -12,7 +12,7 @@ export function DeletionInProgress(props: { nodeTag: string }) {
                 <RichPanelName>Node: {nodeTag}</RichPanelName>
                 <FlexGrow />
                 <div className="pulse text-progress" title="Deletion in progress">
-                    <Spinner size={"sm"} className="me-1" /> Deletion in progress
+                    <Spinner size="sm" className="me-1" /> Deletion in progress
                 </div>
             </RichPanelHeader>
         </RichPanel>
