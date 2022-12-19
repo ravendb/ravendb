@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         protected DatabaseSubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection) : base(server, connection, database.Name)
         {
             Database = database;
-            MaximumAllowedMemory = new Size((Database.Is32Bits ? 4 : 32) * Voron.Global.Constants.Size.Megabyte, SizeUnit.Bytes);
+            MaximumAllowedMemory = new Size(Database.Is32Bits ? 4 : 32, SizeUnit.Megabytes);
         }
         
         public override void InitializeProcessor()

@@ -140,7 +140,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                 foreach (var deletedId in Deleted)
                 {
-                    if (subscriptionState.SubscriptionShardingState != null)
+                    if (subscriptionState.ShardingState != null)
                     {
                         if (IsFromProperShard(record, deletedId) == false)
                             continue;
@@ -164,7 +164,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         using var __ = Slice.From(context.Allocator, documentRecord.ChangeVector, out var changeVectorSlice);
 
                         var batchId = index;
-                        if (subscriptionState.SubscriptionShardingState != null)
+                        if (subscriptionState.ShardingState != null)
                         {
                             var exists = TryGetExisting(context, keySlice, out var currentBatch, out var currentChangeVector);
                             var owner = IsFromProperShard(record, documentRecord.DocumentId);
@@ -189,7 +189,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                             }
                             else
                             {
-                                if (IsAlreadyProcessed(context, subscriptionState.SubscriptionShardingState, documentRecord.DocumentId,
+                                if (IsAlreadyProcessed(context, subscriptionState.ShardingState, documentRecord.DocumentId,
                                         documentRecord.ChangeVector))
                                 {
                                     // item was already processed
@@ -214,9 +214,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                             if (batchId > SubscriptionConnectionBase.NonExistentBatch)
                             {
-                                if (subscriptionState.SubscriptionShardingState.ProcessedChangeVectorPerBucket.TryGetValue(bucket, out var current))
+                                if (subscriptionState.ShardingState.ProcessedChangeVectorPerBucket.TryGetValue(bucket, out var current))
                                 {
-                                    subscriptionState.SubscriptionShardingState.ProcessedChangeVectorPerBucket[bucket] = ChangeVectorUtils.MergeVectors(current, vector.Version);
+                                    subscriptionState.ShardingState.ProcessedChangeVectorPerBucket[bucket] = ChangeVectorUtils.MergeVectors(current, vector.Version);
                                 }
                             }
                         }
@@ -260,10 +260,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     else
                     {
                         var changeVector = context.GetChangeVector(CurrentChangeVector);
-                        subscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string current);
-                        subscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard[ShardName] =
+                        subscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string current);
+                        subscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard[ShardName] =
                             changeVector.Order.MergeWith(current, context);
-                        subscriptionState.SubscriptionShardingState.NodeTagPerShard[ShardName] = NodeTag;
+                        subscriptionState.ShardingState.NodeTagPerShard[ShardName] = NodeTag;
                     }
                 }
 
@@ -343,7 +343,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 return;
             }
 
-            state.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string cvInStorage);
+            state.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string cvInStorage);
             if (cvInStorage != PreviouslyRecordedChangeVector)
             {
                 throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't record sharded subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {cvInStorage}, received value: {PreviouslyRecordedChangeVector}.");

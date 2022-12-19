@@ -584,31 +584,6 @@ namespace Sparrow.Json
             return dic;
         }
 
-        /*private static Dictionary<string, List<T>> ToDictionaryOfList<T>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, T> converter)
-        {
-            var dic = new Dictionary<string, List<T>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
-
-            BlittableJsonReaderObject obj;
-            //should a "null" exist in json? -> not sure that "null" can exist there
-            if (json.TryGet(name, out obj) == false || obj == null)
-                return dic;
-
-            foreach (var propertyName in obj.GetPropertyNames())
-            {
-                BlittableJsonReaderArray array;
-                if (obj.TryGet(propertyName, out array))
-                {
-                    var list = new List<T>(array.Length);
-                    foreach (BlittableJsonReaderObject item in array)
-                    {
-                        list.Add(converter(item));
-                    }
-                    dic[propertyName] = list;
-                }
-            }
-            return dic;
-        }*/
-
         private static Dictionary<TK, List<TV>> ToDictionaryOfList<TK, TV>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, TV> converter)
         {
             var type = typeof(TK);

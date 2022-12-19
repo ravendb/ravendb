@@ -396,7 +396,7 @@ namespace Raven.Server.Documents.Subscriptions
                 LastBatchAckTime = @base.LastBatchAckTime;
                 LastClientConnectionTime = @base.LastClientConnectionTime;
                 Disabled = @base.Disabled;
-                SubscriptionShardingState = @base.SubscriptionShardingState;
+                ShardingState = @base.ShardingState;
             }
         }
 

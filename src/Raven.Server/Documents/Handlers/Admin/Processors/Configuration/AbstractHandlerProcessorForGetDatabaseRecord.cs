@@ -37,9 +37,8 @@ internal abstract class AbstractHandlerProcessorForGetDatabaseRecord<TRequestHan
 
         using (ClusterContextPool.AllocateOperationContext(out ClusterOperationContext context))
         {
-            var dbId = Constants.Documents.Prefix + name;
             using (context.OpenReadTransaction())
-            using (var dbDoc = RequestHandler.ServerStore.Cluster.Read(context, dbId, out long etag))
+            using (var dbDoc = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, name, out long etag))
             {
                 if (dbDoc == null)
                 {
@@ -63,7 +62,7 @@ internal abstract class AbstractHandlerProcessorForGetDatabaseRecord<TRequestHan
                     writer.WriteStartObject();
                     writer.WriteDocumentPropertiesWithoutMetadata(context, new Document
                     {
-                        Data = dbDoc
+                        Data = dbDoc.Raw
                     });
                     writer.WriteComma();
                     writer.WritePropertyName("Etag");
