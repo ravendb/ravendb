@@ -98,13 +98,15 @@ public partial class ShardedDatabaseContext
                 switch (definition.Type)
                 {
                     case IndexType.Map:
+                    case IndexType.JavaScriptMap:
                         indexInformationHolder = MapIndex.CreateIndexInformationHolder(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
                         break;
                     case IndexType.MapReduce:
+                    case IndexType.JavaScriptMapReduce:
                         indexInformationHolder = MapReduceIndex.CreateIndexInformationHolder(definition, _context.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, out _);
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException(nameof(definition.Type));
+                        throw new ArgumentOutOfRangeException(nameof(definition.Type), definition.Type, "Unknown index type");
                 }
 
                 return indexInformationHolder;
