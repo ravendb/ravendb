@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Config;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -330,7 +331,6 @@ namespace SlowTests.Sharding.Cluster
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
             await CreateItems(store, 9, 10);
 
-
             await t;
 
             using (var session = store.OpenAsyncSession())
@@ -445,7 +445,7 @@ namespace SlowTests.Sharding.Cluster
             await SubscriptionWithResharding(store);
         }
 
-        [RavenFact(RavenTestCategory.Sharding, Skip = "Need to handle resharding failover")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "Need to stablize this")]
         public async Task ContinueSubscriptionAfterReshardingInAClusterWithFailover()
         {
             var cluster = await CreateRaftCluster(5, watcherCluster: true, shouldRunInMemory: false);
@@ -453,40 +453,46 @@ namespace SlowTests.Sharding.Cluster
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 3,
+                RunInMemory = false
             });
 
             var id = await store.Subscriptions.CreateAsync<User>(predicate: u => u.Age > 0);
             var users = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var t = ProcessSubscription(store, id, users, timoutSec: 15);
-            var sync = new AsyncManualResetEvent();
-            var sync2 = new AsyncManualResetEvent();
+            var t = ProcessSubscription(store, id, users, timoutSec: 120);
 
-            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3)))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
             {
                 var fail = Task.Run(async () =>
                 {
+                    int position = -1;
+                    (string DataDirectory, string Url, string NodeTag) result = default;
+                    var recoveryOptions = new ServerCreationOptions
+                    {
+                        RunInMemory = false,
+                        DeletePrevious = false,
+                        RegisterForDisposal = true,
+                        CustomSettings = DefaultClusterSettings
+                    };
+
+                    recoveryOptions.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] =
+                        cluster.Leader.Configuration.Cluster.ElectionTimeout.ToString();
+
                     try
                     {
                         while (cts.IsCancellationRequested == false)
                         {
-                            var position = Random.Shared.Next(0, 5);
+                            position = Random.Shared.Next(0, 5);
                             var node = cluster.Nodes[position];
                             if (node.ServerStore.IsLeader())
                                 continue;
 
-                            var result = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
-                            await Cluster.WaitForNodeToBeRehabAsync(store, node.ServerStore.NodeTag, token: cts.Token);
+                            result = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
+                            await Cluster.WaitForNodeToBeRehabAsync(store, result.NodeTag, token: cts.Token);
                             
-                            sync.Set();
-                            await sync2.WaitAsync(cts.Token);
-                            sync2.Reset();
+                            await Task.Delay(TimeSpan.FromSeconds(3), cts.Token);
 
-                            cluster.Nodes[position] = await ReviveNodeAsync(result);
+                            cluster.Nodes[position] = await ReviveNodeAsync(result, recoveryOptions);
                             await Cluster.WaitForAllNodesToBeMembersAsync(store, token: cts.Token);
-                            
-                            sync.Set();
-                            await sync2.WaitAsync(cts.Token);
-                            sync2.Reset();
                         }
                     }
                     catch (OperationCanceledException)
@@ -499,66 +505,38 @@ namespace SlowTests.Sharding.Cluster
                 {
                     await CreateItems(store, 0, 2);
                     await Sharding.Resharding.MoveShardForId(store, "users/1-A", cluster.Nodes);
-                    
-                    await sync.WaitAsync(cts.Token);
-                    sync.Reset();
-                    sync2.Set();
-
                     await CreateItems(store, 2, 4);
                     await Sharding.Resharding.MoveShardForId(store, "users/1-A", cluster.Nodes);
-
-                    await sync.WaitAsync(cts.Token);
-                    sync.Reset();
-                    sync2.Set();
-
                     await CreateItems(store, 4, 6);
                     await Sharding.Resharding.MoveShardForId(store, "users/1-A", cluster.Nodes);
-
-                    await sync.WaitAsync(cts.Token);
-                    sync.Reset();
-                    sync2.Set();
-
                     await CreateItems(store, 6, 7);
                     await Sharding.Resharding.MoveShardForId(store, "users/1-A", cluster.Nodes);
-
-                    await sync.WaitAsync(cts.Token);
-                    sync.Reset();
-                    sync2.Set();
-
                     await CreateItems(store, 7, 8);
                     await Sharding.Resharding.MoveShardForId(store, "users/1-A", cluster.Nodes);
-
-                    await sync.WaitAsync(cts.Token);
-                    sync.Reset();
-                    sync2.Set();
-
-                    await CreateItems(store, 9, 10);
-
-
-                    await t;
-
-                    using (var session = store.OpenAsyncSession())
-                    {
-                        var total = await session.Query<User>().CountAsync();
-                        Assert.Equal(195, total);
-
-                        var usersByQuery = await session.Query<User>().Where(u => u.Age > 0).ToListAsync();
-                        foreach (var user in usersByQuery)
-                        {
-                            Assert.True(users.TryGetValue(user.Id, out var age), $"Missing {user.Id} from subscription");
-                            Assert.True(age == user.Age, $"From sub:{age}, from shard: {user.Age} for {user.Id} cv:{session.Advanced.GetChangeVectorFor(user)}");
-                            users.Remove(user.Id);
-                        }
-                    }
+                    await CreateItems(store, 8, 10);
                 }
                 finally
                 {
                    cts.Cancel();
                    await fail;
+                   await t;
+                }
+
+                await Indexes.WaitForIndexingInTheClusterAsync(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    var total = await session.Query<User>().CountAsync();
+                    Assert.Equal(195, total);
+
+                    var usersByQuery = await session.Query<User>().Where(u => u.Age > 0).ToListAsync();
+                    foreach (var user in usersByQuery)
+                    {
+                        Assert.True(users.TryGetValue(user.Id, out var age), $"Missing {user.Id} from subscription");
+                        Assert.True(age == user.Age, $"From sub:{age}, from shard: {user.Age} for {user.Id} cv:{session.Advanced.GetChangeVectorFor(user)}");
+                        users.Remove(user.Id);
+                    }
                 }
             }
-
-            await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, id);
         }
 
         private async Task SubscriptionWithResharding(IDocumentStore store)

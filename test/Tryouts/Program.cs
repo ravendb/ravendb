@@ -29,10 +29,10 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new ShardedClusterObserverTests(testOutputHelper))
+                using (var test = new SubscriptionsWithReshardingTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.DynamicNodeDistributionForOrchestrator();
+                    await test.ContinueSubscriptionAfterReshardingInAClusterWithFailover();
                 }
             }
             catch (Exception e)
