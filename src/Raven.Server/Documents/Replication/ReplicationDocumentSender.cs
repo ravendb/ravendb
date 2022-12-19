@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     _replicationState.Item = current;
                     long next = Next;
-                    if (_parent.CanContinueBatch(_replicationState, ref next) == false)
+                    if (CanContinueBatch(_replicationState, ref next) == false)
                     {
                         WasInterrupted = true;
                         return;
@@ -236,6 +236,59 @@ namespace Raven.Server.Documents.Replication
                     Next = next;
                     _replicationState.LastTransactionMarker = current.TransactionMarker;
                 }
+            }
+
+            private bool CanContinueBatch(ReplicationState state, ref long next)
+            {
+                if (_parent.MissingAttachmentsInLastBatch)
+                {
+                    // we do have missing attachments but we haven't gathered yet any of the missing hashes
+                    if (state.MissingAttachmentBase64Hashes == null)
+                        return true;
+
+                    // we do have missing attachments but we haven't included all of them in the batch yet
+                    if (state.MissingAttachmentBase64Hashes.Count > 0)
+                        return true;
+                }
+
+                if (state.Delay.Ticks > 0)
+                {
+                    var nextReplication = state.Item.LastModifiedTicks + state.Delay.Ticks;
+                    if (_parent._parent._database.Time.GetUtcNow().Ticks < nextReplication)
+                    {
+                        if (Interlocked.CompareExchange(ref next, nextReplication, state.CurrentNext) == state.CurrentNext)
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                if (state.NumberOfItemsSent == 0)
+                {
+                    // always send at least one item
+                    return true;
+                }
+
+                // We want to limit batch sizes to reasonable limits.
+                var totalSize =
+                    state.Size + state.Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
+
+                if (state.MaxSizeToSend.HasValue && totalSize >= state.MaxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
+                    state.BatchSize.HasValue && state.NumberOfItemsSent >= state.BatchSize.Value)
+                {
+                    return false;
+                }
+
+                if (_parent._stats.Storage.CurrentStats.InputCount % 16384 == 0)
+                {
+                    // ReSharper disable once PossibleLossOfFraction
+                    if ((_parent._parent._parent.MinimalHeartbeatInterval / 2) < _parent._stats.Storage.Duration.TotalMilliseconds)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
             }
 
             public override bool ShouldPulseTransaction()
@@ -452,59 +505,6 @@ namespace Raven.Server.Documents.Replication
             {
                 AssertNotTimeSeriesForLegacyReplication(item);
             }
-        }
-
-        private bool CanContinueBatch(ReplicationState state, ref long next)
-        {
-            if (MissingAttachmentsInLastBatch)
-            {
-                // we do have missing attachments but we haven't gathered yet any of the missing hashes
-                if (state.MissingAttachmentBase64Hashes == null)
-                    return true;
-
-                // we do have missing attachments but we haven't included all of them in the batch yet
-                if (state.MissingAttachmentBase64Hashes.Count > 0)
-                    return true;
-            }
-
-            if (state.Delay.Ticks > 0)
-            {
-                var nextReplication = state.Item.LastModifiedTicks + state.Delay.Ticks;
-                if (_parent._database.Time.GetUtcNow().Ticks < nextReplication)
-                {
-                    if (Interlocked.CompareExchange(ref next, nextReplication, state.CurrentNext) == state.CurrentNext)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            if (state.NumberOfItemsSent == 0)
-            {
-                // always send at least one item
-                return true;
-            }
-
-            // We want to limit batch sizes to reasonable limits.
-            var totalSize =
-                state.Size + state.Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
-
-            if (state.MaxSizeToSend.HasValue && totalSize >= state.MaxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
-                state.BatchSize.HasValue && state.NumberOfItemsSent >= state.BatchSize.Value)
-            {
-                return false;
-            }
-
-            if (_stats.Storage.CurrentStats.InputCount % 16384 == 0)
-            {
-                // ReSharper disable once PossibleLossOfFraction
-                if ((_parent._parent.MinimalHeartbeatInterval / 2) < _stats.Storage.Duration.TotalMilliseconds)
-                {
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         private void AssertNotTimeSeriesForLegacyReplication(ReplicationBatchItem item)
