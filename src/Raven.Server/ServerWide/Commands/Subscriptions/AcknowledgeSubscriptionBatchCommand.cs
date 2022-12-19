@@ -93,7 +93,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             else
             {
                 var changeVector = context.GetChangeVector(ChangeVector);
-                currentState.SubscriptionShardingState.NodeTagPerShard[ShardName] = NodeTag;
+                currentState.ShardingState.NodeTagPerShard[ShardName] = NodeTag;
                 currentState.ChangeVectorForNextBatchStartingPoint =
                     ChangeVectorUtils.MergeVectors(changeVector.Order.StripMoveTag(context), currentState.ChangeVectorForNextBatchStartingPoint);
             }

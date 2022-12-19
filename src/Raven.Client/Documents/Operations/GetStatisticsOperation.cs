@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -34,6 +35,7 @@ namespace Raven.Client.Documents.Operations
             {
                 _debugTag = debugTag;
                 SelectedNodeTag = nodeTag;
+                Timeout = TimeSpan.FromSeconds(15);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

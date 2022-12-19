@@ -24,10 +24,11 @@ namespace Raven.Client.Documents.Subscriptions
         public DateTime? LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
         public bool Disabled { get; set; }
 
+        // the responsible node of the subscription,
         // in sharding context - orchestrator node tag
         public string NodeTag { get; set; }
         
-        public SubscriptionShardingState SubscriptionShardingState { get; set; }
+        public SubscriptionShardingState ShardingState { get; set; }
 
         public ulong GetTaskKey()
         {
@@ -75,9 +76,9 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(Disabled)] = Disabled,
             };
 
-            if (SubscriptionShardingState != null)
+            if (ShardingState != null)
             {
-                djv[nameof(SubscriptionShardingState)] = SubscriptionShardingState.ToJson();
+                djv[nameof(ShardingState)] = ShardingState.ToJson();
             }
 
             return djv;

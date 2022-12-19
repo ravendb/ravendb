@@ -53,7 +53,11 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                         yield break;
                 }
                 else
+                {
+                    item.Data?.Dispose();
+                    item.Data = null;
                     yield return result;
+                }
             }
         }
 
@@ -163,7 +167,6 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                         ItemsToRemoveFromResend.Add(item.Id);
                     }
 
-                    result.Data.Dispose();
                     result.Data = null;
                     reason = $"{item.Id} filtered out by criteria";
                     return false;

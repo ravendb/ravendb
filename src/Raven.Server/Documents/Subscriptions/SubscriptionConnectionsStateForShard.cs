@@ -19,8 +19,8 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
 
     protected override void SetLastChangeVectorSent(SubscriptionConnection connection)
     {
-        if (connection.SubscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard == null ||
-            connection.SubscriptionState.SubscriptionShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(DocumentDatabase.Name, out string cv) == false)
+        if (connection.SubscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard == null ||
+            connection.SubscriptionState.ShardingState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(DocumentDatabase.Name, out string cv) == false)
         {
             LastChangeVectorSent = null;
         }
@@ -58,7 +58,7 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
     }
 
     
-    public bool HasDocumentFormResendForShard()
+    public bool HasDocumentFromResend()
     {
         using (_server.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())

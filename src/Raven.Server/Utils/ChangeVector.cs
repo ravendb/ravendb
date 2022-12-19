@@ -75,8 +75,6 @@ public class ChangeVector
     public bool IsSingle => string.IsNullOrEmpty(_order?._changeVector) &&
                             string.IsNullOrEmpty(_version?._changeVector);
 
-    public int NumberOfEntries => _changeVector.ToChangeVector().Length;
-
     public bool IsEqual(ChangeVector changeVector)
     {
         if (IsSingle && changeVector.IsSingle)

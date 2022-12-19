@@ -90,7 +90,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         if (base.FoundAboutMoreDocs())
             return true;
 
-        if (_state.HasDocumentFormResendForShard())
+        if (_state.HasDocumentFromResend())
             return true;
 
         return false;
@@ -101,14 +101,14 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         var subscriptions = TcpConnection.DocumentDatabase.SubscriptionStorage.Subscriptions;
         var state = subscriptions.GetOrAdd(SubscriptionId, subId => new SubscriptionConnectionsStateForShard(DatabaseName, subId, TcpConnection.DocumentDatabase.SubscriptionStorage));
         _subscriptionConnectionsState = state;
-        _state = state as SubscriptionConnectionsStateForShard;
+        _state = (SubscriptionConnectionsStateForShard)state;
         return state;
     }
 
     protected override string WhosTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState) => 
         topology.WhoseTaskIsIt(_serverStore.Engine.CurrentState, subscriptionState, () =>
         {
-            subscriptionState.SubscriptionShardingState.NodeTagPerShard.TryGetValue(ShardName, out var tag);
+            subscriptionState.ShardingState.NodeTagPerShard.TryGetValue(ShardName, out var tag);
             return tag;
         });
 }
