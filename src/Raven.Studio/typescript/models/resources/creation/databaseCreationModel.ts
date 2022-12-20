@@ -696,9 +696,10 @@ class databaseCreationModel {
             settings[configuration.core.dataDirectory] = dataDir;
         }
 
+        const sharded = this.getShardingConfigSection().enabled();
         const shards: Record<string, Raven.Client.ServerWide.DatabaseTopology> = {};
         const numberOfShards = this.sharding.numberOfShards();
-        if (numberOfShards && this.getShardingConfigSection().enabled()) {
+        if (numberOfShards && sharded) {
             for (let i = 0; i < numberOfShards; i++) {
                 shards[i.toString()] = {} as Raven.Client.ServerWide.DatabaseTopology;
             }
@@ -710,9 +711,9 @@ class databaseCreationModel {
             Disabled: false,
             Encrypted: this.getEncryptionConfigSection().enabled(),
             Topology: numberOfShards ? null : this.topologyToDto(),
-            Sharding: {
+            Sharding: sharded ? {
                 Shards: shards
-            }
+            } : null
         } as Raven.Client.ServerWide.DatabaseRecord;
     }
 

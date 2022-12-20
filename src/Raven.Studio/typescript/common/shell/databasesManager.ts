@@ -1,8 +1,6 @@
 ﻿import router = require("plugins/router");
 import database = require("models/resources/database");
 import changesContext = require("common/changesContext");
-import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
-import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
@@ -15,6 +13,8 @@ import mergedIndexesStorage from "common/storage/mergedIndexesStorage";
 import shardedDatabase from "models/resources/shardedDatabase";
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
 import DatabaseUtils from "components/utils/DatabaseUtils";
+import getDatabasesForStudioCommand from "commands/resources/getDatabasesForStudioCommand";
+import getDatabaseForStudioCommand from "commands/resources/getDatabaseForStudioCommand";
 
 class databasesManager {
 
@@ -57,7 +57,7 @@ class databasesManager {
         }
     }
 
-    init(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
+    init(): JQueryPromise<StudioDatabasesResponse> {
         return this.refreshDatabases()
             .done(() => {
                 router.activate();
@@ -69,12 +69,10 @@ class databasesManager {
         this.databaseToActivate(databaseName);
     }
 
-    refreshDatabases(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
-        return new getDatabasesCommand()
+    refreshDatabases(): JQueryPromise<StudioDatabasesResponse> {
+        return new getDatabasesForStudioCommand()
             .execute()
-            .done(result => {
-                this.updateDatabases(result);
-            });
+            .done(result => this.updateDatabases(result));
     }
 
     activateBasedOnCurrentUrl(dbName: string): JQueryPromise<canActivateResultDto> | boolean {
@@ -141,42 +139,32 @@ class databasesManager {
         }
     }
 
-    private updateDatabases(incomingData: Raven.Client.ServerWide.Operations.DatabasesInfo) {
+    private updateDatabases(incomingData: StudioDatabasesResponse) {
         this.deleteRemovedDatabases(incomingData);
 
-        const nonSharded = incomingData.Databases.filter(x => !DatabaseUtils.isSharded(x.Name));
-        nonSharded.forEach(dbInfo => {
-            const existingDb = this.getDatabaseByName(dbInfo.Name);
-            this.updateDatabase(dbInfo, existingDb);
-        });
-        
-        const sharded = new Map<string, Raven.Client.ServerWide.Operations.DatabaseInfo[]>();
-        incomingData.Databases.forEach(db => {
-            if (DatabaseUtils.isSharded(db.Name)) {
-                const shardKey = DatabaseUtils.shardGroupKey(db.Name);
-
-                const items = sharded.get(shardKey) || [];
-                items.push(db);
-                sharded.set(shardKey, items);
-            }
-        });
-
-        sharded.forEach((shardGroup, shardName) => {
-            const existingDb = this.getDatabaseByName(shardName) as shardedDatabase;
-            this.updateDatabaseGroup(shardGroup, existingDb);
+        incomingData.Databases.forEach(dbDto => {
+            const existingDb = this.getDatabaseByName(dbDto.DatabaseName);
+            this.updateDatabase(dbDto, existingDb);
         });
     }
 
-    private deleteRemovedDatabases(incomingData: Raven.Client.ServerWide.Operations.DatabasesInfo) {
-        const incomingDatabases = incomingData.Databases.map(x => DatabaseUtils.isSharded(x.Name) ? DatabaseUtils.shardGroupKey(x.Name) : x.Name);
+    private deleteRemovedDatabases(incomingData: StudioDatabasesResponse) {
+        const incomingDatabases = incomingData.Databases;
         
         const existingDatabase = this.databases;
-
         const toDelete: database[] = [];
 
         this.databases().forEach(db => {
-            const matchedDb = incomingDatabases.find(x => x.toLowerCase() === db.name.toLowerCase());
-            if (!matchedDb) {
+            const matchedDb = incomingDatabases.find(x => x.DatabaseName.toLowerCase() === db.name.toLowerCase());
+            if (matchedDb) {
+                const incomingIsSharded = !!matchedDb.Sharding;
+                const localIsSharded = db instanceof shardedDatabase;
+                if (incomingIsSharded !== localIsSharded) {
+                    // looks like database type changed between requests - put old one on delete list
+                    toDelete.push(db);
+                }
+                
+            } else {
                 toDelete.push(db);
             }
         });
@@ -186,29 +174,20 @@ class databasesManager {
         // we also get information about deletion over websocket, so if we are not connected, then notification might be missed, so let's call it here as well
         toDelete.forEach(db => this.onDatabaseDeleted(db));
     }
-
-    private updateDatabaseGroup(dbs: Raven.Client.ServerWide.Operations.DatabaseInfo[], existingDb: shardedDatabase): shardedDatabase {
-        if (existingDb) {
-            existingDb.updateUsingGroup(dbs);
-            
-            return existingDb;
-        } else {
-            const nodeTag = clusterTopologyManager.default.localNodeTag;
-            const group = new shardedDatabase(dbs, nodeTag);
-
-            this.databases.push(group);
-            this.databases.sort((a, b) => generalUtils.sortAlphaNumeric(a.name, b.name));
-            
-            return group;
-        }
-    }
     
-    private updateDatabase(incomingDatabase: Raven.Client.ServerWide.Operations.DatabaseInfo, matchedExistingRs: database): database {
+    private updateDatabase(incomingDatabase: StudioDatabaseResponse, matchedExistingRs: database): database {
         if (matchedExistingRs) {
             matchedExistingRs.updateUsing(incomingDatabase);
             return matchedExistingRs;
         } else {
-            const newDatabase = new nonShardedDatabase(incomingDatabase, clusterTopologyManager.default.localNodeTag);
+            const sharded = !!incomingDatabase.Sharding;
+            
+            const localNodeTag = clusterTopologyManager.default.localNodeTag;
+            
+            const newDatabase = sharded ?
+                new shardedDatabase(incomingDatabase, localNodeTag) :
+                new nonShardedDatabase(incomingDatabase, localNodeTag);
+            
             this.databases.push(newDatabase);
             this.databases.sort((a, b) => generalUtils.sortAlphaNumeric(a.name, b.name));
             return newDatabase;
@@ -246,14 +225,14 @@ class databasesManager {
                             this.onDatabaseDeleted(db);
                         }
                     })
-                    .done((info: Raven.Client.ServerWide.Operations.DatabaseInfo) => {
+                    .done((info: StudioDatabaseResponse) => {
                         // check if database if still relevant on this node
                         const localTag = clusterTopologyManager.default.localNodeTag();
-
-                        const relevant = !!info.NodesTopology.Members.find(x => x.NodeTag === localTag)
-                            || !!info.NodesTopology.Promotables.find(x => x.NodeTag === localTag)
-                            || !!info.NodesTopology.Rehabs.find(x => x.NodeTag === localTag);
-
+                        const topologyToUse = info.Topology ?? info.Sharding?.Orchestrator.Topology;
+                        const relevant = topologyToUse && (topologyToUse.Members.includes(localTag) ||
+                            topologyToUse.Promotables.includes(localTag) ||
+                            topologyToUse.Rehabs.includes(localTag));
+                        
                         if (!relevant) {
                             this.onNoLongerRelevant(db);
                         }
@@ -262,16 +241,16 @@ class databasesManager {
         }
     }
 
-    private updateDatabaseInfo(db: database, databaseName: string): JQueryPromise<Raven.Client.ServerWide.Operations.DatabaseInfo> {
-        return new getDatabaseCommand(databaseName)
+    private updateDatabaseInfo(db: database, databaseName: string): JQueryPromise<StudioDatabaseResponse> {
+        return new getDatabaseForStudioCommand(databaseName)
             .execute()
-            .done((rsInfo: Raven.Client.ServerWide.Operations.DatabaseInfo) => {
+            .done((rsInfo: StudioDatabaseResponse) => {
 
-                if (rsInfo.Disabled) {
+                if (rsInfo.IsDisabled) {
                     changesContext.default.disconnectIfCurrent(db, "DatabaseDisabled");
                 }
 
-                const updatedDatabase = this.updateDatabase(rsInfo, this.getDatabaseByName(rsInfo.Name));
+                const updatedDatabase = this.updateDatabase(rsInfo, this.getDatabaseByName(rsInfo.DatabaseName));
 
                 const toActivate = this.databaseToActivate();
 

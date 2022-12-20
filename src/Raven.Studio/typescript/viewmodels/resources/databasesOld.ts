@@ -123,8 +123,8 @@ class databases extends viewModelBase {
             for (const database of databases) {
                 if (database.hasLoadError()) {
                     result.errored++;
-                } else if (!this.isLocalDatabase(database.name)) {
-                    result.remote++;
+                //TODO } else if (!this.isLocalDatabase(database.name)) {
+                //TODO:     result.remote++;
                 } else if (database.disabled()) {
                     result.disabled++;
                 } else if (database.online()) {
@@ -392,7 +392,7 @@ class databases extends viewModelBase {
 
     createManageDbGroupUrlObsevable(dbInfo: databaseInfo): KnockoutComputed<string> {
         return ko.pureComputed(() => {
-            const isLocal = this.isLocalDatabase(dbInfo.name);
+            const isLocal = true; //TODO: this.isLocalDatabase(dbInfo.name);
             const link = appUrl.forManageDatabaseGroup(dbInfo);
             if (isLocal) {
                 return link;
@@ -404,7 +404,7 @@ class databases extends viewModelBase {
 
     createAllDocumentsUrlObservable(dbInfo: databaseInfo): KnockoutComputed<string> {
         return ko.pureComputed(() => {
-            const isLocal = this.isLocalDatabase(dbInfo.name);
+            const isLocal = true; //TOD: this.isLocalDatabase(dbInfo.name);
             const link = appUrl.forDocuments(null, dbInfo);
             if (isLocal) {
                 return link;
@@ -428,16 +428,7 @@ class databases extends viewModelBase {
             }
         });
     }*/
-
-    private static toExternalUrl(dbInfo: databaseInfo, url: string) {
-        return ""; //TODO:
-        /* TODO
-        // we have to redirect to different node, let's find first member where selected database exists
-        const firstMember = dbInfo.nodes().find(x => x.type() === "Member");
-        const serverUrl = firstMember ? firstMember.serverUrl() : clusterTopologyManager.default.localNodeUrl();
-        return appUrl.toExternalUrl(serverUrl, url);
-         */
-    }
+    
 
     indexErrorsUrl(dbInfo: databaseInfo): string {
         return appUrl.forIndexErrors(dbInfo);
@@ -653,20 +644,7 @@ class databases extends viewModelBase {
         
         return true; // don't prevent default action as we have links inside links
     }
-
-    createIsLocalDatabaseObservable(dbName: string) {
-        return ko.pureComputed(() => {
-            return this.isLocalDatabase(dbName);
-        });
-    }
     
-    private isLocalDatabase(dbName: string) {
-        return true; //tODO: 
-        /* TODO:
-        const nodeTag = this.clusterManager.localNodeTag();
-        return this.databases().getByName(dbName).isLocal(nodeTag);
-         */
-    }
     
     openNotificationCenter(dbInfo: databaseInfo) {
         if (!this.activeDatabase() || this.activeDatabase().name !== dbInfo.name) {

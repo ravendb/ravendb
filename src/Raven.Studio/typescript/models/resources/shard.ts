@@ -1,13 +1,19 @@
 import database from "models/resources/database";
 import shardedDatabase from "models/resources/shardedDatabase";
-import DatabaseUtils from "components/utils/DatabaseUtils";
+import DatabaseTopology = Raven.Client.ServerWide.DatabaseTopology;
 
 class shard extends database {
+    private readonly shardTopology: DatabaseTopology;
     readonly parent: shardedDatabase;
-
-    constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, parent: shardedDatabase) {
+    private readonly _shardNumber: number;
+    
+    constructor(dbInfo: StudioDatabaseResponse, shardNumber: number, shardTopology: DatabaseTopology, parent: shardedDatabase) {
         super(dbInfo, parent.clusterNodeTag);
         this.parent = parent;
+        this.shardTopology = shardTopology;
+        this._shardNumber = shardNumber;
+        
+        this.updateUsing(dbInfo);
     }
 
     get root(): database {
@@ -15,11 +21,24 @@ class shard extends database {
     }
     
     get shardNumber() {
-        return DatabaseUtils.shardNumber(this.name);
+        return this._shardNumber;
     }
     
     get shardName() {
         return "Shard #" + this.shardNumber;
+    }
+    
+    updateUsing(incomingCopy: StudioDatabaseResponse) {
+        super.updateUsing(incomingCopy);
+        
+        const nodes = [
+            ...this.shardTopology.Members,
+            ...this.shardTopology.Rehabs,
+            ...this.shardTopology.Promotables
+        ];
+        
+        this.nodes(nodes);
+        this.relevant(nodes.includes(this.clusterNodeTag()));
     }
 
     getLocations(): databaseLocationSpecifier[] {

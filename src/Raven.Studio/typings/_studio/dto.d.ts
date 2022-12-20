@@ -1,5 +1,9 @@
 /// <reference path="../tsd.d.ts"/>
 
+import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
+import DatabaseTopology = Raven.Client.ServerWide.DatabaseTopology;
+import RawShardingConfiguration = Raven.Server.ServerWide.Sharding.RawShardingConfiguration;
+
 interface disposable {
     dispose(): void;
 }
@@ -939,6 +943,19 @@ type databaseLocationSpecifier = {
 
 interface PopoverUtilsOptions extends PopoverOptions {
     rounded?: boolean;
+}
+
+interface StudioDatabasesResponse {
+    Databases: StudioDatabaseResponse[];
+}
+
+interface StudioDatabaseResponse {
+    DatabaseName: string;
+    IsDisabled: boolean;
+    IsEncrypted: boolean;
+    LockMode: DatabaseLockMode;
+    Topology: DatabaseTopology;
+    Sharding: RawShardingConfiguration;
 }
 
 interface ReactInKnockoutOptions<T> {

@@ -33,6 +33,7 @@ import {
     RichPanelName,
     RichPanelSelect,
 } from "../../../common/RichPanel";
+import appUrl from "common/appUrl";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -115,8 +116,11 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     const [lockChanges, setLockChanges] = useState(false);
 
-    const documentsUrl = appUrl.forDocuments(null, db.name);
-    const manageGroupUrl = appUrl.forManageDatabaseGroup(db.name);
+    const localDocumentsUrl = appUrl.forDocuments(null, db.name);
+    const documentsUrl = db.relevant ? localDocumentsUrl : toExternalUrl(db, localDocumentsUrl);
+
+    const localManageGroupUrl = appUrl.forManageDatabaseGroup(db.name);
+    const manageGroupUrl = db.relevant ? localManageGroupUrl : toExternalUrl(db, localManageGroupUrl);
 
     //TODO:
     const deleteDatabase = useCallback(
@@ -176,7 +180,8 @@ export function DatabasePanel(props: DatabasePanelProps) {
         [db, eventsCollector, updateDatabaseLockMode]
     );
 
-    //TODO: createIsLocalDatabaseObservable -> relevant
+    const canNavigateToDatabase = !db.disabled && !db.hasLoadError;
+
     return (
         <RichPanel
             className={classNames("database-item", badgeClass(db), {
@@ -203,24 +208,26 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             </RichPanelSelect>
 
                             <RichPanelName>
-                                {/* TODO <span title="Database is disabled" data-bind="visible: !canNavigateToDatabase()">
-                                <small><i
-                                    data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }" /></small>
-                                <span>{db.name}</span>
-                            </span>*/}
-                                <a
-                                    data-bind="attr: {  target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' },
-                                              css: { 'link-disabled': isBeingDeleted }, visible: canNavigateToDatabase()"
-                                    href={documentsUrl}
-                                    title={db.name}
-                                >
-                                    <i
-                                        className="icon-database-home"
-                                        data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"
-                                    />
-
-                                    <span>{db.name}</span>
-                                </a>
+                                {canNavigateToDatabase ? (
+                                    <a
+                                        href={documentsUrl}
+                                        className={classNames({ "link-disabled": db.isBeingDeleted })}
+                                        target={db.relevant ? undefined : "_blank"}
+                                        title={db.name}
+                                    >
+                                        <i className={db.relevant ? "icon-database-home" : "icon-database"}></i>
+                                        <span>{db.name}</span>
+                                    </a>
+                                ) : (
+                                    <div className="name">
+                                        <span title="Database is disabled">
+                                            <small>
+                                                <i className={db.relevant ? "icon-database-home" : "icon-database"}></i>
+                                            </small>
+                                            <span>{db.name}</span>
+                                        </span>
+                                    </div>
+                                )}
                             </RichPanelName>
 
                             {db.sharded && (
