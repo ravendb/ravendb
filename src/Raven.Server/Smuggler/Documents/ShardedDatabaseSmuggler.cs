@@ -9,6 +9,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.Smuggler.Documents.Actions;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
@@ -144,7 +145,7 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result)
         {
-            await using (var actions = new SubscriptionActions(_server, _databaseRecord.DatabaseName))
+            await using (var actions = new DatabaseSubscriptionActions(_server, _databaseRecord.DatabaseName))
             {
                 return await ProcessSubscriptionsInternalAsync(result, actions);
             }
@@ -152,7 +153,7 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessReplicationHubCertificatesAsync(SmugglerResult result)
         {
-            await using (var actions = new ReplicationHubCertificateActions(_server, _databaseRecord.DatabaseName))
+            await using (var actions = new DatabaseReplicationHubCertificateActions(_server, _databaseRecord.DatabaseName))
             {
                 return await ProcessReplicationHubCertificatesInternalAsync(result, actions);
             }
