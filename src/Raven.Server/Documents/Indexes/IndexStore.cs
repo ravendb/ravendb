@@ -901,11 +901,6 @@ namespace Raven.Server.Documents.Indexes
             return (index, GetIndex(definition.Name));
         }
 
-        public static bool CanUseIndexBatch()
-        {
-            return ClusterCommandsVersionManager.CanPutCommand(nameof(PutIndexesCommand));
-        }
-
         private void StartIndex(Index index)
         {
             Debug.Assert(index != null);

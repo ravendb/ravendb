@@ -183,7 +183,7 @@ namespace Raven.Server.Smuggler.Documents
                 _time = time ?? throw new ArgumentNullException(nameof(time));
                 _configuration = controller.GetDatabaseConfiguration();
 
-                if (IndexStore.CanUseIndexBatch())
+                if (AbstractIndexCreateController.CanUseIndexBatch())
                     _batch = _controller.CreateIndexBatch();
             }
 
