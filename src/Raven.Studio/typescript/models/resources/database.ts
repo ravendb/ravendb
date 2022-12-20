@@ -1,7 +1,5 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
-import accessManager from "common/shell/accessManager";
-
 abstract class database {
     static readonly type = "database";
     static readonly qualifier = "db";
@@ -10,7 +8,6 @@ abstract class database {
 
     disabled = ko.observable<boolean>(false);
     errored = ko.observable<boolean>(false);
-    isAdminCurrentTenant = ko.observable<boolean>(false);
     relevant = ko.observable<boolean>(true);
     nodes = ko.observableArray<string>([]);
     hasRevisionsConfiguration = ko.observable<boolean>(false);
@@ -44,10 +41,8 @@ abstract class database {
         return this.getLocations()[0];
     }
     
-    constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
+    protected constructor(dbInfo: StudioDatabaseResponse, clusterNodeTag: KnockoutObservable<string>) {
         this.clusterNodeTag = clusterNodeTag;
-
-        this.updateUsing(dbInfo);
     }
     
     static createEnvironmentColorComputed(prefix: string, source: KnockoutObservable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>) {
@@ -68,8 +63,10 @@ abstract class database {
         });
     }
 
-    updateUsing(incomingCopy: Raven.Client.ServerWide.Operations.DatabaseInfo) {
+    updateUsing(incomingCopy: StudioDatabaseResponse) {
         this.isEncrypted(incomingCopy.IsEncrypted);
+        this.name = incomingCopy.DatabaseName;
+        this.disabled(incomingCopy.IsDisabled);
         this.hasRevisionsConfiguration(incomingCopy.HasRevisionsConfiguration);
         this.hasExpirationConfiguration(incomingCopy.HasExpirationConfiguration);
         this.hasRefreshConfiguration(incomingCopy.HasRefreshConfiguration);
@@ -113,9 +110,6 @@ abstract class database {
         return database.qualifier;
     }
 
-    get urlPrefix() {
-        return "databases";
-    }
 
     get type() {
         return database.type;

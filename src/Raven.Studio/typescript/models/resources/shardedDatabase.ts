@@ -1,6 +1,5 @@
 import database from "models/resources/database";
 import shard from "models/resources/shard";
-import DatabaseUtils from "components/utils/DatabaseUtils";
 
 class shardedDatabase extends database {
     
@@ -10,10 +9,10 @@ class shardedDatabase extends database {
         return db instanceof shardedDatabase;
     }
     
-    constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo[], clusterNodeTag: KnockoutObservable<string>) {
-        super(dbInfo[0], clusterNodeTag);
+    constructor(dbInfo: StudioDatabaseResponse, clusterNodeTag: KnockoutObservable<string>) {
+        super(dbInfo, clusterNodeTag);
         
-        this.updateUsingGroup(dbInfo);
+        this.updateUsing(dbInfo);
     }
 
     get root(): database {
@@ -35,17 +34,28 @@ class shardedDatabase extends database {
         return locationSpecifiers;
     }
 
-    updateUsingGroup(dbs: Raven.Client.ServerWide.Operations.DatabaseInfo[]) {
-        // update shared info
-        this.updateUsing(dbs[0]);
-        
-        this.shards(dbs.map(db => new shard(db, this)));
-        
-        const nodes = this.shards().flatMap(x => x.nodes());
-        
-        // in sharded environment db is relevant if any shard exists on local node
-        this.relevant(!!nodes.find(x => x === this.clusterNodeTag()));
-        this.name = DatabaseUtils.shardGroupKey(dbs[0].Name);
+    updateUsing(incomingCopy: StudioDatabaseResponse) {
+        super.updateUsing(incomingCopy);
+
+        const topology = incomingCopy.Sharding.Orchestrator.Topology;
+
+        const nodes = [
+            ...topology.Members,
+            ...topology.Promotables,
+            ...topology.Rehabs
+        ];
+
+        this.nodes(nodes);
+        const nodeTag = this.clusterNodeTag();
+        this.relevant(nodes.includes(nodeTag));
+
+        const shards = Object.entries(incomingCopy.Sharding.Shards).map((kv) => {
+            const [shardNumber, shardTopology] = kv;
+
+            return new shard(incomingCopy, parseInt(shardNumber, 10), shardTopology, this);
+        })
+        this.shards(shards);
+        this.relevant(nodes.includes(this.clusterNodeTag()));
     }
 }
 

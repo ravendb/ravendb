@@ -73,10 +73,6 @@ class databaseInfo {
         return "database";
     }
 
-    get urlPrefix() {
-        return "databases";
-    }
-
     asDatabase(): database {
         const casted = databasesManager.default.getDatabaseByName(this.name);
         if (!casted) {

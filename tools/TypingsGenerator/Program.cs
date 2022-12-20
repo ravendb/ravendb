@@ -90,6 +90,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
@@ -320,6 +321,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PatchDebugActions));
 
             scripter.AddType(typeof(Raven.Client.ServerWide.Operations.DatabasesInfo));
+            scripter.AddType(typeof(RawShardingConfiguration));
 
             // smuggler
             scripter.AddType(typeof(DatabaseSmugglerImportOptions));
