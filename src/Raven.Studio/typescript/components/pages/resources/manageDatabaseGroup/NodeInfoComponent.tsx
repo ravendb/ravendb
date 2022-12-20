@@ -20,7 +20,7 @@ import {
     RichPanelName,
     RichPanelStatus,
 } from "components/common/RichPanel";
-import { useDrag, useDrop } from "react-dnd";
+import { useDraggableItem } from "hooks/useDraggableItem";
 
 interface NodeInfoComponentProps {
     node: NodeInfo;
@@ -150,49 +150,18 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
 
 interface NodeInfoReorderComponentProps {
     node: NodeInfo;
-    findCard: (tag: string) => { index: number; card: NodeInfo };
-    moveCard: (tag: string, to: number) => void;
+    findCardIndex: (node: NodeInfo) => number;
+    setOrder: (action: (state: NodeInfo[]) => NodeInfo[]) => void;
 }
 
-type NodeAndIndex = { node: NodeInfo; originalIndex: number };
+const tagExtractor = (node: NodeInfo) => node.tag;
 
 export function NodeInfoReorderComponent(props: NodeInfoReorderComponentProps) {
-    const { node, moveCard, findCard } = props;
+    const { node, setOrder, findCardIndex } = props;
 
-    const originalIndex = findCard(node.tag).index;
+    const { drag, drop, isDragging } = useDraggableItem("node", node, tagExtractor, findCardIndex, setOrder);
 
-    const [{ isDragging }, drag] = useDrag(
-        () => ({
-            type: "node",
-            item: { node, originalIndex } as NodeAndIndex,
-            collect: (monitor) => ({
-                isDragging: monitor.isDragging(),
-            }),
-            end: (item, monitor) => {
-                const { node: droppedNode, originalIndex } = item;
-                const didDrop = monitor.didDrop();
-                if (!didDrop) {
-                    moveCard(droppedNode.tag, originalIndex);
-                }
-            },
-        }),
-        [node.tag, originalIndex, moveCard]
-    );
-
-    const [, drop] = useDrop(
-        () => ({
-            accept: "node",
-            hover({ node: draggedNode }: NodeAndIndex) {
-                if (draggedNode.tag !== node.tag) {
-                    const { index: overIndex } = findCard(node.tag);
-                    moveCard(draggedNode.tag, overIndex);
-                }
-            },
-        }),
-        [findCard, moveCard]
-    );
-
-    const opacity = isDragging ? 0 : 1;
+    const opacity = isDragging ? 0.5 : 1;
 
     return (
         <div ref={(node) => drag(drop(node))} style={{ opacity }}>

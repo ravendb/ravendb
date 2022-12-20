@@ -4,7 +4,6 @@ import { NodeInfo } from "components/pages/resources/manageDatabaseGroup/types";
 import classNames from "classnames";
 import { NodeInfoReorderComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { useDrop } from "react-dnd";
-import { produce } from "immer";
 
 interface ReorderNodesProps {
     cancelReorder: () => void;
@@ -20,37 +19,11 @@ export function ReorderNodes(props: ReorderNodesProps) {
 
     const [, drop] = useDrop(() => ({ accept: "node" }));
 
-    const findCard = useCallback(
-        (tag: string) => {
-            const cardIdx = newOrder.findIndex((x) => x.tag === tag);
-            if (cardIdx === -1) {
-                throw new Error("Unable to find card with tag = " + tag);
-            }
-            return {
-                card: newOrder[cardIdx],
-                index: cardIdx,
-            };
-        },
-        [newOrder]
-    );
-
-    const moveCard = useCallback(
-        (tag: string, atIndex: number) => {
-            const { card, index } = findCard(tag);
-
-            setNewOrder(() => {
-                return produce(newOrder, (draft) => {
-                    draft.splice(index, 1);
-                    draft.splice(atIndex, 0, card);
-                });
-            });
-        },
-        [findCard, newOrder]
-    );
+    const findCardIndex = useCallback((node: NodeInfo) => newOrder.findIndex((x) => x.tag === node.tag), [newOrder]);
 
     return (
         <div ref={drop}>
-            <div className="sticky-header">
+            <div>
                 <div>Drag elements to set their order. Click &quot;Save&quot; when finished.</div>
                 <Button
                     color="primary"
@@ -86,7 +59,12 @@ export function ReorderNodes(props: ReorderNodesProps) {
             </div>
 
             {newOrder.map((node) => (
-                <NodeInfoReorderComponent key={node.tag} node={node} moveCard={moveCard} findCard={findCard} />
+                <NodeInfoReorderComponent
+                    key={node.tag}
+                    node={node}
+                    setOrder={setNewOrder}
+                    findCardIndex={findCardIndex}
+                />
             ))}
         </div>
     );
