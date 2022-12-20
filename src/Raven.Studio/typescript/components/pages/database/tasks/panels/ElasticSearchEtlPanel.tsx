@@ -13,7 +13,14 @@ import {
 import { OngoingTaskElasticSearchEtlInfo } from "../../../../models/tasks";
 import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
-import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../common/RichPanel";
+import {
+    RichPanel,
+    RichPanelActions,
+    RichPanelDetailItem,
+    RichPanelDetails,
+    RichPanelHeader,
+    RichPanelInfo,
+} from "../../../../common/RichPanel";
 import { OngoingEtlTaskDistribution } from "./OngoingEtlTaskDistribution";
 
 type ElasticSearchEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskElasticSearchEtlInfo>;
@@ -66,16 +73,20 @@ export function ElasticSearchEtlPanel(props: ElasticSearchEtlPanelProps & ICanSh
     return (
         <RichPanel>
             <RichPanelHeader>
-                <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
-                <OngoingTaskResponsibleNode task={data} />
-                <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
-                <OngoingTaskActions
-                    task={data}
-                    canEdit={canEdit}
-                    onEdit={onEdit}
-                    onDelete={onDeleteHandler}
-                    toggleDetails={toggleDetails}
-                />
+                <RichPanelInfo>
+                    <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
+                </RichPanelInfo>
+                <RichPanelActions>
+                    <OngoingTaskResponsibleNode task={data} />
+                    <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
+                    <OngoingTaskActions
+                        task={data}
+                        canEdit={canEdit}
+                        onEdit={onEdit}
+                        onDelete={onDeleteHandler}
+                        toggleDetails={toggleDetails}
+                    />
+                </RichPanelActions>
             </RichPanelHeader>
             {detailsVisible && <Details {...props} canEdit={canEdit} />}
             {detailsVisible && <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />}

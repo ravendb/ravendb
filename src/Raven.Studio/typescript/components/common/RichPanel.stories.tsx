@@ -3,15 +3,18 @@ import { boundCopy } from "../utils/common";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import {
     RichPanel,
+    RichPanelActions,
     RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
+    RichPanelInfo,
     RichPanelName,
     RichPanelSelect,
 } from "./RichPanel";
 import React from "react";
 import { Checkbox } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
+import { Button } from "reactstrap";
 
 export default {
     title: "Bits/Rich Panel",
@@ -25,12 +28,17 @@ const Template = (args: { withCheckbox: boolean }) => {
     return (
         <RichPanel>
             <RichPanelHeader>
-                {args.withCheckbox && (
-                    <RichPanelSelect>
-                        <Checkbox toggleSelection={toggle} selected={value} />
-                    </RichPanelSelect>
-                )}
-                <RichPanelName>This is header</RichPanelName>
+                <RichPanelInfo>
+                    {args.withCheckbox && (
+                        <RichPanelSelect>
+                            <Checkbox toggleSelection={toggle} selected={value} />
+                        </RichPanelSelect>
+                    )}
+                    <RichPanelName>This is header</RichPanelName>
+                </RichPanelInfo>
+                <RichPanelActions>
+                    <Button>Actions are placed here</Button>
+                </RichPanelActions>
             </RichPanelHeader>
             <RichPanelDetails>
                 <RichPanelDetailItem>
@@ -58,6 +66,11 @@ const Template = (args: { withCheckbox: boolean }) => {
                 >
                     Small with label
                 </RichPanelDetailItem>
+                <div className="rich-panel-details-right">
+                    <RichPanelDetailItem label="Other">
+                        <i className="icon-star" /> Detail placed right
+                    </RichPanelDetailItem>
+                </div>
             </RichPanelDetails>
         </RichPanel>
     );
