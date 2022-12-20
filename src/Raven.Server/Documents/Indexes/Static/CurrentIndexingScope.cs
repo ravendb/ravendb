@@ -335,7 +335,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return true;
         }
 
-        public SpatialField GetOrCreateSpatialField(string name)
+        public virtual SpatialField GetOrCreateSpatialField(string name)
         {
             return _getSpatialField(name);
         }
