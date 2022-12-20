@@ -1,26 +1,17 @@
-﻿import React, { useCallback, useEffect, useReducer, useState } from "react";
-import { Button, Input, Label, Spinner } from "reactstrap";
+﻿import React, { useCallback, useEffect, useReducer } from "react";
+import { Input, Label, Spinner } from "reactstrap";
 import { UncontrolledButtonWithDropdownPanel } from "components/common/DropdownPanel";
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
 import { useServices } from "hooks/useServices";
-import { NodeInfoComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { manageDatabaseGroupReducer } from "components/pages/resources/manageDatabaseGroup/reducer";
 import database from "models/resources/database";
-import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabaseGroup";
-import app from "durandal/app";
 import { useLicenseStatus } from "hooks/useLicenseStatus";
 import LicenseStatus = Raven.Server.Commercial.LicenseStatus;
-import { DeletionInProgress } from "components/pages/resources/manageDatabaseGroup/DeletionInProgress";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import clusterTopology from "models/database/cluster/clusterTopology";
 import { useChanges } from "hooks/useChanges";
 import { useAccessManager } from "hooks/useAccessManager";
-import { ReorderNodes } from "components/pages/resources/manageDatabaseGroup/ReorderNodes";
-import messagePublisher from "common/messagePublisher";
-import { useEventsCollector } from "hooks/useEventsCollector";
-import { HTML5Backend } from "react-dnd-html5-backend";
-import { DndProvider } from "react-dnd";
+import { NodeGroup } from "components/pages/resources/manageDatabaseGroup/NodeGroup";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -62,17 +53,9 @@ function getDynamicDatabaseDistributionWarning(
 export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     const { db } = props;
 
-    const [sortableMode, setSortableMode] = useState(false);
-
     const [state, dispatch] = useReducer(manageDatabaseGroupReducer, null);
-
     const { databasesService } = useServices();
-
-    const { reportEvent } = useEventsCollector();
-
     const { status: licenseStatus } = useLicenseStatus();
-
-    const clusterTopology = clusterTopologyManager.default.topology();
 
     const { isOperatorOrAbove } = useAccessManager();
 
@@ -107,10 +90,10 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     }, [fetchDatabaseInfo, db, setDynamicDatabaseDistribution]);
 
     const refresh = useCallback(() => {
-        if (!sortableMode) {
-            fetchDatabaseInfo(db.name);
-        }
-    }, [sortableMode, fetchDatabaseInfo, db]);
+        //TODO:if (!sortableMode) {
+        fetchDatabaseInfo(db.name);
+        //TODO:}
+    }, [fetchDatabaseInfo, db]);
 
     const { serverNotifications } = useChanges();
 
@@ -129,6 +112,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
         return () => sub.off();
     });
 
+    /*
     useEffect(() => {
         const anyError = anyNodeHasError(clusterTopology);
         //TODO: test this part!
@@ -139,13 +123,10 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
             setSortableMode(false);
         }
     }, [clusterTopology, sortableMode]);
+    
+     */
 
     const settingsUniqueId = useId("settings");
-
-    const addNode = useCallback(() => {
-        const addKeyView = new addNewNodeToDatabaseGroup(db.name, state.nodes, state.encrypted);
-        app.showBootstrapDialog(addKeyView);
-    }, [db, state]);
 
     const changeDynamicDatabaseDistribution = useCallback(async () => {
         toggleDynamicDatabaseDistribution();
@@ -153,31 +134,9 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
         await databasesService.toggleDynamicNodeAssignment(db, !dynamicDatabaseDistribution);
     }, [dynamicDatabaseDistribution, toggleDynamicDatabaseDistribution, databasesService, db]);
 
-    const enableNodesSort = useCallback(() => {
-        setSortableMode(true);
-    }, []);
-
-    const cancelReorder = useCallback(() => {
-        setSortableMode(false);
-    }, []);
-
-    const saveNewOrder = useCallback(
-        async (tagsOrder: string[], fixOrder: boolean) => {
-            reportEvent("db-group", "save-order");
-            await databasesService.reorderNodesInGroup(db, tagsOrder, fixOrder);
-            setSortableMode(false);
-            await fetchDatabaseInfo(db.name);
-        },
-        [databasesService, db, reportEvent, fetchDatabaseInfo]
-    );
-
     if (!state) {
         return <Spinner />;
     }
-
-    const clusterNodeTags = clusterTopology.nodes().map((x) => x.tag());
-    const existingTags = state.nodes ? state.nodes.map((x) => x.tag) : [];
-    const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
 
     const dynamicDatabaseDistributionWarning = getDynamicDatabaseDistributionWarning(
         licenseStatus,
@@ -188,57 +147,36 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     return (
         <div className="content-margin">
-            {!sortableMode && (
-                <div className="sticky-header">
-                    <Button
-                        disabled={state.nodes.length === 1 || !isOperatorOrAbove()}
-                        onClick={enableNodesSort}
-                        className="me-2"
-                    >
-                        <i className="icon-reorder me-1" /> Reorder nodes
-                    </Button>
-                    <Button className="me-2" color="primary" disabled={!addNodeEnabled} onClick={addNode}>
-                        <i className="icon-plus me-1" />
-                        Add node to group
-                    </Button>
-                    <UncontrolledButtonWithDropdownPanel buttonText="Settings">
-                        <>
-                            <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
-                                <div className="form-switch form-check-reverse">
-                                    <Input
-                                        id={settingsUniqueId}
-                                        type="switch"
-                                        role="switch"
-                                        disabled={!enableDynamicDatabaseDistribution}
-                                        checked={dynamicDatabaseDistribution}
-                                        onChange={changeDynamicDatabaseDistribution}
-                                    />
-                                    Allow dynamic database distribution
-                                </div>
-                            </Label>
-                            {dynamicDatabaseDistributionWarning && (
-                                <div className="bg-faded-warning px-4 py-2">{dynamicDatabaseDistributionWarning}</div>
-                            )}
-                        </>
-                    </UncontrolledButtonWithDropdownPanel>
-                </div>
-            )}
-            {sortableMode && (
-                <DndProvider backend={HTML5Backend}>
-                    <ReorderNodes nodes={state.nodes} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
-                </DndProvider>
-            )}
-            {!sortableMode && (
-                <div>
-                    {state.nodes.map((node) => (
-                        <NodeInfoComponent key={node.tag} node={node} db={db} databaseLockMode={state.lockMode} />
-                    ))}
+            <div className="sticky-header">
+                <UncontrolledButtonWithDropdownPanel buttonText="Settings">
+                    <>
+                        <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
+                            <div className="form-switch form-check-reverse">
+                                <Input
+                                    id={settingsUniqueId}
+                                    type="switch"
+                                    role="switch"
+                                    disabled={!enableDynamicDatabaseDistribution}
+                                    checked={dynamicDatabaseDistribution}
+                                    onChange={changeDynamicDatabaseDistribution}
+                                />
+                                Allow dynamic database distribution
+                            </div>
+                        </Label>
+                        {dynamicDatabaseDistributionWarning && (
+                            <div className="bg-faded-warning px-4 py-2">{dynamicDatabaseDistributionWarning}</div>
+                        )}
+                    </>
+                </UncontrolledButtonWithDropdownPanel>
+            </div>
 
-                    {state.deletionInProgress.map((deleting) => (
-                        <DeletionInProgress key={deleting} nodeTag={deleting} />
-                    ))}
-                </div>
-            )}
+            <NodeGroup
+                nodes={state.nodes}
+                db={db}
+                deletionInProgress={state.deletionInProgress}
+                refresh={refresh}
+                lockMode={state.lockMode}
+            />
         </div>
     );
 }
