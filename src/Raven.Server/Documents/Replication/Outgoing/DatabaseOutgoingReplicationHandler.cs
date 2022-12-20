@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (var tx = ctx.OpenReadTransaction())
                     {
-                        var etag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                        var etag = _database.DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
                         if (etag == _lastSentDocumentEtag)
                         {
                             SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(ctx));
@@ -362,7 +362,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
             {
-                if (DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction) !=
+                if (_database.DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction) !=
                     replicationBatchReply.LastEtagAccepted)
                 {
                     // We have changes that the other side doesn't have, this can be because we have writes

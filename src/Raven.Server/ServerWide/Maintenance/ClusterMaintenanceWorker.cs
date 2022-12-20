@@ -382,7 +382,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 using (var tx = context.OpenReadTransaction())
                 {
-                    report.LastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                    report.LastEtag = documentsStorage.ReadLastEtag(tx.InnerTransaction);
                     report.LastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
                     report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                     report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);

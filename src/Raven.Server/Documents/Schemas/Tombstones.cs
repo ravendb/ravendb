@@ -7,10 +7,8 @@ namespace Raven.Server.Documents.Schemas
 {
     public static class Tombstones
     {
-        public static TableSchema Current => TombstonesSchemaBase60;
-
         internal static readonly TableSchema TombstonesSchemaBase = new TableSchema();
-        internal static readonly TableSchema TombstonesSchemaBase60 = new TableSchema();
+        internal static readonly TableSchema ShardingTombstonesSchema = new TableSchema();
 
         internal static readonly Slice TombstonesSlice;
         internal static readonly Slice AllTombstonesEtagsSlice;
@@ -44,7 +42,7 @@ namespace Raven.Server.Documents.Schemas
             }
 
             DefineIndexesForTombstonesSchema(TombstonesSchemaBase);
-            DefineIndexesForTombstonesSchemaBase60();
+            DefineIndexesForShardingTombstonesSchemaBase();
 
             void DefineIndexesForTombstonesSchema(TableSchema schema)
             {
@@ -75,11 +73,11 @@ namespace Raven.Server.Documents.Schemas
                 });
             }
 
-            void DefineIndexesForTombstonesSchemaBase60()
+            void DefineIndexesForShardingTombstonesSchemaBase()
             {
-                DefineIndexesForTombstonesSchema(TombstonesSchemaBase60);
+                DefineIndexesForTombstonesSchema(ShardingTombstonesSchema);
 
-                TombstonesSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                ShardingTombstonesSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = ShardedDocumentsStorage.GenerateBucketAndEtagIndexKeyForTombstones,
                     OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,

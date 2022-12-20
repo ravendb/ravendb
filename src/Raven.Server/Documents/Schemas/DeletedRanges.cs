@@ -8,10 +8,9 @@ namespace Raven.Server.Documents.Schemas
 {
     public static class DeletedRanges
     {
-        public static TableSchema Current => DeleteRangesSchemaBase60;
 
         internal static readonly TableSchema DeleteRangesSchemaBase = new TableSchema();
-        internal static readonly TableSchema DeleteRangesSchemaBase60 = new TableSchema();
+        internal static readonly TableSchema ShardingDeleteRangesSchemaBase = new TableSchema();
 
         internal static readonly Slice PendingDeletionSegments;
         internal static readonly Slice DeletedRangesKey;
@@ -44,7 +43,7 @@ namespace Raven.Server.Documents.Schemas
             }
 
             DefineIndexesForDeletedRangesSchema(DeleteRangesSchemaBase);
-            DefineIndexesForDeletedRangesSchemaBase60();
+            DefineIndexesForShardingDeletedRangesSchemaBase();
 
             void DefineIndexesForDeletedRangesSchema(TableSchema schema)
             {
@@ -71,11 +70,11 @@ namespace Raven.Server.Documents.Schemas
 
             }
 
-            void DefineIndexesForDeletedRangesSchemaBase60()
+            void DefineIndexesForShardingDeletedRangesSchemaBase()
             {
-                DefineIndexesForDeletedRangesSchema(DeleteRangesSchemaBase60);
+                DefineIndexesForDeletedRangesSchema(ShardingDeleteRangesSchemaBase);
 
-                DeleteRangesSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                ShardingDeleteRangesSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForDeletedRanges,
                     OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,

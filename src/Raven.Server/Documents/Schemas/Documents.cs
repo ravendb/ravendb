@@ -7,20 +7,18 @@ namespace Raven.Server.Documents.Schemas
 {
     public static class Documents
     {
-        public static TableSchema Current => DocsSchemaBase60;
-        public static TableSchema CurrentCompressed => CompressedDocsSchemaBase60;
         public static readonly Slice CollectionEtagsSlice;
 
         internal static readonly Slice DocsSlice;
         internal static readonly Slice AllDocsEtagsSlice;
         internal static readonly Slice AllDocsBucketAndEtagSlice;
 
-        internal static readonly TableSchema DocsSchemaBase60 = new TableSchema
+        internal static readonly TableSchema ShardingDocsSchemaBase = new TableSchema
         {
             TableType = (byte)TableType.Documents
         };
 
-        internal static readonly TableSchema CompressedDocsSchemaBase60 = new TableSchema
+        internal static readonly TableSchema ShardingCompressedDocsSchemaBase = new TableSchema
         {
             TableType = (byte)TableType.Documents
         };
@@ -63,11 +61,11 @@ namespace Raven.Server.Documents.Schemas
             DocsSchemaBase.CompressValues(DocsSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], compress: false);
             CompressedDocsSchemaBase.CompressValues(CompressedDocsSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], compress: true);
 
-            DefineIndexesForDocsSchemaBase60(DocsSchemaBase60);
-            DefineIndexesForDocsSchemaBase60(CompressedDocsSchemaBase60);
+            DefineIndexesForShardingDocsSchemaBase(ShardingDocsSchemaBase);
+            DefineIndexesForShardingDocsSchemaBase(ShardingCompressedDocsSchemaBase);
 
-            DocsSchemaBase60.CompressValues(DocsSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], compress: false);
-            CompressedDocsSchemaBase60.CompressValues(CompressedDocsSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], compress: true);
+            ShardingDocsSchemaBase.CompressValues(DocsSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], compress: false);
+            ShardingCompressedDocsSchemaBase.CompressValues(CompressedDocsSchemaBase.FixedSizeIndexes[CollectionEtagsSlice], compress: true);
 
             void DefineIndexesForDocsSchemaBase(TableSchema docsSchema)
             {
@@ -92,7 +90,7 @@ namespace Raven.Server.Documents.Schemas
                 });
             }
 
-            void DefineIndexesForDocsSchemaBase60(TableSchema docsSchema)
+            void DefineIndexesForShardingDocsSchemaBase(TableSchema docsSchema)
             {
                 DefineIndexesForDocsSchemaBase(docsSchema);
 

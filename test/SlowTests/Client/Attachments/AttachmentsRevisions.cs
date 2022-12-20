@@ -86,8 +86,8 @@ namespace SlowTests.Client.Attachments
                 {
                     Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash1));
                     Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash2));
-                    Assert.Equal(1, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
-                    Assert.Equal(2, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash2Slice));
+                    Assert.Equal(1, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
+                    Assert.Equal(2, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash2Slice));
                 }
             }
         }
@@ -153,8 +153,8 @@ namespace SlowTests.Client.Attachments
                 {
                     Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash1));
                     Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash2));
-                    Assert.Equal(2, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
-                    Assert.Equal(2, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash2Slice));
+                    Assert.Equal(2, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
+                    Assert.Equal(2, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash2Slice));
                 }
             }
         }
@@ -216,7 +216,7 @@ namespace SlowTests.Client.Attachments
                 {
                     Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash1));
                     // 1 doc + 2 rev
-                    Assert.Equal(3, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
+                    Assert.Equal(3, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
                 }
             }
         }
@@ -280,7 +280,7 @@ namespace SlowTests.Client.Attachments
                 {
                     Assert.True(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(ctx, hash1));
                     // 1 doc + 3 rev
-                    Assert.Equal(4, AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
+                    Assert.Equal(4, database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, hash1Slice));
                 }
             }
         }

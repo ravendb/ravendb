@@ -8,14 +8,13 @@ namespace Raven.Server.Documents.Schemas
 {
     public static class TimeSeries
     {
-        public static TableSchema Current => TimeSeriesSchemaBase60;
 
         internal static readonly TableSchema TimeSeriesSchemaBase = new TableSchema
         {
             TableType = (byte)TableType.TimeSeries
         };
 
-        internal static readonly TableSchema TimeSeriesSchemaBase60 = new TableSchema
+        internal static readonly TableSchema ShardingTimeSeriesSchemaBase = new TableSchema
         {
             TableType = (byte)TableType.TimeSeries
         };
@@ -49,7 +48,7 @@ namespace Raven.Server.Documents.Schemas
             }
 
             DefineIndexesForTimeSeriesSchema(TimeSeriesSchemaBase);
-            DefineIndexesForTimeSeriesSchemaBase60();
+            DefineIndexesForShardingTimeSeriesSchemaBase();
 
             void DefineIndexesForTimeSeriesSchema(TableSchema schema)
             {
@@ -75,11 +74,11 @@ namespace Raven.Server.Documents.Schemas
                 });
             }
 
-            void DefineIndexesForTimeSeriesSchemaBase60()
+            void DefineIndexesForShardingTimeSeriesSchemaBase()
             {
-                DefineIndexesForTimeSeriesSchema(TimeSeriesSchemaBase60);
+                DefineIndexesForTimeSeriesSchema(ShardingTimeSeriesSchemaBase);
 
-                TimeSeriesSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                ShardingTimeSeriesSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = TimeSeriesStorage.GenerateBucketAndEtagIndexKeyForTimeSeries,
                     OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,

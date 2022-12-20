@@ -12,6 +12,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -38,8 +39,8 @@ namespace Raven.Server.Documents.TimeSeries
         public readonly TimeSeriesStats Stats;
         public readonly TimeSeriesRollups Rollups;
 
-        internal static readonly TableSchema TimeSeriesSchema = Schemas.TimeSeries.Current;
-        internal static readonly TableSchema DeleteRangesSchema = Schemas.DeletedRanges.Current;
+        internal readonly TableSchema TimeSeriesSchema;
+        internal readonly TableSchema DeleteRangesSchema;
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
@@ -49,6 +50,16 @@ namespace Raven.Server.Documents.TimeSeries
         public TimeSeriesStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
             _documentDatabase = documentDatabase;
+            if (_documentDatabase is ShardedDocumentDatabase)
+            {
+                TimeSeriesSchema = Schemas.TimeSeries.ShardingTimeSeriesSchemaBase;
+                DeleteRangesSchema = Schemas.DeletedRanges.ShardingDeleteRangesSchemaBase;
+            }
+            else
+            {
+                TimeSeriesSchema = Schemas.TimeSeries.TimeSeriesSchemaBase;
+                DeleteRangesSchema = Schemas.DeletedRanges.DeleteRangesSchemaBase;
+            }
             _documentsStorage = documentDatabase.DocumentsStorage;
 
             tx.CreateTree(TimeSeriesKeysSlice);

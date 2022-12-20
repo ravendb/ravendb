@@ -63,7 +63,7 @@ public class DatabaseStatsSender : AbstractDatabaseStatsSender
                 CountOfStaleIndexes = staleIndexes.Count,
                 StaleIndexes = staleIndexes.ToArray(),
                 CountOfIndexingErrors = countOfIndexingErrors,
-                LastEtag = DocumentsStorage.ReadLastEtag(context.Documents.Transaction.InnerTransaction),
+                LastEtag = database.DocumentsStorage.ReadLastEtag(context.Documents.Transaction.InnerTransaction),
                 GlobalChangeVector = DocumentsStorage.GetDatabaseChangeVector(context.Documents),
                 LastIndexingErrorTime = lastIndexingErrorTime,
                 Collections = database.DocumentsStorage.GetCollections(context.Documents)

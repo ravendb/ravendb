@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Indexes
             using (queryContext.OpenReadTransaction())
             using (Slice.From(indexContext.Allocator, key, out var slice))
             {
-                var lastDatabaseEtag = DocumentsStorage.ReadLastEtag(queryContext.Documents.Transaction.InnerTransaction);
+                var lastDatabaseEtag = DocumentDatabase.DocumentsStorage.ReadLastEtag(queryContext.Documents.Transaction.InnerTransaction);
                 var tree = indexContext.Transaction.InnerTransaction.CreateTree(IndexSchema.LastDocumentEtagOnIndexCreationTree);
                 tree.Add(slice, lastDatabaseEtag);
 

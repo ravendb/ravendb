@@ -17,6 +17,7 @@ using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -35,6 +36,7 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
+using static Raven.Server.Documents.Schemas.Attachments;
 using static Raven.Server.Documents.Schemas.Collections;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
@@ -43,9 +45,9 @@ namespace Raven.Server.Documents
 {
     public unsafe class DocumentsStorage : IDisposable
     {
-        public static readonly TableSchema DocsSchema = Schemas.Documents.Current;
-        public static readonly TableSchema CompressedDocsSchema = Schemas.Documents.CurrentCompressed;
-        public static readonly TableSchema TombstonesSchema = Schemas.Tombstones.Current;
+        public TableSchema DocsSchema;
+        public TableSchema CompressedDocsSchema;
+        public TableSchema TombstonesSchema;
         public static readonly TableSchema CollectionsSchema = Schemas.Collections.Current;
         public readonly DocumentDatabase DocumentDatabase;
         public DocumentsContextPool ContextPool;
@@ -97,9 +99,17 @@ namespace Raven.Server.Documents
         public DocumentsStorage(DocumentDatabase documentDatabase, Action<string> addToInitLog)
         {
             DocumentDatabase = documentDatabase;
+            SetDocumentsStorageSchemas();
             _name = DocumentDatabase.Name;
             _logger = LoggingSource.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
             _addToInitLog = addToInitLog;
+        }
+
+        protected virtual void SetDocumentsStorageSchemas()
+        {
+            DocsSchema = Schemas.Documents.DocsSchemaBase;
+            TombstonesSchema = Schemas.Tombstones.TombstonesSchemaBase;
+            CompressedDocsSchema = Schemas.Documents.CompressedDocsSchemaBase;
         }
 
         public void Dispose()
@@ -516,7 +526,7 @@ namespace Raven.Server.Documents
             return ReadLastEtagFrom(tx, Schemas.Revisions.AllRevisionsEtagsSlice);
         }
 
-        public static long ReadLastAttachmentsEtag(Transaction tx)
+        public long ReadLastAttachmentsEtag(Transaction tx)
         {
             if (tx.IsWriteTransaction == false)
             {
@@ -525,6 +535,7 @@ namespace Raven.Server.Documents
                     return cache.LastAttachmentsEtag;
                 }
             }
+
             return AttachmentsStorage.ReadLastEtag(tx);
         }
 
@@ -569,7 +580,7 @@ namespace Raven.Server.Documents
             return 0;
         }
 
-        public static long ReadLastEtag(Transaction tx)
+        public long ReadLastEtag(Transaction tx)
         {
             if (tx.IsWriteTransaction == false)
             {
@@ -1301,7 +1312,7 @@ namespace Raven.Server.Documents
             return ReadLastDocument(transaction, collectionName, CollectionTableType.Documents, ref result);
         }
 
-        private static bool ReadLastDocument(Transaction transaction, CollectionName collectionName, CollectionTableType collectionType, ref Table.TableValueHolder result)
+        private bool ReadLastDocument(Transaction transaction, CollectionName collectionName, CollectionTableType collectionType, ref Table.TableValueHolder result)
         {
             var table = transaction.OpenTable(DocsSchema,
                 collectionName.GetTableName(collectionType)
@@ -1546,7 +1557,7 @@ namespace Raven.Server.Documents
                     ExtractCollectionName(context, collectionName.Name);
                 }
 
-                DocumentPutAction.DeleteTombstoneIfNeeded(context, collectionName, lowerId);
+                DocumentPut.DeleteTombstoneIfNeeded(context, collectionName, lowerId);
 
                 DocumentFlags flags;
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);

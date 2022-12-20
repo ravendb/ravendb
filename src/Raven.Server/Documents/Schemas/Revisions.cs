@@ -8,10 +8,6 @@ namespace Raven.Server.Documents.Schemas
 {
     public static class Revisions
     {
-        public static TableSchema Current => RevisionsSchemaBase60;
-
-        public static TableSchema CurrentCompressed => CompressedRevisionsSchemaBase60;
-
         internal static readonly TableSchema RevisionsSchemaBase = new TableSchema()
         {
             TableType = (byte)TableType.Revisions,
@@ -22,12 +18,12 @@ namespace Raven.Server.Documents.Schemas
             TableType = (byte)TableType.Revisions,
         };
 
-        internal static readonly TableSchema RevisionsSchemaBase60 = new TableSchema()
+        internal static readonly TableSchema ShardingRevisionsSchemaBase = new TableSchema()
         {
             TableType = (byte)TableType.Revisions,
         };
 
-        internal static readonly TableSchema CompressedRevisionsSchemaBase60 = new TableSchema()
+        internal static readonly TableSchema ShardingCompressedRevisionsSchemaBase = new TableSchema()
         {
             TableType = (byte)TableType.Revisions,
         };
@@ -83,18 +79,18 @@ namespace Raven.Server.Documents.Schemas
                 DefineIndexesForRevisionsSchema(RevisionsSchemaBase, changeVectorSlice);
                 DefineIndexesForRevisionsSchema(CompressedRevisionsSchemaBase, changeVectorSlice);
 
-                DefineIndexesForRevisionsSchemaBase60(RevisionsSchemaBase60, changeVectorSlice);
-                DefineIndexesForRevisionsSchemaBase60(CompressedRevisionsSchemaBase60, changeVectorSlice);
+                DefineIndexesForShardingRevisionsSchemaBase(ShardingRevisionsSchemaBase, changeVectorSlice);
+                DefineIndexesForShardingRevisionsSchemaBase(ShardingCompressedRevisionsSchemaBase, changeVectorSlice);
 
                 RevisionsSchemaBase.CompressValues(
                     RevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: false);
                 CompressedRevisionsSchemaBase.CompressValues(
                     CompressedRevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: true);
 
-                RevisionsSchemaBase60.CompressValues(
-                    RevisionsSchemaBase60.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: false);
-                CompressedRevisionsSchemaBase60.CompressValues(
-                    CompressedRevisionsSchemaBase60.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: true);
+                ShardingRevisionsSchemaBase.CompressValues(
+                    ShardingRevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: false);
+                ShardingCompressedRevisionsSchemaBase.CompressValues(
+                    ShardingCompressedRevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: true);
 
             }
         }
@@ -142,7 +138,7 @@ namespace Raven.Server.Documents.Schemas
             });
         }
 
-        private static void DefineIndexesForRevisionsSchemaBase60(TableSchema schema, Slice changeVectorSlice)
+        private static void DefineIndexesForShardingRevisionsSchemaBase(TableSchema schema, Slice changeVectorSlice)
         {
             DefineIndexesForRevisionsSchema(schema, changeVectorSlice);
 

@@ -3,21 +3,24 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Schemas;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
+using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -30,7 +33,7 @@ namespace Raven.Server.Documents
 {
     public unsafe partial class AttachmentsStorage
     {
-        internal static readonly TableSchema AttachmentsSchema = Schemas.Attachments.Current;
+        internal readonly TableSchema AttachmentsSchema;
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
@@ -38,30 +41,43 @@ namespace Raven.Server.Documents
         public AttachmentsStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
             _documentDatabase = documentDatabase;
+            if (_documentDatabase is ShardedDocumentDatabase)
+            {
+                AttachmentsSchema = Schemas.Attachments.ShardingAttachmentsSchemaBase;
+            }
+            else
+            {
+                AttachmentsSchema = Schemas.Attachments.AttachmentsSchemaBase;
+            }
             _documentsStorage = documentDatabase.DocumentsStorage;
-            LoggingSource.Instance.GetLogger<AttachmentsStorage>(documentDatabase.Name);
 
             tx.CreateTree(AttachmentsSlice);
             AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 44);
-            TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
+            _documentDatabase.DocumentsStorage.TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
         }
 
         public static long ReadLastEtag(Transaction tx)
         {
-            var table = tx.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            var last = table.ReadLast(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice]);
-            if (last == null)
-                return 0;
+            var tableTree = tx.ReadTree(Attachments.AttachmentsMetadataSlice, RootObjectType.Table);
 
-            return TableValueToEtag((int)AttachmentsTable.Etag, ref last.Reader);
+            using (var fst = tableTree.FixedTreeFor(Attachments.AttachmentsEtagSlice, valSize: sizeof(long)))
+            {
+                using (var it = fst.Iterate())
+                {
+                    if (it.SeekToLast())
+                        return it.CurrentKey;
+                }
+            }
+
+            return 0;
         }
 
         public void AssertFixedSizeTrees(Transaction tx)
         {
             tx.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice).AssertValidFixedSizeTrees();
 
-            TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
-            tx.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice).AssertValidFixedSizeTrees();
+            _documentDatabase.DocumentsStorage.TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
+            tx.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice).AssertValidFixedSizeTrees();
         }
 
         public IEnumerable<ReplicationBatchItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)
@@ -82,7 +98,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static long GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
+        public long GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             return table.GetCountOfMatchesFor(AttachmentsSchema.Indexes[AttachmentsHashSlice], hash);
@@ -1136,9 +1152,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static Tombstone GetAttachmentTombstoneByKey(DocumentsOperationContext context, Slice key)
+        public Tombstone GetAttachmentTombstoneByKey(DocumentsOperationContext context, Slice key)
         {
-            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice);
+            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
             if (tombstoneTable.ReadByKey(key, out var tvr))
             {
                 var tombstone = TableValueToTombstone(context, ref tvr);
@@ -1172,7 +1188,7 @@ namespace Raven.Server.Documents
 
                 // This basically means that we tried to delete attachment that doesn't exist.
                 long attachmentEtag;
-                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice);
+                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
                 if (tombstoneTable.ReadByKey(key, out var existingTombstone))
                 {
                     attachmentEtag = TableValueToEtag((int)TombstoneTable.Etag, ref existingTombstone);
@@ -1222,9 +1238,9 @@ namespace Raven.Server.Documents
             DeleteAttachmentStream(context, hash, key);
         }
 
-        private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice)
+        private void DeleteTombstoneIfNeeded(DocumentsOperationContext context, Slice keySlice)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice);
+            var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
             table.DeleteByKey(keySlice);
         }
 
@@ -1233,7 +1249,7 @@ namespace Raven.Server.Documents
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice);
+            var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
 
             if (table.VerifyKeyExists(keySlice))
                 return; // attachments (and attachment tombstones) are immutable, we can safely ignore this

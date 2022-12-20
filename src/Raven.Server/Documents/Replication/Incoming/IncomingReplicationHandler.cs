@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 // our own latest etag. This allows us to have effective synchronization points, since each change will
                 // be able to tell (roughly) where it is at on the entire cluster.
                 databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
-                currentLastEtagMatchingChangeVector = DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
+                currentLastEtagMatchingChangeVector = _database.DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
             }
             if (Logger.IsInfoEnabled)
             {
@@ -371,7 +371,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
 
-                                var tombstone = AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
+                                var tombstone = database.DocumentsStorage.AttachmentsStorage.GetAttachmentTombstoneByKey(context, attachmentTombstone.Key);
                                 if (tombstone != null && ChangeVectorUtils.GetConflictStatus(item.ChangeVector, tombstone.ChangeVector) == ConflictStatus.AlreadyMerged)
                                     continue;
 

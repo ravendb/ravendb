@@ -516,7 +516,7 @@ namespace SlowTests.Sharding.Cluster
                 using (ctx.OpenReadTransaction())
                 using (Slice.From(ctx.Allocator, hash, out var slice))
                 {
-                    var count = AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
+                    var count = db.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
                     Assert.Equal(3, count); // document attachment + 2 revision attachments
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
@@ -534,7 +534,7 @@ namespace SlowTests.Sharding.Cluster
                 using (ctx.OpenReadTransaction())
                 using (Slice.From(ctx.Allocator, hash, out var slice))
                 {
-                    var count = AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
+                    var count = db.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
                     Assert.Equal(2, count); // 2 revision attachments
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
@@ -551,7 +551,7 @@ namespace SlowTests.Sharding.Cluster
                 using (ctx.OpenReadTransaction())
                 using (Slice.From(ctx.Allocator, hash, out var slice))
                 {
-                    var count = AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
+                    var count = db.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(ctx, slice);
                     Assert.Equal(0, count);
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);

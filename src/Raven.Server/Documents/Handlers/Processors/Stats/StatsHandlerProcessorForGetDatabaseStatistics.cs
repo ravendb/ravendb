@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
             var size = database.GetSizeOnDisk();
 
             stats.LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Documents.Transaction.InnerTransaction);
-            stats.LastDatabaseEtag = DocumentsStorage.ReadLastEtag(context.Documents.Transaction.InnerTransaction);
+            stats.LastDatabaseEtag = database.DocumentsStorage.ReadLastEtag(context.Documents.Transaction.InnerTransaction);
             stats.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context.Documents);
 
             stats.CountOfDocuments = database.DocumentsStorage.GetNumberOfDocuments(context.Documents);

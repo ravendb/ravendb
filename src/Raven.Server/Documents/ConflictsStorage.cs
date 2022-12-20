@@ -9,6 +9,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents
 {
     public unsafe partial class ConflictsStorage
     {
-        public static readonly TableSchema ConflictsSchema = Current;
+        public readonly TableSchema ConflictsSchema;
         public long ConflictsCount;
 
         private readonly DocumentDatabase _documentDatabase;
@@ -38,6 +39,17 @@ namespace Raven.Server.Documents
         public ConflictsStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
             _documentDatabase = documentDatabase;
+            if (_documentDatabase is ShardedDocumentDatabase)
+            {
+                ConflictsSchema = Schemas.Conflicts.ShardingConflictsSchemaBase;
+
+            }
+            else
+            {
+                ConflictsSchema = Schemas.Conflicts.ConflictsSchemaBase;
+
+            }
+
             _documentsStorage = documentDatabase.DocumentsStorage;
             _logger = LoggingSource.Instance.GetLogger<ConflictsStorage>(documentDatabase.Name);
 
@@ -518,7 +530,7 @@ namespace Raven.Server.Documents
                     _documentsStorage.EnsureLastEtagIsPersisted(context, existingDoc.Etag);
 
                     //make sure that the relevant collection tree exists
-                    var table = tx.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                    var table = tx.OpenTable(_documentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
                     table.Delete(existingDoc.StorageId);
                 }
                 else if (existing.Tombstone != null)
@@ -541,7 +553,7 @@ namespace Raven.Server.Documents
 
                     collectionName = _documentsStorage.GetCollection(existingTombstone.Collection, throwIfDoesNotExist: true);
 
-                    var table = tx.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                    var table = tx.OpenTable(_documentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
                     table.Delete(existingTombstone.StorageId);
 
                 }
