@@ -15,10 +15,10 @@ const {
 } = composeStories(stories);
 
 const selectors = {
-    pageReady: /add node to group/i,
+    pageReady: /add node/i,
 };
 
-describe("IndexesPage", function () {
+describe("ManageDatabaseGroup", function () {
     it("can render cluster view", async () => {
         const { screen } = rtlRender(<Cluster />);
 
