@@ -15,11 +15,14 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Queries.Sorting;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
+using SlowTests.Server.Documents.PeriodicBackup;
 using SlowTests.Smuggler;
 using Sparrow.Utils;
 using Tests.Infrastructure;
@@ -865,6 +868,78 @@ namespace SlowTests.Sharding.Backup
                 File.Delete(file);
                 File.Delete(file2);
             }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task CanImportAtomicGuardTombstonesToShardedDatabase()
+        {
+            //RavenDB-19201
+
+            var file = GetTempFileName();
+            using var store = GetDocumentStore();
+            using var shardedStore = Sharding.GetDocumentStore();
+
+            RavenDB_11139.WaitForFirstCompareExchangeTombstonesClean(Server);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    await session.StoreAsync(new User(), $"users/{i}");
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                var user = new User { Name = "Ayende" };
+                await session.StoreAsync(user, "users/ayende");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                session.Delete("users/ayende");
+                await session.SaveChangesAsync();
+            }
+
+            using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var compareExchangeTombs = Server.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(context, store.Database).ToList();
+                Assert.Equal(1, compareExchangeTombs.Count);
+                Assert.Equal("rvn-atomic/users/ayende", compareExchangeTombs[0].Key.Key);
+            }
+            
+            var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
+            {
+                OperateOnTypes = DatabaseItemType.Documents
+                                 | DatabaseItemType.CompareExchange
+                                 | DatabaseItemType.CompareExchangeTombstones
+
+            }, file);
+
+            await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(10));
+
+            operation = await shardedStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
+            {
+                OperateOnTypes = DatabaseItemType.Documents
+                                 | DatabaseItemType.CompareExchange
+                                 | DatabaseItemType.CompareExchangeTombstones
+            }, file);
+
+            var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(10)) as SmugglerResult;
+
+            Assert.NotNull(result);
+            Assert.Equal(1, result.CompareExchangeTombstones.ReadCount);
+            Assert.Equal(10, result.Documents.ReadCount);
         }
     }
 }
