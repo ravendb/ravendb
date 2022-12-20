@@ -168,18 +168,22 @@ public abstract class AbstractIndexCreateController
         return index;
     }
 
+    public static bool CanUseIndexBatch()
+    {
+        return ClusterCommandsVersionManager.CanPutCommand(nameof(PutIndexesCommand));
+    }
+
+    public IndexBatchScope CreateIndexBatch()
+    {
+        return new IndexBatchScope(this, ServerStore, ServerStore.LicenseManager.GetNumberOfUtilizedCores());
+    }
+
     private static void ValidateAutoIndex(IndexDefinitionBaseServerSide definition)
     {
         if (IndexStore.IsValidIndexName(definition.Name, false, out var errorMessage) == false)
         {
             throw new ArgumentException(errorMessage);
         }
-    }
-
-
-    public IndexBatchScope CreateIndexBatch()
-    {
-        return new IndexBatchScope(this, ServerStore, ServerStore.LicenseManager.GetNumberOfUtilizedCores());
     }
 
     private void ValidateAnalyzers(IndexDefinition definition)
