@@ -14,6 +14,7 @@ using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.Smuggler.Documents.Actions;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -98,7 +99,7 @@ namespace Raven.Server.Smuggler.Documents
 
         // All the NotImplementedException methods are handled on the smuggler level, since they are cluster wide and do no require any specific database
         public IDatabaseRecordActions DatabaseRecord() => throw new NotImplementedException();
-        public IIndexActions Indexes() => new DatabaseDestination.DatabaseIndexActions(_databaseContext.Indexes.Create, _databaseContext.Time);
+        public IIndexActions Indexes() => new DatabaseIndexActions(_databaseContext.Indexes.Create, _databaseContext.Time);
         public IKeyValueActions<long> Identities() => throw new NotImplementedException();
         public ISubscriptionActions Subscriptions() => throw new NotImplementedException();
         public IReplicationHubCertificateActions ReplicationHubCertificates() => throw new NotImplementedException();

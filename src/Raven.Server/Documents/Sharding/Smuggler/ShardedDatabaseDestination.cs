@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Actions;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 
