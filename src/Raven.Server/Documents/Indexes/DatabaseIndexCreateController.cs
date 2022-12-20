@@ -22,7 +22,7 @@ public class DatabaseIndexCreateController : AbstractIndexCreateController
 
     protected override SystemTime GetDatabaseTime() => _database.Time;
 
-    protected override RavenConfiguration GetDatabaseConfiguration() => _database.Configuration;
+    public override RavenConfiguration GetDatabaseConfiguration() => _database.Configuration;
 
     protected override IndexInformationHolder GetIndex(string name)
     {
@@ -52,8 +52,8 @@ public class DatabaseIndexCreateController : AbstractIndexCreateController
             yield return index.ToIndexInformationHolder();
     }
 
-    protected override async ValueTask WaitForIndexNotificationAsync(long index)
+    protected override async ValueTask WaitForIndexNotificationAsync(long index, TimeSpan? timeout = null)
     {
-        await _database.RachisLogIndexNotifications.WaitForIndexNotification(index, _database.ServerStore.Engine.OperationTimeout);
+        await _database.RachisLogIndexNotifications.WaitForIndexNotification(index, timeout ?? _database.ServerStore.Engine.OperationTimeout);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
@@ -26,7 +27,7 @@ public class ShardedIndexCreateController : AbstractIndexCreateController
 
     protected override SystemTime GetDatabaseTime() => _context.Time;
 
-    protected override RavenConfiguration GetDatabaseConfiguration() => _context.Configuration;
+    public override RavenConfiguration GetDatabaseConfiguration() => _context.Configuration;
 
     protected override IndexInformationHolder GetIndex(string name)
     {
@@ -52,7 +53,17 @@ public class ShardedIndexCreateController : AbstractIndexCreateController
 
     protected override IEnumerable<IndexInformationHolder> GetIndexes() => _context.Indexes.GetIndexes();
 
-    protected override ValueTask WaitForIndexNotificationAsync(long index) => _context.Cluster.WaitForExecutionOnAllNodesAsync(index);
+    protected override async ValueTask WaitForIndexNotificationAsync(long index, TimeSpan? timeout = null)
+    {
+        if (timeout != null)
+        {
+            using var cts = new CancellationTokenSource(timeout.Value);
+            await _context.Cluster.WaitForExecutionOnAllNodesAsync(index, cts.Token);
+            return;
+        }
+
+        await _context.Cluster.WaitForExecutionOnAllNodesAsync(index);
+    }
 
     public override async ValueTask ValidateStaticIndexAsync(IndexDefinition definition)
     {

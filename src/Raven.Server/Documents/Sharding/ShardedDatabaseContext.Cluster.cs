@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Sharding.Operations;
@@ -22,10 +23,10 @@ public partial class ShardedDatabaseContext
         /// <summary>
         /// Wait for the database context to be update on all cluster nodes regardless if a shard is actually reside on that node or not [Important when you need the ShardedDatabaseContext to be updated].
         /// </summary>
-        public async ValueTask WaitForExecutionOnAllNodesAsync(long index)
+        public async ValueTask WaitForExecutionOnAllNodesAsync(long index, CancellationToken token = default)
         {
             var op = new WaitForIndexNotificationOperation(index);
-            await _context.AllNodesExecutor.ExecuteParallelForAllAsync(op);
+            await _context.AllNodesExecutor.ExecuteParallelForAllAsync(op, token);
         }
 
         /// <summary>

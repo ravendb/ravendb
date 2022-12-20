@@ -30,6 +30,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -291,7 +292,7 @@ namespace Raven.Server.Commercial
             }
 
             // we don't have any license limits for this node, let's put our info to update it
-            if(shouldPutNodeInfoIfNotExist)
+            if (shouldPutNodeInfoIfNotExist)
                 Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
             return Math.Min(ProcessorInfo.ProcessorCount, LicenseStatus.MaxCores);
         }
@@ -452,7 +453,7 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("Could not save license!", e);
             }
         }
-        
+
         private void ResetLicense(string error)
         {
             LicenseStatus = new LicenseStatus
@@ -949,11 +950,11 @@ namespace Raven.Server.Commercial
             X509Certificate2 certificate = null;
             if (_serverStore.Server.Certificate.Certificate != null)
             {
-                certificateNotBefore  = _serverStore.Server.Certificate.Certificate.NotBefore; 
-                certificateNotAfter  = _serverStore.Server.Certificate.Certificate.NotAfter; 
-                certificate = _serverStore.Server.Certificate.Certificate;   
+                certificateNotBefore = _serverStore.Server.Certificate.Certificate.NotBefore;
+                certificateNotAfter = _serverStore.Server.Certificate.Certificate.NotAfter;
+                certificate = _serverStore.Server.Certificate.Certificate;
             }
-            
+
             var clusterSize = GetClusterSize();
             var maxClusterSize = newLicenseStatus.MaxClusterSize;
             if (clusterSize > maxClusterSize)
@@ -979,9 +980,9 @@ namespace Raven.Server.Commercial
                                        "In order to use this license please disable SNMP Monitoring in the server configuration";
                 throw GenerateLicenseLimit(LimitType.Snmp, message);
             }
-            
+
             SecretProtection.ValidateExpiration(nameof(LicenseManager), _serverStore.GetLicenseType(), newLicenseStatus.Type, certificate, certificateNotBefore, certificateNotAfter);
-            
+
             var encryptedDatabasesCount = 0;
             var externalReplicationCount = 0;
             var delayedExternalReplicationCount = 0;
@@ -1043,15 +1044,15 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.SqlEtls != null &&
                         databaseRecord.SqlEtls.Count > 0)
                         sqlEtlCount++;
-                    
+
                     if (databaseRecord.OlapEtls != null &&
                         databaseRecord.OlapEtls.Count > 0)
                         olapEtlCount++;
-                    
+
                     if (databaseRecord.ElasticSearchEtls != null &&
                         databaseRecord.ElasticSearchEtls.Count > 0)
                         elasticSearchEtlCount++;
-                    
+
                     if (databaseRecord.QueueEtls != null &&
                         databaseRecord.QueueEtls.Count > 0)
                         queueEtlCount++;
@@ -1121,19 +1122,19 @@ namespace Raven.Server.Commercial
                 var message = GenerateDetails(sqlEtlCount, "SQL ETL");
                 throw GenerateLicenseLimit(LimitType.SqlEtl, message);
             }
-            
+
             if (olapEtlCount > 0 && newLicenseStatus.HasOlapEtl == false)
             {
                 var message = GenerateDetails(olapEtlCount, "OLAP ETL");
                 throw GenerateLicenseLimit(LimitType.OlapEtl, message);
             }
-            
+
             if (elasticSearchEtlCount > 0 && newLicenseStatus.HasElasticSearchEtl == false)
             {
                 var message = GenerateDetails(elasticSearchEtlCount, "ElasticSearch ETL");
                 throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
             }
-            
+
             if (queueEtlCount > 0 && newLicenseStatus.HasQueueEtl == false)
             {
                 var message = GenerateDetails(queueEtlCount, "Queue ETL");
@@ -1455,7 +1456,7 @@ namespace Raven.Server.Commercial
             const string message = "Your current license doesn't include the SQL ETL feature";
             throw GenerateLicenseLimit(LimitType.SqlEtl, message);
         }
-        
+
         public void AssertCanAddElasticSearchEtl()
         {
             if (IsValid(out var licenseLimit) == false)
@@ -1518,7 +1519,7 @@ namespace Raven.Server.Commercial
 
         public void AssertCanAddReadOnlyCertificates(CertificateDefinition certificate)
         {
-            if (certificate.Permissions.Count == 0 || 
+            if (certificate.Permissions.Count == 0 ||
                 certificate.Permissions.All(x => x.Value == DatabaseAccess.Read) == false)
                 return;
 
@@ -1586,7 +1587,7 @@ namespace Raven.Server.Commercial
                 DismissLicenseLimit(LimitType.PowerBI);
                 return true;
             }
-            
+
             const string details = "Your current license doesn't include the Power BI feature";
             licenseLimitException = GenerateLicenseLimit(LimitType.PowerBI, details, addNotification: true);
             return false;
@@ -1851,6 +1852,30 @@ namespace Raven.Server.Commercial
             finally
             {
                 _locker.Release();
+            }
+        }
+
+        public int GetNumberOfUtilizedCores()
+        {
+            int defaultNumberOfCores = ProcessorInfo.ProcessorCount;
+
+            try
+            {
+                var licenseLimits = _serverStore.LoadLicenseLimits();
+
+                return licenseLimits != null && licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out DetailsPerNode detailsPerNode)
+                    ? detailsPerNode.UtilizedCores
+                    : defaultNumberOfCores;
+            }
+            catch (Exception e)
+            {
+                if (e.IsOutOfMemory() == false)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Failed to get number of utilized cores. Defaulting to {defaultNumberOfCores} cores", e);
+                }
+
+                return defaultNumberOfCores;
             }
         }
     }
