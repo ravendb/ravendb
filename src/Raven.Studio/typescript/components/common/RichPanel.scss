@@ -8,7 +8,7 @@
     }
 
     .rich-panel-header {
-        padding: sizes.$gutter-xs sizes.$gutter-sm;
+        padding: 0;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -16,7 +16,21 @@
         .rich-panel-select {
             width: sizes.$gutter;
             height: sizes.$gutter;
-            margin-right: sizes.$gutter-sm;
+            margin: 0 sizes.$gutter-xxs 0 0;
+            min-height: auto;
+        }
+
+        .rich-panel-info,
+        .rich-panel-actions {
+            padding: sizes.$gutter-xs sizes.$gutter-sm;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .rich-panel-actions {
+            justify-content: end;
+            flex-grow: 1;
         }
     }
 }
@@ -34,6 +48,15 @@
     padding-left: sizes.$gutter-md;
     display: flex;
     align-items: flex-end;
+    flex-wrap: wrap;
+
+    .rich-panel-details-right {
+        display: flex;
+        justify-content: end;
+        flex-grow: 1;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
 
     .rich-panel-detail-item {
         padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);

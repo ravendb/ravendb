@@ -12,9 +12,11 @@ import { useAccessManager } from "hooks/useAccessManager";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
+    RichPanelActions,
     RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
+    RichPanelInfo,
     RichPanelName,
 } from "../../../../common/RichPanel";
 import genUtils from "common/generalUtils";
@@ -244,19 +246,22 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
     return (
         <RichPanel>
             <RichPanelHeader>
-                <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
-                <FlexGrow />
-                <OngoingTaskResponsibleNode task={data} />
-                <BackupEncryption encrypted={data.shared.encrypted} />
-                <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
+                <RichPanelInfo>
+                    <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
+                </RichPanelInfo>
+                <RichPanelActions>
+                    <OngoingTaskResponsibleNode task={data} />
+                    <BackupEncryption encrypted={data.shared.encrypted} />
+                    <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
 
-                <OngoingTaskActions
-                    task={data}
-                    canEdit={canEdit}
-                    onEdit={onEdit}
-                    onDelete={onDeleteHandler}
-                    toggleDetails={toggleDetails}
-                />
+                    <OngoingTaskActions
+                        task={data}
+                        canEdit={canEdit}
+                        onEdit={onEdit}
+                        onDelete={onDeleteHandler}
+                        toggleDetails={toggleDetails}
+                    />
+                </RichPanelActions>
             </RichPanelHeader>
             {detailsVisible && <Details canEdit={canEdit} {...props} />}
         </RichPanel>

@@ -17,9 +17,11 @@ import { IndexProgressTooltip } from "./IndexProgressTooltip";
 import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 import {
     RichPanel,
+    RichPanelActions,
     RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
+    RichPanelInfo,
     RichPanelName,
     RichPanelSelect,
 } from "../../../../common/RichPanel";
@@ -198,18 +200,18 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
         <>
             <RichPanel className={classNames({ "index-sidebyside": hasReplacement || isReplacement })} innerRef={ref}>
                 <RichPanelHeader id={indexUniqueId(index)}>
-                    <RichPanelSelect>
-                        {canReadWriteDatabase(database) && (
-                            <Input type="checkbox" onChange={toggleSelection} checked={selected} />
-                        )}
-                    </RichPanelSelect>
+                    <RichPanelInfo>
+                        <RichPanelSelect>
+                            {canReadWriteDatabase(database) && (
+                                <Input type="checkbox" onChange={toggleSelection} checked={selected} />
+                            )}
+                        </RichPanelSelect>
 
-                    <RichPanelName>
-                        <a href={editUrl} title={index.name}>
+                        <RichPanelName href={editUrl} title={index.name}>
                             {index.name}
-                        </a>
-                    </RichPanelName>
-                    <div className="flex-horizontal flex-grow-1 justify-content-end flex-wrap">
+                        </RichPanelName>
+                    </RichPanelInfo>
+                    <RichPanelActions>
                         {!IndexUtils.hasAnyFaultyNode(index) && (
                             <>
                                 {!IndexUtils.isSideBySide(index) && (
@@ -310,88 +312,86 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             </>
                         )}
 
-                        <div className="actions flex-horizontal" role="toolbar">
-                            {!IndexUtils.hasAnyFaultyNode(index) && (
-                                <UncontrolledDropdown className="me-1">
-                                    <DropdownToggle
-                                        data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
+                        {!IndexUtils.hasAnyFaultyNode(index) && (
+                            <UncontrolledDropdown className="me-1">
+                                <DropdownToggle
+                                    data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
                                            enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name),
                                            requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }"
-                                    >
-                                        {updatingState && <Spinner size="sm" className="me-2" />}
-                                        <span>Set State</span>
-                                    </DropdownToggle>
+                                >
+                                    {updatingState && <Spinner size="sm" className="me-2" />}
+                                    <span>Set State</span>
+                                </DropdownToggle>
 
-                                    <DropdownMenu>
-                                        <DropdownItem onClick={enableIndexing} title="Enable indexing">
-                                            <i className="icon-play" /> <span>Enable indexing</span>
-                                        </DropdownItem>
-                                        <DropdownItem onClick={disableIndexing} title="Disable indexing">
-                                            <i className="icon-cancel text-danger" /> <span>Disable indexing</span>
-                                        </DropdownItem>
-                                        <DropdownItem divider />
-                                        <DropdownItem onClick={resumeIndexing} title="Resume indexing">
-                                            <i className="icon-play" /> <span>Resume indexing</span>
-                                        </DropdownItem>
-                                        <DropdownItem onClick={pauseIndexing} title="Pause until restart">
-                                            <i className="icon-pause text-warning" />{" "}
-                                            <span>Pause indexing until restart</span>
+                                <DropdownMenu>
+                                    <DropdownItem onClick={enableIndexing} title="Enable indexing">
+                                        <i className="icon-play" /> <span>Enable indexing</span>
+                                    </DropdownItem>
+                                    <DropdownItem onClick={disableIndexing} title="Disable indexing">
+                                        <i className="icon-cancel text-danger" /> <span>Disable indexing</span>
+                                    </DropdownItem>
+                                    <DropdownItem divider />
+                                    <DropdownItem onClick={resumeIndexing} title="Resume indexing">
+                                        <i className="icon-play" /> <span>Resume indexing</span>
+                                    </DropdownItem>
+                                    <DropdownItem onClick={pauseIndexing} title="Pause until restart">
+                                        <i className="icon-pause text-warning" />{" "}
+                                        <span>Pause indexing until restart</span>
+                                    </DropdownItem>
+                                </DropdownMenu>
+                            </UncontrolledDropdown>
+                        )}
+
+                        {!IndexUtils.hasAnyFaultyNode(index) && (
+                            <ButtonGroup className="me-1">
+                                <Button variant="secondary" href={queryUrl}>
+                                    <i className="icon-search" />
+                                    <span>Query</span>
+                                </Button>
+
+                                <UncontrolledDropdown>
+                                    <DropdownToggle className="dropdown-toggle" />
+
+                                    <DropdownMenu end>
+                                        <DropdownItem href={termsUrl}>
+                                            {" "}
+                                            <i className="icon-terms" /> Terms{" "}
                                         </DropdownItem>
                                     </DropdownMenu>
                                 </UncontrolledDropdown>
-                            )}
-
-                            {!IndexUtils.hasAnyFaultyNode(index) && (
-                                <ButtonGroup className="me-1">
-                                    <Button variant="secondary" href={queryUrl}>
-                                        <i className="icon-search" />
-                                        <span>Query</span>
-                                    </Button>
-
-                                    <UncontrolledDropdown>
-                                        <DropdownToggle className="dropdown-toggle" />
-
-                                        <DropdownMenu end>
-                                            <DropdownItem href={termsUrl}>
-                                                {" "}
-                                                <i className="icon-terms" /> Terms{" "}
-                                            </DropdownItem>
-                                        </DropdownMenu>
-                                    </UncontrolledDropdown>
-                                </ButtonGroup>
-                            )}
-
-                            <ButtonGroup className="me-1">
-                                {!IndexUtils.isAutoIndex(index) && !canReadOnlyDatabase(database) && (
-                                    <Button href={editUrl} title="Edit index">
-                                        <i className="icon-edit" />
-                                    </Button>
-                                )}
-                                {(IndexUtils.isAutoIndex(index) || canReadOnlyDatabase(database)) && (
-                                    <Button href={editUrl} title="View index">
-                                        <i className="icon-preview" />
-                                    </Button>
-                                )}
                             </ButtonGroup>
+                        )}
 
-                            {inlineDetails && isFaulty && (
-                                <Button onClick={() => openFaulty(index.nodesInfo[0].location)} className="me-1">
-                                    Open faulty index
+                        <ButtonGroup className="me-1">
+                            {!IndexUtils.isAutoIndex(index) && !canReadOnlyDatabase(database) && (
+                                <Button href={editUrl} title="Edit index">
+                                    <i className="icon-edit" />
                                 </Button>
                             )}
-
-                            {canReadWriteDatabase(database) && (
-                                <ButtonGroup className="me-1">
-                                    <Button color="warning" onClick={resetIndex} title="Reset index (rebuild)">
-                                        <i className="icon-reset-index" />
-                                    </Button>
-                                    <Button color="danger" onClick={deleteIndex} title="Delete the index">
-                                        <i className="icon-trash" />
-                                    </Button>
-                                </ButtonGroup>
+                            {(IndexUtils.isAutoIndex(index) || canReadOnlyDatabase(database)) && (
+                                <Button href={editUrl} title="View index">
+                                    <i className="icon-preview" />
+                                </Button>
                             )}
-                        </div>
-                    </div>
+                        </ButtonGroup>
+
+                        {inlineDetails && isFaulty && (
+                            <Button onClick={() => openFaulty(index.nodesInfo[0].location)} className="me-1">
+                                Open faulty index
+                            </Button>
+                        )}
+
+                        {canReadWriteDatabase(database) && (
+                            <ButtonGroup className="me-1">
+                                <Button color="warning" onClick={resetIndex} title="Reset index (rebuild)">
+                                    <i className="icon-reset-index" />
+                                </Button>
+                                <Button color="danger" onClick={deleteIndex} title="Delete the index">
+                                    <i className="icon-trash" />
+                                </Button>
+                            </ButtonGroup>
+                        )}
+                    </RichPanelActions>
                 </RichPanelHeader>
                 <RichPanelDetails>
                     {(index.reduceOutputCollectionName || index.patternForReferencesToReduceOutputCollection) && (

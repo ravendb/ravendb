@@ -1,5 +1,11 @@
-﻿import { FlexGrow } from "components/common/FlexGrow";
-import { RichPanel, RichPanelHeader, RichPanelName, RichPanelStatus } from "components/common/RichPanel";
+﻿import {
+    RichPanel,
+    RichPanelActions,
+    RichPanelHeader,
+    RichPanelInfo,
+    RichPanelName,
+    RichPanelStatus,
+} from "components/common/RichPanel";
 import React from "react";
 import { Spinner } from "reactstrap";
 
@@ -9,11 +15,14 @@ export function DeletionInProgress(props: { nodeTag: string }) {
         <RichPanel className="flex-row">
             <RichPanelStatus color="danger">deleting</RichPanelStatus>
             <RichPanelHeader className="flex-grow-1">
-                <RichPanelName>Node: {nodeTag}</RichPanelName>
-                <FlexGrow />
-                <div className="pulse text-progress" title="Deletion in progress">
-                    <Spinner size="sm" className="me-1" /> Deletion in progress
-                </div>
+                <RichPanelInfo>
+                    <RichPanelName>Node: {nodeTag}</RichPanelName>
+                </RichPanelInfo>
+                <RichPanelActions>
+                    <div className="pulse text-progress" title="Deletion in progress">
+                        <Spinner size="sm" className="me-1" /> Deletion in progress
+                    </div>
+                </RichPanelActions>
             </RichPanelHeader>
         </RichPanel>
     );

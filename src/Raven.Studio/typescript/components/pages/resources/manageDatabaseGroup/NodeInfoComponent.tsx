@@ -14,9 +14,11 @@ import { FlexGrow } from "components/common/FlexGrow";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import {
     RichPanel,
+    RichPanelActions,
     RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
+    RichPanelInfo,
     RichPanelName,
     RichPanelStatus,
 } from "components/common/RichPanel";
@@ -71,61 +73,62 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
 
             <div className="flex-grow-1">
                 <RichPanelHeader>
-                    <RichPanelName title={node.type}>
-                        <i className={classNames(cssIcon(node), "me-1")} />
-                        Node: {node.tag}
-                    </RichPanelName>
-
-                    <FlexGrow />
-
-                    {node.responsibleNode && (
-                        <div
-                            className="text-center"
-                            title="Database group node that is responsible for caught up of this node"
-                        >
-                            <i className="icon-cluster-node"></i>
-                            <span>{node.responsibleNode}</span>
-                        </div>
-                    )}
-                    {canDelete ? (
-                        <UncontrolledDropdown key="can-delete">
-                            <DropdownToggle color="danger" caret>
-                                <i className="icon-disconnected" />
-                                Delete from group
-                            </DropdownToggle>
-                            <DropdownMenu>
-                                <DropdownItem onClick={() => deleteNodeFromGroup(false)}>
-                                    <i className="icon-trash" />
-                                    <span>Soft Delete</span>&nbsp;
-                                    <br />
-                                    <small>stop replication and keep database files on the node</small>
-                                </DropdownItem>
-                                <DropdownItem onClick={() => deleteNodeFromGroup(true)}>
-                                    <i className="icon-alerts text-danger"></i>{" "}
-                                    <span className="text-danger">Hard Delete</span>
-                                    <br />
-                                    &nbsp;<small>stop replication and remove database files on the node</small>
-                                </DropdownItem>
-                            </DropdownMenu>
-                        </UncontrolledDropdown>
-                    ) : (
-                        <React.Fragment key="cannot-delete">
-                            <UncontrolledDropdown id={deleteLockId}>
-                                <DropdownToggle color="danger" caret disabled>
-                                    <i
-                                        className={classNames("icon-trash-cutout", {
-                                            "icon-addon-exclamation": databaseLockMode === "PreventDeletesError",
-                                            "icon-addon-cancel": databaseLockMode === "PreventDeletesIgnore",
-                                        })}
-                                    />
+                    <RichPanelInfo>
+                        <RichPanelName title={node.type}>
+                            <i className={classNames(cssIcon(node), "me-1")} />
+                            Node: {node.tag}
+                        </RichPanelName>
+                    </RichPanelInfo>
+                    <RichPanelActions>
+                        {node.responsibleNode && (
+                            <div
+                                className="text-center"
+                                title="Database group node that is responsible for caught up of this node"
+                            >
+                                <i className="icon-cluster-node"></i>
+                                <span>{node.responsibleNode}</span>
+                            </div>
+                        )}
+                        {canDelete ? (
+                            <UncontrolledDropdown key="can-delete">
+                                <DropdownToggle color="danger" caret>
+                                    <i className="icon-disconnected" />
                                     Delete from group
                                 </DropdownToggle>
+                                <DropdownMenu>
+                                    <DropdownItem onClick={() => deleteNodeFromGroup(false)}>
+                                        <i className="icon-trash" />
+                                        <span>Soft Delete</span>&nbsp;
+                                        <br />
+                                        <small>stop replication and keep database files on the node</small>
+                                    </DropdownItem>
+                                    <DropdownItem onClick={() => deleteNodeFromGroup(true)}>
+                                        <i className="icon-alerts text-danger"></i>{" "}
+                                        <span className="text-danger">Hard Delete</span>
+                                        <br />
+                                        &nbsp;<small>stop replication and remove database files on the node</small>
+                                    </DropdownItem>
+                                </DropdownMenu>
                             </UncontrolledDropdown>
-                            <UncontrolledTooltip target={deleteLockId} placeholder="top" color="danger">
-                                Database cannot be deleted from node because of the set lock mode
-                            </UncontrolledTooltip>
-                        </React.Fragment>
-                    )}
+                        ) : (
+                            <React.Fragment key="cannot-delete">
+                                <UncontrolledDropdown id={deleteLockId}>
+                                    <DropdownToggle color="danger" caret disabled>
+                                        <i
+                                            className={classNames("icon-trash-cutout", {
+                                                "icon-addon-exclamation": databaseLockMode === "PreventDeletesError",
+                                                "icon-addon-cancel": databaseLockMode === "PreventDeletesIgnore",
+                                            })}
+                                        />
+                                        Delete from group
+                                    </DropdownToggle>
+                                </UncontrolledDropdown>
+                                <UncontrolledTooltip target={deleteLockId} placeholder="top" color="danger">
+                                    Database cannot be deleted from node because of the set lock mode
+                                </UncontrolledTooltip>
+                            </React.Fragment>
+                        )}
+                    </RichPanelActions>
                 </RichPanelHeader>
                 {lastErrorShort && (
                     <RichPanelDetails>
@@ -170,22 +173,24 @@ export function NodeInfoReorderComponent(props: NodeInfoReorderComponentProps) {
 
                 <div className="flex-grow-1">
                     <RichPanelHeader>
-                        <RichPanelName title={node.type}>
-                            <i className={classNames(cssIcon(node), "me-1")} />
-                            Node: {node.tag}
-                        </RichPanelName>
+                        <RichPanelInfo>
+                            <RichPanelName title={node.type}>
+                                <i className={classNames(cssIcon(node), "me-1")} />
+                                Node: {node.tag}
+                            </RichPanelName>
+                        </RichPanelInfo>
 
-                        <FlexGrow />
-
-                        {node.responsibleNode && (
-                            <div
-                                className="text-center"
-                                title="Database group node that is responsible for caught up of this node"
-                            >
-                                <i className="icon-cluster-node"></i>
-                                <span>{node.responsibleNode}</span>
-                            </div>
-                        )}
+                        <RichPanelActions>
+                            {node.responsibleNode && (
+                                <div
+                                    className="text-center"
+                                    title="Database group node that is responsible for caught up of this node"
+                                >
+                                    <i className="icon-cluster-node"></i>
+                                    <span>{node.responsibleNode}</span>
+                                </div>
+                            )}
+                        </RichPanelActions>
                     </RichPanelHeader>
                 </div>
             </RichPanel>

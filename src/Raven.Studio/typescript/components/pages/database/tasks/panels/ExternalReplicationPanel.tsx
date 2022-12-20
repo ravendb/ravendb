@@ -1,6 +1,13 @@
 ﻿import React from "react";
 import { OngoingTaskExternalReplicationInfo } from "../../../../models/tasks";
-import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../common/RichPanel";
+import {
+    RichPanel,
+    RichPanelActions,
+    RichPanelDetailItem,
+    RichPanelDetails,
+    RichPanelHeader,
+    RichPanelInfo,
+} from "../../../../common/RichPanel";
 import {
     ConnectionStringItem,
     OngoingTaskActions,
@@ -83,16 +90,20 @@ export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
     return (
         <RichPanel>
             <RichPanelHeader>
-                <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
-                <OngoingTaskResponsibleNode task={data} />
-                <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
-                <OngoingTaskActions
-                    task={data}
-                    canEdit={canEdit}
-                    onEdit={onEdit}
-                    onDelete={onDeleteHandler}
-                    toggleDetails={toggleDetails}
-                />
+                <RichPanelInfo>
+                    <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
+                </RichPanelInfo>
+                <RichPanelActions>
+                    <OngoingTaskResponsibleNode task={data} />
+                    <OngoingTaskStatus task={data} canEdit={canEdit} toggleState={toggleStateHandler} />
+                    <OngoingTaskActions
+                        task={data}
+                        canEdit={canEdit}
+                        onEdit={onEdit}
+                        onDelete={onDeleteHandler}
+                        toggleDetails={toggleDetails}
+                    />
+                </RichPanelActions>
             </RichPanelHeader>
             {detailsVisible && <Details {...props} canEdit={canEdit} />}
         </RichPanel>

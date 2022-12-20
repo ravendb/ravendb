@@ -1,7 +1,14 @@
 ﻿import React from "react";
 import { OngoingTaskReplicationHubInfo } from "../../../../models/tasks";
 import database from "models/resources/database";
-import { RichPanel, RichPanelDetailItem, RichPanelDetails, RichPanelHeader } from "../../../../common/RichPanel";
+import {
+    RichPanel,
+    RichPanelActions,
+    RichPanelDetailItem,
+    RichPanelDetails,
+    RichPanelHeader,
+    RichPanelInfo,
+} from "../../../../common/RichPanel";
 import { OngoingTaskName, OngoingTaskResponsibleNode } from "../shared";
 
 interface ReplicationHubConnectedSinkPanelProps {
@@ -15,8 +22,12 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
     return (
         <RichPanel>
             <RichPanelHeader>
-                <OngoingTaskName task={data} canEdit={false} editUrl={undefined} />
-                <OngoingTaskResponsibleNode task={data} />
+                <RichPanelInfo>
+                    <OngoingTaskName task={data} canEdit={false} editUrl={undefined} />
+                </RichPanelInfo>
+                <RichPanelActions>
+                    <OngoingTaskResponsibleNode task={data} />
+                </RichPanelActions>
             </RichPanelHeader>
             <RichPanelDetails>
                 <RichPanelDetailItem>

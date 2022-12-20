@@ -1,7 +1,7 @@
 ﻿import React, { ReactNode } from "react";
 import "./RichPanel.scss";
 import classNames from "classnames";
-import { Badge, Card, CardBody, CardHeader, FormGroup } from "reactstrap";
+import { Badge, Card, CardHeader, Input } from "reactstrap";
 
 interface RichPanelProps {
     className?: string;
@@ -64,26 +64,49 @@ export function RichPanelDetails(props: RichPanelDetailsProps) {
 }
 
 export function RichPanelSelect(props: { children: ReactNode | ReactNode[] }) {
-    return <div className="rich-panel-select form-check-secondary form-check-lg m-0">{props.children}</div>;
+    return <div className="rich-panel-select form-check-secondary form-check-lg">{props.children}</div>;
 }
 
-interface RichPanelDetailItemProps {
-    id?: string;
-    children: ReactNode | ReactNode[];
-    className?: string;
+export function RichPanelInfo(props: { children: ReactNode | ReactNode[] }) {
+    const { children, ...rest } = props;
+    return (
+        <div className="rich-panel-info" {...rest}>
+            {props.children}
+        </div>
+    );
+}
+
+export function RichPanelActions(props: { children: ReactNode | ReactNode[] }) {
+    const { children, ...rest } = props;
+    return (
+        <div className="rich-panel-actions" {...rest}>
+            {props.children}
+        </div>
+    );
 }
 
 interface RichPanelNameProps {
     children: ReactNode | ReactNode[];
     title?: string;
+    href?: string;
 }
 
 export function RichPanelName(props: RichPanelNameProps) {
-    const { children, ...rest } = props;
+    const { children, href, title, ...rest } = props;
     return (
-        <h3 className="m-0 me-4 flex-grow-1" {...rest}>
-            {props.children}
-        </h3>
+        <>
+            {href ? (
+                <h3 className="m-0 me-4 flex-grow-1" {...rest}>
+                    <a href={href} title={title}>
+                        {props.children}
+                    </a>
+                </h3>
+            ) : (
+                <h3 className="m-0 me-4 flex-grow-1" title={title} {...rest}>
+                    {props.children}
+                </h3>
+            )}
+        </>
     );
 }
 
