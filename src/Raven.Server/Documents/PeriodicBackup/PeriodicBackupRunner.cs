@@ -329,7 +329,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
-                lastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                lastEtag = _database.DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
             }
 
             DateTime? wakeupDatabase = null;

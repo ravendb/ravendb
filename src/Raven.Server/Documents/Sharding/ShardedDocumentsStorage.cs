@@ -54,7 +54,14 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
     {
         return new ShardedDocumentPutAction(this, _documentDatabase);
     }
-    
+
+    protected override void SetDocumentsStorageSchemas()
+    {
+        DocsSchema = Schemas.Documents.ShardingDocsSchemaBase;
+        TombstonesSchema = Schemas.Tombstones.ShardingTombstonesSchema;
+        CompressedDocsSchema = Schemas.Documents.ShardingCompressedDocsSchemaBase;
+    }
+
     public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
     {
         var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
@@ -281,32 +288,32 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
             merged = merged.MergeWith(tombstoneCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, 0))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.CountersStorage.CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, 0))
         {
             var counterCv = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref result.Result.Reader);
             merged = merged.MergeWith(counterCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, 0))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.ConflictsStorage.ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, 0))
         {
             var conflictCv = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref result.Result.Reader);
             merged = merged.MergeWith(conflictCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, 0))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.RevisionsStorage.RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, 0))
         {
             var revisionCv = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref result.Result.Reader);
             merged = merged.MergeWith(revisionCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndEtagSlice], bucket, 0))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.AttachmentsStorage.AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndEtagSlice], bucket, 0))
         {
             var attachmentCv = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref result.Result.Reader);
             merged = merged.MergeWith(attachmentCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, 0))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.TimeSeriesStorage.TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, 0))
         {
             var tsCv = TableValueToChangeVector(context, (int)TimeSeriesTable.ChangeVector, ref result.Result.Reader);
             merged = merged.MergeWith(tsCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, 0))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.TimeSeriesStorage.DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, 0))
         {
             var deletedRangeCv = TableValueToChangeVector(context, (int)DeletedRangeTable.ChangeVector, ref result.Result.Reader);
             merged = merged.MergeWith(deletedRangeCv, context);

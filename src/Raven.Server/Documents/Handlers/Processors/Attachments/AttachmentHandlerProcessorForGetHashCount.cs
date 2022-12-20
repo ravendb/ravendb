@@ -17,7 +17,7 @@ internal class AttachmentHandlerProcessorForGetHashCount : AbstractAttachmentHan
         using (context.OpenReadTransaction())
         using (Slice.From(context.Allocator, hash, out var hashSlice))
         {
-            var count = AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice);
+            var count = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice);
 
             return ValueTask.FromResult(new GetAttachmentHashCountCommand.Response
             {

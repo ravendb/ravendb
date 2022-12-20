@@ -90,7 +90,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
                 _disposeTransaction = _context.OpenReadTransaction();
-                LastEtag = DocumentsStorage.ReadLastEtag(_disposeTransaction.InnerTransaction);
+                LastEtag = _database.DocumentsStorage.ReadLastEtag(_disposeTransaction.InnerTransaction);
                 LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(_disposeTransaction.InnerTransaction);
             }
 

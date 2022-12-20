@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents
         internal readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _counterModificationMemoryScopes =
             new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
-        internal static readonly TableSchema CountersSchema = Schemas.Counters.Current;
+        internal readonly TableSchema CountersSchema;
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
@@ -95,6 +96,15 @@ namespace Raven.Server.Documents
         public CountersStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
             _documentDatabase = documentDatabase;
+            if (_documentDatabase is ShardedDocumentDatabase)
+            {
+                CountersSchema = Schemas.Counters.ShardingCountersSchemaBase;
+            }
+            else
+            {
+                CountersSchema = Schemas.Counters.CountersSchemaBase;
+            }
+
             _documentsStorage = documentDatabase.DocumentsStorage;
 
             tx.CreateTree(CounterKeysSlice);
@@ -1546,7 +1556,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        private static bool TryGetRawBlob(DocumentsOperationContext context, string docId, string counterName, out long etag, out BlittableJsonReaderObject.RawBlob blob)
+        private bool TryGetRawBlob(DocumentsOperationContext context, string docId, string counterName, out long etag, out BlittableJsonReaderObject.RawBlob blob)
         {
             blob = null;
             etag = -1;
@@ -2426,8 +2436,8 @@ namespace Raven.Server.Documents
 
             public CounterGroupItemMetadata GetCountersMetadata(DocumentsOperationContext context, long etag)
             {
-                var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
-                var index = CountersSchema.FixedSizeIndexes[AllCountersEtagSlice];
+                var table = new Table(_countersStorage.CountersSchema, context.Transaction.InnerTransaction);
+                var index = _countersStorage.CountersSchema.FixedSizeIndexes[AllCountersEtagSlice];
 
                 if (table.Read(context.Allocator, index, etag, out var tvr) == false)
                     return null;
@@ -2440,7 +2450,7 @@ namespace Raven.Server.Documents
 
             public CounterGroupItemMetadata GetCountersMetadata(DocumentsOperationContext context, Slice counterKeySlice)
             {
-                var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+                var table = new Table(_countersStorage.CountersSchema, context.Transaction.InnerTransaction);
 
                 using (ExtractDocumentIdAndCounterNameFromKey(context, counterKeySlice, out var documentIdPrefix, out var loweredCounterNameSlice))
                 {
@@ -2465,9 +2475,9 @@ namespace Raven.Server.Documents
 
             public IEnumerable<CounterGroupItemMetadata> GetCountersMetadataFrom(DocumentsOperationContext context, long etag, long skip, long take)
             {
-                var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+                var table = new Table(_countersStorage.CountersSchema, context.Transaction.InnerTransaction);
 
-                foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, skip))
+                foreach (var result in table.SeekForwardFrom(_countersStorage.CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, skip))
                 {
                     if (take-- <= 0)
                         yield break;
@@ -2488,7 +2498,7 @@ namespace Raven.Server.Documents
                 if (table == null)
                     yield break;
 
-                foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag, skip))
+                foreach (var result in table.SeekForwardFrom(_countersStorage.CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag, skip))
                 {
                     if (take-- <= 0)
                         yield break;

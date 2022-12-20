@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.TimeSeries
             _context = context;
             _documentId = documentId;
             _name = name.ToLowerInvariant();
-            _table = new Table(TimeSeriesStorage.TimeSeriesSchema, context.Transaction.InnerTransaction);
+            _table = new Table(context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.TimeSeriesSchema, context.Transaction.InnerTransaction);
             _tag = new LazyStringValue(null, null, 0, context);
             _offset = offset;
             _token = token;

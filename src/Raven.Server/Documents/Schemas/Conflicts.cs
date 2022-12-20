@@ -6,13 +6,12 @@ namespace Raven.Server.Documents.Schemas
 {
     public static class Conflicts
     {
-        public static TableSchema Current => ConflictsSchemaBase60;
 
         internal static readonly TableSchema ConflictsSchemaBase = new TableSchema()
         {
             TableType = (byte)TableType.Conflicts
         };
-        internal static readonly TableSchema ConflictsSchemaBase60 = new TableSchema()
+        internal static readonly TableSchema ShardingConflictsSchemaBase = new TableSchema()
         {
             TableType = (byte)TableType.Conflicts
         };
@@ -52,7 +51,7 @@ namespace Raven.Server.Documents.Schemas
             }
 
             DefineIndexesForConflictsSchema(ConflictsSchemaBase);
-            DefineIndexesForConflictsSchemaBase60();
+            DefineIndexesForShardingConflictsSchemaBase();
 
             void DefineIndexesForConflictsSchema(TableSchema schema)
             {
@@ -105,11 +104,11 @@ We need a separator in order to delete all conflicts all "users/1" without delet
                 });
             }
 
-            void DefineIndexesForConflictsSchemaBase60()
+            void DefineIndexesForShardingConflictsSchemaBase()
             {
-                DefineIndexesForConflictsSchema(ConflictsSchemaBase60);
+                DefineIndexesForConflictsSchema(ShardingConflictsSchemaBase);
 
-                ConflictsSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                ShardingConflictsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = ConflictsStorage.GenerateBucketAndEtagIndexKeyForConflicts,
                     IsGlobal = true,

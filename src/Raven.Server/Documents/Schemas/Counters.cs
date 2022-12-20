@@ -7,14 +7,13 @@ namespace Raven.Server.Documents.Schemas
 {
     public static class Counters
     {
-        public static TableSchema Current => CountersSchemaBase60;
 
         internal static readonly TableSchema CountersSchemaBase = new TableSchema
         {
             TableType = (byte)TableType.Counters
         };
 
-        internal static readonly TableSchema CountersSchemaBase60 = new TableSchema
+        internal static readonly TableSchema ShardingCountersSchemaBase = new TableSchema
         {
             TableType = (byte)TableType.Counters
         };
@@ -48,7 +47,7 @@ namespace Raven.Server.Documents.Schemas
             }
 
             DefineIndexesForCountersSchema(CountersSchemaBase);
-            DefineIndexesForCountersSchemaBase60();
+            DefineIndexesForShardingCountersSchemaBase();
 
             void DefineIndexesForCountersSchema(TableSchema schema)
             {
@@ -75,11 +74,11 @@ namespace Raven.Server.Documents.Schemas
 
             }
 
-            void DefineIndexesForCountersSchemaBase60()
+            void DefineIndexesForShardingCountersSchemaBase()
             {
-                DefineIndexesForCountersSchema(CountersSchemaBase60);
+                DefineIndexesForCountersSchema(ShardingCountersSchemaBase);
 
-                CountersSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                ShardingCountersSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = CountersStorage.GenerateBucketAndEtagIndexKeyForCounters,
                     OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,

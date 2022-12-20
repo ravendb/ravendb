@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -33,8 +34,8 @@ namespace Raven.Server.Documents.Revisions
 {
     public partial class RevisionsStorage
     {
-        public static readonly TableSchema RevisionsSchema = Schemas.Revisions.Current;
-        public static readonly TableSchema CompressedRevisionsSchema = Schemas.Revisions.CurrentCompressed;
+        public readonly TableSchema RevisionsSchema;
+        public readonly TableSchema CompressedRevisionsSchema;
         public long SizeLimitInBytes = new Size(PlatformDetails.Is32Bits == false ? 32 : 2, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
 
         public RevisionsConfiguration ConflictConfiguration;
@@ -53,6 +54,17 @@ namespace Raven.Server.Documents.Revisions
         public RevisionsStorage(DocumentDatabase database, Transaction tx)
         {
             _database = database;
+            if (_database is ShardedDocumentDatabase)
+            {
+                RevisionsSchema = Schemas.Revisions.ShardingCompressedRevisionsSchemaBase;
+                CompressedRevisionsSchema = Schemas.Revisions.ShardingRevisionsSchemaBase;
+            }
+            else
+            {
+                RevisionsSchema = Schemas.Revisions.CompressedRevisionsSchemaBase;
+                CompressedRevisionsSchema = Schemas.Revisions.RevisionsSchemaBase;
+            }
+
             _documentsStorage = _database.DocumentsStorage;
             _logger = LoggingSource.Instance.GetLogger<RevisionsStorage>(database.Name);
             Operations = new RevisionsOperations(_database);
@@ -144,10 +156,10 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private static void CreateTrees(Transaction tx)
+        private void CreateTrees(Transaction tx)
         {
             tx.CreateTree(RevisionsCountSlice);
-            TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
+            _documentsStorage.TombstonesSchema.Create(tx, RevisionsTombstonesSlice, 16);
         }
 
         public RevisionsCollectionConfiguration GetRevisionsConfiguration(string collection, DocumentFlags flags = DocumentFlags.None)
@@ -749,7 +761,7 @@ namespace Raven.Server.Documents.Revisions
             }
             else
             {
-                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
+                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, RevisionsTombstonesSlice);
                 if (tombstoneTable.VerifyKeyExists(key))
                     return;
 
@@ -765,7 +777,7 @@ namespace Raven.Server.Documents.Revisions
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
+            var table = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, RevisionsTombstonesSlice);
             if (table.VerifyKeyExists(keySlice))
                 return; // revisions (and revisions tombstones) are immutable, we can safely ignore this
 
@@ -1821,7 +1833,7 @@ namespace Raven.Server.Documents.Revisions
             return GetCurrentAndPreviousRevisionsFrom(context, iterator, table, take);
         }
 
-        private static IEnumerable<(Document Previous, Document Current)> GetCurrentAndPreviousRevisionsFrom(
+        private IEnumerable<(Document Previous, Document Current)> GetCurrentAndPreviousRevisionsFrom(
             DocumentsOperationContext context,
             IEnumerable<Table.TableValueHolder> iterator,
             Table table,
@@ -1833,7 +1845,7 @@ namespace Raven.Server.Documents.Revisions
             if (iterator == null)
                 yield break;
 
-            var docsSchemaIndex = RevisionsSchema.Indexes[IdAndEtagSlice];
+            var docsSchemaIndex = _documentsStorage.RevisionsStorage.RevisionsSchema.Indexes[IdAndEtagSlice];
 
             foreach (var tvr in iterator)
             {

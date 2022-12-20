@@ -7,10 +7,8 @@ namespace Raven.Server.Documents.Schemas
 {
     public static class Attachments
     {
-        public static TableSchema Current => AttachmentsSchemaBase60;
-
         internal static readonly TableSchema AttachmentsSchemaBase = new TableSchema();
-        internal static readonly TableSchema AttachmentsSchemaBase60 = new TableSchema();
+        internal static readonly TableSchema ShardingAttachmentsSchemaBase = new TableSchema();
 
         internal static readonly Slice AttachmentsSlice;
         internal static readonly Slice AttachmentsMetadataSlice;
@@ -47,7 +45,7 @@ namespace Raven.Server.Documents.Schemas
             }
 
             DefineIndexesForAttachmentsSchema(AttachmentsSchemaBase);
-            DefineIndexesForAttachmentsSchemaBase60();
+            DefineIndexesForShardingAttachmentsSchema();
 
             void DefineIndexesForAttachmentsSchema(TableSchema schema)
             {
@@ -69,11 +67,11 @@ namespace Raven.Server.Documents.Schemas
                 });
             }
 
-            void DefineIndexesForAttachmentsSchemaBase60()
+            void DefineIndexesForShardingAttachmentsSchema()
             {
-                DefineIndexesForAttachmentsSchema(AttachmentsSchemaBase60);
+                DefineIndexesForAttachmentsSchema(ShardingAttachmentsSchemaBase);
 
-                AttachmentsSchemaBase60.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                ShardingAttachmentsSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
                     GenerateKey = AttachmentsStorage.GenerateBucketAndEtagIndexKeyForAttachments,
                     OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,
