@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using System.ComponentModel;
+using Microsoft.Extensions.Configuration;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Logging;
 
@@ -9,6 +12,13 @@ namespace Raven.Server.Config.Categories
     [ConfigurationCategory(ConfigurationCategoryType.Logs)]
     public class LogsConfiguration : ConfigurationCategory
     {
+        public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type,
+            string resourceName)
+        {
+            base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
+            MicrosoftLogPath ??= Path.Combine("MicrosoftLogs");
+        }
+
         [DefaultValue("Logs")]
         [ConfigurationEntry("Logs.Path", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting Path { get; set; }
@@ -45,5 +55,23 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Logs.Compress", ConfigurationEntryScope.ServerWideOnly)]
         public bool Compress { get; set; }
+
+        #region Microsoft Logs
+        [Description("Will determine whether to disabale the microsoft logs")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("Logs.Microsoft.Enable", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DisableMicrosoftLogs { get; set; }
+        
+        [Description("The path to the folder where microsoft log will be written")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Logs.Microsoft.Path", ConfigurationEntryScope.ServerWideOnly)]
+        public PathSetting MicrosoftLogPath { get; set; }
+        
+        [Description("The path to json configuration file of microsoft logs")]
+        [DefaultValue("microsoftLogSettings.json")]
+        [ConfigurationEntry("Logs.Microsoft.ConfigurationPath", ConfigurationEntryScope.ServerWideOnly)]
+        public PathSetting MicrosoftLogConfigurationPath { get; set; }
+        #endregion
+        
     }
 }
