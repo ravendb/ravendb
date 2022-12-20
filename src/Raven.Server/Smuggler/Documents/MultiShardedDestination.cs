@@ -98,7 +98,7 @@ namespace Raven.Server.Smuggler.Documents
 
         // All the NotImplementedException methods are handled on the smuggler level, since they are cluster wide and do no require any specific database
         public IDatabaseRecordActions DatabaseRecord() => throw new NotImplementedException();
-        public IIndexActions Indexes() => throw new NotImplementedException();
+        public IIndexActions Indexes() => new DatabaseDestination.DatabaseIndexActions(_databaseContext.Indexes.Create, _databaseContext.Time);
         public IKeyValueActions<long> Identities() => throw new NotImplementedException();
         public ISubscriptionActions Subscriptions() => throw new NotImplementedException();
         public IReplicationHubCertificateActions ReplicationHubCertificates() => throw new NotImplementedException();
@@ -145,7 +145,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly IDisposable _rtnCtx;
             private readonly DatabaseSmugglerOptionsServerSide _options;
             protected readonly ShardedDatabaseContext DatabaseContext;
-            protected readonly Dictionary<int,T> _actions;
+            protected readonly Dictionary<int, T> _actions;
             protected readonly T _last;
 
             protected ShardedActions(ShardedDatabaseContext databaseContext, Dictionary<int, T> actions, DatabaseSmugglerOptionsServerSide options)

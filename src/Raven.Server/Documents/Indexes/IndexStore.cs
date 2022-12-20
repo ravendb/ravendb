@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +15,6 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -24,7 +22,6 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Errors;
-using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -35,7 +32,6 @@ using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -43,7 +39,6 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Threading;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -219,36 +214,12 @@ namespace Raven.Server.Documents.Indexes
 
         private void ExecuteForIndexes(IEnumerable<Index> indexes, Action<Index> action)
         {
-            var numberOfUtilizedCores = GetNumberOfUtilizedCores();
+            var numberOfUtilizedCores = _serverStore.LicenseManager.GetNumberOfUtilizedCores();
 
             Parallel.ForEach(indexes, new ParallelOptions
             {
                 MaxDegreeOfParallelism = Math.Max(1, numberOfUtilizedCores / 2)
             }, action);
-        }
-
-        private int GetNumberOfUtilizedCores()
-        {
-            int defaultNumberOfCores = ProcessorInfo.ProcessorCount;
-
-            try
-            {
-                var licenseLimits = _documentDatabase.ServerStore.LoadLicenseLimits();
-
-                return licenseLimits != null && licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out DetailsPerNode detailsPerNode)
-                    ? detailsPerNode.UtilizedCores
-                    : defaultNumberOfCores;
-            }
-            catch (Exception e)
-            {
-                if (e.IsOutOfMemory() == false)
-                {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Failed to get number of utilized cores. Defaulting to {defaultNumberOfCores} cores", e);
-                }
-
-                return defaultNumberOfCores;
-            }
         }
 
         private void HandleSorters(DatabaseRecord record, long index)
@@ -921,61 +892,18 @@ namespace Raven.Server.Documents.Indexes
             return (index, GetIndex(definition.Name));
         }
 
-        public bool CanUseIndexBatch()
-        {
-            return ClusterCommandsVersionManager.CanPutCommand(nameof(PutIndexesCommand));
-        }
-
-        public IndexBatchScope CreateIndexBatch()
-        {
-            return new IndexBatchScope(this, GetNumberOfUtilizedCores());
-        }
-
         public async Task<(long? Index, Index Instance)> CreateIndex(IndexDefinitionBaseServerSide definition, string raftRequestId)
         {
-            if (definition == null)
-                throw new ArgumentNullException(nameof(definition));
-
-            if (definition is MapIndexDefinition mapIndexDefinition)
-                return await CreateIndex(mapIndexDefinition.IndexDefinition, raftRequestId);
-
-            ValidateAutoIndex(definition);
-            definition.DeploymentMode = _documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
-
-            var name = ShardHelper.ToDatabaseName(_documentDatabase.Name);
-
-            var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBaseServerSide)definition, name, raftRequestId, _documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode);
-
-            long index = 0;
-            try
-            {
-                index = (await _serverStore.SendToLeaderAsync(command).ConfigureAwait(false)).Index;
-            }
-            catch (Exception e)
-            {
-                ThrowIndexCreationException("auto", definition.Name, e, "the cluster is probably down", _serverStore);
-            }
-
-            try
-            {
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
-            }
-            catch (TimeoutException toe)
-            {
-                ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.", _serverStore);
-            }
+            var index = await Create.CreateIndexAsync(definition, raftRequestId);
 
             ForTestingPurposes?.AfterIndexCreation?.Invoke(definition.Name);
 
             return (index, GetIndex(definition.Name));
         }
 
-        private void ValidateAutoIndex(IndexDefinitionBaseServerSide definition)
+        public static bool CanUseIndexBatch()
         {
-            if (IsValidIndexName(definition.Name, false, out var errorMessage) == false)
-            {
-                throw new ArgumentException(errorMessage);
-            }
+            return ClusterCommandsVersionManager.CanPutCommand(nameof(PutIndexesCommand));
         }
 
         private void StartIndex(Index index)
@@ -2182,120 +2110,6 @@ namespace Raven.Server.Documents.Indexes
         public static void ThrowIndexCreationException(string indexType, string indexName, Exception exception, string reason, ServerStore serverStore)
         {
             throw new IndexCreationException($"Failed to create {indexType} index '{indexName}', {reason}. Node {serverStore.NodeTag} state is {serverStore.LastStateChangeReason()}", exception);
-        }
-
-        public class IndexBatchScope
-        {
-            private readonly IndexStore _store;
-            private readonly int _numberOfUtilizedCores;
-
-            private PutIndexesCommand _command;
-            private readonly IndexDeploymentMode _defaultAutoDeploymentMode;
-            private readonly IndexDeploymentMode _defaultStaticDeploymentMode;
-
-            public IndexBatchScope(IndexStore store, int numberOfUtilizedCores)
-            {
-                _store = store;
-                _numberOfUtilizedCores = numberOfUtilizedCores;
-                _defaultAutoDeploymentMode = store._documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
-                _defaultStaticDeploymentMode = store._documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode;
-            }
-
-            public async ValueTask AddIndexAsync(IndexDefinitionBaseServerSide definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
-            {
-                if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
-
-                if (definition == null)
-                    throw new ArgumentNullException(nameof(definition));
-
-                if (definition is MapIndexDefinition indexDefinition)
-                {
-                    await AddIndexAsync(indexDefinition.IndexDefinition, source, createdAt, raftRequestId, revisionsToKeep);
-                    return;
-                }
-
-                _store.ValidateAutoIndex(definition);
-
-                var autoDefinition = (AutoIndexDefinitionBaseServerSide)definition;
-                var indexType = PutAutoIndexCommand.GetAutoIndexType(autoDefinition);
-
-                _command.Auto.Add(PutAutoIndexCommand.GetAutoIndexDefinition(autoDefinition, indexType));
-            }
-
-            public async ValueTask AddIndexAsync(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
-            {
-                if (_command == null)
-                    _command = new PutIndexesCommand(_store._documentDatabase.Name, source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
-
-                await _store.Create.ValidateStaticIndexAsync(definition);
-
-                _command.Static.Add(definition);
-            }
-
-            public async Task SaveIfNeeded()
-            {
-                if (_command == null)
-                    return;
-
-                if (_command.Static.Count + _command.Auto.Count > 50)
-                {
-                    await SaveAsync();
-                }
-            }
-
-            public async Task SaveAsync()
-            {
-                if (_command == null || _command.Static.Count == 0 && _command.Auto.Count == 0)
-                    return;
-
-                try
-                {
-                    long index = 0;
-                    try
-                    {
-                        index = (await _store._serverStore.SendToLeaderAsync(_command)).Index;
-                    }
-                    catch (Exception e)
-                    {
-                        ThrowIndexCreationException(e, "Cluster is probably down.");
-                    }
-
-                    var indexCount = _command.Static.Count + _command.Auto.Count;
-                    var operationTimeout = _store._serverStore.Engine.OperationTimeout;
-                    var timeout = TimeSpan.FromSeconds(((double)indexCount / _numberOfUtilizedCores) * operationTimeout.TotalSeconds);
-                    if (operationTimeout > timeout)
-                        timeout = operationTimeout;
-
-                    try
-                    {
-                        await _store._documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, timeout);
-                    }
-                    catch (TimeoutException toe)
-                    {
-                        ThrowIndexCreationException(toe, $"Operation timed out after: {timeout}.");
-                    }
-                }
-                finally
-                {
-                    _command = null;
-                }
-            }
-
-            private void ThrowIndexCreationException(Exception exception, string reason)
-            {
-                var sb = new StringBuilder();
-                sb.AppendLine($"Failed to create indexes. {reason}");
-                if (_command.Static != null && _command.Static.Count > 0)
-                    sb.AppendLine("Static: " + string.Join(", ", _command.Static.Select(x => x.Name)));
-
-                if (_command.Auto != null && _command.Auto.Count > 0)
-                    sb.AppendLine("Auto: " + string.Join(", ", _command.Auto.Select(x => x.Name)));
-
-                sb.AppendLine($"Node {_store._serverStore.NodeTag} state is {_store._serverStore.LastStateChangeReason()}");
-
-                throw new IndexCreationException(sb.ToString(), exception);
-            }
         }
 
         internal TestingStuff ForTestingPurposes;

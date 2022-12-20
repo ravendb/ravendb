@@ -209,7 +209,7 @@ select {
         }
 
         [RavenTheory(RavenTestCategory.Spatial)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded)]
         public void CanGetDistanceFromSpatialQuery(Options options)
         {
             using (var store = GetDocumentStore(options))

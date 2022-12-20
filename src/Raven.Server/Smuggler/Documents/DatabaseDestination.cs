@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
@@ -13,12 +14,12 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TransactionCommands;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -166,44 +167,48 @@ namespace Raven.Server.Smuggler.Documents
 
         public IIndexActions Indexes()
         {
-            return new DatabaseIndexActions(_database);
+            return new DatabaseIndexActions(_database.IndexStore.Create, _database.Time);
         }
 
-        private class DatabaseIndexActions : IIndexActions
+        public class DatabaseIndexActions : IIndexActions
         {
-            private readonly DocumentDatabase _database;
-            private readonly IndexStore.IndexBatchScope _batch;
+            private readonly AbstractIndexCreateController _controller;
+            private readonly SystemTime _time;
+            private readonly AbstractIndexCreateController.IndexBatchScope _batch;
+            private readonly RavenConfiguration _configuration;
 
-            public DatabaseIndexActions(DocumentDatabase database)
+            public DatabaseIndexActions([NotNull] AbstractIndexCreateController controller, [NotNull] SystemTime time)
             {
-                _database = database;
+                _controller = controller ?? throw new ArgumentNullException(nameof(controller));
+                _time = time ?? throw new ArgumentNullException(nameof(time));
+                _configuration = controller.GetDatabaseConfiguration();
 
-                if (_database.IndexStore.CanUseIndexBatch())
-                    _batch = _database.IndexStore.CreateIndexBatch();
+                if (IndexStore.CanUseIndexBatch())
+                    _batch = _controller.CreateIndexBatch();
             }
 
             public async ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType)
             {
                 if (_batch != null)
                 {
-                    await _batch.AddIndexAsync(indexDefinition, _source, _database.Time.GetUtcNow(), RaftIdGenerator.DontCareId, _database.Configuration.Indexing.HistoryRevisionsNumber);
-                    AsyncHelpers.RunSync(_batch.SaveIfNeeded);
+                    await _batch.AddIndexAsync(indexDefinition, _source, _time.GetUtcNow(), RaftIdGenerator.DontCareId, _configuration.Indexing.HistoryRevisionsNumber);
+                    await _batch.SaveIfNeeded();
                     return;
                 }
 
-                await _database.IndexStore.CreateIndex(indexDefinition, RaftIdGenerator.DontCareId);
+                await _controller.CreateIndexAsync(indexDefinition, RaftIdGenerator.DontCareId);
             }
 
             public async ValueTask WriteIndexAsync(IndexDefinition indexDefinition)
             {
                 if (_batch != null)
                 {
-                    await _batch.AddIndexAsync(indexDefinition, _source, _database.Time.GetUtcNow(), RaftIdGenerator.DontCareId, _database.Configuration.Indexing.HistoryRevisionsNumber);
-                    AsyncHelpers.RunSync(_batch.SaveIfNeeded);
+                    await _batch.AddIndexAsync(indexDefinition, _source, _time.GetUtcNow(), RaftIdGenerator.DontCareId, _configuration.Indexing.HistoryRevisionsNumber);
+                    await _batch.SaveIfNeeded();
                     return;
                 }
 
-                await _database.IndexStore.CreateIndex(indexDefinition, RaftIdGenerator.DontCareId, _source);
+                await _controller.CreateIndexAsync(indexDefinition, RaftIdGenerator.DontCareId, _source);
             }
 
             private const string _source = "Smuggler";

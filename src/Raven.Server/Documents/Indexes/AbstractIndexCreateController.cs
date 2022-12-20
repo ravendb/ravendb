@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -9,12 +10,14 @@ using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes;
 
@@ -31,7 +34,7 @@ public abstract class AbstractIndexCreateController
 
     protected abstract SystemTime GetDatabaseTime();
 
-    protected abstract RavenConfiguration GetDatabaseConfiguration();
+    public abstract RavenConfiguration GetDatabaseConfiguration();
 
     protected abstract IndexInformationHolder GetIndex(string name);
 
@@ -41,7 +44,7 @@ public abstract class AbstractIndexCreateController
 
     protected abstract IEnumerable<IndexInformationHolder> GetIndexes();
 
-    protected abstract ValueTask WaitForIndexNotificationAsync(long index);
+    protected abstract ValueTask WaitForIndexNotificationAsync(long index, TimeSpan? timeout = null);
 
     public virtual async ValueTask ValidateStaticIndexAsync(IndexDefinition definition)
     {
@@ -125,6 +128,60 @@ public abstract class AbstractIndexCreateController
         return index;
     }
 
+    public async ValueTask<long?> CreateIndexAsync(IndexDefinitionBaseServerSide definition, string raftRequestId)
+    {
+        if (definition == null)
+            throw new ArgumentNullException(nameof(definition));
+
+        if (definition is MapIndexDefinition mapIndexDefinition)
+            return await CreateIndexAsync(mapIndexDefinition.IndexDefinition, raftRequestId);
+
+        ValidateAutoIndex(definition);
+
+        var configuration = GetDatabaseConfiguration();
+
+        definition.DeploymentMode = configuration.Indexing.AutoIndexDeploymentMode;
+
+        var name = ShardHelper.ToDatabaseName(GetDatabaseName());
+
+        var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBaseServerSide)definition, name, raftRequestId, configuration.Indexing.AutoIndexDeploymentMode);
+
+        long index = 0;
+        try
+        {
+            index = (await ServerStore.SendToLeaderAsync(command).ConfigureAwait(false)).Index;
+        }
+        catch (Exception e)
+        {
+            IndexStore.ThrowIndexCreationException("auto", definition.Name, e, "the cluster is probably down", ServerStore);
+        }
+
+        try
+        {
+            await WaitForIndexNotificationAsync(index);
+        }
+        catch (TimeoutException toe)
+        {
+            IndexStore.ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {ServerStore.Engine.OperationTimeout}.", ServerStore);
+        }
+
+        return index;
+    }
+
+    private static void ValidateAutoIndex(IndexDefinitionBaseServerSide definition)
+    {
+        if (IndexStore.IsValidIndexName(definition.Name, false, out var errorMessage) == false)
+        {
+            throw new ArgumentException(errorMessage);
+        }
+    }
+
+
+    public IndexBatchScope CreateIndexBatch()
+    {
+        return new IndexBatchScope(this, ServerStore, ServerStore.LicenseManager.GetNumberOfUtilizedCores());
+    }
+
     private void ValidateAnalyzers(IndexDefinition definition)
     {
         if (definition.Fields == null)
@@ -183,5 +240,124 @@ public abstract class AbstractIndexCreateController
     {
         return creationOptions == IndexCreationOptions.Create ||
                creationOptions == IndexCreationOptions.Update;
+    }
+
+    public class IndexBatchScope
+    {
+        private readonly AbstractIndexCreateController _controller;
+        private readonly ServerStore _serverStore;
+        private readonly int _numberOfUtilizedCores;
+
+        private PutIndexesCommand _command;
+        private readonly IndexDeploymentMode _defaultAutoDeploymentMode;
+        private readonly IndexDeploymentMode _defaultStaticDeploymentMode;
+
+        public IndexBatchScope([NotNull] AbstractIndexCreateController controller, [NotNull] ServerStore serverStore, int numberOfUtilizedCores)
+        {
+            _controller = controller ?? throw new ArgumentNullException(nameof(controller));
+            _serverStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
+            _numberOfUtilizedCores = numberOfUtilizedCores;
+
+            var configuration = controller.GetDatabaseConfiguration();
+
+            _defaultAutoDeploymentMode = configuration.Indexing.AutoIndexDeploymentMode;
+            _defaultStaticDeploymentMode = configuration.Indexing.StaticIndexDeploymentMode;
+        }
+
+        public async ValueTask AddIndexAsync(IndexDefinitionBaseServerSide definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
+        {
+            if (_command == null)
+                _command = new PutIndexesCommand(_controller.GetDatabaseName(), source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
+
+            if (definition == null)
+                throw new ArgumentNullException(nameof(definition));
+
+            if (definition is MapIndexDefinition indexDefinition)
+            {
+                await AddIndexAsync(indexDefinition.IndexDefinition, source, createdAt, raftRequestId, revisionsToKeep);
+                return;
+            }
+
+            ValidateAutoIndex(definition);
+
+            var autoDefinition = (AutoIndexDefinitionBaseServerSide)definition;
+            var indexType = PutAutoIndexCommand.GetAutoIndexType(autoDefinition);
+
+            _command.Auto.Add(PutAutoIndexCommand.GetAutoIndexDefinition(autoDefinition, indexType));
+        }
+
+        public async ValueTask AddIndexAsync(IndexDefinition definition, string source, DateTime createdAt, string raftRequestId, int revisionsToKeep)
+        {
+            if (_command == null)
+                _command = new PutIndexesCommand(_controller.GetDatabaseName(), source, createdAt, raftRequestId, revisionsToKeep, _defaultAutoDeploymentMode, _defaultStaticDeploymentMode);
+
+            await _controller.ValidateStaticIndexAsync(definition);
+
+            _command.Static.Add(definition);
+        }
+
+        public async Task SaveIfNeeded()
+        {
+            if (_command == null)
+                return;
+
+            if (_command.Static.Count + _command.Auto.Count > 50)
+            {
+                await SaveAsync();
+            }
+        }
+
+        public async Task SaveAsync()
+        {
+            if (_command == null || _command.Static.Count == 0 && _command.Auto.Count == 0)
+                return;
+
+            try
+            {
+                long index = 0;
+                try
+                {
+                    index = (await _serverStore.SendToLeaderAsync(_command)).Index;
+                }
+                catch (Exception e)
+                {
+                    ThrowIndexCreationException(e, "Cluster is probably down.");
+                }
+
+                var indexCount = _command.Static.Count + _command.Auto.Count;
+                var operationTimeout = _serverStore.Engine.OperationTimeout;
+                var timeout = TimeSpan.FromSeconds(((double)indexCount / _numberOfUtilizedCores) * operationTimeout.TotalSeconds);
+                if (operationTimeout > timeout)
+                    timeout = operationTimeout;
+
+                try
+                {
+                    await _controller.WaitForIndexNotificationAsync(index, timeout);
+                }
+                catch (TimeoutException toe)
+                {
+                    ThrowIndexCreationException(toe, $"Operation timed out after: {timeout}.");
+                }
+            }
+            finally
+            {
+                _command = null;
+            }
+        }
+
+        private void ThrowIndexCreationException(Exception exception, string reason)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Failed to create indexes. {reason}");
+            if (_command.Static != null && _command.Static.Count > 0)
+                sb.AppendLine("Static: " + string.Join(", ", _command.Static.Select(x => x.Name)));
+
+            if (_command.Auto != null && _command.Auto.Count > 0)
+                sb.AppendLine("Auto: " + string.Join(", ", _command.Auto.Select(x => x.Name)));
+
+            sb.AppendLine($"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}");
+
+            throw new IndexCreationException(sb.ToString(), exception);
+        }
     }
 }
