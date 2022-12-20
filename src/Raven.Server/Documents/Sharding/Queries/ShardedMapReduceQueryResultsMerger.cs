@@ -9,6 +9,8 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.MapReduce.Static.Sharding;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -54,25 +56,27 @@ public class ShardedMapReduceQueryResultsMerger
         if (index.Type.IsStaticMapReduce() == false)
             throw new InvalidOperationException($"Index '{_indexName}' is not a map-reduce index");
 
-
-        var compiled = ((StaticIndexInformationHolder)index).Compiled;
-
-        var reducingFunc = compiled.Reduce;
-        var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();
-        blittableToDynamicWrapper.InitializeForEnumeration(_currentResults);
-
-        var results = new List<object>();
-        IPropertyAccessor propertyAccessor = null;
-        foreach (var output in reducingFunc(blittableToDynamicWrapper))
+        using (CurrentIndexingScope.Current = new OrchestratorIndexingScope())
         {
-            propertyAccessor ??= PropertyAccessor.Create(output.GetType(), output);
-            results.Add(output);
+            var compiled = ((StaticIndexInformationHolder)index).Compiled;
+
+            var reducingFunc = compiled.Reduce;
+            var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();
+            blittableToDynamicWrapper.InitializeForEnumeration(_currentResults);
+
+            var results = new List<object>();
+            IPropertyAccessor propertyAccessor = null;
+            foreach (var output in reducingFunc(blittableToDynamicWrapper))
+            {
+                propertyAccessor ??= PropertyAccessor.Create(output.GetType(), output);
+                results.Add(output);
+            }
+
+            if (propertyAccessor == null)
+                return new List<BlittableJsonReaderObject>(0);
+
+            var objects = new ShardedAggregatedAnonymousObjects(results, propertyAccessor, _context);
+            return objects.GetOutputsToStore().ToList();
         }
-
-        if (propertyAccessor == null)
-            return new List<BlittableJsonReaderObject>(0);
-
-        var objects = new ShardedAggregatedAnonymousObjects(results, propertyAccessor, _context);
-        return objects.GetOutputsToStore().ToList();
     }
 }

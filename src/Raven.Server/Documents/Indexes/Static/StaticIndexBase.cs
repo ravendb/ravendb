@@ -11,6 +11,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static.Sharding;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
@@ -644,7 +645,10 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-            
+
+            if (CurrentIndexingScope.Current is OrchestratorIndexingScope)
+                return Enumerable.Empty<object>();
+
             if (lng == null || double.IsNaN(lng.Value))
                 return Enumerable.Empty<AbstractField>();
             if (lat == null || double.IsNaN(lat.Value))
@@ -660,7 +664,10 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (CurrentIndexingScope.Current == null)
                 throw new InvalidOperationException("Indexing scope was not initialized.");
-            
+
+            if (CurrentIndexingScope.Current is OrchestratorIndexingScope)
+                return Enumerable.Empty<object>();
+
             return CurrentIndexingScope.Current.Index.SearchEngineType is SearchEngineType.Lucene
                 ? spatialField.LuceneCreateIndexableFields(shapeWkt)
                 : Enumerable.Cast<object>(spatialField.CoraxCreateIndexableFields(shapeWkt));
