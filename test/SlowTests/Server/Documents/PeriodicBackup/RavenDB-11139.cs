@@ -1805,7 +1805,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             return list;
         }
 
-        private void WaitForFirstCompareExchangeTombstonesClean(RavenServer server)
+        internal static void WaitForFirstCompareExchangeTombstonesClean(RavenServer server)
         {
             Assert.True(WaitForValue(() =>
             {

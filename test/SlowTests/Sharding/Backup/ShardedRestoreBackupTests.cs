@@ -5,10 +5,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using MySqlX.XDevAPI;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
+using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
@@ -18,8 +18,10 @@ using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Restore.Sharding;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Server.Documents.PeriodicBackup;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -937,6 +939,92 @@ namespace SlowTests.Sharding.Backup
             Assert.Equal(0, shardedRestoreResults[2].Result.Subscriptions.ReadCount);
 
             Assert.Equal(sharding.Shards[2].Members[0], shardedRestoreResults[2].NodeTag);
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task CanBackupAndRestoreShardedDatabase_WithAtomicGuardTombstones()
+        {
+            //RavenDB-19201
+            using (var store = Sharding.GetDocumentStore())
+            {
+                RavenDB_11139.WaitForFirstCompareExchangeTombstonesClean(Server);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        await session.StoreAsync(new User(), $"users/{i}");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var user = new User { Name = "Ayende" };
+                    await session.StoreAsync(user, "users/ayende");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Delete("users/ayende");
+                    await session.SaveChangesAsync();
+                }
+
+                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var compareExchangeTombs = Server.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(context, store.Database).ToList();
+                    Assert.Equal(1, compareExchangeTombs.Count);
+                    Assert.Equal("rvn-atomic/users/ayende", compareExchangeTombs[0].Key.Key);
+                }
+
+                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
+
+                var backupPath = NewDataPath(suffix: "BackupFolder");
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(3, dirs.Length);
+
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                var restoreOperation = new RestoreBackupOperation(new RestoreBackupConfiguration
+                {
+                    DatabaseName = databaseName,
+                    ShardRestoreSettings = settings
+
+                });
+
+                using (Sharding.Backup.ReadOnly(backupPath))
+                using (Databases.EnsureDatabaseDeletion(databaseName, store))
+                {
+                    var operation = await store.Maintenance.Server.SendAsync(restoreOperation);
+                    var result = await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(20)) as ShardedRestoreResult;
+                    Assert.NotNull(result);
+
+                    var compareExchangeTombsReadCount = result.Results.Sum(r => r.Result.CompareExchangeTombstones.ReadCount);
+                    var docsReadCount = result.Results.Sum(r => r.Result.Documents.ReadCount);
+
+                    Assert.Equal(1, compareExchangeTombsReadCount);
+                    Assert.Equal(10, docsReadCount);
+                }
+            }
         }
 
         private S3Settings GetS3Settings([CallerMemberName] string caller = null)
