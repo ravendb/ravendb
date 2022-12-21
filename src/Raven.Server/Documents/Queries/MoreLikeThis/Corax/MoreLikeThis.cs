@@ -253,7 +253,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         
         void InsertTerm(ReadOnlySpan<byte> termToAdd, bool exactInsert = false)
         {
-            _analyzersScope.Execute(field, termToAdd, out var bufferSpan, out var tokensSpan, exactInsert);
+            using var _ = _analyzersScope.Execute(field, termToAdd, out var bufferSpan, out var tokensSpan, exactInsert);
             for (int index = 0; index < tokensSpan.Length; index++)
             {
                 Token token = tokensSpan[index];
