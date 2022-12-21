@@ -22,7 +22,6 @@ using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
-using static Raven.Server.Smuggler.Documents.CounterItem;
 
 namespace Raven.Server.Documents.Sharding.Queries;
 
@@ -87,7 +86,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             var timeSeriesKeys = _query.Metadata.TimeSeriesIncludes.TimeSeries.Keys;
         }
 
-        var operation = new ShardedQueryOperation(_context, _requestHandler, _commands, documentsComparer, _existingResultEtag?.ToString());
+        var operation = new ShardedQueryOperation(_query, _context, _requestHandler, _commands, documentsComparer, _existingResultEtag?.ToString());
 
         var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(_commands.Keys.ToArray(), operation, _token);
 
