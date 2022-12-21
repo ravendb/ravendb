@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Identity
             _range = new RangeValue(1, 0, null);
         }
 
-        [Obsolete("Will be removed in next major version of the product. Use the GetDocumentIdFromId(NextId) overload")]
+        [Obsolete("Will be removed in next major version of the product. Use the GetDocumentIdFromId(NextId) overload.")]
         protected virtual string GetDocumentIdFromId(long nextId)
         {
             return $"{Prefix}{nextId}-{ServerTag}";
@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Identity
             public long Current;
             public string ServerTag;
 
-            [Obsolete("Will be removed in next major version of the product. Use RangeValue(min, max, serverTag) instead")]
+            [Obsolete("Will be removed in next major version of the product. Use RangeValue(min, max, serverTag) instead.")]
             public RangeValue(long min, long max) : this(min, max, null)
             {
             }
@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Identity
 
         private Lazy<Task> _nextRangeTask = new Lazy<Task>(() => Task.CompletedTask);
 
-        [Obsolete("Use field Range.ServerTag")]
+        [Obsolete("Will be removed in next major version of the product. Use field Range.ServerTag instead.")]
         protected string ServerTag;
 
         /// <summary>
@@ -86,8 +86,10 @@ namespace Raven.Client.Documents.Identity
         /// <returns></returns>
         public virtual async Task<string> GenerateDocumentIdAsync(object entity)
         {
-            var result = await NextIdAsync().ConfigureAwait(false);
-            return GetDocumentIdFromId(result);
+            var result = await GetNextIdAsync().ConfigureAwait(false);
+#pragma warning disable CS0618
+            return GetDocumentIdFromId(result.Id);
+#pragma warning restore CS0618
         }
 
         public async Task<NextId> GetNextIdAsync()
@@ -160,7 +162,9 @@ namespace Raven.Client.Documents.Identity
             }
 
             Prefix = hiloCommand.Result.Prefix;
+#pragma warning disable CS0618
             ServerTag = hiloCommand.Result.ServerTag;
+#pragma warning restore CS0618
             _lastRangeDate = hiloCommand.Result.LastRangeAt;
             _lastBatchSize = hiloCommand.Result.LastSize;
             Range = new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High, hiloCommand.Result.ServerTag);
