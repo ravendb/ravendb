@@ -6,13 +6,15 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Pipeline;
+using Sparrow.Server;
 
 namespace Corax
 {
     public unsafe class Analyzer : IDisposable
     {
-        public static Analyzer DefaultAnalyzer = Create(default(KeywordTokenizer), default(ExactTransformer));
-        public static Analyzer DefaultLowercaseAnalyzer = Create(default(KeywordTokenizer), default(LowerCaseTransformer));
+        public static Analyzer CreateDefaultAnalyzer(ByteStringContext context) => Create(context, default(KeywordTokenizer), default(ExactTransformer));
+        public static Analyzer CreateLowercaseAnalyzer(ByteStringContext context) => Create(context, default(KeywordTokenizer), default(LowerCaseTransformer));
+
         public static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Create();
         public static readonly ArrayPool<Token> TokensPool = ArrayPool<Token>.Create();
         public readonly int DefaultOutputSize;
@@ -301,7 +303,8 @@ namespace Corax
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Analyzer Create<TTokenizer, TTransform1, TTransform2, TTransform3>(in TTokenizer tokenizer = default(TTokenizer), 
+        public static Analyzer Create<TTokenizer, TTransform1, TTransform2, TTransform3>(ByteStringContext context, 
+                            in TTokenizer tokenizer = default(TTokenizer), 
                             in TTransform1 transform1 = default(TTransform1),
                             in TTransform2 transform2 = default(TTransform2), 
                             in TTransform3 transform3 = default(TTransform3))
@@ -419,23 +422,25 @@ namespace Corax
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Analyzer Create<TTokenizer, TTransform1>(in TTokenizer tokenizer = default(TTokenizer),
+        public static Analyzer Create<TTokenizer, TTransform1>(ByteStringContext context, 
+                            in TTokenizer tokenizer = default(TTokenizer),
                             in TTransform1 transform1 = default(TTransform1))
             where TTokenizer : ITokenizer
             where TTransform1 : ITransformer
         {
-            return Create<TTokenizer, TTransform1, NullTransformer, NullTransformer>(tokenizer, transform1);
+            return Create<TTokenizer, TTransform1, NullTransformer, NullTransformer>(context, tokenizer, transform1);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Analyzer Create<TTokenizer, TTransform1, TTransform2>(in TTokenizer tokenizer = default(TTokenizer),
+        public static Analyzer Create<TTokenizer, TTransform1, TTransform2>(ByteStringContext context,
+                            in TTokenizer tokenizer = default(TTokenizer),
                             in TTransform1 transform1 = default(TTransform1),
                             in TTransform2 transform2 = default(TTransform2))
             where TTokenizer : ITokenizer
             where TTransform1 : ITransformer
             where TTransform2 : ITransformer
         {
-            return Create<TTokenizer, TTransform1, TTransform2, NullTransformer>(tokenizer, transform1, transform2);
+            return Create<TTokenizer, TTransform1, TTransform2, NullTransformer>(context, tokenizer, transform1, transform2);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -130,7 +130,7 @@ namespace FastTests.Corax
         {
             Span<byte> source = Encoding.UTF8.GetBytes("This is a SiMple tEsT");
 
-            var analyzer = Analyzer.Create(default(WhitespaceTokenizer), default(LowerCaseTransformer));
+            var analyzer = Analyzer.Create(this.Allocator, default(WhitespaceTokenizer), default(LowerCaseTransformer));
             analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);
 
             Span<byte> buffer = new byte[bufferSize];
@@ -159,7 +159,7 @@ namespace FastTests.Corax
             Span<byte> source = Encoding.UTF8.GetBytes(input);
             ReadOnlySpan<byte> sourceLowerCased = Encoding.UTF8.GetBytes(input.ToLower());
 
-            var analyzer = Analyzer.Create(default(KeywordTokenizer), default(LowerCaseTransformer));
+            var analyzer = Analyzer.Create(this.Allocator, default(KeywordTokenizer), default(LowerCaseTransformer));
             analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);
 
             Span<byte> buffer = new byte[bufferSize];
@@ -179,7 +179,7 @@ namespace FastTests.Corax
         {
             Span<byte> source = Encoding.UTF8.GetBytes(input);
 
-            var analyzer = Analyzer.Create(default(KeywordTokenizer), default(LowerCaseTransformer));
+            var analyzer = Analyzer.Create(this.Allocator, default(KeywordTokenizer), default(LowerCaseTransformer));
             analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);
 
             Span<byte> buffer = new byte[bufferSize];
@@ -205,7 +205,7 @@ namespace FastTests.Corax
             Span<byte> source = Encoding.UTF8.GetBytes(input);
 
 
-            var analyzer = Analyzer.Create(default(WhitespaceTokenizer), default(LowerCaseTransformer));
+            var analyzer = Analyzer.Create(this.Allocator, default(WhitespaceTokenizer), default(LowerCaseTransformer));
             analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);
 
             Span<byte> buffer = new byte[bufferSize];
@@ -258,7 +258,7 @@ namespace FastTests.Corax
         {
             Span<byte> source = Encoding.UTF8.GetBytes("This is a SiMple stop stop tEsT");
 
-            var analyzer = Analyzer.Create(default(WhitespaceTokenizer), default(LowerCaseTransformer))
+            var analyzer = Analyzer.Create(this.Allocator, default(WhitespaceTokenizer), default(LowerCaseTransformer))
                                    .With(default(FilterTransformer<BasicLowercaseFilter>));     
             
             analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);
@@ -283,7 +283,7 @@ namespace FastTests.Corax
         {
             ReadOnlySpan<char> source = "This is a SiMple stop stop tEsT".AsSpan();
 
-            var analyzer = Analyzer.Create(default(WhitespaceTokenizer), default(LowerCaseTransformer))
+            var analyzer = Analyzer.Create(this.Allocator, default(WhitespaceTokenizer), default(LowerCaseTransformer))
                                    .With(default(FilterTransformer<BasicLowercaseFilter>));
 
             analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);

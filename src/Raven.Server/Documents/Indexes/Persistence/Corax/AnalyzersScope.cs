@@ -87,7 +87,7 @@ internal class AnalyzersScope : IDisposable
             {
                 FieldIndexingMode.Normal => _knownFields!.DefaultAnalyzer,
                 FieldIndexingMode.Search => _knownFields!.SearchAnalyzer(fieldName.ToString()),
-                FieldIndexingMode.No => Analyzer.DefaultAnalyzer,
+                FieldIndexingMode.No => Analyzer.CreateDefaultAnalyzer( _indexSearcher.Allocator),
                 FieldIndexingMode.Exact => _knownFields!.ExactAnalyzer(fieldName.ToString()),
                 _ => ThrowWhenAnalyzerModeNotFound(mode)
             };
