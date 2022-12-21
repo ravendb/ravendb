@@ -6,6 +6,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Includes.Sharding;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Commands;
@@ -21,14 +22,16 @@ namespace Raven.Server.Documents.Sharding.Operations;
 
 public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQueryResult>
 {
+    private readonly IndexQueryServerSide _query;
     private readonly TransactionOperationContext _context;
     private readonly ShardedDatabaseRequestHandler _requestHandler;
     private readonly Dictionary<int, ShardedQueryCommand> _queryCommands;
     private readonly ShardedDocumentsComparer _sortingComparer;
     private long _combinedResultEtag;
 
-    public ShardedQueryOperation(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, ShardedDocumentsComparer sortingComparer, string expectedEtag)
+    public ShardedQueryOperation(IndexQueryServerSide query, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, ShardedDocumentsComparer sortingComparer, string expectedEtag)
     {
+        _query = query;
         _context = context;
         _requestHandler = requestHandler;
         _queryCommands = queryCommands;
@@ -188,6 +191,8 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
                 }
             }
         }
+
+        result.RegisterSpatialProperties(_query);
 
         return result;
     }
