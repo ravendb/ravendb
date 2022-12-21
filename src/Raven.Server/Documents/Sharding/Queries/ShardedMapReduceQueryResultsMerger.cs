@@ -70,10 +70,7 @@ public class ShardedMapReduceQueryResultsMerger
         }
 
         if (propertyAccessor == null)
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19083 add a test for this");
-            return new List<BlittableJsonReaderObject>();
-        }
+            return new List<BlittableJsonReaderObject>(0);
 
         var objects = new ShardedAggregatedAnonymousObjects(results, propertyAccessor, _context);
         return objects.GetOutputsToStore().ToList();
