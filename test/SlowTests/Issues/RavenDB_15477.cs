@@ -40,9 +40,14 @@ namespace SlowTests.Issues
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
                     using var bjro = ctx.Sync.ReadForMemory(result, "test");
-                    Assert.True(bjro.TryGetMember(nameof(DatabaseInfo.IndexingStatus), out var indexingStatus));
+                    Assert.True(bjro.TryGet(nameof(DatabasesInfo.Databases), out BlittableJsonReaderArray array));
+                    Assert.Equal(1, array.Length);
+
+                    var item = (BlittableJsonReaderObject)array[0];
+
+                    Assert.True(item.TryGetMember(nameof(DatabaseInfo.IndexingStatus), out var indexingStatus));
                     Assert.Null(indexingStatus);
-                    var dbInfo = JsonDeserializationServer.DatabaseInfo(bjro);
+                    var dbInfo = JsonDeserializationServer.DatabaseInfo(item);
                     Assert.Equal(IndexRunningStatus.Running, dbInfo.IndexingStatus);
                 }
             }

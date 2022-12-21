@@ -2228,7 +2228,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
                     using var bjro = ctx.Sync.ReadForMemory(result, "test");
-                    var databaseInfo = JsonDeserializationServer.DatabaseInfo(bjro);
+
+                    Assert.True(bjro.TryGet(nameof(DatabasesInfo.Databases), out BlittableJsonReaderArray array));
+                    Assert.Equal(1, array.Length);
+
+                    var item = (BlittableJsonReaderObject)array[0];
+
+                    var databaseInfo = JsonDeserializationServer.DatabaseInfo(item);
                     Assert.NotNull(databaseInfo);
                     Assert.Equal(BackupTaskType.OneTime, databaseInfo.BackupInfo.BackupTaskType);
                     Assert.Equal(1, databaseInfo.BackupInfo.Destinations.Count);
