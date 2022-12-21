@@ -161,7 +161,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                 MentorNode: null,
                 NodeTag: null,
                 PinToMentorNode: false,
-                SubscriptionShardingState: null
+                ShardingState: null
             });
     }
 }
