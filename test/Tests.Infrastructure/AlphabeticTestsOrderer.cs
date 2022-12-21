@@ -19,12 +19,6 @@ namespace Tests.Infrastructure
         {
             var orderedTestCases = testCases.OrderBy(x => x.DisplayName).ToList();
 
-            if (_diagnosticMessageSink != null) //just in case
-            {
-                var message = new DiagnosticMessage("Alphabetically ordered {0} test cases", orderedTestCases.Count);
-                _diagnosticMessageSink.OnMessage(message);
-            }
-
             return orderedTestCases;
         }
 
