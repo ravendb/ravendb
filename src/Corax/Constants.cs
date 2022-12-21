@@ -102,7 +102,7 @@ namespace Corax
 
         public static class Analyzers
         {
-            internal const int DefaultBufferForAnalyzers = 4 * Sparrow.Global.Constants.Size.Kilobyte;
+            public const int DefaultBufferForAnalyzers = 4 * Sparrow.Global.Constants.Size.Kilobyte;
         }
         
         public static class Suggestions

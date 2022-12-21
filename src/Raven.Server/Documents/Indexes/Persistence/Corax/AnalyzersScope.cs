@@ -5,66 +5,108 @@ using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Mappings;
 using Corax.Pipeline;
+using Microsoft.CodeAnalysis;
+using Sparrow.Server;
 using Voron;
+using static Raven.Server.Documents.Indexes.MapReduce.ReduceKeyProcessor;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
-internal class AnalyzersScope : IDisposable
+internal unsafe class AnalyzersScope : IDisposable
 {
     private readonly IndexFieldsMapping _knownFields;
     private readonly bool _hasDynamics;
-    private Token[] _tokensBuffer;
-    private byte[] _outputBuffer;
     private readonly IndexSearcher _indexSearcher;
     private readonly Dictionary<Slice, Analyzer> _analyzersCache;
-    
+
+    private ByteStringContext<ByteStringMemoryCache>.InternalScope _tempBufferScope;
+    private int _tempOutputBufferSize;
+    private byte* _tempOutputBuffer;
+    private int _tempOutputTokenSize;
+    private Token* _tempTokenBuffer;
+
     public AnalyzersScope(IndexSearcher indexSearcher, IndexFieldsMapping fieldsMapping, bool hasDynamics)
     {
         _indexSearcher = indexSearcher;
         _knownFields = fieldsMapping;
         _hasDynamics = hasDynamics;
         _analyzersCache = new(SliceComparer.Instance);
-        UnlikelyGrowBuffer(128, 128);
+        InitializeTemporaryBuffers(indexSearcher.Allocator);
+    }
+
+    private void InitializeTemporaryBuffers(ByteStringContext allocator)
+    {
+        _tempOutputBufferSize = Constants.Analyzers.DefaultBufferForAnalyzers;
+        _tempOutputTokenSize = Constants.Analyzers.DefaultBufferForAnalyzers;
+
+        _tempBufferScope = allocator.AllocateDirect(_tempOutputBufferSize + _tempOutputTokenSize * Unsafe.SizeOf<Token>(), out var tempBuffer);
+        _tempOutputBuffer = tempBuffer.Ptr;
+        _tempTokenBuffer = (Token*)(tempBuffer.Ptr + _tempOutputBufferSize);
+    }
+
+    private void UnlikelyGrowBuffers(int outputSize, int tokenSize)
+    {
+        _tempBufferScope.Dispose();
+
+        _tempOutputBufferSize = outputSize;
+        _tempOutputTokenSize = tokenSize;
+
+        _tempBufferScope = _indexSearcher.Allocator.AllocateDirect(_tempOutputBufferSize + _tempOutputTokenSize * Unsafe.SizeOf<Token>(), out var tempBuffer);
+        _tempOutputBuffer = tempBuffer.Ptr;
+        _tempTokenBuffer = (Token*)(tempBuffer.Ptr + _tempOutputBufferSize);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Execute(Slice fieldName, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens)
+    public ByteStringContext<ByteStringMemoryCache>.InternalScope Execute(Slice fieldName, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens)
     {
         Analyzer analyzer = GetAnalyzer(fieldName);
-        ExecuteAnalyze(analyzer, source, out buffer, out tokens);
+        return ExecuteAnalyze(analyzer, source, out buffer, out tokens);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void Execute(FieldMetadata field, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens, bool exact)
+    public ByteStringContext<ByteStringMemoryCache>.InternalScope Execute(FieldMetadata field, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens, bool exact)
     {
-        
         if (field.Mode == FieldIndexingMode.Exact || field.Analyzer == null || exact)
         {
-            buffer = source;
-            _tokensBuffer[0] = new Token() {Length = (uint)source.Length, Offset = 0, Type = TokenType.Term};
-            tokens = _tokensBuffer.AsSpan(0, 1);
-            return;
+            var scope = _indexSearcher.Allocator.AllocateDirect(1 * sizeof(Token) + source.Length, out var outputMemory);
+
+            var outputBuffer = new Span<byte>(outputMemory.Ptr, source.Length);
+            var outputTokens = new Span<Token>(outputMemory.Ptr + outputBuffer.Length, 1);
+
+            source.CopyTo(outputBuffer);
+            outputTokens[0] = new Token() {Length = (uint)source.Length, Offset = 0, Type = TokenType.Term};
+
+            buffer = outputBuffer;
+            tokens = outputTokens;
+            return scope;
         }
 
         var analyzer = field.Analyzer;
-        
-        ExecuteAnalyze(analyzer, source, out buffer, out tokens);
+        return ExecuteAnalyze(analyzer, source, out buffer, out tokens);
     }
     
-    private void ExecuteAnalyze(Analyzer analyzer, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens)
+    private ByteStringContext<ByteStringMemoryCache>.InternalScope ExecuteAnalyze(Analyzer analyzer, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens)
     {
         analyzer.GetOutputBuffersSize(source.Length, out var outputSize, out var tokensSize);
+        if (outputSize > _tempOutputBufferSize || tokensSize > _tempOutputTokenSize)
+            UnlikelyGrowBuffers(outputSize, tokensSize);
 
-        if ((_tokensBuffer?.Length ?? 0) < tokensSize && (_outputBuffer?.Length ?? 0 ) < outputSize)
-            UnlikelyGrowBuffer(outputSize, tokensSize);
+        var tokenSpace = new Span<Token>(_tempTokenBuffer, _tempOutputTokenSize);
+        var wordSpace = new Span<byte>(_tempOutputBuffer, _tempOutputBufferSize);
+        analyzer.Execute(source, ref wordSpace, ref tokenSpace);
 
-        var bufferOutput = _outputBuffer.AsSpan();
-        var tokenOutput = _tokensBuffer.AsSpan();
-        analyzer.Execute(source, ref bufferOutput, ref tokenOutput);
+        var scope = _indexSearcher.Allocator.AllocateDirect(tokenSpace.Length * sizeof(Token) + wordSpace.Length, out var outputMemory);
 
+        var outputBuffer = new Span<byte>(outputMemory.Ptr, wordSpace.Length);
+        var outputTokens = new Span<Token>(outputMemory.Ptr + outputBuffer.Length, tokenSpace.Length);
 
-        buffer = bufferOutput;
-        tokens = tokenOutput;
+        wordSpace.CopyTo(outputBuffer);
+        tokenSpace.CopyTo(outputTokens);
+
+        buffer = outputBuffer;
+        tokens = outputTokens;
+
+        return scope;
     }
 
     private Analyzer GetAnalyzer(Slice fieldName, FieldMetadata field = default)
@@ -109,31 +151,8 @@ internal class AnalyzersScope : IDisposable
             $"Cannot find field {fieldName.ToString()} inside known binding and also index doesn't contain dynamic fields. The field you try to read is not inside index.");
     }
 
-    private void UnlikelyGrowBuffer(int outputSize, int tokensSize)
-    {
-        ReturnBuffers();
-
-        _outputBuffer = Analyzer.BufferPool.Rent(outputSize);
-        _tokensBuffer = Analyzer.TokensPool.Rent(tokensSize);
-    }
-
-    private void ReturnBuffers()
-    {
-        if (_tokensBuffer != null)
-        {
-            Analyzer.TokensPool.Return(_tokensBuffer);
-            _tokensBuffer = null;
-        }
-
-        if (_outputBuffer != null)
-        {
-            Analyzer.BufferPool.Return(_outputBuffer);
-            _outputBuffer = null;
-        }
-    }
-
     public void Dispose()
     {
-        ReturnBuffers();
+        _tempBufferScope.Dispose();
     }
 }
