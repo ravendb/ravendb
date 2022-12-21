@@ -866,6 +866,66 @@ select project(o)")
             }
         }
 
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        public void Simple_collection_query_with_projection_and_order_by()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Grisha", Age = 1 }, "users/1");
+                    session.Store(new User { Name = "Adam", Age = 2 }, "users/2");
+                    session.Store(new User { Name = "Carlos", Age = 3 }, "users/3");
+                    session.SaveChanges();
+
+                    var queryResult = session.Query<User>()
+                        .Where(x => x.Id == "users/1" || x.Id == "users/2" || x.Id == "users/3")
+                        .OrderBy(x => x.Name)
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Select(x => new
+                        {
+                            x.Age
+                        })
+                        .ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(2, queryResult[0].Age);
+                    Assert.Equal(3, queryResult[1].Age);
+                    Assert.Equal(1, queryResult[2].Age);
+
+                    var queryResult2 = session.Query<User>()
+                        .Where(x => x.Id == "users/1" || x.Id == "users/2" || x.Id == "users/3")
+                        .OrderBy(x => x.Name)
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Select(x => new
+                        {
+                            x.Age,
+                            x.Name
+                        })
+                        .ToList();
+
+                    Assert.Equal(3, queryResult2.Count);
+                    Assert.Equal(2, queryResult2[0].Age);
+                    Assert.Equal("Adam", queryResult2[0].Name);
+                    Assert.Equal(3, queryResult2[1].Age);
+                    Assert.Equal("Carlos", queryResult2[1].Name);
+                    Assert.Equal(1, queryResult2[2].Age);
+                    Assert.Equal("Grisha", queryResult2[2].Name);
+
+                    var queryResult3 = session.Advanced.RawQuery<User>("from Users as u where id() = 'users/1' or id() = 'users/2' or id() = 'users/3' select { Age: u.Age, Name: u.Name }")
+                        .ToList();
+
+                    Assert.Equal(3, queryResult3.Count);
+                    Assert.Equal(2, queryResult3[0].Age);
+                    Assert.Equal("Adam", queryResult3[0].Name);
+                    Assert.Equal(3, queryResult3[1].Age);
+                    Assert.Equal("Carlos", queryResult3[1].Name);
+                    Assert.Equal(1, queryResult3[2].Age);
+                    Assert.Equal("Grisha", queryResult3[2].Name);
+                }
+            }
+        }
+
         private class AgeResult
         {
             public int Age { get; set; }
