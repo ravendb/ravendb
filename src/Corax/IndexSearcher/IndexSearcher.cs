@@ -306,7 +306,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         if (readResult == null)
             return FieldIndexingMode.Normal;
 
-
         var mode = (FieldIndexingMode)readResult.Reader.ReadByte();
         return mode;
     }

@@ -12,6 +12,8 @@ using Lucene.Net.Util;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Sparrow.Json;
+using Sparrow.Server;
+using Voron;
 using CoraxProj = global::Corax;
 
 /*
@@ -107,18 +109,14 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
     {
         //We dont have any streaming option for analyzing in Corax so we've to read all
         var termOriginal = Encoding.UTF8.GetBytes(r.ReadToEnd());
+
+        using var _ = Slice.From(this._builderParameters.Allocator, fieldName, ByteStringType.Immutable, out var fieldNameSlice);
+        using var __ = _analyzersScope.Execute(fieldNameSlice, termOriginal, out var outputBuffer, out var outputTokens);
+
         var tokenCount = 0;
-        _analyzer.GetOutputBuffersSize(termOriginal.Length, out int outputSize, out int tokenSize);
-        var bufferHandler = Analyzer.BufferPool.Rent(outputSize);
-        var tokensHandler = Analyzer.TokensPool.Rent(tokenSize);
-
-        var buffer = bufferHandler.AsSpan();
-        var tokens = tokensHandler.AsSpan();
-        _analyzer.Execute(termOriginal, ref buffer, ref tokens);
-
-        foreach (var token in tokens)
+        foreach (var token in outputTokens)
         {
-            var word = Encoding.UTF8.GetString(buffer.Slice(token.Offset, (int)token.Length));
+            var word = Encoding.UTF8.GetString(outputBuffer.Slice(token.Offset, (int)token.Length));
             tokenCount++;
 
             if (tokenCount > _maxNumTokensParsed)
@@ -142,9 +140,6 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
                 cnt.X++;
             }
         }
-
-        Analyzer.BufferPool.Return(bufferHandler);
-        Analyzer.TokensPool.Return(tokensHandler);
     }
 
     /// <summary> Adds term frequencies found by tokenizing text from reader into the Map words</summary>
