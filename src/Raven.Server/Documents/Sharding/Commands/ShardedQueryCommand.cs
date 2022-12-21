@@ -3,6 +3,7 @@ using System.Net.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Queries;
@@ -10,16 +11,18 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Commands;
 
-public class ShardedQueryCommand : AbstractQueryCommand<BlittableJsonReaderObject, QueryResult>
+public class ShardedQueryCommand : AbstractQueryCommand<BlittableJsonReaderObject, QueryResult>, IRaftCommand
 {
     private readonly BlittableJsonReaderObject _query;
     private readonly string _indexName;
 
-    public ShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryServerSide indexQuery, bool metadataOnly, bool indexEntriesOnly, string indexName, bool canReadFromCache) : base(indexQuery, true, metadataOnly, indexEntriesOnly)
+    public ShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryServerSide indexQuery, bool metadataOnly, bool indexEntriesOnly, string indexName,
+        bool canReadFromCache, string raftUniqueRequestId) : base(indexQuery, true, metadataOnly, indexEntriesOnly)
     {
         _query = query;
         _indexName = indexName;
         CanReadFromCache = canReadFromCache;
+        RaftUniqueRequestId = raftUniqueRequestId;
     }
 
     protected override ulong GetQueryHash(JsonOperationContext ctx)
@@ -52,4 +55,6 @@ public class ShardedQueryCommand : AbstractQueryCommand<BlittableJsonReaderObjec
 
         Result = JsonDeserializationClient.QueryResult(response);
     }
+
+    public string RaftUniqueRequestId { get; }
 }
