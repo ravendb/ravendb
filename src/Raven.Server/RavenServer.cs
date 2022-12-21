@@ -95,7 +95,7 @@ namespace Raven.Server
         private IWebHost _redirectingWebHost;
 
         private readonly Logger _tcpLogger;
-        public LoggingSource MicrosoftLog;
+        public LoggingSource MicrosoftLogger;
         private readonly ExternalCertificateValidator _externalCertificateValidator;
         internal readonly JsonContextPool _tcpContextPool;
 
@@ -220,7 +220,7 @@ namespace Raven.Server
                 }
 
                 var webHostBuilder = new WebHostBuilder()
-                    .ConfigureMicrosoftLogging(ref MicrosoftLog, Configuration.Logs)
+                    .ConfigureMicrosoftLogging(ref MicrosoftLogger, Configuration.Logs)
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
                     .UseUrls(Configuration.Core.ServerUrls)

@@ -16,14 +16,14 @@ public static class WebHostBuilderExtensions
         if (configurationLogs.DisableMicrosoftLogs)
             return hostBuilder;
         
-        loggingSource = new LoggingSource(LogMode.Information, configurationLogs.MicrosoftLogPath.FullPath, "Microsoft Log", TimeSpan.MaxValue, long.MaxValue);
+        loggingSource = new LoggingSource(LogMode.Information, configurationLogs.MicrosoftLogsPath.FullPath, "Microsoft Log", TimeSpan.MaxValue, long.MaxValue);
         
         var internalLoggingSource = loggingSource;
         return hostBuilder.ConfigureLogging(logging =>
         {
             logging.ClearProviders();
             var configurationBuilder = new ConfigurationBuilder();
-            configurationBuilder.AddJsonFile(null, configurationLogs.MicrosoftLogConfigurationPath.FullPath, true, true);
+            configurationBuilder.AddJsonFile(null, configurationLogs.MicrosoftLogsConfigurationPath.FullPath, true, true);
             logging.AddConfiguration(configurationBuilder.Build());
             logging.SetMinimumLevel(LogLevel.Critical);
         
