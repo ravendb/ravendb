@@ -16,7 +16,7 @@ namespace Raven.Server.Config.Categories
             string resourceName)
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
-            MicrosoftLogPath ??= Path.Combine("MicrosoftLogs");
+            MicrosoftLogsPath ??= Path.Combine("MicrosoftLogs");
         }
 
         [DefaultValue("Logs")]
@@ -57,20 +57,20 @@ namespace Raven.Server.Config.Categories
         public bool Compress { get; set; }
 
         #region Microsoft Logs
-        [Description("Will determine whether to disabale the microsoft logs")]
+        [Description("Will determine whether to disable the Microsoft logs")]
         [DefaultValue(true)]
-        [ConfigurationEntry("Logs.Microsoft.Enable", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Logs.Microsoft.Disable", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableMicrosoftLogs { get; set; }
         
-        [Description("The path to the folder where microsoft log will be written")]
+        [Description("The path to the folder where Microsoft log will be written")]
         [DefaultValue(null)]
         [ConfigurationEntry("Logs.Microsoft.Path", ConfigurationEntryScope.ServerWideOnly)]
-        public PathSetting MicrosoftLogPath { get; set; }
+        public PathSetting MicrosoftLogsPath { get; set; }
         
-        [Description("The path to json configuration file of microsoft logs")]
-        [DefaultValue("microsoftLogSettings.json")]
+        [Description("The path to json configuration file of Microsoft logs")]
+        [DefaultValue("settings.logs.microsoft.json")]
         [ConfigurationEntry("Logs.Microsoft.ConfigurationPath", ConfigurationEntryScope.ServerWideOnly)]
-        public PathSetting MicrosoftLogConfigurationPath { get; set; }
+        public PathSetting MicrosoftLogsConfigurationPath { get; set; }
         #endregion
         
     }

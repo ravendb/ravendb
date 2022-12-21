@@ -26,7 +26,7 @@ public class SparrowLoggerWrapper<TLogger> : ILogger<TLogger>
             throw new ArgumentNullException(nameof(formatter));
         
         var logLine = formatter(state, null);
-        _sparrowLogger.Operations(logLine, exception);
+        _sparrowLogger.Operations($"{logLevel}, {logLine}", exception);
     }
     
     private sealed class NullScope : IDisposable
