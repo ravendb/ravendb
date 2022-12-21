@@ -377,7 +377,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 var errorMessage = $"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}";
                                 connection.AddToStatusDescription($"{errorMessage}. Sending response to client");
-                                if (connection._logger.IsInfoEnabled)
+                                if (connection._logger.IsInfoEnabled && e is not OperationCanceledException)
                                 {
                                     connection._logger.Info(errorMessage, e);
                                 }
@@ -536,11 +536,14 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 else
                 {
-                    connection.AddToStatusDescription("Subscription error");
-
-                    if (connection._logger.IsInfoEnabled)
+                    if (ex is not OperationCanceledException)
                     {
-                        connection._logger.Info("Subscription error", ex);
+                        connection.AddToStatusDescription("Subscription error");
+
+                        if (connection._logger.IsInfoEnabled)
+                        {
+                            connection._logger.Info("Subscription error", ex);
+                        }
                     }
                     await connection.WriteJsonAsync(new DynamicJsonValue
                     {
