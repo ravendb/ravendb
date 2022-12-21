@@ -44,7 +44,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
 
     public RavenMoreLikeThis(CoraxQueryBuilder.Parameters builderParameters, Analyzer analyzer = null)
     {
-        _analyzer = analyzer ?? Analyzer.DefaultAnalyzer;
+        _analyzer = analyzer ?? Analyzer.CreateDefaultAnalyzer(builderParameters.Allocator);
         _builderParameters = builderParameters;
         _analyzersScope = new(builderParameters.IndexSearcher, builderParameters.IndexFieldsMapping, builderParameters.HasDynamics);
     }

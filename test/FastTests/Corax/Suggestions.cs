@@ -134,7 +134,7 @@ namespace FastTests.Corax
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
-            using var mapping = CreateKnownFields(bsc, Analyzer.DefaultAnalyzer);
+            using var mapping = CreateKnownFields(bsc, Analyzer.CreateDefaultAnalyzer(bsc));
             mapping.TryGetByFieldId(1, out var contentField);
 
             IndexEntries(bsc, new[] { entry1, entry2, entry3, entry4, entry5 }, mapping);
