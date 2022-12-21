@@ -559,9 +559,6 @@ public static class QueryBuilderHelper
                 : FieldIndexingMode.Normal;
             return FieldMetadata.Build(allocator, fieldName, Corax.Constants.IndexWriter.DynamicField, mode, indexMapping.DefaultAnalyzer);
         }
-        
-        void ThrowFieldIsNotIndexed() =>
-            throw new InvalidQueryException($"Field {fieldName} is not indexed in Index {index.Name}. You can index it by changing `Indexing` option from `No`.");
 
         void ThrowNotFoundInIndex() => throw new InvalidQueryException($"Field {fieldName} not found in Index '{index.Name}'.");
     }
