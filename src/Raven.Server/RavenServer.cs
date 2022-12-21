@@ -2780,184 +2780,190 @@ namespace Raven.Server
 
         private static class EchoServer
         {
-            
 
-        public static void StartEchoSockets(int? echoSocketPort)
-        {
-            if (echoSocketPort == null)
-                return;
 
-            int port = echoSocketPort.Value;
-            try
+            public static void StartEchoSockets(int? echoSocketPort)
             {
-                _ = EchoSocketAsync(port);
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info("Failed to start async echo socket on " + port, e);
-                }
-            }
+                if (echoSocketPort == null)
+                    return;
 
-            try
-            {
-                new Thread(EchoSocketSync)
-                {
-                    IsBackground = true, 
-                    Name = "Sync echo socket listener",
-                }.Start(port + 1);
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info("Failed to start sync echo socket on " + port+ 1, e);
-                }
-            }
-        }
-
-        private static async Task EchoSocketAsync(int port)
-        {
-            TcpListener listener = null;
-            try
-            {
-                listener = new TcpListener(IPAddress.Loopback, port);
-                listener.Start();
-                while (true)
-                {
-                    var s = await listener.AcceptSocketAsync();
-                    _ = EchoAsync(s);
-                }
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info("Error in listening to echo socket on " + port, e);
-                }
-            }
-            finally
-            {
+                int port = echoSocketPort.Value;
                 try
                 {
-                    listener?.Stop();
-                }
-                catch 
-                {
-                    // nothing to do
-                }
-            }
-        }
-        private static void EchoSocketSync(object o)
-        {
-            TcpListener listener = null;
-            try
-            {
-                int port = (int)o;
-                listener = new TcpListener(IPAddress.Loopback, port);
-                listener.Start();
-                while (true)
-                {
-                    var s = listener.AcceptSocket();
-                    new Thread(EchoSync)
-                    {
-                        Name = "Sync echo socket thread for: " + s.RemoteEndPoint,
-                        IsBackground = true
-                    }.Start(s);
-                }
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info("Error in listening to echo socket on " + o, e);
-                }
-            }
-            finally
-            {
-                try
-                {
-                    listener?.Stop();
-                }
-                catch 
-                {
-                    // nothing to do
-                }
-            }
-        }
-        
-        private static async Task EchoAsync(Socket s)
-        {
-            try
-            {
-                var buffer = new byte[1024];
-                while (true)
-                {
-                    var read = await s.ReceiveAsync(buffer);
-                    await s.SendAsync(new ReadOnlyMemory<byte>(buffer,0, read), SocketFlags.None);
-                }
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info("Error in async echo socket", e);
-                }
-            }
-            finally
-            {
-                try
-                {
-                    s?.Dispose();
+                    _ = EchoSocketAsync(port);
                 }
                 catch (Exception e)
                 {
                     if (Logger.IsInfoEnabled)
                     {
-                        Logger.Info("Error in disposing async echo socket", e);
+                        Logger.Info("Failed to start async echo socket on " + port, e);
                     }
                 }
-            }
-        }
 
-        
-
-        private static void EchoSync(object o)
-        {
-            Socket s = null;
-            try
-            {
-                s = (Socket)o;
-                var buffer = new byte[1024];
-                while (true)
-                {
-                    var read = s.Receive(buffer);
-                    s.Send(buffer, 0, read, SocketFlags.None);
-                }
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                {
-                    Logger.Info("Error in sync echo socket", e);
-                }
-            }
-            finally
-            {
                 try
                 {
-                    s?.Dispose();
+                    new Thread(EchoSocketSync) { IsBackground = true, Name = "Sync echo socket listener", }.Start(port + 1);
                 }
                 catch (Exception e)
                 {
                     if (Logger.IsInfoEnabled)
                     {
-                        Logger.Info("Error in disposing sync echo socket", e);
+                        Logger.Info("Failed to start sync echo socket on " + port + 1, e);
                     }
                 }
             }
-        }
+
+            private static async Task EchoSocketAsync(int port)
+            {
+                TcpListener listener = null;
+                try
+                {
+                    listener = new TcpListener(IPAddress.Loopback, port);
+                    listener.Start();
+                    while (true)
+                    {
+                        var s = await listener.AcceptSocketAsync();
+                        _ = EchoAsync(s);
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info("Error in listening to echo socket on " + port, e);
+                    }
+                }
+                finally
+                {
+                    try
+                    {
+                        listener?.Stop();
+                    }
+                    catch
+                    {
+                        // nothing to do
+                    }
+                }
+            }
+
+            private static void EchoSocketSync(object o)
+            {
+                TcpListener listener = null;
+                try
+                {
+                    int port = (int)o;
+                    listener = new TcpListener(IPAddress.Loopback, port);
+                    listener.Start();
+                    while (true)
+                    {
+                        var s = listener.AcceptSocket();
+                        new Thread(EchoSync) { Name = "Sync echo socket thread for: " + s.RemoteEndPoint, IsBackground = true }.Start(s);
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info("Error in listening to echo socket on " + o, e);
+                    }
+                }
+                finally
+                {
+                    try
+                    {
+                        listener?.Stop();
+                    }
+                    catch
+                    {
+                        // nothing to do
+                    }
+                }
+            }
+
+            private static async Task EchoAsync(Socket s)
+            {
+                try
+                {
+                    CreateLogfile(s.RemoteEndPoint);
+                    var buffer = new byte[1024];
+                    while (true)
+                    {
+                        var read = await s.ReceiveAsync(buffer);
+                        await s.SendAsync(new ReadOnlyMemory<byte>(buffer, 0, read), SocketFlags.None);
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info("Error in async echo socket", e);
+                    }
+                }
+                finally
+                {
+                    try
+                    {
+                        s?.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsInfoEnabled)
+                        {
+                            Logger.Info("Error in disposing async echo socket", e);
+                        }
+                    }
+                }
+            }
+
+            private static void EchoSync(object o)
+            {
+                Socket s = null;
+                try
+                {
+                    s = (Socket)o;
+                    CreateLogfile(s.RemoteEndPoint);
+                    var buffer = new byte[1024];
+                    while (true)
+                    {
+                        var read = s.Receive(buffer);
+                        s.Send(buffer, 0, read, SocketFlags.None);
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info("Error in sync echo socket", e);
+                    }
+                }
+                finally
+                {
+                    try
+                    {
+                        s?.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsInfoEnabled)
+                        {
+                            Logger.Info("Error in disposing sync echo socket", e);
+                        }
+                    }
+                }
+            }
+
+            private static void CreateLogfile(EndPoint remote)
+            {
+                try
+                {
+                    var f = Path.Combine(Path.GetTempPath(), "Echo_Server_" + remote + "_" + Guid.NewGuid());
+                    File.Create(f).Close();
+                }
+                catch
+                {
+                }
+
+            }
         }
     }
 }
