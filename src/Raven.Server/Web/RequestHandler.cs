@@ -690,7 +690,7 @@ namespace Raven.Server.Web
             return result.HasAccess;
         }
 
-        protected async Task<AllowedDbs> GetAllowedDbsAsync(string dbName, bool requireAdmin, bool requireWrite)
+        protected internal async Task<AllowedDbs> GetAllowedDbsAsync(string dbName, bool requireAdmin, bool requireWrite)
         {
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 

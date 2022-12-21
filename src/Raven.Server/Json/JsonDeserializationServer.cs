@@ -278,6 +278,8 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, NotificationCenterDatabaseStats> NotificationCenterDatabaseStats = GenerateJsonDeserializationRoutine<NotificationCenterDatabaseStats>();
 
+        internal static readonly Func<BlittableJsonReaderObject, DatabasesInfo> DatabasesInfo = GenerateJsonDeserializationRoutine<DatabasesInfo>();
+
         public class Parameters
         {
             private Parameters()

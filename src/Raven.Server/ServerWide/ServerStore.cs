@@ -119,7 +119,7 @@ namespace Raven.Server.ServerWide
         private readonly OperationsStorage _operationsStorage;
         public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
 
-        private RequestExecutor _clusterRequestExecutor;
+        private RequestExecutor _leaderRequestExecutor;
         private long _lastClusterTopologyIndex = -1;
 
         public readonly RavenConfiguration Configuration;
@@ -137,6 +137,8 @@ namespace Raven.Server.ServerWide
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
+        private readonly Lazy<ClusterRequestExecutor> _clusterRequestExecutor;
+
         public long LastClientConfigurationIndex { get; private set; } = -2;
 
         public ConcurrentBackupsCounter ConcurrentBackupsCounter { get; private set; }
@@ -144,6 +146,8 @@ namespace Raven.Server.ServerWide
         public ServerOperations Operations { get; }
 
         public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
+
+        public ClusterRequestExecutor ClusterRequestExecutor => _clusterRequestExecutor.Value;
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
@@ -161,6 +165,9 @@ namespace Raven.Server.ServerWide
             FeatureGuardian = new FeatureGuardian(configuration);
 
             _server = server;
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Critical, "Handle server certificate changes");
+            _clusterRequestExecutor = new Lazy<ClusterRequestExecutor>(() => ClusterRequestExecutor.Create(new[] { Server.WebUrl }, Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
 
             IdleDatabases = new ConcurrentDictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
 
@@ -2512,7 +2519,7 @@ namespace Raven.Server.ServerWide
                         LicenseManager,
                         DatabasesLandlord,
                         _env,
-                        _clusterRequestExecutor,
+                        _leaderRequestExecutor,
                         ContextPool,
                         ByteStringMemoryCache.Cleaner,
                         InitializationCompleted
@@ -2537,6 +2544,12 @@ namespace Raven.Server.ServerWide
                     exceptionAggregator.Execute(_shutdownNotification.Dispose);
 
                     exceptionAggregator.Execute(() => _timer?.Dispose());
+
+                    exceptionAggregator.Execute(() =>
+                    {
+                        if (_clusterRequestExecutor?.IsValueCreated == true)
+                            _clusterRequestExecutor.Value.Dispose();
+                    });
 
                     exceptionAggregator.ThrowIfNeeded();
                 }
@@ -2859,7 +2872,7 @@ namespace Raven.Server.ServerWide
                 {
                     record.Sharding.DatabaseId = Guid.NewGuid().ToBase64Unpadded();
                     record.UnusedDatabaseIds ??= new HashSet<string>();
-                    record.UnusedDatabaseIds.Add( record.Sharding.DatabaseId);
+                    record.UnusedDatabaseIds.Add(record.Sharding.DatabaseId);
                 }
             }
 
@@ -3212,17 +3225,17 @@ namespace Raven.Server.ServerWide
 
             var serverCertificateChanged = Interlocked.Exchange(ref _serverCertificateChanged, 0) == 1;
 
-            if (_clusterRequestExecutor == null
+            if (_leaderRequestExecutor == null
                 || serverCertificateChanged
-                || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
+                || _leaderRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
             {
-                _clusterRequestExecutor?.Dispose();
-                _clusterRequestExecutor = CreateNewClusterRequestExecutor(leaderUrl);
+                _leaderRequestExecutor?.Dispose();
+                _leaderRequestExecutor = CreateNewClusterRequestExecutor(leaderUrl);
             }
 
             try
             {
-                await _clusterRequestExecutor.ExecuteAsync(command, context, token: ServerShutdown);
+                await _leaderRequestExecutor.ExecuteAsync(command, context, token: ServerShutdown);
             }
             catch
             {
@@ -3550,18 +3563,18 @@ namespace Raven.Server.ServerWide
 
             var ioStatsResult = Server.DiskStatsGetter.Get(driveInfo?.BasePath.DriveName);
             if (ioStatsResult != null)
-                usage.IoStatsResult = FillIoStatsResult(ioStatsResult); 
+                usage.IoStatsResult = FillIoStatsResult(ioStatsResult);
 
             if (diskSpaceResult.DriveName == driveInfo?.JournalPath.DriveName)
             {
-                    usage.UsedSpace += sizeOnDisk.JournalsInBytes;
-                    usage.UsedSpaceByTempBuffers += includeTempBuffers ? sizeOnDisk.TempRecyclableJournalsInBytes : 0;
-                }
-                else
-                {
+                usage.UsedSpace += sizeOnDisk.JournalsInBytes;
+                usage.UsedSpaceByTempBuffers += includeTempBuffers ? sizeOnDisk.TempRecyclableJournalsInBytes : 0;
+            }
+            else
+            {
                 var journalDiskSpaceResult = DiskUtils.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
                 if (journalDiskSpaceResult != null)
-                    {
+                {
                     var journalUsage = new Client.ServerWide.Operations.MountPointUsage
                     {
                         Name = environment.Name,
@@ -3571,8 +3584,8 @@ namespace Raven.Server.ServerWide
                     };
                     var journalIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.JournalPath.DriveName);
                     if (journalIoStatsResult != null)
-                        usage.IoStatsResult = FillIoStatsResult(ioStatsResult);  
-                    
+                        usage.IoStatsResult = FillIoStatsResult(ioStatsResult);
+
                     yield return journalUsage;
                 }
             }
@@ -3581,13 +3594,13 @@ namespace Raven.Server.ServerWide
             {
                 if (diskSpaceResult.DriveName == driveInfo?.TempPath.DriveName)
                 {
-                        usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
-                    }
-                    else
-                    {
+                    usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
+                }
+                else
+                {
                     var tempBuffersDiskSpaceResult = DiskUtils.GetDiskSpaceInfo(environment.Environment.Options.TempPath.FullPath, driveInfo?.TempPath);
                     if (tempBuffersDiskSpaceResult != null)
-                        {
+                    {
                         var tempBuffersUsage = new Client.ServerWide.Operations.MountPointUsage
                         {
                             Name = environment.Name,
@@ -3597,7 +3610,7 @@ namespace Raven.Server.ServerWide
                         };
                         var tempBufferIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.TempPath.DriveName);
                         if (tempBufferIoStatsResult != null)
-                            tempBuffersUsage.IoStatsResult = FillIoStatsResult(ioStatsResult);  
+                            tempBuffersUsage.IoStatsResult = FillIoStatsResult(ioStatsResult);
 
                         yield return tempBuffersUsage;
                     }
@@ -3622,7 +3635,7 @@ namespace Raven.Server.ServerWide
         {
             return new IoStatsResult
             {
-                IoReadOperations = ioStatsResult.IoReadOperations, 
+                IoReadOperations = ioStatsResult.IoReadOperations,
                 IoWriteOperations = ioStatsResult.IoWriteOperations,
                 ReadThroughputInKb = ioStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes),
                 WriteThroughputInKb = ioStatsResult.WriteThroughput.GetValue(SizeUnit.Kilobytes),
