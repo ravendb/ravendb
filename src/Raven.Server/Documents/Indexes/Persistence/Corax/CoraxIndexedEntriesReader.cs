@@ -5,26 +5,33 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Amqp.Framing;
 using Corax;
 using Corax.Mappings;
 using Corax.Pipeline;
 using Sparrow;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
-public class CoraxIndexedEntriesReader : IDisposable
+public unsafe class CoraxIndexedEntriesReader : IDisposable
 {
+    private readonly IndexSearcher _indexSearcher;
     private readonly IndexFieldsMapping _fieldsMapping;
 
     private readonly Dictionary<string, byte[]> _dynamicMapping;
-    private Token[] _tokensBuffer;
-    private byte[] _outputBuffer;
-
     private readonly HashSet<object> _container;
+
+    private ByteStringContext<ByteStringMemoryCache>.InternalScope _tempBufferScope;
+    private int _tempOutputBufferSize;
+    private byte* _tempOutputBuffer;
+    private int _tempOutputTokenSize;
+    private Token* _tempTokenBuffer;
 
     public CoraxIndexedEntriesReader(IndexSearcher indexSearcher, IndexFieldsMapping fieldsMapping)
     {
+        _indexSearcher = indexSearcher;
         _fieldsMapping = fieldsMapping;
         _dynamicMapping = new();
 
@@ -32,6 +39,8 @@ public class CoraxIndexedEntriesReader : IDisposable
             _dynamicMapping.Add(dynamicField, Encoding.UTF8.GetBytes(dynamicField));
 
         _container = new();
+
+        InitializeTemporaryBuffers(indexSearcher.Allocator);
     }
 
     public DynamicJsonValue GetDocument(ref IndexEntryReader entryReader)
@@ -167,47 +176,48 @@ public class CoraxIndexedEntriesReader : IDisposable
             _container.Add(Encodings.Utf8.GetString(value));
             return;
         }
-        
-        analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
-        UnlikelyGrowBuffer(tokenSize, outputSize);
 
-        var output = _outputBuffer.AsSpan();
-        var tokens = _tokensBuffer.AsSpan();
-        analyzer.Execute(value, ref output, ref tokens);
+        analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokensSize);
 
-        foreach (var token in tokens)
+        if (outputSize > _tempOutputBufferSize || tokensSize > _tempOutputTokenSize)
+            UnlikelyGrowBuffers(outputSize, tokensSize);
+
+        var tokenSpace = new Span<Token>(_tempTokenBuffer, _tempOutputTokenSize);
+        var wordSpace = new Span<byte>(_tempOutputBuffer, _tempOutputBufferSize);
+        analyzer.Execute(value, ref wordSpace, ref tokenSpace);
+
+        foreach (var token in tokenSpace)
         {
-            var analyzedTerm = output.Slice(token.Offset, (int)token.Length);
+            var analyzedTerm = wordSpace.Slice(token.Offset, (int)token.Length);
             _container.Add(Encoding.UTF8.GetString(analyzedTerm));
         }
     }
 
-    private void UnlikelyGrowBuffer(int tokensSize, int outputSize)
+
+    private void InitializeTemporaryBuffers(ByteStringContext allocator)
     {
-        if (_tokensBuffer?.Length > tokensSize && _outputBuffer?.Length > outputSize)
-            return;
+        _tempOutputBufferSize = Constants.Analyzers.DefaultBufferForAnalyzers;
+        _tempOutputTokenSize = Constants.Analyzers.DefaultBufferForAnalyzers;
 
-        if (_tokensBuffer != null)
-        {
-            Analyzer.TokensPool.Return(_tokensBuffer);
-            _tokensBuffer = null;
-        }
+        _tempBufferScope = allocator.Allocate(_tempOutputBufferSize + _tempOutputTokenSize * Unsafe.SizeOf<Token>(), out var tempBuffer);
+        _tempOutputBuffer = tempBuffer.Ptr;
+        _tempTokenBuffer = (Token*)(tempBuffer.Ptr + _tempOutputBufferSize);
+    }
 
-        if (_outputBuffer != null)
-        {
-            Analyzer.BufferPool.Return(_outputBuffer);
-            _outputBuffer = null;
-        }
+    private void UnlikelyGrowBuffers(int outputSize, int tokenSize)
+    {
+        _tempBufferScope.Dispose();
 
-        _outputBuffer = Analyzer.BufferPool.Rent(outputSize);
-        _tokensBuffer = Analyzer.TokensPool.Rent(tokensSize);
+        _tempOutputBufferSize = outputSize;
+        _tempOutputTokenSize = tokenSize;
+
+        _tempBufferScope = _indexSearcher.Allocator.AllocateDirect(_tempOutputBufferSize + _tempOutputTokenSize * Unsafe.SizeOf<Token>(), out var tempBuffer);
+        _tempOutputBuffer = tempBuffer.Ptr;
+        _tempTokenBuffer = (Token*)(tempBuffer.Ptr + _tempOutputBufferSize);
     }
 
     public void Dispose()
     {
-        if (_tokensBuffer != null)
-            Analyzer.TokensPool.Return(_tokensBuffer);
-        if (_outputBuffer != null)
-            Analyzer.BufferPool.Return(_outputBuffer);
+        _tempBufferScope.Dispose();
     }
 }

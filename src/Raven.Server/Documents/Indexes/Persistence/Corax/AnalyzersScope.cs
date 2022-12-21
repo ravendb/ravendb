@@ -31,6 +31,7 @@ internal unsafe class AnalyzersScope : IDisposable
         _knownFields = fieldsMapping;
         _hasDynamics = hasDynamics;
         _analyzersCache = new(SliceComparer.Instance);
+
         InitializeTemporaryBuffers(indexSearcher.Allocator);
     }
 
