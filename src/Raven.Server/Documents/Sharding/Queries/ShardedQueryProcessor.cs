@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -33,6 +34,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 {
     private readonly long? _existingResultEtag;
 
+    private readonly string _raftUniqueRequestId;
     //private readonly HashSet<int> _filteredShardIndexes;
 
     // User should also be able to define a query parameter ("Sharding.Context") which is an array
@@ -44,6 +46,9 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
         CancellationToken token) : base(context, requestHandler, query, metadataOnly, indexEntriesOnly, token)
     {
         _existingResultEtag = existingResultEtag;
+
+        _raftUniqueRequestId = _requestHandler.GetRaftRequestIdFromQuery() ?? RaftIdGenerator.NewId();
+
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Etag handling");
 
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Add an option to select the shards for query in the client");
@@ -64,7 +69,8 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
     protected override ShardedQueryCommand CreateCommand(BlittableJsonReaderObject query)
     {
-        return new ShardedQueryCommand(_context.ReadObject(query, "query"), _query, _metadataOnly, _indexEntriesOnly, _query.Metadata.IndexName, canReadFromCache: _existingResultEtag != null);
+        return new ShardedQueryCommand(_context.ReadObject(query, "query"), _query, _metadataOnly, _indexEntriesOnly, _query.Metadata.IndexName,
+            canReadFromCache: _existingResultEtag != null, raftUniqueRequestId: _raftUniqueRequestId);
     }
 
     public override async Task<ShardedQueryResult> ExecuteShardedOperations()
