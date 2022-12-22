@@ -1,5 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useReducer, useState } from "react";
-import { databasesStatsReducer, databasesStatsReducerInitializer } from "./DatabasesStatsReducer";
+﻿import React, { useCallback, useMemo, useState } from "react";
 import { DatabasePanel } from "./DatabasePanel";
 import { DatabasesToolbarActions } from "./DatabasesToolbarActions";
 import { DatabasesFilter } from "./DatabasesFilter";
@@ -31,8 +30,6 @@ export function DatabasesPage() {
 
     const { databases } = useDatabaseManager();
 
-    const [stats, dispatch] = useReducer(databasesStatsReducer, null, databasesStatsReducerInitializer);
-
     const [filter, setFilter] = useState<DatabaseFilterCriteria>(() => ({
         searchText: "",
     }));
@@ -47,16 +44,6 @@ export function DatabasesPage() {
         return filterDatabases(databases, filter);
     }, [filter, databases]);
 
-    /* TODO
-    const fetchDatabases = useCallback(async () => {
-        const stats = await databasesService.getDatabases();
-
-        dispatch({
-            type: "StatsLoaded",
-            stats,
-        });
-    }, [databasesService]);*/
-
     const toggleSelectAll = useCallback(() => {
         const selectedCount = selectedDatabases.length;
 
@@ -70,7 +57,7 @@ export function DatabasesPage() {
     const databasesSelectionState = useMemo<checkbox>(() => {
         const selectedCount = selectedDatabases.length;
         const dbsCount = filteredDatabases.length;
-        if (stats.databases && dbsCount === selectedCount) {
+        if (databases && dbsCount === selectedCount) {
             return "checked";
         }
 
@@ -79,7 +66,7 @@ export function DatabasesPage() {
         }
 
         return "unchecked";
-    }, [filteredDatabases, selectedDatabases, stats.databases]);
+    }, [filteredDatabases, selectedDatabases, databases]);
 
     const toggleSelection = (db: DatabaseSharedInfo) => {
         if (selectedDatabases.includes(db.name)) {
@@ -88,19 +75,6 @@ export function DatabasesPage() {
             setSelectedDatabases((s) => s.concat(db.name));
         }
     };
-
-    /* TODO
-    useEffect(() => {
-        fetchDatabases();
-    }, [fetchDatabases]);
-
-    useEffect(() => {
-        if (serverNotifications) {
-            const sub = serverNotifications.watchAllDatabaseChanges(() => fetchDatabases());
-
-            return () => sub.off();
-        }
-    }, [serverNotifications, fetchDatabases]);*/
 
     return (
         <div className="content-margin">
