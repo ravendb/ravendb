@@ -1123,7 +1123,7 @@ namespace Raven.Server.Documents
                 databaseIsBeenDeleted == false)
                 throw new DatabaseNotRelevantException(databaseName + " is not relevant for " + _serverStore.NodeTag);
 
-            return CreateDatabaseConfiguration(_serverStore, databaseRecord.DatabaseName, databaseRecord.Settings);
+            return CreateDatabaseConfiguration(_serverStore, databaseName.Value, databaseRecord.Settings);
         }
 
         private static bool TryGetDeletionInProgress(Dictionary<string, DeletionInProgressStatus> deletionInProgress, string databaseName, string nodeTag, out DeletionInProgressStatus status)

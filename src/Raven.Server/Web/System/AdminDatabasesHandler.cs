@@ -266,8 +266,14 @@ namespace Raven.Server.Web.System
 
                 if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(databaseRecord.DatabaseName) == false)
                 {
-                    using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(databaseRecord.DatabaseName, "Checking if we need to recreate indexes"))
-                        RecreateIndexes(databaseRecord);
+                    using (var raw = new RawDatabaseRecord(context, json))
+                    {
+                        foreach (var rawDatabaseRecord in raw.AsShardsOrNormal())
+                        {
+                            using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if we need to recreate indexes"))
+                                RecreateIndexes(rawDatabaseRecord.DatabaseName, databaseRecord);
+                        }
+                    }
                 }
 
                 var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(databaseRecord.DatabaseName, databaseRecord, context, replicationFactor, index, raftRequestId);
@@ -288,9 +294,9 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private void RecreateIndexes(DatabaseRecord databaseRecord)
+        private void RecreateIndexes(string databaseName, DatabaseRecord databaseRecord)
         {
-            var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseRecord.DatabaseName, true, true, true, databaseRecord);
+            var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseName, true, true, true, databaseRecord);
             if (databaseConfiguration.Indexing.RunInMemory ||
                 Directory.Exists(databaseConfiguration.Indexing.StoragePath.FullPath) == false)
             {
@@ -299,12 +305,12 @@ namespace Raven.Server.Web.System
 
             var addToInitLog = new Action<string>(txt =>
             {
-                var msg = $"[Recreating indexes] {DateTime.UtcNow} :: Database '{databaseRecord.DatabaseName}' : {txt}";
+                var msg = $"[Recreating indexes] {DateTime.UtcNow} :: Database '{databaseName}' : {txt}";
                 if (Logger.IsInfoEnabled)
                     Logger.Info(msg);
             });
 
-            using (var documentDatabase = DatabasesLandlord.CreateDocumentDatabase(databaseRecord.DatabaseName, databaseConfiguration, ServerStore, addToInitLog))
+            using (var documentDatabase = DatabasesLandlord.CreateDocumentDatabase(databaseName, databaseConfiguration, ServerStore, addToInitLog))
             {
                 var options = InitializeOptions.SkipLoadingDatabaseRecord;
                 documentDatabase.Initialize(options);
@@ -343,11 +349,11 @@ namespace Raven.Server.Web.System
                                     // the side by side index is the last version of this index
                                     // and it's the one that should be stored in the database record
                                     indexDefinition.Name = indexDefinition.Name[Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length..];
-                                    sideBySideIndexes.Add(indexDefinition.Name, indexDefinition);
+                                    sideBySideIndexes[indexDefinition.Name] = indexDefinition;
                                     continue;
                                 }
 
-                                databaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
+                                databaseRecord.Indexes[indexDefinition.Name] = indexDefinition;
                                 break;
 
                             default:
