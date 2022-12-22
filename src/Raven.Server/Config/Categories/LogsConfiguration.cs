@@ -71,6 +71,31 @@ namespace Raven.Server.Config.Categories
         [DefaultValue("settings.logs.microsoft.json")]
         [ConfigurationEntry("Logs.Microsoft.ConfigurationPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting MicrosoftLogsConfigurationPath { get; set; }
+        
+        [DefaultValue(128)]
+        [MinValue(16)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Logs.Microsoft.MaxFileSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size MicrosoftLogsMaxFileSize { get; set; }
+
+        [Description("How far back we should retain Microsoft log entries in hours")]
+        [DefaultValue(3 * 24)]
+        [MinValue(24)]
+        [TimeUnit(TimeUnit.Hours)]
+        [ConfigurationEntry("Logs.Microsoft.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting? MicrosoftLogsRetentionTime { get; set; }
+
+        [Description("The maximum size of the Microsoft log after which the old files will be deleted")]
+        [DefaultValue(null)]
+        [MinValue(256)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Logs.Microsoft.RetentionSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size? MicrosoftLogsRetentionSize { get; set; }
+
+        [Description("Will determine whether to compress the Microsoft log files")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Logs.Microsoft.Compress", ConfigurationEntryScope.ServerWideOnly)]
+        public bool MicrosoftLogsCompress { get; set; }
         #endregion
         
     }
