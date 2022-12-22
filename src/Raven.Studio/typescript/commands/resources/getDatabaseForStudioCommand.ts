@@ -1,5 +1,6 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
+import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
 
 class getDatabaseForStudioCommand extends commandBase {
 
@@ -10,7 +11,7 @@ class getDatabaseForStudioCommand extends commandBase {
         this.dbName = dbName;
     }
 
-    execute(): JQueryPromise<StudioDatabaseResponse> {
+    execute(): JQueryPromise<StudioDatabaseInfo> {
         const url = endpoints.global.studioDatabases.studioTasksDatabases;
         const args = {
             name: this.dbName

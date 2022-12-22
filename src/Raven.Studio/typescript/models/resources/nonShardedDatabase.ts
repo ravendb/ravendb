@@ -1,13 +1,12 @@
 import database from "models/resources/database";
-import NodeId = Raven.Client.ServerWide.Operations.NodeId;
-import { NodeInfo } from "components/models/databases";
+import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
 
 class nonShardedDatabase extends database {
     get root(): database {
         return this;
     }
 
-    constructor(dbInfo: StudioDatabaseResponse, clusterNodeTag: KnockoutObservable<string>) {
+    constructor(dbInfo: StudioDatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
         super(dbInfo, clusterNodeTag);
         
         this.updateUsing(dbInfo);
@@ -19,7 +18,7 @@ class nonShardedDatabase extends database {
         }));
     }
 
-    updateUsing(incomingCopy: StudioDatabaseResponse) {
+    updateUsing(incomingCopy: StudioDatabaseInfo) {
         super.updateUsing(incomingCopy);
         
         const topology = incomingCopy.NodesTopology;

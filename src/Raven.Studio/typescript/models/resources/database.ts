@@ -5,6 +5,8 @@ import accessManager from "common/shell/accessManager";
 import { DatabaseSharedInfo, NodeInfo } from "components/models/databases";
 import NodeId = Raven.Client.ServerWide.Operations.NodeId;
 import NodesTopology = Raven.Client.ServerWide.Operations.NodesTopology;
+import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
+import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 
 abstract class database {
     static readonly type = "database";
@@ -49,7 +51,7 @@ abstract class database {
         return this.getLocations()[0];
     }
     
-    protected constructor(dbInfo: StudioDatabaseResponse, clusterNodeTag: KnockoutObservable<string>) {
+    protected constructor(dbInfo: StudioDatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
         this.clusterNodeTag = clusterNodeTag;
     }
     
@@ -71,9 +73,9 @@ abstract class database {
         });
     }
 
-    updateUsing(incomingCopy: StudioDatabaseResponse) {
+    updateUsing(incomingCopy: StudioDatabaseInfo) {
         this.isEncrypted(incomingCopy.IsEncrypted);
-        this.name = incomingCopy.DatabaseName;
+        this.name = incomingCopy.Name;
         this.disabled(incomingCopy.IsDisabled);
         this.lockMode(incomingCopy.LockMode);
         
@@ -93,10 +95,10 @@ abstract class database {
             this.errored(true);
         }*/
 
-        this.environment(incomingCopy.Environment !== "None" ? incomingCopy.Environment : null);
+        this.environment(incomingCopy.StudioEnvironment !== "None" ? incomingCopy.StudioEnvironment : null);
         
         //TODO: delete
-        const dbAccessLevel = accessManager.default.getEffectiveDatabaseAccessLevel(incomingCopy.DatabaseName);
+        const dbAccessLevel = accessManager.default.getEffectiveDatabaseAccessLevel(incomingCopy.Name);
         this.databaseAccess(dbAccessLevel);
         this.databaseAccessText(accessManager.default.getAccessLevelText(dbAccessLevel));
         this.databaseAccessColor(accessManager.default.getAccessColor(dbAccessLevel));

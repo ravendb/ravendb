@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Routing;
@@ -68,7 +69,7 @@ public class StudioDatabasesHandler : RequestHandler
         }
     }
 
-    private class StudioDatabaseInfo : IDynamicJson
+    internal class StudioDatabaseInfo : IDynamicJson
     {
         private StudioDatabaseInfo()
         {
@@ -81,6 +82,16 @@ public class StudioDatabasesHandler : RequestHandler
         public bool IsDisabled { get; set; }
 
         public bool IsEncrypted { get; set; }
+
+        public StudioConfiguration.StudioEnvironment StudioEnvironment { get; set; }
+        
+        public bool HasRevisionsConfiguration { get; set; }
+        
+        public bool HasExpirationConfiguration { get; set; }
+        
+        public bool HasRefreshConfiguration { get; set; }
+        
+        public Dictionary<string, DeletionInProgressStatus> DeletionInProgress { get; set; }
 
         public DatabaseLockMode LockMode { get; set; }
 
@@ -97,7 +108,12 @@ public class StudioDatabasesHandler : RequestHandler
                 [nameof(IsDisabled)] = IsDisabled,
                 [nameof(LockMode)] = LockMode,
                 [nameof(NodesTopology)] = NodesTopology?.ToJson(),
-                [nameof(Sharding)] = Sharding?.ToJson()
+                [nameof(Sharding)] = Sharding?.ToJson(),
+                [nameof(StudioEnvironment)] = StudioEnvironment,
+                [nameof(HasRevisionsConfiguration)] = HasRevisionsConfiguration,
+                [nameof(HasExpirationConfiguration)] = HasExpirationConfiguration,
+                [nameof(HasRefreshConfiguration)] = HasRefreshConfiguration,
+                [nameof(DeletionInProgress)] = DynamicJsonValue.Convert(DeletionInProgress),
             };
         }
 
@@ -118,15 +134,24 @@ public class StudioDatabasesHandler : RequestHandler
                 IsDisabled = record.IsDisabled,
                 LockMode = record.LockMode,
                 IsEncrypted = record.IsEncrypted,
-                IsSharded = record.IsSharded
+                IsSharded = record.IsSharded,
+                StudioEnvironment = record.StudioConfiguration?.Environment ?? StudioConfiguration.StudioEnvironment.None,
+                HasExpirationConfiguration = record.ExpirationConfiguration != null,
+                HasRefreshConfiguration = record.RefreshConfiguration != null,
+                HasRevisionsConfiguration = record.RevisionsConfiguration != null,
+                DeletionInProgress = record.DeletionInProgress
             };
 
-            var nodesTopology = new NodesTopology();
-            DatabasesHandlerProcessorForGet.FillNodesTopology(ref nodesTopology, record.Topology, record, context, serverStore, httpContext);
-            result.NodesTopology = nodesTopology;
-
             if (record.IsSharded)
+            {
                 result.Sharding = ShardingInfo.From(record, context, serverStore, httpContext);
+            }
+            else
+            {
+                var nodesTopology = new NodesTopology();
+                DatabasesHandlerProcessorForGet.FillNodesTopology(ref nodesTopology, record.Topology, record, context, serverStore, httpContext);
+                result.NodesTopology = nodesTopology;
+            }
 
             return result;
         }

@@ -1,5 +1,6 @@
 import database from "models/resources/database";
 import shard from "models/resources/shard";
+import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
 
 class shardedDatabase extends database {
     
@@ -9,7 +10,7 @@ class shardedDatabase extends database {
         return db instanceof shardedDatabase;
     }
     
-    constructor(dbInfo: StudioDatabaseResponse, clusterNodeTag: KnockoutObservable<string>) {
+    constructor(dbInfo: StudioDatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
         super(dbInfo, clusterNodeTag);
         
         this.updateUsing(dbInfo);
@@ -34,10 +35,10 @@ class shardedDatabase extends database {
         return locationSpecifiers;
     }
 
-    updateUsing(incomingCopy: StudioDatabaseResponse) {
+    updateUsing(incomingCopy: StudioDatabaseInfo) {
         super.updateUsing(incomingCopy);
 
-        const topology = incomingCopy.Sharding.Orchestrator.Topology;
+        const topology = incomingCopy.Sharding.Orchestrator.NodesTopology;
 
         const nodes = [
             ...topology.Members.map(x => this.mapNode(topology, x, "Member")),
