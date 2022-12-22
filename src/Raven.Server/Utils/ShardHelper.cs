@@ -178,13 +178,11 @@ namespace Raven.Server.Utils
             where TTransaction : RavenTransaction
         {
             int bucket = GetBucketFor(context, id);
-            int index = 0;
-            foreach (var (prefix, _) in configuration.Prefixed)
+            foreach (var setting in configuration.Prefixed)
             {
-                index++;
-                if (id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                if (id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    bucket += index << 20;
+                    bucket += setting.BucketRangeStart;
                     break;
                 }
             }
@@ -195,14 +193,11 @@ namespace Raven.Server.Utils
         public static int GetShardNumberFor(ShardingConfiguration configuration, Slice id)
         {
             int bucket = GetBucketFromSlice(id);
-            int index = 0;
-            foreach (var (prefix, _) in configuration.Prefixed)
+            foreach (var setting in configuration.Prefixed)
             {
-                index++;
-
-                if (id.ToString().StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                if (id.ToString().StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    bucket += index << 20;
+                    bucket += setting.BucketRangeStart;
                     break;
                 }
             }

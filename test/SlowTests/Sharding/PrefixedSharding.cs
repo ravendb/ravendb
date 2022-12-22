@@ -26,19 +26,21 @@ public class PrefixedSharding : RavenTestBase
             ModifyDatabaseRecord = record =>
             {
                 record.Sharding ??= new ShardingConfiguration();
-                record.Sharding.Prefixed = new Dictionary<string, PrefixedShardingSetting>
+                record.Sharding.Prefixed = new List<PrefixedShardingSetting>
                 {
-                    ["eu/"] = new PrefixedShardingSetting
+                    new PrefixedShardingSetting
                     {
                         // range for 'eu/' is : 
                         // shard 0 : [1M, 2M]
+                        Prefix = "eu/",
                         Shards = new List<int> { 0 }
                     },
-                    ["asia/"] = new PrefixedShardingSetting
+                    new PrefixedShardingSetting
                     {
                         // range for 'asia/' is :
                         // shard 1 : [2M, 2.5M]
                         // shard 2 : [2.5M, 3M]
+                        Prefix = "asia/",
                         Shards = new List<int> { 1, 2 }
                     }
                 };
@@ -49,10 +51,14 @@ public class PrefixedSharding : RavenTestBase
         Assert.Equal(6, shardingConfiguration.BucketRanges.Count);
 
         // 'eu' range
+        Assert.Equal(ShardHelper.NumberOfBuckets, shardingConfiguration.Prefixed[0].BucketRangeStart);
+
         Assert.Equal(0, shardingConfiguration.BucketRanges[3].ShardNumber);
         Assert.Equal(ShardHelper.NumberOfBuckets, shardingConfiguration.BucketRanges[3].BucketRangeStart);
 
         // 'asia' ranges
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.Prefixed[1].BucketRangeStart);
+
         Assert.Equal(1, shardingConfiguration.BucketRanges[4].ShardNumber);
         Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.BucketRanges[4].BucketRangeStart);
 

@@ -649,14 +649,16 @@ namespace SlowTests.Sharding.Cluster
                ModifyDatabaseRecord = record =>
                {
                    record.Sharding ??= new ShardingConfiguration();
-                   record.Sharding.Prefixed = new Dictionary<string, PrefixedShardingSetting>
+                   record.Sharding.Prefixed = new List<PrefixedShardingSetting>
                    {
-                       ["Users/"] = new PrefixedShardingSetting()
+                       new PrefixedShardingSetting()
                        {
+                           Prefix = "Users/",
                            Shards = new List<int> { 0 }
                        },
-                       ["Orders/"] = new PrefixedShardingSetting()
+                       new PrefixedShardingSetting()
                        {
+                           Prefix = "Orders/",
                            Shards = new List<int> { 1 }
                        }
                    };
