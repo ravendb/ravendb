@@ -621,6 +621,11 @@ namespace Voron.Impl.Journal
                 action?.Invoke(tx);
             }
 
+            public void OnTransactionCompleted()
+            {
+               _waitForJournalStateUpdateUnderTx.Set();
+            }
+
             public long LastFlushedTransactionId => _lastFlushed.TransactionId;
             public long LastTransactionIdUsedToReleaseScratches => _lastFlushed.TransactionIdUsedToReleaseScratches;
             public long LastFlushedJournalId => _lastFlushed.JournalId;
@@ -873,15 +878,23 @@ namespace Voron.Impl.Journal
                             try
                             {
                                 _flushLockTaskResponsible.RunTaskIfNotAlreadyRan();
-                                if (_waitForJournalStateUpdateUnderTx.Wait(TimeSpan.FromMilliseconds(250), token))
-                                    break;
+
+                                // 2 options here:
+                                // - we got a notification after the transaction was commited, in which case 
+                                //   _updateJournalStateAfterFlush was set to null while it was holding the write tx lock
+                                //   and we'll exit (from the while)
+                                // - we got a notification that the transaction is over (for any reason)
+                                //   and we'll try to acquire the write tx lock again
+                                _waitForJournalStateUpdateUnderTx.Wait(TimeSpan.FromMilliseconds(250), token);
                             }
                             catch (OperationCanceledException)
                             {
                                 break;
                             }
+
                             continue;
                         }
+
                         var action = _updateJournalStateAfterFlush;
                         if (action != null)
                         {
