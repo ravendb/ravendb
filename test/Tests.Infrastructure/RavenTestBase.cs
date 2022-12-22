@@ -243,7 +243,7 @@ namespace FastTests
         {
             try
             {
-                var documentDatabase = AsyncHelpers.RunSync(async () => await serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
+                var documentDatabase = AsyncHelpers.RunSync(() => serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
                 Assert.True(documentDatabase != null, $"(RavenDB-16924) documentDatabase is null on '{serverToUse.ServerStore.NodeTag}' {Environment.NewLine}{Cluster.CollectLogsFromNodes(Servers)}");
                 documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
             }
