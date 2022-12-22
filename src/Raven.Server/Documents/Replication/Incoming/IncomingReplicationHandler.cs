@@ -95,7 +95,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             return new MergedUpdateDatabaseChangeVectorCommand(changeVector, lastDocumentEtag, sourceDatabaseId, trigger);
         }
 
-        protected virtual TransactionOperationsMerger.MergedTransactionCommand GetMergeDocumentsCommand(DataForReplicationCommand data, long lastDocumentEtag)
+        protected virtual TransactionOperationsMerger.MergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
+            DataForReplicationCommand data, long lastDocumentEtag)
         {
             return new MergedDocumentReplicationCommand(data, lastDocumentEtag);
         }
@@ -235,7 +236,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override Task HandleBatchAsync(DocumentsOperationContext context, DataForReplicationCommand batch, long lastEtag)
         {
-            var replicationCommand = GetMergeDocumentsCommand(batch, lastEtag);
+            var replicationCommand = GetMergeDocumentsCommand(context, batch, lastEtag);
             return _database.TxMerger.Enqueue(replicationCommand);
         }
 
