@@ -2856,7 +2856,8 @@ namespace Raven.Server.Documents.Indexes
             return (lastDocumentEtag, lastTombstoneEtag);
         }
 
-        public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, bool calculateMemoryStats = false,
+        public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false,
+            bool calculateMemoryStats = false, bool calculateLastBatchStats = false,
             QueryOperationContext queryContext = null)
         {
             using (CurrentlyInUse(out var valid))
@@ -2895,7 +2896,9 @@ namespace Raven.Server.Documents.Indexes
                     stats.MappedPerSecondRate = MapsPerSec?.OneMinuteRate ?? 0;
                     stats.ReducedPerSecondRate = ReducesPerSec?.OneMinuteRate ?? 0;
 
-                    stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
+                    if (calculateLastBatchStats)
+                        stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
+                    
                     stats.LastQueryingTime = _lastQueryingTime;
 
                     if (Type == IndexType.MapReduce || Type == IndexType.JavaScriptMapReduce)

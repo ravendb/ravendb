@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,8 +18,8 @@ namespace Raven.Client.Documents.Identity
     /// </summary>
     public class AsyncMultiTypeHiLoIdGenerator
     {
-        private readonly SemaphoreSlim _generatorLock = new SemaphoreSlim(1, 1);
-        private readonly ConcurrentDictionary<string, AsyncHiLoIdGenerator> _idGeneratorsByTag = new ConcurrentDictionary<string, AsyncHiLoIdGenerator>();
+        private readonly SemaphoreSlim _generatorLock = new(1, 1);
+        private readonly ConcurrentDictionary<string, AsyncHiLoIdGenerator> _idGeneratorsByTag = new();
         protected readonly DocumentStore Store;
         protected readonly string DbName;
         protected readonly DocumentConventions Conventions;
@@ -104,7 +103,7 @@ namespace Raven.Client.Documents.Identity
         {
             if (_idGeneratorsByTag.TryGetValue(collectionName, out var value))
             {
-                return await value.NextIdAsync().ConfigureAwait(false);
+                return (await value.GetNextIdAsync().ConfigureAwait(false)).Id;
             }
 
             await _generatorLock.WaitAsync().ConfigureAwait(false);
@@ -112,7 +111,7 @@ namespace Raven.Client.Documents.Identity
             try
             {
                 if (_idGeneratorsByTag.TryGetValue(collectionName, out value))
-                    return await value.NextIdAsync().ConfigureAwait(false);
+                    return (await value.GetNextIdAsync().ConfigureAwait(false)).Id;
 
                 value = CreateGeneratorFor(collectionName);
                 _idGeneratorsByTag.TryAdd(collectionName, value);
@@ -122,12 +121,12 @@ namespace Raven.Client.Documents.Identity
                 _generatorLock.Release();
             }
 
-            return await value.NextIdAsync().ConfigureAwait(false);
+            return (await value.GetNextIdAsync().ConfigureAwait(false)).Id;
         }
 
         protected virtual AsyncHiLoIdGenerator CreateGeneratorFor(string tag)
         {
-            return new AsyncHiLoIdGenerator(tag, Store, DbName, _identityPartsSeparator);
+            return new DefaultAsyncHiLoIdGenerator(tag, Store, DbName, _identityPartsSeparator);
         }
 
         public async Task ReturnUnusedRange()
