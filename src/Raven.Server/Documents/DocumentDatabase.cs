@@ -626,6 +626,8 @@ namespace Raven.Server.Documents
 
                     OnClusterTransactionCompletion(command, mergedCommands, exception);
                 }
+
+                return (0, 0);
             }
 
             var commandsCount = 0;

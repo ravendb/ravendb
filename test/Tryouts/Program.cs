@@ -29,10 +29,10 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new SubscriptionsWithReshardingTests(testOutputHelper))
+                using (var test = new ReshardingTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.ContinueSubscriptionAfterReshardingInAClusterWithFailover();
+                    await test.GetDocuments2();
                 }
             }
             catch (Exception e)

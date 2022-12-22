@@ -260,18 +260,18 @@ namespace SlowTests.Sharding.Cluster
             {
                 Server = cluster.Leader
             });
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User
+                {
+                    Count = 10
+                }, "users/1-A");
+                session.SaveChanges();
+            }
 
             var writes = Task.Run(() =>
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User
-                    {
-                        Count = 10
-                    }, "users/1-A");
-                    session.SaveChanges();
-                }
-
                 for (int i = 0; i < 100; i++)
                 {
                     using (var session = store.OpenSession())
@@ -1229,31 +1229,22 @@ namespace SlowTests.Sharding.Cluster
             var sp = Stopwatch.StartNew();
             
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
-            Console.WriteLine($"Took: {sp.Elapsed}");
             sp.Restart();
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
-            Console.WriteLine($"Took: {sp.Elapsed}");
             sp.Restart();
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
-            Console.WriteLine($"Took: {sp.Elapsed}");
             sp.Restart();
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
-            Console.WriteLine($"Took: {sp.Elapsed}");
             sp.Restart();
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
-            Console.WriteLine($"Took: {sp.Elapsed}");
             sp.Restart();
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
-            Console.WriteLine($"Took: {sp.Elapsed}");
             sp.Restart();
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
-            Console.WriteLine($"Took: {sp.Elapsed}");
             sp.Restart();
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
-            Console.WriteLine($"Took: {sp.Elapsed}");
             sp.Restart();
             await Sharding.Resharding.MoveShardForId(store, "users/1-A");
-            Console.WriteLine($"Took: {sp.Elapsed}");
             sp.Restart();
 
             using (var session = store.OpenAsyncSession())
@@ -1268,6 +1259,12 @@ namespace SlowTests.Sharding.Cluster
         public async Task GetDocuments2()
         {
             using var store = Sharding.GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await AddOrUpdateUserAsync(session, "users/1-A");
+                await session.SaveChangesAsync();
+            }
 
             var writes = Task.Run(async () =>
             {
