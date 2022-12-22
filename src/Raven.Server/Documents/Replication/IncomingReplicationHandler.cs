@@ -204,6 +204,7 @@ namespace Raven.Server.Documents.Replication
             NativeMemory.EnsureRegistered();
             try
             {
+                _parent.ForTestingPurposes?.OnIncomingReplicationHandlerStart?.Invoke();
                 using (_connectionOptionsDisposable = _connectionOptions.ConnectionProcessingInProgress("Replication"))
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
@@ -297,7 +298,6 @@ namespace Raven.Server.Documents.Replication
 
 
                     _parent.ForTestingPurposes?.OnIncomingReplicationHandlerFailure?.Invoke(e);
-
 
 
                     OnFailed(e, this);
@@ -917,6 +917,18 @@ namespace Raven.Server.Documents.Replication
         public void Dispose()
         {
             _disposeOnce.Dispose();
+            if (_incomingWork != PoolOfThreads.LongRunningWork.Current)
+            {
+                try
+                {
+                    _incomingWork?.Join(int.MaxValue);
+                }
+                catch (ThreadStateException)
+                {
+                    // expected if the thread hasn't been started yet
+                }
+            }
+            _incomingWork = null;
         }
 
         private void DisposeInternal()
@@ -959,19 +971,6 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 _replicationFromAnotherSource.Set();
-
-                if (_incomingWork != PoolOfThreads.LongRunningWork.Current)
-                {
-                    try
-                    {
-                        _incomingWork?.Join(int.MaxValue);
-                    }
-                    catch (ThreadStateException)
-                    {
-                        // expected if the thread hasn't been started yet
-                    }
-                }
-                _incomingWork = null;
 
                 try
                 {
