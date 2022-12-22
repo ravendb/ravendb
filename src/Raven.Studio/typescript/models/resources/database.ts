@@ -35,6 +35,8 @@ abstract class database {
     clusterNodeTag: KnockoutObservable<string>;
     
     abstract get root(): database;
+    
+    abstract get isSharded(): boolean;
 
     abstract getLocations(): databaseLocationSpecifier[];
 
@@ -118,7 +120,7 @@ abstract class database {
         return {
             name: this.name,
             encrypted: this.isEncrypted(),
-            sharded: false,
+            sharded: this.isSharded,
             nodes: this.nodes(),
             currentNode: { 
                 relevant: this.relevant(),

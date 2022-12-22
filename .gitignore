@@ -48,18 +48,6 @@ Raven.Web/NLog.config
 Testresults
 /Raven.Client.MvcIntegration/Content/ravendb-profiler.min.js
 /*.shfbproj_Fitzchak
-Raven.Studio/Settings.dat
-
-Raven.Studio.Html5/Scripts/typings/ace/aceExt.js
-Raven.Studio.Html5/Scripts/typings/ace/aceExt.js.map
-Raven.Studio.Html5/Content/app.min.css
-Raven.Studio.Html5/Content/app.less.map
-Raven.Studio.Html5/Content/app.css.map
-Raven.Studio.Html5/optimized-build/
-
-#include our custom PVC build packages, used in the optimized build of Raven Studio.
-!Raven.Studio.Html5/pvc-packages/bin/
-!Raven.Studio.Html5/pvc-packages/bin/*
 
 /Raven.Web/Assemblies
 /test.log
@@ -80,6 +68,7 @@ artifacts/
 
 
 # DNX Studio
+src/Raven.Studio/junit.xml
 src/Raven.Studio/node_modules/
 src/Raven.Studio/test.log
 src/Raven.Studio/wwwroot/App/**/*.js

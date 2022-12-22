@@ -6,6 +6,10 @@ class nonShardedDatabase extends database {
         return this;
     }
 
+    get isSharded(): boolean {
+        return false;
+    }
+
     constructor(dbInfo: StudioDatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
         super(dbInfo, clusterNodeTag);
         
