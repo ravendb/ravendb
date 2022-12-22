@@ -1,4 +1,5 @@
 import MockInstance = jest.MockInstance;
+import { createValue } from "test/mocks/utils";
 
 type ServiceMocks<T extends object> = {
     [K in keyof T]: T[K] extends (...args: any) => any ? jest.MockInstance<ReturnType<T[K]>, Parameters<T[K]>> : never;
@@ -20,13 +21,7 @@ export abstract class AutoMockService<T extends object> {
     }
 
     protected createValue<T>(value: MockedValue<T>, defaultValue: T): T {
-        if (value instanceof Function) {
-            const v = defaultValue;
-            value(v);
-            return v;
-        } else {
-            return value ?? defaultValue;
-        }
+        return createValue(value, defaultValue);
     }
 
     protected mockResolvedValue<T>(mock: MockInstance<T | Promise<T>, any>, value: MockedValue<T>, defaultValue: T) {

@@ -7,7 +7,6 @@ import { ReorderNodes } from "components/pages/resources/manageDatabaseGroup/Reo
 import { NodeInfoComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { DeletionInProgress } from "components/pages/resources/manageDatabaseGroup/DeletionInProgress";
 import { useAccessManager } from "hooks/useAccessManager";
-import { NodeInfo } from "components/pages/resources/manageDatabaseGroup/types";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import database from "models/resources/database";
 import { useEventsCollector } from "hooks/useEventsCollector";
@@ -15,6 +14,7 @@ import { useServices } from "hooks/useServices";
 import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabaseGroup";
 import app from "durandal/app";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import { NodeInfo } from "components/models/databases";
 
 export interface NodeGroupProps {
     nodes: NodeInfo[];

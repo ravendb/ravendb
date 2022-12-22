@@ -1,8 +1,8 @@
 /// <reference path="../tsd.d.ts"/>
 
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import DatabaseTopology = Raven.Client.ServerWide.DatabaseTopology;
-import RawShardingConfiguration = Raven.Server.ServerWide.Sharding.RawShardingConfiguration;
+import DeletionInProgressStatus = Raven.Client.ServerWide.DeletionInProgressStatus;
+import StudioEnvironment = Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment;
 
 interface disposable {
     dispose(): void;
@@ -952,10 +952,21 @@ interface StudioDatabasesResponse {
 interface StudioDatabaseResponse {
     DatabaseName: string;
     IsDisabled: boolean;
+    Environment: StudioEnvironment;
     IsEncrypted: boolean;
+    DeletionInProgress: Record<string, DeletionInProgressStatus>;
     LockMode: DatabaseLockMode;
-    Topology: DatabaseTopology;
-    Sharding: RawShardingConfiguration;
+    NodesTopology: Raven.Client.ServerWide.Operations.NodesTopology;
+    Sharding: {
+        Orchestrator: {
+            Topology: Raven.Client.ServerWide.Operations.NodesTopology;
+        };
+        Shards: {[key: number]: Raven.Client.ServerWide.Operations.NodesTopology;};
+    };
+    HasRevisionsConfiguration: boolean;
+    HasExpirationConfiguration: boolean;
+    HasRefreshConfiguration: boolean;
+    
 }
 
 interface ReactInKnockoutOptions<T> {

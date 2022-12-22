@@ -1,4 +1,4 @@
-﻿import { IndexNodeInfo, IndexSharedInfo } from "../../../../models/indexes";
+﻿import { IndexNodeInfo, IndexSharedInfo } from "components/models/indexes";
 import React, { useState } from "react";
 import classNames from "classnames";
 import { IndexProgressTooltip } from "./IndexProgressTooltip";
@@ -9,9 +9,9 @@ import {
     DistributionLegend,
     DistributionSummary,
     LocationDistribution,
-} from "../../../../common/LocationDistribution";
+} from "components/common/LocationDistribution";
 import assertUnreachable from "../../../../utils/assertUnreachable";
-import { ProgressCircle } from "../../../../common/ProgressCircle";
+import { ProgressCircle } from "components/common/ProgressCircle";
 import { Button } from "reactstrap";
 
 interface IndexDistributionProps {

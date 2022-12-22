@@ -75,7 +75,43 @@ public class StudioDatabasesHandler : RequestHandler
                     w.WritePropertyName(nameof(i.LockMode));
                     w.WriteString(i.LockMode.ToString());
                     w.WriteComma();
+                    
+                    w.WritePropertyName(nameof(i.StudioConfiguration.Environment));
+                    w.WriteString(i.StudioConfiguration.Environment.ToString());
+                    w.WriteComma();
+                    
+                    w.WritePropertyName("HasRevisionsConfiguration");
+                    w.WriteBool(i.RevisionsConfiguration != null);
+                    w.WriteComma();
+                    
+                    w.WritePropertyName("HasExpirationConfiguration");
+                    w.WriteBool(i.ExpirationConfiguration != null);
+                    w.WriteComma();
+                    
+                    w.WritePropertyName("HasRefreshConfiguration");
+                    w.WriteBool(i.RefreshConfiguration != null);
+                    w.WriteComma();
+                    
+                    w.WritePropertyName(nameof(i.DeletionInProgress));
+                    {
+                        w.WriteStartObject();
 
+                        var index = 0;
+                        foreach (var kvp in i.DeletionInProgress)
+                        {
+                            if (index > 0)
+                                w.WriteComma();
+
+                            w.WritePropertyName(kvp.Key);
+                            w.WriteString(kvp.Value.ToString());
+
+                            index++;
+                        }
+
+                        w.WriteEndObject();
+                    }
+                    w.WriteComma();
+                    
                     w.WritePropertyName(nameof(i.Topology));
                     var topology = i.Topology?.ToJson();
                     if (topology == null)

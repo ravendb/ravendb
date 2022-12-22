@@ -3,7 +3,6 @@ import { DatabaseSharedInfo } from "../../../models/databases";
 import classNames from "classnames";
 import { useActiveDatabase } from "hooks/useActiveDatabase";
 import { useAppUrls } from "hooks/useAppUrls";
-import databaseInfo from "models/resources/info/databaseInfo";
 import deleteDatabaseConfirm from "viewmodels/resources/deleteDatabaseConfirm";
 import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
 import app from "durandal/app";
@@ -33,6 +32,7 @@ import {
     RichPanelStatus,
 } from "../../../common/RichPanel";
 import appUrl from "common/appUrl";
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -85,7 +85,7 @@ function badgeText(db: DatabaseSharedInfo) {
     return "Online";
 }
 
-function deleteDatabases(toDelete: databaseInfo[]) {
+function deleteDatabases(toDelete: DatabaseSharedInfo[]) {
     const confirmDeleteViewModel = new deleteDatabaseConfirm(toDelete);
     confirmDeleteViewModel.result.done((confirmResult: deleteDatabaseConfirmResult) => {
         if (confirmResult.can) {
@@ -110,6 +110,12 @@ function deleteDatabases(toDelete: databaseInfo[]) {
     app.showBootstrapDialog(confirmDeleteViewModel);
 }
 
+function toExternalUrl(db: DatabaseSharedInfo, url: string) {
+    // we have to redirect to different node, let's find first member where selected database exists
+    const firstNode = db.nodes[0];
+    return appUrl.toExternalUrl(firstNode.nodeUrl, url);
+}
+
 export function DatabasePanel(props: DatabasePanelProps) {
     const { db, selected, toggleSelection } = props;
     const { db: activeDatabase } = useActiveDatabase();
@@ -120,22 +126,12 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const [lockChanges, setLockChanges] = useState(false);
 
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);
-    const documentsUrl = db.relevant ? localDocumentsUrl : toExternalUrl(db, localDocumentsUrl);
+    const documentsUrl = db.currentNode.relevant ? localDocumentsUrl : toExternalUrl(db, localDocumentsUrl);
 
     const localManageGroupUrl = appUrl.forManageDatabaseGroup(db.name);
-    const manageGroupUrl = db.relevant ? localManageGroupUrl : toExternalUrl(db, localManageGroupUrl);
+    const manageGroupUrl = db.currentNode.relevant ? localManageGroupUrl : toExternalUrl(db, localManageGroupUrl);
 
-    //TODO:
-    const deleteDatabase = useCallback(
-        () =>
-            deleteDatabases([
-                {
-                    name: db.name,
-                    isEncrypted: () => db.encrypted,
-                } as any,
-            ]),
-        [db]
-    );
+    const deleteDatabase = useCallback(() => deleteDatabases([db]), [db]);
 
     const updateDatabaseLockMode = useCallback(
         async (db: DatabaseSharedInfo, lockMode: DatabaseLockMode) => {
@@ -183,7 +179,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
         [db, eventsCollector, updateDatabaseLockMode]
     );
 
-    const canNavigateToDatabase = !db.disabled && !db.hasLoadError;
+    const canNavigateToDatabase = !db.currentNode.disabled; //tODO: && !db.currentNode.hasLoadError
 
     return (
         <RichPanel
@@ -212,18 +208,24 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 {canNavigateToDatabase ? (
                                     <a
                                         href={documentsUrl}
-                                        className={classNames({ "link-disabled": db.isBeingDeleted })}
-                                        target={db.relevant ? undefined : "_blank"}
+                                        className={classNames({ "link-disabled": db.currentNode.isBeingDeleted })}
+                                        target={db.currentNode.relevant ? undefined : "_blank"}
                                         title={db.name}
                                     >
-                                        <i className={db.relevant ? "icon-database-home" : "icon-database"}></i>
+                                        <i
+                                            className={db.currentNode.relevant ? "icon-database-home" : "icon-database"}
+                                        ></i>
                                         <span>{db.name}</span>
                                     </a>
                                 ) : (
                                     <div className="name">
                                         <span title="Database is disabled">
                                             <small>
-                                                <i className={db.relevant ? "icon-database-home" : "icon-database"}></i>
+                                                <i
+                                                    className={
+                                                        db.currentNode.relevant ? "icon-database-home" : "icon-database"
+                                                    }
+                                                ></i>
                                             </small>
                                             <span>{db.name}</span>
                                         </span>
@@ -237,6 +239,8 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     <span>sharded</span>
                                 </Badge>
                             )}
+
+                            {/* TODO:
 
                             <Button
                                 className="rounded-pill me-1"
@@ -260,6 +264,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     <i className="icon-node me-1" />B
                                 </strong>
                             </Button>
+                            */}
 
                             <div className="member">
                                 {/* ko foreach: _.slice(nodes(), 0, 5) */}
@@ -311,14 +316,16 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 Manage group
                             </Button>
 
-                            <UncontrolledDropdown className="me-1">
+                            <UncontrolledDropdown className="me-1" style={{ display: "none" }}>
+                                {" "}
+                                {/* TODO */}
                                 <ButtonGroup>
                                     <Button>
                                         <i className="icon-database-cutout icon-addon-cancel me-1" /> Disable
                                     </Button>
                                     <DropdownToggle caret></DropdownToggle>
                                 </ButtonGroup>
-                                <DropdownMenu right>
+                                <DropdownMenu end>
                                     <DropdownItem>
                                         <i className="icon-pause me-1" /> Pause indexing
                                     </DropdownItem>
@@ -332,9 +339,10 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 </DropdownMenu>
                             </UncontrolledDropdown>
 
+                            {/* TODO
                             <Button className="me-1">
                                 <i className="icon-refresh-stats" />
-                            </Button>
+                            </Button> */}
 
                             {/* TODO <div className="btn-group">
                                 <button className="btn btn-default" data-bind="click: $root.toggleDatabase, visible: $root.accessManager.canDisableEnableDatabase,
@@ -475,23 +483,27 @@ function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) 
                     )}
                 </div>
             </RichPanelDetailItem>
-            <RichPanelDetailItem title="">
-                <i className="icon-drive me-1" /> 138.37 MB {/* TODO */}
-            </RichPanelDetailItem>
-            <RichPanelDetailItem title="">
-                <i className="icon-documents me-1" /> 1,060 {/* TODO */}
-            </RichPanelDetailItem>
-            <RichPanelDetailItem title="">
-                <i className="icon-index me-1" /> 0 {/* TODO */}
+            {/*  TODO
+            <RichPanelDetailItem>
+                <i className="icon-drive me-1" /> 138.37 MB 
             </RichPanelDetailItem>
             <RichPanelDetailItem>
-                <i className="icon-clock me-1" /> Up for 25 minutes {/* TODO */}
+                <i className="icon-documents me-1" /> 1,060 
+            </RichPanelDetailItem>
+            <RichPanelDetailItem>
+                <i className="icon-index me-1" /> 0
+            </RichPanelDetailItem>
+            <RichPanelDetailItem>
+                <i className="icon-clock me-1" /> Up for 25 minutes 
             </RichPanelDetailItem>
             <RichPanelDetailItem title="Last backup" className="text-danger">
-                <i className="icon-backup me-1" /> Never backed up {/* TODO */}
+                <i className="icon-backup me-1" /> Never backed up 
             </RichPanelDetailItem>
+            */}
 
-            <div className="rich-panel-details-right">
+            <div className="rich-panel-details-right" style={{ display: "none" }}>
+                {" "}
+                {/* TODO */}
                 <RichPanelDetailItem
                     title="Indexing errors. Click to view the Indexing Errors."
                     className="text-danger"

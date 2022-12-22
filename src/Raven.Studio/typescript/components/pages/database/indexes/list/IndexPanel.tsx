@@ -1,7 +1,7 @@
 ﻿import React, { ForwardedRef, forwardRef, MouseEvent, useState } from "react";
 import classNames from "classnames";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
-import { IndexSharedInfo } from "../../../../models/indexes";
+import { IndexSharedInfo } from "components/models/indexes";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import { useAppUrls } from "hooks/useAppUrls";
 import IndexUtils from "../../../../utils/IndexUtils";
@@ -11,7 +11,7 @@ import database = require("models/resources/database");
 import app from "durandal/app";
 import { useAccessManager } from "hooks/useAccessManager";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
-import { UncontrolledTooltip } from "../../../../common/UncontrolledTooltip";
+import { UncontrolledTooltip } from "components/common/UncontrolledTooltip";
 import { IndexDistribution, IndexProgress } from "./IndexDistribution";
 import { IndexProgressTooltip } from "./IndexProgressTooltip";
 import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
@@ -207,8 +207,10 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             )}
                         </RichPanelSelect>
 
-                        <RichPanelName href={editUrl} title={index.name}>
-                            {index.name}
+                        <RichPanelName>
+                            <a href={editUrl} title={index.name}>
+                                {index.name}
+                            </a>
                         </RichPanelName>
                     </RichPanelInfo>
                     <RichPanelActions>

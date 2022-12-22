@@ -1,9 +1,9 @@
 ﻿import React, { useCallback, useState } from "react";
 import { Button } from "reactstrap";
-import { NodeInfo } from "components/pages/resources/manageDatabaseGroup/types";
 import classNames from "classnames";
 import { NodeInfoReorderComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { useDrop } from "react-dnd";
+import { NodeInfo } from "components/models/databases";
 
 interface ReorderNodesProps {
     cancelReorder: () => void;

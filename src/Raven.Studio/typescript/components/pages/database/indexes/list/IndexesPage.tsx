@@ -7,7 +7,7 @@ import {
     IndexNodeInfoDetails,
     IndexSharedInfo,
     IndexStatus,
-} from "../../../../models/indexes";
+} from "components/models/indexes";
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
 import { IndexPanel } from "./IndexPanel";
 import deleteIndexesConfirm from "viewmodels/database/indexes/deleteIndexesConfirm";

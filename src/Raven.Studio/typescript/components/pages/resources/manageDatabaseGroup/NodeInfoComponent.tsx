@@ -1,6 +1,5 @@
 ﻿import React, { useCallback } from "react";
 import { DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown, UncontrolledTooltip } from "reactstrap";
-import { NodeInfo } from "components/pages/resources/manageDatabaseGroup/types";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
 import database from "models/resources/database";
@@ -10,7 +9,6 @@ import app from "durandal/app";
 import showDataDialog from "viewmodels/common/showDataDialog";
 import useId from "hooks/useId";
 import classNames from "classnames";
-import { FlexGrow } from "components/common/FlexGrow";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import {
     RichPanel,
@@ -23,6 +21,7 @@ import {
     RichPanelStatus,
 } from "components/common/RichPanel";
 import { useDraggableItem } from "hooks/useDraggableItem";
+import { NodeInfo } from "components/models/databases";
 
 interface NodeInfoComponentProps {
     node: NodeInfo;

@@ -8,8 +8,15 @@ import shardedDatabase from "models/resources/shardedDatabase";
 import shard from "models/resources/shard";
 import { ajaxMock } from "test/mocks";
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
-import DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
+
+function mockResponse(dto: StudioDatabasesResponse) {
+    ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
+        if (args.url === endpointConstants.global.studioDatabases.studioTasksDatabases) {
+            return $.Deferred<StudioDatabasesResponse>().resolve(dto);
+        }
+    });
+}
 
 describe("databasesManager", () => {
     
@@ -18,15 +25,11 @@ describe("databasesManager", () => {
     });
     
     it("can handle non-sharded database", async () => {
-        const response: DatabasesInfo = { 
+        const response: StudioDatabasesResponse = { 
             Databases: [ DatabasesStubs.nonShardedSingleNodeDatabaseDto() ]
         }
         
-        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
-            if (args.url === endpointConstants.global.databases.databases) {
-                return $.Deferred<typeof response>().resolve(response);
-            }
-        });
+        mockResponse(response);
 
         const manager = new databasesManager();
         await manager.init();
@@ -39,19 +42,15 @@ describe("databasesManager", () => {
         expect(firstDb)
             .toBeInstanceOf(nonShardedDatabase);
         expect(firstDb.name)
-            .toEqual(response.Databases[0].Name);
+            .toEqual(response.Databases[0].DatabaseName);
     })
     
     it("can handle sharded database", async () => {
-        const response: DatabasesInfo = {
-            Databases: DatabasesStubs.shardedDatabaseDto()
+        const response: StudioDatabasesResponse = {
+            Databases: [DatabasesStubs.shardedDatabaseDto()]
         }
-        
-        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
-            if (args.url === endpointConstants.global.databases.databases) {
-                return $.Deferred<typeof response>().resolve(response);
-            }
-        });
+
+        mockResponse(response);
         
         const manager = new databasesManager();
         await manager.init();
@@ -61,7 +60,7 @@ describe("databasesManager", () => {
         expect(dbs)
             .toHaveLength(1);
         
-        const expectedShardedDatabaseGroup = (response.Databases[0].Name.split("$")[0]);
+        const expectedShardedDatabaseGroup = (response.Databases[0].DatabaseName.split("$")[0]);
         
         const firstDb = dbs[0];
         expect(firstDb)
@@ -75,33 +74,29 @@ describe("databasesManager", () => {
             .toHaveLength(3);
         
         expect(shards[0].name)
-            .toEqual(response.Databases[0].Name);
+            .toEqual(response.Databases[0].DatabaseName + "$0");
         expect(shards[0])
             .toBeInstanceOf(shard);
 
         expect(shards[1].name)
-            .toEqual(response.Databases[1].Name);
+            .toEqual(response.Databases[0].DatabaseName + "$1");
         expect(shards[1])
             .toBeInstanceOf(shard);
     });
     
     it("can get single shard by name", async () => {
-        const response: DatabasesInfo = {
-            Databases: DatabasesStubs.shardedDatabaseDto()
+        const response: StudioDatabasesResponse = {
+            Databases: [DatabasesStubs.shardedDatabaseDto()]
         }
 
-        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
-            if (args.url === endpointConstants.global.databases.databases) {
-                return $.Deferred<typeof response>().resolve(response);
-            }
-        });
+        mockResponse(response);
 
         const manager = new databasesManager();
         await manager.init();
         
-        const firstShardName = response.Databases[0].Name;
+        const firstShardName = response.Databases[0].DatabaseName;
         
-        const singleShard = manager.getDatabaseByName(firstShardName) as shard;
+        const singleShard = manager.getDatabaseByName(firstShardName + "$0") as shard;
         
         expect(singleShard)
             .not.toBeNull();
@@ -118,20 +113,16 @@ describe("databasesManager", () => {
     });
 
     it("can get sharded database by name", async () => {
-        const response: DatabasesInfo = {
-            Databases: DatabasesStubs.shardedDatabaseDto()
+        const response: StudioDatabasesResponse = {
+            Databases: [DatabasesStubs.shardedDatabaseDto()]
         }
 
-        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
-            if (args.url === endpointConstants.global.databases.databases) {
-                return $.Deferred<typeof response>().resolve(response);
-            }
-        });
+        mockResponse(response);
 
         const manager = new databasesManager();
         await manager.init();
 
-        const shardGroupName = response.Databases[0].Name.split("$")[0];
+        const shardGroupName = response.Databases[0].DatabaseName.split("$")[0];
 
         const shard = manager.getDatabaseByName(shardGroupName) as shardedDatabase;
 
@@ -144,25 +135,17 @@ describe("databasesManager", () => {
     });
     
     it("can update manager after db was deleted", async () => {
-        const response: DatabasesInfo = {
-            Databases: DatabasesStubs.shardedDatabaseDto()
+        const response: StudioDatabasesResponse = {
+            Databases: [DatabasesStubs.shardedDatabaseDto()]
         }
 
-        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
-            if (args.url === endpointConstants.global.databases.databases) {
-                return $.Deferred<typeof response>().resolve(response);
-            }
-        });
+        mockResponse(response);
 
         const manager = new databasesManager();
         await manager.init();
 
-        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
-            if (args.url === endpointConstants.global.databases.databases) {
-                return $.Deferred<typeof response>().resolve({ 
-                    Databases: []
-                });
-            }
+        mockResponse({
+            Databases: []
         });
         
         await manager.refreshDatabases();
@@ -172,26 +155,18 @@ describe("databasesManager", () => {
     });
 
     it("can update manager after single shard was deleted", async () => {
-        const response: DatabasesInfo = {
-            Databases: DatabasesStubs.shardedDatabaseDto()
+        const response: StudioDatabasesResponse = {
+            Databases: [DatabasesStubs.shardedDatabaseDto()]
         }
 
-        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
-            if (args.url === endpointConstants.global.databases.databases) {
-                return $.Deferred<typeof response>().resolve(response);
-            }
-        });
+        mockResponse(response);
 
         const manager = new databasesManager();
         await manager.init();
 
-        response.Databases.splice(0, 1);
-        
-        ajaxMock.mockImplementation((args: JQueryAjaxSettings) => {
-            if (args.url === endpointConstants.global.databases.databases) {
-                return $.Deferred<typeof response>().resolve(response);
-            }
-        });
+        delete response.Databases[0].Sharding.Shards[2];
+
+        mockResponse(response);
 
         await manager.refreshDatabases();
 

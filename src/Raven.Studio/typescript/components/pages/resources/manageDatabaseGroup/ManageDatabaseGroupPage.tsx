@@ -1,10 +1,9 @@
-﻿import React, { useCallback, useEffect, useReducer } from "react";
-import { Input, Label, Spinner } from "reactstrap";
+﻿import React, { useCallback } from "react";
+import { Input, Label } from "reactstrap";
 import { UncontrolledButtonWithDropdownPanel } from "components/common/DropdownPanel";
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
 import { useServices } from "hooks/useServices";
-import { manageDatabaseGroupReducer } from "components/pages/resources/manageDatabaseGroup/reducer";
 import database from "models/resources/database";
 import { useLicenseStatus } from "hooks/useLicenseStatus";
 import LicenseStatus = Raven.Server.Commercial.LicenseStatus;
@@ -12,6 +11,7 @@ import clusterTopology from "models/database/cluster/clusterTopology";
 import { useChanges } from "hooks/useChanges";
 import { useAccessManager } from "hooks/useAccessManager";
 import { NodeGroup } from "components/pages/resources/manageDatabaseGroup/NodeGroup";
+import { useDatabaseManager } from "hooks/useDatabaseManager";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -53,64 +53,22 @@ function getDynamicDatabaseDistributionWarning(
 export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     const { db } = props;
 
-    const [state, dispatch] = useReducer(manageDatabaseGroupReducer, null);
     const { databasesService } = useServices();
     const { status: licenseStatus } = useLicenseStatus();
 
     const { isOperatorOrAbove } = useAccessManager();
 
+    const { databases, findByName } = useDatabaseManager();
+
     const {
         value: dynamicDatabaseDistribution,
         toggle: toggleDynamicDatabaseDistribution,
         setValue: setDynamicDatabaseDistribution,
-    } = useBoolean(false);
-
-    //TODO: error handling!
-    const fetchDatabaseInfo = useCallback(
-        async (databaseName: string) => {
-            const info = await databasesService.getDatabase(databaseName);
-            dispatch({
-                type: "DatabaseInfoLoaded",
-                info,
-            });
-            return info;
-        },
-        [databasesService]
-    );
-
-    useEffect(() => {
-        const fetchData = async () => {
-            if (db) {
-                const dbInfo = await fetchDatabaseInfo(db.name);
-                setDynamicDatabaseDistribution(dbInfo.DynamicNodesDistribution);
-            }
-        };
-
-        fetchData();
-    }, [fetchDatabaseInfo, db, setDynamicDatabaseDistribution]);
-
-    const refresh = useCallback(() => {
-        //TODO:if (!sortableMode) {
-        fetchDatabaseInfo(db.name);
-        //TODO:}
-    }, [fetchDatabaseInfo, db]);
+    } = useBoolean(false); //tODO: assign default value
 
     const { serverNotifications } = useChanges();
 
-    useEffect(() => {
-        const sub = serverNotifications.watchClusterTopologyChanges(() => refresh());
-        return () => sub.off();
-    }, [serverNotifications, refresh]);
-
-    useEffect(() => {
-        const sub = serverNotifications.watchAllDatabaseChanges(() => refresh());
-        return () => sub.off();
-    }, [serverNotifications, refresh]);
-
-    useEffect(() => {
-        const sub = serverNotifications.watchReconnect(() => refresh());
-        return () => sub.off();
-    });
+    const dbShardedInfo = findByName(db.name);
 
     /*
     useEffect(() => {
@@ -134,14 +92,10 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
         await databasesService.toggleDynamicNodeAssignment(db, !dynamicDatabaseDistribution);
     }, [dynamicDatabaseDistribution, toggleDynamicDatabaseDistribution, databasesService, db]);
 
-    if (!state) {
-        return <Spinner />;
-    }
-
     const dynamicDatabaseDistributionWarning = getDynamicDatabaseDistributionWarning(
         licenseStatus,
-        state.encrypted,
-        state.nodes.length
+        dbShardedInfo.encrypted,
+        dbShardedInfo.nodes.length
     );
     const enableDynamicDatabaseDistribution = isOperatorOrAbove() && !dynamicDatabaseDistributionWarning;
 
@@ -171,11 +125,13 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
             </div>
 
             <NodeGroup
-                nodes={state.nodes}
+                nodes={dbShardedInfo.nodes}
                 db={db}
-                deletionInProgress={state.deletionInProgress}
-                refresh={refresh}
-                lockMode={state.lockMode}
+                deletionInProgress={dbShardedInfo.deletionInProgress}
+                refresh={() => {
+                    //TODO:
+                }}
+                lockMode={dbShardedInfo.lockMode}
             />
         </div>
     );

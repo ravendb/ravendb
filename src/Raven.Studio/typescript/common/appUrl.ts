@@ -3,7 +3,6 @@ import database = require("models/resources/database");
 import activeDatabase = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
-import databaseInfo from "models/resources/info/databaseInfo";
 
 class appUrl {
 
@@ -165,7 +164,7 @@ class appUrl {
         return "#admin/settings/ioStats";
     }
 
-    static forRunningQueries(db: database | databaseInfo = null): string {
+    static forRunningQueries(db: database = null): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#admin/settings/runningQueries?" + databasePart;
     }
@@ -246,40 +245,40 @@ class appUrl {
         return "#clusterDashboard";
     }
 
-    static forEditCmpXchg(key: string, db: database | databaseInfo) {
+    static forEditCmpXchg(key: string, db: database) {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const keyUrlPart = key ? "&key=" + encodeURIComponent(key) : "";
         return "#databases/cmpXchg/edit?" + databaseUrlPart + keyUrlPart;
     }
     
-    static forEditDoc(id: string, db: database | databaseInfo | string, collection?: string): string {
+    static forEditDoc(id: string, db: database | string, collection?: string): string {
         const collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
         return "#databases/edit?" + collectionPart + databaseUrlPart + docIdUrlPart;
     }
 
-    static forCreateTimeSeries(docId: string, db: database | databaseInfo): string {
+    static forCreateTimeSeries(docId: string, db: database): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const docIdUrlPart = docId ? "&docId=" + encodeURIComponent(docId) : "";
         return "#databases/ts/edit?" + databaseUrlPart + docIdUrlPart;
     }
     
-    static forEditTimeSeries(tsName: string, docId: string, db: database | databaseInfo): string {
+    static forEditTimeSeries(tsName: string, docId: string, db: database): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const docIdUrlPart = docId ? "&docId=" + encodeURIComponent(docId) : "";
         const tsNameUrlPart = tsName ? "&name=" + encodeURIComponent(tsName) : "";
         return "#databases/ts/edit?" + databaseUrlPart + docIdUrlPart + tsNameUrlPart;
     }
 
-    static forViewDocumentAtRevision(id: string, revisionChangeVector: string, db: database | databaseInfo): string {
+    static forViewDocumentAtRevision(id: string, revisionChangeVector: string, db: database): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const revisionPart = "&revision=" + encodeURIComponent(revisionChangeVector);
         const docIdUrlPart = "&id=" + encodeURIComponent(id);
         return "#databases/edit?" + databaseUrlPart + revisionPart + docIdUrlPart;
     }
 
-    static forEditItem(itemId: string, db: database | databaseInfo, itemIndex: number, collectionName?: string): string {
+    static forEditItem(itemId: string, db: database, itemIndex: number, collectionName?: string): string {
         const urlPart = appUrl.getEncodedDbPart(db);
         const itemIdUrlPart = itemId ? "&id=" + encodeURIComponent(itemId) : "";
 
@@ -288,13 +287,13 @@ class appUrl {
         return databaseTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
-    static forNewCmpXchg(db: database | databaseInfo) {
+    static forNewCmpXchg(db: database) {
         const baseUrlPart = "#databases/cmpXchg/edit?";
         const databasePart = appUrl.getEncodedDbPart(db);
         return baseUrlPart + databasePart;
     }
     
-    static forNewDoc(db: database | databaseInfo, collection: string = null): string {
+    static forNewDoc(db: database, collection: string = null): string {
         const baseUrlPart = "#databases/edit?";
         const databasePart = appUrl.getEncodedDbPart(db);
         if (collection) {
@@ -305,39 +304,39 @@ class appUrl {
         return baseUrlPart + databasePart;
     }
 
-    static forStatus(db: database | databaseInfo): string {
+    static forStatus(db: database): string {
         return "#databases/status?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forIoStats(db: database | databaseInfo): string {
+    static forIoStats(db: database): string {
         return "#databases/status/ioStats?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forIndexPerformance(db: database | databaseInfo | string, indexName?: string): string {
+    static forIndexPerformance(db: database | string, indexName?: string): string {
         return `#databases/indexes/performance?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
     }
     
-    static forIndexCleanup(db: database | databaseInfo | string): string {
+    static forIndexCleanup(db: database | string): string {
         return '#databases/indexes/cleanup?' + appUrl.getEncodedDbPart(db);
     }
 
-    static forStatusStorageReport(db: database | databaseInfo | string): string {
+    static forStatusStorageReport(db: database | string): string {
         return '#databases/status/storage/report?' + appUrl.getEncodedDbPart(db);
     }
 
-    static forSettings(db: database | databaseInfo): string {
+    static forSettings(db: database): string {
         return "#databases/settings/databaseRecord?" + appUrl.getEncodedDbPart(db);
     }
     
-    static forIndexErrors(db: database | databaseInfo): string {
+    static forIndexErrors(db: database): string {
         return "#databases/indexes/indexErrors?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forOngoingTasksStats(db: database | databaseInfo): string {
+    static forOngoingTasksStats(db: database): string {
         return "#databases/status/ongoingTasksStats?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forVisualizer(db: database | databaseInfo, index: string = null): string {
+    static forVisualizer(db: database, index: string = null): string {
         let url = "#databases/indexes/visualizer?" + appUrl.getEncodedDbPart(db);
         if (index) { 
             url += "&index=" + index;
@@ -345,74 +344,74 @@ class appUrl {
         return url;
     }
 
-    static forDatabaseSettings(db: database | databaseInfo): string {
+    static forDatabaseSettings(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db); 
         return "#databases/settings/databaseSettings?" + databasePart;
     }
     
-    static forDatabaseRecord(db: database | databaseInfo): string {
+    static forDatabaseRecord(db: database): string {
         return "#databases/advanced/databaseRecord?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forDatabaseIDs(db: database | databaseInfo): string {
+    static forDatabaseIDs(db: database): string {
         return "#databases/advanced/databaseIDs?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forTombstonesState(db: database | databaseInfo): string {
+    static forTombstonesState(db: database): string {
         return "#databases/advanced/tombstonesState?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forRevisions(db: database | databaseInfo): string {
+    static forRevisions(db: database): string {
         return "#databases/settings/revisions?" + appUrl.getEncodedDbPart(db);
     }
     
-    static forRevertRevisions(db: database | databaseInfo): string {
+    static forRevertRevisions(db: database): string {
         return "#databases/settings/revertRevisions?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forExpiration(db: database | databaseInfo): string {
+    static forExpiration(db: database): string {
         return "#databases/settings/expiration?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forDocumentsCompression(db: database | databaseInfo): string {
+    static forDocumentsCompression(db: database): string {
         return "#databases/settings/documentsCompression?" + appUrl.getEncodedDbPart(db);
     }
     
-    static forTimeSeries(db: database | databaseInfo): string {
+    static forTimeSeries(db: database): string {
         return "#databases/settings/timeSeries?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forRefresh(db: database | databaseInfo): string {
+    static forRefresh(db: database): string {
         return "#databases/settings/refresh?" + appUrl.getEncodedDbPart(db);
     }
     
-    static forCustomSorters(db: database | databaseInfo): string {
+    static forCustomSorters(db: database): string {
         return "#databases/settings/customSorters?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forCustomAnalyzers(db: database | databaseInfo): string {
+    static forCustomAnalyzers(db: database): string {
         return "#databases/settings/customAnalyzers?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forEditCustomSorter(db: database | databaseInfo, sorterName?: string): string {
+    static forEditCustomSorter(db: database, sorterName?: string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const namePart = sorterName ? "&name=" + encodeURIComponent(sorterName) : "";
 
         return "#databases/settings/editCustomSorter?" + databasePart + namePart;
     }
 
-    static forEditCustomAnalyzer(db: database | databaseInfo, analyzerName?: string): string {
+    static forEditCustomAnalyzer(db: database, analyzerName?: string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const namePart = analyzerName ? "&name=" + encodeURIComponent(analyzerName) : "";
 
         return "#databases/settings/editCustomAnalyzer?" + databasePart + namePart;
     }
 
-    static forIntegrations(db: database | databaseInfo): string {
+    static forIntegrations(db: database): string {
         return "#databases/settings/integrations?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forConnectionStrings(db: database | databaseInfo, type?: StudioEtlType, name?: string): string {
+    static forConnectionStrings(db: database, type?: StudioEtlType, name?: string): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const typeUrlPart = type ? "&type=" + encodeURIComponent(type) : "";
         const nameUrlPart = name ? "&name=" + encodeURIComponent(name) : "";
@@ -420,23 +419,23 @@ class appUrl {
         return "#databases/settings/connectionStrings?" + databaseUrlPart + typeUrlPart + nameUrlPart;
     }
     
-    static forConflictResolution(db: database | databaseInfo): string {
+    static forConflictResolution(db: database): string {
         return "#databases/settings/conflictResolution?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forManageDatabaseGroup(db: database | databaseInfo | string): string {
+    static forManageDatabaseGroup(db: database | string): string {
         return "#databases/manageDatabaseGroup?" + appUrl.getEncodedDbPart(db);
     }
     
-    static forClientConfiguration(db: database | databaseInfo): string {
+    static forClientConfiguration(db: database): string {
         return "#databases/settings/clientConfiguration?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forStudioConfiguration(db: database | databaseInfo): string {
+    static forStudioConfiguration(db: database): string {
         return "#databases/settings/studioConfiguration?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forDocuments(collectionName: string, db: database | databaseInfo | string): string {
+    static forDocuments(collectionName: string, db: database | string): string {
         if (collectionName === "All Documents")
             collectionName = null;
 
@@ -445,7 +444,7 @@ class appUrl {
         return "#databases/documents?" + collectionPart + appUrl.getEncodedDbPart(db);
     }
 
-    static forRevisionsBin(db: database | databaseInfo): string {
+    static forRevisionsBin(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/documents/revisions/bin?" + databasePart;
     }
@@ -455,23 +454,23 @@ class appUrl {
         return "#/databases/documents?" + collectionPart + "&database=" + encodeURIComponent(dbName);
     }
 
-    static forIdentities(db: database | databaseInfo): string {
+    static forIdentities(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/identities?" + databasePart;
     }
     
-    static forCmpXchg(db: database | databaseInfo): string {
+    static forCmpXchg(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/cmpXchg?" + databasePart;
     }
     
-    static forConflicts(db: database | databaseInfo, documentId?: string): string {
+    static forConflicts(db: database, documentId?: string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const docIdUrlPart = documentId ? "&id=" + encodeURIComponent(documentId) : "";
         return "#databases/documents/conflicts?" + databasePart + docIdUrlPart;
     }
 
-    static forPatch(db: database | databaseInfo, hashOfRecentPatch?: number): string {
+    static forPatch(db: database, hashOfRecentPatch?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
 
         if (hashOfRecentPatch) {
@@ -482,7 +481,7 @@ class appUrl {
         }
     }
 
-    static forIndexes(db: database | databaseInfo, indexName: string = null, staleOnly = false): string {
+    static forIndexes(db: database, indexName: string = null, staleOnly = false): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const indexNamePart = indexName ? `&indexName=${indexName}` : "";
         const stalePart = staleOnly ? "&stale=true" : "";
@@ -490,17 +489,17 @@ class appUrl {
         return "#databases/indexes?" + databasePart + indexNamePart + stalePart;
     }
 
-    static forNewIndex(db: database | databaseInfo): string {
+    static forNewIndex(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/edit?" + databasePart;
     }
 
-    static forEditIndex(indexName: string, db: database | databaseInfo | string): string {
+    static forEditIndex(indexName: string, db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
-    static forQuery(db: database | databaseInfo, indexNameOrHashToQuery?: string | number, extraParameters = ""): string {
+    static forQuery(db: database, indexNameOrHashToQuery?: string | number, extraParameters = ""): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         let indexToQueryComponent = indexNameOrHashToQuery as string;
         if (typeof indexNameOrHashToQuery === "number") {
@@ -511,7 +510,7 @@ class appUrl {
         return "#databases/query/index" + indexPart + "?" + databasePart + extraParameters;
     }
 
-    static forDatabaseQuery(db: database | databaseInfo): string {
+    static forDatabaseQuery(db: database): string {
         if (db) {
             return appUrl.baseUrl + "/databases/" + db.name;
         }
@@ -519,147 +518,147 @@ class appUrl {
         return this.baseUrl;
     }
 
-    static forTerms(indexName: string, db: database | databaseInfo): string {
+    static forTerms(indexName: string, db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/terms/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
-    static forImportDatabaseFromFile(db: database | databaseInfo): string {
+    static forImportDatabaseFromFile(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/import/file?" + databasePart;
     }
 
-    static forImportCollectionFromCsv(db: database | databaseInfo): string {
+    static forImportCollectionFromCsv(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/import/csv?" + databasePart;
     }
     
-    static forImportFromSql(db: database | databaseInfo): string {
+    static forImportFromSql(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/import/sql?" + databasePart;
     }
 
-    static forExportDatabase(db: database | databaseInfo): string {
+    static forExportDatabase(db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/exportDatabase?" + databasePart;
     }
 
-    static forMigrateRavenDbDatabase(db: database | databaseInfo): string {
+    static forMigrateRavenDbDatabase(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/import/migrateRavenDB?" + databasePart;
     }
 
-    static forMigrateDatabase(db: database | databaseInfo): string {
+    static forMigrateDatabase(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/import/migrate?" + databasePart;
     }
 
-    static forBackups(db: database | databaseInfo): string {
+    static forBackups(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/backups?" + databasePart;
     }
     
-    static forOngoingTasks(db: database | databaseInfo): string {
+    static forOngoingTasks(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/ongoingTasks?" + databasePart;
     }
 
-    static forEditExternalReplication(db: database | databaseInfo, taskId?: number): string {
+    static forEditExternalReplication(db: database, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editExternalReplicationTask?" + databasePart + taskPart;
     }
     
-    static forEditReplicationHub(db: database | databaseInfo, taskId?: number): string {
+    static forEditReplicationHub(db: database, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editReplicationHubTask?" + databasePart + taskPart;
     }
     
-    static forEditReplicationSink(db: database | databaseInfo, taskId?: number): string {
+    static forEditReplicationSink(db: database, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editReplicationSinkTask?" + databasePart + taskPart;
     }
 
-    static forEditPeriodicBackupTask(db: database | databaseInfo, taskId?: number): string {
+    static forEditPeriodicBackupTask(db: database, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editPeriodicBackupTask?" + databasePart + taskPart;
     }
     
-    static forEditManualBackup(db: database | databaseInfo): string {
+    static forEditManualBackup(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const manualPart = "&manual=true";
         return "#databases/tasks/editPeriodicBackupTask?" + databasePart + manualPart;
     }
 
-    static forEditSubscription(db: database | databaseInfo, taskId?: number, taskName?: string): string {
+    static forEditSubscription(db: database, taskId?: number, taskName?: string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         const taskNamePart = taskName ? "&taskName=" + taskName : ""; 
         return "#databases/tasks/editSubscriptionTask?" + databasePart + taskPart + taskNamePart;
     }
 
-    static forEditRavenEtl(db: database | databaseInfo, taskId?: number): string {
+    static forEditRavenEtl(db: database, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editRavenEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditSqlEtl(db: database | databaseInfo, taskId?: number): string {
+    static forEditSqlEtl(db: database, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editSqlEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditOlapEtl(db: database | databaseInfo, taskId?: number): string {
+    static forEditOlapEtl(db: database, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editOlapEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditElasticSearchEtl(db: database | databaseInfo, taskId?: number): string {
+    static forEditElasticSearchEtl(db: database, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editElasticSearchEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditKafkaEtl(db: database | databaseInfo, taskId?: number): string {
+    static forEditKafkaEtl(db: database, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editKafkaEtlTask?" + databasePart + taskPart;
     }
 
-    static forEditRabbitMqEtl(db: database | databaseInfo, taskId?: number): string {
+    static forEditRabbitMqEtl(db: database, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editRabbitMqEtlTask?" + databasePart + taskPart;
     }
     
-    static forSampleData(db: database | databaseInfo): string {
+    static forSampleData(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/sampleData?" + databasePart;
     }
 
-    static forCsvImport(db: database | databaseInfo): string {
+    static forCsvImport(db: database): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/csvImport?" + databasePart;
     }
 
-    static forStatsRawData(db: database | databaseInfo): string {
+    static forStatsRawData(db: database): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/stats";
     }
 
-    static forEssentialStatsRawData(db: database | databaseInfo): string {
+    static forEssentialStatsRawData(db: database): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/stats/essential";
     }
 
-    static forIndexesRawData(db: database | databaseInfo): string {
+    static forIndexesRawData(db: database): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
     }
 
-    static forIndexQueryRawData(db: database | databaseInfo, indexName:string){
+    static forIndexQueryRawData(db: database, indexName:string){
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes/" + indexName;
     }
 
@@ -667,11 +666,11 @@ class appUrl {
         return window.location.protocol + "//" + window.location.host + "/databases";
     }
 
-    static forDocumentRawData(db: database | databaseInfo, docId:string): string {
+    static forDocumentRawData(db: database, docId:string): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs?id=" + encodeURIComponent(docId);
     }
 
-    static forDocumentRevisionRawData(db: database | databaseInfo, revisionChangeVector: string): string { 
+    static forDocumentRevisionRawData(db: database, revisionChangeVector: string): string { 
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/revisions?changeVector=" + encodeURIComponent(revisionChangeVector);
     }
 
@@ -728,7 +727,7 @@ class appUrl {
         return appUrl.currentDbComputeds;
     }
 
-    private static getEncodedDbPart(db?: database | databaseInfo | string) {
+    private static getEncodedDbPart(db?: database | string) {
         if (!db) {
             return "";
         }

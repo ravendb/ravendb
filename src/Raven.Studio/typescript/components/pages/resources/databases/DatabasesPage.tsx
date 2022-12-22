@@ -1,6 +1,5 @@
 ﻿import React, { useCallback, useEffect, useMemo, useReducer, useState } from "react";
-import { useServices } from "hooks/useServices";
-import { databasesStatsReducer, databasesStatsReducerInitializer, DatabasesStatsState } from "./DatabasesStatsReducer";
+import { databasesStatsReducer, databasesStatsReducerInitializer } from "./DatabasesStatsReducer";
 import { DatabasePanel } from "./DatabasePanel";
 import { DatabasesToolbarActions } from "./DatabasesToolbarActions";
 import { DatabasesFilter } from "./DatabasesFilter";
@@ -10,17 +9,18 @@ import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/data
 import { useChanges } from "hooks/useChanges";
 import { Col, Row } from "reactstrap";
 import { useActiveDatabase } from "hooks/useActiveDatabase";
+import { useDatabaseManager } from "hooks/useDatabaseManager";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
 }
 
-function filterDatabases(stats: DatabasesStatsState, criteria: DatabaseFilterCriteria) {
+function filterDatabases(databases: DatabaseSharedInfo[], criteria: DatabaseFilterCriteria) {
     if (criteria.searchText) {
-        return stats.databases.filter((x) => x.name.toLowerCase().includes(criteria.searchText.toLowerCase()));
+        return databases.filter((x) => x.name.toLowerCase().includes(criteria.searchText.toLowerCase()));
     }
 
-    return stats.databases;
+    return databases;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -28,6 +28,8 @@ export function DatabasesPage() {
     //TODO: highlight active database
 
     const { db: activeDatabase } = useActiveDatabase();
+
+    const { databases } = useDatabaseManager();
 
     const [stats, dispatch] = useReducer(databasesStatsReducer, null, databasesStatsReducerInitializer);
 
@@ -39,14 +41,13 @@ export function DatabasesPage() {
 
     const [selectedDatabases, setSelectedDatabases] = useState<string[]>([]);
 
-    const { databasesService } = useServices();
-
     const filteredDatabases = useMemo(() => {
         //TODO: filter and sort databases
         //TODO: update selection if needed
-        return filterDatabases(stats, filter);
-    }, [filter, stats]);
+        return filterDatabases(databases, filter);
+    }, [filter, databases]);
 
+    /* TODO
     const fetchDatabases = useCallback(async () => {
         const stats = await databasesService.getDatabases();
 
@@ -54,7 +55,7 @@ export function DatabasesPage() {
             type: "StatsLoaded",
             stats,
         });
-    }, [databasesService]);
+    }, [databasesService]);*/
 
     const toggleSelectAll = useCallback(() => {
         const selectedCount = selectedDatabases.length;
@@ -88,6 +89,7 @@ export function DatabasesPage() {
         }
     };
 
+    /* TODO
     useEffect(() => {
         fetchDatabases();
     }, [fetchDatabases]);
@@ -98,7 +100,7 @@ export function DatabasesPage() {
 
             return () => sub.off();
         }
-    }, [serverNotifications, fetchDatabases]);
+    }, [serverNotifications, fetchDatabases]);*/
 
     return (
         <div className="content-margin">
@@ -127,7 +129,7 @@ export function DatabasesPage() {
                         />
                     ))}
 
-                    {!stats.databases.length && <NoDatabases />}
+                    {!databases.length && <NoDatabases />}
                 </div>
             </div>
         </div>

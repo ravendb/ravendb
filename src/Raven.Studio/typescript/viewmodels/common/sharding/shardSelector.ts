@@ -45,7 +45,7 @@ class shardSelector extends dialogViewModelBase {
                 return [];
             }
 
-            return currentShard.nodes();
+            return currentShard.nodes().map(x => x.tag);
         });
         
         this.form.shard.subscribe(() => this.maybeChangeNodeTag());
@@ -59,16 +59,16 @@ class shardSelector extends dialogViewModelBase {
         const currentServerNodeTag = this.currentNode();
 
         // try to find and select current currentServerNodeTag (if available) - to prefer local reads
-        const canSelectCurrentNode = !!this.form.shard().nodes().find(x => x === currentServerNodeTag);
+        const canSelectCurrentNode = !!this.form.shard().nodes().find(x => x.tag === currentServerNodeTag);
         if (canSelectCurrentNode) {
             this.form.node(currentServerNodeTag);
         } else {
-            const canUseCurrentNode = !!this.form.shard().nodes().find(x => x === this.form.node());
+            const canUseCurrentNode = !!this.form.shard().nodes().find(x => x.tag === this.form.node());
             if (canUseCurrentNode) {
                 // nothing to be done - don't touch node tag
             } else {
                 // keep UI in sync - select first from the list
-                this.form.node(this.form.shard().nodes()[0]);
+                this.form.node(this.form.shard().nodes()[0].tag);
             }
         }
     }

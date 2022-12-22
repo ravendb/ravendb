@@ -1,4 +1,6 @@
 import database from "models/resources/database";
+import NodeId = Raven.Client.ServerWide.Operations.NodeId;
+import { NodeInfo } from "components/models/databases";
 
 class nonShardedDatabase extends database {
     get root(): database {
@@ -13,24 +15,24 @@ class nonShardedDatabase extends database {
     
     getLocations(): databaseLocationSpecifier[] {
         return this.nodes().map(x => ({
-            nodeTag: x
+            nodeTag: x.tag
         }));
     }
 
     updateUsing(incomingCopy: StudioDatabaseResponse) {
         super.updateUsing(incomingCopy);
         
-        const topology = incomingCopy.Topology;
+        const topology = incomingCopy.NodesTopology;
         const nodeTag = this.clusterNodeTag();
         
         const nodes = [
-            ...topology.Members,
-            ...topology.Promotables,
-            ...topology.Rehabs
+            ...topology.Members.map(x => this.mapNode(topology, x, "Member")),
+            ...topology.Promotables.map(x => this.mapNode(topology, x, "Member")),
+            ...topology.Rehabs.map(x => this.mapNode(topology, x, "Member")),
         ];
         
         this.nodes(nodes);
-        this.relevant(nodes.includes(nodeTag));
+        this.relevant(nodes.some(x => x.tag === nodeTag));
     }
 }
 
