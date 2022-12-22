@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Raven.Server.Config.Categories;
+using Sparrow;
 using Sparrow.Logging;
 
 namespace Raven.Server.Utils.MicrosoftLogging;
@@ -16,9 +17,17 @@ public static class WebHostBuilderExtensions
         if (configurationLogs.DisableMicrosoftLogs)
             return hostBuilder;
         
-        loggingSource = new LoggingSource(LogMode.Information, configurationLogs.MicrosoftLogsPath.FullPath, "Microsoft Log", TimeSpan.MaxValue, long.MaxValue);
+        string logPath = configurationLogs.MicrosoftLogsPath.FullPath;
+        var internalLoggingSource = new LoggingSource(LogMode.None, logPath, "Microsoft Log", TimeSpan.MaxValue, long.MaxValue);
+        internalLoggingSource.MaxFileSizeInBytes = configurationLogs.MicrosoftLogsMaxFileSize.GetValue(SizeUnit.Bytes);
+        internalLoggingSource.SetupLogMode(
+            LogMode.Information, 
+            logPath, 
+            configurationLogs.MicrosoftLogsRetentionTime?.AsTimeSpan, 
+            configurationLogs.MicrosoftLogsRetentionSize?.GetValue(SizeUnit.Bytes), 
+            configurationLogs.MicrosoftLogsCompress);
         
-        var internalLoggingSource = loggingSource;
+        loggingSource =  internalLoggingSource;
         return hostBuilder.ConfigureLogging(logging =>
         {
             logging.ClearProviders();
