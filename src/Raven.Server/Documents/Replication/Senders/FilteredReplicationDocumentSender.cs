@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Replication.Senders
             _shouldSkipSendingTombstones = _parent.Destination is PullReplicationAsSink sink && sink.Mode == PullReplicationMode.SinkToHub && 
                                            _parent is OutgoingPullReplicationHandler pull &&
                                            pull.OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
-                                           _parent._database.ForTestingPurposes?.ForceSendTombstones == false;
+                                           _parent._database.ForTestingPurposes?.ForceSendTombstones != true;
         }
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)

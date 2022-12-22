@@ -117,9 +117,16 @@ namespace Raven.Server.Documents.Replication.Incoming
         public override string FromToString => base.FromToString +
                                                $"{(_incomingPullReplicationParams?.Name == null ? null : $"(pull definition: {_incomingPullReplicationParams?.Name})")}";
 
-        protected override TransactionOperationsMerger.MergedTransactionCommand GetMergeDocumentsCommand(DataForReplicationCommand data, long lastDocumentEtag)
+        protected override TransactionOperationsMerger.MergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
+            DataForReplicationCommand data, long lastDocumentEtag)
         {
-            return new MergedDocumentForPullReplicationCommand(data, lastDocumentEtag, _incomingPullReplicationParams);
+            var cmd = new MergedDocumentForPullReplicationCommand(data, lastDocumentEtag, _incomingPullReplicationParams);
+            foreach (var item in data.ReplicatedItems)
+            {
+                cmd.HandleExpiredDocuments(context, item);
+            }
+
+            return cmd;
         }
 
         protected override TransactionOperationsMerger.MergedTransactionCommand GetUpdateChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
@@ -143,8 +150,6 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
-                HandleExpiredDocuments(context, item);
-
                 if (_isSink) 
                     ReplaceKnownSinkEntries(context, ref item.ChangeVector);
 
@@ -182,7 +187,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                     RemoveExpiresFromSinkBatchItem(doc, ctx);
                 }
             }
-
 
             private static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
             {

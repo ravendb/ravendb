@@ -22,7 +22,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             _currentMigrationIndex = migrationIndex;
         }
 
-        protected override TransactionOperationsMerger.MergedTransactionCommand GetMergeDocumentsCommand(DataForReplicationCommand data, long lastDocumentEtag)
+        protected override TransactionOperationsMerger.MergedTransactionCommand GetMergeDocumentsCommand(DocumentsOperationContext context,
+            DataForReplicationCommand data, long lastDocumentEtag)
         {
             return new MergedIncomingMigrationCommand(data, lastDocumentEtag, _currentMigrationIndex);
         }

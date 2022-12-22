@@ -101,7 +101,7 @@ namespace SlowTests.Server.Replication
             }
 
             var sinkDatabaseInstance = await Databases.GetDocumentDatabaseInstanceFor(sinkStore);
-            sinkDatabaseInstance.ForTestingPurposes.ForceSendTombstones = true;
+            sinkDatabaseInstance.ForTestingPurposesOnly().ForceSendTombstones = true;
 
             await EnsureReplicatingAsync(hubStore, sinkStore);
             await EnsureReplicatingAsync(sinkStore, hubStore);
