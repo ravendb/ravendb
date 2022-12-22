@@ -2888,11 +2888,11 @@ namespace Raven.Server
                 try
                 {
                     CreateLogfile(s.RemoteEndPoint);
-                    var buffer = new byte[1024];
+                    ArraySegment<byte> buffer = new byte[1024];
                     while (true)
                     {
-                        var read = await s.ReceiveAsync(buffer);
-                        await s.SendAsync(new ReadOnlyMemory<byte>(buffer, 0, read), SocketFlags.None);
+                        var read = await s.ReceiveAsync(buffer, SocketFlags.None);
+                        await s.SendAsync(buffer.Slice(0, read), SocketFlags.None);
                     }
                 }
                 catch (Exception e)
