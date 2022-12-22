@@ -1098,7 +1098,8 @@ namespace Raven.Server.Documents
                                     SlowWriteNotification.Notify(stats, _parent);
                                 }
                             }
-                            DoCommandNotification(op);
+
+                            NotifyOnThreadPool(op);
                         }
                         catch (Exception e)
                         {
