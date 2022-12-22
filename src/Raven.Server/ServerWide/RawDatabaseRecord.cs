@@ -111,7 +111,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public long? _etagForBackup;
+        private long? _etagForBackup;
 
         public long EtagForBackup
         {
@@ -128,7 +128,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public string _databaseName;
+        private string _databaseName;
 
         public string DatabaseName
         {
