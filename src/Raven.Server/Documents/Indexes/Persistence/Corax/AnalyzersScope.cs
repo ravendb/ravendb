@@ -59,7 +59,7 @@ internal unsafe class AnalyzersScope : IDisposable
     public ByteStringContext<ByteStringMemoryCache>.InternalScope Execute(Slice fieldName, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens)
     {
         Analyzer analyzer = GetAnalyzer(fieldName);
-        return ExecuteAnalyze(analyzer, source, out buffer, out tokens);
+        return Execute(analyzer, source, out buffer, out tokens);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -81,10 +81,10 @@ internal unsafe class AnalyzersScope : IDisposable
         }
 
         var analyzer = field.Analyzer;
-        return ExecuteAnalyze(analyzer, source, out buffer, out tokens);
+        return Execute(analyzer, source, out buffer, out tokens);
     }
     
-    private ByteStringContext<ByteStringMemoryCache>.InternalScope ExecuteAnalyze(Analyzer analyzer, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens)
+    public ByteStringContext<ByteStringMemoryCache>.InternalScope Execute(Analyzer analyzer, ReadOnlySpan<byte> source, out ReadOnlySpan<byte> buffer, out ReadOnlySpan<Token> tokens)
     {
         analyzer.GetOutputBuffersSize(source.Length, out var outputSize, out var tokensSize);
         if (outputSize > _tempOutputBufferSize || tokensSize > _tempOutputTokenSize)

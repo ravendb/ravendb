@@ -111,7 +111,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
         var termOriginal = Encoding.UTF8.GetBytes(r.ReadToEnd());
 
         using var _ = Slice.From(this._builderParameters.Allocator, fieldName, ByteStringType.Immutable, out var fieldNameSlice);
-        using var __ = _analyzersScope.Execute(fieldNameSlice, termOriginal, out var outputBuffer, out var outputTokens);
+        using var __ = _analyzersScope.Execute(_analyzer, termOriginal, out var outputBuffer, out var outputTokens);
 
         var tokenCount = 0;
         foreach (var token in outputTokens)
