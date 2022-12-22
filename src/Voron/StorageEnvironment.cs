@@ -954,6 +954,8 @@ namespace Voron
                 _writeTransactionRunning.Reset();
                 _transactionWriter.Release();
 
+                Journal.Applicator.OnTransactionCompleted();
+
                 if (tx.FlushInProgressLockTaken)
                     FlushInProgressLock.ExitReadLock();
             }
