@@ -1,13 +1,14 @@
 import database from "models/resources/database";
 import shardedDatabase from "models/resources/shardedDatabase";
 import NodesTopology = Raven.Client.ServerWide.Operations.NodesTopology;
+import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
 
 class shard extends database {
     private readonly shardTopology: NodesTopology;
     readonly parent: shardedDatabase;
     private readonly _shardNumber: number;
     
-    constructor(dbInfo: StudioDatabaseResponse, shardNumber: number, shardTopology: NodesTopology, parent: shardedDatabase) {
+    constructor(dbInfo: StudioDatabaseInfo, shardNumber: number, shardTopology: NodesTopology, parent: shardedDatabase) {
         super(dbInfo, parent.clusterNodeTag);
         this.parent = parent;
         this.shardTopology = shardTopology;
@@ -28,10 +29,10 @@ class shard extends database {
         return "Shard #" + this.shardNumber;
     }
     
-    updateUsing(incomingCopy: StudioDatabaseResponse) {
+    updateUsing(incomingCopy: StudioDatabaseInfo) {
         super.updateUsing(incomingCopy);
         
-        this.name = incomingCopy.DatabaseName + "$" + this._shardNumber;
+        this.name = incomingCopy.Name + "$" + this._shardNumber;
 
         const topology = incomingCopy.Sharding.Shards[this._shardNumber];
         

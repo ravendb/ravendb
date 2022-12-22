@@ -210,6 +210,8 @@ namespace TypingsGenerator
             // database
             scripter.AddType(typeof(DatabasePutResult));
             scripter.AddType(typeof(DatabaseRecord));
+            scripter.AddType(typeof(StudioDatabasesHandler.StudioDatabaseInfo));
+            
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(DetailedDatabaseStatistics));
             scripter.AddType(typeof(EssentialDatabaseStatistics));

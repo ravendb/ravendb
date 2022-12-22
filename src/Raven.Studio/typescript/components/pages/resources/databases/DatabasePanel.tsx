@@ -113,6 +113,9 @@ function deleteDatabases(toDelete: DatabaseSharedInfo[]) {
 function toExternalUrl(db: DatabaseSharedInfo, url: string) {
     // we have to redirect to different node, let's find first member where selected database exists
     const firstNode = db.nodes[0];
+    if (!firstNode) {
+        return "";
+    }
     return appUrl.toExternalUrl(firstNode.nodeUrl, url);
 }
 
@@ -308,9 +311,9 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             <Button
                                 href={manageGroupUrl}
                                 title="Manage the Database Group"
+                                target={db.currentNode.relevant ? undefined : "_blank"}
                                 className="me-1"
-                                data-bind="css: { 'disabled': !canNavigateToDatabase() || isBeingDeleted() }, 
-                                              attr: { href: $root.createManageDbGroupUrlObsevable($data), target: $root.createIsLocalDatabaseObservable(name)() ? undefined : '_blank' }"
+                                disabled={!canNavigateToDatabase || db.currentNode.isBeingDeleted}
                             >
                                 <i className="icon-manage-dbgroup me-2" />
                                 Manage group

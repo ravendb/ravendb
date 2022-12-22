@@ -26,10 +26,10 @@ function commonInit() {
 export const SingleNode: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     commonInit();
 
-    const { useDatabaseManager } = mockHooks;
-    useDatabaseManager.with_Single();
-
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
+
+    const { useDatabaseManager } = mockHooks;
+    useDatabaseManager.withDatabases([db.toDto()]);
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>

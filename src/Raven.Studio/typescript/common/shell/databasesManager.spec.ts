@@ -42,7 +42,7 @@ describe("databasesManager", () => {
         expect(firstDb)
             .toBeInstanceOf(nonShardedDatabase);
         expect(firstDb.name)
-            .toEqual(response.Databases[0].DatabaseName);
+            .toEqual(response.Databases[0].Name);
     })
     
     it("can handle sharded database", async () => {
@@ -60,7 +60,7 @@ describe("databasesManager", () => {
         expect(dbs)
             .toHaveLength(1);
         
-        const expectedShardedDatabaseGroup = (response.Databases[0].DatabaseName.split("$")[0]);
+        const expectedShardedDatabaseGroup = (response.Databases[0].Name.split("$")[0]);
         
         const firstDb = dbs[0];
         expect(firstDb)
@@ -74,12 +74,12 @@ describe("databasesManager", () => {
             .toHaveLength(3);
         
         expect(shards[0].name)
-            .toEqual(response.Databases[0].DatabaseName + "$0");
+            .toEqual(response.Databases[0].Name + "$0");
         expect(shards[0])
             .toBeInstanceOf(shard);
 
         expect(shards[1].name)
-            .toEqual(response.Databases[0].DatabaseName + "$1");
+            .toEqual(response.Databases[0].Name + "$1");
         expect(shards[1])
             .toBeInstanceOf(shard);
     });
@@ -94,7 +94,7 @@ describe("databasesManager", () => {
         const manager = new databasesManager();
         await manager.init();
         
-        const firstShardName = response.Databases[0].DatabaseName;
+        const firstShardName = response.Databases[0].Name;
         
         const singleShard = manager.getDatabaseByName(firstShardName + "$0") as shard;
         
@@ -122,7 +122,7 @@ describe("databasesManager", () => {
         const manager = new databasesManager();
         await manager.init();
 
-        const shardGroupName = response.Databases[0].DatabaseName.split("$")[0];
+        const shardGroupName = response.Databases[0].Name.split("$")[0];
 
         const shard = manager.getDatabaseByName(shardGroupName) as shardedDatabase;
 

@@ -15,6 +15,7 @@ import nonShardedDatabase from "models/resources/nonShardedDatabase";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import getDatabasesForStudioCommand from "commands/resources/getDatabasesForStudioCommand";
 import getDatabaseForStudioCommand from "commands/resources/getDatabaseForStudioCommand";
+import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
 
 class databasesManager {
 
@@ -145,7 +146,7 @@ class databasesManager {
         this.deleteRemovedDatabases(incomingData);
 
         incomingData.Databases.forEach(dbDto => {
-            const existingDb = this.getDatabaseByName(dbDto.DatabaseName);
+            const existingDb = this.getDatabaseByName(dbDto.Name);
             this.updateDatabase(dbDto, existingDb);
         });
         
@@ -159,7 +160,7 @@ class databasesManager {
         const toDelete: database[] = [];
 
         this.databases().forEach(db => {
-            const matchedDb = incomingDatabases.find(x => x.DatabaseName.toLowerCase() === db.name.toLowerCase());
+            const matchedDb = incomingDatabases.find(x => x.Name.toLowerCase() === db.name.toLowerCase());
             if (matchedDb) {
                 const incomingIsSharded = !!matchedDb.Sharding;
                 const localIsSharded = db instanceof shardedDatabase;
@@ -179,7 +180,7 @@ class databasesManager {
         toDelete.forEach(db => this.onDatabaseDeleted(db));
     }
     
-    private updateDatabase(incomingDatabase: StudioDatabaseResponse, matchedExistingRs: database): database {
+    private updateDatabase(incomingDatabase: StudioDatabaseInfo, matchedExistingRs: database): database {
         if (matchedExistingRs) {
             matchedExistingRs.updateUsing(incomingDatabase);
             return matchedExistingRs;
@@ -230,10 +231,10 @@ class databasesManager {
                             this.onUpdateStatsCallbacks().forEach(x => x());
                         }
                     })
-                    .done((info: StudioDatabaseResponse) => {
+                    .done((info: StudioDatabaseInfo) => {
                         // check if database if still relevant on this node
                         const localTag = clusterTopologyManager.default.localNodeTag();
-                        const topologyToUse = info.NodesTopology ?? info.Sharding?.Orchestrator.Topology;
+                        const topologyToUse = info.NodesTopology ?? info.Sharding?.Orchestrator.NodesTopology;
                         const relevant = topologyToUse && (topologyToUse.Members.some(x => x.NodeTag === localTag) ||
                             topologyToUse.Promotables.some(x => x.NodeTag === localTag) ||
                             topologyToUse.Rehabs.some(x => x.NodeTag === localTag));
@@ -246,15 +247,17 @@ class databasesManager {
         }
     }
 
-    private updateDatabaseInfo(db: database, databaseName: string): JQueryPromise<StudioDatabaseResponse> {
-        return new getDatabaseForStudioCommand(databaseName)
+    private updateDatabaseInfo(db: database, databaseName: string): JQueryPromise<StudioDatabaseInfo> {
+        const rootDatabaseName = DatabaseUtils.shardGroupKey(databaseName);
+        
+        return new getDatabaseForStudioCommand(rootDatabaseName)
             .execute()
-            .done((rsInfo: StudioDatabaseResponse) => {
+            .done((rsInfo: StudioDatabaseInfo) => {
                 if (rsInfo.IsDisabled) {
                     changesContext.default.disconnectIfCurrent(db, "DatabaseDisabled");
                 }
 
-                const updatedDatabase = this.updateDatabase(rsInfo, this.getDatabaseByName(rsInfo.DatabaseName));
+                const updatedDatabase = this.updateDatabase(rsInfo, this.getDatabaseByName(rsInfo.Name));
 
                 this.onUpdateStatsCallbacks().forEach(x => x());
                 

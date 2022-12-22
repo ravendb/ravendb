@@ -2,11 +2,13 @@
 import shardedDatabase from "models/resources/shardedDatabase";
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
+import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
+import DatabaseGroupNodeStatus = Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;
 
 export class DatabasesStubs {
-    private static genericDatabaseInfo(name: string): StudioDatabaseResponse {
+    private static genericDatabaseInfo(name: string): StudioDatabaseInfo {
         return {
-            DatabaseName: name,
+            Name: name,
             IsEncrypted: false,
             LockMode: "Unlock",
             DeletionInProgress: {},
@@ -14,21 +16,24 @@ export class DatabasesStubs {
             NodesTopology: {
                 Members: [
                     {
-                        NodeTag: "a",
+                        NodeTag: "A",
                         ResponsibleNode: null,
                         NodeUrl: "http://a.ravendb",
                     },
                 ],
                 Promotables: [],
                 Rehabs: [],
-                Status: null,
+                Status: {
+                    A: DatabasesStubs.statusOk(),
+                },
                 PriorityOrder: null,
             },
             IsDisabled: false,
             HasRefreshConfiguration: false,
             HasExpirationConfiguration: false,
             HasRevisionsConfiguration: false,
-            Environment: "None",
+            StudioEnvironment: "None",
+            IsSharded: false,
         };
     }
 
@@ -54,6 +59,8 @@ export class DatabasesStubs {
             NodeUrl: "http://c.ravendb",
             ResponsibleNode: null,
         });
+        dbInfo.NodesTopology.Status["B"] = DatabasesStubs.statusOk();
+        dbInfo.NodesTopology.Status["C"] = DatabasesStubs.statusOk();
         return dbInfo;
     }
 
@@ -63,9 +70,10 @@ export class DatabasesStubs {
         return new nonShardedDatabase(dto, ko.observable(firstNodeTag));
     }
 
-    static shardedDatabaseDto(): StudioDatabaseResponse {
+    static shardedDatabaseDto(): StudioDatabaseInfo {
         const dbInfo = DatabasesStubs.genericDatabaseInfo("sharded");
         dbInfo.NodesTopology = null;
+        dbInfo.IsSharded = true;
         dbInfo.Sharding = {
             Shards: {
                 [0]: {
@@ -118,7 +126,7 @@ export class DatabasesStubs {
                 },
             },
             Orchestrator: {
-                Topology: {
+                NodesTopology: {
                     Members: [
                         {
                             NodeTag: "A",
@@ -205,6 +213,13 @@ export class DatabasesStubs {
             Pager: "Voron.Impl.Paging.RvnMemoryMapPager",
             StaleIndexes: [],
             Indexes: [],
+        };
+    }
+
+    private static statusOk(): DatabaseGroupNodeStatus {
+        return {
+            LastStatus: "Ok",
+            LastError: null,
         };
     }
 }
