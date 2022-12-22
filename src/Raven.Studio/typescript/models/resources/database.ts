@@ -1,5 +1,11 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
+import DeletionInProgressStatus = Raven.Client.ServerWide.DeletionInProgressStatus;
+import accessManager from "common/shell/accessManager";
+import { DatabaseSharedInfo, NodeInfo } from "components/models/databases";
+import NodeId = Raven.Client.ServerWide.Operations.NodeId;
+import NodesTopology = Raven.Client.ServerWide.Operations.NodesTopology;
+
 abstract class database {
     static readonly type = "database";
     static readonly qualifier = "db";
@@ -9,11 +15,13 @@ abstract class database {
     disabled = ko.observable<boolean>(false);
     errored = ko.observable<boolean>(false);
     relevant = ko.observable<boolean>(true);
-    nodes = ko.observableArray<string>([]);
+    nodes = ko.observableArray<NodeInfo>([]);
     hasRevisionsConfiguration = ko.observable<boolean>(false);
     hasExpirationConfiguration = ko.observable<boolean>(false);
     hasRefreshConfiguration = ko.observable<boolean>(false);
     isEncrypted = ko.observable<boolean>(false);
+    lockMode = ko.observable<DatabaseLockMode>();
+    deletionInProgress = ko.observableArray<{ tag: string, status: DeletionInProgressStatus }>([]);
     
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     environmentClass = database.createEnvironmentColorComputed("label", this.environment);
@@ -67,33 +75,36 @@ abstract class database {
         this.isEncrypted(incomingCopy.IsEncrypted);
         this.name = incomingCopy.DatabaseName;
         this.disabled(incomingCopy.IsDisabled);
+        this.lockMode(incomingCopy.LockMode);
+        
+        this.deletionInProgress(Object.entries(incomingCopy.DeletionInProgress).map((kv: [string, DeletionInProgressStatus]) => {
+            return {
+                tag: kv[0],
+                status: kv[1]
+            }
+        }));
+        
         this.hasRevisionsConfiguration(incomingCopy.HasRevisionsConfiguration);
         this.hasExpirationConfiguration(incomingCopy.HasExpirationConfiguration);
         this.hasRefreshConfiguration(incomingCopy.HasRefreshConfiguration);
-        this.isAdminCurrentTenant(incomingCopy.IsAdmin);
-        this.name = incomingCopy.Name;
-        this.disabled(incomingCopy.Disabled);
-        this.environment(incomingCopy.Environment !== "None" ? incomingCopy.Environment : null);
+        
+        /* TODO
         if (incomingCopy.LoadError) {
             this.errored(true);
-        }
+        }*/
+
+        this.environment(incomingCopy.Environment !== "None" ? incomingCopy.Environment : null);
         
-        if (incomingCopy.NodesTopology) {
-            const nodeTag = this.clusterNodeTag();
-            
-            const nodes: string[] = [];
-            incomingCopy.NodesTopology.Members.forEach(x => nodes.push(x.NodeTag));
-            incomingCopy.NodesTopology.Promotables.forEach(x => nodes.push(x.NodeTag));
-            incomingCopy.NodesTopology.Rehabs.forEach(x => nodes.push(x.NodeTag));
-
-            this.relevant(_.includes(nodes, nodeTag));
-            this.nodes(nodes);
-        }
-
-        const dbAccessLevel = accessManager.default.getEffectiveDatabaseAccessLevel(incomingCopy.Name);
+        //TODO: delete
+        const dbAccessLevel = accessManager.default.getEffectiveDatabaseAccessLevel(incomingCopy.DatabaseName);
         this.databaseAccess(dbAccessLevel);
         this.databaseAccessText(accessManager.default.getAccessLevelText(dbAccessLevel));
         this.databaseAccessColor(accessManager.default.getAccessColor(dbAccessLevel));
+    }
+    
+    isBeingDeleted() {
+        const localTag = this.clusterNodeTag();
+        return this.deletionInProgress().some(x => x.tag === localTag);
     }
 
     static getNameFromUrl(url: string) {
@@ -101,6 +112,22 @@ abstract class database {
         return (index > 0) ? url.substring(index + 10) : "";
     }
 
+    toDto(): DatabaseSharedInfo {
+        return {
+            name: this.name,
+            encrypted: this.isEncrypted(),
+            sharded: false,
+            nodes: this.nodes(),
+            currentNode: { 
+                relevant: this.relevant(),
+                disabled: this.disabled(),
+                isBeingDeleted: this.isBeingDeleted()
+            },
+            lockMode: this.lockMode(),
+            deletionInProgress: this.deletionInProgress().map(x => x.tag)
+        }
+    }
+    
     //TODO: remove those props?
     get fullTypeName() {
         return "Database";
@@ -113,6 +140,17 @@ abstract class database {
 
     get type() {
         return database.type;
+    }
+
+    protected mapNode(topology: NodesTopology, node: NodeId, type: databaseGroupNodeType): NodeInfo {
+        return {
+            tag: node.NodeTag,
+            nodeUrl: node.NodeUrl,
+            type,
+            responsibleNode: node.ResponsibleNode,
+            lastError: topology.Status?.[node.NodeTag]?.LastError,
+            lastStatus: topology.Status?.[node.NodeTag]?.LastStatus,
+        }
     }
 }
 

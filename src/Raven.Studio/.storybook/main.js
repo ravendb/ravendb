@@ -5,6 +5,13 @@ const webpackConfig = webpackConfigFunc(null, {
     watch: false
 });
 
+const customHooksToMock = require("../typescript/components/hooks/hooksForAutoMock.json").hooks;
+const customHooksAliases = {};
+
+customHooksToMock.forEach(name => {
+   customHooksAliases["hooks/" + name] = path.resolve(__dirname, "../typescript/components/hooks/__mocks__/" + name);
+});
+
 module.exports = {
   core: {
     builder: "webpack5"
@@ -27,6 +34,7 @@ module.exports = {
   "framework": "@storybook/react",
     webpackFinal: async config => {
         config.resolve.alias = {
+            ...customHooksAliases,
             ...config.resolve.alias, 
             ...webpackConfig.resolve.alias,
         };

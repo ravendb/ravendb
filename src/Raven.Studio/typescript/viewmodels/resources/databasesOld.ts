@@ -3,37 +3,22 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessManager = require("common/shell/accessManager");
 import createDatabase = require("viewmodels/resources/createDatabase");
-import disableDatabaseToggleConfirm = require("viewmodels/resources/disableDatabaseToggleConfirm");
-import toggleDatabaseCommand = require("commands/resources/toggleDatabaseCommand");
-import togglePauseIndexingCommand = require("commands/database/index/togglePauseIndexingCommand");
-import toggleDisableIndexingCommand = require("commands/database/index/toggleDisableIndexingCommand");
-import loadDatabaseCommand = require("commands/resources/loadDatabaseCommand");
-import databasesInfo = require("models/resources/info/databasesInfo");
-import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
-import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
-import databaseInfo = require("models/resources/info/databaseInfo");
-import messagePublisher = require("common/messagePublisher");
-import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import databaseNotificationCenterClient = require("common/databaseNotificationCenterClient");
-import changeSubscription = require("common/changeSubscription");
-import generalUtils = require("common/generalUtils");
-import popoverUtils = require("common/popoverUtils");
-import database = require("models/resources/database");
-import eventsCollector = require("common/eventsCollector");
-import storageKeyProvider = require("common/storage/storageKeyProvider");
-import compactDatabaseDialog = require("viewmodels/resources/compactDatabaseDialog");
-import notificationCenter = require("common/notifications/notificationCenter");
-import saveDatabaseLockModeCommand = require("commands/resources/saveDatabaseLockModeCommand");
-
 type databaseState = "errored" | "disabled" | "online" | "offline" | "remote";
 type filterState = databaseState | 'local' | 'all';
 
+type OLD_DATABASES_INFO = {
+    sortedDatabases: KnockoutObservableArray<any>;
+    getByName: (name: string) => any;
+    updateDatabase: (a: any) => void;
+}
+
 class databases extends viewModelBase {
-    
     view = require("views/resources/databases.html")
     
-
-    databases = ko.observable<databasesInfo>();
+    
+    /*
+    
+    databases = ko.observable<OLD_DATABASES_INFO>(); //TODO: databasesInfo
     clusterManager = clusterTopologyManager.default;
     
     formatBytes = generalUtils.formatBytesToSize;
@@ -237,7 +222,7 @@ class databases extends viewModelBase {
     private fetchDatabases(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         return new getDatabasesCommand()
             .execute()
-            .done(info => this.databases(new databasesInfo(info)));
+            //TODO: .done(info => this.databases(new databasesInfo(info)));
     }
 
     private onDatabaseChange(e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
@@ -346,8 +331,9 @@ class databases extends viewModelBase {
             }
         });
         
-         */
+         *
     }
+    */
 
     private filterDatabases(): void {
         /* TODO
@@ -390,6 +376,7 @@ class databases extends viewModelBase {
          */
     }
 
+    /*
     createManageDbGroupUrlObsevable(dbInfo: databaseInfo): KnockoutComputed<string> {
         return ko.pureComputed(() => {
             const isLocal = true; //TODO: this.isLocalDatabase(dbInfo.name);
@@ -397,7 +384,7 @@ class databases extends viewModelBase {
             if (isLocal) {
                 return link;
             } else {
-                return databases.toExternalUrl(dbInfo, link);
+                //TODO: return databases.toExternalUrl(dbInfo, link);
             }
         });
     }
@@ -409,10 +396,10 @@ class databases extends viewModelBase {
             if (isLocal) {
                 return link;
             } else {
-                return databases.toExternalUrl(dbInfo, link);
+                //TODO: return databases.toExternalUrl(dbInfo, link);
             }
         });
-    }
+    }*/
 
     
     /*
@@ -430,6 +417,7 @@ class databases extends viewModelBase {
     }*/
     
 
+    /*
     indexErrorsUrl(dbInfo: databaseInfo): string {
         return appUrl.forIndexErrors(dbInfo);
     }
@@ -470,7 +458,7 @@ class databases extends viewModelBase {
         if (withoutLock.length) {
             this.deleteDatabases(withoutLock);
         }
-    }*/
+    }
 
     private removeDatabase(dbInfo: databaseInfo) {
         this.databases().sortedDatabases.remove(dbInfo);
@@ -561,7 +549,7 @@ class databases extends viewModelBase {
                 if (result.can) {
                     db.inProgressAction(enableIndexing ? "Enabling..." : "Disabling...");
 
-                    new toggleDisableIndexingCommand(enableIndexing, db)
+                    new toggleDisableIndexingCommand(enableIndexing, { name: db.name })
                         .execute()
                         .done(() => {
                             db.indexingDisabled(!enableIndexing);
@@ -597,6 +585,7 @@ class databases extends viewModelBase {
             });
     }
 
+    
     newDatabase() {
         const createDbView = new createDatabase("newDatabase");
         app.showBootstrapDialog(createDbView)
@@ -695,6 +684,218 @@ class databases extends viewModelBase {
     isAdminAccessByDbName(dbName: string) {
         return accessManager.default.isAdminByDbName(dbName);
     }
+    
+     */
 }
 
 export = databases;
+
+
+/* TODO
+
+class databasesInfo {
+
+    sortedDatabases = ko.observableArray<databaseInfo>();
+
+    databasesCount: KnockoutComputed<number>;
+
+    constructor(dto: Raven.Client.ServerWide.Operations.DatabasesInfo) {
+
+        const databases = dto.Databases.map(db => new databaseInfo(db));
+
+        const dbs = [...databases];
+        dbs.sort((a, b) => generalUtils.sortAlphaNumeric(a.name, b.name));
+
+        this.sortedDatabases(dbs);
+
+        this.initObservables();
+    }
+
+    getByName(name: string) {
+        return this.sortedDatabases().find(x => x.name.toLowerCase() === name.toLowerCase());
+    }
+
+    updateDatabase(newDatabaseInfo: Raven.Client.ServerWide.Operations.DatabaseInfo) {
+        const databaseToUpdate = this.getByName(newDatabaseInfo.Name);
+
+        if (databaseToUpdate) {
+            databaseToUpdate.update(newDatabaseInfo);
+        } else { // new database - create instance of it
+            const dto = newDatabaseInfo as Raven.Client.ServerWide.Operations.DatabaseInfo;
+            const databaseToAdd = new databaseInfo(dto);
+            this.sortedDatabases.push(databaseToAdd);
+            this.sortedDatabases.sort((a, b) => generalUtils.sortAlphaNumeric(a.name, b.name));
+        }
+    }
+
+    private initObservables() {
+        this.databasesCount = ko.pureComputed(() => this
+            .sortedDatabases()
+            .filter(r => r instanceof databaseInfo)
+            .length);
+    }
+}
+
+
+//TODO: consider removing 
+class databaseInfo {
+
+    private static dayAsSeconds = 60 * 60 * 24;
+
+    name: string;
+
+    uptime = ko.observable<string>();
+    totalSize = ko.observable<number>();
+    totalTempBuffersSize = ko.observable<number>();
+    bundles = ko.observableArray<string>();
+    backupStatus = ko.observable<string>();
+    lastBackupText = ko.observable<string>();
+    lastFullOrIncrementalBackup = ko.observable<string>();
+    dynamicDatabaseDistribution = ko.observable<boolean>();
+
+    loadError = ko.observable<string>();
+
+    isEncrypted = ko.observable<boolean>();
+    isAdmin = ko.observable<boolean>();
+    disabled = ko.observable<boolean>();
+    lockMode = ko.observable<Raven.Client.ServerWide.DatabaseLockMode>();
+
+    filteredOut = ko.observable<boolean>(false);
+    isBeingDeleted = ko.observable<boolean>(false);
+
+    indexingErrors = ko.observable<number>();
+    alerts = ko.observable<number>();
+    performanceHints = ko.observable<number>();
+
+    environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
+    
+    online: KnockoutComputed<boolean>;
+    isLoading: KnockoutComputed<boolean>;
+    hasLoadError: KnockoutComputed<boolean>;
+    canNavigateToDatabase: KnockoutComputed<boolean>;
+    isCurrentlyActiveDatabase: KnockoutComputed<boolean>;
+    
+    databaseAccessText = ko.observable<string>();
+    databaseAccessColor = ko.observable<string>();
+    databaseAccessClass = ko.observable<string>();
+
+    inProgressAction = ko.observable<string>();
+
+    rejectClients = ko.observable<boolean>();
+    indexingStatus = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
+    indexingDisabled = ko.observable<boolean>();
+    indexingPaused = ko.observable<boolean>();
+    documentsCount = ko.observable<number>();
+    indexesCount = ko.observable<number>();
+
+    deletionInProgress = ko.observableArray<string>([]);
+
+    constructor(dto: Raven.Client.ServerWide.Operations.DatabaseInfo) {
+        this.initializeObservables();
+
+        this.update(dto);
+    }
+
+    get qualifier() {
+        return "db";
+    }
+
+    get fullTypeName() {
+        return "database";
+    }
+
+    asDatabase(): database {
+        const casted = databasesManager.default.getDatabaseByName(this.name);
+        if (!casted) {
+            throw new Error("Unable to find database: " + this.name + " in database manager");
+        }
+        return casted;
+    }
+
+    static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
+        return { qualifier: input.substr(0, 2), name: input.substr(3) };
+    }
+
+    private computeBackupStatus(backupInfo: Raven.Client.ServerWide.Operations.BackupInfo) {
+        if (!backupInfo || !backupInfo.LastBackup) {
+            this.lastBackupText("Never backed up");
+            return "text-danger";
+        }
+
+        const dateInUtc = moment.utc(backupInfo.LastBackup);
+        const diff = moment().utc().diff(dateInUtc);
+        const durationInSeconds = moment.duration(diff).asSeconds();
+
+        this.lastBackupText(`Backed up ${this.lastFullOrIncrementalBackup()}`);
+        return durationInSeconds > databaseInfo.dayAsSeconds ? "text-warning" : "text-success";
+    }
+    
+    private initializeObservables() {
+        this.hasLoadError = ko.pureComputed(() => !!this.loadError());
+
+        this.online = ko.pureComputed(() => {
+            return !!this.uptime();
+        });
+
+        this.canNavigateToDatabase = ko.pureComputed(() => {
+            const enabled = !this.disabled();
+            const hasLoadError = this.hasLoadError();
+            return enabled && !hasLoadError;
+        });
+
+        this.isCurrentlyActiveDatabase = ko.pureComputed(() => {
+            const currentDatabase = activeDatabaseTracker.default.database();
+
+            if (!currentDatabase) {
+                return false;
+            }
+
+            return currentDatabase.name === this.name;
+        });
+
+        this.isLoading = ko.pureComputed(() => {
+            return this.isCurrentlyActiveDatabase() &&
+                !this.online() &&
+                !this.disabled();
+        });
+    }
+
+    update(dto: Raven.Client.ServerWide.Operations.DatabaseInfo): void {
+        this.name = dto.Name;
+        this.lockMode(dto.LockMode);
+        this.disabled(dto.Disabled);
+        this.isAdmin(dto.IsAdmin);
+        this.isEncrypted(dto.IsEncrypted);
+        this.totalSize(dto.TotalSize ? dto.TotalSize.SizeInBytes : 0);
+        this.totalTempBuffersSize(dto.TempBuffersSize ? dto.TempBuffersSize.SizeInBytes : 0);
+        this.indexingErrors(dto.IndexingErrors);
+        this.alerts(dto.Alerts);
+        this.performanceHints(dto.PerformanceHints);
+        this.loadError(dto.LoadError);
+        this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
+        this.dynamicDatabaseDistribution(dto.DynamicNodesDistribution);
+        
+        this.environment(dto.Environment);
+
+        if (dto.BackupInfo && dto.BackupInfo.LastBackup) {
+            this.lastFullOrIncrementalBackup(moment.utc(dto.BackupInfo.LastBackup).local().fromNow());
+        }
+            
+        this.backupStatus(this.computeBackupStatus(dto.BackupInfo));
+
+        this.rejectClients(dto.RejectClients);
+        this.indexingStatus(dto.IndexingStatus);
+        this.indexingDisabled(dto.IndexingStatus === "Disabled");
+        this.indexingPaused(dto.IndexingStatus === "Paused");
+        this.documentsCount(dto.DocumentsCount);
+        this.indexesCount(dto.IndexesCount);
+        this.deletionInProgress(dto.DeletionInProgress ? Object.keys(dto.DeletionInProgress) : []);
+        this.databaseAccessText(accessManager.default.getDatabaseAccessLevelTextByDbName(this.name));
+        this.databaseAccessColor(accessManager.default.getAccessColorByDbName(this.name));
+        this.databaseAccessClass(accessManager.default.getAccessIconByDbName(this.name))
+    }
+}
+
+export = databaseInfo;
+
+ */

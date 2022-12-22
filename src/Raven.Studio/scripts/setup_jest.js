@@ -12,7 +12,12 @@ require("bootstrap/dist/js/bootstrap");
 
 require("../typescript/test/mocks");
 
-jest.mock("hooks/useEventsCollector");
+const customHooks = require("../typescript/components/hooks/hooksForAutoMock.json").hooks;
+
+customHooks.forEach(hook => {
+    jest.mock("hooks/" + hook);
+});
+
 jest.mock("../typescript/common/eventsCollector");
 jest.mock("../typescript/common/bindingHelpers/aceEditorBindingHandler");
 

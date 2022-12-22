@@ -1,7 +1,7 @@
 ﻿import React, { ReactNode } from "react";
 import "./RichPanel.scss";
 import classNames from "classnames";
-import { Badge, Card, CardHeader, Input } from "reactstrap";
+import { Badge, Card, CardHeader } from "reactstrap";
 
 interface RichPanelProps {
     className?: string;
@@ -71,7 +71,7 @@ export function RichPanelInfo(props: { children: ReactNode | ReactNode[] }) {
     const { children, ...rest } = props;
     return (
         <div className="rich-panel-info" {...rest}>
-            {props.children}
+            {children}
         </div>
     );
 }
@@ -80,7 +80,7 @@ export function RichPanelActions(props: { children: ReactNode | ReactNode[] }) {
     const { children, ...rest } = props;
     return (
         <div className="rich-panel-actions" {...rest}>
-            {props.children}
+            {children}
         </div>
     );
 }
@@ -88,25 +88,14 @@ export function RichPanelActions(props: { children: ReactNode | ReactNode[] }) {
 interface RichPanelNameProps {
     children: ReactNode | ReactNode[];
     title?: string;
-    href?: string;
 }
 
 export function RichPanelName(props: RichPanelNameProps) {
-    const { children, href, title, ...rest } = props;
+    const { children, ...rest } = props;
     return (
-        <>
-            {href ? (
-                <h3 className="m-0 me-4 flex-grow-1" {...rest}>
-                    <a href={href} title={title}>
-                        {props.children}
-                    </a>
-                </h3>
-            ) : (
-                <h3 className="m-0 me-4 flex-grow-1" title={title} {...rest}>
-                    {props.children}
-                </h3>
-            )}
-        </>
+        <h3 className="m-0 me-4 flex-grow-1" {...rest}>
+            {children}
+        </h3>
     );
 }
 

@@ -1,18 +1,19 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import databasesManager = require("common/shell/databasesManager");
 import notificationCenter = require("common/notifications/notificationCenter");
-import databaseInfo = require("models/resources/info/databaseInfo");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import compactDatabaseCommand = require("commands/resources/compactDatabaseCommand");
 import genUtils = require("common/generalUtils");
 import dialog = require("plugins/dialog");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
+type compactDatabaseItem = { name: string; }
+
 class compactDatabaseDialog extends dialogViewModelBase {
 
     view = require("views/resources/compactDatabaseDialog.html");
     
-    database: databaseInfo;
+    database: compactDatabaseItem;
     
     allIndexes = ko.observableArray<string>([]);
     indexesToCompact = ko.observableArray<string>([]);
@@ -32,7 +33,7 @@ class compactDatabaseDialog extends dialogViewModelBase {
     numberOfNodes: KnockoutComputed<number>;
     currentNodeTag: KnockoutComputed<string>;
     
-    constructor(db: databaseInfo) {
+    constructor(db: compactDatabaseItem) {
         super(); 
         
         this.database = db;
@@ -50,7 +51,7 @@ class compactDatabaseDialog extends dialogViewModelBase {
 
     protected initObservables() {
         this.numberOfIndexesFormatted = ko.pureComputed(() => {
-            return `(${genUtils.formatAsCommaSeperatedString(this.database.indexesCount(), 0)})`;
+            return `(${genUtils.formatAsCommaSeperatedString(this.allIndexes().length, 0)})`;
         })
 
         this.numberOfSelectedIndexesFormatted = ko.pureComputed(() => {
@@ -89,19 +90,19 @@ class compactDatabaseDialog extends dialogViewModelBase {
     }   
     
     compactDatabase() {
-        this.database.inProgressAction("Compacting...");
+        //TODO: this.database.inProgressAction("Compacting...");
 
         new compactDatabaseCommand(this.database.name, this.compactDocuments(), this.indexesToCompact())
             .execute()
             .done(result => {
                 notificationCenter.instance.monitorOperation(null, result.OperationId)
-                    .always(() => this.database.inProgressAction(null));
+                   //tODO:  .always(() => this.database.inProgressAction(null));
 
                 notificationCenter.instance.openDetailsForOperationById(null, result.OperationId);
 
                 dialog.close(this);
             })
-            .fail(() => this.database.inProgressAction(null));
+            //TODO: .fail(() => this.database.inProgressAction(null));
     }
 
     selectAllIndexes() {

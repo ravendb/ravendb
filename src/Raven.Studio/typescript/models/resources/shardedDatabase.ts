@@ -25,7 +25,7 @@ class shardedDatabase extends database {
         this.shards().forEach(shard => {
             shard.nodes().forEach(node => {
                 locationSpecifiers.push({
-                    nodeTag: node,
+                    nodeTag: node.tag,
                     shardNumber: shard.shardNumber
                 })
             })
@@ -40,14 +40,14 @@ class shardedDatabase extends database {
         const topology = incomingCopy.Sharding.Orchestrator.Topology;
 
         const nodes = [
-            ...topology.Members,
-            ...topology.Promotables,
-            ...topology.Rehabs
+            ...topology.Members.map(x => this.mapNode(topology, x, "Member")),
+            ...topology.Promotables.map(x => this.mapNode(topology, x, "Member")),
+            ...topology.Rehabs.map(x => this.mapNode(topology, x, "Member")),
         ];
 
         this.nodes(nodes);
         const nodeTag = this.clusterNodeTag();
-        this.relevant(nodes.includes(nodeTag));
+        this.relevant(nodes.some(x => x.tag === nodeTag));
 
         const shards = Object.entries(incomingCopy.Sharding.Shards).map((kv) => {
             const [shardNumber, shardTopology] = kv;
@@ -55,7 +55,7 @@ class shardedDatabase extends database {
             return new shard(incomingCopy, parseInt(shardNumber, 10), shardTopology, this);
         })
         this.shards(shards);
-        this.relevant(nodes.includes(this.clusterNodeTag()));
+        this.relevant(nodes.some(x => x.tag === this.clusterNodeTag()));
     }
 }
 

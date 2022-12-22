@@ -178,8 +178,8 @@ abstract class abstractDatabaseAndNodeAwareTableWidget<TRaw, TStats extends stat
                 for (const dbNode of allDbNodes) {
                     // we want to check if we are not out of sync 
                     // as we get data from 2 different endpoints
-                    if (!_.includes(nodesWithData, dbNode)) {
-                        items.push(this.createNoDataItem(dbNode, dbName));
+                    if (!_.includes(nodesWithData, dbNode.tag)) {
+                        items.push(this.createNoDataItem(dbNode.tag, dbName));
                     }
                 }
             }

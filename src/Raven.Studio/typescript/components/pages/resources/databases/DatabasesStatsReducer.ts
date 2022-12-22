@@ -18,12 +18,15 @@ export interface DatabasesStatsState {
 
 function mapToDatabaseShardedInfo(stats: DatabaseInfo): DatabaseSharedInfo {
     const sharded = DatabaseUtils.isSharded(stats.Name);
+    return null;
+    /*
     return {
         name: DatabaseUtils.shardGroupKey(stats.Name),
         sharded,
         lockMode: stats.LockMode,
         encrypted: stats.IsEncrypted,
-    };
+        
+    };*/
 }
 
 export const databasesStatsReducer: Reducer<DatabasesStatsState, DatabasesStatsReducerAction> = (

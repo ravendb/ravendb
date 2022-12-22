@@ -1,46 +1,35 @@
 ﻿import nonShardedDatabase from "models/resources/nonShardedDatabase";
 import shardedDatabase from "models/resources/shardedDatabase";
-import DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 
 export class DatabasesStubs {
-    private static genericDatabaseInfo(name: string): DatabaseInfo {
+    private static genericDatabaseInfo(name: string): StudioDatabaseResponse {
         return {
-            Name: name,
+            DatabaseName: name,
             IsEncrypted: false,
             LockMode: "Unlock",
-            Alerts: 0,
-            BackupInfo: null,
-            Disabled: false,
-            DynamicNodesDistribution: false,
-            HasExpirationConfiguration: false,
-            HasRefreshConfiguration: false,
-            HasRevisionsConfiguration: false,
-            DeletionInProgress: null,
-            IsAdmin: true,
-            Environment: "None",
-            LoadError: null,
-            RejectClients: false,
+            DeletionInProgress: {},
+            Sharding: null,
             NodesTopology: {
                 Members: [
                     {
-                        NodeTag: "A",
-                        NodeUrl: "http://127.0.0.1:8080",
+                        NodeTag: "a",
                         ResponsibleNode: null,
+                        NodeUrl: "http://a.ravendb",
                     },
                 ],
                 Promotables: [],
                 Rehabs: [],
+                Status: null,
                 PriorityOrder: null,
-                Status: {
-                    A: {
-                        LastError: null,
-                        LastStatus: "Ok",
-                    },
-                },
             },
-        } as any;
+            IsDisabled: false,
+            HasRefreshConfiguration: false,
+            HasExpirationConfiguration: false,
+            HasRevisionsConfiguration: false,
+            Environment: "None",
+        };
     }
 
     static nonShardedSingleNodeDatabaseDto() {
@@ -57,24 +46,14 @@ export class DatabasesStubs {
         const dbInfo = DatabasesStubs.genericDatabaseInfo("db1");
         dbInfo.NodesTopology.Members.push({
             NodeTag: "B",
-            NodeUrl: "http://127.0.0.2:8080",
+            NodeUrl: "http://b.ravendb",
             ResponsibleNode: null,
         });
-        dbInfo.NodesTopology.Status["B"] = {
-            LastError: null,
-            LastStatus: "Ok",
-        };
-
         dbInfo.NodesTopology.Members.push({
             NodeTag: "C",
-            NodeUrl: "http://127.0.0.3:8080",
+            NodeUrl: "http://c.ravendb",
             ResponsibleNode: null,
         });
-        dbInfo.NodesTopology.Status["C"] = {
-            LastError: null,
-            LastStatus: "Ok",
-        };
-
         return dbInfo;
     }
 
@@ -84,48 +63,101 @@ export class DatabasesStubs {
         return new nonShardedDatabase(dto, ko.observable(firstNodeTag));
     }
 
-    static shardedDatabaseDto() {
-        const dbInfo1 = DatabasesStubs.genericDatabaseInfo("sharded$0");
-        dbInfo1.NodesTopology.Members = [
-            {
-                NodeTag: "A",
-                NodeUrl: "http://127.0.0.1:8080",
-                ResponsibleNode: null,
+    static shardedDatabaseDto(): StudioDatabaseResponse {
+        const dbInfo = DatabasesStubs.genericDatabaseInfo("sharded");
+        dbInfo.NodesTopology = null;
+        dbInfo.Sharding = {
+            Shards: {
+                [0]: {
+                    Members: [
+                        {
+                            NodeTag: "A",
+                            NodeUrl: "http://a.ravendb",
+                            ResponsibleNode: null,
+                        },
+                        {
+                            NodeTag: "B",
+                            NodeUrl: "http://b.ravendb",
+                            ResponsibleNode: null,
+                        },
+                    ],
+                    Rehabs: [],
+                    Promotables: [],
+                },
+                [1]: {
+                    Members: [
+                        {
+                            NodeTag: "C",
+                            NodeUrl: "http://c.ravendb",
+                            ResponsibleNode: null,
+                        },
+                        {
+                            NodeTag: "D",
+                            NodeUrl: "http://d.ravendb",
+                            ResponsibleNode: null,
+                        },
+                    ],
+                    Rehabs: [],
+                    Promotables: [],
+                },
+                [2]: {
+                    Members: [
+                        {
+                            NodeTag: "E",
+                            NodeUrl: "http://e.ravendb",
+                            ResponsibleNode: null,
+                        },
+                        {
+                            NodeTag: "F",
+                            NodeUrl: "http://f.ravendb",
+                            ResponsibleNode: null,
+                        },
+                    ],
+                    Rehabs: [],
+                    Promotables: [],
+                },
             },
-            {
-                NodeTag: "B",
-                NodeUrl: "http://127.0.0.2:8080",
-                ResponsibleNode: null,
+            Orchestrator: {
+                Topology: {
+                    Members: [
+                        {
+                            NodeTag: "A",
+                            NodeUrl: "http://a.ravendb",
+                            ResponsibleNode: null,
+                        },
+                        {
+                            NodeTag: "B",
+                            NodeUrl: "http://b.ravendb",
+                            ResponsibleNode: null,
+                        },
+                        {
+                            NodeTag: "C",
+                            NodeUrl: "http://c.ravendb",
+                            ResponsibleNode: null,
+                        },
+                        {
+                            NodeTag: "D",
+                            NodeUrl: "http://d.ravendb",
+                            ResponsibleNode: null,
+                        },
+                        {
+                            NodeTag: "E",
+                            NodeUrl: "http://e.ravendb",
+                            ResponsibleNode: null,
+                        },
+                        {
+                            NodeTag: "F",
+                            NodeUrl: "http://f.ravendb",
+                            ResponsibleNode: null,
+                        },
+                    ],
+                    Promotables: [],
+                    Rehabs: [],
+                },
             },
-        ];
-        const dbInfo2 = DatabasesStubs.genericDatabaseInfo("sharded$1");
-        dbInfo2.NodesTopology.Members = [
-            {
-                NodeTag: "C",
-                NodeUrl: "http://127.0.0.3:8080",
-                ResponsibleNode: null,
-            },
-            {
-                NodeTag: "D",
-                NodeUrl: "http://127.0.0.4:8080",
-                ResponsibleNode: null,
-            },
-        ];
-        const dbInfo3 = DatabasesStubs.genericDatabaseInfo("sharded$2");
-        dbInfo3.NodesTopology.Members = [
-            {
-                NodeTag: "E",
-                NodeUrl: "http://127.0.0.5:8080",
-                ResponsibleNode: null,
-            },
-            {
-                NodeTag: "F",
-                NodeUrl: "http://127.0.0.6:8080",
-                ResponsibleNode: null,
-            },
-        ];
+        } as any;
 
-        return [dbInfo1, dbInfo2, dbInfo3];
+        return dbInfo;
     }
 
     static shardedDatabase() {

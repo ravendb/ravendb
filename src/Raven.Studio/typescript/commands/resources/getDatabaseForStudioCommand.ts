@@ -11,27 +11,12 @@ class getDatabaseForStudioCommand extends commandBase {
     }
 
     execute(): JQueryPromise<StudioDatabaseResponse> {
-        const deferred = $.Deferred<StudioDatabaseResponse>();
-        
         const url = endpoints.global.studioDatabases.studioTasksDatabases;
         const args = {
             name: this.dbName
         };
         
-        this.query(url, args)
-            .done((result: any) => {
-                deferred.resolve(result.Databases[0]);
-            })
-            .fail((xhr: JQueryXHR) => {
-                if (xhr.status === 404) {
-                    deferred.resolve(null);
-                } else {
-                    deferred.reject(xhr);
-                }
-            });
-        
-        
-        return deferred;
+        return this.query(url, args, null, x => x.Databases[0]);
     }
 }
 

@@ -1,10 +1,9 @@
 ﻿import commandBase = require("commands/commandBase");
-import databaseInfo = require("models/resources/info/databaseInfo");
 import endpoints = require("endpoints");
 
 class toggleDisableIndexingCommand extends commandBase {
 
-    constructor(private start: boolean, private db: databaseInfo) {
+    constructor(private start: boolean, private db: {  name: string }) { //TODO:
         super();
     }
 

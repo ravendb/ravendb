@@ -26,6 +26,8 @@ class databasesManager {
     changesContext = changesContext.default;
 
     private databaseToActivate = ko.observable<string>();
+    
+    onUpdateStatsCallbacks = ko.observableArray<() => void>([]);
 
     databases = ko.observableArray<database>([]);
 
@@ -146,6 +148,8 @@ class databasesManager {
             const existingDb = this.getDatabaseByName(dbDto.DatabaseName);
             this.updateDatabase(dbDto, existingDb);
         });
+        
+        this.onUpdateStatsCallbacks().forEach(x => x());
     }
 
     private deleteRemovedDatabases(incomingData: StudioDatabasesResponse) {
@@ -223,15 +227,16 @@ class databasesManager {
                     .fail((xhr: JQueryXHR) => {
                         if (xhr.status === 404) {
                             this.onDatabaseDeleted(db);
+                            this.onUpdateStatsCallbacks().forEach(x => x());
                         }
                     })
                     .done((info: StudioDatabaseResponse) => {
                         // check if database if still relevant on this node
                         const localTag = clusterTopologyManager.default.localNodeTag();
-                        const topologyToUse = info.Topology ?? info.Sharding?.Orchestrator.Topology;
-                        const relevant = topologyToUse && (topologyToUse.Members.includes(localTag) ||
-                            topologyToUse.Promotables.includes(localTag) ||
-                            topologyToUse.Rehabs.includes(localTag));
+                        const topologyToUse = info.NodesTopology ?? info.Sharding?.Orchestrator.Topology;
+                        const relevant = topologyToUse && (topologyToUse.Members.some(x => x.NodeTag === localTag) ||
+                            topologyToUse.Promotables.some(x => x.NodeTag === localTag) ||
+                            topologyToUse.Rehabs.some(x => x.NodeTag === localTag));
                         
                         if (!relevant) {
                             this.onNoLongerRelevant(db);
@@ -245,13 +250,14 @@ class databasesManager {
         return new getDatabaseForStudioCommand(databaseName)
             .execute()
             .done((rsInfo: StudioDatabaseResponse) => {
-
                 if (rsInfo.IsDisabled) {
                     changesContext.default.disconnectIfCurrent(db, "DatabaseDisabled");
                 }
 
                 const updatedDatabase = this.updateDatabase(rsInfo, this.getDatabaseByName(rsInfo.DatabaseName));
 
+                this.onUpdateStatsCallbacks().forEach(x => x());
+                
                 const toActivate = this.databaseToActivate();
 
                 if (updatedDatabase.relevant() && toActivate && toActivate === databaseName) {
@@ -268,6 +274,7 @@ class databasesManager {
         this.onDatabaseDeletedCallbacks.forEach(callback => {
             callback(db.qualifier, db.name);
         });
+        
     }
     
     private onNoLongerRelevant(db: database) {

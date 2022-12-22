@@ -142,8 +142,10 @@ export function OngoingTaskResponsibleNode(props: { task: OngoingTaskInfo }) {
 export function OngoingTaskName(props: { task: OngoingTaskInfo; canEdit: boolean; editUrl: string }) {
     const { task, canEdit, editUrl } = props;
     return (
-        <RichPanelName href={editUrl} title={"Task name: " + task.shared.taskName}>
-            {task.shared.taskName}
+        <RichPanelName>
+            <a href={editUrl} title={"Task name: " + task.shared.taskName}>
+                {task.shared.taskName}
+            </a>
         </RichPanelName>
     );
 }

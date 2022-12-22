@@ -2,9 +2,9 @@
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import accessManager from "common/shell/accessManager";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import { mockServices } from "test/mocks/services/MockServices";
 import React from "react";
 import { DatabasesPage } from "./DatabasesPage";
+import { mockHooks } from "test/mocks/hooks/MockHooks";
 
 export default {
     title: "Pages/Databases",
@@ -17,9 +17,24 @@ export const Sharded: ComponentStory<typeof DatabasesPage> = () => {
 
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 
-    const { databasesService } = mockServices;
+    const { useDatabaseManager } = mockHooks;
 
-    databasesService.withGetDatabases_Sharded();
+    useDatabaseManager.with_Sharded();
+
+    return (
+        <div style={{ height: "100vh", overflow: "auto" }}>
+            <DatabasesPage />
+        </div>
+    );
+};
+
+export const Cluster: ComponentStory<typeof DatabasesPage> = () => {
+    accessManager.default.securityClearance("ClusterAdmin");
+    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+
+    const { useDatabaseManager } = mockHooks;
+
+    useDatabaseManager.with_Cluster();
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>
@@ -32,9 +47,9 @@ export const Single: ComponentStory<typeof DatabasesPage> = () => {
     accessManager.default.securityClearance("ClusterAdmin");
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
 
-    const { databasesService } = mockServices;
+    const { useDatabaseManager } = mockHooks;
 
-    databasesService.withGetDatabases_Single();
+    useDatabaseManager.with_Single();
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>
