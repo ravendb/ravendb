@@ -1,0 +1,43 @@
+<div class="modal-dialog add-new-node-to-db-group" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3>Add a new orchestrator to the database group</h3>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="flex-form">
+                <div class="form-group" data-bind="validationElement: nodeTag">
+                    <div>
+                        <label class="control-label">Node tag</label>
+                    </div>
+                    <div class="flex-grow">
+                        <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                            <span data-bind="text: nodeTag() ? 'Node ' + nodeTag() : 'Select cluster node'"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" data-bind="foreach: nodesCanBeAdded">
+                            <li><a href="#" data-bind="text: 'Node ' + $data, click: $root.selectedClusterNode"></a></li>
+                        </ul>
+                        <span class="help-block" data-bind="validationMessage: nodeTag"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div class="text-right">
+                <button type="button" class="btn btn-default" data-bind="click: close"><i class="icon-cancel"></i><span>Cancel</span></button>
+                <button data-bind="click: addNode, disable: spinners.addNode, css: { 'btn-spinner': spinners.addNode }" type="button" class="btn btn-primary">
+                    <i class="icon-plus"></i><span>Add orchestrator</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

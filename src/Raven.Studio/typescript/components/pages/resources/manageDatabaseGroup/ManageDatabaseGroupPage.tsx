@@ -128,9 +128,6 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                 nodes={dbShardedInfo.nodes}
                 db={db}
                 deletionInProgress={dbShardedInfo.deletionInProgress}
-                refresh={() => {
-                    //TODO:
-                }}
                 lockMode={dbShardedInfo.lockMode}
             />
         </div>
