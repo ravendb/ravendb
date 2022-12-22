@@ -10,7 +10,7 @@ public class ShardingConfiguration
 
     public List<ShardBucketRange> BucketRanges = new List<ShardBucketRange>();
 
-    public Dictionary<string, PrefixedShardingSetting> Prefixed;
+    public List<PrefixedShardingSetting> Prefixed;
 
     public Dictionary<int, ShardBucketMigration> BucketMigrations;
 

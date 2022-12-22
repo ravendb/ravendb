@@ -146,9 +146,9 @@ public class RawShardingConfiguration
         }
     }
 
-    private Dictionary<string, PrefixedShardingSetting> _prefixed;
+    private List<PrefixedShardingSetting> _prefixed;
 
-    public Dictionary<string, PrefixedShardingSetting> Prefixed
+    public List<PrefixedShardingSetting> Prefixed
     {
         get
         {
@@ -158,27 +158,28 @@ public class RawShardingConfiguration
             if (_prefixed != null)
                 return _prefixed;
 
-            if (_configuration.TryGet(nameof(ShardingConfiguration.Prefixed), out BlittableJsonReaderObject obj) && obj != null)
+            if (_configuration.TryGet(nameof(ShardingConfiguration.Prefixed), out BlittableJsonReaderArray array))
             {
-                _prefixed = new Dictionary<string, PrefixedShardingSetting>();
+                _prefixed = new List<PrefixedShardingSetting>();
 
-                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                for (var index = 0; index < obj.Count; index++)
+                foreach (BlittableJsonReaderObject settingBlittable in array)
                 {
-                    obj.GetPropertyByIndex(index, ref propertyDetails);
-                    if (propertyDetails.Value is not BlittableJsonReaderObject settingBlittable ||
-                        settingBlittable.TryGet(nameof(PrefixedShardingSetting.Shards), out BlittableJsonReaderArray array) == false)
+                    if (settingBlittable.TryGet(nameof(PrefixedShardingSetting.Prefix), out string prefix) == false ||
+                        settingBlittable.TryGet(nameof(PrefixedShardingSetting.Shards), out BlittableJsonReaderArray shards) == false ||
+                        settingBlittable.TryGet(nameof(PrefixedShardingSetting.BucketRangeStart), out int rangeStart) == false)
                         continue;
 
                     var setting = new PrefixedShardingSetting
                     {
+                        Prefix = prefix,
+                        BucketRangeStart = rangeStart,
                         Shards = new List<int>()
                     };
 
-                    foreach (int shardNumber in array)
+                    foreach (int shardNumber in shards)
                         setting.Shards.Add(shardNumber);
 
-                    _prefixed[propertyDetails.Name] = setting;
+                    _prefixed.Add(setting);
                 }
             }
 

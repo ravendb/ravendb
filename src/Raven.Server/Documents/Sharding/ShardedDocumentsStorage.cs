@@ -178,17 +178,17 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
         var database = tx.Owner as ShardedDocumentDatabase;
         var prefixedConfiguration = database?.ReadShardingState().Prefixed;
-        if (prefixedConfiguration != null)
+        if (prefixedConfiguration is { Count: > 0 })
         {
             var idAsStr = Encoding.UTF8.GetString(idPtr, idSize);
             var index = 0;
-            foreach (var (prefix, _) in prefixedConfiguration)
+            foreach (var setting in prefixedConfiguration)
             {
-                index++;
-
+                var prefix = setting.Prefix;
+                 
                 if (idAsStr.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    bucket += index << 20;
+                    bucket += setting.BucketRangeStart;
                     break;
                 }
             }
