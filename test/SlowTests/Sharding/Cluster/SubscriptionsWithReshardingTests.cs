@@ -87,17 +87,17 @@ namespace SlowTests.Sharding.Cluster
         {
             using var store = Sharding.GetDocumentStore();
             var numberOfDocs = 100;
+            
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User
+                {
+                }, "users/1-A");
+                session.SaveChanges();
+            }
 
             var writes = Task.Run(() =>
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User
-                    {
-                    }, "users/1-A");
-                    session.SaveChanges();
-                }
-
                 for (int i = 0; i < numberOfDocs; i++)
                 {
                     using (var session = store.OpenSession())
@@ -177,6 +177,11 @@ namespace SlowTests.Sharding.Cluster
         {
             using var store = Sharding.GetDocumentStore();
             var docsCount = 100;
+            using (var session = store.OpenAsyncSession())
+            {
+                await AddOrUpdateUserAsync(session, "users/1-A");
+                await session.SaveChangesAsync();
+            }
             var writes = Task.Run(async () =>
             {
                 for (int j = 0; j < 10; j++)
@@ -475,7 +480,7 @@ namespace SlowTests.Sharding.Cluster
                     };
 
                     recoveryOptions.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] =
-                        cluster.Leader.Configuration.Cluster.ElectionTimeout.ToString();
+                        cluster.Leader.Configuration.Cluster.ElectionTimeout.AsTimeSpan.ToString();
 
                     try
                     {

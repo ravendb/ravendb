@@ -30,6 +30,7 @@ namespace SlowTests.Issues
                     Task unloadTask = null;
                     var database = await GetDatabase(store.Database);
                     var testingStuff = database.ForTestingPurposesOnly();
+                    testingStuff.SkipDrainAllRequests = true;
 
                     var afterTxMergerDispose = new ManualResetEvent(false);
 
