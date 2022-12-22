@@ -15,24 +15,26 @@ import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabase
 import app from "durandal/app";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { NodeInfo } from "components/models/databases";
+import addNewOrchestratorToDatabase from "viewmodels/resources/addNewOrchestatorToDatabaseGroup";
 
 export interface NodeGroupProps {
     nodes: NodeInfo[];
     db: database;
     lockMode: DatabaseLockMode;
     deletionInProgress: string[];
-    refresh: () => void;
 }
 
 export function NodeGroup(props: NodeGroupProps) {
-    const { nodes, deletionInProgress, db, lockMode, refresh } = props;
+    const { nodes, deletionInProgress, db, lockMode } = props;
     const [sortableMode, setSortableMode] = useState(false);
     const { isOperatorOrAbove } = useAccessManager();
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
 
     const addNode = useCallback(() => {
-        const addKeyView = new addNewNodeToDatabaseGroup(db.name, nodes, db.isEncrypted());
+        const addKeyView = db.isSharded
+            ? new addNewOrchestratorToDatabase(db.name, nodes)
+            : new addNewNodeToDatabaseGroup(db.name, nodes, db.isEncrypted());
         app.showBootstrapDialog(addKeyView);
     }, [db, nodes]);
 
@@ -49,20 +51,20 @@ export function NodeGroup(props: NodeGroupProps) {
             reportEvent("db-group", "save-order");
             await databasesService.reorderNodesInGroup(db, tagsOrder, fixOrder);
             setSortableMode(false);
-            refresh();
         },
-        [databasesService, db, reportEvent, refresh]
+        [databasesService, db, reportEvent]
     );
 
     const clusterTopology = clusterTopologyManager.default.topology();
     const clusterNodeTags = clusterTopology.nodes().map((x) => x.tag());
     const existingTags = nodes ? nodes.map((x) => x.tag) : [];
     const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
+    const sharded = db.isSharded;
 
     return (
         <div>
             <div className="d-flex">
-                <span>Database Group:</span>
+                <span>{sharded ? "Orchestrators" : "Database Group"}</span>
             </div>
 
             {sortableMode ? (
