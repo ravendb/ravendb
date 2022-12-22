@@ -25,6 +25,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -391,6 +392,8 @@ namespace Raven.Server.Documents.Handlers
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
             await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context.Documents, ServerStore, ResponseBodyStream()))
             {
+                var notFromStudio = HttpContext.Request.IsFromStudio() == false;
+
                 IndexStats[] indexStats;
                 using (context.OpenReadTransaction())
                 {
@@ -403,7 +406,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 try
                                 {
-                                    return x.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context);
+                                    return x.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: notFromStudio, calculateLastBatchStats: notFromStudio, queryContext: context);
                                 }
                                 catch (OperationCanceledException)
                                 {
@@ -477,7 +480,7 @@ namespace Raven.Server.Documents.Handlers
                             return;
                         }
 
-                        indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context) };
+                        indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: notFromStudio, calculateLastBatchStats: notFromStudio, queryContext: context) };
                     }
                 }
 
