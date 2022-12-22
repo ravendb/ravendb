@@ -36,6 +36,7 @@ module.exports = {
         "^plugins/(.*)$": "<rootDir>/node_modules/durandal/js/plugins/$1",
         "^durandal/(.*)$": "<rootDir>/node_modules/durandal/js/$1",
         "^endpoints$":  "<rootDir>/typings/server/endpoints",
+        "^configuration$":  "<rootDir>/typings/server/configuration",
         "^d3$": "<rootDir>/wwwroot/Content/custom_d3",
         "^qrcodejs$": "<rootDir>/wwwroot/Content/custom_qrcode",
         "^hooks/(.*)$": "<rootDir>/typescript/components/hooks/$1",
