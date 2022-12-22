@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Configuration;
@@ -34,7 +35,7 @@ internal class DatabasesHandlerProcessorForGet : AbstractServerHandlerProxyReadP
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
 
-    public DatabasesHandlerProcessorForGet([NotNull] RequestHandler requestHandler) 
+    public DatabasesHandlerProcessorForGet([NotNull] RequestHandler requestHandler)
         : base(requestHandler)
     {
     }
@@ -126,10 +127,62 @@ internal class DatabasesHandlerProcessorForGet : AbstractServerHandlerProxyReadP
         return RequestHandler.ServerStore.ClusterRequestExecutor.ExecuteAsync(command, context, token: token.Token);
     }
 
+    public static void FillNodesTopology(ref NodesTopology nodesTopology, DatabaseTopology topology, RawDatabaseRecord databaseRecord, TransactionOperationContext context, ServerStore serverStore, HttpContext httpContext)
+    {
+        if (topology == null)
+            return;
+
+        var statuses = serverStore.GetNodesStatuses();
+
+        nodesTopology.PriorityOrder = topology.PriorityOrder;
+
+        var clusterTopology = serverStore.GetClusterTopology(context);
+        clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(serverStore, httpContext);
+
+        foreach (var member in topology.Members)
+        {
+            if (databaseRecord.DeletionInProgress != null && databaseRecord.DeletionInProgress.ContainsKey(member))
+                continue;
+
+            var url = clusterTopology.GetUrlFromTag(member);
+            var node = new InternalReplication
+            {
+                Database = databaseRecord.DatabaseName,
+                NodeTag = member,
+                Url = url
+            };
+            nodesTopology.Members.Add(GetNodeId(node));
+            SetNodeStatus(topology, member, nodesTopology, statuses);
+        }
+
+        foreach (var promotable in topology.Promotables)
+        {
+            if (databaseRecord.DeletionInProgress != null && databaseRecord.DeletionInProgress.ContainsKey(promotable))
+                continue;
+
+            topology.PredefinedMentors.TryGetValue(promotable, out var mentorCandidate);
+            var node = GetNode(databaseRecord.DatabaseName, clusterTopology, promotable, mentorCandidate, out var promotableTask);
+            var mentor = topology.WhoseTaskIsIt(serverStore.Engine.CurrentState, promotableTask, null);
+            nodesTopology.Promotables.Add(GetNodeId(node, mentor));
+            SetNodeStatus(topology, promotable, nodesTopology, statuses);
+        }
+
+        foreach (var rehab in topology.Rehabs)
+        {
+            if (databaseRecord.DeletionInProgress != null && databaseRecord.DeletionInProgress.ContainsKey(rehab))
+                continue;
+
+            var node = GetNode(databaseRecord.DatabaseName, clusterTopology, rehab, null, out var promotableTask);
+            var mentor = topology.WhoseTaskIsIt(serverStore.Engine.CurrentState, promotableTask, null);
+            nodesTopology.Rehabs.Add(GetNodeId(node, mentor));
+            SetNodeStatus(topology, rehab, nodesTopology, statuses);
+        }
+    }
+
     private void WriteDatabaseInfo(string databaseName, RawDatabaseRecord rawDatabaseRecord,
         TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)
     {
-        var nodesTopology = new NodesTopology();
+        NodesTopology nodesTopology = new();
 
         try
         {
@@ -138,53 +191,7 @@ internal class DatabasesHandlerProcessorForGet : AbstractServerHandlerProxyReadP
 
             var topology = rawDatabaseRecord.IsSharded ? rawDatabaseRecord.Sharding.Orchestrator.Topology : rawDatabaseRecord.Topology;
 
-            var statuses = ServerStore.GetNodesStatuses();
-            if (topology != null)
-            {
-                nodesTopology.PriorityOrder = topology.PriorityOrder;
-
-                var clusterTopology = ServerStore.GetClusterTopology(context);
-                clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
-
-                foreach (var member in topology.Members)
-                {
-                    if (rawDatabaseRecord.DeletionInProgress != null && rawDatabaseRecord.DeletionInProgress.ContainsKey(member))
-                        continue;
-
-                    var url = clusterTopology.GetUrlFromTag(member);
-                    var node = new InternalReplication
-                    {
-                        Database = databaseName,
-                        NodeTag = member,
-                        Url = url
-                    };
-                    nodesTopology.Members.Add(GetNodeId(node));
-                    SetNodeStatus(topology, member, nodesTopology, statuses);
-                }
-
-                foreach (var promotable in topology.Promotables)
-                {
-                    if (rawDatabaseRecord.DeletionInProgress != null && rawDatabaseRecord.DeletionInProgress.ContainsKey(promotable))
-                        continue;
-
-                    topology.PredefinedMentors.TryGetValue(promotable, out var mentorCandidate);
-                    var node = GetNode(databaseName, clusterTopology, promotable, mentorCandidate, out var promotableTask);
-                    var mentor = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, promotableTask, null);
-                    nodesTopology.Promotables.Add(GetNodeId(node, mentor));
-                    SetNodeStatus(topology, promotable, nodesTopology, statuses);
-                }
-
-                foreach (var rehab in topology.Rehabs)
-                {
-                    if (rawDatabaseRecord.DeletionInProgress != null && rawDatabaseRecord.DeletionInProgress.ContainsKey(rehab))
-                        continue;
-
-                    var node = GetNode(databaseName, clusterTopology, rehab, null, out var promotableTask);
-                    var mentor = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, promotableTask, null);
-                    nodesTopology.Rehabs.Add(GetNodeId(node, mentor));
-                    SetNodeStatus(topology, rehab, nodesTopology, statuses);
-                }
-            }
+            FillNodesTopology(ref nodesTopology, topology, rawDatabaseRecord, context, ServerStore, HttpContext);
 
             // Check for exceptions
             if (dbTask is { IsFaulted: true })
