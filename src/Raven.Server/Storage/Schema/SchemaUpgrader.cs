@@ -112,16 +112,9 @@ namespace Raven.Server.Storage.Schema
 
                 if (shouldAddToInitLog)
                 {
-                    if (result)
-                    {
-                        var msg = $"Finished Schema Upgrade from version #{updater.From} to version #{updater.To}";
-                        _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(msg);
-                    }
-                    else
-                    {
-                        var msg = $"Failed to Schema Upgrade from version #{updater.From} to version #{updater.To}";
-                        _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(msg);
-                    }
+
+                    var msg = $"{(result ? "Finished" : "Failed to")}  Schema Upgrade from version #{updater.From} to version #{updater.To}";
+                    _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(msg);
                 }
 
                 return result;
