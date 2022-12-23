@@ -100,7 +100,7 @@ namespace Raven.Server.Storage.Schema
 
                 if (shouldAddToInitLog)
                 {
-                    var msg = $"Started Schema Upgrade from version #{updater.From} to version #{updater.To}";
+                    var msg = $"Started schema upgrade from version #{updater.From} to version #{updater.To}";
                     _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(msg);
                 }
 
@@ -113,7 +113,7 @@ namespace Raven.Server.Storage.Schema
                 if (shouldAddToInitLog)
                 {
 
-                    var msg = $"{(result ? "Finished" : "Failed to")}  Schema Upgrade from version #{updater.From} to version #{updater.To}";
+                    var msg = $"{(result ? "Finished" : "Failed to")} schema upgrade from version #{updater.From} to version #{updater.To}";
                     _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(msg);
                 }
 
