@@ -17,6 +17,23 @@
     <Compile Include="..\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="Utils\VxSort\bench\**" />
+    <Compile Remove="Utils\VxSort\codegen\**" />
+    <Compile Remove="Utils\VxSort\obj\**" />
+    <Compile Remove="Utils\VxSort\test\**" />
+    <EmbeddedResource Remove="Utils\VxSort\bench\**" />
+    <EmbeddedResource Remove="Utils\VxSort\codegen\**" />
+    <EmbeddedResource Remove="Utils\VxSort\obj\**" />
+    <EmbeddedResource Remove="Utils\VxSort\test\**" />
+    <None Remove="Utils\VxSort\bench\**" />
+    <None Remove="Utils\VxSort\codegen\**" />
+    <None Remove="Utils\VxSort\obj\**" />
+    <None Remove="Utils\VxSort\test\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Utils\VxSort\InternalsVisibleTo.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'MemGuard'">
@@ -26,6 +43,9 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Validate'">
     <DefineConstants>$(DefineConstants);MEM_GUARD_STACK;VALIDATE</DefineConstants>
     <Optimize>true</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>True</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <None Include="Sodium.tt">

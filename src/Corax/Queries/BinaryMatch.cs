@@ -19,13 +19,12 @@ namespace Corax.Queries
         private TInner _inner;
         private TOuter _outer;
         private ByteStringContext _ctx;
-        private long _totalResults;
-        private long _current;
-        private QueryCountConfidence _confidence;
+        private readonly long _totalResults;
+        private readonly QueryCountConfidence _confidence;
 
         public bool IsBoosting => _inner.IsBoosting || _outer.IsBoosting;
+
         public long Count => _totalResults;
-        public long Current => _current;
 
         public QueryCountConfidence Confidence => _confidence;
 
@@ -39,7 +38,6 @@ namespace Corax.Queries
             QueryCountConfidence confidence)
         {
             _totalResults = totalResults;
-            _current = QueryMatch.Start;
 
             _fillFunc = fillFunc;
             _andWithFunc = andWithFunc;
