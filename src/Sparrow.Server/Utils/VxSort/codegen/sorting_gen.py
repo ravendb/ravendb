@@ -78,7 +78,7 @@ def generate_sorting_all_types():
                         default='all',
                         help='list of vector ISA to generate',
                         choices=list(VectorISA).append("all"))
-    parser.add_argument("--output-dir", type=str, help="output directory")
+    parser.add_argument("--output-dir", type=str, default="..", help="output directory")
 
     opts = parser.parse_args()
 
