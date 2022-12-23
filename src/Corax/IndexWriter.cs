@@ -63,7 +63,7 @@ namespace Corax
         // private readonly ConcurrentDictionary<Slice, Dictionary<Slice, ConcurrentQueue<long>>> _bufferConcurrent =
         //     new ConcurrentDictionary<Slice, ConcurrentDictionary<Slice, ConcurrentQueue<long>>>(SliceComparer.Instance);
 
-        private unsafe struct EntriesModifications : IDisposable
+        internal unsafe struct EntriesModifications : IDisposable
         {
             private readonly ByteStringContext _context;
             private ByteStringContext<ByteStringMemoryCache>.InternalScope _disposable;
@@ -74,8 +74,15 @@ namespace Corax
             private int _removals;
             private bool _sortingNeeded;
 
-            public bool HasChanges =>  _removals != 0 || _additions != 0;
-            
+            public bool HasChanges
+            {
+                get
+                {
+                    SortAndRemoveDuplicates();
+                    return _removals != 0 || _additions != 0;
+                }
+            }
+
             public int TotalAdditions => _additions;
             public int TotalRemovals => _removals;
 
@@ -161,22 +168,70 @@ namespace Corax
                 _disposable = scope;
             }
 
-            public void Sort()
+            // There is an case we found in RavenDB-19688
+            // Sometimes term can be added and removed for the same in the same batch and there can be multiple other docs between this two operations.
+            // This requires us to ensure we don't have duplicates here.
+            public void SortAndRemoveDuplicates()
             {
                 if (_removals + _additions <= 1)
                     _sortingNeeded = false;
 
+                var additions = new Span<long>(_start, _additions);
+                var removals = new Span<long>(_end - _removals + 1, _removals);
+                
                 if (_sortingNeeded)
                 {
-                    MemoryExtensions.Sort(new Span<long>(_start, _additions));
-                    MemoryExtensions.Sort(new Span<long>(_end - _removals + 1, _removals));
+                    MemoryExtensions.Sort(additions);
+                    MemoryExtensions.Sort(removals);
                     _sortingNeeded = false;
                 }
+
+                int duplicatesFound = 0;
+                for (int add = 0, rem = 0; add < additions.Length && rem < removals.Length; ++add)
+                {
+                    Start:
+                    ref var currAdd = ref additions[add];
+                    ref var currRem = ref removals[rem];
+
+                    if (currAdd == currRem)
+                    {
+                        currRem = -1;
+                        currAdd = -1;
+                        duplicatesFound++;
+                        rem++;
+                        continue;
+                    }
+                    
+                    if (currAdd < currRem)
+                        continue;
+
+                    if (currAdd > currRem)
+                    {
+                        rem++;
+                        while (rem < removals.Length)
+                        {
+                            if (currAdd <= removals[rem])
+                                goto Start;
+                            rem++;
+                        }
+                    }
+                }
+
+                if (duplicatesFound == 0)
+                    return;
+
+                // rare case
+                MemoryExtensions.Sort(additions);
+                MemoryExtensions.Sort(removals);
+                _additions -= duplicatesFound;
+                _removals -= duplicatesFound;
                 
+                additions.Slice(duplicatesFound).CopyTo(additions);
+                removals.Slice(duplicatesFound).CopyTo(new Span<long>(_end - _removals + 1, _removals));
                 ValidateNoDuplicateEntries();
             }
-
-            [Conditional("DEBUG")]
+            
+         //   [Conditional("DEBUG")]
             private void ValidateNoDuplicateEntries()
             {
                 var removals = Removals;
@@ -187,10 +242,10 @@ namespace Corax
                         throw new InvalidOperationException("Found duplicate addition & removal item during indexing: " + add);
                 }
 
-                foreach (var reomval in removals)
+                foreach (var removal in removals)
                 {
-                    if (additions.BinarySearch(reomval) >= 0)
-                        throw new InvalidOperationException("Found duplicate addition & removal item during indexing: " + reomval);
+                    if (additions.BinarySearch(removal) >= 0)
+                        throw new InvalidOperationException("Found duplicate addition & removal item during indexing: " + removal);
                 }
             }
 
@@ -1412,7 +1467,7 @@ namespace Corax
             var smallSet = Container.GetMutable(llt, id);
             Debug.Assert(entries.Removals.ToArray().Distinct().Count() == entries.TotalRemovals, $"Removals list is not distinct.");
             
-            entries.Sort();
+            entries.SortAndRemoveDuplicates();
           
             int removalIndex = 0;
             
@@ -1463,7 +1518,7 @@ namespace Corax
                 return AddEntriesToTermResult.RemoveTermId;
             }
 
-            entries.Sort();
+            entries.SortAndRemoveDuplicates();
 
             if (TryDeltaEncodingToBuffer(entries.Additions, tmpBuf, out var encoded) == false)
             {
@@ -1522,7 +1577,7 @@ namespace Corax
         {
             var llt = Transaction.LowLevelTransaction;
 
-            entries.Sort();
+            entries.SortAndRemoveDuplicates();
 
             var setSpace = Container.GetMutable(llt, id);
             ref var setState = ref MemoryMarshal.AsRef<SetState>(setSpace);
@@ -1660,7 +1715,7 @@ namespace Corax
 
             // Because the sorting would not change the struct itself, it is safe to use an 'in' modifier to avoid the copying. 
             if(sortingNeeded)
-                entries.Sort();
+                entries.SortAndRemoveDuplicates();
 
             if (TryDeltaEncodingToBuffer(additions, tmpBuf, out var encoded) == false)
             {
