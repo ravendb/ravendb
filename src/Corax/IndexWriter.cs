@@ -74,6 +74,8 @@ namespace Corax
             private int _removals;
             private bool _sortingNeeded;
 
+            public bool HasChanges =>  _removals != 0 || _additions != 0;
+            
             public int TotalAdditions => _additions;
             public int TotalRemovals => _removals;
 
@@ -1338,7 +1340,9 @@ namespace Corax
 
                 ref var entries = ref CollectionsMarshal.GetValueRefOrNullRef(currentFieldTerms, term);
                 Debug.Assert(Unsafe.IsNullRef(ref entries) == false);
-
+                if (entries.HasChanges == false)
+                    continue;
+                
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
                 
@@ -1550,7 +1554,9 @@ namespace Corax
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
                 // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
                 var localEntry = entries;
-
+                if (localEntry.HasChanges == false)
+                    continue;
+                
                 long termId;
                 using var _ = fieldTree.Read(term, out var result);
                 if (localEntry.TotalAdditions > 0 && result.HasValue == false)
@@ -1584,6 +1590,9 @@ namespace Corax
                 // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
                 // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
                 var localEntry = entries;
+                if (localEntry.HasChanges == false)
+                    continue;
+                
                 using var _ = fieldTree.Read(term, out var result);
 
                 long termId;
