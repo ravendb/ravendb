@@ -9,6 +9,15 @@ native_size_map = {
     "double": 8,
 }
 
+capital_type_map = {
+    "int": "Int32",
+    "uint": "UInt32",
+    "float": "Float",
+    "long": "Int64",
+    "ulong": "UInt64",
+    "double": "Double",
+}
+
 native_types = ["int", "uint", "float", "long", "ulong", "double"]
 
 
