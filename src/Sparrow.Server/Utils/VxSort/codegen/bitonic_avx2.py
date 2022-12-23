@@ -264,7 +264,7 @@ using static System.Runtime.Intrinsics.X86.Sse42;
 namespace {g.namespace}
 {{
     using V = Vector256<{self.type}>;
-    static unsafe partial class BitonicSort
+    public static unsafe partial class BitonicSort
     {{
 """
         print(s, file=f)
@@ -585,6 +585,9 @@ namespace {g.namespace}
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public static void Sort({t}* ptr, int length)
         {{                    
+            if (length <= 1)
+                return;
+        
             uint fullvlength = (uint)length / (uint)V.Count;
             var remainder = (int)(length - fullvlength * V.Count);
             var v = fullvlength + ((remainder > 0) ? 1 : 0);
@@ -592,6 +595,8 @@ namespace {g.namespace}
             {{
                 {generate_sorters_entry_list()}              
             }}
+            
+            throw new NotSupportedException($"The length is too big for BitonicSort. Ensure the length is always smaller or equal to .MaxBitonicLength<T>()");
         }}"""
         print(s, file=f_header)
 

@@ -95,7 +95,7 @@ def generate_bitonicsort_all_types():
                         choices=list(VectorISA).append("all"))
     parser.add_argument("--break-inline", type=int, default=0, help="break inlining every N levels")
 
-    parser.add_argument("--output-dir", type=str,
+    parser.add_argument("--output-dir", type=str, default='..',
                         help="output directory")
 
     opts = parser.parse_args()
