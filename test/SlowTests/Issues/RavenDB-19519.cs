@@ -19,6 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
+        [Fact]
         public void SchemaUpgradeAddedToInitLog()
         {
             var folder = NewDataPath(forceCreateDir: true);
@@ -58,7 +59,7 @@ namespace SlowTests.Issues
                         using (var session = store.OpenSession())
                         {
                             var exception = Assert.Throws<DatabaseLoadTimeoutException>(() => session.Store(new User { Name = "Foo" }));
-                            Assert.True(exception.Message.Contains("Schema Upgrade"));
+                            Assert.True(exception.Message.Contains("schema upgrade"));
                         }
                     }
                 }
