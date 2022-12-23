@@ -72,14 +72,14 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Logs.Microsoft.ConfigurationPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting MicrosoftLogsConfigurationPath { get; set; }
         
-        [DefaultValue(128)]
+        [DefaultValue(null)]
         [MinValue(16)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Logs.Microsoft.MaxFileSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
-        public Size MicrosoftLogsMaxFileSize { get; set; }
+        public Size? MicrosoftLogsMaxFileSize { get; set; }
 
         [Description("How far back we should retain Microsoft log entries in hours")]
-        [DefaultValue(3 * 24)]
+        [DefaultValue(null)]
         [MinValue(24)]
         [TimeUnit(TimeUnit.Hours)]
         [ConfigurationEntry("Logs.Microsoft.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
@@ -93,9 +93,9 @@ namespace Raven.Server.Config.Categories
         public Size? MicrosoftLogsRetentionSize { get; set; }
 
         [Description("Will determine whether to compress the Microsoft log files")]
-        [DefaultValue(false)]
+        [DefaultValue(null)]
         [ConfigurationEntry("Logs.Microsoft.Compress", ConfigurationEntryScope.ServerWideOnly)]
-        public bool MicrosoftLogsCompress { get; set; }
+        public bool? MicrosoftLogsCompress { get; set; }
         #endregion
         
     }
