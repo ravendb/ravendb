@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace {g.namespace}
 {{
@@ -21,7 +22,12 @@ namespace {g.namespace}
         [SkipLocalsInit]
         public unsafe static void Run<T>(T* left, T* right) where T : unmanaged
         {{ 
-        """
+            if (!Avx2.IsSupported)
+            {{
+                MemoryExtensions.Sort(new Span<T>(left, (int)(right - left) + 1));
+                return;
+            }}
+"""
         print(s, file=f)
 
     def generate_public_api(self, f):

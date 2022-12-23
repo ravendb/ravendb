@@ -94,6 +94,7 @@ def generate_sorting_all_types():
         generate_main_sorter(f_header, config)
 
     for isa in opts.vector_isa:
+
         filename = f"VectorizedSort.{isa}.generated"
         print(f"Generating {filename}.{{cs}}")
         h_filename = os.path.join(opts.output_dir, filename + ".cs")
