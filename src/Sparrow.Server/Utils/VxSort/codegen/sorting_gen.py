@@ -16,6 +16,8 @@ from enum import Enum
 from abc import ABC, ABCMeta, abstractmethod
 from datetime import datetime
 
+from sorting_main import MainSorting
+
 SortingISA.register(AVX2SortingISA)
 
 class VectorISA(Enum):
@@ -62,6 +64,12 @@ def generate_base_types(f_header, vector_isa, configuration):
     g.generate_master_entry_point(f_header)
     g.generate_epilogue(f_header)
 
+def generate_main_sorter(f_header, configuration):
+    g = MainSorting(configuration)
+    g.generate_prologue(f_header)
+    g.generate_public_api(f_header)
+    g.generate_epilogue(f_header)
+
 
 def generate_sorting_all_types():
     parser = argparse.ArgumentParser()
@@ -78,6 +86,12 @@ def generate_sorting_all_types():
         opts.vector_isa = list(VectorISA)
 
     config = Configuration()
+
+    filename = f"VectorizedSort.generated"
+    print(f"Generating {filename}.{{cs}}")
+    h_filename = os.path.join(opts.output_dir, filename + ".cs")
+    with open(h_filename, "w") as f_header:
+        generate_main_sorter(f_header, config)
 
     for isa in opts.vector_isa:
         filename = f"VectorizedSort.{isa}.generated"
