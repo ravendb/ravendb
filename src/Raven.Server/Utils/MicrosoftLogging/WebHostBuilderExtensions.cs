@@ -12,27 +12,28 @@ namespace Raven.Server.Utils.MicrosoftLogging;
 
 public static class WebHostBuilderExtensions
 {
-    public static IWebHostBuilder ConfigureMicrosoftLogging(this IWebHostBuilder hostBuilder, ref LoggingSource loggingSource, LogsConfiguration configurationLogs)
+    public static IWebHostBuilder ConfigureMicrosoftLogging(this IWebHostBuilder hostBuilder, ref LoggingSource loggingSource, LogsConfiguration configuration)
     {
-        if (configurationLogs.DisableMicrosoftLogs)
+        if (configuration.DisableMicrosoftLogs)
             return hostBuilder;
         
-        string logPath = configurationLogs.MicrosoftLogsPath.FullPath;
-        var internalLoggingSource = new LoggingSource(LogMode.None, logPath, "Microsoft Log", TimeSpan.MaxValue, long.MaxValue);
-        internalLoggingSource.MaxFileSizeInBytes = configurationLogs.MicrosoftLogsMaxFileSize.GetValue(SizeUnit.Bytes);
-        internalLoggingSource.SetupLogMode(
-            LogMode.Information, 
-            logPath, 
-            configurationLogs.MicrosoftLogsRetentionTime?.AsTimeSpan, 
-            configurationLogs.MicrosoftLogsRetentionSize?.GetValue(SizeUnit.Bytes), 
-            configurationLogs.MicrosoftLogsCompress);
+        string logPath = configuration.MicrosoftLogsPath.FullPath;
+        var internalLoggingSource = new LoggingSource(LogMode.None, logPath, "MicrosoftLoggingSource", TimeSpan.MaxValue, long.MaxValue);
+
+        var maxFileSize = configuration.MicrosoftLogsMaxFileSize ?? configuration.MaxFileSize;
+        var retentionTime = configuration.MicrosoftLogsRetentionTime ?? configuration.RetentionTime;
+        var retentionSize = configuration.MicrosoftLogsRetentionSize ?? configuration.RetentionSize;
+        var compress = configuration.MicrosoftLogsCompress ?? configuration.Compress;
+        
+        internalLoggingSource.MaxFileSizeInBytes = maxFileSize.GetValue(SizeUnit.Bytes);
+        internalLoggingSource.SetupLogMode(LogMode.Information, logPath, retentionTime?.AsTimeSpan, retentionSize?.GetValue(SizeUnit.Bytes), compress);
         
         loggingSource =  internalLoggingSource;
         return hostBuilder.ConfigureLogging(logging =>
         {
             logging.ClearProviders();
             var configurationBuilder = new ConfigurationBuilder();
-            configurationBuilder.AddJsonFile(null, configurationLogs.MicrosoftLogsConfigurationPath.FullPath, true, true);
+            configurationBuilder.AddJsonFile(null, configuration.MicrosoftLogsConfigurationPath.FullPath, true, true);
             logging.AddConfiguration(configurationBuilder.Build());
             logging.SetMinimumLevel(LogLevel.Critical);
         
