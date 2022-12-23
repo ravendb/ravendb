@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Numerics;
-using Sparrow;
+using System.Runtime.CompilerServices;
+using Sparrow.Server.Utils.VxSort;
 
-namespace Corax.Utils
+namespace Sparrow.Server.Utils
 {
     internal static class Sorting
     {
         public static int SortAndRemoveDuplicates<T, W>(Span<T> values, Span<W> items)
             where T : unmanaged, IBinaryNumber<T>
         {
-            MemoryExtensions.Sort(values, items);
+            values.Sort(items);
 
             // We need to fill in the gaps left by removing deduplication process.
             // If there are no duplicated the writes at the architecture level will execute
@@ -37,39 +38,18 @@ namespace Corax.Utils
             return outputIdx;
         }
 
-        public static int SortAndRemoveDuplicates<T>(Span<T> values)
+        public static unsafe int SortAndRemoveDuplicates<T>(Span<T> values)
             where T : unmanaged, IBinaryNumber<T>
         {
-            MemoryExtensions.Sort(values);
-
-            // We need to fill in the gaps left by removing deduplication process.
-            // If there are no duplicated the writes at the architecture level will execute
-            // way faster than if there are.
-
-            int nextI = 0;
-            int outputIdx = 0;
-            while (nextI < values.Length - 1)
-            {
-                int i = nextI;
-                nextI++;
-                outputIdx += (values[nextI] != values[i]).ToInt32();
-                values[outputIdx] = values[nextI];
-            }
-
-            outputIdx++;
-            if (outputIdx != values.Length)
-            {
-                values[outputIdx] = values[^1];               
-            }
-
-            return outputIdx;
+            fixed (T* basePtr = values)
+                return SortAndRemoveDuplicates(basePtr, values.Length);
         }
 
         public static unsafe int SortAndRemoveDuplicates<T, W>(T* bufferBasePtr, W* itemsBasePtr, int count)
             where T : unmanaged, IBinaryNumber<T>
             where W : unmanaged
         {
-            MemoryExtensions.Sort(new Span<T>(bufferBasePtr, count), new Span<W>(itemsBasePtr, count));
+            new Span<T>(bufferBasePtr, count).Sort(new Span<W>(itemsBasePtr, count));
 
             // We need to fill in the gaps left by removing deduplication process.
             // If there are no duplicated the writes at the architecture level will execute
@@ -95,7 +75,7 @@ namespace Corax.Utils
         public static unsafe int SortAndRemoveDuplicates<T>(T* bufferBasePtr, int count)
             where T : unmanaged, IBinaryNumber<T>
         {
-            MemoryExtensions.Sort(new Span<T>(bufferBasePtr, count));
+            Sort.Run(bufferBasePtr, count);
 
             // We need to fill in the gaps left by removing deduplication process.
             // If there are no duplicated the writes at the architecture level will execute

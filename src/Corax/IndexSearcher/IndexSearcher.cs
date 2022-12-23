@@ -352,13 +352,19 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         return _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
     }
-    
+
 
     public FieldMetadata FieldMetadataBuilder(string fieldName, int fieldId = Constants.IndexSearcher.NonAnalyzer, Analyzer analyzer = null,
         FieldIndexingMode fieldIndexingMode = default)
     {
         Slice.From(Allocator, fieldName, ByteStringType.Immutable, out var fieldNameAsSlice);
         return FieldMetadata.Build(fieldNameAsSlice, fieldId, fieldIndexingMode, analyzer);
+    }
+
+    public FieldMetadata FieldMetadataBuilder(Slice fieldName, int fieldId = Constants.IndexSearcher.NonAnalyzer, Analyzer analyzer = null,
+        FieldIndexingMode fieldIndexingMode = default)
+    {
+        return FieldMetadata.Build(fieldName, fieldId, fieldIndexingMode, analyzer);
     }
 
     public void Dispose()

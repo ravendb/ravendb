@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Corax.Utils;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 
 namespace Corax.Queries
 {

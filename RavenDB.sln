@@ -1,7 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.2.32317.152
 VisualStudioVersion = 17.4.33103.184
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02838C57-DE0E-465D-9FBB-248DA87BEAAE}"
@@ -84,7 +83,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LicenseTests", "test\Licens
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Corax", "src\Corax\Corax.csproj", "{9AE9D686-5E30-4F52-BC8B-DE08130F6843}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Voron.Dictionary.Generator", "tools\Voron.Dictionary.Generator\Voron.Dictionary.Generator.csproj", "{4A27BC98-D655-4335-B761-A7084799CB77}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Voron.Dictionary.Generator", "tools\Voron.Dictionary.Generator\Voron.Dictionary.Generator.csproj", "{4A27BC98-D655-4335-B761-A7084799CB77}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VxSort.Benchmark", "bench\VxSort.Benchmark\VxSort.Benchmark.csproj", "{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -708,6 +709,24 @@ Global
 		{4A27BC98-D655-4335-B761-A7084799CB77}.Validate|x64.Build.0 = Debug|Any CPU
 		{4A27BC98-D655-4335-B761-A7084799CB77}.Validate|x86.ActiveCfg = Debug|Any CPU
 		{4A27BC98-D655-4335-B761-A7084799CB77}.Validate|x86.Build.0 = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Debug|x64.Build.0 = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Debug|x86.Build.0 = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Release|x64.ActiveCfg = Release|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Release|x64.Build.0 = Release|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Release|x86.ActiveCfg = Release|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Release|x86.Build.0 = Release|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Validate|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Validate|Any CPU.Build.0 = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Validate|x64.ActiveCfg = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Validate|x64.Build.0 = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Validate|x86.ActiveCfg = Debug|Any CPU
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Validate|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -747,6 +766,7 @@ Global
 		{E7ED7D1F-2A2A-44F0-8E87-6E4B15455C64} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
 		{9AE9D686-5E30-4F52-BC8B-DE08130F6843} = {02838C57-DE0E-465D-9FBB-248DA87BEAAE}
 		{4A27BC98-D655-4335-B761-A7084799CB77} = {FAAED88A-1C25-4853-9A1B-C41BCF9BED1F}
+		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {032D6274-16A5-43ED-920F-D37BBD4B9628}
