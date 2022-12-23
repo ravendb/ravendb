@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
@@ -18,6 +20,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -29,18 +32,32 @@ namespace SlowTests.Server.Documents.Indexing.Static
         public CollisionsOfReduceKeyHashes(ITestOutputHelper output) : base(output)
         {
         }
-
-        [Theory]
-        [InlineData(5, new[] { "Israel", "Poland" })]
-        [InlineData(100, new[] { "Israel", "Poland", "USA" })]
-        public async Task Auto_index_should_produce_multiple_outputs(int numberOfUsers, string[] locations)
+        
+        private static IEnumerable<object[]> Data() => new []
         {
-            using (var database = CreateDocumentDatabase())
+            new[] { new TestData(){NumberOfUsers = 5,Locations = new[] { "Israel", "Poland" }, SearchEngineType = SearchEngineType.Lucene }},
+            new[] { new TestData(){NumberOfUsers = 5,Locations = new[] { "Israel", "Poland" }, SearchEngineType = SearchEngineType.Corax }},
+            new[] { new TestData(){NumberOfUsers = 100,Locations = new[] { "Israel", "Poland", "USA" }, SearchEngineType = SearchEngineType.Lucene }},
+            new[] { new TestData(){NumberOfUsers = 100,Locations = new[] { "Israel", "Poland", "USA" }, SearchEngineType = SearchEngineType.Corax }}
+        };
+        
+        [Theory] 
+        [MemberData(nameof(Data))]
+        public async Task Auto_index_should_produce_multiple_outputs(TestData data)
+        {
+            var numberOfUsers = data.NumberOfUsers;
+            var locations = data.Locations;
+            using (var database = CreateDocumentDatabase(modifyConfiguration: record =>
+                   {
+                       record[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = data.SearchEngineType.ToString();
+                       record[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = data.SearchEngineType.ToString();
+                   })) 
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
                 {
                     Name = "Count",
+                    Id = 1,
                     Aggregation = AggregationOperation.Count,
                     Storage = FieldStorage.Yes
                 }
@@ -48,6 +65,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
             {
                 new AutoIndexField
                 {
+                    Id = 2,
                     Name = "Location",
                     Storage = FieldStorage.Yes
                 },
@@ -68,12 +86,17 @@ namespace SlowTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
-        [InlineData(5, new[] { "Israel", "Poland" })]
-        [InlineData(100, new[] { "Israel", "Poland", "USA" })]
-        public async Task Static_index_should_produce_multiple_outputs(int numberOfUsers, string[] locations)
+        [Theory] 
+        [MemberData(nameof(Data))]
+        public async Task Static_index_should_produce_multiple_outputs(TestData data)
         {
-            using (var database = CreateDocumentDatabase())
+            var numberOfUsers = data.NumberOfUsers;
+            var locations = data.Locations;
+            using (var database = CreateDocumentDatabase(modifyConfiguration: record =>
+                   {
+                       record[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = data.SearchEngineType.ToString();
+                       record[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = data.SearchEngineType.ToString();
+                   })) 
             using (var index = MapReduceIndex.CreateNew<MapReduceIndex>(new IndexDefinition()
             {
                 Name = "Users_ByCount_GroupByLocation",
@@ -302,6 +325,13 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     }
                 }
             }
+        }
+        
+        public class TestData
+        {
+            public int NumberOfUsers { get; set; }
+            public string[] Locations { get; set; }
+            public SearchEngineType SearchEngineType { get; set; }
         }
     }
 }

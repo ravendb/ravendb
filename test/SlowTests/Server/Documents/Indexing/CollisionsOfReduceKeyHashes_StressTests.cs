@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using SlowTests.Server.Documents.Indexing.Static;
 using Tests.Infrastructure;
 using Xunit;
@@ -12,23 +14,28 @@ namespace SlowTests.Server.Documents.Indexing
         {
         }
 
-        [Theory]
-        [InlineData(50000, new[] { "Canada", "France" })] // reduce key tree with depth 3
-        public async Task Auto_index_should_produce_multiple_outputs(int numberOfUsers, string[] locations)
+        private static IEnumerable<object[]> Data() => new[]
+        {
+            new[] { new CollisionsOfReduceKeyHashes.TestData() {NumberOfUsers = 50000, Locations = new[] {"Canada", "France"}, SearchEngineType = SearchEngineType.Lucene}},
+            new[] { new CollisionsOfReduceKeyHashes.TestData() {NumberOfUsers = 50000, Locations = new[] {"Canada", "France"}, SearchEngineType = SearchEngineType.Corax}}
+        };
+        
+        [Theory] 
+        [MemberData(nameof(Data))]// reduce key tree with depth 3
+        public async Task Auto_index_should_produce_multiple_outputs(CollisionsOfReduceKeyHashes.TestData data)
         {
             using (var test = new CollisionsOfReduceKeyHashes(Output))
             {
-                await test.Auto_index_should_produce_multiple_outputs(numberOfUsers, locations);
+                await test.Auto_index_should_produce_multiple_outputs(data);
             }
         }
-
-        [Theory]
-        [InlineData(50000, new[] { "Canada", "France" })] // reduce key tree with depth 3
-        public async Task Static_index_should_produce_multiple_outputs(int numberOfUsers, string[] locations)
+        [Theory] 
+        [MemberData(nameof(Data))]// reduce key tree with depth 3
+        public async Task Static_index_should_produce_multiple_outputs(CollisionsOfReduceKeyHashes.TestData data)
         {
             using (var test = new CollisionsOfReduceKeyHashes(Output))
             {
-                await test.Static_index_should_produce_multiple_outputs(numberOfUsers, locations);
+                await test.Static_index_should_produce_multiple_outputs(data);
             }
         }
     }
