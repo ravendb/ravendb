@@ -18,4 +18,20 @@ public class ShardingConfiguration
 
     // the dbid part with the MOVE tag upon migration
     public string DatabaseId;
+
+    public bool DoesShardHaveBuckets(int shardNumber) => DoesShardHaveBuckets(BucketRanges, shardNumber);
+
+    public static bool DoesShardHaveBuckets(List<ShardBucketRange> bucketRanges, int shardNumber)
+    {
+        if (bucketRanges == null)
+            return false;
+
+        foreach (var bucketRange in bucketRanges)
+        {
+            if (bucketRange.ShardNumber == shardNumber)
+                return true;
+        }
+
+        return false;
+    }
 }

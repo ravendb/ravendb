@@ -60,11 +60,17 @@ namespace Raven.Server.ServerWide.Commands
                             if (record.Sharding.Shards.ContainsKey(ShardNumber.Value) == false)
                                 throw new RachisApplyException($"The requested shard '{ShardNumber}' doesn't exists in '{record.DatabaseName}'");
 
+                            if (record.Sharding.Shards[ShardNumber.Value].ReplicationFactor == 1 && record.Sharding.DoesShardHaveBuckets(ShardNumber.Value))
+                            {
+                                throw new RachisApplyException(
+                                $"Database {DatabaseName} cannot be deleted because it is the last copy of shard {ShardNumber.Value} and it still contains buckets.");
+                            }
+
                             RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[ShardNumber.Value], node, shardNumber: ShardNumber, deletionInProgressStatus);
                             return;
                         }
 
-                        throw new InvalidOperationException($"Deleting entire sharded database {DatabaseName} from a specific node is not allowed.");
+                        throw new RachisApplyException($"Deleting entire sharded database {DatabaseName} from a specific node is not allowed.");
                     }
                 }
             }
@@ -77,7 +83,8 @@ namespace Raven.Server.ServerWide.Commands
                 else
                 {
                     if (ShardNumber.HasValue)
-                        throw new InvalidOperationException($"Deleting an entire shard group (shard {ShardNumber.Value}) from the database is not allowed.");
+                        throw new RachisApplyException(
+                            $"Deleting an entire shard group (shard {ShardNumber.Value}) from the database is not allowed. Use {nameof(DeleteDatabaseCommand)} instead to delete all of this shard's databases.");
 
                     foreach (var (shardNumber, topology) in record.Sharding.Shards)
                     {

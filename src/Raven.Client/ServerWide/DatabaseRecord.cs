@@ -468,6 +468,17 @@ namespace Raven.Client.ServerWide
 
             return $"{node}${shardNumber.Value}";
         }
+
+        public bool IsShardBeingDeletedOnAnyNode(int shardNumber)
+        {
+            foreach (var deletion in DeletionInProgress)
+            {
+                if (deletion.Key.Contains($"${shardNumber}"))
+                    return true;
+            }
+
+            return false;
+        }
     }
 
     public class IndexHistoryEntry

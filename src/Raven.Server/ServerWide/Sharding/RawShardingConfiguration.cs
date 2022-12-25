@@ -176,4 +176,6 @@ public class RawShardingConfiguration
             return _materializedSharding;
         }
     }
+
+    public bool DoesShardHaveBuckets(int shardNumber) => ShardingConfiguration.DoesShardHaveBuckets(_shardBucketRanges, shardNumber);
 }

@@ -1472,54 +1472,69 @@ namespace Raven.Server.ServerWide
                 var databaseName = remove.DatabaseName;
                 var isShard = ShardHelper.TryGetShardNumberAndDatabaseName(databaseName, out var shardedDatabaseName, out var shardNumber);
                 var databaseNameLowered = shardedDatabaseName.ToLowerInvariant();
+
                 using (Slice.From(context.Allocator, "db/" + databaseNameLowered, out Slice lowerKey))
                 using (Slice.From(context.Allocator, "db/" + shardedDatabaseName, out Slice key))
                 {
                     var rawRecord = ReadRawDatabaseRecord(context, shardedDatabaseName, out _);
                     if (rawRecord == null)
                         throw new DatabaseDoesNotExistException($"The database {databaseName} does not exists");
+                    
+                    DatabaseRecord databaseRecord;
 
-                    DatabaseTopology topology;
-
-                    if (isShard)
+                    if (isShard) //shard database
                     {
-                        rawRecord.Sharding.Shards.TryGetValue(shardNumber, out topology);
+                        rawRecord.Sharding.Shards.TryGetValue(shardNumber, out var topology);
+
+                        if (topology == null)
+                            return;
+
+                        databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
+                        remove.UpdateShardedDatabaseRecord(databaseRecord, shardNumber, index);
+
+                        if (databaseRecord.Sharding.Shards[shardNumber].Count == 0)
+                        {
+                            // finished all deletions on all nodes
+                            if (databaseRecord.IsShardBeingDeletedOnAnyNode(shardNumber) == false)
+                            {
+                                databaseRecord.Sharding.Shards.Remove(shardNumber);
+                            }
+
+                            if (databaseRecord.Sharding.Shards.Count == 0)
+                            {
+                                DeleteDatabaseRecord(context, index, items, lowerKey, databaseRecord, serverStore);
+                                NotifyDatabaseAboutChanged(context, shardedDatabaseName, index, nameof(RemoveNodeFromDatabaseCommand),
+                                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
+                                return;
+                            }
+                        }
                     }
                     else
                     {
-                        topology = rawRecord.Topology;
-                    }
-
-                    if (topology == null)
-                    {
-                        if (isShard == false)
+                        if (rawRecord.Topology == null)
                         {
                             items.DeleteByKey(lowerKey);
                             NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
                                 DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
+                            return;
                         }
-                        
-                        return;
-                    }
 
-                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
-
-                    if (isShard == false) // not a shard
-                    {
+                        databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
                         remove.UpdateDatabaseRecord(databaseRecord, index);
-                    }
-                    else //shard
-                    {
-                        remove.UpdateShardedDatabaseRecord(databaseRecord, shardNumber, index);
-                    }
+                        
+                        if (databaseRecord.IsSharded)
+                        {
+                            throw new RachisApplyException($"Attempting to remove node from database {databaseName} but it is sharded.");
+                        }
 
-                    topology = isShard ? databaseRecord.Sharding.Shards[shardNumber] : databaseRecord.Topology;
-                    if (databaseRecord.DeletionInProgress.Count == 0 && topology.Count == 0)
-                    {
-                        DeleteDatabaseRecord(context, index, items, lowerKey, databaseRecord, serverStore);
-                        NotifyDatabaseAboutChanged(context, shardedDatabaseName, index, nameof(RemoveNodeFromDatabaseCommand),
-                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
-                        return;
+                        // no nodes in the topology and all databases have finished being deleted
+                        if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
+                        {
+                            DeleteDatabaseRecord(context, index, items, lowerKey, databaseRecord, serverStore);
+                            NotifyDatabaseAboutChanged(context, shardedDatabaseName, index, nameof(RemoveNodeFromDatabaseCommand),
+                                DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
+                            return;
+                        }
                     }
 
                     var updated = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);

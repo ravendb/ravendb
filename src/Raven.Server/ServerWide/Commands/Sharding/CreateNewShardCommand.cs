@@ -10,7 +10,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
     {
         public DatabaseTopology Topology;
         public DateTime At;
-        public int Shard;
+        public int ShardNumber;
 
         public CreateNewShardCommand()
         {
@@ -24,7 +24,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
             Topology = shardTopology;
             At = at;
-            Shard = shardNumber;
+            ShardNumber = shardNumber;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -32,10 +32,10 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             Topology.NodesModifiedAt = At;
             SetLeaderStampForTopology(Topology, etag);
 
-            if (record.Sharding.Shards.ContainsKey(Shard))
-                throw new RachisApplyException($"Cannot add new shard {Shard} to the database {DatabaseName} because it already exists.");
+            if (record.Sharding.Shards.ContainsKey(ShardNumber))
+                throw new RachisApplyException($"Cannot add new shard {ShardNumber} to the database {DatabaseName} because it already exists.");
 
-            record.Sharding.Shards.Add(Shard, Topology);
+            record.Sharding.Shards.Add(ShardNumber, Topology);
         }
 
         public override void FillJson(DynamicJsonValue json)
@@ -43,7 +43,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             json[nameof(Topology)] = Topology.ToJson();
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
             json[nameof(At)] = At;
-            json[nameof(Shard)] = Shard;
+            json[nameof(ShardNumber)] = ShardNumber;
         }
     }
 }

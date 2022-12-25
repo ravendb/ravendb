@@ -690,11 +690,20 @@ namespace Raven.Server.Web.System
                     foreach (var databaseName in parameters.DatabaseNames)
                     {
                         DatabaseTopology topology = null;
-                        using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                        var isShard = ShardHelper.TryGetShardNumberAndDatabaseName(databaseName, out string shardedDatabaseName, out int shardNumber);
+                        var dbRecordName = isShard ? shardedDatabaseName : databaseName;
+
+                        using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, dbRecordName))
                         {
                             if (rawRecord == null)
                                 continue;
-                            
+
+                            if (isShard && rawRecord.Sharding.Shards.ContainsKey(shardNumber) == false)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Attempting to delete shard database {databaseName} but shard {shardNumber} doesn't exist for database {shardedDatabaseName}.");
+                            }
+
                             switch (rawRecord.LockMode)
                             {
                                 case DatabaseLockMode.Unlock:
@@ -716,34 +725,35 @@ namespace Raven.Server.Web.System
                             }
 
                             if (fromNodes)
-                                topology = rawRecord.Topology;
-                        }
+                                topology = isShard ? rawRecord.Sharding.Shards[shardNumber] : rawRecord.Topology;
 
-                        if (fromNodes)
-                        {
-                            foreach (var node in parameters.FromNodes)
+                            if (fromNodes)
                             {
-                                if (topology.RelevantFor(node) == false)
+                                foreach (var node in parameters.FromNodes)
                                 {
-                                    throw new InvalidOperationException($"Database '{databaseName}' doesn't reside on node '{node}' so it can't be deleted from it");
+                                    if (topology.RelevantFor(node) == false)
+                                    {
+                                        throw new InvalidOperationException($"Database '{databaseName}' doesn't reside on node '{node}' so it can't be deleted from it");
+                                    }
+                                    
+                                    if (isShard && topology.ReplicationFactor == 1 && rawRecord.Sharding.DoesShardHaveBuckets(shardNumber))
+                                    {
+                                        throw new InvalidOperationException(
+                                            $"Database {databaseName} cannot be deleted because it is the last copy of shard {shardNumber} and it still contains buckets.");
+                                    }
+
+                                    pendingDeletes.Add(node);
+                                    topology.RemoveFromTopology(node);
                                 }
 
-                                if (ShardHelper.TryGetShardNumber(databaseName, out var shard) && topology.ReplicationFactor == 1)
-                                {
-                                    throw new InvalidOperationException($"Database {databaseName} cannot be deleted because it is the last copy of shard {shard}");
-                                }
+                                if (topology.Count == 0)
+                                    waitOnRecordDeletion.Add(databaseName);
 
-                                pendingDeletes.Add(node);
-                                topology.RemoveFromTopology(node);
+                                continue;
                             }
 
-                            if (topology.Count == 0)
-                                waitOnRecordDeletion.Add(databaseName);
-
-                            continue;
+                            waitOnRecordDeletion.Add(databaseName);
                         }
-
-                        waitOnRecordDeletion.Add(databaseName);
                     }
                 }
 
