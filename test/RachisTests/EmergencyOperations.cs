@@ -25,12 +25,11 @@ namespace RachisTests
         public async Task LeaderCanCecedeFromClusterAndNewLeaderWillBeElected()
         {
             var (nodes, leader) = await CreateRaftCluster(3);
-            Assert.True(await WaitForNotHavingPromotables(nodes)); //Waiting for everyone not to be promotable in everyone's topologies.
             ClusterTopology old, @new;
-            old = GetServerTopology(leader);
+            old = leader.ServerStore.GetClusterTopology();
             leader.ServerStore.Engine.HardResetToNewCluster("A");
             await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
-            @new = GetServerTopology(leader);
+            @new = leader.ServerStore.GetClusterTopology();
             Assert.NotEqual(old.TopologyId, @new.TopologyId);
             var leaderSelectedTasks = new List<Task>();
             var followers = nodes.Where(n => n != leader);
@@ -48,52 +47,12 @@ namespace RachisTests
             await CreateRaftCluster(clusterSize);
             var follower = Servers.First(x => x.ServerStore.CurrentRachisState == RachisState.Follower);
             ClusterTopology old, @new;
-            old = GetServerTopology(follower);
+            old = follower.ServerStore.GetClusterTopology();
             new AdminJsConsole(follower, null).ApplyScript(new AdminJsScript(@"server.ServerStore.Engine.HardResetToNewCluster('A');"));
             await follower.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
-            @new = GetServerTopology(follower);
+            @new = follower.ServerStore.GetClusterTopology();
             Assert.NotEqual(old.TopologyId, @new.TopologyId);
         }
 
-        private static ClusterTopology GetServerTopology(RavenServer leader)
-        {
-            ClusterTopology old;
-            using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                old = leader.ServerStore.GetClusterTopology(ctx);
-            }
-
-            return old;
-        }
-
-        private static async Task<bool> WaitForNotHavingPromotables(List<RavenServer> servers, long timeout = 15_000)
-        {
-            var tasks = new List<Task>();
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < timeout)
-            {
-                bool havePromotables = false;
-                foreach (var server in servers)
-                {
-                    var t1 = GetServerTopology(server);
-                    if (t1.Promotables.Count > 0)
-                    {
-                        havePromotables = true;
-                        break;
-                    }
-                }
-
-                if (havePromotables == false)
-                {
-                    return true;
-                }
-
-                await Task.Delay(200);
-            }
-
-            return false;
-
-        }
     }
 }

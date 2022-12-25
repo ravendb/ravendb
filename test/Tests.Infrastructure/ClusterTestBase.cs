@@ -883,6 +883,7 @@ namespace Tests.Infrastructure
                     try
                     {
                         leader = await ActionWithLeader(_ => Task.CompletedTask, clusterNodes);
+                        Assert.True(await WaitForNotHavingPromotables(clusterNodes));
                         return (clusterNodes, leader, certificates);
                     }
                     catch (InvalidOperationException ex)
@@ -895,6 +896,7 @@ namespace Tests.Infrastructure
                     states += $"{Environment.NewLine}{e}";
             }
             Assert.True(condition, states);
+            Assert.True(await WaitForNotHavingPromotables(clusterNodes));
             return (clusterNodes, leader, certificates);
         }
 
@@ -905,6 +907,35 @@ namespace Tests.Infrastructure
                 var nodesInTopology = await WaitForValueAsync(async () => await Task.FromResult(node.ServerStore.GetClusterTopology().AllNodes.Count), clusterNodes.Count, interval: 444);
                 Assert.Equal(clusterNodes.Count, nodesInTopology);
             }
+        }
+
+        private static async Task<bool> WaitForNotHavingPromotables(List<RavenServer> clusterNodes, long timeout = 15_000)
+        {
+            // Waiting for not having Promotables and all nodes topologies will be updated
+
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeout)
+            {
+                bool havePromotables = false;
+                foreach (var server in clusterNodes)
+                {
+                    var t1 = server.ServerStore.GetClusterTopology();
+                    if (t1.Promotables.Count > 0)
+                    {
+                        havePromotables = true;
+                        break;
+                    }
+                }
+
+                if (havePromotables == false)
+                {
+                    return true;
+                }
+
+                await Task.Delay(200);
+            }
+
+            return false;
         }
 
         protected Dictionary<string, string> GetServerSettingsForPort(bool useSsl, out string serverUrl, out TestCertificatesHolder certificates)
