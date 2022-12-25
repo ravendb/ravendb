@@ -1216,7 +1216,7 @@ namespace Raven.Server.ServerWide
         {
             foreach (var deletion in DeletionInProgress)
             {
-                if (deletion.Key.Contains(shardNumber.ToString()))
+                if (deletion.Key.Contains($"${shardNumber}"))
                     return true;
             }
 

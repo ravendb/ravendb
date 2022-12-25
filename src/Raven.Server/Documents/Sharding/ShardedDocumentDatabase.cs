@@ -82,8 +82,8 @@ public class ShardedDocumentDatabase : DocumentDatabase
     {
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
+        using (var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, ShardedDatabaseName))
         {
-            var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, ShardedDatabaseName);
             return raw.Sharding.Value;
         }
     }

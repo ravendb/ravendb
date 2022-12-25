@@ -87,7 +87,7 @@ namespace Raven.Client.ServerWide.Sharding
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.CreateShardResult(response);
+                Result = JsonDeserializationClient.AddDatabaseShardResult(response);
             }
 
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
