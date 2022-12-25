@@ -509,15 +509,15 @@ namespace SlowTests.Sharding.Cluster
                 try
                 {
                     await CreateItems(store, 0, 2);
-                    await Sharding.Resharding.MoveShardForId(store, "users/1-A", cluster.Nodes);
+                    await Sharding.Resharding.MoveShardForId(store, "users/1-A", servers: cluster.Nodes);
                     await CreateItems(store, 2, 4);
-                    await Sharding.Resharding.MoveShardForId(store, "users/1-A", cluster.Nodes);
+                    await Sharding.Resharding.MoveShardForId(store, "users/1-A", servers: cluster.Nodes);
                     await CreateItems(store, 4, 6);
-                    await Sharding.Resharding.MoveShardForId(store, "users/1-A", cluster.Nodes);
+                    await Sharding.Resharding.MoveShardForId(store, "users/1-A", servers: cluster.Nodes);
                     await CreateItems(store, 6, 7);
-                    await Sharding.Resharding.MoveShardForId(store, "users/1-A", cluster.Nodes);
+                    await Sharding.Resharding.MoveShardForId(store, "users/1-A", servers: cluster.Nodes);
                     await CreateItems(store, 7, 8);
-                    await Sharding.Resharding.MoveShardForId(store, "users/1-A", cluster.Nodes);
+                    await Sharding.Resharding.MoveShardForId(store, "users/1-A", servers: cluster.Nodes);
                     await CreateItems(store, 8, 10);
                 }
                 finally
