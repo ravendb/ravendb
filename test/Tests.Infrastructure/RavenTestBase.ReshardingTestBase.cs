@@ -22,7 +22,7 @@ public partial class RavenTestBase
             _parent = parent;
         }
 
-        public async Task StartMovingShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
+        public async Task StartMovingShardForId(IDocumentStore store, string id, int? toShard = null, List<RavenServer> servers = null)
         {
             servers ??= _parent.GetServers();
 
@@ -30,7 +30,7 @@ public partial class RavenTestBase
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             var bucket = ShardHelper.GetBucket(id);
             var shardNumber = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
-            var toShard = ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, shardNumber);
+            var moveToShard = toShard == null ? ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, shardNumber) : toShard.Value;
 
             using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
             {
@@ -41,7 +41,7 @@ public partial class RavenTestBase
             {
                 try
                 {
-                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, shardNumber, toShard);
+                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, shardNumber, moveToShard);
                     break;
                 }
                 catch
@@ -50,8 +50,8 @@ public partial class RavenTestBase
                 }
             }
                 
-            var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard), timeout: 30_000);
-            Assert.True(exists, $"{id} wasn't found at shard {toShard}");
+            var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, moveToShard), timeout: 30_000);
+            Assert.True(exists, $"{id} wasn't found at shard {moveToShard}");
         }
 
         public async Task WaitForMigrationComplete(IDocumentStore store, string id)
@@ -68,11 +68,11 @@ public partial class RavenTestBase
             }
         }
 
-        public async Task MoveShardForId(IDocumentStore store, string id, List<RavenServer> servers = null)
+        public async Task MoveShardForId(IDocumentStore store, string id, int? toShard = null, List<RavenServer> servers = null)
         {
             try
             {
-                await StartMovingShardForId(store, id, servers);
+                await StartMovingShardForId(store, id, toShard, servers);
                 await WaitForMigrationComplete(store, id);
             }
             catch (Exception e)

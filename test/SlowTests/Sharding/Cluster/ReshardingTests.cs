@@ -155,7 +155,7 @@ namespace SlowTests.Sharding.Cluster
                 var id = "foo/bar";
                 var bucket = ShardHelper.GetBucket(id);
                 var location = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
-                var newLocation = ShardingTestBase.ReshardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, location);
+                var newLocation = ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, location);
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = new User
@@ -214,16 +214,16 @@ namespace SlowTests.Sharding.Cluster
             {
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var shardTopology = record.Sharding.Shards[0];
-                Equal(2, shardTopology.Members.Count);
-                Equal(0, shardTopology.Promotables.Count);
-                Equal(2, shardTopology.ReplicationFactor);
+                Assert.Equal(2, shardTopology.Members.Count);
+                Assert.Equal(0, shardTopology.Promotables.Count);
+                Assert.Equal(2, shardTopology.ReplicationFactor);
 
                 //create new shard
                 var res = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database));
                 var newShardNumber = res.ShardNumber;
-                Equal(2, newShardNumber);
-                Equal(2, res.ShardTopology.ReplicationFactor);
-                Equal(2, res.ShardTopology.AllNodes.Count());
+                Assert.Equal(2, newShardNumber);
+                Assert.Equal(2, res.ShardTopology.ReplicationFactor);
+                Assert.Equal(2, res.ShardTopology.AllNodes.Count());
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
 
                 await AssertWaitForValueAsync(async () =>
@@ -244,7 +244,7 @@ namespace SlowTests.Sharding.Cluster
                 foreach (var node in nodesContainingNewShard)
                 {
                     var serverWithNewShard = Servers.Single(x => x.ServerStore.NodeTag == node);
-                    True(serverWithNewShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(ShardHelper.ToShardName(store.Database, newShardNumber), out _));
+                    Assert.True(serverWithNewShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(ShardHelper.ToShardName(store.Database, newShardNumber), out _));
                 }
                 
                 //migrate doc to new shard
@@ -253,7 +253,7 @@ namespace SlowTests.Sharding.Cluster
                 var originalDocShard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
                 var toShard = newShardNumber;
 
-                NotEqual(toShard, originalDocShard);
+                Assert.NotEqual(toShard, originalDocShard);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -268,18 +268,18 @@ namespace SlowTests.Sharding.Cluster
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, originalDocShard)))
                 {
                     var user = await session.LoadAsync<User>(id);
-                    NotNull(user);
+                    Assert.NotNull(user);
                 }
 
                 await Sharding.Resharding.MoveShardForId(store, id, toShard);
 
                 var exists = WaitForDocument<User>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard));
-                True(exists);
+                Assert.True(exists);
 
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, toShard)))
                 {
                     var user = await session.LoadAsync<User>(id);
-                    NotNull(user);
+                    Assert.NotNull(user);
                 }
 
                 // the document will be written to the new location
@@ -293,12 +293,12 @@ namespace SlowTests.Sharding.Cluster
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, originalDocShard)))
                 {
                     var user = await session.LoadAsync<User>(id);
-                    Null(user);
+                    Assert.Null(user);
                 }
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, toShard)))
                 {
                     var user = await session.LoadAsync<User>(id);
-                    Equal("New shard", user.Name);
+                    Assert.Equal("New shard", user.Name);
                 }
             }
         }
