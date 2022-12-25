@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _database = database;
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<PeriodicBackupRunner>(_database.Name);
-            _auditLog = LoggingSource.AuditLog.GetLogger("PeriodicBackupRunner", "Audit");
+            _auditLog = LoggingSource.AuditLog.GetLogger(_database.Name, "Audit");
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             _tempBackupPath = BackupUtils.GetBackupTempPath(_database.Configuration, "PeriodicBackupTemp");
 
@@ -382,7 +382,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return;
             }
 
-            throw new ArgumentException($"Backup task {taskId} isn't registered");
+            throw new InvalidOperationException($"Fail to delay backup task with task id '{taskId}', the operation with that number isn't registered");
         }
 
         public DateTime? GetWakeDatabaseTimeUtc(string databaseName)
