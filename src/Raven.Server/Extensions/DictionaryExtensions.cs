@@ -39,5 +39,22 @@ namespace Raven.Server.Extensions
 
             return true;
         }
+
+        public static bool KeysEqual<TKey, TValue>(IDictionary<TKey, TValue> dict1, IDictionary<TKey, TValue> dict2)
+        {
+            if (dict1 == null || dict2 == null)
+                return dict1 == null && dict2 == null;
+
+            if (dict1.Count != dict2.Count)
+                return false;
+
+            foreach (var item in dict1)
+            {
+                if (dict2.ContainsKey(item.Key) == false)
+                    return false;
+            }
+
+            return true;
+        }
     }
 }

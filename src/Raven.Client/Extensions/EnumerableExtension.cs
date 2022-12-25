@@ -47,6 +47,23 @@ namespace Raven.Client.Extensions
             return result;
         }
 
+        public static bool ElementsEqual<TValue>(List<TValue> list1, List<TValue> list2)
+        {
+            if (list1 == null || list2 == null)
+                return list1 == null && list2 == null;
+
+            if (list1.Count != list2.Count)
+                return false;
+
+            foreach (var item in list1)
+            {
+                if (list2.Contains(item) == false)
+                    return false;
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// This is used to prevent race condition errors when using linq extension methods on ConcurrentDictionary
         /// </summary>

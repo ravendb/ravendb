@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -18,6 +18,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using DictionaryExtensions = Raven.Server.Extensions.DictionaryExtensions;
 
 namespace Raven.Server.Documents.Sharding
 {
@@ -79,21 +80,24 @@ namespace Raven.Server.Documents.Sharding
 
         public IDisposable AllocateContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);
 
-
         public void UpdateDatabaseRecord(RawDatabaseRecord record, long index)
         {
             UpdateConfiguration(record.Settings);
             
-            if (AreDictionaryKeysEqual(record.Sharding.Shards, _record.Sharding.Shards) == false)
+            if (DictionaryExtensions.KeysEqual(record.Sharding.Shards, _record.Sharding.Shards) == false)
             {
-                ShardExecutor.Dispose();
-                ShardExecutor = new ShardExecutor(ServerStore, record, record.DatabaseName);
+                using (var se = ShardExecutor)
+                {
+                    ShardExecutor = new ShardExecutor(ServerStore, record, record.DatabaseName);
+                }
             }
 
-            if (AreElementsEqual(record.Sharding.Orchestrator.Topology.Members, _record.Sharding.Orchestrator.Topology.Members) == false)
+            if (EnumerableExtension.ElementsEqual(record.Sharding.Orchestrator.Topology.Members, _record.Sharding.Orchestrator.Topology.Members) == false)
             {
-                AllOrchestratorNodesExecutor.Dispose();
-                AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, record);
+                using (var ne = AllOrchestratorNodesExecutor)
+                {
+                    AllOrchestratorNodesExecutor = new AllOrchestratorNodesExecutor(ServerStore, record);
+                }
             }
 
             Indexes.Update(record, index);
@@ -103,34 +107,6 @@ namespace Raven.Server.Documents.Sharding
             Interlocked.Exchange(ref _record, record);
 
             RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
-        }
-
-        private bool AreElementsEqual(List<string> list1, List<string> list2)
-        {
-            if (list1.Count != list2.Count)
-                return false;
-
-            foreach (var item in list1)
-            {
-                if (list2.Contains(item) == false)
-                    return false;
-            }
-
-            return true;
-        }
-
-        private bool AreDictionaryKeysEqual(Dictionary<int, DatabaseTopology> dict1, Dictionary<int, DatabaseTopology> dict2)
-        {
-            if (dict1.Count != dict2.Count)
-                return false;
-
-            foreach (var item in dict1)
-            {
-                if (dict2.ContainsKey(item.Key) == false)
-                    return false;
-            }
-
-            return true;
         }
 
         public string DatabaseName => _record.DatabaseName;
