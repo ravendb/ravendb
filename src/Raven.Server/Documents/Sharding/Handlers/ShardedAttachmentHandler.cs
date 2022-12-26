@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Attachments;
 using Raven.Server.Routing;
 
@@ -54,6 +55,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task GetPost()
         {
             using (var processor = new ShardedAttachmentHandlerProcessorForGetAttachment(this, isDocument: false))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/attachments/bulk", "POST")]
+        public async Task GetAttachments()
+        {
+            using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support Get Attachments."))
                 await processor.ExecuteAsync();
         }
     }

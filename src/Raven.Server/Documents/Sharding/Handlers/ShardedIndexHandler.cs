@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
+using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -176,6 +177,20 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task SuggestIndexMerge()
         {
             using (var processor = new ShardedIndexHandlerProcessorForSuggestIndexMerge(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/indexes/try", "POST")]
+        public async Task TestJavaScriptIndex()
+        {
+            using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support JavaScript indexes."))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/indexes/finish-rolling", "POST")]
+        public async Task FinishRolling()
+        {
+            using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support PutRollingIndex command."))
                 await processor.ExecuteAsync();
         }
     }
