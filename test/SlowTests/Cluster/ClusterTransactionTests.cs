@@ -506,8 +506,7 @@ namespace SlowTests.Cluster
         }
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "Handle this after RavenDB-18336")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ResolveInFavorOfClusterTransaction(Options options)
         {
             var user1 = new User()
@@ -1321,8 +1320,7 @@ namespace SlowTests.Cluster
         }
 
         [RavenTheory(RavenTestCategory.ClusterTransactions)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "Handle this after RavenDB-18336")]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ClusterTransactionConflict(Options options)
         {
             using (var store1 = GetDocumentStore(options))
@@ -1375,9 +1373,18 @@ namespace SlowTests.Cluster
                     Assert.Equal("Grisha", u.Name);
                 }
 
-                var t1 = EnsureNoReplicationLoop(Server, store1.Database);
-                var t2 = EnsureNoReplicationLoop(Server, store2.Database);
-
+                Task t1, t2;
+                if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+                {
+                    t1 = ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
+                    t2 = ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
+                }
+                else
+                {
+                    t1 = EnsureNoReplicationLoop(Server, store1.Database);
+                    t2 = EnsureNoReplicationLoop(Server, store2.Database);
+                }
+                
                 await Task.WhenAll(t1, t2);
                 await t1;
                 await t2;
