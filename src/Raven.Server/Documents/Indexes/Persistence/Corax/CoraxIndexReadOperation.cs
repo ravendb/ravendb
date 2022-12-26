@@ -28,10 +28,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
     {
-        internal static readonly ArrayPool<long> QueryPool = ArrayPool<long>.Create();
+        // PERF: This is a hack in order to deal with RavenDB-19597. The ArrayPool creates contention under high requests environments.
+        // There are 2 ways to avoid this contention, one is to avoid using it altogether and the other one is separating the pools from
+        // the actual executing thread. While the correct approach would be to amp-up the usage of shared buffers (which would make) this
+        // hack irrelevant, the complexity it introduces is much greater than what it make sense to be done at the moment. Therefore, 
+        // we are building a quick fix that allow us to avoid the locking convoys and we will defer the real fix to RavenDB-19665. 
+        [ThreadStatic] private static ArrayPool<long> _queryPool;
+
+        public static ArrayPool<long> QueryPool
+        {
+            get
+            {
+                _queryPool ??= ArrayPool<long>.Create();
+                return _queryPool;
+            }
+        }
+
         private readonly IndexFieldsMapping _fieldMappings;
         private readonly IndexSearcher _indexSearcher;
         private readonly ByteStringContext _allocator;
+
         private long _entriesCount = 0;
         
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, queryBuilderFactories, query)
@@ -80,8 +96,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     yield break;
             }
 
-            
-            var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary ));
+
+            int coraxPageSize = CoraxGetPageSize(_indexSearcher, take, query, isBinary);
+            var ids = QueryPool.Rent(coraxPageSize);
             int docsToLoad = pageSize;
             int queryStart = query.Start;
             bool hasHighlights = query.Metadata.HasHighlightings;
