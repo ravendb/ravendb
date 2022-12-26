@@ -5,8 +5,10 @@
 // ----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
@@ -96,7 +98,14 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
         public override Task SendNoopAckAsync() => Task.CompletedTask;
 
-        protected override bool FoundAboutMoreDocs() => _state.Batches.Count > 0;
+        protected override bool FoundAboutMoreDocs()
+        {
+            if (_state.Batches.Count > 0)
+                return true;
+
+            AssertCloseWhenNoDocsLeft();
+            return false;
+        }
 
         public override IDisposable MarkInUse()
         {
@@ -128,6 +137,24 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
             if (_options.Strategy == SubscriptionOpeningStrategy.Concurrent)
                 throw new NotSupportedInShardingException("Concurrent subscriptions are not supported in sharding.");
+        }
+
+        protected override void AssertCloseWhenNoDocsLeft()
+        {
+            if (_options.CloseWhenNoDocsLeft)
+            {
+                if (_state.ShardWorkers.All(x => x.Value.ClosedDueNoDocsLeft))
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info(
+                            $"Closing sharded subscription '{Options.SubscriptionName}' because all the shards did not find any documents to send and it's in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode.");
+                    }
+
+                    throw new SubscriptionClosedException(
+                        $"Closing sharded subscription '{Options.SubscriptionName}' because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode", canReconnect:false, closedDueNoDocsLeft: true);
+                }
+            }
         }
 
         protected override void OnError(Exception e) => _processor?.CurrentBatch?.SetException(e);

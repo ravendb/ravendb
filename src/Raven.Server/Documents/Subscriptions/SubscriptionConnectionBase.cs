@@ -600,20 +600,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected void AssertCloseWhenNoDocsLeft()
-        {
-            if (_options.CloseWhenNoDocsLeft)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info(
-                        $"Closing subscription {Options.SubscriptionName} because did not find any documents to send and it's in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode");
-                }
-
-                throw new SubscriptionClosedException(
-                    $"Closing subscription {Options.SubscriptionName} because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode");
-            }
-        }
+        protected abstract void AssertCloseWhenNoDocsLeft();
 
         protected async Task LogExceptionAndReportToClientAsync(Exception e)
         {
@@ -652,7 +639,8 @@ namespace Raven.Server.Documents.Subscriptions
                             [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
                             [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                             {
-                                [nameof(SubscriptionClosedException.CanReconnect)] = sce.CanReconnect
+                                [nameof(SubscriptionClosedException.CanReconnect)] = sce.CanReconnect,
+                                [nameof(SubscriptionClosedException.ClosedDueNoDocsLeft)] = sce.ClosedDueNoDocsLeft
                             }
                         });
                         break;
