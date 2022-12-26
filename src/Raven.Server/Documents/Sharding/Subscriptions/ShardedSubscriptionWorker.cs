@@ -16,7 +16,8 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         private readonly int _shardNumber;
         private readonly RequestExecutor _shardRequestExecutor;
         private readonly SubscriptionConnectionsStateOrchestrator _state;
-        
+        public bool ClosedDueNoDocsLeft;
+
         public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re, SubscriptionConnectionsStateOrchestrator state) : base(options, dbName)
         {
             _shardNumber = ShardHelper.GetShardNumber(dbName);
@@ -72,18 +73,19 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             }
         }
 
-        protected override (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) CheckIfShouldReconnectWorker(Exception ex, CancellationTokenSource processingCts,
-            Action assertLastConnectionFailure, Action<Exception> onUnexpectedSubscriptionError, bool throwOnRedirectNodeNotFound = true)
+        protected override (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) CheckIfShouldReconnectWorker(Exception ex, Action assertLastConnectionFailure, Action<Exception> onUnexpectedSubscriptionError, bool throwOnRedirectNodeNotFound = true)
         {
             // always try to reconnect until the task is canceled or assertLastConnectionFailure will throw when 'MaxErroneousPeriod' will elapse
             try
             {
                 assertLastConnectionFailure.Invoke();
-                var r = base.CheckIfShouldReconnectWorker(ex, default, assertLastConnectionFailure, onUnexpectedSubscriptionError, throwOnRedirectNodeNotFound: false);
+                var r = base.CheckIfShouldReconnectWorker(ex, assertLastConnectionFailure, onUnexpectedSubscriptionError, throwOnRedirectNodeNotFound: false);
+                if (ClosedDueNoDocsLeft)
+                    return (ShouldTryToReconnect: false, NodeRedirectTo: null);
 
                 if (_state.CancellationTokenSource.IsCancellationRequested)
                 {
-                    processingCts.Cancel();
+                    _processingCts.Cancel();
                     return (ShouldTryToReconnect: false, NodeRedirectTo: null);
                 }
 
@@ -100,6 +102,20 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 _state.DropSubscription(new SubscriptionClosedException($"Stopping sharded subscription '{_options.SubscriptionName}' with id '{_state.SubscriptionId}'", canReconnect: true, e));
                 throw;
             }
+        }
+
+        protected override (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionClosedException(SubscriptionClosedException sce)
+        {
+            if (sce.ClosedDueNoDocsLeft)
+            {
+                ClosedDueNoDocsLeft = true;
+                return (false, null);
+            }
+
+            if (sce.CanReconnect)
+                return (true, null);
+
+            return (false, null);
         }
     }
 }

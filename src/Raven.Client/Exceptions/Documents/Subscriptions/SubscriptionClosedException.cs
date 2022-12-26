@@ -11,6 +11,7 @@ namespace Raven.Client.Exceptions.Documents.Subscriptions
     public class SubscriptionClosedException : SubscriptionException
     {
         internal bool CanReconnect { get; set; }
+        internal bool ClosedDueNoDocsLeft { get; set; }
 
         public SubscriptionClosedException(string message) : base(message)
         {
@@ -21,12 +22,25 @@ namespace Raven.Client.Exceptions.Documents.Subscriptions
             CanReconnect = canReconnect;
         }
 
+        public SubscriptionClosedException(string message, bool canReconnect, bool closedDueNoDocsLeft) : base(message)
+        {
+            CanReconnect = canReconnect;
+            ClosedDueNoDocsLeft = closedDueNoDocsLeft;
+        }
+
         public SubscriptionClosedException(string message, Exception inner) : base(message, inner)
         {
         }
+
         public SubscriptionClosedException(string message, bool canReconnect, Exception inner) : base(message, inner)
         {
             CanReconnect = canReconnect;
+        }
+
+        public SubscriptionClosedException(string message, bool canReconnect, bool closedDueNoDocsLeft, Exception inner) : base(message, inner)
+        {
+            CanReconnect = canReconnect;
+            ClosedDueNoDocsLeft = closedDueNoDocsLeft;
         }
     }
 }

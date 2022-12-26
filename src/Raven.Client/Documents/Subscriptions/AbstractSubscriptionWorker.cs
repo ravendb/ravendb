@@ -426,9 +426,11 @@ namespace Raven.Client.Documents.Subscriptions
                     throw new SubscriptionInUseException(
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
+                    bool closedWhenNoDocsLeft = false;
                     bool canReconnect = false;
+                    connectionStatus.Data?.TryGet(nameof(SubscriptionClosedException.ClosedDueNoDocsLeft), out closedWhenNoDocsLeft);
                     connectionStatus.Data?.TryGet(nameof(SubscriptionClosedException.CanReconnect), out canReconnect);
-                    throw new SubscriptionClosedException($"Subscription With Id '{_options.SubscriptionName}' was closed.  " + connectionStatus.Exception, canReconnect);
+                    throw new SubscriptionClosedException($"Subscription With Id '{_options.SubscriptionName}' was closed.  " + connectionStatus.Exception, canReconnect, closedWhenNoDocsLeft);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Invalid:
                     throw new SubscriptionInvalidStateException(
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it is in invalid state. " + connectionStatus.Exception);
@@ -779,7 +781,7 @@ namespace Raven.Client.Documents.Subscriptions
                                 $"Subscription '{_options.SubscriptionName}'. Pulling task threw the following exception", ex);
                         }
 
-                        (bool shouldTryToReconnect, _redirectNode) = CheckIfShouldReconnectWorker(ex, _processingCts, AssertLastConnectionFailure, OnUnexpectedSubscriptionError);
+                        (bool shouldTryToReconnect, _redirectNode) = CheckIfShouldReconnectWorker(ex, AssertLastConnectionFailure, OnUnexpectedSubscriptionError);
                         if (shouldTryToReconnect)
                         {
                             await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry, _processingCts.Token).ConfigureAwait(false);
@@ -847,13 +849,13 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        protected virtual (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) CheckIfShouldReconnectWorker(Exception ex, CancellationTokenSource processingCts, Action assertLastConnectionFailure, Action<Exception> onUnexpectedSubscriptionError, bool throwOnRedirectNodeNotFound = true)
+        protected virtual (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) CheckIfShouldReconnectWorker(Exception ex, Action assertLastConnectionFailure, Action<Exception> onUnexpectedSubscriptionError, bool throwOnRedirectNodeNotFound = true)
         {
             if (ex is AggregateException ae)
             {
                 foreach (var exception in ae.InnerExceptions)
                 {
-                    if (CheckIfShouldReconnectWorker(exception, processingCts, assertLastConnectionFailure, onUnexpectedSubscriptionError).ShouldTryToReconnect)
+                    if (CheckIfShouldReconnectWorker(exception, assertLastConnectionFailure, onUnexpectedSubscriptionError).ShouldTryToReconnect)
                     {
                         return (true, null);
                     }
@@ -893,11 +895,7 @@ namespace Raven.Client.Documents.Subscriptions
                     return (true, null);
 
                 case SubscriptionClosedException sce:
-                    if (sce.CanReconnect)
-                        return (true, null);
-
-                    processingCts?.Cancel();
-                    return (false, null);
+                    return HandleSubscriptionClosedException(sce);
 
                 case SubscriptionMessageTypeException _:
                     goto default;
@@ -924,6 +922,15 @@ namespace Raven.Client.Documents.Subscriptions
                     assertLastConnectionFailure?.Invoke();
                     return (true, null);
             }
+        }
+
+        protected virtual (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionClosedException(SubscriptionClosedException sce)
+        {
+            if (sce.CanReconnect)
+                return (true, null);
+
+            _processingCts?.Cancel();
+            return (false, null);
         }
 
         protected void CloseTcpClient()
