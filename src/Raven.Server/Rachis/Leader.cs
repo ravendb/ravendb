@@ -385,15 +385,7 @@ namespace Raven.Server.Rachis
 
                 try
                 {
-                    ClusterTopology clusterTopology = null;
-                    using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    using (var ctx = context.OpenReadTransaction())
-                    {
-                        clusterTopology = _engine.GetTopology(context);
-                    }
-
-                    if(clusterTopology!=null && clusterTopology.AllNodes.Count>1)
-                        _engine.SwitchToCandidateState("An error occurred during our leadership." + Environment.NewLine + e);
+                    _engine.SwitchToCandidateState("An error occurred during our leadership." + Environment.NewLine + e);
                 }
                 catch (Exception e2)
                 {
