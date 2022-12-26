@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions;
 public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsStateBase<OrchestratedSubscriptionConnection>
 {
     private readonly ShardedDatabaseContext _databaseContext;
-    private Dictionary<string, ShardedSubscriptionWorker> _shardWorkers;
+    public Dictionary<string, ShardedSubscriptionWorker> ShardWorkers;
     private TaskCompletionSource _initialConnection;
     private SubscriptionWorkerOptions _options;
 
@@ -53,7 +53,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
         if (initializationTask == null)
         {
             _options = connection.Options;
-            _shardWorkers = new Dictionary<string, ShardedSubscriptionWorker>();
+            ShardWorkers = new Dictionary<string, ShardedSubscriptionWorker>();
             StartShardSubscriptionWorkers();
 
             _initialConnection.SetResult();
@@ -71,7 +71,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
             var re = _databaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber);
             var shard = ShardHelper.ToShardName(_databaseContext.DatabaseName, shardNumber);
             var worker = CreateShardedWorkerHolder(shard, re, lastErrorDateTime: null);
-            _shardWorkers.Add(shard, worker);
+            ShardWorkers.Add(shard, worker);
         }
     }
 
@@ -142,7 +142,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
             // ignore
         }
 
-        var workers = _shardWorkers;
+        var workers = ShardWorkers;
         var connection = _initialConnection;
 
         while (Batches.TryTake(out var batch))
@@ -171,7 +171,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
 
         if (Interlocked.CompareExchange(ref _initialConnection, null, connection) == connection)
         {
-            _shardWorkers = null;
+            ShardWorkers = null;
         }
     }
 }
