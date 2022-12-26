@@ -29,8 +29,7 @@ namespace SlowTests.Server.Replication
         }
 
         [RavenTheory(RavenTestCategory.Sharding | RavenTestCategory.Revisions)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Skip = "This test depends on the completion of sharded external replication")]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ReplicateAConflictThenResolveIt(Options options)
         {
             options.ModifyDatabaseRecord = record =>
