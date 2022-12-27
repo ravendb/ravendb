@@ -33,22 +33,8 @@ namespace Raven.Server
     public class Program
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Server");
-
+        
         public static unsafe int Main(string[] args)
-        {
-            try
-            {
-                xd(args);
-            }
-            catch (Exception e)
-            {
-                Logger.Info("", e);
-                throw;
-            }
-
-            return 0;
-        }
-        public static unsafe int xd(string[] args)
         {
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
