@@ -141,19 +141,9 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
 
         protected override void AssertCloseWhenNoDocsLeft()
         {
-            if (_options.CloseWhenNoDocsLeft)
+            if (_state.SubscriptionClosedDueNoDocs)
             {
-                if (_state.ShardWorkers.All(x => x.Value.ClosedDueNoDocsLeft))
-                {
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info(
-                            $"Closing sharded subscription '{Options.SubscriptionName}' because all the shards did not find any documents to send and it's in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode.");
-                    }
-
-                    throw new SubscriptionClosedException(
-                        $"Closing sharded subscription '{Options.SubscriptionName}' because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode", canReconnect:false, closedDueNoDocsLeft: true);
-                }
+                base.AssertCloseWhenNoDocsLeft();
             }
         }
 
