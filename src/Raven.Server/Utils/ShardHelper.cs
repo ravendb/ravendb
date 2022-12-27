@@ -8,7 +8,6 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Sharding;
@@ -147,7 +146,6 @@ namespace Raven.Server.Utils
 
         public static int GetShardNumberFor(ShardingConfiguration configuration, int bucket)
         {
-            // todo : all places that use this overload should take into account Prefixed settings when calculating the bucket
             return FindBucketShard(configuration.BucketRanges, bucket);
         }
 

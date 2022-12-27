@@ -62,7 +62,7 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 var bucket = Sharding.GetBucket(id);
-                var shardNumber = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+                var shardNumber = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
                 var toShard = ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, shardNumber);
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
                 {

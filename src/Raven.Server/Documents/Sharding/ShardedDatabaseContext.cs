@@ -160,8 +160,8 @@ namespace Raven.Server.Documents.Sharding
             {
                 shardingConfiguration.BucketRanges = new List<ShardBucketRange>();
                 var start = 0;
-                var step = ShardHelper.NumberOfBuckets / shardingConfiguration.Shards.Length;
-                for (int i = 0; i < shardingConfiguration.Shards.Length; i++)
+                var step = ShardHelper.NumberOfBuckets / shardingConfiguration.Shards.Count;
+                for (int i = 0; i < shardingConfiguration.Shards.Count; i++)
                 {
                     shardingConfiguration.BucketRanges.Add(new ShardBucketRange
                     {
@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Sharding
             var pool = GetNodesDistribution(clusterTopology, shardingConfiguration.Shards);
             var index = 0;
             var keys = pool.Keys.ToList();
-            foreach (var shardTopology in shardingConfiguration.Shards)
+            foreach (var (_, shardTopology) in shardingConfiguration.Shards)
             {
                 while (shardTopology.ReplicationFactor > shardTopology.Count)
                 {
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.Sharding
 
             foreach (var shardNumber in shards)
             {
-                if (shardNumber >= shardingConfiguration.Shards.Length)
+                if (shardingConfiguration.Shards.ContainsKey(shardNumber) == false)
                 {
                     throw new InvalidDataException($"Cannot assign shard number {shardNumber} to prefix {setting.Prefix}, " +
                                                    $"there's no shard '{shardNumber}' in sharding topology!");
@@ -361,7 +361,7 @@ namespace Raven.Server.Documents.Sharding
             return command.Result.Results.Length == 0;
         }
 
-        private static Dictionary<string, int> GetNodesDistribution(ClusterTopology clusterTopology, DatabaseTopology[] shards)
+        private static Dictionary<string, int> GetNodesDistribution(ClusterTopology clusterTopology, Dictionary<int, DatabaseTopology> shards)
         {
             var total = 0;
             var pool = new Dictionary<string, int>(); // tag, number of occurrences
@@ -371,7 +371,7 @@ namespace Raven.Server.Documents.Sharding
                 pool[node.Key] = 0;
             }
 
-            foreach (var shardTopology in shards)
+            foreach (var (shardNumber, shardTopology) in shards)
             {
                 total += shardTopology.ReplicationFactor;
             }
@@ -394,7 +394,6 @@ namespace Raven.Server.Documents.Sharding
 
             return pool;
         }
-
         public void Dispose()
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 needs an ExceptionAggregator like DocumentDatabase");

@@ -107,43 +107,43 @@ namespace Raven.Server.Smuggler.Documents
 
         public ICompareExchangeActions CompareExchange(string databaseName, JsonOperationContext context, BackupKind? backupKind, bool withDocuments)
         {
-            return withDocuments ? null : new ShardedCompareExchangeActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.CompareExchange(databaseName, context, backupKind, withDocuments: false)), _options);
+            return withDocuments ? null : new ShardedCompareExchangeActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.CompareExchange(databaseName, context, backupKind, withDocuments: false)), _options);
         }
 
         public ICompareExchangeActions CompareExchangeTombstones(string databaseName, JsonOperationContext context) =>
-            new ShardedCompareExchangeActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.CompareExchangeTombstones(databaseName, context)), _options);
+            new ShardedCompareExchangeActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.CompareExchangeTombstones(databaseName, context)), _options);
 
         public IDocumentActions Documents(bool throwOnCollectionMismatchError = true) =>
-            new ShardedDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Documents(throwOnDuplicateCollection: false)), _options);
+            new ShardedDocumentActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.Documents(throwOnDuplicateCollection: false)), _options);
 
         public IDocumentActions RevisionDocuments() =>
-            new ShardedDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.RevisionDocuments()), _options);
+            new ShardedDocumentActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.RevisionDocuments()), _options);
 
         public IDocumentActions Tombstones() =>
-            new ShardedDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Tombstones()), _options);
+            new ShardedDocumentActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.Tombstones()), _options);
 
         public IDocumentActions Conflicts() =>
-            new ShardedDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Conflicts()), _options);
+            new ShardedDocumentActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.Conflicts()), _options);
 
         public ICounterActions Counters(SmugglerResult result) =>
-            new ShardedCounterActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Counters(result)), _options);
+            new ShardedCounterActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.Counters(result)), _options);
 
         public ICounterActions LegacyCounters(SmugglerResult result) =>
-            new ShardedCounterActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyCounters(result)), _options);
+            new ShardedCounterActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyCounters(result)), _options);
 
         public ITimeSeriesActions TimeSeries() =>
-            new ShardedTimeSeriesActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.TimeSeries()), _options);
+            new ShardedTimeSeriesActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.TimeSeries()), _options);
 
         public ILegacyActions LegacyDocumentDeletions() =>
-            new ShardedLegacyActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyDocumentDeletions()), _options);
+            new ShardedLegacyActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyDocumentDeletions()), _options);
 
         public ILegacyActions LegacyAttachmentDeletions() =>
-            new ShardedLegacyActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyAttachmentDeletions()), _options);
+            new ShardedLegacyActions(_databaseContext, _allocator, _destinations.ToDictionary(x => x.Key, x => x.Value.LegacyAttachmentDeletions()), _options);
 
 
         private abstract class ShardedActions<T> : INewDocumentActions, INewCompareExchangeActions where T : IAsyncDisposable
         {
-            private JsonOperationContext _context;
+            private readonly JsonOperationContext _context;
             private readonly IDisposable _rtnCtx;
             private readonly DatabaseSmugglerOptionsServerSide _options;
             protected readonly ShardedDatabaseContext DatabaseContext;
@@ -178,7 +178,8 @@ namespace Raven.Server.Smuggler.Documents
         private class ShardedCompareExchangeActions : ShardedActions<ICompareExchangeActions>, ICompareExchangeActions
         {
             private readonly ByteStringContext _allocator;
-            public ShardedCompareExchangeActions(ShardedDatabaseContext databaseContext, Dictionary<int, ICompareExchangeActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
+
+            public ShardedCompareExchangeActions(ShardedDatabaseContext databaseContext, ByteStringContext allocator, Dictionary<int, ICompareExchangeActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
                 _allocator = allocator;
             }
@@ -213,7 +214,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             private readonly ByteStringContext _allocator;
 
-            public ShardedDocumentActions(ShardedDatabaseContext databaseContext, Dictionary<int, IDocumentActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
+            public ShardedDocumentActions(ShardedDatabaseContext databaseContext, ByteStringContext allocator, Dictionary<int, IDocumentActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
                 _allocator = allocator;
             }
@@ -226,7 +227,6 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteTombstoneAsync(Tombstone tombstone, SmugglerProgressBase.CountsWithLastEtag progress)
             {
-                
                 var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, tombstone.LowerId);
                 await _actions[shardNumber].WriteTombstoneAsync(tombstone, progress);
             }
@@ -249,7 +249,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             private readonly ByteStringContext _allocator;
 
-            public ShardedCounterActions(ShardedDatabaseContext databaseContext, Dictionary<int, ICounterActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
+            public ShardedCounterActions(ShardedDatabaseContext databaseContext, ByteStringContext allocator, Dictionary<int, ICounterActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
                 _allocator = allocator;
             }
@@ -274,7 +274,8 @@ namespace Raven.Server.Smuggler.Documents
         private class ShardedTimeSeriesActions : ShardedActions<ITimeSeriesActions>, ITimeSeriesActions
         {
             private readonly ByteStringContext _allocator;
-            public ShardedTimeSeriesActions(ShardedDatabaseContext databaseContext, Dictionary<int, ITimeSeriesActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
+
+            public ShardedTimeSeriesActions(ShardedDatabaseContext databaseContext, ByteStringContext allocator, Dictionary<int, ITimeSeriesActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
                 _allocator = allocator;
             }
@@ -289,7 +290,8 @@ namespace Raven.Server.Smuggler.Documents
         private class ShardedLegacyActions : ShardedActions<ILegacyActions>, ILegacyActions
         {
             private readonly ByteStringContext _allocator;
-            public ShardedLegacyActions(ShardedDatabaseContext databaseContext, Dictionary<int, ILegacyActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
+
+            public ShardedLegacyActions(ShardedDatabaseContext databaseContext, ByteStringContext allocator, Dictionary<int, ILegacyActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
                 _allocator = allocator;
             }
