@@ -63,12 +63,9 @@ namespace Raven.Server.Smuggler.Documents
         {
             if (ClusterTransactionCommand.IsAtomicGuardKey(key.Key, out var docId))
             {
-                using (_serverContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                {
-                var shardNumber = ShardHelper.GetShardNumberFor(_shardedRecord.Sharding, _allocator, docId);
-
-                    return shardNumber != _index;
-                }
+                var shardNumber = ShardHelper.GetShardNumberFor(_sharding, _allocator, docId);
+                return shardNumber != _index;
+            }
 
             return _processCompareExchange == false;
         }
@@ -77,6 +74,6 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (_allocator = new ByteStringContext(SharedMultipleUseFlag.None))
                 return base.ExecuteAsync(ensureStepsProcessed, isLastFile);
+        }
     }
-}
 }
