@@ -118,14 +118,14 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
                 AddToQueryTree(IndexSearcher.InQuery(field, terms));
         }
 
-        if (ScoreFunction is not NullScoreFunction && ScoreFunction != null)
-            baseQuery = IndexSearcher.Boost(baseQuery, ScoreFunction);
-        
         if (_complexMatches != null)
         {
             foreach (var complex in _complexMatches ?? Enumerable.Empty<IQueryMatch>())
                 AddToQueryTree(complex);
         }
+
+        if (ScoreFunction is not NullScoreFunction && ScoreFunction != null)
+            baseQuery = IndexSearcher.Boost(baseQuery, ScoreFunction);
 
         return baseQuery;
         
