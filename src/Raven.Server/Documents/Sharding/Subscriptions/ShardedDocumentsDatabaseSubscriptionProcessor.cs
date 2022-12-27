@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Nest;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
@@ -38,7 +39,15 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
 
         if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
         {
-            var bucket = ShardHelper.GetBucket(item.Id);
+            var bucket = ShardHelper.GetBucketFor(_allocator, item.Id);
+            foreach (var setting in _sharding.Prefixed)
+            {
+                if (item.Id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    bucket += setting.BucketRangeStart;
+                    break;
+                }
+            }
             if (_sharding.BucketMigrations.TryGetValue(bucket, out var migration))
             {
                 if (migration.Status < MigrationStatus.OwnershipTransferred)
@@ -50,7 +59,7 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
                 }
             }
 
-            var shard = ShardHelper.GetShardNumber(_sharding.BucketRanges, bucket);
+            var shard = ShardHelper.GetShardNumberFor(_sharding, bucket);
             if (shard != _database.ShardNumber)
             {
                 reason = $"The owner of {item.Id} is shard {shard} (current shard number: {_database.ShardNumber})";

@@ -220,12 +220,6 @@ namespace Raven.Server.Utils
             return ranges[^1].ShardNumber;
         }
 
-        public static int GetShardNumber(List<ShardBucketRange> ranges, string id)
-        {
-            var bucket = GetBucket(id);
-            return GetShardNumber(ranges, bucket);
-        }
-
         public static void MoveBucket(this DatabaseRecord record, int bucket, int toShard)
         {
             try

@@ -682,9 +682,8 @@ namespace SlowTests.Sharding.Cluster
                     expected.Remove(user.Key);
                 }
 
-                var config = await Sharding.GetShardingConfigurationAsync(store);
                 Assert.True(expected.Count == 0,
-                    $"Missing {string.Join(Environment.NewLine, expected.Select(e => $"{e} (shard: {ShardHelper.GetShardNumber(config.BucketRanges, e)})"))}");
+                    $"Missing {string.Join(Environment.NewLine, expected.Select(async e => $"{e} (shard: {await Sharding.GetShardNumberFor(store, e)})"))}");
 
                 
                 await Sharding.Subscriptions.AssertNoItemsInTheResendQueueAsync(store, id);

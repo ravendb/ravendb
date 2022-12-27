@@ -65,7 +65,7 @@ public class SubscriptionConnectionsStateForShard : SubscriptionConnectionsState
         {
             foreach (var item in GetDocumentsFromResend(context, GetActiveBatches()))
             {
-                var shard = ShardHelper.GetShardNumber(ShardedDocumentDatabase.DatabaseContext.DatabaseRecord.Sharding.BucketRanges, item.DocumentId);
+                var shard = ShardHelper.GetShardNumberFor(ShardedDocumentDatabase.DatabaseContext.DatabaseRecord.Sharding, context, item.DocumentId);
                 if (shard == ShardedDocumentDatabase.ShardNumber)
                     return true;
             }

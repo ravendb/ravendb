@@ -58,7 +58,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to handle NodeTag, currently is isn't used for sharded because it is shared");
 
-            var topology = string.IsNullOrEmpty(ShardName) ? record.Topology : record.Sharding.Shards[ShardHelper.GetShardNumber(ShardName)];
+            var topology = string.IsNullOrEmpty(ShardName) ? record.Topology : record.Sharding.Shards[ShardHelper.GetShardNumberFromDatabaseName(ShardName)];
             var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, currentState, lastResponsibleNode);
             

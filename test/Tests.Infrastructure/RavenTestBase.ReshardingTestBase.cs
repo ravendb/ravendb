@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -22,15 +23,27 @@ public partial class RavenTestBase
             _parent = parent;
         }
 
-        public async Task StartMovingShardForId(IDocumentStore store, string id, int? toShard = null, List<RavenServer> servers = null)
+        public async Task<int> StartMovingShardForId(IDocumentStore store, string id, int? toShard = null, List<RavenServer> servers = null)
         {
             servers ??= _parent.GetServers();
 
-
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-            var bucket = ShardHelper.GetBucket(id);
-            var shardNumber = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
-            var moveToShard = toShard == null ? ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, shardNumber) : toShard.Value;
+            var bucket = _parent.Sharding.GetBucket(id);
+            PrefixedShardingSetting prefixed = null;
+            foreach (var setting in record.Sharding.Prefixed)
+            {
+                if (id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    bucket += setting.BucketRangeStart;
+                    prefixed = setting;
+                    break;
+                }
+            }
+
+            var shardNumber = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
+            var moveToShard = toShard ?? (prefixed != null 
+                ? ShardingTestBase.GetNextSortedShardNumber(prefixed, shardNumber)
+                : ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, shardNumber));
 
             using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
             {
@@ -52,13 +65,14 @@ public partial class RavenTestBase
                 
             var exists = _parent.WaitForDocument<dynamic>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, moveToShard), timeout: 30_000);
             Assert.True(exists, $"{id} wasn't found at shard {moveToShard}");
+
+            return bucket;
         }
 
-        public async Task WaitForMigrationComplete(IDocumentStore store, string id)
+        public async Task WaitForMigrationComplete(IDocumentStore store, int bucket)
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
             {
-                var bucket = ShardHelper.GetBucket(id);
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database), cts.Token);
                 while (record.Sharding.BucketMigrations.ContainsKey(bucket))
                 {
@@ -72,8 +86,8 @@ public partial class RavenTestBase
         {
             try
             {
-                await StartMovingShardForId(store, id, toShard, servers);
-                await WaitForMigrationComplete(store, id);
+                var bucket = await StartMovingShardForId(store, id, toShard, servers);
+                await WaitForMigrationComplete(store, bucket);
             }
             catch (Exception e)
             {

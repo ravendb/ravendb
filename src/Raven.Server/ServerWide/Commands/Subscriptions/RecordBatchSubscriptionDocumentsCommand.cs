@@ -12,6 +12,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -115,7 +116,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "create subscription WhosTaskIsIt");
 
-                var topology = string.IsNullOrEmpty(ShardName) ? record.Topology : record.Sharding.Shards[ShardHelper.GetShardNumber(ShardName)];
+                var topology = string.IsNullOrEmpty(ShardName) ? record.Topology : record.Sharding.Shards[ShardHelper.GetShardNumberFromDatabaseName(ShardName)];
                 var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
                 var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscriptionState, lastResponsibleNode);
 
@@ -142,7 +143,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 {
                     if (subscriptionState.ShardingState != null)
                     {
-                        if (IsFromProperShard(record, deletedId) == false)
+                        if (IsFromProperShard(context, record, deletedId) == false)
                             continue;
                     }
 
@@ -167,7 +168,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         if (subscriptionState.ShardingState != null)
                         {
                             var exists = TryGetExisting(context, keySlice, out var currentBatch, out var currentChangeVector);
-                            var owner = IsFromProperShard(record, documentRecord.DocumentId);
+                            var owner = IsFromProperShard(context, record, documentRecord.DocumentId);
 
                             if (exists)
                             {
@@ -189,7 +190,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                             }
                             else
                             {
-                                if (IsAlreadyProcessed(context, subscriptionState.ShardingState, documentRecord.DocumentId,
+                                if (IsAlreadyProcessed(context, record.Sharding, subscriptionState.ShardingState, documentRecord.DocumentId,
                                         documentRecord.ChangeVector))
                                 {
                                     // item was already processed
@@ -199,7 +200,15 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                             }
 
                             var vector = context.GetChangeVector(documentRecord.ChangeVector);
-                            var bucket = ShardHelper.GetBucket(documentRecord.DocumentId);
+                            var bucket = ShardHelper.GetBucketFor(context, documentRecord.DocumentId);
+                            foreach (var setting in record.Sharding.Prefixed)
+                            {
+                                if (documentRecord.DocumentId.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    bucket += setting.BucketRangeStart;
+                                    break;
+                                }
+                            }
 
                             if (IsBucketUnderActiveMigration(record, bucket))
                             {
@@ -295,11 +304,20 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             return false;
         }
 
-        private bool IsAlreadyProcessed(ClusterOperationContext context, SubscriptionShardingState subscriptionShardingState, string id,
+        private bool IsAlreadyProcessed(ClusterOperationContext context, RawShardingConfiguration configuration,
+            SubscriptionShardingState subscriptionShardingState, string id,
             string changeVector)
         {
             var vector = context.GetChangeVector(changeVector);
-            var bucket = ShardHelper.GetBucket(id);
+            var bucket = ShardHelper.GetBucketFor(context, id);
+            foreach (var setting in configuration.Prefixed)
+            {
+                if (id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    bucket += setting.BucketRangeStart;
+                    break;
+                }
+            }
 
             if (subscriptionShardingState.ProcessedChangeVectorPerBucket.TryGetValue(bucket, out var processedChangeVector))
             {
@@ -322,11 +340,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             return migration.Status < MigrationStatus.OwnershipTransferred;
         }
 
-        private bool IsFromProperShard(RawDatabaseRecord record, string id)
+        private bool IsFromProperShard(ClusterOperationContext context, RawDatabaseRecord record, string id)
         {
-            var bucket = ShardHelper.GetBucket(id);
-            var expected = ShardHelper.GetShardNumber(record.Sharding.ShardBucketRanges, bucket);
-            var actual = ShardHelper.GetShardNumber(ShardName);
+            var expected = ShardHelper.GetShardNumberFor(record.Sharding, context, id);
+            var actual = ShardHelper.GetShardNumberFromDatabaseName(ShardName);
 
             return expected == actual;
         }
