@@ -1,11 +1,34 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Smuggler;
+using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
-using SlowTests.Core.Utils.Entities;
+using Raven.Client.ServerWide.Sharding;
+using Raven.Server;
+using Raven.Server.Documents.Commands.Replication;
+using Raven.Server.Documents.Handlers.Processors.Replication;
+using Raven.Server.Documents.Replication.Outgoing;
+using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
+using Tests.Infrastructure;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,6 +38,319 @@ namespace SlowTests.Sharding.Replication
     {
         public ShardedExternalReplicationTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        private const DatabaseItemType AllTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Tombstones |
+                                                  DatabaseItemType.Conflicts | DatabaseItemType.Attachments | DatabaseItemType.CounterGroups |
+                                                  DatabaseItemType.TimeSeries;
+
+        [Fact]
+        public async Task GetReplicationActiveConnectionsShouldWork()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+
+                    s1.SaveChanges();
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+
+                var dbs = Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store2.Database);
+                foreach (var task in dbs)
+                {
+                    var db = await task;
+                    var shardNumber = ShardHelper.GetShardNumberFromDatabaseName(db.Name);
+                    var replicationActiveConnections = await store2.Maintenance.ForShard(shardNumber).SendAsync(new GetReplicationActiveConnectionsInfoOperation());
+                    Assert.NotNull(replicationActiveConnections.IncomingConnections);
+                    Assert.Equal(3, replicationActiveConnections.IncomingConnections.Count);
+                    Assert.Empty(replicationActiveConnections.OutgoingConnections);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFromNonShardedToShardedShouldWork()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+
+                    s1.SaveChanges();
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFromNonShardedToShardedShouldWork2()
+        {
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"NonSharded_{s}"
+            }))
+            using (var store2 = Sharding.GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"Sharded_{s}"
+            }))
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(AllTypes));
+
+                await EnsureReplicatingAsync(store1, store2);
+
+                WaitForUserToContinueTheTest(store2);
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFromShardedToShardedShouldWork()
+        {
+            using (var store1 = Sharding.GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"Source_{s}"
+            }))
+            using (var store2 = Sharding.GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"Destination_{s}"
+            }))
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+
+                    s1.SaveChanges();
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFromShardedToShardedShouldWork2()
+        {
+            using (var store1 = Sharding.GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"NonSharded_{s}"
+            }))
+            using (var store2 = Sharding.GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"Sharded_{s}"
+            }))
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(AllTypes));
+                WaitForUserToContinueTheTest(store2);
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                WaitForUserToContinueTheTest(store2);
+            }
+        }
+
+        [Fact]
+        public async Task EnsureNoReplicationLoopInExternalReplicationBetweenTwoShardedDBs()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+
+                    s1.SaveChanges();
+                }
+
+                using (var s2 = store2.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s2.Store(new User(), $"users/{i}");
+                    }
+
+                    s2.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store2, store1);
+
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"users/{i}";
+                    Assert.True(WaitForDocument<User>(store1, id, predicate: null, timeout: 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task EnsureNoReplicationLoopInExternalReplicationBetweenTwoShardedDBs2()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User() { Name = "Shiran" }, "users/1");
+                    s1.SaveChanges();
+                }
+
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new User() { Name = "Queeni" }, "users/1");
+                    s2.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                await SetupReplicationAsync(store2, store1);
+                await EnsureReplicatingAsync(store2, store1);
+
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
+
+                Assert.True(WaitForDocument<User>(store1, "users/1", predicate: u => u.Name == "Queeni", timeout: 30_000));
+                Assert.True(WaitForDocument<User>(store2, "users/1", predicate: u => u.Name == "Queeni", timeout: 30_000));
+            }
+        }
+
+        [Fact]
+        public async Task EnsureNoReplicationLoopInExternalReplicationFromNonShardedToSharded()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User() { Name = "Shiran" }, "users/1");
+                    s1.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+                await EnsureReplicatingAsync(store2, store1);
+
+                Assert.True(WaitForDocument(store2, "users/1"));
+
+                var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+
+                // we should get 3 incoming handlers (for each shard) 
+                var incomingReplicationHandlers = db.ReplicationLoader?.IncomingHandlers.ToList();
+                Assert.NotNull(incomingReplicationHandlers);
+                Assert.Equal(3, incomingReplicationHandlers.Count);
+
+                // we want to ensure we sent back from the sharded DBs to the non-sharded DB only one document (from `EnsureReplicatingAsync`)
+                foreach (var incoming in incomingReplicationHandlers)
+                {
+                    var haveStats = incoming.GetReplicationPerformance().Any(p => p.Network.InputCount > 0);
+                    if (haveStats)
+                    {
+                        var stats = incoming.GetReplicationPerformance().Where(p => p.Network.InputCount > 0)?.Single();
+                        Assert.Equal(1, stats.Network.InputCount);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFromShardedToNonShardedShouldWork()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+
+                    s1.SaveChanges();
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFromShardedToNonShardedShouldWork2()
+        {
+            using (var store1 = Sharding.GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"Sharded_{s}"
+            }))
+            using (var store2 = GetDocumentStore())
+            {
+                await SetupReplicationAsync(store1, store2);
+
+                await store1.Maintenance.SendAsync(new CreateSampleDataOperation(AllTypes));
+
+                await EnsureReplicatingAsync(store1, store2);
+
+                WaitForUserToContinueTheTest(store2);
+            }
         }
 
         [Fact]
@@ -106,6 +442,1278 @@ namespace SlowTests.Sharding.Replication
                     "users/1",
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(60)));
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFailOverFromNonShardedToShardedDatabase()
+        {
+            var clusterSize = 3;
+            var replicationFactor = 3;
+
+            var (_, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
+
+            var srcDB = GetDatabaseName();
+            var dstDB = GetDatabaseName();
+
+            var srcTopology = await CreateDatabaseInCluster(srcDB, clusterSize, srcLeader.WebUrl);
+            var dstTopology = await ShardingCluster.CreateShardedDatabaseInCluster(dstDB, replicationFactor, (dstNodes, dstLeader), shards: 3);
+
+            using (var srcStore = new DocumentStore()
+            {
+                Urls = new[] { srcLeader.WebUrl },
+                Database = srcDB,
+            }.Initialize())
+            {
+                using (var session = srcStore.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                // add watcher with invalid url to test the failover on database topology discovery
+                var watcher = new ExternalReplication(dstDB, "connection")
+                {
+                    MentorNode = "B"
+                };
+                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
+
+                using (var dstStore = new DocumentStore
+                {
+                    Urls = dstTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    using (var dstSession = dstStore.OpenSession())
+                    {
+                        dstSession.Load<User>("Karmel");
+                        Assert.True(await WaitForDocumentInClusterAsync<User>(
+                            dstNodes,
+                            dstDB,
+                            "users/1",
+                            u => u.Name.Equals("Karmel"),
+                            TimeSpan.FromSeconds(60)));
+                    }
+
+                    await ShardingCluster.WaitForShardedChangeVectorInClusterAsync(dstNodes, dstDB, replicationFactor, 30_000);
+
+                    var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+                    var server = Servers.Single(s => s.WebUrl == responsibale);
+                    using (var processor = await Databases.InstantiateOutgoingTaskProcessor(srcDB, server))
+                    {
+                        Assert.True(WaitForValue(
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                                  null,
+                            true));
+
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                            .DestinationUrl;
+
+                        // fail the node to to where the data is sent
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
+                    }
+
+                    using (var session = srcStore.OpenSession())
+                    {
+                        session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                        session.Store(new User
+                        {
+                            Name = "Karmel2"
+                        }, "users/2");
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
+
+                    var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDB);
+                    Assert.Equal(1, WaitForValue(() =>
+                    {
+
+                        return db.ReplicationLoader?.OutgoingHandlers.Where(o => o is OutgoingExternalReplicationHandler)?.Count() ?? 0;
+                    }, 1));
+
+                    var outgoingHandler = db.ReplicationLoader?.OutgoingHandlers.Where(o => o is OutgoingExternalReplicationHandler).ToList();
+                    Assert.NotNull(outgoingHandler);
+
+                    // checking that after the replication resumes we don't start from scratch
+                    var stats = outgoingHandler[0].GetReplicationPerformance().Where(p => p.Network.DocumentOutputCount > 0)?.Single();
+                    Assert.Equal(1, stats.Network.DocumentOutputCount);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFailOverFromShardedToNonShardedDatabase()
+        {
+            var clusterSize = 3;
+            var replicationFactor = 3;
+
+            var (srcNodes, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
+
+            var srcDB = GetDatabaseName();
+            var dstDB = GetDatabaseName();
+
+            var srcTopology = await ShardingCluster.CreateShardedDatabaseInCluster(srcDB, replicationFactor, (srcNodes, srcLeader), shards: 3);
+            var dstTopology = await CreateDatabaseInCluster(dstDB, clusterSize, dstLeader.WebUrl);
+
+            using (var srcStore = new DocumentStore()
+            {
+                Urls = srcTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                Database = srcDB,
+            }.Initialize())
+            {
+                using (var session = srcStore.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                // add watcher with invalid url to test the failOver on database topology discovery
+                var watcher = new ExternalReplication(dstDB, "connection")
+                {
+                    MentorNode = "B"
+                };
+                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
+
+                using (var dstStore = new DocumentStore
+                {
+                    Urls = new[] { dstLeader.WebUrl },
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    using (var dstSession = dstStore.OpenSession())
+                    {
+                        dstSession.Load<User>("Karmel");
+                        Assert.True(await WaitForDocumentInClusterAsync<User>(
+                            dstNodes,
+                            dstDB,
+                            "users/1",
+                            u => u.Name.Equals("Karmel"),
+                            TimeSpan.FromSeconds(60)));
+                    }
+
+                    var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+                    var server = Servers.Single(s => s.WebUrl == responsibale);
+                    using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
+                    {
+                        Assert.True(WaitForValue(
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                                  null,
+                            true));
+
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                            .DestinationUrl;
+
+                        // fail the node to to where the data is sent
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
+                    }
+
+                    using (var session = srcStore.OpenSession())
+                    {
+                        session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                        session.Store(new User
+                        {
+                            Name = "Karmel2"
+                        }, "users/2");
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFailOverWithReshardingFromShardedToNonShardedDatabase()
+        {
+            var clusterSize = 3;
+            var replicationFactor = 3;
+
+            var (srcNodes, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
+
+            var srcDB = GetDatabaseName();
+            var dstDB = GetDatabaseName();
+
+            var srcTopology = await ShardingCluster.CreateShardedDatabaseInCluster(srcDB, replicationFactor, (srcNodes, srcLeader), shards: 3);
+            var dstTopology = await CreateDatabaseInCluster(dstDB, clusterSize, dstLeader.WebUrl);
+
+            using (var srcStore = new DocumentStore()
+            {
+                Urls = srcTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                Database = srcDB,
+            }.Initialize())
+            {
+                using (var session = srcStore.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                // add watcher with invalid url to test the failOver on database topology discovery
+                var watcher = new ExternalReplication(dstDB, "connection")
+                {
+                    MentorNode = "B"
+                };
+                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
+
+                using (var dstStore = new DocumentStore
+                {
+                    Urls = new[] { dstLeader.WebUrl },
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    using (var dstSession = dstStore.OpenSession())
+                    {
+                        dstSession.Load<User>("Karmel");
+                        Assert.True(await WaitForDocumentInClusterAsync<User>(
+                            dstNodes,
+                            dstDB,
+                            "users/1",
+                            u => u.Name.Equals("Karmel"),
+                            TimeSpan.FromSeconds(60)));
+                    }
+
+                    await Sharding.Resharding.MoveShardForId(srcStore, "users/1");
+
+                    var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+                    var server = Servers.Single(s => s.WebUrl == responsibale);
+                    using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
+                    {
+                        Assert.True(WaitForValue(
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                                  null,
+                            true));
+
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                            .DestinationUrl;
+
+                        // fail the node to to where the data is sent
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
+                    }
+
+                    using (var session = srcStore.OpenSession())
+                    {
+                        session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                        session.Store(new User
+                        {
+                            Name = "Karmel2"
+                        }, "users/2");
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationFailOverFromShardedToShardedDatabase()
+        {
+            var clusterSize = 3;
+            var replicationFactor = 3;
+
+            var (srcNodes, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
+
+            var srcDB = GetDatabaseName();
+            var dstDB = GetDatabaseName();
+
+            var srcTopology = await ShardingCluster.CreateShardedDatabaseInCluster(srcDB, replicationFactor, (srcNodes, srcLeader), shards: 3);
+            var dstTopology = await ShardingCluster.CreateShardedDatabaseInCluster(dstDB, replicationFactor, (dstNodes, dstLeader), shards: 3);
+
+            using (var srcStore = new DocumentStore()
+            {
+                Urls = srcTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                Database = srcDB,
+            }.Initialize())
+            {
+                using (var session = srcStore.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                // add watcher with invalid url to test the failover on database topology discovery
+                var watcher = new ExternalReplication(dstDB, "connection")
+                {
+                    MentorNode = "B"
+                };
+                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
+
+                using (var dstStore = new DocumentStore
+                {
+                    Urls = dstTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    using (var dstSession = dstStore.OpenSession())
+                    {
+                        dstSession.Load<User>("Karmel");
+                        Assert.True(await WaitForDocumentInClusterAsync<User>(
+                            dstNodes,
+                            dstDB,
+                            "users/1",
+                            u => u.Name.Equals("Karmel"),
+                            TimeSpan.FromSeconds(60)));
+                    }
+
+                    var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+                    var server = Servers.Single(s => s.WebUrl == responsibale);
+                    using (var processor = await Sharding.InstantiateShardedOutgoingTaskProcessor(srcDB, server))
+                    {
+                        Assert.True(WaitForValue(
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                                  null,
+                            true));
+
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                            .DestinationUrl;
+
+                        // fail the node to to where the data is sent
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
+                    }
+
+                    using (var session = srcStore.OpenSession())
+                    {
+                        session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                        session.Store(new User
+                        {
+                            Name = "Karmel2"
+                        }, "users/2");
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task BidirectionalReplicationWithFailOver_NonShardedAndShardedDatabases()
+        {
+            var clusterSize = 3;
+            var replicationFactor = 3;
+
+            var (_, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
+
+            var srcDB = GetDatabaseName();
+            var dstDB = GetDatabaseName();
+
+            var srcTopology = await CreateDatabaseInCluster(srcDB, clusterSize, srcLeader.WebUrl);
+            var dstTopology = await ShardingCluster.CreateShardedDatabaseInCluster(dstDB, replicationFactor, (dstNodes, dstLeader), shards: 3);
+
+            using (var srcStore = new DocumentStore()
+            {
+                Urls = new[] { srcLeader.WebUrl },
+                Database = srcDB,
+            }.Initialize())
+            {
+                using (var session = srcStore.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                // add watcher with invalid url to test the failover on database topology discovery
+                var watcher = new ExternalReplication(dstDB, "connection")
+                {
+                    MentorNode = "B"
+                };
+                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
+
+                using (var dstStore = new DocumentStore
+                {
+                    Urls = dstTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    var watcher2 = new ExternalReplication(srcDB, "connection-2");
+                    await AddWatcherToReplicationTopology((DocumentStore)dstStore, watcher2, srcStore.Urls);
+
+                    using (var dstSession = dstStore.OpenSession())
+                    {
+                        dstSession.Load<User>("Karmel");
+                        Assert.True(await WaitForDocumentInClusterAsync<User>(
+                            dstNodes,
+                            dstDB,
+                            "users/1",
+                            u => u.Name.Equals("Karmel"),
+                            TimeSpan.FromSeconds(60)));
+                    }
+
+                    await ShardingCluster.WaitForShardedChangeVectorInClusterAsync(dstNodes, dstDB, replicationFactor);
+                    var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+                    var server = Servers.Single(s => s.WebUrl == responsibale);
+                    using (var processor = await Databases.InstantiateOutgoingTaskProcessor(srcDB, server))
+                    {
+                        Assert.True(WaitForValue(
+                            () => ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
+                                  null,
+                            true));
+
+                        var watcherTaskUrl = ((OngoingTaskReplication)processor.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
+                            .DestinationUrl;
+
+                        // fail the node to to where the data is sent
+                        await DisposeServerAndWaitForFinishOfDisposalAsync(Servers.Single(s => s.WebUrl == watcherTaskUrl));
+                    }
+
+                    using (var session = srcStore.OpenSession())
+                    {
+                        session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                        session.Store(new User
+                        {
+                            Name = "Karmel2"
+                        }, "users/2");
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
+
+                    using (var dstSession = dstStore.OpenSession())
+                    {
+                        dstSession.Store(new User
+                        {
+                            Name = "Karmel3"
+                        }, "users/3");
+                        dstSession.SaveChanges();
+                    }
+
+                    Assert.True(WaitForDocument(srcStore, "users/3", 30_000));
+
+                    var total = 0;
+                    foreach (var node in srcTopology.Servers)
+                    {
+                        var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDB);
+                        var incomingHandlers = db.ReplicationLoader?.IncomingHandlers.Where(i => i.GetReplicationPerformanceType() == LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal).ToList();
+
+                        if (incomingHandlers == null || incomingHandlers.Count == 0)
+                            continue;
+
+                        Assert.True(incomingHandlers.Count > 0);
+
+                        total++;
+
+                        // we want to ensure we sent back from the sharded DBs to the non-sharded DB only one document ("users/3")
+                        foreach (var incoming in incomingHandlers)
+                        {
+                            var haveStats = incoming.GetReplicationPerformance().Any(p => p.Network.InputCount > 0);
+                            if (haveStats)
+                            {
+                                var incomingStats = incoming.GetReplicationPerformance().Where(p => p.Network.InputCount > 0)?.Single();
+                                Assert.Equal(1, incomingStats.Network.InputCount);
+                            }
+                        }
+                    }
+                    Assert.True(total > 0);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task BidirectionalReplicationWithReshardingShouldWork_NonShardedAndShardedDatabases()
+        {
+            var clusterSize = 3;
+            var replicationFactor = 3;
+
+            var (srcNodes, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
+
+            var srcDB = GetDatabaseName();
+            var dstDB = GetDatabaseName();
+
+            var srcTopology = await CreateDatabaseInCluster(srcDB, clusterSize, srcLeader.WebUrl);
+            var dstTopology = await ShardingCluster.CreateShardedDatabaseInCluster(dstDB, replicationFactor, (dstNodes, dstLeader), shards: 3);
+
+            using (var srcStore = new DocumentStore()
+            {
+                Urls = new[] { srcLeader.WebUrl },
+                Database = srcDB,
+            }.Initialize())
+            {
+                using (var session = srcStore.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(30), replicas: clusterSize - 1);
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                var watcher = new ExternalReplication(dstDB, "connection-1");
+                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { dstLeader.WebUrl });
+
+                string changeVector;
+                using (var session = srcStore.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.NotNull(user);
+                    changeVector = session.Advanced.GetChangeVectorFor(user);
+                }
+
+                using (var dstStore = new DocumentStore
+                {
+                    Urls = dstTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    var watcher2 = new ExternalReplication(srcDB, "connection-2");
+                    await AddWatcherToReplicationTopology((DocumentStore)dstStore, watcher2, srcStore.Urls);
+
+                    Assert.True(WaitForDocument(dstStore, "users/1", 30_000));
+
+                    using (var session = dstStore.OpenSession())
+                    {
+                        session.Store(new User
+                        {
+                            Name = "Karmel"
+                        }, "users/2$users/1");
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(
+                        dstNodes,
+                        dstDB,
+                        "users/2$users/1",
+                        u => u.Name.Equals("Karmel"),
+                        TimeSpan.FromSeconds(60)));
+
+                    Assert.True(WaitForDocument(srcStore, "users/2$users/1", 30_000));
+
+                    var oldLocation = await Sharding.GetShardNumberFor(dstStore, "users/2$users/1");
+                    await Sharding.Resharding.MoveShardForId(dstStore, "users/2$users/1", servers: dstNodes);
+
+                    var db = await dstLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(dstDB, oldLocation));
+                    var storage = db.DocumentsStorage;
+                    using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        //tombstones
+                        var tombstonesCount = storage.GetNumberOfTombstones(context);
+                        Assert.Equal(2, tombstonesCount);
+                    }
+
+                    var docsCount = storage.GetNumberOfDocuments();
+                    Assert.Equal(0, docsCount);
+
+                    using (var session = srcStore.OpenSession())
+                    {
+                        var user = session.Load<User>("users/1");
+                        Assert.NotNull(user);
+                        var existingChangeVector = session.Advanced.GetChangeVectorFor(user);
+                        Assert.Equal(changeVector, existingChangeVector);
+                    }
+
+                    var newLocation = await Sharding.GetShardNumberFor(dstStore, "users/2$users/1");
+                    db = await dstLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(dstDB, newLocation));
+                    storage = db.DocumentsStorage;
+                    using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        using (var session = dstStore.OpenSession())
+                        {
+                            var user = session.Load<User>("users/1");
+                            Assert.NotNull(user);
+                            var existingChangeVector = session.Advanced.GetChangeVectorFor(user);
+                            existingChangeVector = context.GetChangeVector(existingChangeVector).Version;
+                            Assert.Equal(changeVector, existingChangeVector);
+                        }
+                    }
+
+                    foreach (var server in dstNodes)
+                    {
+                        await ShardingCluster.EnsureNoReplicationLoopForSharding(server, dstDB);
+                    }
+
+                    foreach (var server in srcNodes)
+                    {
+                        await EnsureNoReplicationLoop(server, srcDB);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task BidirectionalReplicationWithReshardingShouldWork_ShardedDatabases()
+        {
+            var clusterSize = 3;
+            var replicationFactor = 3;
+
+            var (srcNodes, srcLeader) = await CreateRaftCluster(clusterSize);
+            var (dstNodes, dstLeader) = await CreateRaftCluster(clusterSize);
+
+            var srcDB = GetDatabaseName();
+            var dstDB = GetDatabaseName();
+
+            var srcTopology = await ShardingCluster.CreateShardedDatabaseInCluster(srcDB, replicationFactor, (srcNodes, srcLeader), shards: 3);
+            var dstTopology = await ShardingCluster.CreateShardedDatabaseInCluster(dstDB, replicationFactor, (dstNodes, dstLeader), shards: 3);
+
+            using (var srcStore = new DocumentStore()
+            {
+                Urls = srcTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                Database = srcDB,
+            }.Initialize())
+            {
+                using (var session = srcStore.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    srcNodes,
+                    srcDB,
+                    "users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(60)));
+
+                var watcher = new ExternalReplication(dstDB, "connection-1");
+                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { dstLeader.WebUrl });
+
+                string changeVector;
+                using (var session = srcStore.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    Assert.NotNull(user);
+                    changeVector = session.Advanced.GetChangeVectorFor(user);
+                }
+
+                using (var dstStore = new DocumentStore
+                {
+                    Urls = dstTopology.Servers.Select(s => s.WebUrl).ToArray(),
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    var watcher2 = new ExternalReplication(srcDB, "connection-2");
+                    await AddWatcherToReplicationTopology((DocumentStore)dstStore, watcher2, srcStore.Urls);
+
+                    Assert.True(WaitForDocument(dstStore, "users/1", 30_000));
+
+                    using (var session = dstStore.OpenSession())
+                    {
+                        session.Store(new User
+                        {
+                            Name = "Karmel"
+                        }, "users/2$users/1");
+                        session.SaveChanges();
+                    }
+
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(
+                        dstNodes,
+                        dstDB,
+                        "users/2$users/1",
+                        u => u.Name.Equals("Karmel"),
+                        TimeSpan.FromSeconds(60)));
+
+                    Assert.True(WaitForDocument(srcStore, "users/2$users/1", 30_000));
+
+                    var oldLocation = await Sharding.GetShardNumberFor(dstStore, "users/2$users/1");
+                    await Sharding.Resharding.MoveShardForId(dstStore, "users/2$users/1", servers: dstNodes);
+
+                    var db = await dstLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(dstDB, oldLocation));
+                    var storage = db.DocumentsStorage;
+                    using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        //tombstones
+                        var tombstonesCount = storage.GetNumberOfTombstones(context);
+                        Assert.Equal(2, tombstonesCount);
+                    }
+
+                    var docsCount = storage.GetNumberOfDocuments();
+                    Assert.Equal(0, docsCount);
+
+                    var srcLocation = await Sharding.GetShardNumberFor(srcStore, "users/1");
+                    db = await srcLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(srcDB, srcLocation));
+                    storage = db.DocumentsStorage;
+                    using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        using (var session = srcStore.OpenSession())
+                        {
+                            var user = session.Load<User>("users/1");
+                            Assert.NotNull(user);
+                            var existingChangeVector = session.Advanced.GetChangeVectorFor(user);
+                            existingChangeVector = context.GetChangeVector(existingChangeVector).Version;
+                            Assert.Equal(changeVector, existingChangeVector);
+                        }
+                    }
+
+                    var newLocation = await Sharding.GetShardNumberFor(dstStore, "users/2$users/1");
+                    db = await dstLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(ShardHelper.ToShardName(dstDB, newLocation));
+                    storage = db.DocumentsStorage;
+                    using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        using (var session = dstStore.OpenSession())
+                        {
+                            var user = session.Load<User>("users/1");
+                            Assert.NotNull(user);
+                            var existingChangeVector = session.Advanced.GetChangeVectorFor(user);
+                            existingChangeVector = context.GetChangeVector(existingChangeVector).Version;
+                            Assert.Equal(changeVector, existingChangeVector);
+                        }
+                    }
+
+                    foreach (var server in dstNodes)
+                    {
+                        await ShardingCluster.EnsureNoReplicationLoopForSharding(server, dstDB);
+                    }
+
+                    foreach (var server in srcNodes)
+                    {
+                        await ShardingCluster.EnsureNoReplicationLoopForSharding(server, srcDB);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ReplicationShouldResumeAfterDeletingAndRestartingShardDatabase()
+        {
+            var src = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseName = s => "Src_" + s
+            });
+            var dst = Sharding.GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseName = s => "Dst_" + s
+            });
+
+            var watcher = new ExternalReplication(dst.Database, "connection");
+            await AddWatcherToReplicationTopology(src, watcher, dst.Urls);
+
+            var dstServers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(dst, new List<RavenServer> { Server });
+            while (Sharding.AllShardHaveDocs(dstServers) == false)
+            {
+                using (var session = src.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Oren"
+                    });
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            var shardedDb = await GetDocumentDatabaseInstanceFor(dst, dst.Database + "$0");
+            var environmentOptions = (StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions)shardedDb.DocumentsStorage.Environment.Options;
+            using (await Server.ServerStore.DatabasesLandlord.UnloadAndLockDatabase(shardedDb.Name, "Want to test removal of data from disk"))
+            {
+                IOExtensions.DeleteDirectory(environmentOptions.BasePath.ToFullPath());
+            }
+
+            var databaseTask = shardedDb.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(shardedDb.Name).DatabaseTask;
+            await databaseTask;
+
+            dstServers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(dst, new List<RavenServer>() { Server });
+            using (var session = src.OpenSession())
+            {
+                var sourceDocs = session.Query<User>()
+                    .Customize(x => x.WaitForNonStaleResults())
+                    .Count();
+
+                var dstDocs = WaitForValue(() => Sharding.GetDocsCountForCollectionInAllShards(dstServers, "users"), sourceDocs);
+                Assert.Equal(sourceDocs, dstDocs);
+            }
+        }
+
+        [Fact]
+        public async Task ReplicationShouldResumeAfterDeletingAndRestartingShardDatabase2()
+        {
+            var src = Sharding.GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseName = s => "Src_" + s
+            });
+            var dst = Sharding.GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseName = s => "Dst_" + s
+            });
+
+            var watcher = new ExternalReplication(dst.Database, "connection");
+            await AddWatcherToReplicationTopology(src, watcher, dst.Urls);
+
+            var dstServers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(dst, new List<RavenServer> { Server });
+            while (Sharding.AllShardHaveDocs(dstServers) == false)
+            {
+                using (var session = src.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Oren"
+                    });
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            var shardedDb = await GetDocumentDatabaseInstanceFor(dst, dst.Database + "$0");
+            var environmentOptions = (StorageEnvironmentOptions.PureMemoryStorageEnvironmentOptions)shardedDb.DocumentsStorage.Environment.Options;
+            using (await Server.ServerStore.DatabasesLandlord.UnloadAndLockDatabase(shardedDb.Name, "Want to test removal of data from disk"))
+            {
+                IOExtensions.DeleteDirectory(environmentOptions.BasePath.ToFullPath());
+            }
+
+            var databaseTask = shardedDb.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(shardedDb.Name).DatabaseTask;
+            await databaseTask;
+
+            dstServers = await ShardingCluster.GetShardsDocumentDatabaseInstancesFor(dst, new List<RavenServer>() { Server });
+            using (var session = src.OpenSession())
+            {
+                var sourceDocs = session.Query<User>()
+                    .Customize(x => x.WaitForNonStaleResults())
+                    .Count();
+
+                var dstDocs = WaitForValue(() => Sharding.GetDocsCountForCollectionInAllShards(dstServers, "users"), sourceDocs);
+                Assert.Equal(sourceDocs, dstDocs);
+            }
+        }
+
+        [Fact]
+        public async Task ReplicationWithReshardingShouldWorkFromNonShardedToSharded()
+        {
+            using (var store = GetDocumentStore())
+            using (var replica = Sharding.GetDocumentStore())
+            {
+                await InsertData(store);
+
+                var suffix = "$usa";
+                var id = $"users/1{suffix}";
+
+                await SetupReplicationAsync(store, replica);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    user.AddressId = "New";
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(WaitForDocument<User>(replica, id, u => u.AddressId == "New"));
+
+                await CheckData(store);
+
+                var oldLocation = await Sharding.GetShardNumberFor(replica, id);
+
+                await Sharding.Resharding.MoveShardForId(replica, id);
+
+                var db = await GetDocumentDatabaseInstanceFor(replica, ShardHelper.ToShardName(replica.Database, oldLocation));
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombs = db.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
+                    Assert.Equal(22, tombs.Count);
+                }
+
+                var newLocation = await Sharding.GetShardNumberFor(replica, id);
+
+                await CheckData(replica, ShardHelper.ToShardName(replica.Database, newLocation));
+
+                await CheckData(store);
+            }
+        }
+
+        [Fact]
+        public async Task ShouldNotReplicateTombstonesCreatedByBucketDeletionFromShardedToSharded()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            using (var replica = Sharding.GetDocumentStore())
+            {
+                await InsertData(store);
+
+                var suffix = "$usa";
+                var id = $"users/1{suffix}";
+
+                await SetupReplicationAsync(store, replica);
+                await SetupReplicationAsync(replica, store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    user.AddressId = "New";
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(WaitForDocument<User>(replica, id, u => u.AddressId == "New"));
+
+                var oldLocation = await Sharding.GetShardNumberFor(store, id);
+                await CheckData(store, ShardHelper.ToShardName(store.Database, oldLocation));
+
+                await Sharding.Resharding.MoveShardForId(store, id);
+
+                oldLocation = await Sharding.GetShardNumberFor(replica, id);
+                await CheckData(replica, ShardHelper.ToShardName(replica.Database, oldLocation));
+
+                await Sharding.Resharding.MoveShardForId(replica, id);
+
+                await WaitForValueAsync(async () =>
+                {
+                    var newLocation = await Sharding.GetShardNumberFor(replica, id);
+                    return newLocation != oldLocation;
+                }, true);
+
+                var newLocation = await Sharding.GetShardNumberFor(replica, id);
+                await CheckData(replica, ShardHelper.ToShardName(replica.Database, newLocation));
+
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store.Database);
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, replica.Database);
+            }
+        }
+
+        [Fact]
+        public async Task ShouldNotReplicateTombstonesCreatedByBucketDeletionFromShardedToSharded2()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            using (var replica = Sharding.GetDocumentStore())
+            {
+                var suffix1 = "usa";
+                var suffix2 = $"isr${suffix1}";
+
+                await InsertData(store, suffix1);
+                await InsertData(replica, suffix2);
+
+                var id1 = $"users/1${suffix1}";
+                var id2 = $"users/1${suffix2}";
+
+                await SetupReplicationAsync(store, replica);
+                await SetupReplicationAsync(replica, store);
+
+                using (var session = replica.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id2);
+                    user.AddressId = "New";
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(WaitForDocument<User>(store, id2, u => u.AddressId == "New"));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id1);
+                    user.AddressId = "New";
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(WaitForDocument<User>(replica, id1, u => u.AddressId == "New"));
+
+                var oldLocation1 = await Sharding.GetShardNumberFor(store, id1);
+
+                var db1 = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation1));
+                var storage1 = db1.DocumentsStorage;
+
+                var docsCount = storage1.GetNumberOfDocuments();
+                Assert.Equal(8, docsCount);
+
+                var oldLocation2 = await Sharding.GetShardNumberFor(replica, id2);
+                var db2 = await GetDocumentDatabaseInstanceFor(replica, ShardHelper.ToShardName(replica.Database, oldLocation2));
+                var storage2 = db2.DocumentsStorage;
+
+                docsCount = storage2.GetNumberOfDocuments();
+                Assert.Equal(8, docsCount);
+
+                await Sharding.Resharding.MoveShardForId(store, id1);
+                await Sharding.Resharding.MoveShardForId(replica, id2);
+
+                await WaitForValueAsync(async () =>
+                {
+                    var newLocation1 = await Sharding.GetShardNumberFor(replica, id1);
+                    var newLocation2 = await Sharding.GetShardNumberFor(replica, id2);
+                    return newLocation1 != oldLocation1 && newLocation2 != oldLocation2;
+                }, true, 30_000, 333);
+
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store.Database);
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, replica.Database);
+
+                docsCount = storage1.GetNumberOfDocuments();
+                Assert.Equal(0, docsCount);
+
+                docsCount = storage2.GetNumberOfDocuments();
+                Assert.Equal(0, docsCount);
+            }
+        }
+
+        [Fact]
+        public async Task ShouldNotReplicateTombstonesCreatedByBucketDeletionFromShardedToNonSharded()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            using (var replica = GetDocumentStore())
+            {
+                await InsertData(store);
+
+                var suffix = "$usa";
+                var id = $"users/1{suffix}";
+
+                await SetupReplicationAsync(store, replica);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id);
+                    user.AddressId = "New";
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(WaitForDocument<User>(replica, id, u => u.AddressId == "New"));
+
+                await CheckData(replica);
+
+                var oldLocation = await Sharding.GetShardNumberFor(store, id);
+                await Sharding.Resharding.MoveShardForId(store, id);
+
+                var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation));
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombs = db.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
+                    Assert.Equal(22, tombs.Count);
+                }
+
+                var newLocation = await Sharding.GetShardNumberFor(store, id);
+
+                await CheckData(store, ShardHelper.ToShardName(store.Database, newLocation));
+                await CheckData(replica);
+            }
+        }
+
+        [Fact]
+        public async Task ShouldNotReplicateTombstonesCreatedByBucketDeletionFromShardedToNonSharded2()
+        {
+            var record = new DatabaseRecord("dummy")
+            {
+                Sharding = new ShardingConfiguration
+                {
+                    Shards = new Dictionary<int, DatabaseTopology>()
+                    {
+                        {0, new DatabaseTopology()},
+                        {1, new DatabaseTopology()},
+                        {2, new DatabaseTopology()}
+                    },
+                    BucketMigrations = new Dictionary<int, ShardBucketMigration>(),
+                    BucketRanges = new List<ShardBucketRange> { new ShardBucketRange { ShardNumber = 2, BucketRangeStart = 0 } }
+                }
+            };
+
+            using (var store = Sharding.GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = r =>
+                {
+                    r.Sharding = record.Sharding;
+                },
+            }, shards: record.Sharding.Shards))
+            using (var replica = GetDocumentStore())
+            {
+                var suffix1 = "usa";
+                var suffix2 = "isr";
+                var id1 = $"users/1${suffix1}";
+                var id2 = $"users/2${suffix1}";
+                var id3 = $"users/3${suffix2}";
+                var id4 = $"users/4${suffix2}";
+                var id5 = $"users/5${suffix2}";
+
+                var ids = new List<string> { id1, id2, id3, id4, id5 };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1", Age = 5 }, id1);
+                    await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2", Age = 78 }, id2);
+                    await session.StoreAsync(new User { Name = "Name3", LastName = "LastName3", Age = 4 }, id3);
+                    await session.StoreAsync(new User { Name = "Name4", LastName = "LastName4", Age = 15 }, id4);
+                    await session.StoreAsync(new User { Name = "Name4", LastName = "LastName5", Age = 29 }, id5);
+                    await session.SaveChangesAsync();
+                }
+
+                await Sharding.Resharding.MoveShardForId(store, id3);
+
+                await SetupReplicationAsync(store, replica);
+
+                foreach (var id in ids)
+                    Assert.True(WaitForDocument(replica, id));
+
+                var changeVector = "";
+                using (var session = replica.OpenSession())
+                {
+                    foreach (var id in ids)
+                    {
+                        var user = session.Load<User>(id);
+                        Assert.NotNull(user);
+
+                        var userChangeVector = session.Advanced.GetChangeVectorFor(user);
+                        Assert.True(changeVector.CompareTo(userChangeVector) < 0);
+                    }
+                }
+            }
+        }
+
+        public class GetReplicationActiveConnectionsInfoOperation : IMaintenanceOperation<ReplicationActiveConnectionsPreview>
+        {
+            public RavenCommand<ReplicationActiveConnectionsPreview> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new GetReplicationActiveConnectionsInfoCommand();
+            }
+        }
+
+        private static async Task InsertData(IDocumentStore store, string suffix = "usa", bool purgeOnDelete = false)
+        {
+            var id1 = $"users/1${suffix}";
+            var id2 = $"users/2${suffix}";
+            var id3 = $"users/3${suffix}";
+            var id4 = $"users/4${suffix}";
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        PurgeOnDelete = purgeOnDelete
+                    }
+                }));
+
+                //Docs
+                await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1", Age = 5 }, id1);
+                await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2", Age = 78 }, id2);
+                await session.StoreAsync(new User { Name = "Name3", LastName = "LastName3", Age = 4 }, id3);
+                await session.StoreAsync(new User { Name = "Name4", LastName = "LastName4", Age = 15 }, id4);
+
+                //counters
+                session.CountersFor(id3).Increment("Downloads", 100);
+
+                //Attachments
+                var names = new[]
+                {
+                    "background-photo.jpg",
+                    "fileNAME_#$1^%_בעברית.txt",
+                    "profile.png"
+                };
+
+                await using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                await using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                {
+                    session.Advanced.Attachments.Store(id1, names[0], backgroundStream, "ImGgE/jPeG");
+                    session.Advanced.Attachments.Store(id2, names[1], fileStream);
+                    session.Advanced.Attachments.Store(id3, names[2], profileStream, "image/png");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            // revision
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<User>(id1);
+                user.Age = 10;
+                await session.SaveChangesAsync();
+            }
+        }
+
+        private async Task CheckData(IDocumentStore store, string database = null, long expectedRevisionsCount = 10, long expectedTombstoneCount = 0)
+        {
+            database ??= store.Database;
+            var db = await GetDocumentDatabaseInstanceFor(store, database);
+            var storage = db.DocumentsStorage;
+
+            var docsCount = storage.GetNumberOfDocuments();
+            using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                //tombstones
+                var tombstonesCount = storage.GetNumberOfTombstones(context);
+                Assert.Equal(expectedTombstoneCount, tombstonesCount);
+
+                //revisions
+                var revisionsCount = storage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
+                Assert.Equal(expectedRevisionsCount, revisionsCount);
+            }
+
+            //docs
+            Assert.Equal(4, docsCount);
+
+            var suffix = "usa";
+            using (var session = store.OpenSession(database))
+            {
+                //Counters
+                var counterValue = session.CountersFor($"users/3${suffix}").Get("Downloads");
+                Assert.Equal(100, counterValue.Value);
+            }
+
+            //Attachments
+            using (var session = store.OpenAsyncSession(database))
+            {
+                var attachmentNames = new[]
+                {
+                    "background-photo.jpg",
+                    "fileNAME_#$1^%_בעברית.txt",
+                    "profile.png"
+                };
+
+                for (var i = 0; i < attachmentNames.Length; i++)
+                {
+                    var id = $"users/{i + 1}${suffix}";
+                    var user = await session.LoadAsync<User>(id);
+                    var metadata = session.Advanced.GetMetadataFor(user);
+
+                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                    Assert.Equal(1, attachments.Length);
+
+                    var attachment = attachments[0];
+                    var name = attachment.GetString(nameof(AttachmentName.Name));
+                    var hash = attachment.GetString(nameof(AttachmentName.Hash));
+                    var size = attachment.GetLong(nameof(AttachmentName.Size));
+
+                    Assert.Equal(attachmentNames[i], name);
+
+                    string expectedHash = default;
+                    long expectedSize = default;
+
+                    switch (i)
+                    {
+                        case 0:
+                            expectedHash = "igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=";
+                            expectedSize = 5;
+                            break;
+                        case 1:
+                            expectedHash = "Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=";
+                            expectedSize = 5;
+                            break;
+                        case 2:
+                            expectedHash = "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=";
+                            expectedSize = 3;
+                            break;
+                    }
+
+                    Assert.Equal(expectedHash, hash);
+                    Assert.Equal(expectedSize, size);
+
+                    var attachmentResult = await session.Advanced.Attachments.GetAsync(id, name);
+                    Assert.NotNull(attachmentResult);
+                }
             }
         }
     }

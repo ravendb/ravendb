@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -9,6 +11,11 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -111,6 +118,81 @@ namespace InterversionTests
             }
         }
 
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Replication)]
+        public async Task ReplicationWithReshardingShouldWorkFromShardedToOldServer()
+        {
+            var processNode = await GetServerAsync("5.4.5");
+            using (var store = Sharding.GetDocumentStore())
+            using (var oldStore = await GetStore(processNode.Url, processNode.Process))
+            {
+                var suffix = "$usa";
+                var id1 = $"users/1{suffix}";
+                var id2 = $"users/2{suffix}";
+                var id3 = $"users/3{suffix}";
+                var id4 = $"users/4{suffix}";
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1", Age = 5 }, id1);
+                    await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2", Age = 78 }, id2);
+                    await session.StoreAsync(new User { Name = "Name3", LastName = "LastName3", Age = 4 }, id3);
+                    await session.StoreAsync(new User { Name = "Name4", LastName = "LastName4", Age = 15 }, id4);
+                    await session.SaveChangesAsync();
+                }
+                
+                var externalTask = new ExternalReplication(oldStore.Database.ToLowerInvariant(), "MyConnectionString")
+                {
+                    Name = "MyExternalReplication",
+                    Url = oldStore.Urls.First()
+                };
+
+                await SetupReplication(store, externalTask);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(id1);
+                    user.AddressId = "New";
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(WaitForDocument<User>(oldStore, id1, u => u.AddressId == "New"));
+
+                var oldLocation = await Sharding.GetShardNumberFor(store, id1);
+                await Sharding.Resharding.MoveShardForId(store, id1);
+
+                var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation));
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombs = db.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
+                    Assert.Equal(4, tombs.Count);
+                }
+
+                for (var i = 1; i < 5; i++)
+                {
+                    var currentId = $"users/{i}{suffix}";
+                    Assert.True(WaitForDocument<User>(oldStore, currentId, null));
+                }
+
+                var newLocation = await Sharding.GetShardNumberFor(store, id1);
+
+                db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, newLocation));
+                var storage = db.DocumentsStorage;
+
+                var docsCount = storage.GetNumberOfDocuments();
+                Assert.Equal(4, docsCount);
+                using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    //tombstones
+                    var tombstonesCount = storage.GetNumberOfTombstones(context);
+                    Assert.Equal(0, tombstonesCount);
+                }
+
+                await EnsureNoReplicationLoop(Server, ShardHelper.ToShardName(store.Database, newLocation));
+            }
+        }
+
         internal static async Task<ModifyOngoingTaskResult> SetupReplication(IDocumentStore src, IDocumentStore dst)
         {
             var csName = $"cs-to-{dst.Database}";
@@ -162,6 +244,53 @@ namespace InterversionTests
             }
 
             return await store.Maintenance.SendAsync(op);
+        }
+
+        protected async Task<DocumentStore> GetStore(string serverUrl, Process serverProcess = null, [CallerMemberName] string database = null, InterversionTestOptions options = null)
+        {
+            options = options ?? InterversionTestOptions.Default;
+            var name = database ?? GetDatabaseName();
+
+            if (options.ModifyDatabaseName != null)
+                name = options.ModifyDatabaseName(name) ?? name;
+
+            var store = new DocumentStore
+            {
+                Urls = new[] { serverUrl },
+                Database = name
+            };
+
+            options.ModifyDocumentStore?.Invoke(store);
+
+            store.Initialize();
+
+            if (options.CreateDatabase)
+            {
+                var doc = new DatabaseRecord(name)
+                {
+                    Settings =
+                    {
+                        [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
+                        [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
+                        [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = true.ToString(),
+                        [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = true.ToString(),
+                        [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
+                    }
+                };
+
+                options.ModifyDatabaseRecord?.Invoke(doc);
+
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, options.ReplicationFactor));
+            }
+
+            if (serverProcess != null)
+            {
+                store.AfterDispose += (sender, e) =>
+                {
+                    KillSlavedServerProcess(serverProcess);
+                };
+            }
+            return store;
         }
     }
 }
