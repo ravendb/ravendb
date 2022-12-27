@@ -899,7 +899,7 @@ namespace Raven.Server.Smuggler.Documents
                 _log = log;
             }
 
-            public async ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType)
+            public async ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerResult progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType)
             {
                 var currentDatabaseRecord = _database.ReadDatabaseRecord();
                 var tasks = new List<Task<(long Index, object Result)>>();
@@ -926,7 +926,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         Solver = databaseRecord.ConflictSolverConfig
                     }));
-                    progress.ConflictSolverConfigUpdated = true;
+                    progress.DatabaseRecord.ConflictSolverConfigUpdated = true;
                 }
 
                 if (databaseRecord.PeriodicBackups.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.PeriodicBackups))
@@ -947,7 +947,7 @@ namespace Raven.Server.Smuggler.Documents
                         backupConfig.Disabled = true;
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePeriodicBackupCommand(backupConfig, _database.Name, RaftIdGenerator.DontCareId)));
                     }
-                    progress.PeriodicBackupsUpdated = true;
+                    progress.DatabaseRecord.PeriodicBackupsUpdated = true;
                 }
 
                 if (databaseRecord.SinkPullReplications.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SinkPullReplications))
@@ -970,7 +970,7 @@ namespace Raven.Server.Smuggler.Documents
                             PullReplicationAsSink = pullReplication
                         }));
                     }
-                    progress.SinkPullReplicationsUpdated = true;
+                    progress.DatabaseRecord.SinkPullReplicationsUpdated = true;
                 }
 
                 if (databaseRecord.HubPullReplications.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.HubPullReplications))
@@ -994,7 +994,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                         ));
                     }
-                    progress.HubPullReplicationsUpdated = true;
+                    progress.DatabaseRecord.HubPullReplicationsUpdated = true;
                 }
 
                 if (databaseRecord.Sorters.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Sorters))
@@ -1007,7 +1007,7 @@ namespace Raven.Server.Smuggler.Documents
                         Sorters = databaseRecord.Sorters.Values.ToList()
                     }));
 
-                    progress.SortersUpdated = true;
+                    progress.DatabaseRecord.SortersUpdated = true;
                 }
 
                 if (databaseRecord.Analyzers.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Analyzers))
@@ -1020,7 +1020,7 @@ namespace Raven.Server.Smuggler.Documents
                         Analyzers = databaseRecord.Analyzers.Values.ToList()
                     }));
 
-                    progress.AnalyzersUpdated = true;
+                    progress.DatabaseRecord.AnalyzersUpdated = true;
                 }
 
                 if (databaseRecord.ExternalReplications.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ExternalReplications))
@@ -1043,7 +1043,7 @@ namespace Raven.Server.Smuggler.Documents
                             Watcher = replication
                         }));
                     }
-                    progress.ExternalReplicationsUpdated = true;
+                    progress.DatabaseRecord.ExternalReplicationsUpdated = true;
                 }
 
                 if (databaseRecord.RavenEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RavenEtls))
@@ -1063,7 +1063,7 @@ namespace Raven.Server.Smuggler.Documents
                         etl.Disabled = true;
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddRavenEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
                     }
-                    progress.RavenEtlsUpdated = true;
+                    progress.DatabaseRecord.RavenEtlsUpdated = true;
                 }
 
                 if (databaseRecord.SqlEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SqlEtls))
@@ -1083,7 +1083,7 @@ namespace Raven.Server.Smuggler.Documents
                         etl.Disabled = true;
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddSqlEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
                     }
-                    progress.SqlEtlsUpdated = true;
+                    progress.DatabaseRecord.SqlEtlsUpdated = true;
                 }
 
                 if (databaseRecord.TimeSeries != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.TimeSeries))
@@ -1092,16 +1092,25 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         foreach (var collection in currentDatabaseRecord.TimeSeries.Collections)
                         {
-                            if ((databaseRecord.TimeSeries.Collections.ContainsKey(collection.Key)) == false)
+                            if (databaseRecord.TimeSeries.Collections.TryGetValue(collection.Key, out var collectionConfiguration) == false)
                             {
                                 databaseRecord.TimeSeries.Collections.Add(collection.Key, collection.Value);
+                            }
+                            else
+                            {
+                                string msg = $"The time-series configuration of collection '{collection.Key}' already exist on the destination Database Record.";
+
+                                if (collectionConfiguration.Equals(collection.Value) == false)
+                                    msg += " Configuring this time-series from smuggler was skipped, even though the configuration differed from the configuration in the target database record";
+                                    
+                                progress.AddWarning(msg);
                             }
                         }
                     }
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring time-series from smuggler");
                     tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditTimeSeriesConfigurationCommand(databaseRecord.TimeSeries, _database.Name, RaftIdGenerator.DontCareId)));
-                    progress.TimeSeriesConfigurationUpdated = true;
+                    progress.DatabaseRecord.TimeSeriesConfigurationUpdated = true;
                 }
 
                 if (databaseRecord.DocumentsCompression != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.DocumentsCompression))
