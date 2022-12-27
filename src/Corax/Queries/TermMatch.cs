@@ -322,7 +322,7 @@ namespace Corax.Queries
                         if (result == false)
                             break;
 
-                        Debug.Assert(read < BlockSize);
+                        Debug.Assert(read <= BlockSize);
 
                         if (read == 0)
                             continue;
