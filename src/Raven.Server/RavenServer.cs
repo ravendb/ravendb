@@ -2892,6 +2892,11 @@ namespace Raven.Server
                     while (true)
                     {
                         var read = await s.ReceiveAsync(buffer, SocketFlags.None);
+                        if (read == 0)
+                        {
+                            Logger.Info($"Received 0 bytes. Close the connection. RemoteEndPoint:{s.RemoteEndPoint} SocketHashCode{s.GetHashCode()}");
+                            return;
+                        }
                         await s.SendAsync(buffer.Slice(0, read), SocketFlags.None);
                     }
                 }
@@ -2929,6 +2934,11 @@ namespace Raven.Server
                     while (true)
                     {
                         var read = s.Receive(buffer);
+                        if (read == 0)
+                        {
+                            Logger.Info($"Received 0 bytes. Close the connection. RemoteEndPoint:{s.RemoteEndPoint} SocketHashCode{s.GetHashCode()}");
+                            return;
+                        }
                         s.Send(buffer, 0, read, SocketFlags.None);
                     }
                 }
