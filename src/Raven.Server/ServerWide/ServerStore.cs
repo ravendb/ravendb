@@ -36,7 +36,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -49,6 +48,7 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
@@ -87,6 +87,7 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Constants = Raven.Client.Constants;
+using DeleteSubscriptionCommand = Raven.Server.ServerWide.Commands.Subscriptions.DeleteSubscriptionCommand;
 using MemoryCache = Raven.Server.Utils.Imports.Memory.MemoryCache;
 using MemoryCacheOptions = Raven.Server.Utils.Imports.Memory.MemoryCacheOptions;
 using NodeInfo = Raven.Client.ServerWide.Commands.NodeInfo;
@@ -879,7 +880,7 @@ namespace Raven.Server.ServerWide
                     }
                     else
                     {
-                        FillShardingConfiguration(addDatabase, clusterTopology);
+                        ShardedDatabaseContext.FillShardingConfiguration(this, addDatabase, clusterTopology);
                     }
                     break;
             }
@@ -3275,7 +3276,7 @@ namespace Raven.Server.ServerWide
             return (command.Result.RaftCommandIndex, command.Result.Data);
         }
 
-        private ClusterRequestExecutor CreateNewClusterRequestExecutor(string leaderUrl)
+        internal ClusterRequestExecutor CreateNewClusterRequestExecutor(string leaderUrl)
         {
             var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer);
             requestExecutor.DefaultTimeout = Engine.OperationTimeout;

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -130,6 +131,284 @@ public class PrefixedSharding : RavenTestBase
             Assert.Equal(22, await s.Query<Item>().CountAsync(i => i.Id.StartsWith("us/")));
             Assert.Equal(21, await s.Query<Item>().CountAsync(i => i.Id.StartsWith("items/")));
         }
+    }
+
+
+    [Fact]
+    public async Task ShouldThrowOnAttemptToAddPrefixThatDoesntEndWithSlashOrComma()
+    {
+        using var store = Sharding.GetDocumentStore();
+
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+        var shardingConfiguration = record.Sharding;
+
+        shardingConfiguration.Prefixed ??= new List<PrefixedShardingSetting>();
+        shardingConfiguration.Prefixed.Add(new PrefixedShardingSetting
+        {
+            Prefix = "asia",
+            Shards = new List<int> { 1, 2 }
+        });
+
+        var task = store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
+        var e = await Assert.ThrowsAsync<RavenException>(async () => await task);
+        Assert.Contains(
+            "Cannot add prefix 'asia' to ShardingConfiguration.Prefixed. In order to define sharding by prefix, the prefix string must end with '/' or '-' characters",
+            e.Message);
+    }
+
+    [Fact]
+    public async Task ShouldNotAllowToAddPrefixIfWeHaveDocsStartingWith()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed = new List<PrefixedShardingSetting>
+                {
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "eu/",
+                        Shards = new List<int> { 0 }
+                    }
+                };
+            }
+        });
+
+        using (var session = store.OpenAsyncSession())
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                string id = "asia/items/" + i;
+                await session.StoreAsync(new Item(), id);
+            }
+
+            await session.SaveChangesAsync();
+        }
+
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+        var shardingConfiguration = record.Sharding;
+
+        shardingConfiguration.Prefixed.Add(new PrefixedShardingSetting
+        {
+            Prefix = "asia/",
+            Shards = new List<int> { 1, 2 }
+        });
+
+        var task =  store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
+        var e = await Assert.ThrowsAsync<RavenException>(async () => await task);
+        Assert.Contains(
+            $"Cannot add prefix 'asia/' to ShardingConfiguration.Prefixed. There are existing documents in database '{store.Database}' that start with 'asia/'",
+            e.Message);
+    }
+
+    [Fact]
+    public async Task ShouldNotAllowToDeletePrefixIfWeHaveDocsStartingWith()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed = new List<PrefixedShardingSetting>
+                {
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "asia/",
+                        Shards = new List<int> { 0 }
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "eu/",
+                        Shards = new List<int> { 1, 2 }
+                    }
+                };
+            }
+        });
+
+        using (var session = store.OpenAsyncSession())
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                string id = "asia/items/" + i;
+                await session.StoreAsync(new Item(), id);
+            }
+
+            await session.SaveChangesAsync();
+        }
+
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+        var shardingConfiguration = record.Sharding;
+
+        shardingConfiguration.Prefixed.RemoveAt(0);
+
+        var task = store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
+        var e = await Assert.ThrowsAsync<RavenException>(async () => await task);
+        Assert.Contains(
+            $"Cannot remove prefix 'asia/' from ShardingConfiguration.Prefixed. There are existing documents in database '{store.Database}' that start with 'asia/'",
+            e.Message);
+    }
+
+    [Fact]
+    public async Task CanAddPrefixIfNoDocsStartingWith()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed = new List<PrefixedShardingSetting>
+                {
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "eu/",
+                        Shards = new List<int> { 0 }
+                    }
+                };
+            }
+        });
+
+        using (var session = store.OpenAsyncSession())
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                string id = "eu/items/" + i;
+                await session.StoreAsync(new Item(), id);
+            }
+
+            await session.SaveChangesAsync();
+        }
+
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+        var shardingConfiguration = record.Sharding;
+
+        shardingConfiguration.Prefixed.Add(new PrefixedShardingSetting
+        {
+            Prefix = "asia/",
+            Shards = new List<int> { 1, 2 }
+        });
+
+        Assert.Equal(4, shardingConfiguration.BucketRanges.Count);
+
+        await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
+
+        shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+
+        Assert.Equal(2, shardingConfiguration.Prefixed.Count);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.Prefixed[1].BucketRangeStart);
+        Assert.Equal(6, shardingConfiguration.BucketRanges.Count);
+    }
+
+    [Fact]
+    public async Task CanDeletePrefixIfNoDocsStartingWith()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed = new List<PrefixedShardingSetting>
+                {
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "eu/",
+                        Shards = new List<int> { 0, 1 }
+                    }
+                };
+            }
+        });
+
+        using (var session = store.OpenAsyncSession())
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                string id = "asia/items/" + i;
+                await session.StoreAsync(new Item(), id);
+            }
+
+            await session.SaveChangesAsync();
+        }
+
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+        var shardingConfiguration = record.Sharding;
+
+        shardingConfiguration.Prefixed.RemoveAt(0);
+
+        Assert.Equal(5, shardingConfiguration.BucketRanges.Count);
+
+        await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
+
+        shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+
+        Assert.Equal(0, shardingConfiguration.Prefixed.Count);
+        Assert.Equal(3, shardingConfiguration.BucketRanges.Count);
+    }
+
+    [Fact]
+    public async Task CanDeleteOnePrefixThenAddAnotherIfNoDocsStartingWith()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed = new List<PrefixedShardingSetting>
+                {
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "eu/",
+                        Shards = new List<int> { 0, 1 }
+                    },
+                    new PrefixedShardingSetting
+                    {
+                        Prefix = "us/",
+                        Shards = new List<int> { 1, 2 }
+                    }
+                };
+            }
+        });
+
+        using (var session = store.OpenAsyncSession())
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                string id = "asia/items/" + i;
+                await session.StoreAsync(new Item(), id);
+            }
+
+            await session.SaveChangesAsync();
+        }
+
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+        var shardingConfiguration = record.Sharding;
+        Assert.Equal(7, shardingConfiguration.BucketRanges.Count);
+
+        // remove 'eu/' prefix
+        shardingConfiguration.Prefixed.RemoveAt(0);
+        await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
+        
+        shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(1, shardingConfiguration.Prefixed.Count);
+        Assert.Equal(5, shardingConfiguration.BucketRanges.Count);
+
+        // add a new prefix
+        record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+        shardingConfiguration = record.Sharding;
+        shardingConfiguration.Prefixed.Add(new PrefixedShardingSetting
+        {
+            Prefix = "africa/",
+            Shards = new List<int> { 0, 2 }
+        });
+
+        await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
+        shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(2, shardingConfiguration.Prefixed.Count);
+        Assert.Equal(7, shardingConfiguration.BucketRanges.Count);
+
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2, shardingConfiguration.BucketRanges[3].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 2.5, shardingConfiguration.BucketRanges[4].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 3, shardingConfiguration.BucketRanges[5].BucketRangeStart);
+        Assert.Equal(ShardHelper.NumberOfBuckets * 3.5, shardingConfiguration.BucketRanges[6].BucketRangeStart);
     }
 
     private class Item
