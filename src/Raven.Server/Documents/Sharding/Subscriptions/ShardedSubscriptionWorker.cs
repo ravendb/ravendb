@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         private readonly int _shardNumber;
         private readonly RequestExecutor _shardRequestExecutor;
         private readonly SubscriptionConnectionsStateOrchestrator _state;
-        public bool ClosedDueNoDocsLeft;
+        private bool _closedDueNoDocsLeft;
 
         public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re, SubscriptionConnectionsStateOrchestrator state) : base(options, dbName)
         {
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             {
                 assertLastConnectionFailure.Invoke();
                 var r = base.CheckIfShouldReconnectWorker(ex, assertLastConnectionFailure, onUnexpectedSubscriptionError, throwOnRedirectNodeNotFound: false);
-                if (ClosedDueNoDocsLeft)
+                if (_closedDueNoDocsLeft)
                     return (ShouldTryToReconnect: false, NodeRedirectTo: null);
 
                 if (_state.CancellationTokenSource.IsCancellationRequested)
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             }
             catch (Exception e)
             {
-                _state.DropSubscription(new SubscriptionClosedException($"Stopping sharded subscription '{_options.SubscriptionName}' with id '{_state.SubscriptionId}'", canReconnect: true, e));
+                _state.DropSubscription(new SubscriptionClosedException($"Stopping sharded subscription '{_options.SubscriptionName}' with id '{_state.SubscriptionId}'", canReconnect: true, closedDueNoDocsLeft: false, e));
                 throw;
             }
         }
@@ -108,7 +108,8 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         {
             if (sce.ClosedDueNoDocsLeft)
             {
-                ClosedDueNoDocsLeft = true;
+                Interlocked.Increment(ref _state.ClosedDueToNoDocs);
+                _closedDueNoDocsLeft = true;
                 return (false, null);
             }
 

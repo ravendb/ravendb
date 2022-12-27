@@ -34,11 +34,14 @@ namespace Raven.Server.Documents.Sharding.Subscriptions;
 public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsStateBase<OrchestratedSubscriptionConnection>
 {
     private readonly ShardedDatabaseContext _databaseContext;
-    public Dictionary<string, ShardedSubscriptionWorker> ShardWorkers;
+    private Dictionary<string, ShardedSubscriptionWorker> _shardWorkers;
     private TaskCompletionSource _initialConnection;
     private SubscriptionWorkerOptions _options;
 
     public BlockingCollection<ShardedSubscriptionBatch> Batches = new BlockingCollection<ShardedSubscriptionBatch>();
+
+    public int ClosedDueToNoDocs;
+    public bool SubscriptionClosedDueNoDocs => ClosedDueToNoDocs == _shardWorkers.Count;
 
     public SubscriptionConnectionsStateOrchestrator(ServerStore server, ShardedDatabaseContext databaseContext, long subscriptionId) : 
         base(server, databaseContext.DatabaseName, subscriptionId, databaseContext.DatabaseShutdown)
@@ -53,7 +56,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
         if (initializationTask == null)
         {
             _options = connection.Options;
-            ShardWorkers = new Dictionary<string, ShardedSubscriptionWorker>();
+            _shardWorkers = new Dictionary<string, ShardedSubscriptionWorker>();
             StartShardSubscriptionWorkers();
 
             _initialConnection.SetResult();
@@ -71,7 +74,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
             var re = _databaseContext.ShardExecutor.GetRequestExecutorAt(shardNumber);
             var shard = ShardHelper.ToShardName(_databaseContext.DatabaseName, shardNumber);
             var worker = CreateShardedWorkerHolder(shard, re, lastErrorDateTime: null);
-            ShardWorkers.Add(shard, worker);
+            _shardWorkers.Add(shard, worker);
         }
     }
 
@@ -142,7 +145,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
             // ignore
         }
 
-        var workers = ShardWorkers;
+        var workers = _shardWorkers;
         var connection = _initialConnection;
 
         while (Batches.TryTake(out var batch))
@@ -171,7 +174,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
 
         if (Interlocked.CompareExchange(ref _initialConnection, null, connection) == connection)
         {
-            ShardWorkers = null;
+            _shardWorkers = null;
         }
     }
 }

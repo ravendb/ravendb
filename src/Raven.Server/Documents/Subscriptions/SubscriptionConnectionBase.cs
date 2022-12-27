@@ -600,7 +600,20 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        protected abstract void AssertCloseWhenNoDocsLeft();
+        protected virtual void AssertCloseWhenNoDocsLeft()
+        {
+            if (_options.CloseWhenNoDocsLeft)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info(
+                        $"Closing subscription {Options.SubscriptionName} because did not find any documents to send and it's in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode");
+                }
+
+                throw new SubscriptionClosedException(
+                    $"Closing subscription {Options.SubscriptionName} because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode", canReconnect: false, closedDueNoDocsLeft: true);
+            }
+        }
 
         protected async Task LogExceptionAndReportToClientAsync(Exception e)
         {
