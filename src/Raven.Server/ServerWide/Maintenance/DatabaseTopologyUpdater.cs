@@ -796,7 +796,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private static List<string> GetPendingDeleteNodes(DatabaseObservationState state)
         {
             var alreadyInDeletionProgress = new List<string>();
-            if (ShardHelper.TryGetShardNumber(state.Name, out var shardNumber))
+            if (ShardHelper.TryGetShardNumberFromDatabaseName(state.Name, out var shardNumber))
             {
                 foreach (var (tag, _) in state.RawDatabase.DeletionInProgress)
                 {

@@ -448,7 +448,7 @@ namespace SlowTests.Sharding.Cluster
                     await session.SaveChangesAsync();
                 }
 
-                var oldLocation = await Sharding.GetShardNumber(store, id);
+                var oldLocation = await Sharding.GetShardNumberFor(store, id);
 
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, oldLocation)))
                 {
@@ -487,7 +487,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.True(tomb.Flags.Contain(DocumentFlags.FromResharding));
                 }
 
-                var newLocation = await Sharding.GetShardNumber(store, id);
+                var newLocation = await Sharding.GetShardNumberFor(store, id);
                 Assert.NotEqual(oldLocation, newLocation);
 
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
@@ -511,7 +511,7 @@ namespace SlowTests.Sharding.Cluster
                 var id3 = $"users/3${suffix}";
                 var id4 = $"users/4${suffix}";
 
-                var oldLocation = await Sharding.GetShardNumber(store, id1);
+                var oldLocation = await Sharding.GetShardNumberFor(store, id1);
 
                 await Sharding.Resharding.MoveShardForId(store, id1);
 
@@ -560,7 +560,7 @@ namespace SlowTests.Sharding.Cluster
                     }
                 }
 
-                var newLocation = await Sharding.GetShardNumber(store, id1);
+                var newLocation = await Sharding.GetShardNumberFor(store, id1);
                 Assert.NotEqual(oldLocation, newLocation);
 
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
@@ -608,7 +608,7 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 var id = $"users/1${suffix}";
-                var oldLocation = await Sharding.GetShardNumber(store, id);
+                var oldLocation = await Sharding.GetShardNumberFor(store, id);
 
                 var oldLocationShard = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation));
                 using (oldLocationShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -651,7 +651,7 @@ namespace SlowTests.Sharding.Cluster
                     }
                 }
 
-                var newLocation = await Sharding.GetShardNumber(store, id);
+                var newLocation = await Sharding.GetShardNumberFor(store, id);
                 Assert.NotEqual(oldLocation, newLocation);
 
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
@@ -698,7 +698,7 @@ namespace SlowTests.Sharding.Cluster
                 session.SaveChanges();
             }
 
-            var oldLocation = await Sharding.GetShardNumber(store, id);
+            var oldLocation = await Sharding.GetShardNumberFor(store, id);
 
             await Sharding.Resharding.MoveShardForId(store, id);
 
@@ -708,7 +708,7 @@ namespace SlowTests.Sharding.Cluster
                 Assert.Null(user);
             }
 
-            var newLocation = await Sharding.GetShardNumber(store, id);
+            var newLocation = await Sharding.GetShardNumberFor(store, id);
             Assert.NotEqual(oldLocation, newLocation);
 
             using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
@@ -745,7 +745,7 @@ namespace SlowTests.Sharding.Cluster
 
                 await CheckData(replica);
 
-                var oldLocation = await Sharding.GetShardNumber(store, id);
+                var oldLocation = await Sharding.GetShardNumberFor(store, id);
 
                 await Sharding.Resharding.MoveShardForId(store, id);
 
@@ -757,7 +757,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(24, tombs.Count);
                 }
 
-                var newLocation = await Sharding.GetShardNumber(store, id);
+                var newLocation = await Sharding.GetShardNumberFor(store, id);
 
                 await CheckData(store, ShardHelper.ToShardName(store.Database, newLocation));
 
@@ -791,7 +791,7 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 var id = $"users/1${suffix}";
-                var oldLocation = await Sharding.GetShardNumber(store, id);
+                var oldLocation = await Sharding.GetShardNumberFor(store, id);
 
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, oldLocation)))
                 {
@@ -815,7 +815,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(0, q.Count);
                 }
 
-                var newLocation = await Sharding.GetShardNumber(store, id);
+                var newLocation = await Sharding.GetShardNumberFor(store, id);
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
                 {
                     var q = await session.Query<User, UsersByName>().ToListAsync();
@@ -848,7 +848,7 @@ namespace SlowTests.Sharding.Cluster
 
                 await CheckData(replica, expectedRevisionsCount: 0);
 
-                var oldLocation = await Sharding.GetShardNumber(store, id);
+                var oldLocation = await Sharding.GetShardNumberFor(store, id);
 
                 await Sharding.Resharding.MoveShardForId(store, id);
 
@@ -860,7 +860,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(22, tombs.Count);
                 }
 
-                var newLocation = await Sharding.GetShardNumber(store, id);
+                var newLocation = await Sharding.GetShardNumberFor(store, id);
 
                 await CheckData(store, ShardHelper.ToShardName(store.Database, newLocation));
 
@@ -897,7 +897,7 @@ namespace SlowTests.Sharding.Cluster
 
                 // migrate bucket
                 const string id = $"users/1${suffix}";
-                var oldLocation = await Sharding.GetShardNumber(store, id);
+                var oldLocation = await Sharding.GetShardNumberFor(store, id);
                 await Sharding.Resharding.MoveShardForId(store, id);
 
                 // add more data
@@ -916,7 +916,7 @@ namespace SlowTests.Sharding.Cluster
                     }
                 }
 
-                var newLocation = await Sharding.GetShardNumber(store, id);
+                var newLocation = await Sharding.GetShardNumberFor(store, id);
                 using (var session = store.OpenSession(ShardHelper.ToShardName(store.Database, newLocation)))
                 {
                     for (int i = 1; i <= 11; i++)

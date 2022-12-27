@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -66,7 +67,7 @@ public class PrefixedSharding : RavenTestBase
             }
         }
 
-        using (var s = store.OpenAsyncSession(store.Database + "$0"))
+        using (var s = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, 0)))
         {
             // shard $0 has all the eu/ docs, no asia/ docs and fair share of the others
             Assert.Equal(73, await s.Query<Item>().CountAsync(i => i.Id.StartsWith("eu/")));
@@ -75,7 +76,7 @@ public class PrefixedSharding : RavenTestBase
             Assert.Equal(19, await s.Query<Item>().CountAsync(i => i.Id.StartsWith("items/")));
         }
 
-        using (var s = store.OpenAsyncSession(store.Database + "$1"))
+        using (var s = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, 1)))
         {
             // shard $1 has no eu/ docs, half of the asia/ docs and fair share of the others
             Assert.Equal(0, await s.Query<Item>().CountAsync(i => i.Id.StartsWith("eu/")));
@@ -84,7 +85,7 @@ public class PrefixedSharding : RavenTestBase
             Assert.Equal(23, await s.Query<Item>().CountAsync(i => i.Id.StartsWith("items/")));
         }
 
-        using (var s = store.OpenAsyncSession(store.Database + "$2"))
+        using (var s = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, 2)))
         {
             // shard $1 has no eu/ docs, half of the asia/ docs and fair share of the others
             Assert.Equal(0, await s.Query<Item>().CountAsync(i => i.Id.StartsWith("eu/")));
