@@ -784,7 +784,7 @@ namespace SlowTests.Sharding.Backup
             using (var store = Sharding.GetDocumentStore())
             {
                 const string id = "users/1/$b";
-                var originalLocation = await Sharding.GetShardNumber(store, id);
+                var originalLocation = await Sharding.GetShardNumberFor(store, id);
                 Assert.Equal(0, originalLocation);
 
                 var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -794,7 +794,7 @@ namespace SlowTests.Sharding.Backup
 
                 store.Maintenance.Server.Send(new UpdateDatabaseOperation(databaseRecord, replicationFactor: 1, databaseRecord.Etag));
 
-                var newLocation = await Sharding.GetShardNumber(store, id);
+                var newLocation = await Sharding.GetShardNumberFor(store, id);
                 Assert.Equal(1, newLocation);
 
                 using (var session = store.OpenAsyncSession())
