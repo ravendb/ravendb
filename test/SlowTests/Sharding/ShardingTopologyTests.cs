@@ -15,7 +15,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding
 {
-    internal class ShardingTopologyTests : ClusterTestBase
+    public class ShardingTopologyTests : ClusterTestBase
     {
         public ShardingTopologyTests(ITestOutputHelper output) : base(output)
         {
@@ -85,41 +85,6 @@ namespace SlowTests.Sharding
                 {
                     var serverWithNewShard = Servers.Single(x => x.ServerStore.NodeTag == node);
                     Assert.False(serverWithNewShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(ShardHelper.ToShardName(store.Database, addShardRes.ShardNumber), out _));
-                }
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
-        public async Task DeletingAllShardsDatabasesShouldDeleteShardedDatabase()
-        {
-            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
-            var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 2, orchestratorReplicationFactor: 2);
-
-            using (var store = GetDocumentStore(options))
-            {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-
-                //delete shard's databases all on all nodes
-                foreach (var (shardNumber, topology) in record.Sharding.Shards)
-                {
-                    foreach (var node in topology.Members)
-                    {
-                        var deleteShardDatabaseRes = store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, shardNumber, hardDelete: true, fromNode: node));
-                        await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(deleteShardDatabaseRes.RaftCommandIndex);
-                    }
-                }
-
-                Assert.Null(await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)));
-
-                //make sure the nodes that held the deleted shard no longer have any of this shard's db instances
-                foreach (var (shardNumber, topology) in record.Sharding.Shards)
-                {
-                    foreach (var node in topology.Members)
-                    {
-                        var serverWithNewShard = Servers.Single(x => x.ServerStore.NodeTag == node);
-                        Assert.False(serverWithNewShard.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(
-                            ShardHelper.ToShardName(store.Database, shardNumber), out _));
-                    }
                 }
             }
         }
@@ -325,7 +290,7 @@ namespace SlowTests.Sharding
                 {
                     store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, shardNumber: 5, hardDelete: true, fromNode: shardTopology.Members[0]));
                 });
-                Assert.Contains("Can't fetch topology of shard number 5 from the raw record because it does not exist.", error.Message);
+                Assert.Contains($"Attempting to delete shard database {ShardHelper.ToShardName(store.Database, 5)} but shard 5 doesn't exist for database {store.Database}.", error.Message);
 
                 var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.NotNull(record2);
@@ -352,7 +317,7 @@ namespace SlowTests.Sharding
                 var error = Assert.ThrowsAny<RavenException>(() =>
                     store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, shardNumber: 0, hardDelete: true, fromNode: nodeContainingShard0)));
 
-                Assert.Contains($"Database {ShardHelper.ToShardName(store.Database, 0)} cannot be deleted because it is the last copy of shard", error.Message);
+                Assert.Contains($"Database {store.Database} cannot be deleted because it is the last copy of shard 0 and it still contains buckets.", error.Message);
 
                 //topology should not change
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));

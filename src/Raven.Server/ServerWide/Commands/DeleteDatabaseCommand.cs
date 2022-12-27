@@ -63,7 +63,7 @@ namespace Raven.Server.ServerWide.Commands
                             if (record.Sharding.Shards[ShardNumber.Value].ReplicationFactor == 1 && record.Sharding.DoesShardHaveBuckets(ShardNumber.Value))
                             {
                                 throw new RachisApplyException(
-                                $"Database {DatabaseName} cannot be deleted because it is the last copy of shard {ShardNumber.Value} and it still contains buckets.");
+                                    $"Database {DatabaseName} cannot be deleted because it is the last copy of shard {ShardNumber.Value} and it still contains buckets.");
                             }
 
                             RemoveDatabaseFromSingleNode(record, record.Sharding.Shards[ShardNumber.Value], node, shardNumber: ShardNumber, deletionInProgressStatus);

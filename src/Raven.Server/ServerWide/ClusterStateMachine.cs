@@ -1499,14 +1499,6 @@ namespace Raven.Server.ServerWide
                             {
                                 databaseRecord.Sharding.Shards.Remove(shardNumber);
                             }
-
-                            if (databaseRecord.Sharding.Shards.Count == 0)
-                            {
-                                DeleteDatabaseRecord(context, index, items, lowerKey, databaseRecord, serverStore);
-                                NotifyDatabaseAboutChanged(context, shardedDatabaseName, index, nameof(RemoveNodeFromDatabaseCommand),
-                                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
-                                return;
-                            }
                         }
                     }
                     else
