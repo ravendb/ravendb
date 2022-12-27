@@ -249,8 +249,7 @@ namespace SlowTests.Sharding.Cluster
                 
                 //migrate doc to new shard
                 var id = "foo/bar";
-                var bucket = ShardHelper.GetBucket(id);
-                var originalDocShard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+                var originalDocShard = await Sharding.GetShardNumberFor(store, id);
                 var toShard = newShardNumber;
 
                 Assert.NotEqual(toShard, originalDocShard);

@@ -17,6 +17,8 @@ using Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
+using Sparrow.Server;
+using Sparrow.Threading;
 using Xunit;
 
 namespace FastTests;
@@ -99,9 +101,20 @@ public partial class RavenTestBase
             return options;
         }
 
+        public static int GetNextSortedShardNumber(PrefixedShardingSetting prefixedShardingSetting, int shardNumber)
+        {
+            var shardsSorted = prefixedShardingSetting.Shards.OrderBy(x => x).ToArray();
+            return GetNextSortedShardNumber(shardNumber, shardsSorted);
+        }
+
         public static int GetNextSortedShardNumber(Dictionary<int, DatabaseTopology> shards, int shardNumber)
         {
             var shardsSorted = shards.Keys.OrderBy(x => x).ToArray();
+            return GetNextSortedShardNumber(shardNumber, shardsSorted);
+        }
+
+        private static int GetNextSortedShardNumber(int shardNumber, int[] shardsSorted)
+        {
             var toShard = -1;
             for (int i = 0; i < shardsSorted.Length; i++)
             {
