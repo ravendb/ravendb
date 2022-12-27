@@ -156,7 +156,6 @@ public partial class RavenTestBase
                 var shardedDatabase = (await _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(shardedName)) as ShardedDocumentDatabase;
                 Assert.NotNull(shardedDatabase);
                 return shardedDatabase;
-
             }
         }
 

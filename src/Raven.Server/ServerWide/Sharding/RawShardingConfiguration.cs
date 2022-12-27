@@ -11,13 +11,13 @@ public class RawShardingConfiguration
 {
     private ShardingConfiguration _materializedConfiguration;
 
-    private readonly BlittableJsonReaderObject _configuration;
+    private readonly BlittableJsonReaderObject _sharding;
     private readonly JsonOperationContext _context;
 
     public RawShardingConfiguration([NotNull] JsonOperationContext context, [NotNull] BlittableJsonReaderObject configuration)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _sharding = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
     public RawShardingConfiguration(ShardingConfiguration configuration)
@@ -29,10 +29,10 @@ public class RawShardingConfiguration
     {
         get
         {
-            if (_configuration == null)
-                throw new ArgumentNullException(nameof(_configuration));
+            if (_sharding == null)
+                throw new ArgumentNullException(nameof(_sharding));
 
-            return _configuration;
+            return _sharding;
         }
     }
 
@@ -46,7 +46,7 @@ public class RawShardingConfiguration
                 return _materializedConfiguration.DatabaseId;
 
             if (_shardedDatabaseId == null)
-                _configuration.TryGet(nameof(ShardingConfiguration.DatabaseId), out _shardedDatabaseId);
+                _sharding.TryGet(nameof(ShardingConfiguration.DatabaseId), out _shardedDatabaseId);
 
             return _shardedDatabaseId;
         }
@@ -64,7 +64,7 @@ public class RawShardingConfiguration
             if (_bucketMigrations == null)
             {
                 _bucketMigrations = new Dictionary<int, ShardBucketMigration>();
-                if (_configuration.TryGet(nameof(ShardingConfiguration.BucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
+                if (_sharding.TryGet(nameof(ShardingConfiguration.BucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
                 {
                     var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                     for (var i = 0; i < obj.Count; i++)
@@ -132,7 +132,7 @@ public class RawShardingConfiguration
             if (_shardBucketRanges != null)
                 return _shardBucketRanges;
 
-            if (_configuration.TryGet(nameof(ShardingConfiguration.BucketRanges), out BlittableJsonReaderArray array) == false || array == null)
+            if (_sharding.TryGet(nameof(ShardingConfiguration.BucketRanges), out BlittableJsonReaderArray array) == false || array == null)
                 return null;
 
             _shardBucketRanges = new List<ShardBucketRange>(array.Length);
@@ -158,7 +158,7 @@ public class RawShardingConfiguration
             if (_prefixed != null)
                 return _prefixed;
 
-            if (_configuration.TryGet(nameof(ShardingConfiguration.Prefixed), out BlittableJsonReaderArray array))
+            if (_sharding.TryGet(nameof(ShardingConfiguration.Prefixed), out BlittableJsonReaderArray array))
             {
                 _prefixed = new List<PrefixedShardingSetting>();
 
@@ -198,7 +198,7 @@ public class RawShardingConfiguration
 
             if (_orchestrator == null)
             {
-                if (_configuration.TryGet(nameof(ShardingConfiguration.Orchestrator), out BlittableJsonReaderObject obj) && obj != null)
+                if (_sharding.TryGet(nameof(ShardingConfiguration.Orchestrator), out BlittableJsonReaderObject obj) && obj != null)
                     _orchestrator = JsonDeserializationCluster.OrchestratorConfiguration(obj);
             }
 
@@ -213,7 +213,7 @@ public class RawShardingConfiguration
             if (_materializedConfiguration != null)
                 return _materializedConfiguration;
 
-            _materializedConfiguration = JsonDeserializationCluster.ShardingConfiguration(_configuration);
+            _materializedConfiguration = JsonDeserializationCluster.ShardingConfiguration(_sharding);
             return _materializedConfiguration;
         }
     }
