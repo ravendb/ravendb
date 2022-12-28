@@ -1500,6 +1500,14 @@ namespace Raven.Server.ServerWide
                                 databaseRecord.Sharding.Shards.Remove(shardNumber);
                             }
                         }
+
+                        if (databaseRecord.Sharding.Shards.Count == 0)
+                        {
+                            DeleteDatabaseRecord(context, index, items, lowerKey, databaseRecord, serverStore);
+                            NotifyDatabaseAboutChanged(context, shardedDatabaseName, index, nameof(RemoveNodeFromDatabaseCommand),
+                                DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
+                            return;
+                        }
                     }
                     else
                     {
@@ -1516,7 +1524,7 @@ namespace Raven.Server.ServerWide
                         
                         if (databaseRecord.IsSharded)
                         {
-                            throw new RachisApplyException($"Attempting to remove node from database {databaseName} but it is sharded.");
+                            throw new RachisApplyException($"Attempting to remove node {remove.NodeTag} from database {databaseName} but it is sharded.");
                         }
 
                         // no nodes in the topology and all databases have finished being deleted

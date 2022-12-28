@@ -473,7 +473,7 @@ namespace Raven.Client.ServerWide
         {
             foreach (var deletion in DeletionInProgress)
             {
-                if (deletion.Key.Contains($"${shardNumber}"))
+                if (deletion.Key.EndsWith($"${shardNumber}"))
                     return true;
             }
 

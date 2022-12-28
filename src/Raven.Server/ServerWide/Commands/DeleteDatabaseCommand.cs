@@ -57,10 +57,10 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         if (ShardNumber.HasValue)
                         {
-                            if (record.Sharding.Shards.ContainsKey(ShardNumber.Value) == false)
+                            if (record.Sharding.Shards.TryGetValue(ShardNumber.Value, out var topology) == false)
                                 throw new RachisApplyException($"The requested shard '{ShardNumber}' doesn't exists in '{record.DatabaseName}'");
 
-                            if (record.Sharding.Shards[ShardNumber.Value].ReplicationFactor == 1 && record.Sharding.DoesShardHaveBuckets(ShardNumber.Value))
+                            if (topology.ReplicationFactor == 1 && record.Sharding.DoesShardHaveBuckets(ShardNumber.Value))
                             {
                                 throw new RachisApplyException(
                                     $"Database {DatabaseName} cannot be deleted because it is the last copy of shard {ShardNumber.Value} and it still contains buckets.");
@@ -88,7 +88,7 @@ namespace Raven.Server.ServerWide.Commands
 
                     foreach (var (shardNumber, topology) in record.Sharding.Shards)
                     {
-                        record.Sharding.Shards[shardNumber] = RemoveDatabaseFromAllNodes(record, record.Sharding.Shards[shardNumber], shardNumber, deletionInProgressStatus);
+                        record.Sharding.Shards[shardNumber] = RemoveDatabaseFromAllNodes(record, topology, shardNumber, deletionInProgressStatus);
                     }
                 }
             }
