@@ -38,7 +38,7 @@ public class ThreadsInfoNotificationSender : BackgroundWorkBase
             if (CancellationToken.IsCancellationRequested)
                 return;
 
-            if (_watchers.Count == 0)
+            if (_watchers.IsEmpty)
                 return;
 
             var threadsInfo = _threadsUsage.Calculate();

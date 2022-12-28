@@ -60,7 +60,7 @@ namespace Raven.Server.Utils
 
         public void ThrowIfNeeded()
         {
-            if (_list.Count == 0)
+            if (_list.IsEmpty)
                 return;
 
             var aggregateException = new AggregateException(_errorMsg, _list);

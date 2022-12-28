@@ -92,7 +92,7 @@ namespace Raven.Server.NotificationCenter
                     }
                 }
 
-                if (Watchers.Count == 0)
+                if (Watchers.IsEmpty)
                     return;
 
                 using (_notificationsStorage.Read(notification.Id, out NotificationTableValue existing))

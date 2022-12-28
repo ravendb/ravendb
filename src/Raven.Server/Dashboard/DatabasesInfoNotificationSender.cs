@@ -40,7 +40,7 @@ namespace Raven.Server.Dashboard
                 if (CancellationToken.IsCancellationRequested)
                     return;
 
-                if (_watchers.Count == 0)
+                if (_watchers.IsEmpty)
                     return;
 
                 var databasesInfo = new List<AbstractDashboardNotification>();

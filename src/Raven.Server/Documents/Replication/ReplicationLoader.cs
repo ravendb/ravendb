@@ -721,7 +721,7 @@ namespace Raven.Server.Documents.Replication
 
         private void ForceTryReconnectAll()
         {
-            if (_reconnectQueue.Count == 0)
+            if (_reconnectQueue.IsEmpty)
                 return;
 
             if (Interlocked.CompareExchange(ref _reconnectInProgress, 1, 0) == 1)
