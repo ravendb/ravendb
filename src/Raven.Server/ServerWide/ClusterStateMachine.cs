@@ -1484,9 +1484,7 @@ namespace Raven.Server.ServerWide
 
                     if (isShard) //shard database
                     {
-                        rawRecord.Sharding.Shards.TryGetValue(shardNumber, out var topology);
-
-                        if (topology == null)
+                        if (rawRecord.Sharding.Shards.ContainsKey(shardNumber) == false)
                             return;
 
                         databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
