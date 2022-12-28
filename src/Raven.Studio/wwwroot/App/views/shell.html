@@ -46,6 +46,7 @@
                                             <div data-bind="text: environment, visible: environment, attr: { class: 'margin-left label text-uppercase ' + environmentClass() }"></div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
                                             <div class="flex-separator"></div>
+                                            <div data-bind="visible: isSharded(), if: isSharded()" class="label label-info"><span data-bind="text: shards().length"></span> shards</div>
                                             <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: databaseAccessColor() }"></small>
                                         </a>
                                     </li>
@@ -58,6 +59,7 @@
                                             <div class="label label-default">Non-relevant (Remote)</div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
                                             <div class="flex-separator"></div>
+                                            <div data-bind="visible: isSharded(), if: isSharded()" class="label label-info"><span data-bind="text: shards().length"></span> shards</div>
                                             <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: databaseAccessColor() }"></small>
                                         </a>
                                     </li>
@@ -70,6 +72,7 @@
                                             <div class="label label-default">Disabled</div>
                                             <div data-bind="visible: errored" class="label label-danger">Errored</div>
                                             <div class="flex-separator"></div>
+                                            <div data-bind="visible: isSharded(), if: isSharded()" class="label label-info"><span data-bind="text: shards().length"></span> shards</div>
                                             <small data-bind="text: databaseAccessText, visible: databaseAccessText, attr: { class: databaseAccessColor() }"></small>
                                         </a>
                                     </li>
