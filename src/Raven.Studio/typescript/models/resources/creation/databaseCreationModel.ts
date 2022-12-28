@@ -11,6 +11,7 @@ import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import licenseModel = require("models/auth/licenseModel");
 import getCloudBackupCredentialsFromLinkCommand = require("commands/resources/getCloudBackupCredentialsFromLinkCommand");
 import backupCredentials = require("models/resources/creation/backupCredentials");
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
@@ -705,14 +706,21 @@ class databaseCreationModel {
             }
         }
         
+        const clusterNodeTags = clusterTopologyManager.default.topology()?.nodes().map(x => x.tag()) ?? [];
+        
         return {
             DatabaseName: this.name(),
             Settings: settings,
             Disabled: false,
             Encrypted: this.getEncryptionConfigSection().enabled(),
-            Topology: numberOfShards ? null : this.topologyToDto(),
+            Topology: sharded ? null : this.topologyToDto(),
             Sharding: sharded ? {
-                Shards: shards
+                Shards: shards,
+                Orchestrator: {
+                    Topology: {
+                        Members: clusterNodeTags
+                    }
+                }
             } : null
         } as Raven.Client.ServerWide.DatabaseRecord;
     }
