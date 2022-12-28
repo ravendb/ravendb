@@ -739,7 +739,7 @@ namespace Raven.Server.Web.System
                                     if (isShard && topology.ReplicationFactor == 1 && rawRecord.Sharding.DoesShardHaveBuckets(shardNumber))
                                     {
                                         throw new InvalidOperationException(
-                                            $"Database {databaseName} cannot be deleted because it is the last copy of shard {shardNumber} and it still contains buckets.");
+                                            $"Database {databaseName} cannot be deleted because it is the last copy of shard {shardNumber} and it contains data that has not been migrated.");
                                     }
 
                                     pendingDeletes.Add(node);
