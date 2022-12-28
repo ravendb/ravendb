@@ -67,9 +67,10 @@ namespace Raven.Server.NotificationCenter
 
             lock (_watchersLock)
             {
+                var first = Watchers.IsEmpty;
                 Watchers.TryAdd(watcher);
 
-                if (Watchers.Count == 1)
+                if (first)
                 {
                     StartBackgroundWorkers();
                 }
@@ -100,7 +101,7 @@ namespace Raven.Server.NotificationCenter
                 {
                     Watchers.TryRemove(watcher);
 
-                    if (Watchers.Count == 0)
+                    if (Watchers.IsEmpty)
                     {
                         StopBackgroundWorkers();
                     }

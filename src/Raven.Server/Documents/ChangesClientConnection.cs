@@ -246,7 +246,7 @@ namespace Raven.Server.Documents
 
         private static bool HasItemStartingWith(ConcurrentSet<string> set, string value)
         {
-            if (set.Count == 0)
+            if (set.IsEmpty)
                 return false;
             foreach (string item in set)
             {
@@ -258,7 +258,7 @@ namespace Raven.Server.Documents
 
         private static bool HasItemEqualsTo(ConcurrentSet<string> set, string value)
         {
-            if (set.Count == 0)
+            if (set.IsEmpty)
                 return false;
             foreach (string item in set)
             {
@@ -291,7 +291,7 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            if (change.DocumentId != null && change.Name != null && _matchingDocumentCounter.Count > 0)
+            if (change.DocumentId != null && change.Name != null && _matchingDocumentCounter.IsEmpty == false)
             {
                 var parameters = new DocumentIdAndNamePair(change.DocumentId, change.Name);
                 if (_matchingDocumentCounter.Contains(parameters))
@@ -325,7 +325,7 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            if (change.DocumentId != null && change.Name != null && _matchingDocumentTimeSeries.Count > 0)
+            if (change.DocumentId != null && change.Name != null && _matchingDocumentTimeSeries.IsEmpty == false)
             {
                 var parameters = new DocumentIdAndNamePair(change.DocumentId, change.Name);
                 if (_matchingDocumentTimeSeries.Contains(parameters))

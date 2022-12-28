@@ -37,6 +37,8 @@ namespace Sparrow.Collections
         }
 
         public int Count => _inner.Count;
+        
+        public bool IsEmpty => _inner.IsEmpty;
 
         public void Add(T item)
         {

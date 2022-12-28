@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public bool IsSubscriptionActive()
         {
-            return _connections.Count != 0;
+            return _connections.IsEmpty == false;
         }
 
         public Task<bool> WaitForSubscriptionActiveLock(int millisecondsTimeout)
@@ -267,7 +267,7 @@ namespace Raven.Server.Documents.Subscriptions
         private bool TryRegisterFirstConnection(SubscriptionConnection incomingConnection)
         {
             var current = _connections;
-            if (current.Count == 0)
+            if (current.IsEmpty)
             {
                 var firstConnection = new ConcurrentSet<SubscriptionConnection> {incomingConnection};
                 return Interlocked.CompareExchange(ref _connections, firstConnection, current) == current;
@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         private void RegisterSingleConnection(SubscriptionConnection incomingConnection)
         {
-            if (_connections.Count > 1)
+            if (_connections.IsEmpty == false)
             {
                 throw new InvalidOperationException("Non concurrent subscription with more than a single connection. Likely a bug");
             }
@@ -326,7 +326,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             try
             {
-                if (_connections.Count != 0)
+                if (_connections.IsEmpty == false)
                     throw new TimeoutException();
 
                 if (TryAddConnection(incomingConnection) == false)

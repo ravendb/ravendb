@@ -444,7 +444,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         public void Dispose()
         {
-            if (_subscriptions.Count == 0)
+            if (_subscriptions.IsEmpty)
                 return;
             var tasks = new List<Task>();
 

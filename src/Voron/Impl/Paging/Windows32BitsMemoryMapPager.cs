@@ -494,7 +494,7 @@ namespace Voron.Impl.Paging
                     UnmapViewOfFile((byte*)addr.Address);
                     NativeMemory.UnregisterFileMapping(addr.File, addr.Address, addr.Size);
 
-                    if (set.Count == 0)
+                    if (set.IsEmpty)
                     {
                         _globalMapping.TryRemove(addr.StartPage, out set);
                     }

@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             _threads.ForEach(x => x.Join(int.MaxValue));
 
-            if (_exceptions.Count > 0)
+            if (_exceptions.IsEmpty == false)
             {
                 if (_exceptions.Count == 1)
                     throw _exceptions.First();
