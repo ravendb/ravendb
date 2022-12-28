@@ -271,4 +271,31 @@ public class RavenIntegration : RavenTestBase
         public string Id { get; set; }
         public string Tag { get; set; }
     }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CoraxOrQueriesCanWorksOnlyOnComplexQueries(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            using var session = store.OpenSession();
+            session.Store(new Person("Maciej"));
+            session.SaveChanges();
+        }
+
+        {
+            using var session = store.OpenSession();
+            var person = session.Advanced.DocumentQuery<Person>()
+                .OpenSubclause()
+                    .WhereStartsWith(i => i.Name, "mac")
+                    .OrElse()
+                    .WhereEndsWith(i => i.Name, "iej")
+                .CloseSubclause()
+                .Boost(10)
+                .Single();
+            Assert.Equal("Maciej", person.Name);
+        }
+    }
+
+    private record Person(string Name);
 }
