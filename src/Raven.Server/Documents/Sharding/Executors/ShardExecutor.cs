@@ -21,15 +21,15 @@ namespace Raven.Server.Documents.Sharding.Executors
         public ShardExecutor(ServerStore store, DatabaseRecord record, string databaseName) : base(store)
         {
             _fullRange = record.Sharding.Shards.Keys.ToArray();
-            
             _requestExecutors = new Dictionary<int, RequestExecutor>(record.Sharding.Shards.Count);
-            foreach (var shardToTopology in record.Sharding.Shards)
+            var allNodes = store.GetClusterTopology().AllNodes;
+
+            foreach ((int shardNumber, var topology) in record.Sharding.Shards)
             {
-                var allNodes = store.GetClusterTopology().AllNodes;
-                var urls = record.Sharding.Shards[shardToTopology.Key].AllNodes.Select(tag => allNodes[tag]).ToArray();
-                _requestExecutors[shardToTopology.Key] = RequestExecutor.CreateForServer(
+                var urls = topology.AllNodes.Select(tag => allNodes[tag]).ToArray();
+                _requestExecutors[shardNumber] = RequestExecutor.CreateForServer(
                     urls,
-                    ShardHelper.ToShardName(databaseName, shardToTopology.Key),
+                    ShardHelper.ToShardName(databaseName, shardNumber),
                     store.Server.Certificate.Certificate,
                     DocumentConventions.DefaultForServer);
             }

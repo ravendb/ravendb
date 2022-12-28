@@ -1,13 +1,13 @@
-﻿using System.Diagnostics;
-using System.Net.Http;
+﻿using System.Net.Http;
+using System.Text;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Queries;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Commands;
 
@@ -37,9 +37,8 @@ public class ShardedQueryCommand : AbstractQueryCommand<BlittableJsonReaderObjec
 
     protected override HttpContent GetContent(JsonOperationContext ctx)
     {
-        var queryToSend = _query.Clone(ctx);
-
-        return new BlittableJsonContent(async stream => await queryToSend.WriteJsonToAsync(stream));
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "let's create a server-side query class here and use same code as for QueryCommand");
+        return new StringContent(_query.ToString(), Encoding.UTF8, "application/json");
     }
 
     public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)

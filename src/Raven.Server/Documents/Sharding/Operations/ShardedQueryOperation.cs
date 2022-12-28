@@ -26,16 +26,16 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
     private readonly TransactionOperationContext _context;
     private readonly ShardedDatabaseRequestHandler _requestHandler;
     private readonly Dictionary<int, ShardedQueryCommand> _queryCommands;
-    private readonly ShardedDocumentsComparer _sortingComparer;
+    private readonly IComparer<BlittableJsonReaderObject> _sortingComparer;
     private long _combinedResultEtag;
 
-    public ShardedQueryOperation(IndexQueryServerSide query, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, ShardedDocumentsComparer sortingComparer, string expectedEtag)
+    public ShardedQueryOperation(IndexQueryServerSide query, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, IComparer<BlittableJsonReaderObject> sortingComparer, string expectedEtag)
     {
         _query = query;
         _context = context;
         _requestHandler = requestHandler;
         _queryCommands = queryCommands;
-        _sortingComparer = sortingComparer;
+        _sortingComparer = sortingComparer ?? new RoundRobinComparer();
         ExpectedEtag = expectedEtag;
     }
 
@@ -138,14 +138,6 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
                 compareExchangeValueIncludes.AddResults(queryRes.CompareExchangeValueIncludes, _context);
             }
-
-            if (_sortingComparer == null)
-            {
-                foreach (BlittableJsonReaderObject item in queryRes.Results)
-                {
-                    result.Results.Add(item.Clone(_context));
-                }
-            }
         }
 
         if (revisionIncludes != null)
@@ -166,28 +158,24 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         if (compareExchangeValueIncludes != null)
             result.AddCompareExchangeValueIncludes(compareExchangeValueIncludes);
 
-        if (_sortingComparer != null)
+        // all the results from each command are already ordered
+        using (var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(_sortingComparer))
         {
-            // all the results from each command are already ordered
-
-            using (var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(_sortingComparer))
+            foreach (var cmdResult in results.Values)
             {
-                foreach (var cmdResult in results.Values)
-                {
-                    mergedEnumerator.AddEnumerator(GetEnumerator(cmdResult.Result.Results));
-                }
+                mergedEnumerator.AddEnumerator(GetEnumerator(cmdResult.Result.Results.Clone(_context)));
+            }
 
-                while (mergedEnumerator.MoveNext())
-                {
-                    result.Results.Add(mergedEnumerator.Current?.Clone(_context));
-                }
+            while (mergedEnumerator.MoveNext())
+            {
+                result.Results.Add(mergedEnumerator.Current);
+            }
 
-                static IEnumerator<BlittableJsonReaderObject> GetEnumerator(BlittableJsonReaderArray array)
+            static IEnumerator<BlittableJsonReaderObject> GetEnumerator(BlittableJsonReaderArray array)
+            {
+                foreach (BlittableJsonReaderObject item in array)
                 {
-                    foreach (BlittableJsonReaderObject item in array)
-                    {
-                        yield return item;
-                    }
+                    yield return item;
                 }
             }
         }
@@ -195,6 +183,16 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         result.RegisterSpatialProperties(_query);
 
         return result;
+    }
+
+    private class RoundRobinComparer : IComparer<BlittableJsonReaderObject>
+    {
+        private long _current;
+
+        public int Compare(BlittableJsonReaderObject _, BlittableJsonReaderObject __)
+        {
+            return _current++ % 2 == 0 ? 1 : -1;
+        }
     }
 
     private void HandleDocumentIncludes(QueryResult cmdResult, ref ShardedQueryResult result)
