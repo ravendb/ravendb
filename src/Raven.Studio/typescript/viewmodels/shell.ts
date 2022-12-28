@@ -185,9 +185,13 @@ class shell extends viewModelBase {
             if (!db || !(db instanceof shard)) {
                 return "";
             }
+            const shardedDb = db.root;
             
-            const targetDb = db.root;
-            return appUrl.forCurrentPage(targetDb);           
+            const localUrl = appUrl.forCurrentPage(shardedDb);
+            
+            const firstNode = shardedDb.nodes()[0];
+
+            return shardedDb.relevant() ? localUrl : appUrl.toExternalUrl(firstNode.nodeUrl, localUrl);
         });
 
         this.bindToCurrentInstance("toggleMenu");
