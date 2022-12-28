@@ -1185,6 +1185,9 @@ namespace Voron.Data.CompactTrees
                 throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key),$"key must be less than {Constants.CompactTree.MaximumKeySize} bytes in size");
             if(key.Length <= 0)
                 throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key), "key must be at least 1 byte");
+            int indexOf = key.IndexOf((byte)0);
+            if(indexOf != -1)
+                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key), "key must NOT have a null terminator but had one in: " + indexOf);  
         }
         
         public void Add(string key, long value)
