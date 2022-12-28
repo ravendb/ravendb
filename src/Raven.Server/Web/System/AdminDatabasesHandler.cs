@@ -264,18 +264,18 @@ namespace Raven.Server.Web.System
                     }
                 }
 
-                if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(databaseRecord.DatabaseName) == false)
+                using (var raw = new RawDatabaseRecord(context, json))
                 {
-                    using (var raw = new RawDatabaseRecord(context, json))
+                    foreach (var rawDatabaseRecord in raw.AsShardsOrNormal())
                     {
-                        foreach (var rawDatabaseRecord in raw.AsShardsOrNormal())
+                        if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(rawDatabaseRecord.DatabaseName) == false)
                         {
                             using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if we need to recreate indexes"))
                                 RecreateIndexes(rawDatabaseRecord.DatabaseName, databaseRecord);
                         }
                     }
                 }
-
+                
                 var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(databaseRecord.DatabaseName, databaseRecord, context, replicationFactor, index, raftRequestId);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
