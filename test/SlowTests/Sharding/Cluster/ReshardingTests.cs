@@ -544,7 +544,7 @@ namespace SlowTests.Sharding.Cluster
                 using (context.OpenReadTransaction())
                 {
                     var tombs = db.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
-                    Assert.Equal(20, tombs.Count);
+                    Assert.Equal(22, tombs.Count);
 
                     foreach (var item in tombs)
                     {
@@ -755,7 +755,7 @@ namespace SlowTests.Sharding.Cluster
                 using (context.OpenReadTransaction())
                 {
                     var tombs = db.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
-                    Assert.Equal(22, tombs.Count);
+                    Assert.Equal(24, tombs.Count);
                 }
 
                 var newLocation = await Sharding.GetShardNumber(store, id);
@@ -825,7 +825,7 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [RavenFact(RavenTestCategory.Sharding)]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-19696")]
         public async Task EtlShouldNotSendTombstonesCreatedByBucketDeletion()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1029,7 +1029,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(6969, stats.Size);
+                    Assert.Equal(8706, stats.Size);
                     Assert.Equal(4, stats.NumberOfDocuments);
                 }
 
@@ -1063,7 +1063,7 @@ namespace SlowTests.Sharding.Cluster
                 using (context.OpenReadTransaction())
                 {
                     var tombs = originalShard.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
-                    Assert.Equal(20, tombs.Count);
+                    Assert.Equal(22, tombs.Count);
 
                     foreach (var item in tombs)
                     {
@@ -1103,11 +1103,11 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(7706, stats.Size);
+                    Assert.Equal(9147, stats.Size);
                     Assert.Equal(4, stats.NumberOfDocuments);
                 }
 
-                await CheckData(store, database: ShardHelper.ToShardName(store.Database, newLocation), expectedRevisionsCount: 9);
+                await CheckData(store, database: ShardHelper.ToShardName(store.Database, newLocation), expectedRevisionsCount: 11);
             }
         }
 
@@ -1167,11 +1167,10 @@ namespace SlowTests.Sharding.Cluster
                 await session.StoreAsync(new User { Name = "Name4", LastName = "LastName4", Age = 15 }, id4);
 
                 //Time series
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Major, "fix timeseries migration");
-                /*session.TimeSeriesFor(id1, "Heartrate")
+                session.TimeSeriesFor(id1, "Heartrate")
                     .Append(DateTime.Now, 59d, "watches/fitbit");
                 session.TimeSeriesFor(id2, "Heartrate")
-                    .Append(DateTime.Now.AddHours(6), 59d, "watches/fitbit");*/
+                    .Append(DateTime.Now.AddHours(6), 59d, "watches/fitbit");
 
                 //counters
                 session.CountersFor(id3).Increment("Downloads", 100);
@@ -1204,7 +1203,7 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        private async Task CheckData(IDocumentStore store, string database = null, long expectedRevisionsCount = 10)
+        private async Task CheckData(IDocumentStore store, string database = null, long expectedRevisionsCount = 12)
         {
             database ??= store.Database;
             var db = await GetDocumentDatabaseInstanceFor(store, database);
@@ -1229,8 +1228,7 @@ namespace SlowTests.Sharding.Cluster
             var suffix = "usa";
             using (var session = store.OpenSession(database))
             {
-                //todo fix timeseries migration
-                /*var val = session.TimeSeriesFor("users/1$usa", "Heartrate")
+                var val = session.TimeSeriesFor("users/1$usa", "Heartrate")
                     .Get(DateTime.MinValue, DateTime.MaxValue);
 
                 Assert.Equal(1, val.Length);
@@ -1238,7 +1236,7 @@ namespace SlowTests.Sharding.Cluster
                 val = session.TimeSeriesFor("users/2$usa", "Heartrate")
                     .Get(DateTime.MinValue, DateTime.MaxValue);
 
-                Assert.Equal(1, val.Length);*/
+                Assert.Equal(1, val.Length);
 
                 //Counters
                 var counterValue = session.CountersFor($"users/3${suffix}").Get("Downloads");
