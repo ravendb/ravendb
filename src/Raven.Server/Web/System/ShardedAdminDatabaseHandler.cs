@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Amazon.Runtime.Internal;
-using Nest;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -98,7 +95,7 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(ModifyOrchestratorTopologyResult.DatabaseName)] = name,
+                        [nameof(ModifyOrchestratorTopologyResult.Name)] = name,
                         [nameof(ModifyOrchestratorTopologyResult.OrchestratorTopology)] = topology.ToJson(),
                         [nameof(ModifyOrchestratorTopologyResult.RaftCommandIndex)] = newIndex
                     });
@@ -185,7 +182,7 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(ModifyOrchestratorTopologyResult.DatabaseName)] = name,
+                        [nameof(ModifyOrchestratorTopologyResult.Name)] = name,
                         [nameof(ModifyOrchestratorTopologyResult.OrchestratorTopology)] = topology.ToJson(),
                         [nameof(ModifyOrchestratorTopologyResult.RaftCommandIndex)] = newIndex
                     });
@@ -202,7 +199,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases/shard", "PUT", AuthorizationStatus.Operator)]
         public async Task CreateNewShard()
         {
-            var database = GetQueryStringValueAndAssertIfSingleAndNotEmpty("databaseName").Trim();
+            var database = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
             var shardNumber = GetIntValueQueryString("shardNumber", required: false);
             var nodes = GetStringValuesQueryString("node", required: false);
             var replicationFactor = GetIntValueQueryString("replicationFactor", required: false);
@@ -307,7 +304,7 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(AddDatabaseShardResult.DatabaseName)] = database,
+                        [nameof(AddDatabaseShardResult.Name)] = database,
                         [nameof(AddDatabaseShardResult.ShardNumber)] = newChosenShardNumber,
                         [nameof(AddDatabaseShardResult.ShardTopology)] = newShardTopology.ToJson(),
                         [nameof(AddDatabaseShardResult.RaftCommandIndex)] = newIndex
