@@ -7,6 +7,7 @@ import NodeId = Raven.Client.ServerWide.Operations.NodeId;
 import NodesTopology = Raven.Client.ServerWide.Operations.NodesTopology;
 import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
+import type shardedDatabase from "models/resources/shardedDatabase";
 
 abstract class database {
     static readonly type = "database";
@@ -36,7 +37,7 @@ abstract class database {
     
     abstract get root(): database;
     
-    abstract get isSharded(): boolean;
+    abstract isSharded(): this is shardedDatabase;
 
     abstract getLocations(): databaseLocationSpecifier[];
 
@@ -120,7 +121,7 @@ abstract class database {
         return {
             name: this.name,
             encrypted: this.isEncrypted(),
-            sharded: this.isSharded,
+            sharded: this.isSharded(),
             nodes: this.nodes(),
             currentNode: { 
                 relevant: this.relevant(),

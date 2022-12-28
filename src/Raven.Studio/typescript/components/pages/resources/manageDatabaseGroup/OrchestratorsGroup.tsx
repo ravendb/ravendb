@@ -4,29 +4,26 @@ import { Button } from "reactstrap";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { ReorderNodes } from "components/pages/resources/manageDatabaseGroup/ReorderNodes";
-import { NodeInfoComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
+import { OrchestratorInfoComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { DeletionInProgress } from "components/pages/resources/manageDatabaseGroup/DeletionInProgress";
 import { useAccessManager } from "hooks/useAccessManager";
-import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import database from "models/resources/database";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { useServices } from "hooks/useServices";
-import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabaseGroup";
 import app from "durandal/app";
 import { NodeInfo } from "components/models/databases";
+import addNewOrchestratorToDatabase from "viewmodels/resources/addNewOrchestatorToDatabaseGroup";
+import shardedDatabase from "models/resources/shardedDatabase";
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 import viewHelpers from "common/helpers/view/viewHelpers";
-import genUtils from "common/generalUtils";
 
-export interface NodeGroupProps {
-    nodes: NodeInfo[];
-    db: database;
-    lockMode: DatabaseLockMode;
+export interface OrchestratorsGroupProps {
+    orchestrators: NodeInfo[];
+    db: shardedDatabase;
     deletionInProgress: string[];
 }
 
-export function NodeGroup(props: NodeGroupProps) {
-    const { nodes, deletionInProgress, db, lockMode } = props;
+export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
+    const { orchestrators, deletionInProgress, db } = props;
     const [sortableMode, setSortableMode] = useState(false);
     const { isOperatorOrAbove } = useAccessManager();
     const { databasesService } = useServices();
@@ -34,9 +31,9 @@ export function NodeGroup(props: NodeGroupProps) {
     const { nodeTags: clusterNodeTags } = useClusterTopologyManager();
 
     const addNode = useCallback(() => {
-        const addKeyView = new addNewNodeToDatabaseGroup(db.name, nodes, db.isEncrypted());
+        const addKeyView = new addNewOrchestratorToDatabase(db.name, orchestrators);
         app.showBootstrapDialog(addKeyView);
-    }, [db, nodes]);
+    }, [db, orchestrators]);
 
     const enableNodesSort = useCallback(() => setSortableMode(true), []);
 
@@ -51,50 +48,46 @@ export function NodeGroup(props: NodeGroupProps) {
         [databasesService, db, reportEvent]
     );
 
-    const deleteNodeFromGroup = useCallback(
-        (nodeTag: string, hardDelete: boolean) => {
+    const deleteOrchestratorFromGroup = useCallback(
+        (nodeTag: string) => {
             viewHelpers
-                .confirmationMessage(
-                    "Are you sure",
-                    "Do you want to delete database '" + genUtils.escapeHtml(db.name) + "' from node: " + nodeTag + "?",
-                    {
-                        buttons: ["Cancel", "Yes, delete"],
-                        html: true,
-                    }
-                )
+                .confirmationMessage("Are you sure", "Do you want to delete orchestrator from node: " + nodeTag + "?", {
+                    buttons: ["Cancel", "Yes, delete"],
+                    html: true,
+                })
                 .done((result) => {
                     if (result.can) {
                         // noinspection JSIgnoredPromiseFromCall
-                        databasesService.deleteDatabaseFromNode(db, [nodeTag], hardDelete);
+                        databasesService.deleteOrchestratorFromNode(db, nodeTag);
                     }
                 });
         },
         [db, databasesService]
     );
 
-    const existingTags = nodes ? nodes.map((x) => x.tag) : [];
+    const existingTags = orchestrators ? orchestrators.map((x) => x.tag) : [];
     const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
 
     return (
         <div>
-            <div className="d-flex">
-                <span>Database Group</span>
+            <div className="d-flex mt-5">
+                <span>Orchestrators</span>
             </div>
 
             {sortableMode ? (
                 <DndProvider backend={HTML5Backend}>
-                    <ReorderNodes nodes={nodes} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
+                    <ReorderNodes nodes={orchestrators} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
                 </DndProvider>
             ) : (
                 <React.Fragment>
                     <div className="d-flex">
                         <FlexGrow />
                         <Button
-                            disabled={nodes.length === 1 || !isOperatorOrAbove()}
+                            disabled={orchestrators.length === 1 || !isOperatorOrAbove()}
                             onClick={enableNodesSort}
                             className="me-2"
                         >
-                            <i className="icon-reorder me-1" /> Reorder nodes
+                            <i className="icon-reorder me-1" /> Reorder orchestrators
                         </Button>
                         <Button className="me-2" color="primary" disabled={!addNodeEnabled} onClick={addNode}>
                             <i className="icon-plus me-1" />
@@ -102,12 +95,11 @@ export function NodeGroup(props: NodeGroupProps) {
                         </Button>
                     </div>
 
-                    {nodes.map((node) => (
-                        <NodeInfoComponent
+                    {orchestrators.map((node) => (
+                        <OrchestratorInfoComponent
                             key={node.tag}
                             node={node}
-                            databaseLockMode={lockMode}
-                            deleteFromGroup={deleteNodeFromGroup}
+                            deleteFromGroup={deleteOrchestratorFromGroup}
                         />
                     ))}
 

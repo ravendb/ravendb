@@ -116,7 +116,7 @@ class editReplicationHubTask extends shardViewModelBase {
 
         deferredHubTaskInfo.done(() => this.initObservables());
 
-        const isSharded = this.db.isSharded;
+        const isSharded = this.db.isSharded();
         
         if (args.taskId) {
             shardingTodo("ANY", "loadPossibleMentors is Not implemented for sharded (all + single). Currently only implemented for non-sharded");

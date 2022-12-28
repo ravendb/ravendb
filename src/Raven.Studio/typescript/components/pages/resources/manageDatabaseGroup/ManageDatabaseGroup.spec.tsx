@@ -12,6 +12,7 @@ const {
     PreventDeleteError,
     NotAllNodesUsed,
     SingleNode,
+    Sharded,
 } = composeStories(stories);
 
 const selectors = {
@@ -23,6 +24,12 @@ describe("ManageDatabaseGroup", function () {
         const { screen } = rtlRender(<Cluster />);
 
         await screen.findByText(selectors.pageReady);
+    });
+
+    it("can render sharded view", async () => {
+        const { screen } = rtlRender(<Sharded />);
+
+        expect(await screen.findAllByText(selectors.pageReady)).toHaveLength(4);
     });
 
     it("can render database with prevent delete (ignore)", async () => {
@@ -59,5 +66,8 @@ describe("ManageDatabaseGroup", function () {
         const { screen } = rtlRender(<NotAllNodesUsed />);
 
         await screen.findByText(selectors.pageReady);
+
+        const addNodeButton = await screen.findByText(/add node/i);
+        expect(addNodeButton).toBeEnabled();
     });
 });

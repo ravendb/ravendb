@@ -91,6 +91,10 @@ export class DatabasesStubs {
                     ],
                     Rehabs: [],
                     Promotables: [],
+                    Status: {
+                        A: DatabasesStubs.statusOk(),
+                        B: DatabasesStubs.statusOk(),
+                    },
                 },
                 [1]: {
                     Members: [
@@ -107,6 +111,10 @@ export class DatabasesStubs {
                     ],
                     Rehabs: [],
                     Promotables: [],
+                    Status: {
+                        C: DatabasesStubs.statusOk(),
+                        D: DatabasesStubs.statusOk(),
+                    },
                 },
                 [2]: {
                     Members: [
@@ -123,6 +131,10 @@ export class DatabasesStubs {
                     ],
                     Rehabs: [],
                     Promotables: [],
+                    Status: {
+                        E: DatabasesStubs.statusOk(),
+                        F: DatabasesStubs.statusOk(),
+                    },
                 },
             },
             Orchestrator: {
@@ -161,6 +173,14 @@ export class DatabasesStubs {
                     ],
                     Promotables: [],
                     Rehabs: [],
+                    Status: {
+                        A: DatabasesStubs.statusOk(),
+                        B: DatabasesStubs.statusOk(),
+                        C: DatabasesStubs.statusOk(),
+                        D: DatabasesStubs.statusOk(),
+                        E: DatabasesStubs.statusOk(),
+                        F: DatabasesStubs.statusOk(),
+                    },
                 },
             },
         } as any;

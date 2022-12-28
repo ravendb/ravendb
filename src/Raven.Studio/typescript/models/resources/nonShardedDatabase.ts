@@ -6,7 +6,7 @@ class nonShardedDatabase extends database {
         return this;
     }
 
-    get isSharded(): boolean {
+    isSharded(): false {
         return false;
     }
 

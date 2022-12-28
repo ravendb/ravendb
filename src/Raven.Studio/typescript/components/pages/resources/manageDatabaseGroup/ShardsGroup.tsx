@@ -4,29 +4,30 @@ import { Button } from "reactstrap";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { ReorderNodes } from "components/pages/resources/manageDatabaseGroup/ReorderNodes";
-import { NodeInfoComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
-import { DeletionInProgress } from "components/pages/resources/manageDatabaseGroup/DeletionInProgress";
+import { ShardInfoComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { useAccessManager } from "hooks/useAccessManager";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import database from "models/resources/database";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { useServices } from "hooks/useServices";
-import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabaseGroup";
 import app from "durandal/app";
 import { NodeInfo } from "components/models/databases";
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
+import shard = require("models/resources/shard");
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
+import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabaseGroup";
 
-export interface NodeGroupProps {
+export interface ShardsGroupProps {
     nodes: NodeInfo[];
-    db: database;
+    shard: shard;
     lockMode: DatabaseLockMode;
-    deletionInProgress: string[];
 }
 
-export function NodeGroup(props: NodeGroupProps) {
-    const { nodes, deletionInProgress, db, lockMode } = props;
+//TODO: deletion in progress?
+
+export function ShardsGroup(props: ShardsGroupProps) {
+    const { nodes, lockMode, shard } = props;
+
     const [sortableMode, setSortableMode] = useState(false);
     const { isOperatorOrAbove } = useAccessManager();
     const { databasesService } = useServices();
@@ -34,21 +35,22 @@ export function NodeGroup(props: NodeGroupProps) {
     const { nodeTags: clusterNodeTags } = useClusterTopologyManager();
 
     const addNode = useCallback(() => {
-        const addKeyView = new addNewNodeToDatabaseGroup(db.name, nodes, db.isEncrypted());
+        //TODO: what if db is encrypted?
+        const addKeyView = new addNewNodeToDatabaseGroup(shard.name, nodes, shard.isEncrypted());
         app.showBootstrapDialog(addKeyView);
-    }, [db, nodes]);
+    }, [shard, nodes]);
 
     const enableNodesSort = useCallback(() => setSortableMode(true), []);
 
     const cancelReorder = useCallback(() => setSortableMode(false), []);
 
     const saveNewOrder = useCallback(
-        async (tagsOrder: string[], fixOrder: boolean) => {
+        async (tagsOrder: string[]) => {
             reportEvent("db-group", "save-order");
-            await databasesService.reorderNodesInGroup(db, tagsOrder, fixOrder);
+            await databasesService.reorderShardsInGroup(shard, tagsOrder);
             setSortableMode(false);
         },
-        [databasesService, db, reportEvent]
+        [databasesService, shard, reportEvent]
     );
 
     const deleteNodeFromGroup = useCallback(
@@ -56,7 +58,7 @@ export function NodeGroup(props: NodeGroupProps) {
             viewHelpers
                 .confirmationMessage(
                     "Are you sure",
-                    "Do you want to delete database '" + genUtils.escapeHtml(db.name) + "' from node: " + nodeTag + "?",
+                    "Do you want to delete '" + genUtils.escapeHtml(shard.shardName) + "' from node: " + nodeTag + "?",
                     {
                         buttons: ["Cancel", "Yes, delete"],
                         html: true,
@@ -65,20 +67,20 @@ export function NodeGroup(props: NodeGroupProps) {
                 .done((result) => {
                     if (result.can) {
                         // noinspection JSIgnoredPromiseFromCall
-                        databasesService.deleteDatabaseFromNode(db, [nodeTag], hardDelete);
+                        databasesService.deleteDatabaseFromNode(shard, [nodeTag], hardDelete);
                     }
                 });
         },
-        [db, databasesService]
+        [shard, databasesService]
     );
 
     const existingTags = nodes ? nodes.map((x) => x.tag) : [];
     const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
 
     return (
-        <div>
+        <div className="mt-5">
             <div className="d-flex">
-                <span>Database Group</span>
+                <span>{shard.shardName}</span>
             </div>
 
             {sortableMode ? (
@@ -103,16 +105,12 @@ export function NodeGroup(props: NodeGroupProps) {
                     </div>
 
                     {nodes.map((node) => (
-                        <NodeInfoComponent
+                        <ShardInfoComponent
                             key={node.tag}
                             node={node}
                             databaseLockMode={lockMode}
                             deleteFromGroup={deleteNodeFromGroup}
                         />
-                    ))}
-
-                    {deletionInProgress.map((deleting) => (
-                        <DeletionInProgress key={deleting} nodeTag={deleting} />
                     ))}
                 </React.Fragment>
             )}
