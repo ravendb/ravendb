@@ -6,7 +6,7 @@ class shardedDatabase extends database {
     
     shards = ko.observableArray<shard>([]);
 
-    get isSharded(): boolean {
+    isSharded(): true {
         return true;
     }
     

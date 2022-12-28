@@ -50,6 +50,7 @@ using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations.TrafficWatch;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -209,6 +210,7 @@ namespace TypingsGenerator
 
             // database
             scripter.AddType(typeof(DatabasePutResult));
+            scripter.AddType(typeof(AddDatabaseShardResult));
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(StudioDatabasesHandler.StudioDatabaseInfo));
             

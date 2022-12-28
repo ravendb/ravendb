@@ -3,11 +3,11 @@ import { ComponentMeta, ComponentStory } from "@storybook/react";
 import { ManageDatabaseGroupPage } from "components/pages/resources/manageDatabaseGroup/ManageDatabaseGroupPage";
 import React from "react";
 import accessManager from "common/shell/accessManager";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
-import { ClusterStubs } from "test/stubs/ClusterStubs";
 import licenseModel from "models/auth/licenseModel";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
+import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import { ClusterStubs } from "test/stubs/ClusterStubs";
 
 export default {
     title: "Pages/Manage Database Group",
@@ -17,7 +17,10 @@ export default {
 
 function commonInit() {
     accessManager.default.securityClearance("ClusterAdmin");
-    clusterTopologyManager.default.topology(ClusterStubs.singleNodeTopology());
+
+    const { useClusterTopologyManager } = mockHooks;
+    useClusterTopologyManager.with_Single();
+    
     licenseModel.licenseStatus({
         HasDynamicNodesDistribution: true,
     } as any);
@@ -39,10 +42,14 @@ export const SingleNode: ComponentStory<typeof ManageDatabaseGroupPage> = () => 
 };
 
 export const NotAllNodesUsed: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
+    // needed for old inner component (add node dialog)
+    clusterTopologyManager.default.topology(ClusterStubs.clusterTopology()); 
+    
     commonInit();
-    clusterTopologyManager.default.topology(ClusterStubs.clusterTopology());
-
-    const { useDatabaseManager } = mockHooks;
+    
+    const { useClusterTopologyManager, useDatabaseManager } = mockHooks;
+    
+    useClusterTopologyManager.with_Cluster();
     useDatabaseManager.with_Single();
 
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
@@ -61,6 +68,23 @@ export const Cluster: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     useDatabaseManager.with_Cluster();
 
     const db = DatabasesStubs.nonShardedClusterDatabase();
+
+    return (
+        <div style={{ height: "100vh", overflow: "auto" }}>
+            <ManageDatabaseGroupPage db={db} />
+        </div>
+    );
+};
+
+export const Sharded: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
+    commonInit();
+
+    const { useDatabaseManager, useClusterTopologyManager } = mockHooks;
+    
+    useDatabaseManager.with_Sharded();
+    useClusterTopologyManager.with_Cluster();
+
+    const db = DatabasesStubs.shardedDatabase();
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>

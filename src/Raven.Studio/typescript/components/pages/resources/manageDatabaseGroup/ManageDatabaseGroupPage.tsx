@@ -12,6 +12,8 @@ import { useChanges } from "hooks/useChanges";
 import { useAccessManager } from "hooks/useAccessManager";
 import { NodeGroup } from "components/pages/resources/manageDatabaseGroup/NodeGroup";
 import { useDatabaseManager } from "hooks/useDatabaseManager";
+import { OrchestratorsGroup } from "components/pages/resources/manageDatabaseGroup/OrchestratorsGroup";
+import { ShardsGroup } from "components/pages/resources/manageDatabaseGroup/ShardsGroup";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -124,12 +126,31 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                 </UncontrolledButtonWithDropdownPanel>
             </div>
 
-            <NodeGroup
-                nodes={dbShardedInfo.nodes}
-                db={db}
-                deletionInProgress={dbShardedInfo.deletionInProgress}
-                lockMode={dbShardedInfo.lockMode}
-            />
+            {db.isSharded() ? (
+                <React.Fragment key="sharded-db">
+                    <OrchestratorsGroup
+                        orchestrators={dbShardedInfo.nodes}
+                        db={db}
+                        deletionInProgress={dbShardedInfo.deletionInProgress}
+                    />
+                    {db.shards().map((shard) => (
+                        <ShardsGroup
+                            key={shard.name}
+                            nodes={shard.nodes()}
+                            shard={shard}
+                            lockMode={dbShardedInfo.lockMode}
+                        />
+                    ))}
+                </React.Fragment>
+            ) : (
+                <NodeGroup
+                    key="non-sharded-db"
+                    nodes={dbShardedInfo.nodes}
+                    db={db}
+                    deletionInProgress={dbShardedInfo.deletionInProgress}
+                    lockMode={dbShardedInfo.lockMode}
+                />
+            )}
         </div>
     );
 }
