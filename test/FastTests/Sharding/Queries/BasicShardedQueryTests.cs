@@ -918,10 +918,10 @@ select project(o)")
                     Assert.Equal(3, queryResult3.Count);
                     Assert.Equal(2, queryResult3[0].Age);
                     Assert.Equal("Adam", queryResult3[0].Name);
-                    Assert.Equal(3, queryResult3[1].Age);
-                    Assert.Equal("Carlos", queryResult3[1].Name);
-                    Assert.Equal(1, queryResult3[2].Age);
-                    Assert.Equal("Grisha", queryResult3[2].Name);
+                    Assert.Equal(3, queryResult3[2].Age);
+                    Assert.Equal("Carlos", queryResult3[2].Name);
+                    Assert.Equal(1, queryResult3[1].Age);
+                    Assert.Equal("Grisha", queryResult3[1].Name);
                 }
             }
         }
