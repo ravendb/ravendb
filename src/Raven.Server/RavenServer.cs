@@ -212,7 +212,7 @@ namespace Raven.Server
                 }
 
                 var webHostBuilder = new WebHostBuilder()
-                    .ConfigureMicrosoftLogging(ref MicrosoftLogger, Configuration.Logs)
+                    .ConfigureMicrosoftLogging(ref MicrosoftLogger, Configuration.Logs, ServerStore.NotificationCenter)
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
                     .UseUrls(Configuration.Core.ServerUrls)
