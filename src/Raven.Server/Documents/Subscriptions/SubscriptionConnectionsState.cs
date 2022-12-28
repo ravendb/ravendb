@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         private void RegisterSingleConnection(SubscriptionConnection incomingConnection)
         {
-            if (_connections.IsEmpty == false)
+            if (_connections.Count > 1)
             {
                 throw new InvalidOperationException("Non concurrent subscription with more than a single connection. Likely a bug");
             }
