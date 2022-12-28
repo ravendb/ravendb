@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Extensions;
@@ -172,15 +173,16 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            var leaderUrl = clusterTopology.GetUrlFromTag(serverStore.LeaderTag);
-            using (var clusterRequestExecutor = serverStore.CreateNewClusterRequestExecutor(leaderUrl))
+            if (addDatabase.RaftCommandIndex == null)
             {
-                FillPrefixedSharding(serverStore, addDatabase, clusterRequestExecutor);
+                FillPrefixedSharding(shardingConfiguration);
             }
 
             var orchestratorTopology = shardingConfiguration.Orchestrator.Topology;
             if (orchestratorTopology.Count == 0)
+            {
                 serverStore.AssignNodesToDatabase(clusterTopology, addDatabase.Record.DatabaseName, addDatabase.Encrypted, orchestratorTopology);
+            }
 
             Debug.Assert(orchestratorTopology.Count != 0, "Empty orchestrator topology after AssignNodesToDatabase");
 
@@ -207,35 +209,16 @@ namespace Raven.Server.Documents.Sharding
             }
         }
 
-        private static void FillPrefixedSharding(ServerStore serverStore, AddDatabaseCommand addDatabase, RequestExecutor requestExecutor)
+        private static void FillPrefixedSharding(ShardingConfiguration shardingConfiguration)
         {
-            var shardingConfiguration = addDatabase.Record.Sharding;
-            if (addDatabase.RaftCommandIndex != null)
-            {
-                // update database
-                using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var existingConfiguration = serverStore.Cluster.ReadShardingConfiguration(context, addDatabase.Name);
-                    if (shardingConfiguration.Prefixed.SequenceEqual(existingConfiguration.Prefixed))
-                        return;
-
-                    HandlePrefixSettingsUpdate(context, existingConfiguration.Prefixed, addDatabase, requestExecutor);
-                    return;
-                }
-            }
-
             if (shardingConfiguration.Prefixed is not { Count: > 0 })
                 return;
 
             var start = ShardHelper.NumberOfBuckets;
-            using (serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            foreach (var setting in shardingConfiguration.Prefixed)
             {
-                foreach (var setting in shardingConfiguration.Prefixed)
-                {
-                    AddPrefixedBucketRange(setting, start, shardingConfiguration);
-                    start += ShardHelper.NumberOfBuckets;
-                }
+                AddPrefixedBucketRange(setting, start, shardingConfiguration);
+                start += ShardHelper.NumberOfBuckets;
             }
         }
 
@@ -268,16 +251,29 @@ namespace Raven.Server.Documents.Sharding
             }
         }
 
-        private static void HandlePrefixSettingsUpdate(JsonOperationContext context, List<PrefixedShardingSetting> existingConfiguration, AddDatabaseCommand addDatabase, RequestExecutor requestExecutor)
+        public static async Task UpdatePrefixedShardingIfNeeded(ServerStore serverStore, TransactionOperationContext context, DatabaseRecord databaseRecord, ClusterTopology clusterTopology)
+        {
+            var existingConfiguration = serverStore.Cluster.ReadShardingConfiguration(context, databaseRecord.DatabaseName);
+            if (databaseRecord.Sharding.Prefixed.SequenceEqual(existingConfiguration.Prefixed))
+                return;
+
+            var leaderUrl = clusterTopology.GetUrlFromTag(serverStore.LeaderTag);
+            using (var clusterRequestExecutor = serverStore.CreateNewClusterRequestExecutor(leaderUrl))
+            {
+                await HandlePrefixSettingsUpdate(context, databaseRecord, existingConfiguration.Prefixed, clusterRequestExecutor);
+            }
+        }
+
+        private static async Task HandlePrefixSettingsUpdate(JsonOperationContext context, DatabaseRecord databaseRecord, List<PrefixedShardingSetting> existingSettings, RequestExecutor requestExecutor)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Minor, 
                 "optimize this and reuse deleted bucket ranges");
 
-            var shardingConfiguration = addDatabase.Record.Sharding;
+            var shardingConfiguration = databaseRecord.Sharding;
             var safeToRemove = new List<PrefixedShardingSetting>();
             var maxBucketRangeStart = 0;
 
-            foreach (var existingSetting in existingConfiguration)
+            foreach (var existingSetting in existingSettings)
             {
                 bool found = false;
                 foreach (var setting in shardingConfiguration.Prefixed)
@@ -306,10 +302,10 @@ namespace Raven.Server.Documents.Sharding
                     continue;
 
                 // existingSetting.Prefix was removed
-                if (AssertNoDocsStartingWith(existingSetting.Prefix, addDatabase.Name, context, requestExecutor) == false)
+                if (await AssertNoDocsStartingWith(existingSetting.Prefix, databaseRecord.DatabaseName, context, requestExecutor) == false)
                     throw new InvalidOperationException(
                         $"Cannot remove prefix '{existingSetting.Prefix}' from {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
-                        $"There are existing documents in database '{addDatabase.Name}' that start with '{existingSetting.Prefix}'. " +
+                        $"There are existing documents in database '{databaseRecord.DatabaseName}' that start with '{existingSetting.Prefix}'. " +
                         "In order to remove a sharding by prefix setting, you cannot have any documents in the database that starts with this prefix.");
 
                 safeToRemove.Add(existingSetting);
@@ -337,10 +333,10 @@ namespace Raven.Server.Documents.Sharding
                 if (setting.BucketRangeStart != 0)
                     continue; // already added to BucketRanges
 
-                if (AssertNoDocsStartingWith(setting.Prefix, addDatabase.Name, context, requestExecutor) == false)
+                if (await AssertNoDocsStartingWith(setting.Prefix, databaseRecord.DatabaseName, context, requestExecutor) == false)
                     throw new InvalidOperationException(
                         $"Cannot add prefix '{setting.Prefix}' to {nameof(ShardingConfiguration)}.{nameof(ShardingConfiguration.Prefixed)}. " +
-                        $"There are existing documents in database '{addDatabase.Name}' that start with '{setting.Prefix}'. " +
+                        $"There are existing documents in database '{databaseRecord.DatabaseName}' that start with '{setting.Prefix}'. " +
                         "In order to define sharding by prefix, you cannot have any documents in the database that starts with this prefix.");
                 
                 AddPrefixedBucketRange(setting, start, shardingConfiguration);
@@ -349,15 +345,14 @@ namespace Raven.Server.Documents.Sharding
 
         }
 
-        private static bool AssertNoDocsStartingWith(string prefix, string database, JsonOperationContext context, RequestExecutor requestExecutor)
+        private static async Task<bool> AssertNoDocsStartingWith(string prefix, string database, JsonOperationContext context, RequestExecutor requestExecutor)
         {
             var command = new GetDocumentsCommand(startWith: prefix,
                 startAfter: null, matches: null, exclude: null, start: 0, pageSize: int.MaxValue, metadataOnly: false)
             {
                 _database = database
             };
-
-            requestExecutor.Execute(command, context, sessionInfo: null);
+            await requestExecutor.ExecuteAsync(command, context, sessionInfo: null);
             return command.Result.Results.Length == 0;
         }
 

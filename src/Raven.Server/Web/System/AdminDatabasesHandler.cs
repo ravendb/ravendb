@@ -37,6 +37,7 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -54,6 +55,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Voron.Util.Settings;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Size = Sparrow.Size;
@@ -400,8 +402,14 @@ namespace Raven.Server.Web.System
             }
             var clusterTopology = ServerStore.GetClusterTopology(context);
             ValidateClusterMembers(clusterTopology, databaseRecord);
-
             UpdateDatabaseTopology(databaseRecord, clusterTopology, replicationFactor);
+
+            if (dbRecordExist && databaseRecord.IsSharded)
+            {
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, 
+                    "remove this and introduce a dedicated command for updating Sharding.Prefixed");
+                await ShardedDatabaseContext.UpdatePrefixedShardingIfNeeded(ServerStore, context, databaseRecord, clusterTopology);
+            }
 
             var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
             await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
