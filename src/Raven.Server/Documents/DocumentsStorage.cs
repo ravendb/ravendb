@@ -1403,7 +1403,7 @@ namespace Raven.Server.Documents
                 if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                     metadata.TryGet(assertionKey, out BlittableJsonReaderArray values))
                 {
-                    Debug.Assert(false, $"Found {assertionKey}({values.Length}) in metadata but {flags} flag is missing in document {id} (database: {DocumentDatabase.Name}).");
+                    Debug.Assert(false, $"Found {assertionKey}({values.Length}) in metadata but {assertionFlag} flag is missing in document {id} (database: {DocumentDatabase.Name}).");
                 }
             }
         }
