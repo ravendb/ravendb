@@ -23,9 +23,6 @@ public class ShardingConfiguration
 
     public static bool DoesShardHaveBuckets(List<ShardBucketRange> bucketRanges, int shardNumber)
     {
-        if (bucketRanges == null)
-            return false;
-
         foreach (var bucketRange in bucketRanges)
         {
             if (bucketRange.ShardNumber == shardNumber)
