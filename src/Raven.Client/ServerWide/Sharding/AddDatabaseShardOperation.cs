@@ -58,7 +58,7 @@ namespace Raven.Client.ServerWide.Sharding
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                var sb = new StringBuilder($"{node.Url}/admin/databases/shard?databaseName={Uri.EscapeDataString(_databaseName)}");
+                var sb = new StringBuilder($"{node.Url}/admin/databases/shard?name={Uri.EscapeDataString(_databaseName)}");
 
                 if (_shardNumber.HasValue)
                     sb = sb.Append($"&shardNumber={_shardNumber}");
@@ -96,7 +96,7 @@ namespace Raven.Client.ServerWide.Sharding
 
     public class AddDatabaseShardResult
     {
-        public string DatabaseName { get; set; }
+        public string Name { get; set; }
         public int ShardNumber { get; set; }
         public DatabaseTopology ShardTopology { get; set; }
         public long RaftCommandIndex { get; set; }
