@@ -442,7 +442,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 }
                                 UpdateTimeSeriesNameIfNeeded(context, docId, segment, tss);
                                 
-                                if (tss.TryAppendEntireSegment(context, segment, changeVectorVersion, docId, segment.Name, baseline))
+                                if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, baseline))
                                 {
                                     var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                                     context.LastDatabaseChangeVector = ChangeVector.Merge(databaseChangeVector, changeVectorOrder, context);
