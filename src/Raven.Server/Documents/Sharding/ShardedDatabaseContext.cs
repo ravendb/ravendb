@@ -45,6 +45,8 @@ namespace Raven.Server.Documents.Sharding
 
         public readonly ConcurrentSet<TcpConnectionOptions> RunningTcpConnections = new ConcurrentSet<TcpConnectionOptions>();
 
+        public readonly MetricCounters Metrics;
+
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 reduce the record to the needed fields");
@@ -55,6 +57,7 @@ namespace Raven.Server.Documents.Sharding
             _logger = LoggingSource.Instance.GetLogger<ShardedDatabaseContext>(DatabaseName);
 
             Time = serverStore.Server.Time;
+            Metrics = new MetricCounters();
 
             UpdateConfiguration(record.Settings);
 

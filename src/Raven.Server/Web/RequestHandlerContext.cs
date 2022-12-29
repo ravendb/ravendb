@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Web
 {
@@ -12,5 +13,8 @@ namespace Raven.Server.Web
         public RouteMatch RouteMatch;
         public DocumentDatabase Database;
         public ShardedDatabaseContext DatabaseContext;
+
+        public string DatabaseName => Database?.Name ?? DatabaseContext?.DatabaseName;
+        public MetricCounters DatabaseMetrics => Database?.Metrics ?? DatabaseContext?.Metrics;
     }
 }

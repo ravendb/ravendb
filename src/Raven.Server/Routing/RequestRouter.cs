@@ -244,8 +244,7 @@ namespace Raven.Server.Routing
             var tuple = tryMatch.Value.TryGetHandler(reqCtx);
             var handler = tuple.Item1 ?? await tuple.Item2;
 
-            reqCtx.Database?.Metrics?.Requests.RequestsPerSec.Mark();
-
+            reqCtx.DatabaseMetrics?.Requests.RequestsPerSec.Mark();
             _serverMetrics.Requests.RequestsPerSec.Mark();
 
             Interlocked.Increment(ref _serverMetrics.Requests.ConcurrentRequestsCount);

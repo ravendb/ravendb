@@ -607,12 +607,19 @@ namespace Raven.Server.Documents
 
         public event Action<string> OnDatabaseLoaded = delegate { };
 
-        public bool IsDatabaseLoaded(StringSegment databaseName)
-        {
-            if (DatabasesCache.TryGetValue(databaseName, out var task))
-                return task != null && task.IsCompletedSuccessfully;
+        public bool IsDatabaseLoaded(StringSegment databaseName) => TryGetDatabaseIfLoaded(databaseName, out _);
 
-            return false;
+        public bool TryGetDatabaseIfLoaded(StringSegment databaseName, out DocumentDatabase database)
+        {
+            database = default;
+            if (DatabasesCache.TryGetValue(databaseName, out var task) == false)
+                return false;
+
+            if (task.IsCompletedSuccessfully == false)
+                return false;
+
+            database = task.Result;
+            return task.Result.DatabaseShutdown.IsCancellationRequested == false;
         }
 
         public struct DatabaseSearchResult
