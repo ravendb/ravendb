@@ -13,7 +13,6 @@ import ongoingTaskOlapEtlEditModel = require("models/database/tasks/ongoingTaskO
 import ongoingTaskOlapEtlTransformationModel = require("models/database/tasks/ongoingTaskOlapEtlTransformationModel");
 import ongoingTaskOlapEtlTableModel = require("models/database/tasks/ongoingTaskOlapEtlTableModel");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import jsonUtil = require("common/jsonUtil");
 import popoverUtils = require("common/popoverUtils");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
@@ -32,6 +31,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
+import { shardingTodo } from "common/developmentHelper";
 
 class partitionTable {
     key: string;
@@ -287,6 +287,8 @@ class editOlapEtlTask extends shardViewModelBase {
     activate(args: any) {
         super.activate(args);
         const deferred = $.Deferred<void>();
+        
+        this.loadPossibleMentors();
 
         if (args.taskId) {
             // 1. Editing an Existing task
@@ -312,16 +314,24 @@ class editOlapEtlTask extends shardViewModelBase {
             deferred.resolve();
         }
         
-        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), this.loadServerSideConfiguration(), deferred)
+        return $.when<any>(this.getAllConnectionStrings(), this.loadServerSideConfiguration(), deferred)
             .done(() => {
                 this.initObservables();
             });
     }
 
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.db.name)
-            .execute()
-            .done(mentors => this.possibleMentors(mentors));
+        if (this.db.isSharded()) {
+            const members = this.db.nodes()
+                .filter(x => x.type === "Member")
+                .map(x => x.tag);
+
+            this.possibleMentors(members);
+        } else {
+            shardingTodo("ANY", "for sharded each shard has own mentor");
+
+            this.possibleMentors([]);
+        }
     }
     
     compositionComplete() {

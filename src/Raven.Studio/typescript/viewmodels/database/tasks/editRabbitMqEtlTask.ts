@@ -13,7 +13,6 @@ import ongoingTaskQueueEtlTransformationModel = require("models/database/tasks/o
 import connectionStringRabbitMqEtlModel = require("models/database/settings/connectionStringRabbitMqEtlModel");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
-import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
@@ -25,6 +24,7 @@ import testQueueEtlCommand = require("commands/database/tasks/testQueueEtlComman
 import document = require("models/database/documents/document");
 import popoverUtils = require("common/popoverUtils");
 import { highlight, languages } from "prismjs";
+import { shardingTodo } from "common/developmentHelper";
 
 class rabbitMqTaskTestMode {
     documentId = ko.observable<string>();
@@ -206,6 +206,8 @@ class editRabbitMqEtlTask extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         const deferred = $.Deferred<void>();
+        
+        this.loadPossibleMentors();
 
         if (args.taskId) {
             // 1. Editing an Existing task
@@ -230,16 +232,25 @@ class editRabbitMqEtlTask extends viewModelBase {
             deferred.resolve();
         }
 
-        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred)
+        return $.when<any>(this.getAllConnectionStrings(), deferred)
             .done(() => {
                 this.initObservables();
             })
     }
 
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.activeDatabase().name)
-            .execute()
-            .done(mentors => this.possibleMentors(mentors));
+        const db = this.activeDatabase();
+        if (db.isSharded()) {
+            const members = db.nodes()
+                .filter(x => x.type === "Member")
+                .map(x => x.tag);
+
+            this.possibleMentors(members);
+        } else {
+            shardingTodo("ANY", "for sharded each shard has own mentor");
+
+            this.possibleMentors([]);
+        }
     }
     
     compositionComplete() {

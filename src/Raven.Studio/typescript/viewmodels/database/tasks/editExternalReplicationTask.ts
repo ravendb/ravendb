@@ -6,12 +6,12 @@ import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskI
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
-import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import jsonUtil = require("common/jsonUtil");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import { shardingTodo } from "common/developmentHelper";
 
 class editExternalReplicationTask extends shardViewModelBase {
 
@@ -56,6 +56,8 @@ class editExternalReplicationTask extends shardViewModelBase {
         super.activate(args);
         const deferred = $.Deferred<void>();
 
+        this.loadPossibleMentors();
+        
         if (args.taskId) {
             // 1. Editing an existing task
             this.isAddingNewReplicationTask(false);
@@ -79,14 +81,22 @@ class editExternalReplicationTask extends shardViewModelBase {
             deferred.resolve();
         }
 
-        return $.when<any>(this.getAllConnectionStrings(), this.loadPossibleMentors(), deferred)
+        return $.when<any>(this.getAllConnectionStrings(), deferred)
             .done(() => this.initObservables());
     }
-    
+
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.db.name)
-            .execute()
-            .done(mentors => this.possibleMentors(mentors));
+        if (this.db.isSharded()) {
+            const members = this.db.nodes()
+                .filter(x => x.type === "Member")
+                .map(x => x.tag);
+
+            this.possibleMentors(members);
+        } else {
+            shardingTodo("ANY", "for sharded each shard has own mentor");
+
+            this.possibleMentors([]);
+        }
     }
 
     private getAllConnectionStrings() {

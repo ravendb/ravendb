@@ -4,7 +4,6 @@ import router = require("plugins/router");
 import saveReplicationHubTaskCommand = require("commands/database/tasks/saveReplicationHubTaskCommand");
 import ongoingTaskReplicationHubEditModel = require("models/database/tasks/ongoingTaskReplicationHubEditModel");
 import eventsCollector = require("common/eventsCollector");
-import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import jsonUtil = require("common/jsonUtil");
 import getReplicationHubTaskInfoCommand = require("commands/database/tasks/getReplicationHubTaskInfoCommand");
 import generateCertificateForReplicationCommand = require("commands/database/tasks/generateCertificateForReplicationCommand");
@@ -79,6 +78,8 @@ class editReplicationHubTask extends shardViewModelBase {
         super.activate(args);
         const deferredHubTaskInfo = $.Deferred<void>();
         const deferredAccessInfo = $.Deferred<void>();
+        
+        this.loadPossibleMentors();
 
         if (args.taskId) {
             // 1. Editing an existing task
@@ -116,25 +117,11 @@ class editReplicationHubTask extends shardViewModelBase {
 
         deferredHubTaskInfo.done(() => this.initObservables());
 
-        const isSharded = this.db.isSharded();
-        
         if (args.taskId) {
-            shardingTodo("ANY", "loadPossibleMentors is Not implemented for sharded (all + single). Currently only implemented for non-sharded");
-            // return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo, deferredAccessInfo);
-            if (isSharded) {
-                return $.when<any>(deferredHubTaskInfo, deferredAccessInfo);
-            } else {
-                return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo, deferredAccessInfo);
-            }
+            return $.when<any>(deferredHubTaskInfo, deferredAccessInfo);
         }
         
-        // return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo);
-        if (isSharded) {
-            return $.when<any>(deferredHubTaskInfo);
-        } else {
-            return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo);
-        }
-        
+        return $.when<any>(deferredHubTaskInfo);
     }
 
     private processResults(accessResult: Raven.Client.Documents.Operations.Replication.ReplicationHubAccessResult) {
@@ -165,11 +152,19 @@ class editReplicationHubTask extends shardViewModelBase {
                     "</ul>"
             });
     }
-    
+
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.db.name)
-            .execute()
-            .done(mentors => this.possibleMentors(mentors));
+        if (this.db.isSharded()) {
+            const members = this.db.nodes()
+                .filter(x => x.type === "Member")
+                .map(x => x.tag);
+
+            this.possibleMentors(members);
+        } else {
+            shardingTodo("ANY", "for sharded each shard has own mentor");
+
+            this.possibleMentors([]);
+        }
     }
 
     private initObservables() {
