@@ -6,7 +6,6 @@ import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testP
 import popoverUtils = require("common/popoverUtils");
 import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
-import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import cronEditor = require("viewmodels/common/cronEditor");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
@@ -14,6 +13,7 @@ import manualBackupConfiguration = require("models/database/tasks/periodicBackup
 import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import { shardingTodo } from "common/developmentHelper";
 
 type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfiguration;
 
@@ -91,7 +91,7 @@ class editPeriodicBackupTask extends shardViewModelBase {
                 });
         };
 
-        return $.when<any>(this.loadPossibleMentors(), this.loadServerSideConfiguration())
+        return $.when<any>(this.loadServerSideConfiguration())
             .then(backupLoader);
     }
 
@@ -102,11 +102,19 @@ class editPeriodicBackupTask extends shardViewModelBase {
                 this.serverConfiguration(config);
             });
     }
-    
+
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.db.name)
-            .execute()
-            .done(mentors => this.possibleMentors(mentors));
+        if (this.db.isSharded()) {
+            const members = this.db.nodes()
+                .filter(x => x.type === "Member")
+                .map(x => x.tag);
+
+            this.possibleMentors(members);
+        } else {
+            shardingTodo("ANY", "for sharded each shard has own mentor");
+
+            this.possibleMentors([]);
+        }
     }
 
     isBackupOptionAvailable(option: backupOptions) {

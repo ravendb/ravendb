@@ -15,13 +15,13 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
 import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRqlSyntax");
-import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import rqlLanguageService = require("common/rqlLanguageService");
 import { highlight, languages } from "prismjs";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import { shardingTodo } from "common/developmentHelper";
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -84,6 +84,8 @@ class editSubscriptionTask extends shardViewModelBase {
         super.activate(args);
         const deferred = $.Deferred<void>();
 
+        this.loadPossibleMentors();
+        
         if (args.taskId) { 
 
             // 1. Editing an existing task
@@ -119,7 +121,7 @@ class editSubscriptionTask extends shardViewModelBase {
         deferred
             .done(() => this.dirtyFlag = this.editedSubscription().dirtyFlag);
 
-        return $.when<any>(deferred, this.loadPossibleMentors());
+        return $.when<any>(deferred);
     }
     
     detached() {
@@ -129,9 +131,13 @@ class editSubscriptionTask extends shardViewModelBase {
     }
 
     private loadPossibleMentors() {
-        return new getPossibleMentorsCommand(this.db.name)
-            .execute()
-            .done(mentors => this.possibleMentors(mentors));
+        shardingTodo("ANY", "check if this works ok with sharded");
+
+        const members = this.db.nodes()
+            .filter(x => x.type === "Member")
+            .map(x => x.tag);
+
+        this.possibleMentors(members);
     }
 
     compositionComplete() {
