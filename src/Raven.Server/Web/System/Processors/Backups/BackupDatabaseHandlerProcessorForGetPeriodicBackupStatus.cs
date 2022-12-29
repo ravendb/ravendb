@@ -61,7 +61,7 @@ internal class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus : Abstra
 
             foreach (var status in statuses)
             {
-                status.Dispose();
+                status?.Dispose();
             }
         }
     }
