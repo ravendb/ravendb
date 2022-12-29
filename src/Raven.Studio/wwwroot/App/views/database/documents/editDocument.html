@@ -58,7 +58,7 @@
                         <span>Save</span>
                     </button>
                     <button type="button" class="clone-btn btn btn-default"
-                            data-bind="click: tryCreateClone, enable: !showHugeDocumentWarning() && !isCreatingNewDocument(), visible: !isDeleteRevision() && !inDiffMode() && !isClone() && !isCreatingNewDocument(), requiredAccess: 'DatabaseReadWrite'">
+                            data-bind="click: tryCreateClone, enable: !showHugeDocumentWarning() && !isCreatingNewDocument(), visible: !isDeleteRevision() && !inDiffMode() && !isClone() && !documentBelongsToShardedDatabase(), requiredAccess: 'DatabaseReadWrite'">
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>

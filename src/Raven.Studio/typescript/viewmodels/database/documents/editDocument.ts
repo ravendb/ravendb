@@ -44,6 +44,8 @@ import globalSettings = require("common/settings/globalSettings");
 import fileDownloader = require("common/fileDownloader");
 import moment = require("moment");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
+import shard from "models/resources/shard";
+import shardedDatabase from "models/resources/shardedDatabase";
 
 class editDocument extends shardViewModelBase {
 
@@ -92,6 +94,9 @@ class editDocument extends shardViewModelBase {
     createTimeSeriesUrl: KnockoutComputed<string>;
 
     isCreatingNewDocument = ko.observable(false);
+    
+    documentBelongsToShardedDatabase = ko.observable(false);
+    
     isClone = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
@@ -225,6 +230,9 @@ class editDocument extends shardViewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        
+        this.documentBelongsToShardedDatabase(this.db instanceof shard || this.db instanceof shardedDatabase);
+        
         this.docEditor = aceEditorBindingHandler.getEditorBySelection(this.$docEditor);
         this.docEditorRight = aceEditorBindingHandler.getEditorBySelection(this.$docEditorRight);
 
