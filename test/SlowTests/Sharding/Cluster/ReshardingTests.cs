@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
  using Raven.Client.Documents;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Replication;
 using Orders;
 using Raven.Client;
@@ -23,7 +22,6 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Client.Util;
 using Raven.Server.Utils;
@@ -1103,7 +1101,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(9147, stats.Size);
+                    Assert.Equal(9265, stats.Size);
                     Assert.Equal(4, stats.NumberOfDocuments);
                 }
 

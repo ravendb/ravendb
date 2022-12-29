@@ -567,10 +567,10 @@ namespace Raven.Server.Documents.TimeSeries
             return new TimeSeriesReader(context, documentId, name, from, to, offset);
         }
 
-        public bool TryAppendEntireSegment(DocumentsOperationContext context, TimeSeriesReplicationItem item, string changeVector, string docId, LazyStringValue name, DateTime baseline)
+        public bool TryAppendEntireSegment(DocumentsOperationContext context, TimeSeriesReplicationItem item, string docId, LazyStringValue name, DateTime baseline)
         {
             var collectionName = _documentsStorage.ExtractCollectionName(context, item.Collection);
-            return TryAppendEntireSegment(context, item.Key, docId, name, collectionName, changeVector, item.Segment, baseline);
+            return TryAppendEntireSegment(context, item.Key, docId, name, collectionName, item.ChangeVector, item.Segment, baseline);
         }
 
         private bool TryAppendEntireSegment(
@@ -589,7 +589,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 var existingChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)TimeSeriesTable.ChangeVector, ref tvr);
 
-                var status = ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector);
+                var status = ChangeVectorUtils.GetConflictStatus(context.GetChangeVector(changeVector).Version, existingChangeVector.Version);
 
                 if (status == ConflictStatus.AlreadyMerged)
                     return true; // nothing to do, we already have this
