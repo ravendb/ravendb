@@ -234,7 +234,7 @@ namespace Raven.Server
                 // check if TW has clients
                 if (TrafficWatchManager.HasRegisteredClients)
                 {
-                    var database = requestHandlerContext.Database?.Name;
+                    var database = requestHandlerContext.DatabaseName;
                     LogTrafficWatch(context, sp?.ElapsedMilliseconds ?? 0, database);
                 }
 
@@ -242,7 +242,7 @@ namespace Raven.Server
                 {
                     var requestDuration = sp.ElapsedMilliseconds;
                     requestHandlerContext.RavenServer?.Metrics.Requests.UpdateDuration(requestDuration);
-                    requestHandlerContext.Database?.Metrics.Requests.UpdateDuration(requestDuration);
+                    requestHandlerContext.DatabaseMetrics?.Requests.UpdateDuration(requestDuration);
                 }
 
                 if (_logger.IsInfoEnabled && SkipHttpLogging == false)

@@ -90,139 +90,59 @@ namespace Raven.Server.Dashboard
             return GetValue<List<AbstractDashboardNotification>>(DatabasesInfoKey).OfType<DrivesUsage>().First();
         }
 
+        private class AggregatedWatchInfo
+        {
+            public readonly DatabasesInfo DatabasesInfo = new DatabasesInfo();
+            public readonly DatabasesOngoingTasksInfo DatabasesOngoingTasksInfo = new DatabasesOngoingTasksInfo();
+            public readonly IndexingSpeed IndexingSpeed = new IndexingSpeed();
+            public readonly TrafficWatch TrafficWatch = new TrafficWatch();
+            public readonly DrivesUsage DrivesUsage = new DrivesUsage();
+        }
+
         public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, CanAccessDatabase isValidFor, bool collectOngoingTasks, CancellationToken token)
         {
-            var databasesInfo = new DatabasesInfo();
-            var databasesOngoingTasksInfo = new DatabasesOngoingTasksInfo();
-            var indexingSpeed = new IndexingSpeed();
-            var trafficWatch = new TrafficWatch();
-            var drivesUsage = new DrivesUsage();
-
-            trafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration.GetRate();
+            var trafficWatchInfo = new AggregatedWatchInfo();
+            trafficWatchInfo.TrafficWatch.AverageRequestDuration = serverStore.Server.Metrics.Requests.AverageDuration.GetRate();
+            var drivesUsage = trafficWatchInfo.DrivesUsage;
 
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 // 1. Fetch databases info
-                foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, 0, long.MaxValue))
+                foreach (var rawDatabaseRecord in serverStore.Cluster.GetAllRawDatabases(context))
                 {
-                    var databaseName = databaseTuple.ItemName.Substring(Constants.Documents.Prefix.Length);
-                    if (token.IsCancellationRequested)
-                        yield break;
+                    var databaseName = rawDatabaseRecord.DatabaseName;
 
                     if (isValidFor != null && isValidFor(databaseName, false) == false)
                         continue;
 
-                    if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
+                    if (rawDatabaseRecord.IsSharded)
                     {
-                        // database does not exist on this server, is offline or disabled
-                        SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, disabled: DatabasesLandlord.IsDatabaseDisabled(databaseTuple.Value));
-                        continue;
-                    }
-
-                    try
-                    {
-                        var databaseOnline = IsDatabaseOnline(databaseTask, out var database);
-                        if (databaseOnline == false)
-                        {
-                            SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, disabled: false);
-                            continue;
-                        }
-
                         var rate = (int)RefreshRate.TotalSeconds;
-
-                        var indexingSpeedItem = new IndexingSpeedItem
+                        if (serverStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(databaseName, out var databaseTask))
                         {
-                            Database = database.Name,
-                            IndexedPerSecond = database.Metrics.MapIndexes.IndexedPerSec.GetRate(rate),
-                            MappedPerSecond = database.Metrics.MapReduceIndexes.MappedPerSec.GetRate(rate),
-                            ReducedPerSecond = database.Metrics.MapReduceIndexes.ReducedPerSec.GetRate(rate)
+                            var database = databaseTask.Result;
+                            var trafficWatchItem = new TrafficWatchItem
+                            {
+                                Database = databaseName,
+                                RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.GetRate(rate),
+                                AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
+                                DocumentWritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.GetRate(rate),
+                                AttachmentWritesPerSecond = (int)database.Metrics.Attachments.PutsPerSec.GetRate(rate),
+                                CounterWritesPerSecond = (int)database.Metrics.Counters.PutsPerSec.GetRate(rate),
+                                TimeSeriesWritesPerSecond = (int)database.Metrics.TimeSeries.PutsPerSec.GetRate(rate),
+                                DocumentsWriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.GetRate(rate),
+                                AttachmentsWriteBytesPerSecond = database.Metrics.Attachments.BytesPutsPerSec.GetRate(rate),
+                                CountersWriteBytesPerSecond = database.Metrics.Counters.BytesPutsPerSec.GetRate(rate),
+                                TimeSeriesWriteBytesPerSecond = database.Metrics.TimeSeries.BytesPutsPerSec.GetRate(rate)
+                            };
+                            trafficWatchInfo.TrafficWatch.Items.Add(trafficWatchItem);
                         };
-                        indexingSpeed.Items.Add(indexingSpeedItem);
-
-                        var replicationFactor = GetReplicationFactor(databaseTuple.Value);
-                        var documentsStorage = database.DocumentsStorage;
-                        var indexStorage = database.IndexStore;
-
-                        var trafficWatchItem = new TrafficWatchItem
-                        {
-                            Database = database.Name,
-                            RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.GetRate(rate),
-                            AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
-                            DocumentWritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.GetRate(rate),
-                            AttachmentWritesPerSecond = (int)database.Metrics.Attachments.PutsPerSec.GetRate(rate),
-                            CounterWritesPerSecond = (int)database.Metrics.Counters.PutsPerSec.GetRate(rate),
-                            TimeSeriesWritesPerSecond = (int)database.Metrics.TimeSeries.PutsPerSec.GetRate(rate),
-                            DocumentsWriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.GetRate(rate),
-                            AttachmentsWriteBytesPerSecond = database.Metrics.Attachments.BytesPutsPerSec.GetRate(rate),
-                            CountersWriteBytesPerSecond = database.Metrics.Counters.BytesPutsPerSec.GetRate(rate),
-                            TimeSeriesWriteBytesPerSecond = database.Metrics.TimeSeries.BytesPutsPerSec.GetRate(rate)
-                        };
-                        trafficWatch.Items.Add(trafficWatchItem);
-
-                        var ongoingTasksInfoItem = GetOngoingTasksInfoItem(database, serverStore, context, out var ongoingTasksCount);
-                        if (collectOngoingTasks)
-                        {
-                            databasesOngoingTasksInfo.Items.Add(ongoingTasksInfoItem);
-                        }
-
-                        // TODO: RavenDB-17004 - hash should report on all relevant info 
-                        var currentEnvironmentsHash = database.GetEnvironmentsHash();
-
-                        if (CachedDatabaseInfo.TryGetValue(database.Name, out var item) &&
-                            item.Hash == currentEnvironmentsHash &&
-                            item.Item.OngoingTasksCount == ongoingTasksCount)
-                        {
-                            databasesInfo.Items.Add(item.Item);
-
-                            if (item.NextDiskSpaceCheck < SystemTime.UtcNow)
-                            {
-                                item.MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>();
-                                DiskUsageCheck(item, database, drivesUsage, token);
-                            }
-                            else
-                            {
-                                foreach (var cachedMountPoint in item.MountPoints)
-                                {
-                                    UpdateMountPoint(database.Configuration.Storage, cachedMountPoint, database.Name, drivesUsage);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
-                            using (documentsContext.OpenReadTransaction())
-                            {
-                                var databaseInfoItem = new DatabaseInfoItem
-                                {
-                                    Database = database.Name,
-                                    DocumentsCount = documentsStorage.GetNumberOfDocuments(documentsContext),
-                                    IndexesCount = database.IndexStore.Count,
-                                    AlertsCount = database.NotificationCenter.GetAlertCount(),
-                                    PerformanceHintsCount = database.NotificationCenter.GetPerformanceHintCount(),
-                                    ReplicationFactor = replicationFactor,
-                                    ErroredIndexesCount = indexStorage.GetIndexes().Count(index => index.State == IndexState.Error),
-                                    IndexingErrorsCount = indexStorage.GetIndexes().Sum(index => index.GetErrorCount()),
-                                    BackupInfo = database.PeriodicBackupRunner?.GetBackupInfo(context),
-                                    OngoingTasksCount = ongoingTasksCount,
-                                    Online = true
-                                };
-
-                                databasesInfo.Items.Add(databaseInfoItem);
-
-                                CachedDatabaseInfo[database.Name] = item = new DatabaseInfoCache
-                                {
-                                    Hash = currentEnvironmentsHash,
-                                    Item = databaseInfoItem
-                                };
-                            }
-
-                            DiskUsageCheck(item, database, drivesUsage, token);
-                        }
                     }
-                    catch (Exception)
+
+                    foreach (var rawRecord in rawDatabaseRecord.AsShardsOrNormal())
                     {
-                        SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, disabled: false);
+                        AddInfoForDatabase(serverStore, collectOngoingTasks, trafficWatchInfo, context, rawRecord, token);
                     }
                 }
 
@@ -269,14 +189,126 @@ namespace Raven.Server.Dashboard
                 }
             }
 
-            yield return databasesInfo;
-            yield return indexingSpeed;
-            yield return trafficWatch;
-            yield return drivesUsage;
+            yield return trafficWatchInfo.DatabasesInfo;
+            yield return trafficWatchInfo.IndexingSpeed;
+            yield return trafficWatchInfo.TrafficWatch;
+            yield return trafficWatchInfo.DrivesUsage;
             
             if (collectOngoingTasks)
             {
-                yield return databasesOngoingTasksInfo;
+                yield return trafficWatchInfo.DatabasesOngoingTasksInfo;
+            }
+        }
+
+        private static void AddInfoForDatabase(ServerStore serverStore, bool collectOngoingTasks, AggregatedWatchInfo trafficWatchInfo,
+             TransactionOperationContext context, RawDatabaseRecord rawRecord, CancellationToken token)
+        {
+            var databasesInfo = trafficWatchInfo.DatabasesInfo;
+            var drivesUsage = trafficWatchInfo.DrivesUsage;
+            var indexingSpeed = trafficWatchInfo.IndexingSpeed;
+            var trafficWatch = trafficWatchInfo.TrafficWatch;
+            var databasesOngoingTasksInfo = trafficWatchInfo.DatabasesOngoingTasksInfo;
+
+            try
+            {
+                var databaseName = rawRecord.DatabaseName;
+                var databaseOnline = serverStore.DatabasesLandlord.TryGetDatabaseIfLoaded(databaseName, out var database);
+                if (databaseOnline == false)
+                {
+                    SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, disabled: false);
+                    return;
+                }
+
+                var rate = (int)RefreshRate.TotalSeconds;
+
+                var indexingSpeedItem = new IndexingSpeedItem
+                {
+                    Database = database.Name,
+                    IndexedPerSecond = database.Metrics.MapIndexes.IndexedPerSec.GetRate(rate),
+                    MappedPerSecond = database.Metrics.MapReduceIndexes.MappedPerSec.GetRate(rate),
+                    ReducedPerSecond = database.Metrics.MapReduceIndexes.ReducedPerSec.GetRate(rate)
+                };
+                indexingSpeed.Items.Add(indexingSpeedItem);
+
+                var replicationFactor = rawRecord.Topology.ReplicationFactor;
+                var documentsStorage = database.DocumentsStorage;
+                var indexStorage = database.IndexStore;
+
+                var trafficWatchItem = new TrafficWatchItem
+                {
+                    Database = database.Name,
+                    RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.GetRate(rate),
+                    AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
+                    DocumentWritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.GetRate(rate),
+                    AttachmentWritesPerSecond = (int)database.Metrics.Attachments.PutsPerSec.GetRate(rate),
+                    CounterWritesPerSecond = (int)database.Metrics.Counters.PutsPerSec.GetRate(rate),
+                    TimeSeriesWritesPerSecond = (int)database.Metrics.TimeSeries.PutsPerSec.GetRate(rate),
+                    DocumentsWriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.GetRate(rate),
+                    AttachmentsWriteBytesPerSecond = database.Metrics.Attachments.BytesPutsPerSec.GetRate(rate),
+                    CountersWriteBytesPerSecond = database.Metrics.Counters.BytesPutsPerSec.GetRate(rate),
+                    TimeSeriesWriteBytesPerSecond = database.Metrics.TimeSeries.BytesPutsPerSec.GetRate(rate)
+                };
+                trafficWatch.Items.Add(trafficWatchItem);
+
+                var ongoingTasksInfoItem = GetOngoingTasksInfoItem(database, serverStore, context, out var ongoingTasksCount);
+                if (collectOngoingTasks)
+                {
+                    databasesOngoingTasksInfo.Items.Add(ongoingTasksInfoItem);
+                }
+
+                // TODO: RavenDB-17004 - hash should report on all relevant info 
+                var currentEnvironmentsHash = database.GetEnvironmentsHash();
+
+                if (CachedDatabaseInfo.TryGetValue(database.Name, out var item) &&
+                    item.Hash == currentEnvironmentsHash &&
+                    item.Item.OngoingTasksCount == ongoingTasksCount)
+                {
+                    databasesInfo.Items.Add(item.Item);
+
+                    if (item.NextDiskSpaceCheck < SystemTime.UtcNow)
+                    {
+                        item.MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>();
+                        DiskUsageCheck(item, database, drivesUsage, token);
+                    }
+                    else
+                    {
+                        foreach (var cachedMountPoint in item.MountPoints)
+                        {
+                            UpdateMountPoint(database.Configuration.Storage, cachedMountPoint, database.Name, drivesUsage);
+                        }
+                    }
+                }
+                else
+                {
+                    using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+                    using (documentsContext.OpenReadTransaction())
+                    {
+                        var databaseInfoItem = new DatabaseInfoItem
+                        {
+                            Database = database.Name,
+                            DocumentsCount = documentsStorage.GetNumberOfDocuments(documentsContext),
+                            IndexesCount = database.IndexStore.Count,
+                            AlertsCount = database.NotificationCenter.GetAlertCount(),
+                            PerformanceHintsCount = database.NotificationCenter.GetPerformanceHintCount(),
+                            ReplicationFactor = replicationFactor,
+                            ErroredIndexesCount = indexStorage.GetIndexes().Count(index => index.State == IndexState.Error),
+                            IndexingErrorsCount = indexStorage.GetIndexes().Sum(index => index.GetErrorCount()),
+                            BackupInfo = database.PeriodicBackupRunner?.GetBackupInfo(context),
+                            OngoingTasksCount = ongoingTasksCount,
+                            Online = true
+                        };
+
+                        databasesInfo.Items.Add(databaseInfoItem);
+
+                        CachedDatabaseInfo[database.Name] = item = new DatabaseInfoCache { Hash = currentEnvironmentsHash, Item = databaseInfoItem };
+                    }
+
+                    DiskUsageCheck(item, database, drivesUsage, token);
+                }
+            }
+            catch (Exception)
+            {
+                SetOfflineDatabaseInfo(serverStore, context, rawRecord.DatabaseName, databasesInfo, drivesUsage, disabled: false);
             }
         }
 
@@ -549,29 +581,6 @@ namespace Raven.Server.Dashboard
                 
                 UpdateMountPoint(serverStore.Configuration.Storage, mountPointUsage, databaseName, existingDrivesUsage);
             }
-        }
-
-        private static int GetReplicationFactor(BlittableJsonReaderObject databaseRecordBlittable)
-        {
-            if (databaseRecordBlittable.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false)
-                return 1;
-
-            if (topology.TryGet(nameof(DatabaseTopology.ReplicationFactor), out int replicationFactor) == false)
-                return 1;
-
-            return replicationFactor;
-        }
-
-        private static bool IsDatabaseOnline(Task<DocumentDatabase> databaseTask, out DocumentDatabase database)
-        {
-            if (databaseTask.IsCanceled || databaseTask.IsFaulted || databaseTask.IsCompleted == false)
-            {
-                database = null;
-                return false;
-            }
-
-            database = databaseTask.Result;
-            return database.DatabaseShutdown.IsCancellationRequested == false;
         }
     }
 }
