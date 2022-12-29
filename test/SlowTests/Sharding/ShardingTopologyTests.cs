@@ -52,7 +52,9 @@ namespace SlowTests.Sharding
                     deleteShardDatabaseRes = store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, shardToDelete, hardDelete: true, fromNode: nodesContainingNewShard[1]));
                     await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(deleteShardDatabaseRes.RaftCommandIndex);
                 });
-                Assert.Contains($"it still contains buckets", error.Message);
+                Assert.Contains(
+                    $"Database {ShardHelper.ToShardName(store.Database, 2)} cannot be deleted because it is the last copy of shard {2} and it contains data that has not been migrated",
+                    error.Message);
             }
         }
 
@@ -317,7 +319,9 @@ namespace SlowTests.Sharding
                 var error = Assert.ThrowsAny<RavenException>(() =>
                     store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, shardNumber: 0, hardDelete: true, fromNode: nodeContainingShard0)));
 
-                Assert.Contains($"Database {store.Database} cannot be deleted because it is the last copy of shard 0 and it still contains buckets.", error.Message);
+                Assert.Contains(
+                    $"Database {ShardHelper.ToShardName(store.Database, 0)} cannot be deleted because it is the last copy of shard 0 and it contains data that has not been migrated",
+                    error.Message);
 
                 //topology should not change
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
