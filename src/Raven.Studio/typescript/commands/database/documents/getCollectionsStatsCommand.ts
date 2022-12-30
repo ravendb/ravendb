@@ -5,8 +5,11 @@ import endpoints = require("endpoints");
 
 class getCollectionsStatsCommand extends commandBase {
 
-    constructor(private ownerDb: database) {
+    private ownerDb: database;
+
+    constructor(ownerDb: database) {
         super();
+        this.ownerDb = ownerDb;
 
         if (!this.ownerDb) {
             throw new Error("Must specify a database.");

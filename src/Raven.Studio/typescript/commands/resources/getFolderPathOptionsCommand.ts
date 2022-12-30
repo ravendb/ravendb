@@ -4,13 +4,28 @@ import database = require("models/resources/database");
 
 class getFolderPathOptionsCommand extends commandBase {
 
+    private db: database;
+
+    private inputPath: string;
+
+    private isBackupFolder: boolean = false;
+
+    private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType;
+
+    private credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings;
+
     private constructor(
-        private db: database, 
-        private inputPath: string, 
-        private isBackupFolder: boolean = false, 
-        private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType, 
-        private credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings ) {
+        db: database, 
+        inputPath: string, 
+        isBackupFolder: boolean = false, 
+        connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType, 
+        credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings ) {
         super();
+        this.credentials = credentials;
+        this.connectionType = connectionType;
+        this.isBackupFolder = isBackupFolder;
+        this.inputPath = inputPath;
+        this.db = db;
     }
 
     private preparePayload() {

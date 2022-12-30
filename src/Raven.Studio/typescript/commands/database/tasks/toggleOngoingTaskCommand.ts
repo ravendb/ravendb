@@ -4,8 +4,23 @@ import endpoints = require("endpoints");
 
 class toggleOngoingTaskCommand extends commandBase {
 
-    constructor(private db: database, private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, private taskId: number, private taskName: string, private disable: boolean) {
+    private db: database;
+
+    private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
+
+    private taskId: number;
+
+    private taskName: string;
+
+    private disable: boolean;
+
+    constructor(db: database, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, taskId: number, taskName: string, disable: boolean) {
         super();
+        this.disable = disable;
+        this.taskName = taskName;
+        this.taskId = taskId;
+        this.taskType = taskType;
+        this.db = db;
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {

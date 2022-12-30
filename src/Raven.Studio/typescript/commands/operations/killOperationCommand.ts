@@ -4,8 +4,14 @@ import endpoints = require("endpoints");
 
 class killOperationCommand extends commandBase {
 
-    constructor(private db: database, private taskId: number) {
+    private db: database;
+
+    private taskId: number;
+
+    constructor(db: database, taskId: number) {
         super();
+        this.taskId = taskId;
+        this.db = db;
     }
 
     execute(): JQueryPromise<void> {

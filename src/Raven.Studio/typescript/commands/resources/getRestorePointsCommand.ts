@@ -3,11 +3,23 @@ import endpoints = require("endpoints");
 
 class getRestorePointsCommand extends commandBase {
 
-    private constructor(private path: string, 
-                        private skipReportingError: boolean,
-                        private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType,
-                        private credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings) {
+    private path: string;
+
+    private skipReportingError: boolean;
+
+    private connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType;
+
+    private credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings;
+
+    private constructor(path: string,
+                        skipReportingError: boolean,
+                        connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType,
+                        credentials?: Raven.Client.Documents.Operations.Backups.BackupSettings) {
         super();
+        this.credentials = credentials;
+        this.connectionType = connectionType;
+        this.skipReportingError = skipReportingError;
+        this.path = path;
     }
 
     private preparePayload() {

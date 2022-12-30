@@ -3,8 +3,20 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class backupNowPeriodicCommand extends commandBase {
-    constructor(private db: database, private taskId: number, private isFullBackup: boolean, private taskName: string) {
+    private db: database;
+
+    private taskId: number;
+
+    private isFullBackup: boolean;
+
+    private taskName: string;
+
+    constructor(db: database, taskId: number, isFullBackup: boolean, taskName: string) {
         super();
+        this.taskName = taskName;
+        this.isFullBackup = isFullBackup;
+        this.taskId = taskId;
+        this.db = db;
     }
  
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Backups.StartBackupOperationResult> {

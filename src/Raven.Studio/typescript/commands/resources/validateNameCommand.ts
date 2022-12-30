@@ -3,8 +3,17 @@ import endpoints = require("endpoints");
 
 class validateNameCommand extends commandBase {
 
-    constructor(private type: Raven.Server.Web.Studio.StudioTasksHandler.ItemType, private name: string, private dataPath?: string) {
+    private type: Raven.Server.Web.Studio.StudioTasksHandler.ItemType;
+
+    private name: string;
+
+    private dataPath?: string;
+
+    constructor(type: Raven.Server.Web.Studio.StudioTasksHandler.ItemType, name: string, dataPath?: string) {
         super();
+        this.dataPath = dataPath;
+        this.name = name;
+        this.type = type;
     }
 
     execute(): JQueryPromise<Raven.Client.Util.NameValidation> {

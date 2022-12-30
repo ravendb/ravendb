@@ -3,8 +3,14 @@ import endpoints = require("endpoints");
 
 class validateOfflineMigration extends commandBase {
 
-    constructor(private mode: "dataDir" | "migratorPath", private pathToTest: string) {
+    private mode: "dataDir" | "migratorPath";
+
+    private pathToTest: string;
+
+    constructor(mode: "dataDir" | "migratorPath", pathToTest: string) {
         super();
+        this.pathToTest = pathToTest;
+        this.mode = mode;
     }
 
     execute(): JQueryPromise<Raven.Server.Web.Studio.StudioTasksHandler.OfflineMigrationValidation> {

@@ -3,8 +3,11 @@ import endpoints = require("endpoints");
 
 class restoreDatabaseFromBackupCommand extends commandBase {
 
-    constructor(private restoreConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase) {
+    private restoreConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase;
+
+    constructor(restoreConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase) {
         super();
+        this.restoreConfiguration = restoreConfiguration;
     }
 
     execute(): JQueryPromise<operationIdDto> {

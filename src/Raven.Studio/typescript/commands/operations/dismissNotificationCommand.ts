@@ -4,8 +4,17 @@ import endpoints = require("endpoints");
 
 class dismissNotificationCommand extends commandBase {
 
-    constructor(private db: database, private notificationId: string, private forever: boolean = false) {
+    private db: database;
+
+    private notificationId: string;
+
+    private forever: boolean = false;
+
+    constructor(db: database, notificationId: string, forever: boolean = false) {
         super();
+        this.forever = forever;
+        this.notificationId = notificationId;
+        this.db = db;
     }
 
     execute(): JQueryPromise<void> {

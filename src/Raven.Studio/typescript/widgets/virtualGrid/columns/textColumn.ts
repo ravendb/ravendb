@@ -10,12 +10,27 @@ type preparedValue = {
 }
 
 class textColumn<T extends object> implements virtualColumn {
+    protected gridController: virtualGridController<T>;
+
+    public valueAccessor: ((item: T) => any) | string;
+
+    public header: string;
+
+    public width: string;
+
+    public opts: textColumnOpts<T> = {};
+
     constructor(
-        protected gridController: virtualGridController<T>,
-        public valueAccessor: ((item: T) => any) | string,
-        public header: string, 
-        public width: string,
-        public opts: textColumnOpts<T> = {}) {
+        gridController: virtualGridController<T>,
+        valueAccessor: ((item: T) => any) | string,
+        header: string, 
+        width: string,
+        opts: textColumnOpts<T> = {}) {
+        this.opts = opts;
+        this.width = width;
+        this.header = header;
+        this.valueAccessor = valueAccessor;
+        this.gridController = gridController;
     }
     
     get headerTitle() {

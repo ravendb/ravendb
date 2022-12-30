@@ -6,9 +6,12 @@ class backupNowConfirm extends confirmViewModelBase<backupNowConfirmResult> {
     
     private isFullBackup = ko.observable<boolean>(true);
 
-    constructor(private fullBackupType: string) {
+    private fullBackupType: string;
+
+    constructor(fullBackupType: string) {
         super();
-        
+        this.fullBackupType = fullBackupType;
+
         this.fullBackupType = this.fullBackupType !== 'Snapshot' ? this.fullBackupType + ' Backup' : this.fullBackupType;
     }
 

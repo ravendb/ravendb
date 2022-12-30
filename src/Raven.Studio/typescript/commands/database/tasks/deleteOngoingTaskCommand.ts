@@ -4,8 +4,20 @@ import endpoints = require("endpoints");
 
 class deleteOngoingTaskCommand extends commandBase {
     
-    constructor(private db: database, private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, private taskId: number, private taskName: string) {
+    private db: database;
+
+    private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
+
+    private taskId: number;
+
+    private taskName: string;
+
+    constructor(db: database, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, taskId: number, taskName: string) {
         super();
+        this.taskName = taskName;
+        this.taskId = taskId;
+        this.taskType = taskType;
+        this.db = db;
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {

@@ -9,7 +9,13 @@ class requestExecution {
     private alertTimeout: ReturnType<typeof setTimeout>;
     private readonly sync: () => void;
 
-    constructor(private timeForSpinner: number, private timeToAlert = 0, sync: () => void) {
+    private timeForSpinner: number;
+
+    private timeToAlert = 0;
+
+    constructor(timeForSpinner: number, timeToAlert = 0, sync: () => void) {
+        this.timeToAlert = timeToAlert;
+        this.timeForSpinner = timeForSpinner;
         this.setTimeouts();
         this.sync = sync;
     }

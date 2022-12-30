@@ -3,8 +3,14 @@ import endpoints = require("endpoints");
 
 class addOrchestratorToDatabaseGroupCommand extends commandBase {
 
-    constructor(private databaseName: string, private nodeTagToAdd: string) {
+    private databaseName: string;
+
+    private nodeTagToAdd: string;
+
+    constructor(databaseName: string, nodeTagToAdd: string) {
         super();
+        this.nodeTagToAdd = nodeTagToAdd;
+        this.databaseName = databaseName;
     }
 
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasePutResult> {

@@ -2,8 +2,11 @@ import commandBase = require("commands/commandBase");
 
 class getCloudBackupCredentialsFromLinkCommand extends commandBase {
 
-    constructor(private link: string) {
+    private link: string;
+
+    constructor(link: string) {
         super();
+        this.link = link;
     }
 
     execute(): JQueryPromise<federatedCredentials> {

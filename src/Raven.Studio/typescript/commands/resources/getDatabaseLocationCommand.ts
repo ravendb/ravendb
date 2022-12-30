@@ -3,8 +3,14 @@ import endpoints = require("endpoints");
 
 class getDatabaseLocationCommand extends commandBase {
 
-    constructor(private inputName: string, private inputPath: string) {
+    private inputName: string;
+
+    private inputPath: string;
+
+    constructor(inputName: string, inputPath: string) {
         super();
+        this.inputPath = inputPath;
+        this.inputName = inputName;
     }
 
     execute(): JQueryPromise<Raven.Server.Web.Studio.DataDirectoryResult> {

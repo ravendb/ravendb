@@ -4,8 +4,11 @@ import endpoints = require("endpoints");
 
 class getEssentialDatabaseStatsCommand extends commandBase {
 
-    constructor(private db: database) {
+    private db: database;
+
+    constructor(db: database) {
         super();
+        this.db = db;
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.EssentialDatabaseStatistics> {

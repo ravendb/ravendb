@@ -3,8 +3,17 @@ import endpoints = require("endpoints");
 
 class addNodeToDatabaseGroupCommand extends commandBase {
 
-    constructor(private databaseName: string, private nodeTagToAdd: string, private mentorNode: string = undefined) {
+    private databaseName: string;
+
+    private nodeTagToAdd: string;
+
+    private mentorNode: string = undefined;
+
+    constructor(databaseName: string, nodeTagToAdd: string, mentorNode: string = undefined) {
         super();
+        this.mentorNode = mentorNode;
+        this.nodeTagToAdd = nodeTagToAdd;
+        this.databaseName = databaseName;
     }
 
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasePutResult> {

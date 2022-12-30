@@ -3,8 +3,11 @@ import endpoints = require("endpoints");
 
 class migrateLegacyDatabaseFromDatafilesCommand extends commandBase {
 
-    constructor(private restoreConfiguration: Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration) {
+    private restoreConfiguration: Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration;
+
+    constructor(restoreConfiguration: Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration) {
         super();
+        this.restoreConfiguration = restoreConfiguration;
     }
 
     execute(): JQueryPromise<operationIdDto> {

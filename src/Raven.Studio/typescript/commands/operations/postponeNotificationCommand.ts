@@ -4,8 +4,17 @@ import endpoints = require("endpoints");
 
 class postponeNotificationCommand extends commandBase {
 
-    constructor(private db: database, private notificationId: string, private timeInSec: number) {
+    private db: database;
+
+    private notificationId: string;
+
+    private timeInSec: number;
+
+    constructor(db: database, notificationId: string, timeInSec: number) {
         super();
+        this.timeInSec = timeInSec;
+        this.notificationId = notificationId;
+        this.db = db;
     }
 
     execute(): JQueryPromise<void> {

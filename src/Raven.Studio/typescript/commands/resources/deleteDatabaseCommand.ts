@@ -3,8 +3,14 @@ import endpoints = require("endpoints");
 
 class deleteDatabaseCommand extends commandBase {
 
-    constructor(private databases: string[], private isHardDelete: boolean) {
+    private databases: string[];
+
+    private isHardDelete: boolean;
+
+    constructor(databases: string[], isHardDelete: boolean) {
         super();
+        this.isHardDelete = isHardDelete;
+        this.databases = databases;
     }
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
