@@ -6,6 +6,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import accessManager = require("common/shell/accessManager");
 import React from "react";
 import ReactDOM from "react-dom";
+import { createRoot, Root } from "react-dom/client";
 
 class extensions {
     static install() {
@@ -214,7 +215,8 @@ class extensions {
         ko.bindingHandlers.react = {
             init: function (element) {
                 ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
-                    ReactDOM.unmountComponentAtNode(element);
+                    const root: Root = $(element).data("root");
+                    root.unmount();
                 });
 
                 return {
@@ -227,14 +229,12 @@ class extensions {
 
                 if (options && options.component) {
                     // eslint-disable-next-line
-                    const componentInstance = ReactDOM.render(
+                    const root = createRoot(element);
+                    root.render(
                         React.createElement(options.component, options.props),
-                        element
                     );
-
-                    if (options.ref) {
-                        options.ref(componentInstance);
-                    }
+                    
+                    $(element).data("root", root);
                 }
             }
         }
