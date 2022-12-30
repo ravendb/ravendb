@@ -19,9 +19,15 @@ class togglePauseIndexingCommand extends commandBase {
     private type: toggleType;
     private location: databaseLocationSpecifier;
 
-    constructor(private start: boolean, private db: database, options: optsNames | optsType = null, location: databaseLocationSpecifier = undefined) {
+    private start: boolean;
+
+    private db: database;
+
+    constructor(start: boolean, db: database, options: optsNames | optsType = null, location: databaseLocationSpecifier = undefined) {
         super();
-        
+        this.db = db;
+        this.start = start;
+
         this.location = location;
         
         if (options && "name" in options) {

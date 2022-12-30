@@ -4,8 +4,17 @@ import endpoints = require("endpoints");
 
 class saveIndexPriorityCommand extends commandBase {
 
-    constructor(private indexName: string, private priority: Raven.Client.Documents.Indexes.IndexPriority, private db: database) {
+    private indexName: string;
+
+    private priority: Raven.Client.Documents.Indexes.IndexPriority;
+
+    private db: database;
+
+    constructor(indexName: string, priority: Raven.Client.Documents.Indexes.IndexPriority, db: database) {
         super();
+        this.db = db;
+        this.priority = priority;
+        this.indexName = indexName;
     }
 
     execute(): JQueryPromise<void> {

@@ -3,8 +3,14 @@ import endpoints = require("endpoints");
 
 class toggleDynamicNodeAssignmentCommand extends commandBase {
 
-    constructor(private databaseName: string, private enable: boolean) {
+    private databaseName: string;
+
+    private enable: boolean;
+
+    constructor(databaseName: string, enable: boolean) {
         super();
+        this.enable = enable;
+        this.databaseName = databaseName;
     }
 
     execute(): JQueryPromise<void> {

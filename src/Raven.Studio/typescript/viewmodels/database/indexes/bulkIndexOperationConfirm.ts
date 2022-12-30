@@ -38,8 +38,11 @@ class bulkIndexOperationConfirm extends confirmViewModelBase<bulkIndexOperationC
 
     infinitive: string;
 
-    private constructor(indexes: Array<IndexSharedInfo>, infinitive: string, private gerund: string, locations: databaseLocationSpecifier[]) {
+    private gerund: string;
+
+    private constructor(indexes: Array<IndexSharedInfo>, infinitive: string, gerund: string, locations: databaseLocationSpecifier[]) {
         super(null);
+        this.gerund = gerund;
         this.infinitive = infinitive;
         this.indexes = indexes;
 

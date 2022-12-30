@@ -16,7 +16,10 @@ abstract class abstractWebSocketClient<T> {
 
     protected abstract get autoReconnect(): boolean;
    
-    protected constructor(protected db: database, connectArgs: any = null) {
+    protected db: database;
+
+    protected constructor(db: database, connectArgs: any = null) {
+        this.db = db;
         this.resourcePath = appUrl.forDatabaseQuery(this.db);
         this.connectToWebSocketTask = $.Deferred<void>();
 

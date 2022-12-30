@@ -3,8 +3,11 @@ import endpoints = require("endpoints");
 
 class licenseActivateCommand extends commandBase {
 
-    constructor(private licensePayload: Raven.Server.Commercial.License) {
+    private licensePayload: Raven.Server.Commercial.License;
+
+    constructor(licensePayload: Raven.Server.Commercial.License) {
         super();
+        this.licensePayload = licensePayload;
     }
 
     execute(): JQueryPromise<void> {

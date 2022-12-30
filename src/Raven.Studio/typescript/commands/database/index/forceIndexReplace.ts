@@ -4,8 +4,14 @@ import endpoints = require("endpoints");
 
 class forceIndexReplace extends commandBase {
 
-    constructor(private indexName: string, private db: database) {
+    private indexName: string;
+
+    private db: database;
+
+    constructor(indexName: string, db: database) {
         super();
+        this.db = db;
+        this.indexName = indexName;
     }
 
     execute(): JQueryPromise<void> {

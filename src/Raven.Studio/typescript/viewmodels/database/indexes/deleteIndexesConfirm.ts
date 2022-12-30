@@ -37,8 +37,14 @@ class deleteIndexesConfirm extends dialogViewModelBase {
 
     indexesInfoForDelete = Array<indexInfoForDelete>();
 
-    constructor(private indexes: IndexToDelete[], private db: database) {
+    private indexes: IndexToDelete[];
+
+    private db: database;
+
+    constructor(indexes: IndexToDelete[], db: database) {
         super();
+        this.db = db;
+        this.indexes = indexes;
 
         if (!indexes || indexes.length === 0) {
             throw new Error("Indexes must not be null or empty.");

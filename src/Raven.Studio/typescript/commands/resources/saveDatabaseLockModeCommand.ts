@@ -5,8 +5,14 @@ import { DatabaseSharedInfo } from "components/models/databases";
 
 class saveDatabaseLockModeCommand extends commandBase {
 
-    constructor(private dbs: Array<database | DatabaseSharedInfo>, private lockMode: Raven.Client.ServerWide.DatabaseLockMode) {
+    private dbs: Array<database | DatabaseSharedInfo>;
+
+    private lockMode: Raven.Client.ServerWide.DatabaseLockMode;
+
+    constructor(dbs: Array<database | DatabaseSharedInfo>, lockMode: Raven.Client.ServerWide.DatabaseLockMode) {
         super();
+        this.lockMode = lockMode;
+        this.dbs = dbs;
     }
 
     execute(): JQueryPromise<void> {

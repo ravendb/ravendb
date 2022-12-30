@@ -4,8 +4,14 @@ import endpoints = require("endpoints");
 
 class getIndexesStatsCommand extends commandBase {
 
-    constructor(private db: database, private location?: databaseLocationSpecifier) {
+    private db: database;
+
+    private location?: databaseLocationSpecifier;
+
+    constructor(db: database, location?: databaseLocationSpecifier) {
         super();
+        this.location = location;
+        this.db = db;
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Indexes.IndexStats[]> {

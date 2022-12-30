@@ -4,8 +4,11 @@ import clusterTopology = require("models/database/cluster/clusterTopology");
 
 class getClusterTopologyCommand extends commandBase {
 
-    constructor(private serverUrl?: string) {
+    private serverUrl?: string;
+
+    constructor(serverUrl?: string) {
         super();
+        this.serverUrl = serverUrl;
     }
 
     execute(): JQueryPromise<clusterTopology> {

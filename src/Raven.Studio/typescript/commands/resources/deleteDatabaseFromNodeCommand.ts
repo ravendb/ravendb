@@ -5,8 +5,17 @@ import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
 class deleteDatabaseFromNodeCommand extends commandBase {
 
-    constructor(private db: database, private nodes: Array<string>, private isHardDelete: boolean) {
+    private db: database;
+
+    private nodes: Array<string>;
+
+    private isHardDelete: boolean;
+
+    constructor(db: database, nodes: Array<string>, isHardDelete: boolean) {
         super();
+        this.isHardDelete = isHardDelete;
+        this.nodes = nodes;
+        this.db = db;
     }
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {

@@ -4,8 +4,14 @@ import endpoints = require("endpoints");
 
 class verifyDocumentsIDsCommand extends commandBase {
 
-    constructor(private docIDs: string[], private db: database) {
+    private docIDs: string[];
+
+    private db: database;
+
+    constructor(docIDs: string[], db: database) {
         super();
+        this.db = db;
+        this.docIDs = docIDs;
     }
 
     execute(): JQueryPromise<Array<string>> {

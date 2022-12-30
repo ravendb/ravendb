@@ -3,8 +3,17 @@ import endpoints = require("endpoints");
 
 class distributeSecretCommand extends commandBase {
 
-    constructor(private name: string, private secret: string, private nodeTags: string[]) {
+    private name: string;
+
+    private secret: string;
+
+    private nodeTags: string[];
+
+    constructor(name: string, secret: string, nodeTags: string[]) {
         super();
+        this.nodeTags = nodeTags;
+        this.secret = secret;
+        this.name = name;
     }
 
     execute(): JQueryPromise<void> {

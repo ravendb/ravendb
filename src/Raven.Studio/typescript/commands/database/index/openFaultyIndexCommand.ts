@@ -4,8 +4,17 @@ import endpoints from "endpoints";
 
 export default class openFaultyIndexCommand extends commandBase {
 
-    constructor(private indexNameToOpen: string, private db: database, private location: databaseLocationSpecifier) {
+    private indexNameToOpen: string;
+
+    private db: database;
+
+    private location: databaseLocationSpecifier;
+
+    constructor(indexNameToOpen: string, db: database, location: databaseLocationSpecifier) {
         super();
+        this.location = location;
+        this.db = db;
+        this.indexNameToOpen = indexNameToOpen;
     }
 
     execute(): JQueryPromise<void> {

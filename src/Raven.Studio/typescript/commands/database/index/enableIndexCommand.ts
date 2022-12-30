@@ -4,8 +4,17 @@ import endpoints = require("endpoints");
 
 class enableIndexCommand extends commandBase {
 
-    constructor(private indexName: string, private db: database, private location: databaseLocationSpecifier) {
+    private indexName: string;
+
+    private db: database;
+
+    private location: databaseLocationSpecifier;
+
+    constructor(indexName: string, db: database, location: databaseLocationSpecifier) {
         super();
+        this.location = location;
+        this.db = db;
+        this.indexName = indexName;
     }
 
     execute(): JQueryPromise<void> {

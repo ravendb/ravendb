@@ -4,8 +4,17 @@ import endpoints = require("endpoints");
 
 class resetIndexCommand extends commandBase {
 
-    constructor(private indexNameToReset: string, private db: database, private location: databaseLocationSpecifier) {
+    private indexNameToReset: string;
+
+    private db: database;
+
+    private location: databaseLocationSpecifier;
+
+    constructor(indexNameToReset: string, db: database, location: databaseLocationSpecifier) {
         super();
+        this.location = location;
+        this.db = db;
+        this.indexNameToReset = indexNameToReset;
     }
 
     execute(): JQueryPromise<{ IndexId: number }> {

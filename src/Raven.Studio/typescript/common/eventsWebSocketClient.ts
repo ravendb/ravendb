@@ -9,8 +9,11 @@ abstract class eventsWebSocketClient<T> extends abstractWebSocketClient<T> {
 
     private sentMessages: chagesApiConfigureRequestDto[] = [];
    
-    protected constructor(protected db: database) {
+    protected db: database;
+
+    protected constructor(db: database) {
         super(db);
+        this.db = db;
     }
 
     protected get autoReconnect() {

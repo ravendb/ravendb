@@ -4,8 +4,17 @@ import endpoints = require("endpoints");
 
 class etlProgressCommand extends commandBase {
 
-    constructor(private db: database, private location: databaseLocationSpecifier, private reportFailure: boolean = true) {
+    private db: database;
+
+    private location: databaseLocationSpecifier;
+
+    private reportFailure: boolean = true;
+
+    constructor(db: database, location: databaseLocationSpecifier, reportFailure: boolean = true) {
         super();
+        this.reportFailure = reportFailure;
+        this.location = location;
+        this.db = db;
     }
 
     execute(): JQueryPromise<resultsDto<Raven.Server.Documents.ETL.Stats.EtlTaskProgress>> {

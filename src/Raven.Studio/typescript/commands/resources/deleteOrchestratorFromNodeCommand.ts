@@ -5,8 +5,14 @@ import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
 class deleteOrchestratorFromNodeCommand extends commandBase {
 
-    constructor(private db: database, private node: string) {
+    private db: database;
+
+    private node: string;
+
+    constructor(db: database, node: string) {
         super();
+        this.node = node;
+        this.db = db;
     }
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {

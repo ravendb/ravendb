@@ -12,9 +12,24 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtlDetails |
                                           Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtlDetails> extends commandBase {
 
-      private constructor(private db: database, private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
-                          private taskId: number, private taskName?: string, private reportFailure: boolean = true) {
+      private db: database;
+
+    private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
+
+    private taskId: number;
+
+    private taskName?: string;
+
+    private reportFailure: boolean = true;
+
+    private constructor(db: database, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
+                        taskId: number, taskName?: string, reportFailure: boolean = true) {
           super();
+        this.reportFailure = reportFailure;
+        this.taskName = taskName;
+        this.taskId = taskId;
+        this.taskType = taskType;
+        this.db = db;
     }
 
     execute(): JQueryPromise<T> {

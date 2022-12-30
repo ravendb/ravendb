@@ -3,8 +3,11 @@ import endpoints = require("endpoints");
 
 class getManualBackupCommand extends commandBase {
 
-    constructor(private dbName: string) {
+    private dbName: string;
+
+    constructor(dbName: string) {
         super();
+        this.dbName = dbName;
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Backups.GetPeriodicBackupStatusOperationResult> {
