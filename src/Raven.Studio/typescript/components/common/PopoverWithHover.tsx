@@ -17,10 +17,6 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
     useEffect(() => {
         textRef.current = document.createElement("div");
         rootRef.current = createRoot(textRef.current);
-
-        return () => {
-            rootRef.current.unmount();
-        };
     }, []);
 
     useEffect(() => {
