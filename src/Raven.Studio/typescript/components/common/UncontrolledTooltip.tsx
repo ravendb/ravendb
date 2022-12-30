@@ -1,5 +1,6 @@
-﻿import { useEffect } from "react";
+﻿import React, { useEffect } from "react";
 import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 
 interface UncontrolledTooltipProps extends Exclude<TooltipOptions, "title" | "html"> {
     target: string;
@@ -11,16 +12,25 @@ export function UncontrolledTooltip(props: UncontrolledTooltipProps) {
 
     useEffect(() => {
         const container = document.createElement("div");
-        ReactDOM.render(children, container, () => {
-            $("#" + target).tooltip({
-                title: container.innerHTML,
-                html: true,
-                ...rest,
-            });
-        });
+        const root = createRoot(container);
+
+        root.render(
+            <div
+                className="tooltip-container"
+                ref={() => {
+                    $("#" + target).tooltip({
+                        title: container.querySelector(".tooltip-container").innerHTML,
+                        html: true,
+                        ...rest,
+                    });
+                }}
+            >
+                {children}
+            </div>
+        );
 
         return () => {
-            ReactDOM.unmountComponentAtNode(container);
+            root.unmount();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [target]);
