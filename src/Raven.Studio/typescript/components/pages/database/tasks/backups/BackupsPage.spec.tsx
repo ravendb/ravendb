@@ -26,6 +26,8 @@ describe("BackupsPage", function () {
         expect(await screen.findByText(/Create a Backup/)).toBeInTheDocument();
         expect(await screen.findByText(/Restore a database from a backup/)).toBeInTheDocument();
 
+        expect(await screen.findByText(/Raven Backup/)).toBeInTheDocument();
+
         expect(screen.queryByText(/No periodic backup tasks created/)).not.toBeInTheDocument();
         expect(screen.queryByText(/No manual backup created/)).not.toBeInTheDocument();
     });

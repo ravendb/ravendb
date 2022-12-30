@@ -29,9 +29,6 @@ export function UncontrolledTooltip(props: UncontrolledTooltipProps) {
             </div>
         );
 
-        return () => {
-            root.unmount();
-        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [target]);
 
