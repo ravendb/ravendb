@@ -1,9 +1,14 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -11,7 +16,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Encryption
 {
-    public class ShardedEncryption : RavenTestBase
+    public class ShardedEncryption : ClusterTestBase
     {
         public ShardedEncryption(ITestOutputHelper output) : base(output)
         {
@@ -123,6 +128,75 @@ namespace SlowTests.Sharding.Encryption
                     var hash = attachment.GetString(nameof(AttachmentName.Hash));
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", hash);
                     Assert.Equal(3, attachment.GetLong(nameof(AttachmentName.Size)));
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
+        public async Task Can_Add_Shard_To_Encrypted_Database()
+        {
+            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
+            Encryption.SetupEncryptedDatabaseInCluster(nodes, certificates, out var databaseName);
+
+            var options = Sharding.GetOptionsForCluster(leader, shards: 2, shardReplicationFactor: 1, orchestratorReplicationFactor: 1);
+            options.ClientCertificate = certificates.ClientCertificate1.Value;
+            options.AdminCertificate = certificates.ServerCertificate.Value;
+            options.ModifyDatabaseName = _ => databaseName;
+            options.ModifyDatabaseRecord += record =>
+            {
+                record.Encrypted = true;
+                record.Sharding.Shards[0].Members = new List<string> { "A" };
+                record.Sharding.Shards[1].Members = new List<string> { "B" };
+                record.Sharding.Orchestrator.Topology.Members = new List<string> { "A" };
+            };
+            
+            options.RunInMemory = false;
+
+            using (var store = GetDocumentStore(options))
+            {
+                var shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+                Assert.Equal(2, shardingConfiguration.Shards.Count);
+
+                Assert.Equal(1, shardingConfiguration.Shards[0].Count);
+                Assert.Equal("A", shardingConfiguration.Shards[0].Members[0]);
+
+                Assert.Equal(1, shardingConfiguration.Shards[1].Count);
+                Assert.Equal("B", shardingConfiguration.Shards[1].Members[0]);
+
+                Assert.Equal(1, shardingConfiguration.Orchestrator.Topology.Count);
+                Assert.Equal("A", shardingConfiguration.Orchestrator.Topology.Members[0]);
+
+                //create new shard on a node that didn't have shards or orchestrator before
+                var res = await store.Maintenance.Server.SendAsync(new AddDatabaseShardOperation(store.Database, nodes: new []{ "C" }));
+                var newShardNumber = res.ShardNumber;
+                Assert.Equal(2, newShardNumber);
+                Assert.Equal(1, res.ShardTopology.ReplicationFactor);
+                Assert.Equal(1, res.ShardTopology.AllNodes.Count());
+                Assert.Equal("C", res.ShardTopology.Members[0]);
+
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Shards.Count;
+                }, 3);
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newShardNumber)))
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "ayende"
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newShardNumber)))
+                {
+                    var users = await session.Query<User>().ToListAsync();
+                    Assert.Equal(1, users.Count);
+                    Assert.Equal("ayende", users[0].Name);
                 }
             }
         }
