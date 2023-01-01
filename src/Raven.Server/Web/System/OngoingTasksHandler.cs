@@ -1432,6 +1432,21 @@ namespace Raven.Server.Web.System
                 }
             }
         }
+
+        internal TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        public class TestingStuff
+        {
+            internal long RequiredFreeSpaceOnSnapshot;
+        }
     }
 
     public class OngoingTasksResult : IDynamicJson

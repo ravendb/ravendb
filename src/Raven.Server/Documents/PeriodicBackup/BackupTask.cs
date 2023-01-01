@@ -599,7 +599,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     else
                     {
                         // snapshot backup
-                        ValidateFreeSpaceForSnapshot(tempBackupFilePath);
+                        var excludeIndexes = _configuration.SnapshotSettings?.ExcludeIndexes ?? false;
+                        ValidateFreeSpaceForSnapshot(tempBackupFilePath, excludeIndexes);
 
                         (internalBackupResult.LastEtag, internalBackupResult.LastDatabaseChangeVector) = _database.ReadLastEtagAndChangeVector();
                         internalBackupResult.LastRaftIndex = GetDatabaseEtagForBackup();
@@ -609,7 +610,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var totalSw = Stopwatch.StartNew();
                         var sw = Stopwatch.StartNew();
                         var compressionLevel = _configuration.SnapshotSettings?.CompressionLevel ?? CompressionLevel.Optimal;
-                        var excludeIndexes = _configuration.SnapshotSettings?.ExcludeIndexes ?? false;
                         var smugglerResult = _database.FullBackupTo(tempBackupFilePath, compressionLevel, excludeIndexes,
                             info =>
                             {
@@ -676,13 +676,17 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private void ValidateFreeSpaceForSnapshot(string filePath)
+        private void ValidateFreeSpaceForSnapshot(string filePath, bool excludeIndexes)
         {
             long totalUsedSpace = 0;
             foreach (var mountPointUsage in _database.GetMountPointsUsage(includeTempBuffers: false))
             {
+                if(mountPointUsage.Type == "Index" && excludeIndexes) continue;
+
                 totalUsedSpace += mountPointUsage.UsedSpace;
             }
+
+            if (_forTestingPurposes != null) _forTestingPurposes.RequiredFreeSpaceOnSnapshot = totalUsedSpace;
 
             var directoryPath = Path.GetDirectoryName(filePath);
 
