@@ -30,25 +30,30 @@ internal class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus : Abstra
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {
+            List<IDisposable> toDispose = new();
             DynamicJsonValue result = new();
-            var statuses = new List<BlittableJsonReaderObject>();
             var dbRecord = RequestHandler.ServerStore.Cluster.ReadRawDatabaseRecord(context, name);
 
             if (dbRecord.IsSharded)
             {
+                DynamicJsonValue statusByShard = new();
+
                 foreach (var shardNumber in dbRecord.Sharding.Shards.Keys)
                 {
-                    var status = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(ShardHelper.ToShardName(name, shardNumber), taskId.Value));
-                    statuses.Add(status);
+                    var itemName = PeriodicBackupStatus.GenerateItemName(ShardHelper.ToShardName(name, shardNumber), taskId.Value);
+                    var status = ServerStore.Cluster.Read(context, itemName);
+
+                    toDispose.Add(status);
+                    statusByShard[shardNumber.ToString()] = status;
                 }
 
                 result[nameof(GetShardedPeriodicBackupStatusOperationResult.IsSharded)] = true;
-                result[nameof(GetShardedPeriodicBackupStatusOperationResult.Statuses)] = statuses;
+                result[nameof(GetShardedPeriodicBackupStatusOperationResult.Statuses)] = statusByShard;
             }
             else
             {
                 var status = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value));
-                statuses.Add(status);
+                toDispose.Add(status);
 
                 result[nameof(GetPeriodicBackupStatusOperationResult.IsSharded)] = false;
                 result[nameof(GetPeriodicBackupStatusOperationResult.Status)] = status;
@@ -59,10 +64,11 @@ internal class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus : Abstra
                 context.Write(writer, result);
             }
 
-            foreach (var status in statuses)
+            foreach (var status in toDispose)
             {
                 status?.Dispose();
             }
+
         }
     }
 }

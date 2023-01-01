@@ -395,8 +395,8 @@ namespace SlowTests.Sharding.Backup
 
                 var status = store.Maintenance.Send(new GetShardedPeriodicBackupStatusOperation(backupTaskId));
 
-                Assert.Equal(3, status.Statuses.Length);
-                foreach (var shardBackupStatus in status.Statuses)
+                Assert.Equal(3, status.Statuses.Count);
+                foreach (var (shardNumber, shardBackupStatus) in status.Statuses)
                 {
                     Assert.NotNull(shardBackupStatus);
                 }

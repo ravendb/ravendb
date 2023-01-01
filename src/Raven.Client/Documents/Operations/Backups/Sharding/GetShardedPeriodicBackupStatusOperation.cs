@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -55,6 +56,6 @@ namespace Raven.Client.Documents.Operations.Backups.Sharding
     }
     public class GetShardedPeriodicBackupStatusOperationResult : AbstractGetPeriodicBackupStatusOperationResult
     {
-        public PeriodicBackupStatus[] Statuses;
+        public Dictionary<int, PeriodicBackupStatus> Statuses;
     }
 }
