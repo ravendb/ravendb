@@ -124,7 +124,8 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var property = _csvReader.Context.Reader.HeaderRecord[i];
 
-                if (_csvReader.Context.Reader.HeaderRecord[i][0] == '@')
+                if (string.IsNullOrEmpty(_csvReader.Context.Reader.HeaderRecord[i]) == false && 
+                    _csvReader.Context.Reader.HeaderRecord[i][0] == '@')
                 {
                     if (property == Constants.Documents.Metadata.Id)
                     {
@@ -248,7 +249,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 for (var i = 0; i < csvReaderFieldHeaders.Length; i++)
                 {
-                    if (csvReaderFieldHeaders[i][0] == '@')
+                    if (string.IsNullOrEmpty(csvReaderFieldHeaders[i]) == false &&
+                        csvReaderFieldHeaders[i][0] == '@')
                     {
                         if (_idIndex == i)
                             continue;
