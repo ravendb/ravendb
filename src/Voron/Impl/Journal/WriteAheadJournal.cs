@@ -880,7 +880,7 @@ namespace Voron.Impl.Journal
                                 _flushLockTaskResponsible.RunTaskIfNotAlreadyRan();
 
                                 // 2 options here:
-                                // - we got a notification after the transaction was commited, in which case 
+                                // - we got a notification after the transaction was committed, in which case 
                                 //   _updateJournalStateAfterFlush was set to null while it was holding the write tx lock
                                 //   and we'll exit (from the while)
                                 // - we got a notification that the transaction is over (for any reason)
