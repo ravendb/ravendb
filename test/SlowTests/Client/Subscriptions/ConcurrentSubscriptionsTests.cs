@@ -29,7 +29,7 @@ namespace SlowTests.Client.Subscriptions
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
-        
+
         [Fact]
         public async Task ConcurrentSubscriptions()
         {
@@ -62,7 +62,7 @@ namespace SlowTests.Client.Subscriptions
 
                     var con1Docs = new List<string>();
                     var con2Docs = new List<string>();
-                    
+
                     var t = subscription.Run(x =>
                     {
                         foreach (var item in x.Items)
@@ -70,7 +70,7 @@ namespace SlowTests.Client.Subscriptions
                             con1Docs.Add(item.Id);
                         }
                     });
-                    
+
                     var _ = secondSubscription.Run(x =>
                     {
                         foreach (var item in x.Items)
@@ -79,7 +79,7 @@ namespace SlowTests.Client.Subscriptions
                         }
                     });
 
-                    await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6),6000);
+                    await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6), 6000);
                     await AssertNoLeftovers(store, id);
                 }
             }
@@ -92,7 +92,7 @@ namespace SlowTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create<User>();
-                
+
                 var workerToDocsAmount = new Dictionary<SubscriptionWorker<User>, HashSet<string>>();
 
                 for (int i = 0; i < workersAmount; i++)
@@ -150,7 +150,7 @@ namespace SlowTests.Client.Subscriptions
                     var amre2 = new AsyncManualResetEvent();
                     var waitForConn2ToFetch = new AsyncManualResetEvent();
                     var noopSent = new AsyncManualResetEvent();
-                    
+
                     using (var session = store.OpenSession())
                     {
                         session.Store(new User(), "user/1");
@@ -245,8 +245,8 @@ namespace SlowTests.Client.Subscriptions
                     }
 
                     var first = true;
-                    
-                    var _ = subscription3.Run(async (x) =>
+
+                    var _ = subscription3.Run((x) =>
                     {
                         //will fetch user/2 if resend table was not deleted by noop
                         //will fetch user/8 if resend was deleted
@@ -265,6 +265,7 @@ namespace SlowTests.Client.Subscriptions
                         }
 
                         noopSent.Set();
+                        return Task.CompletedTask;
                     });
 
                     await noopSent.WaitAsync();
@@ -340,7 +341,7 @@ namespace SlowTests.Client.Subscriptions
                             con1Docs.Add(item.Id);
                         }
                     });
-                    
+
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 4), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
 
@@ -384,7 +385,7 @@ namespace SlowTests.Client.Subscriptions
 
                     var con1Docs = new List<(string id, string name)>();
                     var con2Docs = new List<(string id, string name)>();
-                    
+
                     var delayConn2ack = new AsyncManualResetEvent();
                     var waitUntilConn2GetsUser1 = new AsyncManualResetEvent();
                     var waitBeforeConn1FinishesSecondBatch = new AsyncManualResetEvent();
@@ -436,7 +437,7 @@ namespace SlowTests.Client.Subscriptions
 
                     waitBeforeConn1FinishesSecondBatch.Set();
                     delayConn2ack.Set(); // let connection 2 finish with old user/1
-                    
+
                     Assert.Contains(("user/1", "NotChanged"), con2Docs);
 
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Contains(("user/1", "Changed")) || con2Docs.Contains(("user/1", "Changed"))), true, 6000, 100), $"connection 1 and 2 are missing new user/1");
@@ -499,7 +500,7 @@ namespace SlowTests.Client.Subscriptions
                     using (var session = store.OpenAsyncSession())
                     {
                         session.Delete("users/1");
-                        await session.StoreAsync(new User (), "users/7");
+                        await session.StoreAsync(new User(), "users/7");
                         await session.SaveChangesAsync();
                     }
 
@@ -594,8 +595,8 @@ namespace SlowTests.Client.Subscriptions
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User {Name = "Changed"}, "users/1");
-                        await session.StoreAsync(new User (), "users/7");
+                        await session.StoreAsync(new User { Name = "Changed" }, "users/1");
+                        await session.StoreAsync(new User(), "users/7");
                         await session.SaveChangesAsync();
                     }
 
@@ -687,7 +688,7 @@ namespace SlowTests.Client.Subscriptions
                     });
 
                     mre.WaitOne();
-                    
+
                     using (var session = store.OpenAsyncSession())
                     {
                         await session.StoreAsync(new User { Name = "Changed" }, "users/1");
@@ -726,14 +727,14 @@ namespace SlowTests.Client.Subscriptions
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
-            
+
             using var store = GetDocumentStore(new Options
             {
                 ReplicationFactor = 3,
                 Server = cluster.Leader,
-                ModifyDocumentStore = s =>s.Conventions.LoadBalanceBehavior = LoadBalanceBehavior.UseSessionContext
+                ModifyDocumentStore = s => s.Conventions.LoadBalanceBehavior = LoadBalanceBehavior.UseSessionContext
             });
-            
+
             var database = store.Database;
 
             var node1 = await cluster.Nodes[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
@@ -743,25 +744,25 @@ namespace SlowTests.Client.Subscriptions
             var t1 = await BreakReplication(cluster.Nodes[0].ServerStore, database);
             var t2 = await BreakReplication(cluster.Nodes[1].ServerStore, database);
             var t3 = await BreakReplication(cluster.Nodes[2].ServerStore, database);
-            
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Advanced.SessionInfo.SetContext("foo");
-                    await session.StoreAsync(new User(), "user/1");
-                    await session.StoreAsync(new User(), "user/2");
-                    await session.StoreAsync(new User(), "user/3");
-                    await session.SaveChangesAsync();
-                }
 
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Advanced.SessionInfo.SetContext("bar");
-                    await session.StoreAsync(new User(), "user/4");
-                    await session.StoreAsync(new User(), "user/5");
-                    await session.StoreAsync(new User(), "user/6");
-                    await session.SaveChangesAsync();
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.SessionInfo.SetContext("foo");
+                await session.StoreAsync(new User(), "user/1");
+                await session.StoreAsync(new User(), "user/2");
+                await session.StoreAsync(new User(), "user/3");
+                await session.SaveChangesAsync();
             }
-            
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.SessionInfo.SetContext("bar");
+                await session.StoreAsync(new User(), "user/4");
+                await session.StoreAsync(new User(), "user/5");
+                await session.StoreAsync(new User(), "user/6");
+                await session.SaveChangesAsync();
+            }
+
             t1.Mend();
             t2.Mend();
             t3.Mend();
@@ -781,8 +782,8 @@ namespace SlowTests.Client.Subscriptions
             }))
             await using (var subscription2 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
             {
-                Strategy = SubscriptionOpeningStrategy.Concurrent, 
-                TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5), 
+                Strategy = SubscriptionOpeningStrategy.Concurrent,
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
                 MaxDocsPerBatch = 2
             }))
             {
@@ -987,7 +988,7 @@ namespace SlowTests.Client.Subscriptions
 
                 Assert.True(mre1.Wait(TimeSpan.FromSeconds(15)));
                 mre1.Reset();
-                
+
                 await store.Subscriptions.DropSubscriptionWorkerAsync(subscription1);
                 await Assert.ThrowsAsync<SubscriptionClosedException>(() => t);
 
@@ -1012,7 +1013,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var t = subscription.Run(x =>
                     {
-                       
+
                     });
 
                     var ex = await Assert.ThrowsAsync<SubscriptionInvalidStateException>(() => t.WaitAndThrowOnTimeout(TimeSpan.FromSeconds(15)));

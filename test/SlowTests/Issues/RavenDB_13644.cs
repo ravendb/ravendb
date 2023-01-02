@@ -269,22 +269,22 @@ namespace SlowTests.Issues
                         switch (key.ShardNumber)
                         {
                             case 0:
-                            {
-                                Assert.False(result.IsStale);
-                                break;
-                            }
+                                {
+                                    Assert.False(result.IsStale);
+                                    break;
+                                }
                             case 2:
-                            {
-                                Assert.False(result.IsStale);
-                                break;
-                            }
+                                {
+                                    Assert.False(result.IsStale);
+                                    break;
+                                }
                             default:
-                            {
-                                Assert.True(result.IsStale);
-                                Assert.Equal(1, result.StalenessReasons.Count);
-                                Assert.Contains("There are still some compare exchange references to process for collection", result.StalenessReasons[0]);
-                                break;
-                            }
+                                {
+                                    Assert.True(result.IsStale);
+                                    Assert.Equal(1, result.StalenessReasons.Count);
+                                    Assert.Contains("There are still some compare exchange references to process for collection", result.StalenessReasons[0]);
+                                    break;
+                                }
                         }
                     });
 
@@ -331,22 +331,22 @@ namespace SlowTests.Issues
                         switch (key.ShardNumber)
                         {
                             case 0:
-                            {
-                                Assert.False(result.IsStale);
-                                break;
-                            }
+                                {
+                                    Assert.False(result.IsStale);
+                                    break;
+                                }
                             case 2:
-                            {
-                                Assert.False(result.IsStale);
-                                break;
-                            }
+                                {
+                                    Assert.False(result.IsStale);
+                                    break;
+                                }
                             default:
-                            {
-                                Assert.True(result.IsStale);
-                                Assert.Equal(1, result.StalenessReasons.Count);
-                                Assert.Contains("There are still some compare exchange tombstone references to process for collection", result.StalenessReasons[0]);
-                                break;
-                            }
+                                {
+                                    Assert.True(result.IsStale);
+                                    Assert.Equal(1, result.StalenessReasons.Count);
+                                    Assert.Contains("There are still some compare exchange tombstone references to process for collection", result.StalenessReasons[0]);
+                                    break;
+                                }
                         }
                     });
 
@@ -386,7 +386,7 @@ namespace SlowTests.Issues
                 {
                     Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5));
                 }
-                catch (Exception e)
+                catch
                 {
                     store.Maintenance.ForTesting(() => new GetIndexStalenessOperation(indexName))
                         .AssertAll((_, result) => Assert.False(result.IsStale));
