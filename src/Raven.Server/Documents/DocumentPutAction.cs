@@ -748,9 +748,13 @@ namespace Raven.Server.Documents
 
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerId, int lowerSize)
         {
+            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            if (tombstoneTable.NumberOfEntries == 0)
+                return;
+
             using (Slice.External(context.Allocator, lowerId, lowerSize, out Slice id))
             {
-                DeleteTombstoneIfNeeded(context, collectionName, id);
+                DeleteTombstone(tombstoneTable, id);
             }
         }
 
@@ -759,6 +763,12 @@ namespace Raven.Server.Documents
             var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
             if (tombstoneTable.NumberOfEntries == 0)
                 return;
+
+            DeleteTombstone(tombstoneTable, id);
+        }
+
+        private static void DeleteTombstone(Table tombstoneTable, Slice id)
+        {
 
             foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(id, Slices.Empty, 0))
             {
