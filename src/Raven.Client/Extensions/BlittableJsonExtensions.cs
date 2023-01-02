@@ -1,5 +1,6 @@
 ﻿using System;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Extensions
 {
@@ -70,6 +71,23 @@ namespace Raven.Client.Extensions
 
             changeVector = changeVectorAsObject as string;
             return true;
+        }
+
+        internal static BlittableJsonReaderObject AddToMetadata<T>(this BlittableJsonReaderObject item, JsonOperationContext context, string key, T value)
+        {
+            item.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
+            metadata.Modifications = new DynamicJsonValue(metadata)
+            {
+                [key] = value
+            };
+            item.Modifications = new DynamicJsonValue(item)
+            {
+                [Constants.Documents.Metadata.Key] = metadata
+            };
+            using (var old = item)
+            {
+                return context.ReadObject(item, "add-to-metadata");
+            }
         }
 
         private static void InvalidMissingChangeVector()

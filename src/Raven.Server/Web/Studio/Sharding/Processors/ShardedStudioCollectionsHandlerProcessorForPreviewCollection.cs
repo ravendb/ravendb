@@ -20,10 +20,11 @@ using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.Json;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
-public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : AbstractStudioCollectionsHandlerProcessorForPreviewCollection<ShardedDatabaseRequestHandler>
+public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : AbstractStudioCollectionsHandlerProcessorForPreviewCollection<ShardedDatabaseRequestHandler, ShardStreamItem<Document>>
 {
     private readonly ShardedDatabaseRequestHandler _requestHandler;
     private IDisposable _releaseContext;
@@ -61,16 +62,34 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
     protected override async ValueTask WriteResultsAsync(
         AsyncBlittableJsonTextWriter writer, 
-        IAsyncEnumerable<Document> documents, 
+        IAsyncEnumerable<ShardStreamItem<Document>> results, 
         JsonOperationContext context, 
-        HashSet<string> propertiesPreviewToSend, 
-        HashSet<string> fullPropertiesToSend,
-        long totalResults, 
-        List<string> availableColumns)
+        PreviewState state)
     {
-        await base.WriteResultsAsync(writer, documents, context, propertiesPreviewToSend, fullPropertiesToSend, totalResults, availableColumns);
+        await base.WriteResultsAsync(writer, results, context, state);
         writer.WriteComma();
         writer.WriteContinuationToken(context, _continuationToken);
+    }
+
+    private class ShardedPreviewState : PreviewState
+    {
+        private const string ShardNumberKey = "$shard-number";
+        public int ShardNumber;
+
+        public override DynamicJsonValue CreateMetadata(BlittableJsonReaderObject current)
+        {
+            var r = base.CreateMetadata(current);
+            r[ShardNumberKey] = ShardNumber;
+            return r;
+        }
+    }
+
+    protected override PreviewState CreatePreviewState() => new ShardedPreviewState();
+
+    protected override void WriteResult(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, ShardStreamItem<Document> result, PreviewState state)
+    {
+        ((ShardedPreviewState)state).ShardNumber = result.ShardNumber;
+        WriteDocument(writer, context, result.Item, state);
     }
 
     protected override async ValueTask<long> GetTotalResultsAsync()
@@ -97,7 +116,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         return false;
     }
 
-    protected override IAsyncEnumerable<Document> GetDocumentsAsync() =>
+    protected override IAsyncEnumerable<ShardStreamItem<Document>> GetDocumentsAsync() =>
         RequestHandler.DatabaseContext.Streaming.GetDocumentsAsync(_combinedReadState, _continuationToken);
 
     protected override async ValueTask<List<string>> GetAvailableColumnsAsync()

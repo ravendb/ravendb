@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -13,6 +14,7 @@ using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -63,13 +65,14 @@ namespace Raven.Server.Documents.Sharding.Operations
             var docs = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var includesMap = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
             var missingIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
+            var fromStudio = HttpRequest.IsFromStudio();
+            
             ShardedRevisionIncludes revisionIncludes = null;
             ShardedCounterIncludes counterIncludes = null;
             ShardedTimeSeriesIncludes timeSeriesIncludes = null;
             ShardedCompareExchangeValueInclude compareExchangeValueIncludes = null;
 
-            foreach (var cmd in results.Values)
+            foreach (var (shardNumber, cmd) in results)
             {
                 var docRes = cmd.Result;
                 if (docRes == null)
@@ -106,7 +109,10 @@ namespace Raven.Server.Documents.Sharding.Operations
                         continue;
 
                     var docId = cmdResult.GetMetadata().GetId();
-                    docs.TryAdd(docId, cmdResult.Clone(_context));
+                    var result = fromStudio ? 
+                        cmdResult.AddToMetadata(_context, Constants.Documents.Metadata.ShardNumber, shardNumber) : 
+                        cmdResult.Clone(_context);
+                    docs.TryAdd(docId, result);
                 }
 
                 if (cmdRevisionIncludes != null)

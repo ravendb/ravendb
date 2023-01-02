@@ -16,15 +16,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollection<TRequestHandler> : IDisposable
+public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollection<TRequestHandler, TResult> : IDisposable
     where TRequestHandler : RequestHandler
 {
     private const int ColumnsSamplingLimit = 10;
     private const int StringLengthLimit = 255;
-
-    private const string ObjectStubsKey = "$o";
-    private const string ArrayStubsKey = "$a";
-    private const string TrimmedValueKey = "$t";
 
     protected readonly TRequestHandler RequestHandler;
 
@@ -60,7 +56,7 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
 
     protected abstract bool NotModified(out string etag);
 
-    protected abstract IAsyncEnumerable<Document> GetDocumentsAsync();
+    protected abstract IAsyncEnumerable<TResult> GetDocumentsAsync();
 
     protected abstract ValueTask<List<string>> GetAvailableColumnsAsync();
 
@@ -77,56 +73,52 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         if (etag != null)
             HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
 
+        var state = CreatePreviewState();
         var documents = GetDocumentsAsync();
-        var totalResults = await GetTotalResultsAsync();
-        var availableColumns = await GetAvailableColumnsAsync();
+        state.TotalResults = await GetTotalResultsAsync();
+        state.AvailableColumns = await GetAvailableColumnsAsync();
 
-        var propertiesPreviewToSend = IsAllDocsCollection
+        state.PropertiesPreviewToSend = IsAllDocsCollection
             ? _bindings.Count > 0 ? new HashSet<string>(_bindings) : new HashSet<string>()
-            : _bindings.Count > 0 ? new HashSet<string>(_bindings) : availableColumns.Take(ColumnsSamplingLimit).Select(x => x.ToString(CultureInfo.InvariantCulture)).ToHashSet();
+            : _bindings.Count > 0 ? new HashSet<string>(_bindings) : state.AvailableColumns.Take(ColumnsSamplingLimit).Select(x => x.ToString(CultureInfo.InvariantCulture)).ToHashSet();
 
-        var fullPropertiesToSend = new HashSet<string>(_fullBindings);
+        state.FullPropertiesToSend = new HashSet<string>(_fullBindings);
 
         var context = GetContext();
+
 
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
-            await WriteResultsAsync(writer, documents, context, propertiesPreviewToSend, fullPropertiesToSend, totalResults, availableColumns);
+            await WriteResultsAsync(writer, documents, context, state);
             writer.WriteEndObject();
         }
     }
 
     protected virtual async ValueTask WriteResultsAsync(
         AsyncBlittableJsonTextWriter writer, 
-        IAsyncEnumerable<Document> documents, 
+        IAsyncEnumerable<TResult> results, 
         JsonOperationContext context, 
-        HashSet<string> propertiesPreviewToSend,
-        HashSet<string> fullPropertiesToSend, 
-        long totalResults, 
-        List<string> availableColumns)
+        PreviewState state)
     {
         writer.WritePropertyName(nameof(PreviewCollectionResult.TotalResults));
-        writer.WriteInteger(totalResults);
+        writer.WriteInteger(state.TotalResults);
         writer.WriteComma();
 
-        writer.WriteArray(nameof(PreviewCollectionResult.AvailableColumns), availableColumns);
+        writer.WriteArray(nameof(PreviewCollectionResult.AvailableColumns), state.AvailableColumns);
         writer.WriteComma();
 
         writer.WritePropertyName(nameof(PreviewCollectionResult.Results));
         writer.WriteStartArray();
 
         var first = true;
-        await foreach (var document in documents)
+        await foreach (var result in results)
         {
             if (first == false)
                 writer.WriteComma();
             first = false;
 
-            using (document.Data)
-            {
-                WriteDocument(writer, context, document, propertiesPreviewToSend, fullPropertiesToSend);
-            }
+            WriteResult(writer, context, result, state);
         }
 
         writer.WriteEndArray();
@@ -139,102 +131,127 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         public List<string> AvailableColumns;
     }
 
-    private static void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)
+    protected class PreviewState
     {
-        writer.WriteStartObject();
+        private const string ObjectStubsKey = "$o";
+        private const string ArrayStubsKey = "$a";
+        private const string TrimmedValueKey = "$t";
 
-        document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
+        public HashSet<string> PropertiesPreviewToSend;
+        public HashSet<string> FullPropertiesToSend;
+        public long TotalResults;
+        public List<string> AvailableColumns;
 
-        bool first = true;
+        public DynamicJsonValue ArrayStubsJson = new DynamicJsonValue();
+        public DynamicJsonValue ObjectStubsJson = new DynamicJsonValue();
+        public HashSet<LazyStringValue> TrimmedValue = new HashSet<LazyStringValue>();
 
-        var arrayStubsJson = new DynamicJsonValue();
-        var objectStubsJson = new DynamicJsonValue();
-        var trimmedValue = new HashSet<LazyStringValue>();
-
-        var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-        using (var buffers = document.Data.GetPropertiesByInsertionOrder())
+        public virtual DynamicJsonValue CreateMetadata(BlittableJsonReaderObject current)
         {
-            for (int i = 0; i < buffers.Size; i++)
+            return new DynamicJsonValue(current)
             {
-                unsafe
-                {
-                    document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
-                }
+                [ArrayStubsKey] = ArrayStubsJson,
+                [ObjectStubsKey] = ObjectStubsJson,
+                [TrimmedValueKey] = new DynamicJsonArray(TrimmedValue)
+            };
+        }
+    }
 
-                var sendFull = fullPropertiesToSend.Contains(prop.Name);
-                if (sendFull || propertiesPreviewToSend.Contains(prop.Name))
-                {
-                    var strategy = sendFull ? ValueWriteStrategy.Passthrough : FindWriteStrategy(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+    protected virtual PreviewState CreatePreviewState() => new PreviewState();
 
-                    if (strategy == ValueWriteStrategy.Passthrough || strategy == ValueWriteStrategy.Trim)
+    protected abstract void WriteResult(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, TResult document, PreviewState state);
+
+    protected static void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, PreviewState state)
+    {
+        using (document.Data)
+        {
+            writer.WriteStartObject();
+
+            document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
+
+            bool first = true;
+
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+            using (var buffers = document.Data.GetPropertiesByInsertionOrder())
+            {
+                for (int i = 0; i < buffers.Size; i++)
+                {
+                    unsafe
                     {
-                        if (first == false)
+                        document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
+                    }
+
+                    var sendFull = state.FullPropertiesToSend.Contains(prop.Name);
+                    if (sendFull || state.PropertiesPreviewToSend.Contains(prop.Name))
+                    {
+                        var strategy = sendFull ? ValueWriteStrategy.Passthrough : FindWriteStrategy(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+
+                        if (strategy == ValueWriteStrategy.Passthrough || strategy == ValueWriteStrategy.Trim)
                         {
-                            writer.WriteComma();
+                            if (first == false)
+                            {
+                                writer.WriteComma();
+                            }
+
+                            first = false;
                         }
 
-                        first = false;
-                    }
+                        switch (strategy)
+                        {
+                            case ValueWriteStrategy.Passthrough:
+                                writer.WritePropertyName(prop.Name);
+                                writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+                                break;
 
-                    switch (strategy)
-                    {
-                        case ValueWriteStrategy.Passthrough:
-                            writer.WritePropertyName(prop.Name);
-                            writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                            break;
+                            case ValueWriteStrategy.SubstituteWithArrayStub:
+                                state.ArrayStubsJson[prop.Name] = ((BlittableJsonReaderArray)prop.Value).Length;
+                                break;
 
-                        case ValueWriteStrategy.SubstituteWithArrayStub:
-                            arrayStubsJson[prop.Name] = ((BlittableJsonReaderArray)prop.Value).Length;
-                            break;
+                            case ValueWriteStrategy.SubstituteWithObjectStub:
+                                state.ObjectStubsJson[prop.Name] = ((BlittableJsonReaderObject)prop.Value).Count;
+                                break;
 
-                        case ValueWriteStrategy.SubstituteWithObjectStub:
-                            objectStubsJson[prop.Name] = ((BlittableJsonReaderObject)prop.Value).Count;
-                            break;
-
-                        case ValueWriteStrategy.Trim:
-                            writer.WritePropertyName(prop.Name);
-                            WriteTrimmedValue(writer, prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                            trimmedValue.Add(prop.Name);
-                            break;
+                            case ValueWriteStrategy.Trim:
+                                writer.WritePropertyName(prop.Name);
+                                WriteTrimmedValue(writer, prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+                                state.TrimmedValue.Add(prop.Name);
+                                break;
+                        }
                     }
                 }
             }
-        }
 
-        if (first == false)
-            writer.WriteComma();
+            if (first == false)
+                writer.WriteComma();
 
-        var extraMetadataProperties = new DynamicJsonValue(metadata)
-        {
-            [ObjectStubsKey] = objectStubsJson,
-            [ArrayStubsKey] = arrayStubsJson,
-            [TrimmedValueKey] = new DynamicJsonArray(trimmedValue)
-        };
+            var extraMetadataProperties = state.CreateMetadata(metadata);
 
-        if (metadata != null)
-        {
-            metadata.Modifications = extraMetadataProperties;
-
-            if (document.Flags.Contain(DocumentFlags.HasCounters) || document.Flags.Contain(DocumentFlags.HasAttachments) || document.Flags.Contain(DocumentFlags.HasTimeSeries))
+            if (metadata != null)
             {
-                metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
-                metadata.Modifications.Remove(Constants.Documents.Metadata.TimeSeries);
+                metadata.Modifications = extraMetadataProperties;
+
+                if (document.Flags.Contain(DocumentFlags.HasCounters) || document.Flags.Contain(DocumentFlags.HasAttachments) ||
+                    document.Flags.Contain(DocumentFlags.HasTimeSeries))
+                {
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.TimeSeries);
+                }
+
+                using (var old = metadata)
+                {
+                    metadata = context.ReadObject(metadata, document.Id);
+                }
+            }
+            else
+            {
+                metadata = context.ReadObject(extraMetadataProperties, document.Id);
             }
 
-            using (var old = metadata)
-            {
-                metadata = context.ReadObject(metadata, document.Id);
-            }
+            writer.WriteMetadata(document, metadata);
+            writer.WriteEndObject();
         }
-        else
-        {
-            metadata = context.ReadObject(extraMetadataProperties, document.Id);
-        }
-
-        writer.WriteMetadata(document, metadata);
-        writer.WriteEndObject();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

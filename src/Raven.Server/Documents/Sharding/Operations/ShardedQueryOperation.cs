@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
@@ -12,10 +12,11 @@ using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
-using Raven.Server.Documents.Sharding.Queries;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Operations;
@@ -42,6 +43,8 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
     public string ExpectedEtag { get; }
 
     public HttpRequest HttpRequest { get => _requestHandler.HttpContext.Request; }
+
+    public bool Debug => HttpRequest.IsFromStudio();
 
     RavenCommand<QueryResult> IShardedOperation<QueryResult, ShardedReadResult<ShardedQueryResult>>.CreateCommandForShard(int shardNumber) => _queryCommands[shardNumber];
 
@@ -78,7 +81,7 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         ShardedCompareExchangeValueInclude compareExchangeValueIncludes = null;
         ShardedTimeSeriesIncludes timeSeriesIncludes = null;
 
-        foreach (var cmdResult in results.Values)
+        foreach (var (shardNumber, cmdResult) in results)
         {
             var queryRes = cmdResult.Result;
             result.TotalResults += queryRes.TotalResults;
@@ -161,9 +164,9 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         // all the results from each command are already ordered
         using (var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(_sortingComparer))
         {
-            foreach (var cmdResult in results.Values)
+            foreach (var (shardNumber, cmdResult) in results)
             {
-                mergedEnumerator.AddEnumerator(GetEnumerator(cmdResult.Result.Results.Clone(_context)));
+                mergedEnumerator.AddEnumerator(GetEnumerator(cmdResult.Result.Results.Clone(_context), shardNumber));
             }
 
             while (mergedEnumerator.MoveNext())
@@ -171,11 +174,17 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
                 result.Results.Add(mergedEnumerator.Current);
             }
 
-            static IEnumerator<BlittableJsonReaderObject> GetEnumerator(BlittableJsonReaderArray array)
+            IEnumerator<BlittableJsonReaderObject> GetEnumerator(BlittableJsonReaderArray array, int shardNumber)
             {
                 foreach (BlittableJsonReaderObject item in array)
                 {
-                    yield return item;
+                    if (Debug == false)
+                    {
+                        yield return item;
+                        continue;
+                    }
+
+                    yield return item.AddToMetadata(_context, Constants.Documents.Metadata.ShardNumber, shardNumber);
                 }
             }
         }

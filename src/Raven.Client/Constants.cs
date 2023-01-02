@@ -266,6 +266,8 @@ namespace Raven.Client
                 public const string Etag = "@etag";
 
                 internal const string OrderByFields = "@order-by-fields";
+
+                internal const string ShardNumber = "@shard-number";
             }
 
             public class Collections
