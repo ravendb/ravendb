@@ -662,10 +662,12 @@ namespace Raven.Server.Web.System
             if (delay <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(delay));
 
-            var databaseName = GetStringQueryString("databaseName");
+            var databaseName = GetStringQueryString("database");
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
 
             await database.PeriodicBackupRunner.DelayAsync(id, delay.Value, GetCurrentCertificate());
+            
+            NoContentStatus();
         }
 
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]

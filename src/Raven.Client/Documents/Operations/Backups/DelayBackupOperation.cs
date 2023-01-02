@@ -36,7 +36,7 @@ public class DelayBackupOperation : IMaintenanceOperation<OperationState>
         public override bool IsReadRequest => true;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/backup-task/delay?taskId={_taskId}&duration={_duration}&databaseName={node.Database}";
+            url = $"{node.Url}/admin/backup-task/delay?taskId={_taskId}&duration={_duration}&database={node.Database}";
 
             return new HttpRequestMessage
             {
