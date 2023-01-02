@@ -30,6 +30,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
+using StorageEnvironmentType = Voron.StorageEnvironmentWithType.StorageEnvironmentType;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -599,8 +600,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     else
                     {
                         // snapshot backup
-                        var excludeIndexes = _configuration.SnapshotSettings?.ExcludeIndexes ?? false;
-                        ValidateFreeSpaceForSnapshot(tempBackupFilePath, excludeIndexes);
+                        ValidateFreeSpaceForSnapshot(tempBackupFilePath);
 
                         (internalBackupResult.LastEtag, internalBackupResult.LastDatabaseChangeVector) = _database.ReadLastEtagAndChangeVector();
                         internalBackupResult.LastRaftIndex = GetDatabaseEtagForBackup();
@@ -610,6 +610,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var totalSw = Stopwatch.StartNew();
                         var sw = Stopwatch.StartNew();
                         var compressionLevel = _configuration.SnapshotSettings?.CompressionLevel ?? CompressionLevel.Optimal;
+                        var excludeIndexes = _configuration.SnapshotSettings?.ExcludeIndexes ?? false;
                         var smugglerResult = _database.FullBackupTo(tempBackupFilePath, compressionLevel, excludeIndexes,
                             info =>
                             {
@@ -676,12 +677,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private void ValidateFreeSpaceForSnapshot(string filePath, bool excludeIndexes)
+        private void ValidateFreeSpaceForSnapshot(string filePath)
         {
             long totalUsedSpace = 0;
             foreach (var mountPointUsage in _database.GetMountPointsUsage(includeTempBuffers: false))
             {
-                if(mountPointUsage.Type == "Index" && excludeIndexes)
+                if(mountPointUsage.Type == nameof(StorageEnvironmentType.Index) &&
+                   _configuration.SnapshotSettings is { ExcludeIndexes: true })
                     continue;
 
                 totalUsedSpace += mountPointUsage.UsedSpace;
