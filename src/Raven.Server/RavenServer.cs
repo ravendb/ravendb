@@ -93,7 +93,7 @@ namespace Raven.Server
         private IWebHost _redirectingWebHost;
 
         private readonly Logger _tcpLogger;
-        public LoggingSource MicrosoftLogger;
+        public MicrosoftLoggingProvider MicrosoftLogger;
         private readonly ExternalCertificateValidator _externalCertificateValidator;
         internal readonly JsonContextPool _tcpContextPool;
 
