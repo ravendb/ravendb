@@ -57,6 +57,10 @@ namespace Corax.Queries
             while (bufferState.Length > 0)
             {
                 var read = _currentTerm.Fill(bufferState);
+                
+                //Always remove frequency in MultiTermMatch because it cannot support Boosting
+                FrequencyUtils.RemoveFrequencies(bufferState);
+                
                 if (read == 0)
                 {
                     if (_inner.Next(out _currentTerm) == false)

@@ -96,15 +96,15 @@ public partial class IndexSearcher
         var stack = new BinaryMatch[allInTermsCount / 2];
         for (int i = 0; i < allInTermsCount / 2; i++)
         {
-            var term1 = TermQuery(terms, list[i * 2].Item.Span);
-            var term2 = TermQuery(terms, list[i * 2 + 1].Item.Span);
+            var term1 = TermQuery(field, terms, list[i * 2].Item.Span);
+            var term2 = TermQuery(field, terms, list[i * 2 + 1].Item.Span);
             stack[i] = And(term1, term2);
         }
 
         if (allInTermsCount % 2 == 1)
         {
             // We need even values to make the last work. 
-            var term = TermQuery(terms, list[^1].Item.Span);
+            var term = TermQuery(field, terms, list[^1].Item.Span);
             stack[^1] = And(stack[^1], term);
         }
 

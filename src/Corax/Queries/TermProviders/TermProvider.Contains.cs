@@ -38,11 +38,11 @@ namespace Corax.Queries
                 if (!termSlice.Contains(contains))
                     continue;
 
-                term = _searcher.TermQuery(_tree, termSlice);
+                term = _searcher.TermQuery(_field, _tree, termSlice);
                 return true;
             }
 
-            term = TermMatch.CreateEmpty(_searcher.Allocator);
+            term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
             return false;
         }
 

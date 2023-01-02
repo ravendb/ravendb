@@ -69,7 +69,7 @@ namespace Corax.Queries
         {
             if (_iterator.MoveNext(out termSlice, out var _) == false)
             {
-                term = TermMatch.CreateEmpty(_searcher.Allocator);
+                term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
             }
 
@@ -91,13 +91,13 @@ namespace Corax.Queries
                 if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= 0 || 
                     typeof(THigh) == typeof(Range.Inclusive) && cmp < 0)
                 {
-                    term = TermMatch.CreateEmpty(_searcher.Allocator);
+                    term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                     return false;
                 }
 
             }
             
-            term = _searcher.TermQuery(_tree, termSlice);
+            term = _searcher.TermQuery(_field, _tree, termSlice);
             return true;
         }
 
@@ -186,11 +186,11 @@ namespace Corax.Queries
             }
 
             var termId = _iterator.CreateReaderForCurrent().ReadLittleEndianInt64();
-            term = _searcher.TermQuery(termId);
+            term = _searcher.TermQuery(_field, termId);
             return true;
 
             Empty:
-            term = TermMatch.CreateEmpty(_searcher.Allocator);
+            term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
             return false;
         }
 

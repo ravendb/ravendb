@@ -15,7 +15,7 @@ public partial class IndexSearcher
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 
-            return TermMatch.CreateEmpty(Allocator);
+            return TermMatch.CreateEmpty(this, Allocator);
         }
 
         var match = new SpatialMatch(this, _transaction.Allocator, spatialContext, field, shape, terms, error, spatialRelation);
