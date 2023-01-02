@@ -681,12 +681,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             long totalUsedSpace = 0;
             foreach (var mountPointUsage in _database.GetMountPointsUsage(includeTempBuffers: false))
             {
-                if(mountPointUsage.Type == "Index" && excludeIndexes) continue;
+                if(mountPointUsage.Type == "Index" && excludeIndexes)
+                    continue;
 
                 totalUsedSpace += mountPointUsage.UsedSpace;
             }
-
-            if (_forTestingPurposes != null) _forTestingPurposes.RequiredFreeSpaceOnSnapshot = totalUsedSpace;
 
             var directoryPath = Path.GetDirectoryName(filePath);
 
