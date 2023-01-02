@@ -4,9 +4,11 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Utils.MicrosoftLogging;
 
-public class SparrowLoggerWrapper<TLogger> : ILogger<TLogger>
+public class SparrowLoggerWrapper : ILogger<RavenServer>
 {
     private readonly Logger _sparrowLogger;
+
+    public LogLevel MinLogLevel { get; set; }
 
     public SparrowLoggerWrapper(Logger sparrowLogger)
     {
@@ -18,7 +20,7 @@ public class SparrowLoggerWrapper<TLogger> : ILogger<TLogger>
         return NullScope.Instance;
     }
 
-    public bool IsEnabled(LogLevel logLevel) => true;
+    public bool IsEnabled(LogLevel logLevel) => logLevel >= MinLogLevel;
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
     {
