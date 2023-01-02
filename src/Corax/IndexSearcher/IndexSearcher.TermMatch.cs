@@ -28,7 +28,7 @@ public partial class IndexSearcher
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 
-            return TermMatch.CreateEmpty(Allocator);
+            return TermMatch.CreateEmpty(this, Allocator);
         }
 
         var termSlice = term switch
@@ -38,7 +38,7 @@ public partial class IndexSearcher
             _ => EncodeAndApplyAnalyzer(field, term)
         };
         
-        return TermQuery(terms, termSlice.AsReadOnlySpan());
+        return TermQuery(field, terms, termSlice.AsReadOnlySpan());
     }
     
     //Should be already analyzed...
@@ -48,24 +48,24 @@ public partial class IndexSearcher
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 
-            return TermMatch.CreateEmpty(Allocator);
+            return TermMatch.CreateEmpty(this, Allocator);
         }
         
-        return TermQuery(terms, term);
+        return TermQuery(field, terms, term);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal TermMatch TermQuery(CompactTree tree, Slice term)
+    internal TermMatch TermQuery(in FieldMetadata field, CompactTree tree, Slice term)
     {
-        return TermQuery(tree, term.AsReadOnlySpan());
+        return TermQuery(field, tree, term.AsReadOnlySpan());
     }
     
-    internal TermMatch TermQuery(CompactTree tree, ReadOnlySpan<byte> term)
+    internal TermMatch TermQuery(in FieldMetadata field, CompactTree tree, ReadOnlySpan<byte> term)
     {
         if (tree.TryGetValue(term, out var value) == false)
-            return TermMatch.CreateEmpty(Allocator);
+            return TermMatch.CreateEmpty(this, Allocator);
 
-        var matches = TermQuery(value);
+        var matches = TermQuery(field, value);
         
 #if DEBUG
         matches.Term = Encoding.UTF8.GetString(term);
@@ -73,26 +73,33 @@ public partial class IndexSearcher
         return matches;
     }
 
-    internal TermMatch TermQuery(long containerId)
+    internal TermMatch TermQuery(in FieldMetadata field, long containerId)
     {
         TermMatch matches;
         if ((containerId & (long)TermIdMask.Set) != 0)
         {
             var setId = containerId & Constants.StorageMask.ContainerType;
             var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
+
             ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             var set = new PostingList(_transaction.LowLevelTransaction, Slices.Empty, setState);
-            matches = TermMatch.YieldSet(Allocator, set, IsAccelerated);
+            matches = field.CalculateScoring 
+                ? TermMatch.YieldSetWithFreq(this, Allocator, set, IsAccelerated) 
+                : TermMatch.YieldSetNoFreq(this, Allocator, set, IsAccelerated);
         }
         else if ((containerId & (long)TermIdMask.Small) != 0)
         {
             var smallSetId = containerId & Constants.StorageMask.ContainerType;
             var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
-            matches = TermMatch.YieldSmall(Allocator, small);
+            matches = field.CalculateScoring ? 
+                TermMatch.YieldSmallWithFreq(this, Allocator, small) : 
+                TermMatch.YieldSmallNoFreq(this, Allocator, small);
         }
         else
         {
-            matches = TermMatch.YieldOnce(Allocator, containerId);
+            matches = field.CalculateScoring 
+                ? TermMatch.YieldOnceWithFreq(this, Allocator, containerId)
+                : TermMatch.YieldOnceNoFreq(this, Allocator, containerId);
         }
 
         return matches;

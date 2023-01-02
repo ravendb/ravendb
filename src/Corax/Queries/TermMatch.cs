@@ -1,16 +1,17 @@
-using System.Runtime.CompilerServices;
 using Sparrow.Server.Compression;
 using Voron.Data.PostingLists;
-using Voron.Data.Containers;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
-using System.Collections.Generic;
-using Sparrow.Compression;
+using Corax.Utils;
 using Sparrow.Server;
 using Sparrow.Server.Binary;
+using Voron.Data.Containers;
+using Voron.Data.Sets;
 
 namespace Corax.Queries
 {
@@ -27,13 +28,14 @@ namespace Corax.Queries
         private long _numOfReturnedItems;
         private long _baselineIdx;
         private long _current;
-
+        private FrequencyHolder _frequencyHolder;
         private Container.Item _container;
         private PostingList.Iterator _set;
         private ByteStringContext _ctx;
-
+        private IndexSearcher _indexSearcher;
         public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
+        private float _currentFreq;
 
 #if DEBUG
         public string Term;
@@ -42,6 +44,7 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
 
         private TermMatch(
+            IndexSearcher indexSearcher,
             ByteStringContext ctx,
             long totalResults,
             delegate*<ref TermMatch, Span<long>, int> fillFunc,
@@ -58,7 +61,7 @@ namespace Corax.Queries
             _scoreFunc = scoreFunc;
             _inspectFunc = inspectFunc;
             _ctx = ctx;
-
+            _indexSearcher = indexSearcher;
             _numOfReturnedItems = 0;
             _container = default;
             _set = default;
@@ -67,7 +70,7 @@ namespace Corax.Queries
 #endif
         }
 
-        public static TermMatch CreateEmpty(ByteStringContext ctx)
+        public static TermMatch CreateEmpty(IndexSearcher indexSearcher, ByteStringContext ctx)
         {
             static int FillFunc(ref TermMatch term, Span<long> matches)
             {
@@ -88,21 +91,21 @@ namespace Corax.Queries
                 return new QueryInspectionNode($"{nameof(TermMatch)} [Empty]",
                     parameters: new Dictionary<string, string>()
                     {
-                        
-                    { nameof(term.IsBoosting), term.IsBoosting.ToString() },
-                    { nameof(term.Count), $"{term.Count} [{term.Confidence}]" }
+                        {nameof(term.IsBoosting), term.IsBoosting.ToString()}, {nameof(term.Count), $"{term.Count} [{term.Confidence}]"}
                     });
             }
 
-            return new TermMatch(ctx, 0, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(indexSearcher, ctx, 0, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
+                _indexSearcher = indexSearcher
 #if DEBUG
+                ,
                 Term = "<empty>"
 #endif
-            };            
+            };
         }
 
-        public static TermMatch YieldOnce(ByteStringContext ctx, long value)
+        public static TermMatch YieldOnceNoFreq(IndexSearcher indexSearcher, ByteStringContext ctx, long value)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -146,19 +149,17 @@ namespace Corax.Queries
                 return new QueryInspectionNode($"{nameof(TermMatch)} [Once]",
                     parameters: new Dictionary<string, string>()
                     {
-                    { nameof(term.IsBoosting), term.IsBoosting.ToString() },
-                    { nameof(term.Count), $"{term.Count} [{term.Confidence}]" }
+                        {nameof(term.IsBoosting), term.IsBoosting.ToString()}, {nameof(term.Count), $"{term.Count} [{term.Confidence}]"}
                     });
             }
 
-            return new TermMatch(ctx, 1, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(indexSearcher, ctx, 1, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
-                _current = value,
-                _currentIdx = QueryMatch.Start
+                _indexSearcher = indexSearcher, _current = FrequencyUtils.RemoveFrequency(value), _currentIdx = QueryMatch.Start
             };
         }
 
-        public static TermMatch YieldSmall(ByteStringContext ctx, Container.Item containerItem)
+        public static TermMatch YieldSmallNoFreq(IndexSearcher indexSearcher, ByteStringContext ctx, Container.Item containerItem)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -181,6 +182,8 @@ namespace Corax.Queries
                     term._numOfReturnedItems++;
                 }
 
+                FrequencyUtils.RemoveFrequencies(matches.Slice(0, i));
+
                 return i;
             }
 
@@ -196,7 +199,7 @@ namespace Corax.Queries
                 long current = 0;
                 int currentIdx = (int)term._baselineIdx;
                 var itemsScanned = 0L;
-
+                var currentWithoutFreq = 0L;
                 int i = 0;
                 int matchedIdx = 0;
                 while (itemsScanned < term._totalResults && i < matches)
@@ -204,23 +207,24 @@ namespace Corax.Queries
                     current += ZigZagEncoding.Decode<long>(stream, out var len, currentIdx);
                     currentIdx += len;
                     itemsScanned++;
-
-                    while (buffer[i] < current)
-                    {                        
+                    currentWithoutFreq = FrequencyUtils.RemoveFrequency(current);
+                    while (buffer[i] < currentWithoutFreq)
+                    {
                         i++;
                         if (i >= matches)
                             goto End;
-                    }                    
+                    }
 
                     // If there is a match we advance. 
-                    if (buffer[i] == current)
+                    if (buffer[i] == currentWithoutFreq)
                     {
-                        buffer[matchedIdx++] = current;
+                        buffer[matchedIdx++] = currentWithoutFreq;
                         i++;
                     }
                 }
 
-                End:  return matchedIdx;
+                End:
+                return matchedIdx;
             }
 
             static QueryInspectionNode InspectFunc(ref TermMatch term)
@@ -228,14 +232,14 @@ namespace Corax.Queries
                 return new QueryInspectionNode($"{nameof(TermMatch)} [SmallSet]",
                     parameters: new Dictionary<string, string>()
                     {
-                    { nameof(term.IsBoosting), term.IsBoosting.ToString() },
-                    { nameof(term.Count), $"{term.Count} [{term.Confidence}]" }
+                        {nameof(term.IsBoosting), term.IsBoosting.ToString()}, {nameof(term.Count), $"{term.Count} [{term.Confidence}]"}
                     });
             }
 
             var itemsCount = ZigZagEncoding.Decode<int>(containerItem.ToSpan(), out var len);
-            return new TermMatch(ctx, itemsCount, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(indexSearcher, ctx, itemsCount, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
+                _indexSearcher = indexSearcher,
                 _container = containerItem,
                 _currentIdx = len,
                 _baselineIdx = len,
@@ -243,7 +247,7 @@ namespace Corax.Queries
             };
         }
 
-        public static TermMatch YieldSet(ByteStringContext ctx, PostingList postingList, bool useAccelerated = true)
+        public static TermMatch YieldSetNoFreq(IndexSearcher indexSearcher, ByteStringContext ctx, PostingList postingList, bool useAccelerated = true)
         {
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -256,10 +260,10 @@ namespace Corax.Queries
                 ref long start = ref MemoryMarshal.GetReference(buffer);
                 it.Seek(start - 1);
                 if (it.MoveNext() == false)
-                    goto Fail;                    
-                
+                    goto Fail;
+
                 // We update the current value we want to work with.
-                var current = it.Current;
+                var current = FrequencyUtils.RemoveFrequency(it.Current);
 
                 // Check if there are matches left to process or is any possibility of a match to be available in this block.
                 int i = 0;
@@ -289,7 +293,7 @@ namespace Corax.Queries
                     if (it.MoveNext() == false)
                         goto End;
 
-                    current = it.Current;
+                    current = FrequencyUtils.RemoveFrequency(it.Current);
                 }
 
                 End:
@@ -307,7 +311,7 @@ namespace Corax.Queries
             static int AndWithVectorizedFunc(ref TermMatch term, Span<long> buffer, int matches)
             {
                 const int BlockSize = 4096;
-                uint N = (uint) Vector256<long>.Count;
+                uint N = (uint)Vector256<long>.Count;
 
                 Debug.Assert(Vector256<long>.Count == 4);
 
@@ -333,7 +337,10 @@ namespace Corax.Queries
                         if (result == false)
                             break;
 
-                        Debug.Assert(read <= BlockSize);
+                        //Always discard freqs here
+                        FrequencyUtils.RemoveFrequencies(blockMatches.Slice(0, read));
+
+                        Debug.Assert(read < BlockSize);
 
                         if (read == 0)
                             continue;
@@ -443,7 +450,7 @@ namespace Corax.Queries
 
                     return (int)((ulong)dstPtr - (ulong)inputStartPtr) / sizeof(ulong);
                 }
-            }            
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -452,6 +459,7 @@ namespace Corax.Queries
                 var set = term._set;
 
                 set.Fill(matches, out i);
+                FrequencyUtils.RemoveFrequencies(matches.Slice(0, i));
 
                 term._set = set;
                 return i;
@@ -462,21 +470,427 @@ namespace Corax.Queries
                 return new QueryInspectionNode($"{nameof(TermMatch)} [Set]",
                     parameters: new Dictionary<string, string>()
                     {
-                    { nameof(term.IsBoosting), term.IsBoosting.ToString() },
-                    { nameof(term.Count), $"{term.Count} [{term.Confidence}]" }
+                        {nameof(term.IsBoosting), term.IsBoosting.ToString()}, {nameof(term.Count), $"{term.Count} [{term.Confidence}]"}
                     });
             }
 
-            if (!Avx2.IsSupported)
+            if (Avx2.IsSupported == false)
                 useAccelerated = false;
 
             // We will select the AVX version if supported.             
-            return new TermMatch(ctx, postingList.State.NumberOfEntries, &FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(indexSearcher, ctx, postingList.State.NumberOfEntries, &FillFunc,
+                useAccelerated
+                    ? &AndWithVectorizedFunc
+                    : &AndWithFunc,
+                inspectFunc: &InspectFunc) {_indexSearcher = indexSearcher, _set = postingList.Iterate(), _current = long.MinValue};
+        }
+
+        public static TermMatch YieldOnceWithFreq(IndexSearcher indexSearcher, ByteStringContext ctx, long value)
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int FillFunc(ref TermMatch term, Span<long> matches)
             {
-                _set = postingList.Iterate(),
-                _current = long.MinValue
+                if (term._currentIdx == QueryMatch.Start)
+                {
+                    term._currentIdx = term._current;
+                    matches[0] = term._current;
+                    return 1;
+                }
+
+                term._currentIdx = QueryMatch.Invalid;
+                return 0;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int AndWithFunc(ref TermMatch term, Span<long> buffer, int matches)
+            {
+                // TODO: If matches is too big, we should use quicksort
+                long current = term._current;
+                for (int i = 0; i < matches; i++)
+                {
+                    if (buffer[i] == current)
+                    {
+                        buffer[0] = current;
+                        return 1;
+                    }
+                }
+
+                return 0;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static void ScoreFunc(ref TermMatch term, Span<long> matches, Span<float> scores)
+            {
+                Bm25.CalculateRelevance(term._frequencyHolder, Bm25.ComputeIdf(term._indexSearcher, 1), matches, scores);
+            }
+
+            static QueryInspectionNode InspectFunc(ref TermMatch term)
+            {
+                return new QueryInspectionNode($"{nameof(TermMatch)} [Once]",
+                    parameters: new Dictionary<string, string>()
+                    {
+                        {nameof(term.IsBoosting), term.IsBoosting.ToString()}, {nameof(term.Count), $"{term.Count} [{term.Confidence}]"}
+                    });
+            }
+
+            FrequencyHolder frequencyHolder = new(ctx, 1);
+            frequencyHolder.Add(value);
+
+            return new TermMatch(indexSearcher, ctx, 1, &FillFunc, &AndWithFunc, scoreFunc: &ScoreFunc, inspectFunc: &InspectFunc)
+            {
+                _indexSearcher = indexSearcher, _current = frequencyHolder.Matches[0], _currentIdx = QueryMatch.Start, _frequencyHolder = frequencyHolder
             };
         }
+
+        public static TermMatch YieldSmallWithFreq(IndexSearcher indexSearcher, ByteStringContext ctx, Container.Item containerItem)
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int FillFunc(ref TermMatch term, Span<long> matches)
+            {
+                // Fill needs to store resume capability.
+
+                var stream = term._container.ToSpan();
+                if (term._currentIdx == QueryMatch.Invalid)
+                {
+                    term._currentIdx = QueryMatch.Invalid;
+                    return 0;
+                }
+
+                int i = 0;
+                for (; i < matches.Length && term._numOfReturnedItems < term._totalResults; i++)
+                {
+                    term._current += ZigZagEncoding.Decode<long>(stream, out var len, (int)term._currentIdx);
+                    term._currentIdx += len;
+                    matches[i] = term._current;
+                    term._numOfReturnedItems++;
+                }
+
+                //Save the frequencies
+                term._frequencyHolder.Process(matches, i);
+
+                return i;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int AndWithFunc(ref TermMatch term, Span<long> buffer, int matches)
+            {
+                // AndWith has to start from the start.
+                // TODO: Support Seek for the small set in order to have better behavior.
+
+                var stream = term._container.ToSpan();
+
+                // need to seek from start
+                long current = 0;
+                int currentIdx = (int)term._baselineIdx;
+                var itemsScanned = 0L;
+
+                int i = 0;
+                int matchedIdx = 0;
+                long decodedEntryId;
+                while (itemsScanned < term._totalResults && i < matches)
+                {
+                    current += ZigZagEncoding.Decode<long>(stream, out var len, currentIdx);
+                    currentIdx += len;
+                    itemsScanned++;
+                    decodedEntryId = term._frequencyHolder.Add(current);
+
+                    while (buffer[i] < decodedEntryId)
+                    {
+                        i++;
+                        if (i >= matches)
+                        {
+                            //no match, we should discard last item.
+                            term._frequencyHolder.Remove();
+                            goto End;
+                        }
+                    }
+
+                    // If there is a match we advance. 
+                    if (buffer[i] == decodedEntryId)
+                    {
+                        buffer[matchedIdx++] = decodedEntryId;
+                        i++;
+                    }
+                }
+
+                End:
+                return matchedIdx;
+            }
+
+            static void ScoreFunc(ref TermMatch term, Span<long> matches, Span<float> scores)
+            {
+                Bm25.CalculateRelevance(term._frequencyHolder, Bm25.ComputeIdf(term._indexSearcher, term.Count), matches, scores);
+            }
+
+            static QueryInspectionNode InspectFunc(ref TermMatch term)
+            {
+                return new QueryInspectionNode($"{nameof(TermMatch)} [SmallSet]",
+                    parameters: new Dictionary<string, string>()
+                    {
+                        {nameof(term.IsBoosting), term.IsBoosting.ToString()}, {nameof(term.Count), $"{term.Count} [{term.Confidence}]"}
+                    });
+            }
+
+            var itemsCount = ZigZagEncoding.Decode<int>(containerItem.ToSpan(), out var len);
+            return new TermMatch(indexSearcher, ctx, itemsCount, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc, scoreFunc: &ScoreFunc)
+            {
+                _indexSearcher = indexSearcher,
+                _frequencyHolder = new(ctx, itemsCount),
+                _container = containerItem,
+                _currentIdx = len,
+                _baselineIdx = len,
+                _current = 0
+            };
+        }
+        
+        public static TermMatch YieldSetWithFreq(IndexSearcher indexSearcher, ByteStringContext ctx, PostingList postingList, bool useAccelerated = true)
+        {
+            [SkipLocalsInit]
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int AndWithFunc(ref TermMatch term, Span<long> buffer, int matches)
+            {
+                int matchedIdx = 0;
+
+                var it = term._set;
+
+                it.MaybeSeek(buffer[0] - 1);
+                if (it.MoveNext() == false)
+                    goto Fail;
+
+                // We update the current value we want to work with.
+                var current = term._frequencyHolder.Add(it.Current);
+
+                // Check if there are matches left to process or is any posibility of a match to be available in this block.
+                int i = 0;
+                while (i < matches && current <= buffer[matches - 1])
+                {
+                    // While the current match is smaller we advance.
+                    while (buffer[i] < current)
+                    {
+                        i++;
+                        if (i >= matches)
+                            goto End;
+                    }
+
+                    // We are guaranteed that matches[i] is at least equal if not higher than current.
+                    Debug.Assert(buffer[i] >= current);
+
+                    // We have a match, we include it into the matches and go on. 
+                    if (current == buffer[i])
+                    {
+                        buffer[matchedIdx++] = current;
+                        i++;
+                    }
+
+                    // We look into the next.
+                    if (it.MoveNext() == false)
+                        goto End;
+
+                    current = term._frequencyHolder.Add(it.Current);
+                }
+
+                End:
+                term._set = it;
+                term._current = current;
+                return matchedIdx;
+
+                Fail:
+                term._set = it;
+                return 0;
+            }
+
+            [SkipLocalsInit]
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int AndWithVectorizedFunc(ref TermMatch term, Span<long> buffer, int matches)
+            {
+                const int BlockSize = 4096;
+                uint N = (uint)Vector256<long>.Count;
+
+                Debug.Assert(Vector256<long>.Count == 4);
+
+                term._set.MaybeSeek(buffer[0] - 1);
+
+                // PERF: The AND operation can be performed in place, because we end up writing the same value that we already read. 
+                fixed (long* inputStartPtr = buffer)
+                {
+                    long* inputEndPtr = inputStartPtr + matches;
+
+                    // The size of this array is fixed to improve cache locality.
+                    using var _ = term._ctx.Allocate(BlockSize * sizeof(long), out var bufferHolder);
+                    var blockMatches = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan());
+                    Debug.Assert(blockMatches.Length == BlockSize);
+
+                    long* blockStartPtr = (long*)bufferHolder.Ptr;
+
+                    long* inputPtr = inputStartPtr;
+                    long* dstPtr = inputStartPtr;
+                    while (inputPtr < inputEndPtr)
+                    {
+                        var result = term._set.Fill(blockMatches, out int read, pruneGreaterThanOptimization: buffer[matches - 1]);
+                        if (result == false)
+                            break;
+
+                        term._frequencyHolder.Process(blockMatches, read);
+
+                        Debug.Assert(read < BlockSize);
+
+                        if (read == 0)
+                            continue;
+
+                        long* smallerPtr, largerPtr;
+                        long* smallerEndPtr, largerEndPtr;
+
+                        bool applyVectorization;
+
+                        // See: MergeHelper.AndVectorized
+                        // read => leftLength
+                        // matches => rightLength
+                        bool isSmallerInput;
+                        if (read < (inputEndPtr - inputPtr))
+                        {
+                            smallerPtr = blockStartPtr;
+                            smallerEndPtr = blockStartPtr + read;
+                            isSmallerInput = false;
+                            largerPtr = inputPtr;
+                            largerEndPtr = inputEndPtr;
+                            applyVectorization = matches > N && read > 0;
+                        }
+                        else
+                        {
+                            smallerPtr = inputPtr;
+                            smallerEndPtr = inputEndPtr;
+                            isSmallerInput = true;
+                            largerPtr = blockStartPtr;
+                            largerEndPtr = blockStartPtr + read;
+                            applyVectorization = read > N && matches > 0;
+                        }
+
+                        Debug.Assert((ulong)(smallerEndPtr - smallerPtr) <= (ulong)(largerEndPtr - largerPtr));
+
+                        if (applyVectorization)
+                        {
+                            while (true)
+                            {
+                                // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
+                                //       multiple checks at once and find the right amount of skipping using a table. 
+
+                                // If the value to compare is bigger than the biggest element in the block, we advance the block. 
+                                if ((ulong)*smallerPtr > (ulong)*(largerPtr + N - 1))
+                                {
+                                    if (largerPtr + N >= largerEndPtr)
+                                        break;
+
+                                    largerPtr += N;
+                                    continue;
+                                }
+
+                                // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
+                                if ((ulong)*smallerPtr < (ulong)*largerPtr)
+                                {
+                                    smallerPtr++;
+                                    if (smallerPtr >= smallerEndPtr)
+                                        break;
+
+                                    continue;
+                                }
+
+                                Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
+                                Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
+
+                                // We are going to select which direction we are going to be moving forward. 
+                                if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
+                                {
+                                    // We found the value, therefore we need to store this value in the destination.
+                                    *dstPtr = *smallerPtr;
+                                    dstPtr++;
+                                }
+
+                                smallerPtr++;
+                                if (smallerPtr >= smallerEndPtr)
+                                    break;
+                            }
+                        }
+
+                        // The scalar version. This shouldnt cost much either way. 
+                        while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
+                        {
+                            ulong leftValue = (ulong)*smallerPtr;
+                            ulong rightValue = (ulong)*largerPtr;
+
+                            if (leftValue > rightValue)
+                            {
+                                largerPtr++;
+                            }
+                            else if (leftValue < rightValue)
+                            {
+                                smallerPtr++;
+                            }
+                            else
+                            {
+                                *dstPtr = (long)leftValue;
+                                dstPtr++;
+                                smallerPtr++;
+                                largerPtr++;
+                            }
+                        }
+
+                        inputPtr = isSmallerInput ? smallerPtr : largerPtr;
+
+                        Debug.Assert(inputPtr >= dstPtr);
+                        Debug.Assert((isSmallerInput ? largerPtr : smallerPtr) - blockStartPtr <= BlockSize);
+                    }
+
+                    return (int)((ulong)dstPtr - (ulong)inputStartPtr) / sizeof(ulong);
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int FillFunc(ref TermMatch term, Span<long> matches)
+            {
+                int i = 0;
+                var set = term._set;
+
+                set.Fill(matches, out i);
+                term._frequencyHolder.Process(matches, i);
+
+                term._set = set;
+                return i;
+            }
+
+            static QueryInspectionNode InspectFunc(ref TermMatch term)
+            {
+                return new QueryInspectionNode($"{nameof(TermMatch)} [Set]",
+                    parameters: new Dictionary<string, string>()
+                    {
+                        {nameof(term.IsBoosting), term.IsBoosting.ToString()}, {nameof(term.Count), $"{term.Count} [{term.Confidence}]"}
+                    });
+            }
+
+            static void ScoreFunc(ref TermMatch term, Span<long> matches, Span<float> scores)
+            {
+                Bm25.CalculateRelevance(term._frequencyHolder, Bm25.ComputeIdf(term._indexSearcher, term.Count), matches, scores);
+            }
+            
+            if (Avx2.IsSupported == false)
+                useAccelerated = false;
+            
+            // We will select the AVX version if supported.             
+            return new TermMatch(indexSearcher, ctx, postingList.State.NumberOfEntries, &FillFunc,
+                useAccelerated
+                    ? &AndWithVectorizedFunc
+                    : &AndWithFunc,
+                inspectFunc: &InspectFunc,
+                scoreFunc: &ScoreFunc)
+            {
+                _indexSearcher = indexSearcher, 
+                _set = postingList.Iterate(), 
+                _current = long.MinValue,
+                _frequencyHolder = new FrequencyHolder(ctx, (int)set.State.NumberOfEntries),
+                
+            };
+        }
+
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> matches)

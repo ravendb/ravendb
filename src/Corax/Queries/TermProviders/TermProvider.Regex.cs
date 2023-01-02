@@ -38,11 +38,11 @@ public struct RegexTermProvider : ITermProvider
             if (_regex.IsMatch(termSlice.ToString()) == false)
                 continue;
 
-            term = _searcher.TermQuery(_tree, termSlice);
+            term = _searcher.TermQuery(_field, _tree, termSlice);
             return true;
         }
 
-        term = TermMatch.CreateEmpty(_searcher.Allocator);
+        term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
         return false;
     }
 

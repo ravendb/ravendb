@@ -17,4 +17,8 @@
     public struct TermFrequencyScoreFunction : IQueryScoreFunction
     {
     }
+    
+    public struct TfIdfScoreFunction : IQueryScoreFunction
+    {
+    }
 }

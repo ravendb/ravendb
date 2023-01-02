@@ -11,13 +11,15 @@ public readonly struct FieldMetadata
     public readonly int FieldId;
     public readonly FieldIndexingMode Mode;
     public readonly Analyzer Analyzer;
+    public readonly bool CalculateScoring;
 
-    private FieldMetadata(Slice fieldName, int fieldId, FieldIndexingMode mode, Analyzer analyzer)
+    private FieldMetadata(Slice fieldName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool calculateScoring = false)
     {
         FieldName = fieldName;
         FieldId = fieldId;
         Mode = mode;
         Analyzer = analyzer;
+        CalculateScoring = calculateScoring;
     }
 
     public FieldMetadata GetNumericFieldMetadata<T>(ByteStringContext allocator)
@@ -52,6 +54,14 @@ public readonly struct FieldMetadata
     public FieldMetadata ChangeAnalyzer(FieldIndexingMode mode, Analyzer analyzer = null)
     {
         return new FieldMetadata(FieldName, FieldId, mode, analyzer ?? Analyzer);
+    }
+
+    public FieldMetadata ChangeScoringMode(bool scoring)
+    {
+        if (CalculateScoring == scoring) return this;
+        
+        return new FieldMetadata(FieldName, FieldId, Mode, Analyzer, scoring);
+
     }
     
     public override string ToString()

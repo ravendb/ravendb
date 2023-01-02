@@ -52,6 +52,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)
         {
+            
             return _fillFunc(ref this, buffer);
         }
 
@@ -76,19 +77,7 @@ namespace Corax.Queries
             if (innerBoosting == true && outerBoosting == true)
             {
                 _inner.Score(matches, scores);
-
-                using var _ =  _ctx.Allocate(sizeof(float) * scores.Length, out var bufferHolder);
-                var outerScores = MemoryMarshal.Cast<byte, float>(bufferHolder.ToSpan())[..scores.Length];
-
-                outerScores.Fill(1); // We will fill the scores with 1.0
-
-                // We get the score for the outer chain.
-                _outer.Score(matches, outerScores);
-
-                // We multiply the scores from the outer chain with the current scores and return.
-                for(int i = 0; i < scores.Length; i++)
-                    scores[i] *= outerScores[i];
-
+                _outer.Score(matches, scores);
                 return;
             }
 
