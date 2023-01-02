@@ -106,7 +106,35 @@
                 </label>
             </div>
         </div>
-        <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/operations/footerPartial.html'">
+        <div class="modal-footer">
+            <div class="flex-horizontal">
+                <div data-bind="visible: canDelay">
+                    <div class="btn-group dropup">
+                        <button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown"
+                                data-bind="requiredAccess: 'Operator'">
+                            <span>Delay backup</span><span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#" data-bind="click: _.partial(delayBackup, '01:00:00')"><span>1 hour</span></a></li>
+                            <li><a href="#" data-bind="click: _.partial(delayBackup, '03:00:00')"><span>3 hours</span></a></li>
+                            <li><a href="#" data-bind="click: _.partial(delayBackup, '06:00:00')"><span>6 hours</span></a></li>
+                            <li><a href="#" data-bind="click: _.partial(delayBackup, '1.00:00:00')"><span>1 day</span></a></li>
+                            <li><a href="#" data-bind="click: _.partial(delayBackup, '3.00:00:00')"><span>3 days</span></a></li>
+                            <li><a href="#" data-bind="click: _.partial(delayBackup, '7.00:00:00')"><span>7 days</span></a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="flex-separator"></div>
+                <div>
+                    <button type="button" class="btn btn-default" data-bind="click: close" title="Close this dialog">
+                        <i class="icon-cancel"></i><span>Close</span>
+                    </button>
+                    <button type="button" class="btn btn-danger" title="Abort this operation"
+                            data-bind="click: killOperation, visible: killable, css: { 'btn-spinner': spinners.kill }, disable: spinners.kill">
+                        <i class="icon-stop"></i><span>Abort</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
