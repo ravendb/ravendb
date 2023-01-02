@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStudioCollectionsHandlerProcessorForPreviewCollection<DatabaseRequestHandler>
+public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStudioCollectionsHandlerProcessorForPreviewCollection<DatabaseRequestHandler, Document>
 {
     private readonly DocumentDatabase _database;
 
@@ -103,6 +103,9 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
     {
         return ValueTask.FromResult(ExtractColumnNames(_documents, _context));
     }
+
+    protected override void WriteResult(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, PreviewState state) 
+        => WriteDocument(writer, context, document, state);
 
     public override void Dispose()
     {

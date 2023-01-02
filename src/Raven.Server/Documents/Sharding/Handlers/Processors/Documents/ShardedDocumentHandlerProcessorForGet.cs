@@ -142,11 +142,11 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         IAsyncEnumerable<Document> documents;
         if (startsWith != null)
         {
-            documents = RequestHandler.DatabaseContext.Streaming.GetDocumentsAsyncById(streams, token);
+            documents = RequestHandler.DatabaseContext.Streaming.GetDocumentsAsyncById(streams, token).Select(x => x.Item);
         }
         else
         {
-            documents = RequestHandler.DatabaseContext.Streaming.GetDocumentsAsync(streams, token);
+            documents = RequestHandler.DatabaseContext.Streaming.GetDocumentsAsync(streams, token).Select(x => x.Item);
         }
 
         return new DocumentsResult
