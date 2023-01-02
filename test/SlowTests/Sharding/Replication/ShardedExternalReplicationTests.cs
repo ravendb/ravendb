@@ -7,6 +7,7 @@ using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -29,6 +30,10 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Voron;
+using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1714,6 +1719,314 @@ namespace SlowTests.Sharding.Replication
                     var attachmentResult = await session.Advanced.Attachments.GetAsync(id, name);
                     Assert.NotNull(attachmentResult);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationWithRevisionTombstones_NonShardedToSharded()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                await store1.Maintenance.ForDatabase(store1.Database).SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        PurgeOnDelete = true
+                    }
+                }));
+
+                var id1 = "foo/bar/0";
+
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+
+                    s1.SaveChanges();
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+
+                var location = await Sharding.GetShardNumber(store2, id1);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Delete(id1);
+                    s1.SaveChanges();
+                }
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                await CheckData(store2, location);
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationWithRevisionTombstones_NonShardedAndSharded()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                await store1.Maintenance.ForDatabase(store1.Database).SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        PurgeOnDelete = true
+                    }
+                }));
+
+                var id1 = "foo/bar/0";
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    
+                    s1.SaveChanges();
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+
+                var location = await Sharding.GetShardNumber(store2, id1);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Delete(id1);
+                    s1.SaveChanges();
+                }
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                await CheckData(store2, location);
+
+                await EnsureNoReplicationLoop(Server, store1.Database);
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationWithRevisionTombstones_ShardedToSharded()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                await store1.Maintenance.ForDatabase(store1.Database).SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        PurgeOnDelete = true
+                    }
+                }));
+
+                var id1 = "foo/bar/0";
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                        s1.Store(new User(), $"foo/bar/{i}");
+
+                    s1.SaveChanges();
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+
+                var location = await Sharding.GetShardNumber(store2, id1);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Delete(id1);
+                    s1.SaveChanges();
+                }
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                await EnsureReplicatingAsync(store2, store1);
+                await EnsureReplicatingAsync(store2, store1);
+                await EnsureReplicatingAsync(store2, store1);
+
+                await CheckData(store2, location);
+
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
+            }
+        }
+
+        [Fact]
+        public async Task ExternalReplicationWithRevisionTombstonesAndResharding_ShardedToSharded()
+        {
+            using (var store1 = Sharding.GetDocumentStore())
+            using (var store2 = Sharding.GetDocumentStore())
+            {
+                var id1 = "users/1$usa";
+                var id2 = "users/2$usa";
+
+                await InsertData(store1);
+                await InsertData(store2, "isr");
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store2, store1);
+
+                var location = await Sharding.GetShardNumber(store2, id1);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Delete(id1);
+                    s1.SaveChanges();
+                }
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2);
+
+                var databaseRecord = store2.Maintenance.ForDatabase(store2.Database).Server.Send(new GetDatabaseRecordOperation(store2.Database));
+                List<string> shardNames = ShardHelper.GetShardNames(store2.Database, databaseRecord.Sharding.Shards.Keys.AsEnumerable()).ToList();
+
+                shardNames.Remove(ShardHelper.ToShardName(store2.Database, location));
+                foreach (var name in shardNames)
+                {
+                    var db = await GetDocumentDatabaseInstanceFor(store2, name);
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var tombstonesCount = db.DocumentsStorage.GetNumberOfTombstones(context);
+                        Assert.Equal(4, tombstonesCount);
+                    }
+                }
+                
+                await Sharding.Resharding.MoveShardForId(store2, id2);
+
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Delete(id2);
+                    s2.SaveChanges();
+                }
+
+                await EnsureReplicatingAsync(store2, store1);
+                await EnsureReplicatingAsync(store2, store1);
+                await EnsureReplicatingAsync(store2, store1);
+
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
+                await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
+            }
+        }
+
+        private static async Task InsertData(IDocumentStore store, string suffix = "usa")
+        {
+            var id1 = $"users/1${suffix}";
+            var id2 = $"users/2${suffix}";
+            var id3 = $"users/3${suffix}";
+            var id4 = $"users/4${suffix}";
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        PurgeOnDelete = true
+                    }
+                }));
+
+                //Docs
+                await session.StoreAsync(new Raven.Tests.Core.Utils.Entities.User { Name = "Name1", LastName = "LastName1", Age = 5 }, id1);
+                await session.StoreAsync(new Raven.Tests.Core.Utils.Entities.User { Name = "Name2", LastName = "LastName2", Age = 78 }, id2);
+                await session.StoreAsync(new Raven.Tests.Core.Utils.Entities.User { Name = "Name3", LastName = "LastName3", Age = 4 }, id3);
+                await session.StoreAsync(new Raven.Tests.Core.Utils.Entities.User { Name = "Name4", LastName = "LastName4", Age = 15 }, id4);
+
+                //Time series
+                session.TimeSeriesFor(id1, "Heartrate")
+                    .Append(DateTime.Now, 59d, "watches/fitbit");
+                session.TimeSeriesFor(id2, "Heartrate")
+                    .Append(DateTime.Now.AddHours(6), 59d, "watches/fitbit");
+
+                //counters
+                session.CountersFor(id3).Increment("Downloads", 100);
+
+                //Attachments
+                var names = new[]
+                {
+                    "background-photo.jpg",
+                    "fileNAME_#$1^%_בעברית.txt",
+                    "profile.png"
+                };
+
+                await using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                await using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                {
+                    session.Advanced.Attachments.Store(id1, names[0], backgroundStream, "ImGgE/jPeG");
+                    session.Advanced.Attachments.Store(id2, names[1], fileStream);
+                    session.Advanced.Attachments.Store(id3, names[2], profileStream, "image/png");
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            // revision
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = await session.LoadAsync<Raven.Tests.Core.Utils.Entities.User>(id1);
+                user.Age = 10;
+                await session.SaveChangesAsync();
+            }
+        }
+
+        private async Task CheckData(DocumentStore store, int location)
+        {
+            var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, location));
+            var storage = db.DocumentsStorage;
+            using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var tombs = storage.GetTombstonesFrom(context, 0).ToList();
+                Assert.Equal(2, tombs.Count);
+
+                int revisionTombsCount = 0, documentTombsCount = 0;
+                foreach (var item in tombs)
+                {
+                    if (item is RevisionTombstoneReplicationItem)
+                        revisionTombsCount++;
+                    else if (item is DocumentReplicationItem)
+                        documentTombsCount++;
+                }
+
+                Assert.Equal(1, revisionTombsCount);
+                Assert.Equal(1, documentTombsCount);
             }
         }
     }

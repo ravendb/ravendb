@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Config;
@@ -185,6 +184,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             foreach (var item in dataForReplicationCommand.ReplicatedItems)
             {
+                if (item is RevisionTombstoneReplicationItem revisionTombstoneItem)
+                {
+                    foreach (var batch in batches.Values)
+                        batch.Items.Add(revisionTombstoneItem);
+
+                    continue;
+                }
+
                 int shardNumber = GetShardNumberForReplicationItem(context, item);
                 batches[shardNumber].Items.Add(item);
                 if (item is AttachmentReplicationItem attachmentReplicationItem && attachmentReplicationItem.Stream == null)
@@ -253,9 +260,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 case TimeSeriesDeletedRangeItem:
                 case TimeSeriesReplicationItem:
                     return _parent.Context.GetShardNumberFor(context, _documentInfoHelper.GetDocumentId(item));
-                case RevisionTombstoneReplicationItem:
-                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle this (document Id does not exist)");
-                    throw new NotSupportedInShardingException("TODO: implement for sharding"); // revision tombstones doesn't contain any info about the doc. The id here is the change-vector of the deleted revision
                 default:
                     throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}");
             }
