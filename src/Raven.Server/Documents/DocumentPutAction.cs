@@ -757,6 +757,9 @@ namespace Raven.Server.Documents
         public static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, Slice id)
         {
             var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            if (tombstoneTable.NumberOfEntries == 0)
+                return;
+
             foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(id, Slices.Empty, 0))
             {
                 if (IsTombstoneOfId(tombstoneKey, id) == false)
