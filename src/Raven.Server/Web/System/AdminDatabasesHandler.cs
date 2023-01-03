@@ -408,7 +408,7 @@ namespace Raven.Server.Web.System
             {
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, 
                     "remove this and introduce a dedicated command for updating Sharding.Prefixed");
-                await ShardedDatabaseContext.UpdatePrefixedShardingIfNeeded(ServerStore, context, databaseRecord, clusterTopology);
+                await ServerStore.UpdatePrefixedShardingIfNeeded(ServerStore, context, databaseRecord, clusterTopology);
             }
 
             var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);

@@ -48,7 +48,6 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
@@ -97,7 +96,7 @@ namespace Raven.Server.ServerWide
     /// <summary>
     /// Persistent store for server-wide configuration, such as cluster settings, database configuration, etc
     /// </summary>
-    public class ServerStore : IDisposable, ILowMemoryHandler
+    public partial class ServerStore : IDisposable, ILowMemoryHandler
     {
         private const string ResourceName = nameof(ServerStore);
 
@@ -880,7 +879,7 @@ namespace Raven.Server.ServerWide
                     }
                     else
                     {
-                        ShardedDatabaseContext.FillShardingConfiguration(this, addDatabase, clusterTopology);
+                        FillShardingConfiguration(this, addDatabase, clusterTopology);
                     }
                     break;
             }
