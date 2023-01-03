@@ -76,6 +76,8 @@ namespace Raven.Server.Documents
 
         private readonly object _clusterLocker = new object();
 
+        public Action<string> AddToInitLog => _addToInitLog;
+
         /// <summary>
         /// The current lock, used to make sure indexes have a unique names
         /// </summary>

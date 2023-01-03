@@ -83,6 +83,7 @@ namespace Raven.Server.Documents
             internal Action<(DocumentDatabase Database, string caller)> AfterDatabaseCreation;
             internal Action<CancellationToken> DelayIncomingReplication;
             internal int? HoldDocumentDatabaseCreation = null;
+            internal Action AfterDatabaseInitialize;
             internal bool PreventedRehabOfIdleDatabase = false;
             internal ManualResetEvent DeleteDatabaseWhileItBeingDeleted = null;
             internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
@@ -801,6 +802,8 @@ namespace Raven.Server.Documents
                 ForTestingPurposes?.OnBeforeDocumentDatabaseInitialization?.Invoke(documentDatabase);
 
                 documentDatabase.Initialize(InitializeOptions.None, wakeup);
+
+                ForTestingPurposes?.AfterDatabaseInitialize?.Invoke();
 
                 AddToInitLog("Finish database initialization");
                 DeleteDatabaseCachedInfo(documentDatabase.Name, throwOnError: false);
