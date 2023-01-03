@@ -11,10 +11,6 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
-using static Raven.Server.Documents.AttachmentsStorage;
-using static Raven.Server.Documents.ConflictsStorage;
-using static Raven.Server.Documents.CountersStorage;
-using static Raven.Server.Documents.Revisions.RevisionsStorage;
 using static Raven.Server.Documents.Schemas.Attachments;
 using static Raven.Server.Documents.Schemas.Conflicts;
 using static Raven.Server.Documents.Schemas.Counters;
@@ -23,7 +19,6 @@ using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
 using static Raven.Server.Documents.Schemas.Revisions;
 using static Raven.Server.Documents.Schemas.TimeSeries;
-using static Raven.Server.Documents.TimeSeries.TimeSeriesStorage;
 
 namespace Raven.Server.Documents.Sharding;
 
@@ -61,6 +56,8 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         DocsSchema = Schemas.Documents.ShardingDocsSchemaBase;
         TombstonesSchema = Schemas.Tombstones.ShardingTombstonesSchema;
         CompressedDocsSchema = Schemas.Documents.ShardingCompressedDocsSchemaBase;
+
+        AttachmentsSchema = Schemas.Attachments.ShardingAttachmentsSchemaBase;
     }
 
     public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
