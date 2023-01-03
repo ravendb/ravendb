@@ -923,16 +923,9 @@ namespace Raven.Server.Smuggler.Documents
                             }
                             else
                             {
-                                var sb = new StringBuilder();
-                                sb.Append("Conflict solver configuration of collection '");
-                                sb.Append(collection.Key);
-                                sb.Append("' already exist on the destination Database Record. Configuring this conflict solver from smuggler was skipped, ");
-                                sb.Append(collectionConfiguration.Equals(collection.Value)
-                                    ? "but the configuration was the same as "
-                                    : "even though the configuration differed from ");
-                                sb.Append("the configuration in the target database record");
-
-                                result.AddWarning(sb.ToString());
+                                if (collectionConfiguration.Equals(collection.Value) == false)
+                                    result.AddWarning($"Conflict solver configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
+                                                  "Configuring this conflict solver from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
                             }
                         }
                     }
@@ -1122,16 +1115,9 @@ namespace Raven.Server.Smuggler.Documents
                             }
                             else
                             {
-                                var sb = new StringBuilder();
-                                sb.Append("Time-series configuration of collection '");
-                                sb.Append(collection.Key);
-                                sb.Append("' already exist on the destination Database Record. Configuring this time-series from smuggler was skipped, ");
-                                sb.Append(collectionConfiguration.Equals(collection.Value)
-                                    ? "but the configuration was the same as "
-                                    : "even though the configuration differed from ");
-                                sb.Append("the configuration in the target database record");
-
-                                result.AddWarning(sb.ToString());
+                                if (collectionConfiguration.Equals(collection.Value) == false)
+                                    result.AddWarning($"Time-series configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
+                                                      "Configuring this time-series from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
                             }
                         }
                     }
@@ -1183,16 +1169,9 @@ namespace Raven.Server.Smuggler.Documents
                             }
                             else
                             {
-                                var sb = new StringBuilder();
-                                sb.Append("Revisions configuration of collection '");
-                                sb.Append(collection.Key);
-                                sb.Append("' already exist on the destination Database Record. Configuring this revisions from smuggler was skipped, ");
-                                sb.Append(collectionConfiguration.Equals(collection.Value)
-                                    ? "but the configuration was the same as "
-                                    : "even though the configuration differed from ");
-                                sb.Append("the configuration in the target database record");
-
-                                result.AddWarning(sb.ToString());
+                                if (collectionConfiguration.Equals(collection.Value) == false)
+                                    result.AddWarning($"Revisions configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
+                                                      "Configuring this revisions from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
                             }
                         }
                     }
