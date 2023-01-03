@@ -428,7 +428,7 @@ namespace Raven.Client.Documents.Subscriptions
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
                     bool closedWhenNoDocsLeft = false;
                     bool canReconnect = false;
-                    connectionStatus.Data?.TryGet(nameof(SubscriptionClosedException.ClosedDueNoDocsLeft), out closedWhenNoDocsLeft);
+                    connectionStatus.Data?.TryGet(nameof(SubscriptionClosedException.NoDocsLeft), out closedWhenNoDocsLeft);
                     connectionStatus.Data?.TryGet(nameof(SubscriptionClosedException.CanReconnect), out canReconnect);
                     throw new SubscriptionClosedException($"Subscription With Id '{_options.SubscriptionName}' was closed.  " + connectionStatus.Exception, canReconnect, closedWhenNoDocsLeft);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Invalid:

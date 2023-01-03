@@ -611,7 +611,7 @@ namespace Raven.Server.Documents.Subscriptions
                 }
 
                 throw new SubscriptionClosedException(
-                    $"Closing subscription {Options.SubscriptionName} because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode", canReconnect: false, closedDueNoDocsLeft: true);
+                    $"Closing subscription {Options.SubscriptionName} because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode", canReconnect: false, noDocsLeft: true);
             }
         }
 
@@ -653,7 +653,7 @@ namespace Raven.Server.Documents.Subscriptions
                             [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                             {
                                 [nameof(SubscriptionClosedException.CanReconnect)] = sce.CanReconnect,
-                                [nameof(SubscriptionClosedException.ClosedDueNoDocsLeft)] = sce.ClosedDueNoDocsLeft
+                                [nameof(SubscriptionClosedException.NoDocsLeft)] = sce.NoDocsLeft
                             }
                         });
                         break;
