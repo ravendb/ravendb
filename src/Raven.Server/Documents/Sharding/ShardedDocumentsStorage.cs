@@ -59,6 +59,13 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
         AttachmentsSchema = Schemas.Attachments.ShardingAttachmentsSchemaBase;
         ConflictsSchema = Schemas.Conflicts.ShardingConflictsSchemaBase;
+        CountersSchema = Schemas.Counters.ShardingCountersSchemaBase;
+
+        TimeSeriesSchema = Schemas.TimeSeries.ShardingTimeSeriesSchemaBase;
+        TimeSeriesDeleteRangesSchema = Schemas.DeletedRanges.ShardingDeleteRangesSchemaBase;
+
+        RevisionsSchema = Schemas.Revisions.ShardingRevisionsSchemaBase;
+        CompressedRevisionsSchema = Schemas.Revisions.ShardingCompressedRevisionsSchemaBase;
     }
 
     public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)

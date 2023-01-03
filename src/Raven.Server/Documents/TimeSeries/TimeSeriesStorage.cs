@@ -7,12 +7,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -47,20 +47,16 @@ namespace Raven.Server.Documents.TimeSeries
         private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
-        public TimeSeriesStorage(DocumentDatabase documentDatabase, Transaction tx)
+        public TimeSeriesStorage([NotNull] DocumentDatabase documentDatabase, [NotNull] Transaction tx, [NotNull] TableSchema timeSeriesSchema, [NotNull] TableSchema deleteRangesSchema)
         {
-            _documentDatabase = documentDatabase;
-            if (_documentDatabase is ShardedDocumentDatabase)
-            {
-                TimeSeriesSchema = Schemas.TimeSeries.ShardingTimeSeriesSchemaBase;
-                DeleteRangesSchema = Schemas.DeletedRanges.ShardingDeleteRangesSchemaBase;
-            }
-            else
-            {
-                TimeSeriesSchema = Schemas.TimeSeries.TimeSeriesSchemaBase;
-                DeleteRangesSchema = Schemas.DeletedRanges.DeleteRangesSchemaBase;
-            }
+            if (tx == null)
+                throw new ArgumentNullException(nameof(tx));
+
+            _documentDatabase = documentDatabase ?? throw new ArgumentNullException(nameof(documentDatabase));
             _documentsStorage = documentDatabase.DocumentsStorage;
+
+            TimeSeriesSchema = timeSeriesSchema ?? throw new ArgumentNullException(nameof(timeSeriesSchema));
+            DeleteRangesSchema = deleteRangesSchema ?? throw new ArgumentNullException(nameof(deleteRangesSchema));
 
             tx.CreateTree(TimeSeriesKeysSlice);
             tx.CreateTree(DeletedRangesKey);
@@ -2511,7 +2507,7 @@ namespace Raven.Server.Documents.TimeSeries
             var newEtag = _documentsStorage.GenerateNextEtag();
             var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
             databaseChangeVector = databaseChangeVector.UpdateOrder(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, newEtag, context);
-            
+
             if (fromReplicationChangeVector != null)
             {
                 databaseChangeVector = databaseChangeVector.MergeWith(fromReplicationChangeVector, context);

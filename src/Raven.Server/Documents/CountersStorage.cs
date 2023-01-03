@@ -4,12 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -93,19 +93,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        public CountersStorage(DocumentDatabase documentDatabase, Transaction tx)
+        public CountersStorage([NotNull] DocumentDatabase documentDatabase, [NotNull] Transaction tx, [NotNull] TableSchema schema)
         {
-            _documentDatabase = documentDatabase;
-            if (_documentDatabase is ShardedDocumentDatabase)
-            {
-                CountersSchema = Schemas.Counters.ShardingCountersSchemaBase;
-            }
-            else
-            {
-                CountersSchema = Schemas.Counters.CountersSchemaBase;
-            }
+            if (tx == null)
+                throw new ArgumentNullException(nameof(tx));
 
+            _documentDatabase = documentDatabase ?? throw new ArgumentNullException(nameof(documentDatabase));
             _documentsStorage = documentDatabase.DocumentsStorage;
+
+            CountersSchema = schema ?? throw new ArgumentNullException(nameof(schema));
 
             tx.CreateTree(CounterKeysSlice);
 

@@ -48,8 +48,12 @@ namespace Raven.Server.Documents
         public TableSchema TombstonesSchema;
 
         protected TableSchema AttachmentsSchema;
-
         protected TableSchema ConflictsSchema;
+        public TableSchema CountersSchema;
+        protected TableSchema TimeSeriesSchema;
+        protected TableSchema TimeSeriesDeleteRangesSchema;
+        public TableSchema RevisionsSchema;
+        public TableSchema CompressedRevisionsSchema;
 
         public static readonly TableSchema CollectionsSchema = Schemas.Collections.Current;
         public readonly DocumentDatabase DocumentDatabase;
@@ -116,6 +120,13 @@ namespace Raven.Server.Documents
 
             AttachmentsSchema = Schemas.Attachments.AttachmentsSchemaBase;
             ConflictsSchema = Schemas.Conflicts.ConflictsSchemaBase;
+            CountersSchema = Schemas.Counters.CountersSchemaBase;
+
+            TimeSeriesSchema = Schemas.TimeSeries.TimeSeriesSchemaBase;
+            TimeSeriesDeleteRangesSchema = Schemas.DeletedRanges.DeleteRangesSchemaBase;
+
+            RevisionsSchema = Schemas.Revisions.RevisionsSchemaBase;
+            CompressedRevisionsSchema = Schemas.Revisions.CompressedRevisionsSchemaBase;
         }
 
         public void Dispose()
@@ -241,12 +252,12 @@ namespace Raven.Server.Documents
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
-                    RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx);
+                    RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx, RevisionsSchema, CompressedRevisionsSchema);
                     ExpirationStorage = new ExpirationStorage(DocumentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx, ConflictsSchema);
                     AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx, AttachmentsSchema);
-                    CountersStorage = new CountersStorage(DocumentDatabase, tx);
-                    TimeSeriesStorage = new TimeSeriesStorage(DocumentDatabase, tx);
+                    CountersStorage = new CountersStorage(DocumentDatabase, tx, CountersSchema);
+                    TimeSeriesStorage = new TimeSeriesStorage(DocumentDatabase, tx, TimeSeriesSchema, TimeSeriesDeleteRangesSchema);
 
                     DocumentPut = CreateDocumentPutAction();
 

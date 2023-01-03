@@ -24,7 +24,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             // So we say that if the revision is deleted it will be stored with the 'DeletedEtag' to the etag value, 
             // otherwise (if the revision is a document) it will be stored with 'DeletedEtag' set to 0.
 
-            step.DocumentsStorage.RevisionsStorage = new RevisionsStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);
+            step.DocumentsStorage.RevisionsStorage = new RevisionsStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx, step.DocumentsStorage.RevisionsSchema, step.DocumentsStorage.CompressedRevisionsSchema);
 
             using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
