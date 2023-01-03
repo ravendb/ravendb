@@ -228,10 +228,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
             
             Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
             
-            await ActionWithLeader(l =>
-            {
-                l.ServerStore.RemoveFromClusterAsync(responsibleNodeNodeTag);
-            });
+            await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(responsibleNodeNodeTag));
             
             var waitForPassive = mentorNode.ServerStore.Engine.WaitForState(RachisState.Passive,CancellationToken.None);
             Assert.True(waitForPassive.Wait(TimeSpan.FromSeconds(10_000)));
