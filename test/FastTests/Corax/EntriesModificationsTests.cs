@@ -3,11 +3,16 @@ using Corax;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Corax;
 
-public class EntriesModificationsTests
+public class EntriesModificationsTests : NoDisposalNeeded
 {
+    public EntriesModificationsTests(ITestOutputHelper output) : base(output)
+    {
+    }
+
     [Fact]
     public void EntriesModificationsWillEraseOddDuplicates()
     {
