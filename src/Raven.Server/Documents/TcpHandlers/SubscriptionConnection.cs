@@ -409,7 +409,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             var errorMessage = $"Failed to process subscription {SubscriptionId} / from client {TcpConnection.TcpClient.Client.RemoteEndPoint}";
             AddToStatusDescription($"{errorMessage}. Sending response to client");
-            if (_logger.IsInfoEnabled)
+            if (_logger.IsInfoEnabled && e is not OperationCanceledException)
             {
                 _logger.Info(errorMessage, e);
             }
@@ -583,13 +583,15 @@ namespace Raven.Server.Documents.TcpHandlers
                         await ReportExceptionToClient(server, connection, commandExecution.InnerException, recursionDepth - 1);
                         break;
                     default:
-                        connection.AddToStatusDescription("Subscription error");
-
-                        if (connection._logger.IsInfoEnabled)
+                        if (ex is not OperationCanceledException)
                         {
-                            connection._logger.Info("Subscription error", ex);
-                        }
+                            connection.AddToStatusDescription("Subscription error");
 
+                            if (connection._logger.IsInfoEnabled)
+                            {
+                                connection._logger.Info("Subscription error", ex);
+                            }
+                        }
                         await connection.WriteJsonAsync(new DynamicJsonValue
                         {
                             [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Error),
@@ -1114,7 +1116,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 var resultingTask = await Task
                     .WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs))).ConfigureAwait(false);
-              
+
                 TcpConnection.DocumentDatabase.ForTestingPurposes?.Subscription_ActionToCallDuringWaitForChangedDocuments?.Invoke();
 
                 if (CancellationTokenSource.IsCancellationRequested)
