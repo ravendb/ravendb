@@ -60,6 +60,7 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
+using Raven.Server.Web.Studio.Processors;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
@@ -281,6 +282,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, NotificationCenterDatabaseStats> NotificationCenterDatabaseStats = GenerateJsonDeserializationRoutine<NotificationCenterDatabaseStats>();
 
         internal static readonly Func<BlittableJsonReaderObject, DatabasesInfo> DatabasesInfo = GenerateJsonDeserializationRoutine<DatabasesInfo>();
+
+        internal static readonly Func<BlittableJsonReaderObject, BucketsResults> BucketsResults = GenerateJsonDeserializationRoutine<BucketsResults>();
 
         public class Parameters
         {
