@@ -418,7 +418,7 @@ namespace Raven.Server.ServerWide.Maintenance
             var databaseName = rawRecord.DatabaseName;
             var sharding = rawRecord.Sharding;
             var currentMigration = sharding.BucketMigrations.SingleOrDefault(pair => pair.Value.Status < MigrationStatus.OwnershipTransferred).Value;
-            if (currentMigration?.LastSourceChangeVector == null)
+            if (currentMigration == null)
                 return;
 
             var destination = ShardHelper.ToShardName(databaseName, currentMigration.DestinationShard);

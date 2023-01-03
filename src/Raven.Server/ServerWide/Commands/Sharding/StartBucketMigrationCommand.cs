@@ -3,6 +3,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
@@ -38,13 +39,20 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 foreach (var migration in record.Sharding.BucketMigrations)
                 {
                     if (migration.Value.Status < MigrationStatus.OwnershipTransferred)
-                        throw new InvalidOperationException(
+                        throw new RachisApplyException(
                             $"Only one bucket can be transferred at a time, currently bucket {migration.Key} is {migration.Value.Status}");
 
                     if (migration.Key == Bucket)
-                        throw new InvalidOperationException($"Can't migrate bucket {Bucket}, since it is still migrating.");
+                        throw new RachisApplyException($"Can't migrate bucket {Bucket}, since it is still migrating.");
                 }
             }
+
+            var sourceShard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, Bucket);
+            if (sourceShard != SourceShard)
+                throw new RachisApplyException($"Bucket {Bucket} expected to be on shard {SourceShard}, but is actually on shard {sourceShard}");
+
+            if (record.Sharding.Shards.ContainsKey(DestinationShard) == false)
+                throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
 
             _migration = new ShardBucketMigration
             {
