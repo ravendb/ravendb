@@ -200,7 +200,7 @@ namespace Voron.Data.Tables
         {
             public override TreeIndexType Type => TreeIndexType.DynamicKeyValues;
 
-            public delegate ByteStringContext.Scope IndexEntryKeyGenerator(ByteStringContext context, ref TableValueReader value, out Slice slice);
+            public delegate ByteStringContext.Scope IndexEntryKeyGenerator(Transaction tx, ref TableValueReader value, out Slice slice);
 
             public delegate void OnIndexEntryChangedDelegate(Transaction tx, Slice key, long oldSize, long newSize);
 
@@ -208,22 +208,22 @@ namespace Voron.Data.Tables
 
             public IndexEntryKeyGenerator GenerateKey;
 
-            public ByteStringContext.Scope GetValue(ByteStringContext context, ref TableValueReader value,
+            public ByteStringContext.Scope GetValue(Transaction tx, ref TableValueReader value,
                 out Slice slice)
             {
-                return GenerateKey(context, ref value, out slice);
+                return GenerateKey(tx, ref value, out slice);
             }
 
-            public ByteStringContext.Scope GetValue(ByteStringContext context, TableValueBuilder value,
+            public ByteStringContext.Scope GetValue(Transaction tx, TableValueBuilder value,
                 out Slice slice)
             {
-                using (context.Allocate(value.Size, out var buffer))
+                using (tx.Allocator.Allocate(value.Size, out var buffer))
                 {
                     // todo RavenDB-18105 : try to optimize this - avoid creating a copy of the value here
 
                     value.CopyTo(buffer.Ptr);
                     var reader = value.CreateReader(buffer.Ptr);
-                    return GenerateKey(context, ref reader, out slice);
+                    return GenerateKey(tx, ref reader, out slice);
                 }
             }
 

@@ -5,6 +5,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Counters;
 
 namespace Raven.Server.Documents
@@ -22,9 +23,9 @@ namespace Raven.Server.Documents
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounters(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounters(Transaction tx, ref TableValueReader tvr, out Slice slice)
         {
-            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, (int)CountersTable.CounterKey, (int)CountersTable.Etag, ref tvr, out slice);
+            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)CountersTable.CounterKey, (int)CountersTable.Etag, ref tvr, out slice);
         }
     }
 }

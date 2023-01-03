@@ -4,6 +4,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Revisions;
 
 namespace Raven.Server.Documents.Revisions
@@ -21,9 +22,9 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForRevisions(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForRevisions(Transaction tx, ref TableValueReader tvr, out Slice slice)
         {
-            return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(context, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, ref tvr, out slice);
+            return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(tx, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, ref tvr, out slice);
         }
     }
 }

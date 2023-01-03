@@ -4,6 +4,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Conflicts;
 
 namespace Raven.Server.Documents
@@ -21,9 +22,9 @@ namespace Raven.Server.Documents
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForConflicts(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForConflicts(Transaction tx, ref TableValueReader tvr, out Slice slice)
         {
-            return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(context, idIndex: (int)ConflictsTable.LowerId, etagIndex: (int)ConflictsTable.Etag, ref tvr, out slice);
+            return ShardedDocumentsStorage.GenerateBucketAndEtagIndexKey(tx, idIndex: (int)ConflictsTable.LowerId, etagIndex: (int)ConflictsTable.Etag, ref tvr, out slice);
         }
     }
 }

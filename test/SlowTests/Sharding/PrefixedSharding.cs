@@ -20,7 +20,7 @@ public class PrefixedSharding : RavenTestBase
     [Fact]
     public async Task CanShardByDocumentsPrefix()
     {
-        const int prefixedRangeStart = 1024 * 1024;
+        const int prefixedRangeStart = ShardHelper.NumberOfBuckets;
 
         using var store = Sharding.GetDocumentStore(new Options
         {
