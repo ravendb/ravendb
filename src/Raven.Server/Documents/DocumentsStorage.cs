@@ -17,7 +17,6 @@ using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -36,7 +35,6 @@ using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl;
-using static Raven.Server.Documents.Schemas.Attachments;
 using static Raven.Server.Documents.Schemas.Collections;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
@@ -48,6 +46,9 @@ namespace Raven.Server.Documents
         public TableSchema DocsSchema;
         public TableSchema CompressedDocsSchema;
         public TableSchema TombstonesSchema;
+
+        protected TableSchema AttachmentsSchema;
+
         public static readonly TableSchema CollectionsSchema = Schemas.Collections.Current;
         public readonly DocumentDatabase DocumentDatabase;
         public DocumentsContextPool ContextPool;
@@ -110,6 +111,8 @@ namespace Raven.Server.Documents
             DocsSchema = Schemas.Documents.DocsSchemaBase;
             TombstonesSchema = Schemas.Tombstones.TombstonesSchemaBase;
             CompressedDocsSchema = Schemas.Documents.CompressedDocsSchemaBase;
+
+            AttachmentsSchema = Schemas.Attachments.AttachmentsSchemaBase;
         }
 
         public void Dispose()
@@ -238,7 +241,7 @@ namespace Raven.Server.Documents
                     RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx);
                     ExpirationStorage = new ExpirationStorage(DocumentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx);
-                    AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx);
+                    AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx, AttachmentsSchema);
                     CountersStorage = new CountersStorage(DocumentDatabase, tx);
                     TimeSeriesStorage = new TimeSeriesStorage(DocumentDatabase, tx);
 

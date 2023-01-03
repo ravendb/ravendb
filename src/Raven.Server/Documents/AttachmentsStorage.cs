@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Threading;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
@@ -11,7 +11,6 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Schemas;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -38,18 +37,15 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
 
-        public AttachmentsStorage(DocumentDatabase documentDatabase, Transaction tx)
+        public AttachmentsStorage([NotNull] DocumentDatabase database, [NotNull] Transaction tx, [NotNull] TableSchema schema)
         {
-            _documentDatabase = documentDatabase;
-            if (_documentDatabase is ShardedDocumentDatabase)
-            {
-                AttachmentsSchema = Schemas.Attachments.ShardingAttachmentsSchemaBase;
-            }
-            else
-            {
-                AttachmentsSchema = Schemas.Attachments.AttachmentsSchemaBase;
-            }
-            _documentsStorage = documentDatabase.DocumentsStorage;
+            if (tx == null)
+                throw new ArgumentNullException(nameof(tx));
+
+            _documentDatabase = database ?? throw new ArgumentNullException(nameof(database));
+            _documentsStorage = database.DocumentsStorage;
+
+            AttachmentsSchema = schema ?? throw new ArgumentNullException(nameof(schema));
 
             tx.CreateTree(AttachmentsSlice);
             AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 44);
@@ -70,14 +66,6 @@ namespace Raven.Server.Documents
             }
 
             return 0;
-        }
-
-        public void AssertFixedSizeTrees(Transaction tx)
-        {
-            tx.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice).AssertValidFixedSizeTrees();
-
-            _documentDatabase.DocumentsStorage.TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
-            tx.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice).AssertValidFixedSizeTrees();
         }
 
         public IEnumerable<ReplicationBatchItem> GetAttachmentsFrom(DocumentsOperationContext context, long etag)
@@ -1228,7 +1216,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, 
+        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash,
             string changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
         {
             CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, flags);
@@ -1244,7 +1232,7 @@ namespace Raven.Server.Documents
             table.DeleteByKey(keySlice);
         }
 
-        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag, 
+        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag,
             string changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
@@ -1270,7 +1258,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice, string changeVector, 
+        private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice, string changeVector,
             long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
@@ -1296,7 +1284,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector, 
+        public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector,
             long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
         {
             using (GetAttachmentPrefix(context, lowerId.Content.Ptr, lowerId.Size, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
