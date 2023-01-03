@@ -1,8 +1,9 @@
 ﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding;
 
-public class BucketStats
+public class BucketStats : IDynamicJson
 {
     public int Bucket;
 
@@ -11,4 +12,15 @@ public class BucketStats
     public long NumberOfDocuments;
 
     public DateTime LastModified;
+
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue()
+        {
+            [nameof(Bucket)] = Bucket,
+            [nameof(Size)] = Size,
+            [nameof(NumberOfDocuments)] = NumberOfDocuments,
+            [nameof(LastModified)] = LastModified,
+        };
+    }
 }
