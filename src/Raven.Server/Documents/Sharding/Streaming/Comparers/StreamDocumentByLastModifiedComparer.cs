@@ -8,6 +8,6 @@ public class StreamDocumentByLastModifiedComparer : Comparer<ShardStreamItem<Doc
         
     public override int Compare(ShardStreamItem<Document> x, ShardStreamItem<Document> y)
     {
-        return DocumentByLastModifiedComparer.Instance.Compare(x.Item, y.Item);
+        return DocumentByLastModifiedDescComparer.Instance.Compare(x.Item, y.Item);
     }
 }

@@ -262,6 +262,15 @@ namespace Raven.Server.Documents.Sharding
             public IAsyncEnumerable<ShardStreamItem<Document>> GetDocumentsAsyncById(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation, string resultPropertyName = "Results") => 
                 PagedShardedDocumentsById(documents, resultPropertyName, pagingContinuation);
 
+            
+            public static async IAsyncEnumerable<Document> UnwrapDocuments(IAsyncEnumerable<ShardStreamItem<Document>> docs)
+            {
+                await foreach (var doc in docs)
+                {
+                    yield return doc.Item;
+                }
+            }
+
             public IEnumerable<T> PagedShardedItem<T, TInput>(
                 Dictionary<int, ShardExecutionResult<TInput>> results,
                 Func<TInput, IEnumerable<T>> selector,
