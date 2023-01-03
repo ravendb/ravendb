@@ -145,12 +145,12 @@ namespace Raven.Server.Dashboard
                         var trafficWatchItem = new TrafficWatchItem
                         {
                             Database = database.Name,
-                            RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.GetRate(rate),
+                            RequestsPerSecond = (int)Math.Ceiling(database.Metrics.Requests.RequestsPerSec.GetRate(rate)),
                             AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
-                            DocumentWritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.GetRate(rate),
-                            AttachmentWritesPerSecond = (int)database.Metrics.Attachments.PutsPerSec.GetRate(rate),
-                            CounterWritesPerSecond = (int)database.Metrics.Counters.PutsPerSec.GetRate(rate),
-                            TimeSeriesWritesPerSecond = (int)database.Metrics.TimeSeries.PutsPerSec.GetRate(rate),
+                            DocumentWritesPerSecond = (int)Math.Ceiling(database.Metrics.Docs.PutsPerSec.GetRate(rate)),
+                            AttachmentWritesPerSecond = (int)Math.Ceiling(database.Metrics.Attachments.PutsPerSec.GetRate(rate)),
+                            CounterWritesPerSecond = (int)Math.Ceiling(database.Metrics.Counters.PutsPerSec.GetRate(rate)),
+                            TimeSeriesWritesPerSecond = (int)Math.Ceiling(database.Metrics.TimeSeries.PutsPerSec.GetRate(rate)),
                             DocumentsWriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.GetRate(rate),
                             AttachmentsWriteBytesPerSecond = database.Metrics.Attachments.BytesPutsPerSec.GetRate(rate),
                             CountersWriteBytesPerSecond = database.Metrics.Counters.BytesPutsPerSec.GetRate(rate),
