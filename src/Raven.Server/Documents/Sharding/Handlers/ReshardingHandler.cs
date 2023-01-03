@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ReshardingHandler : ServerRequestHandler
     {
-        [RavenAction("/admin/resharding", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/resharding/start", "POST", AuthorizationStatus.Operator)]
         public async Task StartResharding()
         {
             var database = GetStringQueryString("database");
