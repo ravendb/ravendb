@@ -624,10 +624,8 @@ namespace Voron.Impl.Journal
 
             public void OnTransactionCompleted()
             {
-                if (_waitForJournalStateUpdateUnderTx.IsSet == false)
-                {
-                    _onWriteTransactionCompleted.Set();
-                }
+                // no-op if there no waiters
+                _onWriteTransactionCompleted.Set();
             }
 
             public long LastFlushedTransactionId => _lastFlushed.TransactionId;
@@ -902,6 +900,7 @@ namespace Voron.Impl.Journal
                                 case 1:
                                 case WaitHandle.WaitTimeout:
                                     // _onWriteTransactionCompleted or timeout
+                                    _onWriteTransactionCompleted.Reset();
                                     continue;
 
                                 default:
