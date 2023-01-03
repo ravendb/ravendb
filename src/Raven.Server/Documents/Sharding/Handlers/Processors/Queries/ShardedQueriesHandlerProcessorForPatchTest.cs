@@ -24,7 +24,7 @@ internal class ShardedQueriesHandlerProcessorForPatchTest : AbstractQueriesHandl
     {
         var command = new PatchByQueryTestCommand(docId, query);
 
-        int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
+        int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
 
         using (var token = RequestHandler.CreateOperationToken())
         {

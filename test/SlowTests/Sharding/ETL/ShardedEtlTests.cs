@@ -165,7 +165,7 @@ loadToOrders(orderData);
                     for (int i = 0; i < ids.Length; i++)
                     {
                         var id = ids[i];
-                        var shardNumber = shardedCtx.GetShardNumber(context, id);
+                        var shardNumber = shardedCtx.GetShardNumberFor(context, id);
                         Assert.Equal(i, shardNumber);
                     }
                 }
@@ -239,7 +239,7 @@ loadToOrders(orderData);
                     for (int i = 0; i < ids.Length; i++)
                     {
                         var id = ids[i];
-                        var shardNumber = shardedCtx.GetShardNumber(context, id);
+                        var shardNumber = shardedCtx.GetShardNumberFor(context, id);
                         Assert.Equal(i, shardNumber);
                     }
                 }
@@ -1148,7 +1148,7 @@ person.addCounter(loadCounter('down'));
                     for (int i = 0; i < ids.Length; i++)
                     {
                         var id = ids[i];
-                        var shardNumber = shardedCtx.GetShardNumber(context, id);
+                        var shardNumber = shardedCtx.GetShardNumberFor(context, id);
                         Assert.Equal(i, shardNumber);
                     }
                 }

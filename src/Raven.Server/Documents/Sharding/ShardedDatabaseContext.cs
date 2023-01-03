@@ -17,7 +17,9 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server;
 using Sparrow.Utils;
+using Voron;
 using DictionaryExtensions = Raven.Server.Extensions.DictionaryExtensions;
 
 namespace Raven.Server.Documents.Sharding
@@ -122,14 +124,15 @@ namespace Raven.Server.Documents.Sharding
 
         public Dictionary<int, DatabaseTopology> ShardsTopology => _record.Sharding.Shards;
 
-        public int GetShardNumber(int shardBucket) => ShardHelper.GetShardNumber(_record.Sharding.BucketRanges, shardBucket);
+        public int GetShardNumberFor(TransactionOperationContext context, string id) => ShardHelper.GetShardNumberFor(_record.Sharding, context, id);
 
-        public int GetShardNumber(TransactionOperationContext context, string id)
-        {
-            var bucket = ShardHelper.GetBucket(context, id);
+        public int GetShardNumberFor(ByteStringContext allocator, string id) => ShardHelper.GetShardNumberFor(_record.Sharding, allocator, id);
 
-            return ShardHelper.GetShardNumber(_record.Sharding.BucketRanges, bucket);
-        }
+        public int GetShardNumberFor(ByteStringContext allocator, LazyStringValue id) => ShardHelper.GetShardNumberFor(_record.Sharding, allocator, id);
+
+        public int GetShardNumberFor(Slice id) => ShardHelper.GetShardNumberFor(_record.Sharding, id);
+
+        public int GetShardNumberForIdentity(TransactionOperationContext context, string id) => ShardHelper.GetShardNumberForIdentity(_record.Sharding, context, id, IdentityPartsSeparator);
 
         public bool HasTopologyChanged(long etag)
         {

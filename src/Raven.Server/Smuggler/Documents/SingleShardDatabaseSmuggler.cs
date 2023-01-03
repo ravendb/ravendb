@@ -8,18 +8,19 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Server;
+using Sparrow.Threading;
 
 namespace Raven.Server.Smuggler.Documents
 {
     internal class SingleShardDatabaseSmuggler : DatabaseSmuggler
     {
-        private readonly TransactionContextPool _serverContextPool;
         private readonly int _index;
         private bool _processCompareExchange;
+        private ByteStringContext _allocator;
         private readonly ShardingConfiguration _sharding;
 
         public SingleShardDatabaseSmuggler(ShardedDocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time,
@@ -27,9 +28,8 @@ namespace Raven.Server.Smuggler.Documents
             Action<IOperationProgress> onProgress = null, CancellationToken token = default) :
             base(database.ShardedDatabaseName, database, source, destination, time, context, options, result, onProgress, token)
         {
-            _serverContextPool = database.ServerStore.ContextPool;
             _sharding = database.ReadShardingState();
-            _index = ShardHelper.GetShardNumber(database.Name);
+            _index = ShardHelper.GetShardNumberFromDatabaseName(database.Name);
 
             Initialize();
         }
@@ -65,13 +65,18 @@ namespace Raven.Server.Smuggler.Documents
             {
                 using (_serverContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    var bucket = ShardHelper.GetBucket(context, docId);
-                    var shardNumber = ShardHelper.GetShardNumber(_sharding.BucketRanges, bucket);
+                var shardNumber = ShardHelper.GetShardNumberFor(_shardedRecord.Sharding, _allocator, docId);
 
                     return shardNumber != _index;
                 }
-            }
+
             return _processCompareExchange == false;
         }
+
+        public override Task<SmugglerResult> ExecuteAsync(bool ensureStepsProcessed = true, bool isLastFile = true)
+        {
+            using (_allocator = new ByteStringContext(SharedMultipleUseFlag.None))
+                return base.ExecuteAsync(ensureStepsProcessed, isLastFile);
     }
+}
 }

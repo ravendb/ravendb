@@ -20,7 +20,7 @@ internal class ShardedAttachmentHandlerProcessorForHeadAttachment : AbstractAtta
 
         int shardNumber;
         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, documentId);
+            shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, documentId);
 
         using (var token = RequestHandler.CreateOperationToken())
         {

@@ -19,7 +19,7 @@ public class ShardedDocumentPutAction : DocumentPutAction
     protected override void ValidateId(Slice lowerId)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle write documents to the wrong shard");
-        var bucket = ShardHelper.GetBucketFromSlice(lowerId);
+        //var bucket = ShardHelper.GetBucketFromSlice(lowerId);
         // throw if I'm not the owner of the bucket?
         // throw if bucket moved, I'm the destination but still didn't confirm
         // OR mark this document for migration

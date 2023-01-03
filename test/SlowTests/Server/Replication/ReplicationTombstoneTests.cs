@@ -372,7 +372,7 @@ namespace SlowTests.Server.Replication
                 foreach (var task in dbs)
                 {
                     var db = await task;
-                    var shardNumber = ShardHelper.GetShardNumber(db.Name);
+                    var shardNumber = ShardHelper.GetShardNumberFromDatabaseName(db.Name);
                     var stats = await store2.Maintenance.ForShard(shardNumber).SendAsync(new GetStatisticsOperation(db.ServerStore.Server.DebugTag, db.ServerStore.NodeTag));
                     if (stats.CountOfTombstones > 0)
                         countOfTombstones += stats.CountOfTombstones;

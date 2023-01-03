@@ -16,7 +16,6 @@ using Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Actions;
 using Raven.Server.Smuggler.Documents.Data;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -31,6 +30,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly ISmugglerSource _source;
         private readonly Dictionary<int, StreamDestination> _destinations;
         private DatabaseSmugglerOptionsServerSide _options;
+        private readonly ByteStringContext _allocator;
 
         public MultiShardedDestination([NotNull] ISmugglerSource source, [NotNull] ShardedDatabaseContext databaseContext, [NotNull] ShardedDatabaseRequestHandler handler, long operationId)
         {
@@ -39,6 +39,7 @@ namespace Raven.Server.Smuggler.Documents
             _handler = handler ?? throw new ArgumentNullException(nameof(handler));
             _operationId = operationId;
             _destinations = new Dictionary<int, StreamDestination>(databaseContext.ShardCount);
+            _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         }
 
         public async ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
@@ -108,9 +109,14 @@ namespace Raven.Server.Smuggler.Documents
         {
             return withDocuments ? null : new ShardedCompareExchangeActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.CompareExchange(databaseName, context, backupKind, withDocuments: false)), _options);
         }
+        //public ICompareExchangeActions CompareExchange(JsonOperationContext context) =>
+        //    new ShardedCompareExchangeActions(_databaseContext, _allocator, _destinations.Select(d => d.CompareExchange(context)).ToArray(), _options);
 
         public ICompareExchangeActions CompareExchangeTombstones(string databaseName, JsonOperationContext context) =>
             new ShardedCompareExchangeActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.CompareExchangeTombstones(databaseName, context)), _options);
+
+        //public ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context) =>
+        //    new ShardedCompareExchangeActions(_databaseContext, _allocator, _destinations.Select(d => d.CompareExchangeTombstones(context)).ToArray(), _options);
 
         public IDocumentActions Documents(bool throwOnCollectionMismatchError = true) =>
             new ShardedDocumentActions(_databaseContext, _destinations.ToDictionary(x => x.Key, x => x.Value.Documents(throwOnDuplicateCollection: false)), _options);
@@ -176,15 +182,17 @@ namespace Raven.Server.Smuggler.Documents
 
         private class ShardedCompareExchangeActions : ShardedActions<ICompareExchangeActions>, ICompareExchangeActions
         {
+            private readonly ByteStringContext _allocator;
             public ShardedCompareExchangeActions(ShardedDatabaseContext databaseContext, Dictionary<int, ICompareExchangeActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
+                _allocator = allocator;
             }
 
             public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value, Document existingDocument)
             {
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
-                    var shardNumber = DatabaseContext.GetShardNumberFor(key);
+                    var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, key);
                     await _actions[shardNumber].WriteKeyValueAsync(key, value, existingDocument);
                     return;
                 }
@@ -196,7 +204,8 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
-                    var shardNumber = DatabaseContext.GetShardNumberFor(key);;
+                    var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, key);
+                    ;
                     await _actions[shardNumber].WriteTombstoneKeyAsync(key);
                     return;
                 }
@@ -212,13 +221,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public ShardedDocumentActions(ShardedDatabaseContext databaseContext, Dictionary<int, IDocumentActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
-                _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-            }
-
-            public override async ValueTask DisposeAsync()
-            {
-                await base.DisposeAsync();
-                _allocator.Dispose();
+                _allocator = allocator;
             }
 
             public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
@@ -254,13 +257,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public ShardedCounterActions(ShardedDatabaseContext databaseContext, Dictionary<int, ICounterActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
-                _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-            }
-
-            public override async ValueTask DisposeAsync()
-            {
-                await base.DisposeAsync();
-                _allocator.Dispose();
+                _allocator = allocator;
             }
 
             public async ValueTask WriteCounterAsync(CounterGroupDetail counterDetail)
@@ -271,7 +268,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteLegacyCounterAsync(CounterDetail counterDetail)
             {
-                var shardNumber = DatabaseContext.GetShardNumberFor(counterDetail.DocumentId);
+                var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, counterDetail.DocumentId);
                 await _actions[shardNumber].WriteLegacyCounterAsync(counterDetail);
             }
 
@@ -282,26 +279,30 @@ namespace Raven.Server.Smuggler.Documents
 
         private class ShardedTimeSeriesActions : ShardedActions<ITimeSeriesActions>, ITimeSeriesActions
         {
+            private readonly ByteStringContext _allocator;
             public ShardedTimeSeriesActions(ShardedDatabaseContext databaseContext, Dictionary<int, ITimeSeriesActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
+                _allocator = allocator;
             }
 
             public async ValueTask WriteTimeSeriesAsync(TimeSeriesItem ts)
             {
-                var shardNumber = DatabaseContext.GetShardNumberFor(ts.DocId);
+                var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, ts.DocId);
                 await _actions[shardNumber].WriteTimeSeriesAsync(ts);
             }
         }
 
         private class ShardedLegacyActions : ShardedActions<ILegacyActions>, ILegacyActions
         {
+            private readonly ByteStringContext _allocator;
             public ShardedLegacyActions(ShardedDatabaseContext databaseContext, Dictionary<int, ILegacyActions> actions, DatabaseSmugglerOptionsServerSide options) : base(databaseContext, actions, options)
             {
+                _allocator = allocator;
             }
 
             public async ValueTask WriteLegacyDeletions(string id)
             {
-                var shardNumber = DatabaseContext.GetShardNumberFor(id);
+                var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, id);
                 await _actions[shardNumber].WriteLegacyDeletions(id);
             }
         }

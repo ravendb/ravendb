@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Replication.Senders
         private HashSet<Slice> _deduplicatedAttachmentHashes = new(SliceComparer.Instance);
         private Queue<Slice> _deduplicatedAttachmentHashesLru = new();
         private readonly int _numberOfAttachmentsTrackedForDeduplication;
-        private readonly ByteStringContext _context; // required to clone the hashes 
+        private readonly ByteStringContext _allocator; // required to clone the hashes 
 
         protected ReplicationDocumentSenderBase(Stream stream, DatabaseOutgoingReplicationHandler parent, Logger log)
         {
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Replication.Senders
             _parent = parent;
 
             _numberOfAttachmentsTrackedForDeduplication = parent._database.Configuration.Replication.MaxNumberOfAttachmentsTrackedForDeduplication;
-            _context = new ByteStringContext(SharedMultipleUseFlag.None);
+            _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         }
 
         protected virtual IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats,
@@ -568,14 +568,14 @@ namespace Raven.Server.Documents.Replication.Senders
             if (_deduplicatedAttachmentHashes.Contains(attachment.Base64Hash))
                 return false; // we already sent it over during the current run
 
-            var clone = attachment.Base64Hash.Clone(_context);
+            var clone = attachment.Base64Hash.Clone(_allocator);
             _deduplicatedAttachmentHashes.Add(clone);
             _deduplicatedAttachmentHashesLru.Enqueue(clone);
             while (_deduplicatedAttachmentHashesLru.Count > _numberOfAttachmentsTrackedForDeduplication)
             {
                 var cur = _deduplicatedAttachmentHashesLru.Dequeue();
                 _deduplicatedAttachmentHashes.Remove(cur);
-                _context.Release(ref cur.Content);
+                _allocator.Release(ref cur.Content);
             }
 
             return true;
@@ -749,7 +749,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
         public virtual void Dispose()
         {
-            _context.Dispose();
+            _allocator.Dispose();
         }
     }
 }

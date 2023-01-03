@@ -29,7 +29,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
     public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         : base(name, configuration, serverStore, addToInitLog)
     {
-        ShardNumber = ShardHelper.GetShardNumber(name);
+        ShardNumber = ShardHelper.GetShardNumberFromDatabaseName(name);
         ShardedDatabaseName = ShardHelper.ToDatabaseName(name);
 
         Smuggler = new ShardedDatabaseSmugglerFactory(this);
@@ -84,7 +84,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
         using (context.OpenReadTransaction())
         using (var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, ShardedDatabaseName))
         {
-            return raw.Sharding.Value;
+            return raw.Sharding.MaterializedConfiguration;
         }
     }
 

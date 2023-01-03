@@ -5,6 +5,8 @@ using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Server;
+using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions;
 
@@ -12,10 +14,12 @@ public class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSu
 {
     private readonly ShardedDocumentDatabase _database;
     private ShardingConfiguration _sharding;
+    private readonly ByteStringContext _allocator;
 
     public ShardedRevisionsDatabaseSubscriptionProcessor(ServerStore server, ShardedDocumentDatabase database, SubscriptionConnection connection) : base(server, database, connection)
     {
         _database = database;
+        _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
     }
 
     protected override SubscriptionFetcher<(Document Previous, Document Current)> CreateFetcher()
@@ -29,8 +33,7 @@ public class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSu
         exception = null;
         result = item.Current;
 
-        var bucket = ShardHelper.GetBucket(result.Id);
-        var shard = ShardHelper.GetShardNumber(_sharding.BucketRanges, bucket);
+        var shard = ShardHelper.GetShardNumberFor(_sharding, _allocator, result.Id);
         if (shard != _database.ShardNumber)
         {
             reason = $"The owner of {result.Id} is shard {shard} ({_database.ShardNumber})";
@@ -38,5 +41,12 @@ public class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSu
         }
 
         return base.ShouldSend(item, out reason, out exception, out result);
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+
+        _allocator?.Dispose();
     }
 }

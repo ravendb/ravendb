@@ -19,7 +19,7 @@ internal class ShardedDocumentHandlerProcessorForPut : AbstractDocumentHandlerPr
     {
         var command = new PutDocumentCommand(id, changeVector, doc);
 
-        int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, id);
+        int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
 
         using (var token = RequestHandler.CreateOperationToken())
         {

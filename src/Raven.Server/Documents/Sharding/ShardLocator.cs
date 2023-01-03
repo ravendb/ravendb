@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Sharding
                 }
                 else if (typeof(T) == typeof(string))
                 {
-                    shardNumber = databaseContext.GetShardNumberFor((string)(object)id);
+                    shardNumber = databaseContext.GetShardNumberFor(context, (string)(object)id);
                 }
                 else
                 {

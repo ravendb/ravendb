@@ -609,7 +609,7 @@ namespace SlowTests.Server.Replication
                 foreach (var task in dbs)
                 {
                     var db = await task;
-                    var shardNumber = ShardHelper.GetShardNumber(db.Name);
+                    var shardNumber = ShardHelper.GetShardNumberFromDatabaseName(db.Name);
                     var replicationActiveConnections = await store2.Maintenance.ForShard(shardNumber).SendAsync(new GetReplicationActiveConnectionsInfoOperation());
                     Assert.NotNull(replicationActiveConnections.IncomingConnections);
                     Assert.Equal(3, replicationActiveConnections.IncomingConnections.Count);

@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Replication
             var cmd = new GetConflictsCommand(id: documentId);
             var proxyCommand = new ProxyCommand<GetConflictsResult>(cmd, RequestHandler.HttpContext.Response);
 
-            var shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, documentId);
+            var shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, documentId);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber);
         }
 

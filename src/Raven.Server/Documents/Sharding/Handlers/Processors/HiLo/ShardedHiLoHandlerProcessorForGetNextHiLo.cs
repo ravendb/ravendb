@@ -26,7 +26,7 @@ internal class ShardedHiLoHandlerProcessorForGetNextHiLo : AbstractHiLoHandlerPr
 
             int shardNumber;
             using (RequestHandler.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, hiloDocId);
+                shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, hiloDocId);
 
             var command = CreateCommand();
             var proxyCommand = new ProxyCommand<HiLoResult>(command, HttpContext.Response);

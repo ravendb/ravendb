@@ -54,7 +54,7 @@ namespace SlowTests.Server.Documents.Replication
                     foreach (var task in dbs)
                     {
                         var db = await task;
-                        shardNumber = ShardHelper.GetShardNumber(db.Name);
+                        shardNumber = ShardHelper.GetShardNumberFromDatabaseName(db.Name);
           
                         replicationPerformance = await store2.Maintenance.ForShard(shardNumber).SendAsync(new GetReplicationPerformanceStatisticsOperation());
                         replicationIncoming = replicationPerformance.Incoming.Length;

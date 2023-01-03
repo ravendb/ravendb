@@ -56,7 +56,7 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
 
                     bjro.TryGet(nameof(ICommandData.ChangeVector), out string expectedChangeVector);
 
-                    var shardId = _databaseContext.GetShardNumber(_context, id);
+                    var shardId = _databaseContext.GetShardNumberFor(_context, id);
                     if (idsByShard.TryGetValue(shardId, out var list) == false)
                     {
                         list = new List<(string Id, string ChangeVector)>();
@@ -111,15 +111,12 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
     private int GetShardNumberForCommandType(BatchRequestParser.CommandData cmd, bool isServerSideIdentity)
     {
         if (isServerSideIdentity)
-        {
-            var bucket = ShardHelper.GetBucketOfIdentity(_context, cmd.Id, _databaseContext.IdentityPartsSeparator);
-            return _databaseContext.GetShardNumber(bucket);
-        }
+            return _databaseContext.GetShardNumberForIdentity(_context, cmd.Id);
 
         if (cmd.Type == CommandType.Counters)
-            return _databaseContext.GetShardNumber(_context, cmd.Id ?? cmd.Counters.DocumentId);
+            return _databaseContext.GetShardNumberFor(_context, cmd.Id ?? cmd.Counters.DocumentId);
 
-        return _databaseContext.GetShardNumber(_context, cmd.Id);
+        return _databaseContext.GetShardNumberFor(_context, cmd.Id);
     }
 
     IEnumerator IEnumerable.GetEnumerator()

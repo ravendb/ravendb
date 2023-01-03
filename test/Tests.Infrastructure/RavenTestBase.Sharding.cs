@@ -132,12 +132,17 @@ public partial class RavenTestBase
             return record.Sharding;
         }
 
-        public async Task<int> GetShardNumber(IDocumentStore store, string id, string database = null)
+        public int GetBucket(string id)
         {
-            database ??= store.Database;
-            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
-            var bucket = ShardHelper.GetBucket(id);
-            return ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+            using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
+                return ShardHelper.GetBucketFor(allocator, id);
+        }
+
+        public async Task<int> GetShardNumberFor(IDocumentStore store, string id)
+        {
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
+                return ShardHelper.GetShardNumberFor(record.Sharding, allocator, id);
         }
 
         public async Task<ShardedDocumentDatabase> GetShardedDocumentDatabaseForBucketAsync(string database, int bucket)
@@ -146,7 +151,7 @@ public partial class RavenTestBase
             using (context.OpenReadTransaction())
             {
                 var config = _parent.Server.ServerStore.Cluster.ReadShardingConfiguration(context, database);
-                var shardNumber = ShardHelper.GetShardNumber(config.BucketRanges, bucket);
+                var shardNumber = ShardHelper.GetShardNumberFor(config, bucket);
                 var shardedName = ShardHelper.ToShardName(database, shardNumber);
                 var shardedDatabase = (await _parent.Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(shardedName)) as ShardedDocumentDatabase;
                 Assert.NotNull(shardedDatabase);

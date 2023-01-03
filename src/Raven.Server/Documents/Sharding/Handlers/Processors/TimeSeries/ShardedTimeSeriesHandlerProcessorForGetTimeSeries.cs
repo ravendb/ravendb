@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
         protected override async ValueTask<TimeSeriesRangeResult> GetTimeSeriesAndWriteAsync(TransactionOperationContext context, string docId, string name, DateTime @from, DateTime to, int start, int pageSize, bool includeDoc,
             bool includeTags, bool fullResults)
         {
-            var shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
+            var shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
             
             Action<ITimeSeriesIncludeBuilder> action = includeBuilder =>
             {
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
                 var nonLocalIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var id in rangeResult.MissingIncludes)
                 {
-                    if (RequestHandler.DatabaseContext.GetShardNumber(context, id) != shardNumber)
+                    if (RequestHandler.DatabaseContext.GetShardNumberFor(context, id) != shardNumber)
                         nonLocalIncludes.Add(id);
                 }
 

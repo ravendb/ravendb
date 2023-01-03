@@ -8,6 +8,8 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Server;
+using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions;
 
@@ -15,10 +17,12 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
 {
     private readonly ShardedDocumentDatabase _database;
     private ShardingConfiguration _sharding;
+    private readonly ByteStringContext _allocator;
 
     public ShardedDocumentsDatabaseSubscriptionProcessor(ServerStore server, ShardedDocumentDatabase database, SubscriptionConnection connection) : base(server, database, connection)
     {
         _database = database;
+        _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
     }
 
     protected override SubscriptionFetcher<Document> CreateFetcher()
@@ -59,6 +63,12 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
         return base.ShouldSend(item, out reason, out exception, out result);
     }
 
+    public override void Dispose()
+    {
+        base.Dispose();
+
+        _allocator?.Dispose();
+    }
     protected override bool ShouldFetchFromResend(DocumentsOperationContext context, string id, DocumentsStorage.DocumentOrTombstone item, string currentChangeVector, out string reason)
     {
         reason = null;

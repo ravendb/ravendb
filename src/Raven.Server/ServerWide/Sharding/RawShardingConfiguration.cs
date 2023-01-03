@@ -9,30 +9,30 @@ namespace Raven.Server.ServerWide.Sharding;
 
 public class RawShardingConfiguration
 {
-    private ShardingConfiguration _materializedSharding;
+    private ShardingConfiguration _materializedConfiguration;
 
-    private readonly BlittableJsonReaderObject _sharding;
+    private readonly BlittableJsonReaderObject _configuration;
     private readonly JsonOperationContext _context;
 
-    public RawShardingConfiguration([NotNull] JsonOperationContext context, [NotNull] BlittableJsonReaderObject sharding)
+    public RawShardingConfiguration([NotNull] JsonOperationContext context, [NotNull] BlittableJsonReaderObject configuration)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
-        _sharding = sharding ?? throw new ArgumentNullException(nameof(sharding));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
     }
 
-    public RawShardingConfiguration(ShardingConfiguration sharding)
+    public RawShardingConfiguration(ShardingConfiguration configuration)
     {
-        _materializedSharding = sharding;
+        _materializedConfiguration = configuration;
     }
 
     public BlittableJsonReaderObject Raw
     {
         get
         {
-            if (_sharding == null)
-                throw new ArgumentNullException(nameof(_sharding));
+            if (_configuration == null)
+                throw new ArgumentNullException(nameof(_configuration));
 
-            return _sharding;
+            return _configuration;
         }
     }
 
@@ -42,11 +42,11 @@ public class RawShardingConfiguration
     {
         get
         {
-            if (_materializedSharding != null)
-                return _materializedSharding.DatabaseId;
+            if (_materializedConfiguration != null)
+                return _materializedConfiguration.DatabaseId;
 
             if (_shardedDatabaseId == null)
-                _sharding.TryGet(nameof(ShardingConfiguration.DatabaseId), out _shardedDatabaseId);
+                _configuration.TryGet(nameof(ShardingConfiguration.DatabaseId), out _shardedDatabaseId);
 
             return _shardedDatabaseId;
         }
@@ -58,13 +58,13 @@ public class RawShardingConfiguration
     {
         get
         {
-            if (_materializedSharding != null)
-                return _materializedSharding.BucketMigrations;
+            if (_materializedConfiguration != null)
+                return _materializedConfiguration.BucketMigrations;
 
             if (_bucketMigrations == null)
             {
                 _bucketMigrations = new Dictionary<int, ShardBucketMigration>();
-                if (_sharding.TryGet(nameof(ShardingConfiguration.BucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
+                if (_configuration.TryGet(nameof(ShardingConfiguration.BucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
                 {
                     var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                     for (var i = 0; i < obj.Count; i++)
@@ -90,8 +90,8 @@ public class RawShardingConfiguration
     {
         get
         {
-            if (_materializedSharding != null)
-                return _materializedSharding.Shards;
+            if (_materializedConfiguration != null)
+                return _materializedConfiguration.Shards;
 
             if (_shards != null)
                 return _shards;
@@ -122,17 +122,17 @@ public class RawShardingConfiguration
 
     private List<ShardBucketRange> _shardBucketRanges;
 
-    public List<ShardBucketRange> ShardBucketRanges
+    public List<ShardBucketRange> BucketRanges
     {
         get
         {
-            if (_materializedSharding != null)
-                return _materializedSharding.BucketRanges;
+            if (_materializedConfiguration != null)
+                return _materializedConfiguration.BucketRanges;
 
             if (_shardBucketRanges != null)
                 return _shardBucketRanges;
 
-            if (_sharding.TryGet(nameof(ShardingConfiguration.BucketRanges), out BlittableJsonReaderArray array) == false || array == null)
+            if (_configuration.TryGet(nameof(ShardingConfiguration.BucketRanges), out BlittableJsonReaderArray array) == false || array == null)
                 return null;
 
             _shardBucketRanges = new List<ShardBucketRange>(array.Length);
@@ -146,18 +146,54 @@ public class RawShardingConfiguration
         }
     }
 
+    private Dictionary<string, List<ShardBucketRange>> _prefixed;
+
+    public Dictionary<string, List<ShardBucketRange>> Prefixed
+    {
+        get
+        {
+            if (_materializedConfiguration != null)
+                return _materializedConfiguration.Prefixed;
+
+            if (_prefixed != null)
+                return _prefixed;
+
+            if (_configuration.TryGet(nameof(ShardingConfiguration.Prefixed), out BlittableJsonReaderObject obj) && obj != null)
+            {
+                _prefixed = new Dictionary<string, List<ShardBucketRange>>();
+
+                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                for (var index = 0; index < obj.Count; index++)
+                {
+                    obj.GetPropertyByIndex(index, ref propertyDetails);
+                    var array = propertyDetails.Value as BlittableJsonReaderArray;
+                    if (array == null)
+                        continue;
+
+                    var items = new List<ShardBucketRange>();
+                    foreach (BlittableJsonReaderObject item in array)
+                        items.Add(JsonDeserializationCluster.ShardBucketRange(item));
+
+                    _prefixed[propertyDetails.Name] = items;
+                }
+            }
+
+            return _prefixed;
+        }
+    }
+
     private OrchestratorConfiguration _orchestrator;
 
     public OrchestratorConfiguration Orchestrator
     {
         get
         {
-            if (_materializedSharding != null)
-                return _materializedSharding.Orchestrator;
+            if (_materializedConfiguration != null)
+                return _materializedConfiguration.Orchestrator;
 
             if (_orchestrator == null)
             {
-                if (_sharding.TryGet(nameof(ShardingConfiguration.Orchestrator), out BlittableJsonReaderObject obj) && obj != null)
+                if (_configuration.TryGet(nameof(ShardingConfiguration.Orchestrator), out BlittableJsonReaderObject obj) && obj != null)
                     _orchestrator = JsonDeserializationCluster.OrchestratorConfiguration(obj);
             }
 
@@ -165,15 +201,15 @@ public class RawShardingConfiguration
         }
     }
 
-    public ShardingConfiguration Value
+    public ShardingConfiguration MaterializedConfiguration
     {
         get
         {
-            if (_materializedSharding != null)
-                return _materializedSharding;
+            if (_materializedConfiguration != null)
+                return _materializedConfiguration;
 
-            _materializedSharding = JsonDeserializationCluster.ShardingConfiguration(_sharding);
-            return _materializedSharding;
+            _materializedConfiguration = JsonDeserializationCluster.ShardingConfiguration(_configuration);
+            return _materializedConfiguration;
         }
     }
 

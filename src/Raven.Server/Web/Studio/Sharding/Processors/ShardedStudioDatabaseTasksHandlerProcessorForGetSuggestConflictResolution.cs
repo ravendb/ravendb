@@ -21,7 +21,7 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
             var cmd = new GetSuggestConflictResolutionOperation.GetSuggestConflictResolutionCommand(documentId);
             var proxyCommand = new ProxyCommand<ConflictResolverAdvisor.MergeResult>(cmd, RequestHandler.HttpContext.Response);
 
-            var shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, documentId);
+            var shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, documentId);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(proxyCommand, shardNumber);
         }
     }

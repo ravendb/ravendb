@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
 
         protected override async ValueTask ApplyTimeSeriesOperationAsync(string docId, TimeSeriesOperation operation, TransactionOperationContext context)
         {
-            int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
+            int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
             using (var token = RequestHandler.CreateOperationToken())
             {
                 var cmd = new TimeSeriesBatchOperation.TimeSeriesBatchCommand(docId, operation);

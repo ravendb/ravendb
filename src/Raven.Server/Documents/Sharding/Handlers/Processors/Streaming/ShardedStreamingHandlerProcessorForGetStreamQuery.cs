@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 
         protected override async ValueTask<BlittableJsonReaderObject> GetDocumentDataAsync(TransactionOperationContext context, string fromDocument)
         {
-            var shard = RequestHandler.DatabaseContext.GetShardNumber(context, fromDocument);
+            var shard = RequestHandler.DatabaseContext.GetShardNumberFor(context, fromDocument);
 
             var docs = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(context,
                 new GetDocumentsCommand(new[] { fromDocument }, includes: null, metadataOnly: false), shard);

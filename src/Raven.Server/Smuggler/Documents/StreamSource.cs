@@ -67,7 +67,7 @@ namespace Raven.Server.Smuggler.Documents
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
         private DatabaseItemType _operateOnTypes;
         private readonly DatabaseSmugglerOptionsServerSide _options;
-        private readonly ByteStringContext _byteStringContext;
+        private readonly ByteStringContext _allocator;
 
         public StreamSource(Stream stream, JsonOperationContext context, string databaseName, DatabaseSmugglerOptionsServerSide options = null)
         {
@@ -75,7 +75,7 @@ namespace Raven.Server.Smuggler.Documents
             _context = context;
             _log = LoggingSource.Instance.GetLogger<StreamSource>(databaseName);
             _options = options ?? new DatabaseSmugglerOptionsServerSide();
-            _byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
+            _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         }
 
         public async Task<SmugglerInitializeResult> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result)
@@ -966,7 +966,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     var arr = (BlittableJsonReaderArray)prop.Value;
                     var sizeToAllocate = CountersStorage.SizeOfCounterValues * arr.Length / 2;
-                    scopes.Add(_byteStringContext.Allocate(sizeToAllocate, out var newVal));
+                    scopes.Add(_allocator.Allocate(sizeToAllocate, out var newVal));
 
                     for (int j = 0; j < arr.Length; j += 2)
                     {
@@ -1815,7 +1815,7 @@ namespace Raven.Server.Smuggler.Documents
 
             memoryStream.Position = 0;
 
-            return GenerateLegacyAttachmentDetails(context, memoryStream, key, metadata, _byteStringContext, ref attachment);
+            return GenerateLegacyAttachmentDetails(context, memoryStream, key, metadata, _allocator, ref attachment);
         }
 
         public static string GetLegacyAttachmentId(string key)
@@ -1878,8 +1878,8 @@ namespace Raven.Server.Smuggler.Documents
                 _returnWriteBuffer = _context.GetMemoryBuffer(out _writeBuffer);
 
             attachment.Data = data;
-            attachment.Base64HashDispose = Slice.External(_byteStringContext, hash, out attachment.Base64Hash);
-            attachment.TagDispose = Slice.External(_byteStringContext, tag, out attachment.Tag);
+            attachment.Base64HashDispose = Slice.External(_allocator, hash, out attachment.Base64Hash);
+            attachment.TagDispose = Slice.External(_allocator, tag, out attachment.Tag);
 
             while (size > 0)
             {
@@ -2001,7 +2001,7 @@ namespace Raven.Server.Smuggler.Documents
         public void Dispose()
         {
             _peepingTomStream.Dispose();
-            _byteStringContext.Dispose();
+            _allocator.Dispose();
         }
     }
 }

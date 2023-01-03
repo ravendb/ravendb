@@ -445,7 +445,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
 
                 //make sure revisions are saved on different shards
-                Assert.NotEqual(Sharding.GetShardNumber(store, user.Id), Sharding.GetShardNumber(store, product.Id));
+                Assert.NotEqual(Sharding.GetShardNumberFor(store, user.Id), Sharding.GetShardNumberFor(store, product.Id));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1752,8 +1752,8 @@ namespace FastTests.Server.Documents.Revisions
                     await session.StoreAsync(new Order() {Employee = "Stav"}, "orders/1");
                     await session.SaveChangesAsync();
 
-                    var usersShard = Sharding.GetShardNumber(store, "users/1");
-                    var ordersShard = Sharding.GetShardNumber(store, "orders/1");
+                    var usersShard = Sharding.GetShardNumberFor(store, "users/1");
+                    var ordersShard = Sharding.GetShardNumberFor(store, "orders/1");
                     Assert.NotEqual(usersShard, ordersShard);
 
                     var user = await session.LoadAsync<User>("users/1");

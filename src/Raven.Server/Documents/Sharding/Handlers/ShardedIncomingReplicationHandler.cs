@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 case DocumentReplicationItem:
                 case TimeSeriesDeletedRangeItem:
                 case TimeSeriesReplicationItem:
-                    return _parent.Context.GetShardNumber(context, _documentInfoHelper.GetDocumentId(item));
+                    return _parent.Context.GetShardNumberFor(context, _documentInfoHelper.GetDocumentId(item));
                 case RevisionTombstoneReplicationItem:
                     DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Shiran, DevelopmentHelper.Severity.Normal, "Handle this (document Id does not exist)");
                     throw new NotSupportedInShardingException("TODO: implement for sharding"); // revision tombstones doesn't contain any info about the doc. The id here is the change-vector of the deleted revision

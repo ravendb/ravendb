@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         protected override async ValueTask GetAndWriteTimeSeriesAsync(TransactionOperationContext context, string docId, string name, DateTime @from, DateTime to, TimeSpan? offset,
             CancellationToken token)
         {
-            var shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
+            var shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
             var cmd = new GetTimeSeriesCommand(docId, name, from, to, offset);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand(cmd, HttpContext.Response), shardNumber, token);
         }

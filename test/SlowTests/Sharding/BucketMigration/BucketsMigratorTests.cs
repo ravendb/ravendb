@@ -63,7 +63,7 @@ namespace SlowTests.Sharding.BucketMigration
 
             for (int bucket = 0; bucket < ShardHelper.NumberOfBuckets; bucket++)
             {
-                var shardNumber = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+                var shardNumber = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
                 shards[shardNumber] ??= new ShardReport
                 {
                     Shard = shardNumber,
