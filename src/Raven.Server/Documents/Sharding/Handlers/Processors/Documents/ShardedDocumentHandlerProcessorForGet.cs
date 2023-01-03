@@ -14,6 +14,7 @@ using Raven.Server.Documents.Handlers.Processors.Documents;
 using Raven.Server.Documents.Queries.Revisions;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Streaming;
 using Raven.Server.Documents.Sharding.Operations;
+using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -139,19 +140,19 @@ internal class ShardedDocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
         Disposables.Add(streams);
 
-        IAsyncEnumerable<Document> documents;
+        IAsyncEnumerable<ShardStreamItem<Document>> documents;
         if (startsWith != null)
         {
-            documents = RequestHandler.DatabaseContext.Streaming.GetDocumentsAsyncById(streams, token).Select(x => x.Item);
+            documents = RequestHandler.DatabaseContext.Streaming.GetDocumentsAsyncById(streams, token);
         }
         else
         {
-            documents = RequestHandler.DatabaseContext.Streaming.GetDocumentsAsync(streams, token).Select(x => x.Item);
+            documents = RequestHandler.DatabaseContext.Streaming.GetDocumentsAsync(streams, token);
         }
 
         return new DocumentsResult
         {
-            DocumentsAsync = documents,
+            DocumentsAsync = ShardedDatabaseContext.ShardedStreaming.UnwrapDocuments(documents),
             ContinuationToken = token,
             Etag = results.CombinedEtag
         };

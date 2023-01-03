@@ -44,7 +44,7 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
     public HttpRequest HttpRequest { get => _requestHandler.HttpContext.Request; }
 
-    public bool Debug => HttpRequest.IsFromStudio();
+    public bool FromStudio => HttpRequest.IsFromStudio();
 
     RavenCommand<QueryResult> IShardedOperation<QueryResult, ShardedReadResult<ShardedQueryResult>>.CreateCommandForShard(int shardNumber) => _queryCommands[shardNumber];
 
@@ -178,7 +178,7 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
             {
                 foreach (BlittableJsonReaderObject item in array)
                 {
-                    if (Debug == false)
+                    if (FromStudio == false)
                     {
                         yield return item;
                         continue;

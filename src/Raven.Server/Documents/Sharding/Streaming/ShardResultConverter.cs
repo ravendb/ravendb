@@ -12,7 +12,8 @@ namespace Raven.Server.Documents.Sharding.Streaming
             return new Document
             {
                 Data = json, 
-                LowerId = metadata.GetIdAsLazyString()
+                LowerId = metadata.GetIdAsLazyString(),
+                LastModified = metadata.GetLastModified()
             };
         }
 
