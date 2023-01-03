@@ -63,7 +63,7 @@ namespace Raven.Server.Config.Categories
         public bool DisableMicrosoftLogs { get; set; }
         
         [Description("The path to the folder where Microsoft log will be written")]
-        [DefaultValue(null)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Logs.Microsoft.Path", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting MicrosoftLogsPath { get; set; }
         
