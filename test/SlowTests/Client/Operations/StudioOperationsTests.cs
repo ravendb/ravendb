@@ -52,9 +52,9 @@ namespace SlowTests.Client.Operations
         {
             using (var store = GetDocumentStore(options))
             {
-                var shard1 = await Sharding.GetShardNumber(store, "user/A-1");
-                var shard2 = await Sharding.GetShardNumber(store, "user/B-2");
-                var shard3 = await Sharding.GetShardNumber(store, "user/E-3");
+                var shard1 = await Sharding.GetShardNumberFor(store, "user/A-1");
+                var shard2 = await Sharding.GetShardNumberFor(store, "user/B-2");
+                var shard3 = await Sharding.GetShardNumberFor(store, "user/E-3");
 
                 Assert.NotEqual(shard1, shard2);
                 Assert.NotEqual(shard1, shard3);
@@ -154,9 +154,9 @@ namespace SlowTests.Client.Operations
             {
                 using (var session = store.OpenSession())
                 {
-                    var shard1 = await Sharding.GetShardNumber(store, "user/A-1");
-                    var shard2 = await Sharding.GetShardNumber(store, "user/B-2");
-                    var shard3 = await Sharding.GetShardNumber(store, "user/E-3");
+                    var shard1 = await Sharding.GetShardNumberFor(store, "user/A-1");
+                    var shard2 = await Sharding.GetShardNumberFor(store, "user/B-2");
+                    var shard3 = await Sharding.GetShardNumberFor(store, "user/E-3");
 
                     Assert.NotEqual(shard1, shard2);
                     Assert.NotEqual(shard1, shard3);

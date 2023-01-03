@@ -10,6 +10,8 @@ public class ShardingConfiguration
 
     public List<ShardBucketRange> BucketRanges = new List<ShardBucketRange>();
 
+    public Dictionary<string, List<ShardBucketRange>> Prefixed;
+
     public Dictionary<int, ShardBucketMigration> BucketMigrations;
 
     // change vectors with a MOVE element below this will be considered as permanent

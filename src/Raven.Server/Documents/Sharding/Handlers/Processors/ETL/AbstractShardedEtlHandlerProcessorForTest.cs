@@ -41,7 +41,7 @@ internal abstract class AbstractShardedEtlHandlerProcessorForTest<TTestEtlScript
                 return;
             }
 
-            var shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, testScript.DocumentId);
+            var shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, testScript.DocumentId);
 
             var command = CreateCommand(testScriptJson);
 

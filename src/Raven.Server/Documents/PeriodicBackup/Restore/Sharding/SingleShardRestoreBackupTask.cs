@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             IRestoreSource restoreSource, OperationCancelToken operationCancelToken) : base(serverStore, restoreConfiguration, restoreSource, filesToRestore, operationCancelToken)
         {
             DatabaseValidation = false;
-            _shardNumber = ShardHelper.GetShardNumber(DatabaseName);
+            _shardNumber = ShardHelper.GetShardNumberFromDatabaseName(DatabaseName);
         }
 
         protected override Task<IDisposable> OnBeforeRestoreAsync()

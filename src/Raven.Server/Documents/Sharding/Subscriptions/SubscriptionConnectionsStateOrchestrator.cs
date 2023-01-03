@@ -81,7 +81,7 @@ public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsS
 
         // we don't want to ensure that only one orchestrated connection handle the subscription
         options.Strategy = SubscriptionOpeningStrategy.TakeOver;
-        options.WorkerId += $"/{ShardHelper.GetShardNumber(shard)}";
+        options.WorkerId += $"/{ShardHelper.GetShardNumberFromDatabaseName(shard)}";
         options.TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250); // failover faster
         
         // we want to limit the batch of each shard, to not hold too much memory if there are other batches while batch is proceed

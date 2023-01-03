@@ -440,7 +440,7 @@ namespace SlowTests.Sharding.ETL
                 var shardNumber = 0;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    shardNumber = shardedCtx.GetShardNumber(context, id);
+                    shardNumber = shardedCtx.GetShardNumberFor(context, id);
                 }
 
                 var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation($"{name}${shardNumber}", OngoingTaskType.RavenEtl));
@@ -456,7 +456,7 @@ namespace SlowTests.Sharding.ETL
                 id = "users/5";
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    Assert.Equal(shardNumber, shardedCtx.GetShardNumber(context, id));
+                    Assert.Equal(shardNumber, shardedCtx.GetShardNumberFor(context, id));
                 }
 
                 using (var session = src.OpenSession())

@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.TimeSeries
 
         protected override async ValueTask GetSegmentsSummaryAndWriteAsync(TransactionOperationContext context, string docId, string name, DateTime @from, DateTime to)
         {
-            int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
+            int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
             var op = new ProxyCommand<SegmentsSummary>(new GetSegmentsSummaryOperation.GetSegmentsSummaryCommand(docId, name, from, to), RequestHandler.HttpContext.Response);
             using(var token = RequestHandler.CreateOperationToken())
                 await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(op, shardNumber, token.Token);

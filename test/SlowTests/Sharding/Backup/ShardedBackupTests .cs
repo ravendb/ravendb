@@ -89,7 +89,7 @@ namespace SlowTests.Sharding.Backup
                         var user = new User { Name = i.ToString() };
                         var id = $"users/{i}";
 
-                        var shardNumber = shardedCtx.GetShardNumber(context, id);
+                        var shardNumber = shardedCtx.GetShardNumberFor(context, id);
                         if (shardNumToDocIds.TryGetValue(shardNumber, out var ids) == false)
                         {
                             shardNumToDocIds[shardNumber] = ids = new List<string>();
@@ -132,7 +132,7 @@ namespace SlowTests.Sharding.Backup
                         var user = new User { Name = i.ToString() };
                         var id = $"users/{i}";
 
-                        var shardNumber = shardedCtx.GetShardNumber(context, id);
+                        var shardNumber = shardedCtx.GetShardNumberFor(context, id);
                         shardNumToDocIds[shardNumber].Add(id);
 
                         await session.StoreAsync(user, id);
@@ -523,7 +523,7 @@ namespace SlowTests.Sharding.Backup
                 for (int i = 0; i < count; i++)
                 {
                     var id = $"{idPrefix}/{i}";
-                    var shardNumber = shardedCtx.GetShardNumber(context, id);
+                    var shardNumber = shardedCtx.GetShardNumberFor(context, id);
                     if (shardNumToDocIds.TryGetValue(shardNumber, out var ids) == false)
                     {
                         shardNumToDocIds[shardNumber] = ids = new List<string>();

@@ -827,7 +827,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             public void AddState(DatabaseObservationState state)
             {
-                if (ShardHelper.TryGetShardNumber(state.Name, out var shardNumber) == false)
+                if (ShardHelper.TryGetShardNumberFromDatabaseName(state.Name, out var shardNumber) == false)
                 {
                     // handle not sharded database
                     if (_isShardedState)

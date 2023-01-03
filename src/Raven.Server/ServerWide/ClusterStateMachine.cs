@@ -3477,7 +3477,7 @@ namespace Raven.Server.ServerWide
         {
             using (var raw = ReadRawDatabaseRecord(context, name))
             {
-                return raw.Sharding.Value;
+                return raw.Sharding.MaterializedConfiguration;
             }
         }
 

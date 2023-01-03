@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         
         public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re, SubscriptionConnectionsStateOrchestrator state) : base(options, dbName)
         {
-            _shardNumber = ShardHelper.GetShardNumber(dbName);
+            _shardNumber = ShardHelper.GetShardNumberFromDatabaseName(dbName);
             _shardRequestExecutor = re;
             _state = state;
 

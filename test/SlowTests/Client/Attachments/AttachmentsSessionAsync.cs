@@ -391,7 +391,7 @@ namespace SlowTests.Client.Attachments
                 int? shardNumber = null;
                 if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                 {
-                    shardNumber = await Sharding.GetShardNumber(store, "users/1");
+                    shardNumber = await Sharding.GetShardNumberFor(store, "users/1");
                 }
 
                 AttachmentsCrud.AssertAttachmentCount(store, 1, documentsCount: 1, shardNumber: shardNumber);

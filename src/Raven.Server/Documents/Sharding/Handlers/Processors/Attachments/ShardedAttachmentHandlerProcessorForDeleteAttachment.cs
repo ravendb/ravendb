@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
         {
             var cmd = new DeleteAttachmentOperation.DeleteAttachmentCommand(docId, name, changeVector);
 
-            int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
+            int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
             
             using (var token = RequestHandler.CreateOperationToken())
             {

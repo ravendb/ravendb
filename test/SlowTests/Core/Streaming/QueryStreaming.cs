@@ -350,7 +350,7 @@ namespace SlowTests.Core.Streaming
 
                     session.SaveChanges();
 
-                    Assert.NotEqual(Sharding.GetShardNumber(store, "dogs/1"), Sharding.GetShardNumber(store, "dogs/2"));
+                    Assert.NotEqual(Sharding.GetShardNumberFor(store, "dogs/1"), Sharding.GetShardNumberFor(store, "dogs/2"));
 
                     var q = session.Query<Dog>().Where(d => d.Id == "dogs/1" || d.Id == "dogs/2").OrderBy(x => x.Id);
                     var queryResult = session.Advanced.Stream<Dog>(q);
@@ -387,7 +387,7 @@ namespace SlowTests.Core.Streaming
 
                     session.SaveChanges();
 
-                    Assert.NotEqual(Sharding.GetShardNumber(store, "dogs/1"), Sharding.GetShardNumber(store, "dogs/2"));
+                    Assert.NotEqual(Sharding.GetShardNumberFor(store, "dogs/1"), Sharding.GetShardNumberFor(store, "dogs/2"));
 
                     var q = session.Advanced.DocumentQuery<Dog>().WhereIn(x => x.Id, new[] { "dogs/1", "dogs/2" }).OrderBy("Id");
                     

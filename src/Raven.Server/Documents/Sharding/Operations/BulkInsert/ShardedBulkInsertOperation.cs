@@ -75,7 +75,7 @@ internal class ShardedBulkInsertOperation : BulkInsertOperationBase<ShardedBatch
     {
         await ExecuteBeforeStore();
 
-        int shardNumber = _databaseContext.GetShardNumber(_context, id);
+        int shardNumber = _databaseContext.GetShardNumberFor(_context, id);
 
         await _writers[shardNumber].WriteStreamAsync(command.Stream);
 

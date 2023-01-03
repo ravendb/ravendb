@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
                 cmd = new GetRevisionsCommand(id, start, pageSize, metadataOnly);
             }
 
-            int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, id);
+            int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
             var result = await RequestHandler.ExecuteSingleShardAsync(context, cmd, shardNumber, token);
 
             string actualEtag = cmd.Etag;

@@ -19,7 +19,7 @@ internal class ShardedDocumentHandlerProcessorForGenerateClassFromDocument : Abs
 
         int shardNumber;
         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, id);
+            shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
 
         using (var token = RequestHandler.CreateOperationToken())
         {

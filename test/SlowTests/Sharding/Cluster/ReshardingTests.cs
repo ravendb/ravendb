@@ -61,7 +61,7 @@ namespace SlowTests.Sharding.Cluster
                     await session.SaveChangesAsync();
                 }
 
-                var bucket = ShardHelper.GetBucket(id);
+                var bucket = Sharding.GetBucket(id);
                 var shardNumber = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
                 var toShard = ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, shardNumber);
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shardNumber)))
@@ -109,7 +109,7 @@ namespace SlowTests.Sharding.Cluster
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation( /*| DatabaseItemType.Attachments | DatabaseItemType.CounterGroups | DatabaseItemType.RevisionDocuments*/));
 
                 var id = "orders/830-A";
-                var oldLocation = await Sharding.GetShardNumber(store, id);
+                var oldLocation = await Sharding.GetShardNumberFor(store, id);
                
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, oldLocation)))
                 {
@@ -133,7 +133,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Null(order);
                 }
 
-                var newLocation = await Sharding.GetShardNumber(store, id);
+                var newLocation = await Sharding.GetShardNumberFor(store, id);
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
                 {
                     var order = await session.LoadAsync<Order>(id);
@@ -152,8 +152,8 @@ namespace SlowTests.Sharding.Cluster
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
 
                 var id = "foo/bar";
-                var bucket = ShardHelper.GetBucket(id);
-                var location = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+                var bucket = Sharding.GetBucket(id);
+                var location = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
                 var newLocation = ShardingTestBase.GetNextSortedShardNumber(record.Sharding.Shards, location);
                 using (var session = store.OpenAsyncSession())
                 {
@@ -341,7 +341,7 @@ namespace SlowTests.Sharding.Cluster
                 }
             }, 101);
 
-            var expectedShard = await Sharding.GetShardNumber(store, "users/1-A");
+            var expectedShard = await Sharding.GetShardNumberFor(store, "users/1-A");
             for (int shard = 0; shard < 3; shard++)
             {
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shard)))
@@ -419,7 +419,7 @@ namespace SlowTests.Sharding.Cluster
                 }
             }, 101);
 
-            var expectedShard = await Sharding.GetShardNumber(store, "users/1-A");
+            var expectedShard = await Sharding.GetShardNumberFor(store, "users/1-A");
             for (int shard = 0; shard < 3; shard++)
             {
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, shard)))

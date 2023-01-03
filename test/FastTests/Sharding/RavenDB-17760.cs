@@ -36,7 +36,7 @@ namespace FastTests.Sharding
             for (int i = 0; i < 3; i++)
             {
                 var suffix = $"suffix{i}";
-                int bucket = ShardHelper.GetBucket(suffix);
+                int bucket = Sharding.GetBucket(suffix);
                 Assert.DoesNotContain(bucket, buckets);
                 buckets[i] = bucket;
 
@@ -84,7 +84,7 @@ namespace FastTests.Sharding
         {
             using var store = Sharding.GetDocumentStore();
             const string suffix = "suffix";
-            int bucket = ShardHelper.GetBucket(suffix);
+            int bucket = Sharding.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -152,7 +152,7 @@ namespace FastTests.Sharding
             using var store = Sharding.GetDocumentStore();
 
             const string suffix = "suffix";
-            int bucket = ShardHelper.GetBucket(suffix);
+            int bucket = Sharding.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -228,7 +228,7 @@ namespace FastTests.Sharding
         {
             using var store = Sharding.GetDocumentStore();
             const string suffix = "suffix";
-            int bucket = ShardHelper.GetBucket(suffix);
+            int bucket = Sharding.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -294,7 +294,7 @@ namespace FastTests.Sharding
         {
             using var store = Sharding.GetDocumentStore();
             const string suffix = "suffix";
-            int bucket = ShardHelper.GetBucket(suffix);
+            int bucket = Sharding.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -387,7 +387,7 @@ namespace FastTests.Sharding
         {
             using var store = Sharding.GetDocumentStore();
             const string suffix = "suffix";
-            int bucket = ShardHelper.GetBucket(suffix);
+            int bucket = Sharding.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -473,7 +473,7 @@ namespace FastTests.Sharding
         {
             using var store = Sharding.GetDocumentStore();
             const string suffix = "suffix";
-            int bucket = ShardHelper.GetBucket(suffix);
+            int bucket = Sharding.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -550,7 +550,7 @@ namespace FastTests.Sharding
         {
             using var store = Sharding.GetDocumentStore();
             const string suffix = "suffix";
-            int bucket = ShardHelper.GetBucket(suffix);
+            int bucket = Sharding.GetBucket(suffix);
 
             using (var session = store.OpenAsyncSession())
             {

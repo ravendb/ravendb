@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Counters
         {
             var op = new GetCountersOperation.GetCounterValuesCommand(docId, counters, full);
 
-            var shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
+            var shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
 
             using (var token = RequestHandler.CreateOperationToken())
             {

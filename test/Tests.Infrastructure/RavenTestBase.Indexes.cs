@@ -256,7 +256,7 @@ public partial class RavenTestBase
                         var names = shardsDict.Keys;
                         foreach (var name in names)
                         {
-                            var shardNumber = ShardHelper.GetShardNumber(name);
+                            var shardNumber = ShardHelper.GetShardNumberFromDatabaseName(name);
                             var indexes = store.Maintenance.ForShard(shardNumber).Send(new GetIndexErrorsOperation(indexNames));
 
                             foreach (var index in indexes)

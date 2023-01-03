@@ -18,7 +18,7 @@ internal class ShardedDocumentHandlerProcessorForPatch : AbstractDocumentHandler
     {
         var command = new PatchOperation.PatchCommand(id, changeVector, patchRequest, skipPatchIfChangeVectorMismatch, returnDebugInformation, test);
 
-        int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, id);
+        int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
 
         using (var token = RequestHandler.CreateOperationToken())
         {

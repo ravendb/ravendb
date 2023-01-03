@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Revisions
             using (RequestHandler.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using(context.OpenReadTransaction())
             {
-                shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, docId);
+                shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, docId);
             }
 
             long count;

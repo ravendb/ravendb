@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
 
         protected override async ValueTask PutAttachmentsAsync(TransactionOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, CancellationToken token)
         {
-            int shardNumber = RequestHandler.DatabaseContext.GetShardNumber(context, id);
+            int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
             var op = new PutAttachmentOperation.PutAttachmentCommand(id, name, requestBodyStream, contentType, changeVector, validateStream: false);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand<AttachmentDetails>(op, RequestHandler.HttpContext.Response), shardNumber, token);
         }
