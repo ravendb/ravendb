@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Raven.Server.Config.Categories;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Utils.MicrosoftLogging;
@@ -29,7 +30,10 @@ public static class WebHostBuilderExtensions
         internalLoggingSource.SetupLogMode(LogMode.Information, logPath, retentionTime?.AsTimeSpan, retentionSize?.GetValue(SizeUnit.Bytes), compress);
         
         sparrowLoggingProvider =  new MicrosoftLoggingProvider(internalLoggingSource, notificationCenter);
-        sparrowLoggingProvider.Init(configuration);
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            sparrowLoggingProvider.InitAsync(configuration.MicrosoftLogsConfigurationPath.FullPath, context).GetAwaiter().GetResult();
+        }
         var internalSparrowLoggingProvider = sparrowLoggingProvider;
         return hostBuilder.ConfigureLogging(logging =>
         {
