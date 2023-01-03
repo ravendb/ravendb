@@ -47,7 +47,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 }
             }
 
-            var sourceShard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, Bucket);
+            var sourceShard = ShardHelper.GetShardNumberFor(record.Sharding, Bucket);
             if (sourceShard != SourceShard)
                 throw new RachisApplyException($"Bucket {Bucket} expected to be on shard {SourceShard}, but is actually on shard {sourceShard}");
 

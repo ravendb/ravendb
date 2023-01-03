@@ -7,7 +7,6 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
@@ -15,10 +14,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
-using Sparrow.Server;
-using Sparrow.Threading;
 using Tests.Infrastructure;
-using Tests.Infrastructure.Entities;
 using Voron;
 using Voron.Global;
 using Xunit;
@@ -637,94 +633,6 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(1, stats.NumberOfDocuments);
 
                     Assert.True(stats.Size < originalSize);
-                }
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Sharding)]
-        public async Task CanGetBucketStats_Prefixed()
-        {
-            using (var store = Sharding.GetDocumentStore(new Options
-            {
-               ModifyDatabaseRecord = record =>
-               {
-                   record.Sharding ??= new ShardingConfiguration();
-                   record.Sharding.Prefixed = new List<PrefixedShardingSetting>
-                   {
-                       new PrefixedShardingSetting()
-                       {
-                           Prefix = "Users/",
-                           Shards = new List<int> { 0 }
-                       },
-                       new PrefixedShardingSetting()
-                       {
-                           Prefix = "Orders/",
-                           Shards = new List<int> { 1 }
-                       }
-                   };
-               }
-            }))
-            {
-                var before1 = DateTime.UtcNow;
-                using (var session = store.OpenAsyncSession())
-                {
-                    for (int i = 0; i < 10; i++)
-                    {
-                        await session.StoreAsync(new Raven.Tests.Core.Utils.Entities.User(), $"users/{i}/$abc");
-                    }
-
-                    await session.SaveChangesAsync();
-                }
-                var after1 = DateTime.UtcNow;
-                using (var session = store.OpenAsyncSession())
-                {
-                    for (int i = 0; i < 10; i++)
-                    {
-                        await session.StoreAsync(new Order(), $"orders/{i}/$abc");
-                    }
-
-                    await session.SaveChangesAsync();
-                }
-                var after2 = DateTime.UtcNow;
-
-                var shardingConfig = await Sharding.GetShardingConfigurationAsync(store);
-                using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
-                {
-                    var id = "users/1/$abc";
-                    var shard = ShardHelper.GetShardNumberFor(shardingConfig, allocator, id);
-                    Assert.Equal(0, shard);
-
-                    var bucket = Sharding.GetBucket(id);
-                    bucket += 1 << 20;
-
-                    var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
-                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
-                    {
-                        var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
-                        Assert.Equal(bucket, stats.Bucket);
-                        Assert.Equal(10, stats.NumberOfDocuments);
-                        Assert.True(stats.LastModified > before1);
-                        Assert.True(stats.LastModified < after1);
-                    }
-
-                    id = "orders/1/$abc";
-                    shard = ShardHelper.GetShardNumberFor(shardingConfig, allocator, id);
-                    Assert.Equal(1, shard);
-
-                    bucket = Sharding.GetBucket(id);
-                    bucket += 2 << 20;
-
-                    db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
-                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
-                    {
-                        var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
-                        Assert.Equal(bucket, stats.Bucket);
-                        Assert.Equal(10, stats.NumberOfDocuments);
-                        Assert.True(stats.LastModified > after1);
-                        Assert.True(stats.LastModified < after2);
-                    }
                 }
             }
         }

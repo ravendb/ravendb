@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 if (from.HasValue == false)
                 {
                     var config = raw.Sharding;
-                    from = ShardHelper.GetShardNumber(config.ShardBucketRanges, bucket);
+                    from = ShardHelper.GetShardNumberFor(config, bucket);
                 }
             }
 
