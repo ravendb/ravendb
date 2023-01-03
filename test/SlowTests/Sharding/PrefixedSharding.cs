@@ -29,7 +29,9 @@ public class PrefixedSharding : RavenTestBase
 {
     public PrefixedSharding(ITestOutputHelper output) : base(output)
     {
-        ServerStore.BlockPrefixedSharding = false;
+        DoNotReuseServer();
+
+        Server.ServerStore.Sharding.BlockPrefixedSharding = false;
     }
 
     [RavenFact(RavenTestCategory.Sharding)]
@@ -207,7 +209,7 @@ public class PrefixedSharding : RavenTestBase
             Shards = new List<int> { 1, 2 }
         });
 
-        var task =  store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
+        var task = store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
         var e = await Assert.ThrowsAsync<RavenException>(async () => await task);
         Assert.Contains(
             $"Cannot add prefix 'asia/' to ShardingConfiguration.Prefixed. There are existing documents in database '{store.Database}' that start with 'asia/'",
@@ -398,7 +400,7 @@ public class PrefixedSharding : RavenTestBase
         // remove 'eu/' prefix
         shardingConfiguration.Prefixed.RemoveAt(0);
         await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor: 1, record.Etag));
-        
+
         shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
         Assert.Equal(1, shardingConfiguration.Prefixed.Count);
         Assert.Equal(5, shardingConfiguration.BucketRanges.Count);

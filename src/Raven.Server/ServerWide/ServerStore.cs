@@ -879,7 +879,7 @@ namespace Raven.Server.ServerWide
                     }
                     else
                     {
-                        FillShardingConfiguration(this, addDatabase, clusterTopology);
+                        Sharding.FillShardingConfiguration(addDatabase, clusterTopology);
                     }
                     break;
             }
@@ -2783,7 +2783,7 @@ namespace Raven.Server.ServerWide
             }
             else
             {
-                if (BlockPrefixedSharding && record.Sharding.Prefixed is { Count: > 0 })
+                if (Sharding.BlockPrefixedSharding && record.Sharding.Prefixed is { Count: > 0 })
                     throw new InvalidOperationException("Cannot use prefixed sharding, this feature is currently blocked");
 
                 InitializeTopology(record.Sharding.Orchestrator.Topology);
