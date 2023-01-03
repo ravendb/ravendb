@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -134,26 +135,26 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
     }
 
     [StorageIndexEntryKeyGenerator]
-    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(Transaction tx, ref TableValueReader tvr, out Slice slice)
     {
-        return GenerateBucketAndEtagIndexKey(context, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
+        return GenerateBucketAndEtagIndexKey(tx, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
     }
 
     [StorageIndexEntryKeyGenerator]
-    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(Transaction tx, ref TableValueReader tvr, out Slice slice)
     {
-        return GenerateBucketAndEtagIndexKey(context, idIndex: (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
+        return GenerateBucketAndEtagIndexKey(tx, idIndex: (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
     }
 
-    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
+    internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(Transaction tx, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
     {
         var idPtr = tvr.Read(idIndex, out var size);
         var etag = *(long*)tvr.Read(etagIndex, out _);
 
-        return GenerateBucketAndEtagSlice(context, idPtr, size, etag, out slice);
+        return GenerateBucketAndEtagSlice(tx, idPtr, size, etag, out slice);
     }
 
-    internal static ByteStringContext.Scope ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(ByteStringContext context, int keyIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
+    internal static ByteStringContext.Scope ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(Transaction tx, int keyIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
     {
         var keyPtr = tvr.Read(keyIndex, out var keySize);
 
@@ -166,14 +167,32 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
         var etag = *(long*)tvr.Read(etagIndex, out _);
 
-        return GenerateBucketAndEtagSlice(context, keyPtr, sizeOfDocId, etag, out slice);
+        return GenerateBucketAndEtagSlice(tx, keyPtr, sizeOfDocId, etag, out slice);
     }
 
-    private static ByteStringContext.Scope GenerateBucketAndEtagSlice(ByteStringContext context, byte* idPtr, int idSize, long etag, out Slice slice)
+    private static ByteStringContext.Scope GenerateBucketAndEtagSlice(Transaction tx, byte* idPtr, int idSize, long etag, out Slice slice)
     {
-        var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
+        var scope = tx.Allocator.Allocate(sizeof(long) + sizeof(int), out var buffer);
 
         var bucket = ShardHelper.GetBucketFor(idPtr, idSize);
+
+        var database = tx.Owner as ShardedDocumentDatabase;
+        var prefixedConfiguration = database?.ReadShardingState().Prefixed;
+        if (prefixedConfiguration != null)
+        {
+            var idAsStr = Encoding.UTF8.GetString(idPtr, idSize);
+            var index = 0;
+            foreach (var (prefix, _) in prefixedConfiguration)
+            {
+                index++;
+
+                if (idAsStr.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    bucket += index << 20;
+                    break;
+                }
+            }
+        }
 
         *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
         *(long*)(buffer.Ptr + sizeof(int)) = etag;

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
@@ -14,7 +15,10 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Server;
+using Sparrow.Threading;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Voron;
 using Voron.Global;
 using Xunit;
@@ -31,7 +35,7 @@ namespace SlowTests.Sharding.Cluster
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanGetBucketStats()
         {
-            var bucket = ShardHelper.GetBucket("users/1/$abc");
+            var bucket = Sharding.GetBucket("users/1/$abc");
 
             using (var store = Sharding.GetDocumentStore())
             {
@@ -115,9 +119,9 @@ namespace SlowTests.Sharding.Cluster
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanGetBucketStats2()
         {
-            var bucket1 = ShardHelper.GetBucket("users/1/$a");
-            var bucket2 = ShardHelper.GetBucket("users/1/$b");
-            var bucket3 = ShardHelper.GetBucket("users/1/$c");
+            var bucket1 = Sharding.GetBucket("users/1/$a");
+            var bucket2 = Sharding.GetBucket("users/1/$b");
+            var bucket3 = Sharding.GetBucket("users/1/$c");
 
             var buckets = new Dictionary<int, (int NumOfDocs, int Size)>
             {
@@ -170,7 +174,7 @@ namespace SlowTests.Sharding.Cluster
 
                 var after = DateTime.UtcNow;
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket1);
+                var shard = ShardHelper.GetShardNumberFor(record.Sharding, bucket1);
 
                 var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -186,7 +190,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.True(stats.LastModified < after);
                 }
 
-                shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket2);
+                shard = ShardHelper.GetShardNumberFor(record.Sharding, bucket2);
                 db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
@@ -201,7 +205,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.True(stats.LastModified < after);
                 }
 
-                shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket3);
+                shard = ShardHelper.GetShardNumberFor(record.Sharding, bucket3);
                 db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
@@ -231,8 +235,8 @@ namespace SlowTests.Sharding.Cluster
                 for (int i = 1; i <= 100; i++)
                 {
                     var suffix = i.ToString();
-                    var bucket = ShardHelper.GetBucket($"users/1/${suffix}");
-                    var shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+                    var bucket = Sharding.GetBucket($"users/1/${suffix}");
+                    var shard = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
 
                     if (shard != 0)
                         continue;
@@ -271,7 +275,7 @@ namespace SlowTests.Sharding.Cluster
         public async Task CanGetBucketStats_WithDocumentExtensions()
         {
             const string id = "users/1$a";
-            var bucket = ShardHelper.GetBucket(id);
+            var bucket = Sharding.GetBucket(id);
 
             using (var store = Sharding.GetDocumentStore())
             {
@@ -285,7 +289,7 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+                var shard = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
 
                 var expectedSize = 246;
 
@@ -449,7 +453,7 @@ namespace SlowTests.Sharding.Cluster
         public async Task BucketStatsShouldTakeIntoAccountAttachmentStreamSize()
         {
             const string id = "users/1";
-            var bucket = ShardHelper.GetBucket(id);
+            var bucket = Sharding.GetBucket(id);
 
             using (var store = Sharding.GetDocumentStore())
             {
@@ -463,7 +467,7 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+                var shard = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
 
                 var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
 
@@ -582,7 +586,7 @@ namespace SlowTests.Sharding.Cluster
         public async Task BucketStatsWithDocumentsCompression()
         {
             const string id = "companies/1";
-            var bucket = ShardHelper.GetBucket(id);
+            var bucket = Sharding.GetBucket(id);
 
             using (var store = Sharding.GetDocumentStore())
             {
@@ -599,7 +603,7 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shard = ShardHelper.GetShardNumber(record.Sharding.BucketRanges, bucket);
+                var shard = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
 
                 var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
 
@@ -633,6 +637,108 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(1, stats.NumberOfDocuments);
 
                     Assert.True(stats.Size < originalSize);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task CanGetBucketStats_Prefixed()
+        {
+            const int prefixedRangeStart = ShardHelper.NumberOfBuckets;
+
+            using (var store = Sharding.GetDocumentStore(new Options
+            {
+                   ModifyDatabaseRecord = record =>
+                   {
+                       record.Sharding ??= new ShardingConfiguration();
+                       record.Sharding.Prefixed = new Dictionary<string, List<ShardBucketRange>>
+                       {
+                           ["Users/"] = new List<ShardBucketRange>()
+                           {
+                               // range for 'users/' is : 
+                               // shard 0 : [1M, 2M]
+                               new ShardBucketRange
+                               {
+                                   ShardNumber = 0,
+                                   BucketRangeStart = prefixedRangeStart
+                               }
+                           },
+                           ["Orders/"] = new List<ShardBucketRange>()
+                           {
+                               // range for 'orders/' is :
+                               // shard 1 : [2M, 3M]
+                               new ShardBucketRange
+                               {
+                                   ShardNumber = 1,
+                                   BucketRangeStart = prefixedRangeStart * 2
+                               }
+                           }
+                       };
+                   }
+               }))
+            {
+                var before1 = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        await session.StoreAsync(new Raven.Tests.Core.Utils.Entities.User(), $"users/{i}/$abc");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+                var after1 = DateTime.UtcNow;
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        await session.StoreAsync(new Order(), $"orders/{i}/$abc");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+                var after2 = DateTime.UtcNow;
+
+                var shardingConfig = await Sharding.GetShardingConfigurationAsync(store);
+                using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
+                {
+                    var id = "users/1/$abc";
+                    var shard = ShardHelper.GetShardNumberFor(shardingConfig, allocator, id);
+                    Assert.Equal(0, shard);
+
+                    var bucket = Sharding.GetBucket(id);
+                    bucket += 1 << 20;
+
+                    var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                        Assert.Equal(bucket, stats.Bucket);
+                        Assert.Equal(2811, stats.Size);
+                        Assert.Equal(10, stats.NumberOfDocuments);
+                        Assert.True(stats.LastModified > before1);
+                        Assert.True(stats.LastModified < after1);
+                    }
+
+                    id = "orders/1/$abc";
+                    shard = ShardHelper.GetShardNumberFor(shardingConfig, allocator, id);
+                    Assert.Equal(1, shard);
+
+                    bucket = Sharding.GetBucket(id);
+                    bucket += 2 << 20;
+
+                    db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                        Assert.Equal(bucket, stats.Bucket);
+                        Assert.Equal(4101, stats.Size);
+                        Assert.Equal(10, stats.NumberOfDocuments);
+                        Assert.True(stats.LastModified > after1);
+                        Assert.True(stats.LastModified < after2);
+                    }
                 }
             }
         }

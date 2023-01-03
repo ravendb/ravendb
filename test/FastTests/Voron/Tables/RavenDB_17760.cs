@@ -406,9 +406,9 @@ namespace FastTests.Voron.Tables
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope IndexKeyGenerator(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope IndexKeyGenerator(Transaction tx, ref TableValueReader tvr, out Slice slice)
         {
-            var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
+            var scope = tx.Allocator.Allocate(sizeof(long) + sizeof(int), out var buffer);
 
             var idPtr = tvr.Read(0, out var size);
             var hash = Hashing.XXHash64.Calculate(idPtr, (ulong)size);

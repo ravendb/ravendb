@@ -616,7 +616,7 @@ namespace Voron.Data.Tables
             foreach (var dynamicKeyIndexDef in _schema.DynamicKeyIndexes.Values)
             {
                 var indexTree = GetTree(dynamicKeyIndexDef);
-                using (dynamicKeyIndexDef.GetValue(_tx.Allocator, ref value, out Slice val))
+                using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice val))
                 {
                     dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldSize: value.Size, newSize: 0);
 
@@ -851,8 +851,8 @@ namespace Voron.Data.Tables
 
                 foreach (var dynamicKeyIndexDef in _schema.DynamicKeyIndexes.Values)
                 {
-                    using (dynamicKeyIndexDef.GetValue(_tx.Allocator, ref oldVer, out Slice oldVal))
-                    using (dynamicKeyIndexDef.GetValue(_tx.Allocator, newVer, out Slice newVal))
+                    using (dynamicKeyIndexDef.GetValue(_tx, ref oldVer, out Slice oldVal))
+                    using (dynamicKeyIndexDef.GetValue(_tx, newVer, out Slice newVal))
                     {
                         dynamicKeyIndexDef.OnIndexEntryChanged(_tx, key: newVal, oldSize: oldVer.Size, newSize: newVer.Size);
 
@@ -985,7 +985,7 @@ namespace Voron.Data.Tables
 
                 foreach (var dynamicKeyIndexDef in _schema.DynamicKeyIndexes.Values)
                 {
-                    using (dynamicKeyIndexDef.GetValue(_tx.Allocator, ref value, out Slice val))
+                    using (dynamicKeyIndexDef.GetValue(_tx, ref value, out Slice val))
                     {
                         dynamicKeyIndexDef.OnIndexEntryChanged(_tx, val, oldSize: 0, newSize: value.Size);
 

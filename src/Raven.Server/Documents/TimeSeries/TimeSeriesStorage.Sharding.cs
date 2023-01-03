@@ -5,6 +5,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
+using Voron.Impl;
 using static Raven.Server.Documents.Schemas.DeletedRanges;
 using static Raven.Server.Documents.Schemas.TimeSeries;
 
@@ -33,16 +34,16 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTimeSeries(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTimeSeries(Transaction tx, ref TableValueReader tvr, out Slice slice)
         {
-            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)TimeSeriesTable.TimeSeriesKey,
+            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, keyIndex: (int)TimeSeriesTable.TimeSeriesKey,
                 etagIndex: (int)TimeSeriesTable.Etag, ref tvr, out slice);
         }
 
         [StorageIndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDeletedRanges(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDeletedRanges(Transaction tx, ref TableValueReader tvr, out Slice slice)
         {
-            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)DeletedRangeTable.RangeKey,
+            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, keyIndex: (int)DeletedRangeTable.RangeKey,
                 etagIndex: (int)DeletedRangeTable.Etag, ref tvr, out slice);
         }
     }
