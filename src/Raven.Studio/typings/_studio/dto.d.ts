@@ -90,6 +90,7 @@ interface documentMetadataDto {
     '@flags'?: string;
     '@attachments'?: Array<documentAttachmentDto>;
     '@change-vector'?: string;
+    '@shard-number'?: number;
     '@counters'?: Array<string>;
     '@counters-snapshot'?: dictionary<number>;
     '@timeseries-snapshot'?: dictionary<revisionTimeSeriesDto>;

@@ -43,6 +43,8 @@ class documentMetadata {
     revisionTimeSeries = ko.observableArray<revisionTimeSeries>();
     
     changeVector = ko.observable<string>();
+    
+    shardNumber: number | null;
 
     constructor(dto?: documentMetadataDto) {
         if (dto) {
@@ -52,6 +54,7 @@ class documentMetadata {
             this.nonAuthoritativeInfo = dto['Non-Authoritative-Information'];
             this.id = dto['@id'];
             this.tempIndexScore = dto['Temp-Index-Score'];
+            this.shardNumber = dto['@shard-number'];
 
             const dateFormat = generalUtils.dateFormat;
             this.lastModifiedFullDate = ko.pureComputed(() => {
@@ -123,6 +126,7 @@ class documentMetadata {
                 if (property.toUpperCase() !== '@collection'.toUpperCase() &&
                     property.toUpperCase() !== '@flags'.toUpperCase() &&
                     property.toUpperCase() !== 'Raven-Clr-Type'.toUpperCase() &&
+                    property.toUpperCase() !== '@shard-number'.toUpperCase() &&
                     property.toUpperCase() !== 'Non-Authoritative-Information'.toUpperCase() &&
                     property.toUpperCase() !== '@id'.toUpperCase() &&
                     property.toUpperCase() !== 'Temp-Index-Score'.toUpperCase() &&
