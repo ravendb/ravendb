@@ -181,7 +181,6 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         if (prefixedConfiguration is { Count: > 0 })
         {
             var idAsStr = Encoding.UTF8.GetString(idPtr, idSize);
-            var index = 0;
             foreach (var setting in prefixedConfiguration)
             {
                 var prefix = setting.Prefix;

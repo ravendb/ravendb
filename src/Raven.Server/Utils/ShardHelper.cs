@@ -231,7 +231,12 @@ namespace Raven.Server.Utils
             try
             {
                 if (bucket >= NumberOfBuckets)
-                    throw new InvalidOperationException($"For database '{record.DatabaseName}' total number of buckets is {NumberOfBuckets}, requested: {bucket}");
+                {
+                    if (record.Sharding.Prefixed is not {Count: > 0})
+                        throw new InvalidOperationException($"For database '{record.DatabaseName}' total number of buckets is {NumberOfBuckets}, requested: {bucket}");
+
+                    // prefixed range
+                }
 
                 if (bucket == 0)
                 {
