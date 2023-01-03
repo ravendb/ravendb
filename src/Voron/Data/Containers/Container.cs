@@ -347,7 +347,8 @@ namespace Voron.Data.Containers
             var list = new List<long>();
             Span<long> items = stackalloc long[256];
 
-            foreach (var pageNum in GetAllPagesSet(llt, containerId))
+            var it = GetAllPagesSet(llt, containerId);
+            while(it.TryMoveNext(out var pageNum))
             {
                 var page = llt.GetPage(pageNum);
                 int offset = 0;
@@ -403,7 +404,35 @@ namespace Voron.Data.Containers
             throw new VoronErrorException("The page is not a container page");
         }
 
-        public static IEnumerable<long> GetAllPagesSet(LowLevelTransaction llt, long containerId)
+        public struct AllPagesIterator
+        {
+            private readonly Tree _tree;
+            private readonly TreeIterator _iterator;
+            private bool _hasValue;
+
+            public AllPagesIterator(Tree tree)
+            {
+                _tree = tree;
+                _iterator = _tree.Iterate(prefetch: false);
+                _hasValue = _iterator.Seek(Slices.BeforeAllKeys);
+            }
+
+            public bool TryMoveNext(out long pageNum)
+            {
+                if (_hasValue == false)
+                {
+                    _iterator.Dispose();
+                    _tree.Dispose();
+                    pageNum = -1;
+                    return false;
+                }
+                pageNum = _iterator.CurrentKey.CreateReader().ReadBigEndianInt64();
+                _hasValue = _iterator.MoveNext();
+                return true;
+            }
+        }
+        
+        public static AllPagesIterator GetAllPagesSet(LowLevelTransaction llt, long containerId)
         {
             var rootPage = llt.GetPage(containerId);
             var rootContainer = new Container(rootPage);
@@ -413,22 +442,8 @@ namespace Voron.Data.Containers
                 tree = Tree.Open(llt, llt.Transaction, AllPagesTreeName, (TreeRootHeader*)pState);
             }
 
-            return YieldResults(tree);
+            return new AllPagesIterator(tree);
 
-            IEnumerable<long> YieldResults(Tree t)
-            {
-                using (t)
-                {
-                    using TreeIterator iterator = t.Iterate(prefetch: false);
-                    if (iterator.Seek(Slices.BeforeAllKeys) == false)
-                        yield break;
-                    do
-                    {
-                        var pageNum = iterator.CurrentKey.CreateReader().ReadBigEndianInt64();
-                        yield return pageNum;
-                    } while (iterator.MoveNext());
-                }
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
