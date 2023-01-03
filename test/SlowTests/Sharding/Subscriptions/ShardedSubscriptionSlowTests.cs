@@ -21,6 +21,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -680,5 +681,58 @@ namespace SlowTests.Sharding.Subscriptions
                 }
             }
         }
+
+
+        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+
+        public async Task AbortWhenNoDocsLeft2()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                for (int j = 0; j < 100; j++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            await session.StoreAsync(new User());
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var sn = await store.Subscriptions.CreateAsync<User>();
+                var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sn)
+                {
+                    CloseWhenNoDocsLeft = true,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    MaxDocsPerBatch = 16
+                });
+
+                var items = 0;
+                var st = worker.Run(x => { Interlocked.Add(ref items, x.NumberOfItemsInBatch); });
+                await Assert.ThrowsAsync<SubscriptionClosedException>(() => st.WaitWithoutExceptionAsync(_reasonableWaitTime));
+                Assert.Equal(1000, items);
+                await worker.DisposeAsync();
+
+                var worker2 = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sn)
+                {
+                    CloseWhenNoDocsLeft = true,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    MaxDocsPerBatch = 16
+                });
+
+                var gotBatch = false;
+                var st2 = worker2.Run(x =>
+                {
+                    if (x.NumberOfItemsInBatch > 0)
+                        gotBatch = true;
+                });
+                await Assert.ThrowsAsync<SubscriptionClosedException>(() => st2.WaitWithoutExceptionAsync(_reasonableWaitTime));
+                Assert.False(gotBatch);
+            }
+        }
+
     }
 }

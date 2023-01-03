@@ -99,14 +99,14 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             }
             catch (Exception e)
             {
-                _state.DropSubscription(new SubscriptionClosedException($"Stopping sharded subscription '{_options.SubscriptionName}' with id '{_state.SubscriptionId}'", canReconnect: true, closedDueNoDocsLeft: false, e));
+                _state.DropSubscription(new SubscriptionClosedException($"Stopping sharded subscription '{_options.SubscriptionName}' with id '{_state.SubscriptionId}'", canReconnect: true, noDocsLeft: false, e));
                 throw;
             }
         }
 
         protected override (bool ShouldTryToReconnect, ServerNode NodeRedirectTo) HandleSubscriptionClosedException(SubscriptionClosedException sce)
         {
-            if (sce.ClosedDueNoDocsLeft)
+            if (sce.NoDocsLeft)
             {
                 Interlocked.Increment(ref _state.ClosedDueToNoDocs);
                 _closedDueNoDocsLeft = true;
