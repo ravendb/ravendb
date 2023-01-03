@@ -277,7 +277,7 @@ namespace Raven.Server.Web.System
                         }
                     }
                 }
-                
+
                 var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(databaseRecord.DatabaseName, databaseRecord, context, replicationFactor, index, raftRequestId);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -406,9 +406,9 @@ namespace Raven.Server.Web.System
 
             if (dbRecordExist && databaseRecord.IsSharded)
             {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, 
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal,
                     "remove this and introduce a dedicated command for updating Sharding.Prefixed");
-                await ServerStore.UpdatePrefixedShardingIfNeeded(ServerStore, context, databaseRecord, clusterTopology);
+                await ServerStore.Sharding.UpdatePrefixedShardingIfNeeded(context, databaseRecord, clusterTopology);
             }
 
             var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index, raftRequestId);
@@ -743,7 +743,7 @@ namespace Raven.Server.Web.System
                                     {
                                         throw new InvalidOperationException($"Database '{databaseName}' doesn't reside on node '{node}' so it can't be deleted from it");
                                     }
-                                    
+
                                     if (isShard && topology.ReplicationFactor == 1 && rawRecord.Sharding.DoesShardHaveBuckets(shardNumber))
                                     {
                                         throw new InvalidOperationException(
@@ -1070,7 +1070,7 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-        
+
         [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task CompactDatabase()
         {
