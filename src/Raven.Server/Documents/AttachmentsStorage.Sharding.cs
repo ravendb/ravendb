@@ -59,7 +59,7 @@ namespace Raven.Server.Documents
                     break;
             }
 
-            var bucket = ShardHelper.GetBucket(attachmentKey.Content.Ptr, sizeOfDocId);
+            var bucket = ShardHelper.GetBucketFor(attachmentKey.Content.Ptr, sizeOfDocId);
             var scope = context.Allocator.Allocate(sizeof(int), out var buffer);
             *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
 
