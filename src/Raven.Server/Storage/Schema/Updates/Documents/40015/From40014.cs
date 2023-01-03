@@ -17,7 +17,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         public bool Update(UpdateStep step)
         {
-            step.DocumentsStorage.RevisionsStorage = new RevisionsStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);
+            step.DocumentsStorage.RevisionsStorage = new RevisionsStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx, step.DocumentsStorage.RevisionsSchema, step.DocumentsStorage.CompressedRevisionsSchema);
 
             // update revisions
             using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

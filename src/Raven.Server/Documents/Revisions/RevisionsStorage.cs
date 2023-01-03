@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
@@ -51,21 +52,17 @@ namespace Raven.Server.Documents.Revisions
         private static readonly TimeSpan MaxEnforceConfigurationSingleBatchTime = TimeSpan.FromSeconds(30);
         private readonly RevisionsCollectionConfiguration _emptyConfiguration = new RevisionsCollectionConfiguration { Disabled = true };
 
-        public RevisionsStorage(DocumentDatabase database, Transaction tx)
+        public RevisionsStorage([NotNull] DocumentDatabase database, [NotNull] Transaction tx, [NotNull] TableSchema revisionsSchema, [NotNull] TableSchema compressedRevisionsSchema)
         {
-            _database = database;
-            if (_database is ShardedDocumentDatabase)
-            {
-                RevisionsSchema = Schemas.Revisions.ShardingCompressedRevisionsSchemaBase;
-                CompressedRevisionsSchema = Schemas.Revisions.ShardingRevisionsSchemaBase;
-            }
-            else
-            {
-                RevisionsSchema = Schemas.Revisions.CompressedRevisionsSchemaBase;
-                CompressedRevisionsSchema = Schemas.Revisions.RevisionsSchemaBase;
-            }
+            if (tx == null)
+                throw new ArgumentNullException(nameof(tx));
 
+            _database = database ?? throw new ArgumentNullException(nameof(database));
             _documentsStorage = _database.DocumentsStorage;
+
+            RevisionsSchema = revisionsSchema ?? throw new ArgumentNullException(nameof(revisionsSchema));
+            CompressedRevisionsSchema = compressedRevisionsSchema ?? throw new ArgumentNullException(nameof(compressedRevisionsSchema));
+
             _logger = LoggingSource.Instance.GetLogger<RevisionsStorage>(database.Name);
             Operations = new RevisionsOperations(_database);
             ConflictConfiguration = new RevisionsConfiguration
@@ -1381,7 +1378,7 @@ namespace Raven.Server.Documents.Revisions
             }
             else
             {
-                if (collections.Comparer != null && collections.Comparer.Equals(StringComparer.OrdinalIgnoreCase) == false )
+                if (collections.Comparer != null && collections.Comparer.Equals(StringComparer.OrdinalIgnoreCase) == false)
                 {
                     throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
                 }
@@ -1452,7 +1449,7 @@ namespace Raven.Server.Documents.Revisions
                     var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
                     if (collectionName == null)
                     {
-                        var msg = $"Tried to revert revisions in the collection '{collection}' which does not exist"; 
+                        var msg = $"Tried to revert revisions in the collection '{collection}' which does not exist";
                         if (_logger.IsInfoEnabled)
                             _logger.Info(msg);
                         result.WarnAboutFailedCollection(msg);
@@ -1467,7 +1464,7 @@ namespace Raven.Server.Documents.Revisions
                     var revisions = new Table(RevisionsSchema, readCtx.Transaction.InnerTransaction);
                     tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], parameters.LastScannedEtag);
                 }
-                
+
                 foreach (var tvr in tvrs)
                 {
                     token.ThrowIfCancellationRequested();
