@@ -35,8 +35,6 @@ namespace Raven.Client.Documents.Commands
         private readonly string _exclude;
         private readonly string _startAfter;
 
-        internal string _database;
-
         public GetDocumentsCommand(int start, int pageSize)
         {
             _start = start;
@@ -101,7 +99,7 @@ namespace Raven.Client.Documents.Commands
         {
             var pathBuilder = new StringBuilder(node.Url);
             pathBuilder.Append("/databases/")
-                .Append(_database ?? node.Database)
+                .Append(node.Database)
                 .Append("/docs?");
 
             if (_start.HasValue)

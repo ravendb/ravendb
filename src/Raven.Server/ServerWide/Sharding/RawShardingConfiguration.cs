@@ -218,5 +218,5 @@ public class RawShardingConfiguration
         }
     }
 
-    public bool DoesShardHaveBuckets(int shardNumber) => ShardingConfiguration.DoesShardHaveBuckets(ShardBucketRanges, shardNumber);
+    public bool DoesShardHaveBuckets(int shardNumber) => ShardingConfiguration.DoesShardHaveBuckets(BucketRanges, shardNumber);
 }
