@@ -173,7 +173,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
     {
         var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
 
-        var bucket = ShardHelper.GetBucket(idPtr, idSize);
+        var bucket = ShardHelper.GetBucketFor(idPtr, idSize);
 
         *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
         *(long*)(buffer.Ptr + sizeof(int)) = etag;

@@ -1019,8 +1019,8 @@ namespace SlowTests.Sharding.Cluster
                 var id4 = $"users/4${suffix}";
 
                 await InsertData(store);
-                var bucket = ShardHelper.GetBucket(id1);
-                var oldLocation = await Sharding.GetShardNumber(store, id1);
+                var bucket = Sharding.GetBucket(id1);
+                var oldLocation = await Sharding.GetShardNumberFor(store, id1);
 
                 var originalShard = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, oldLocation));
                 using (originalShard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -1093,7 +1093,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(0, stats.NumberOfDocuments);
                 }
 
-                var newLocation = await Sharding.GetShardNumber(store, id1);
+                var newLocation = await Sharding.GetShardNumberFor(store, id1);
                 Assert.NotEqual(oldLocation, newLocation);
 
                 var newShard = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, newLocation));
