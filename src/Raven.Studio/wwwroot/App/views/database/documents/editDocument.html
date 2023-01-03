@@ -226,6 +226,14 @@
                 <h3 class="margin-none">Properties</h3>
                 <hr class="small" />
                 <dl class="dl-horizontal small" data-bind="with: metadata">
+                    <div data-bind="visible: shardNumber != null">
+                        <dt>Shard:</dt>
+                        <dd>
+                            <span class="label label-default">
+                                # <span data-bind="text: shardNumber"></span>    
+                            </span>
+                        </dd>
+                    </div>
                     <div data-bind="visible: !$root.isCreatingNewDocument()">
                         <dt>Change Vector:</dt>
                         <dd>

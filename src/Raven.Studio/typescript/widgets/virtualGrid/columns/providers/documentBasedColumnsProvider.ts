@@ -193,7 +193,8 @@ class documentBasedColumnsProvider {
         const docDto = doc.toDto(true);
         
         const text = JSON.stringify(docDto, null, 4);
-        const titleToUse = title ?? doc.getId() ? "Document: " + doc.getId() : "Document Preview";
+        const shardPart = doc.__metadata?.shardNumber != null ? " (shard #" + doc.__metadata.shardNumber + ")" : "";
+        const titleToUse = title ?? doc.getId() ? "Document: " + doc.getId() + shardPart : "Document Preview";
         app.showBootstrapDialog(new showDataDialog(titleToUse, text, "javascript"));
     }
 

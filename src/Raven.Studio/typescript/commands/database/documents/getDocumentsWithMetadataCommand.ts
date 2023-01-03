@@ -15,7 +15,7 @@ class getDocumentsWithMetadataCommand extends commandBase {
         const payload = {
             Ids: this.ids
         };
-        this.post<queryResultDto<documentDto>>(endpoints.databases.document.docs, JSON.stringify(payload), this.db)
+        this.post<queryResultDto<documentDto>>(endpoints.databases.document.docs + "?fromStudio=true", JSON.stringify(payload), this.db)
             .fail((xhr: JQueryXHR) => {
                 if (xhr.status === 404 && this.ids.length === 1) {
                     documentResult.resolve([null]);

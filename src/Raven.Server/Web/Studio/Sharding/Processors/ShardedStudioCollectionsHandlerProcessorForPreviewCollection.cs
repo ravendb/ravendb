@@ -73,7 +73,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
     private class ShardedPreviewState : PreviewState
     {
-        private const string ShardNumberKey = "$shard-number";
+        private const string ShardNumberKey = "@shard-number";
         public int ShardNumber;
 
         public override DynamicJsonValue CreateMetadata(BlittableJsonReaderObject current)
