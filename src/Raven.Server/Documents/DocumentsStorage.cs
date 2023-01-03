@@ -49,6 +49,8 @@ namespace Raven.Server.Documents
 
         protected TableSchema AttachmentsSchema;
 
+        protected TableSchema ConflictsSchema;
+
         public static readonly TableSchema CollectionsSchema = Schemas.Collections.Current;
         public readonly DocumentDatabase DocumentDatabase;
         public DocumentsContextPool ContextPool;
@@ -113,6 +115,7 @@ namespace Raven.Server.Documents
             CompressedDocsSchema = Schemas.Documents.CompressedDocsSchemaBase;
 
             AttachmentsSchema = Schemas.Attachments.AttachmentsSchemaBase;
+            ConflictsSchema = Schemas.Conflicts.ConflictsSchemaBase;
         }
 
         public void Dispose()
@@ -240,7 +243,7 @@ namespace Raven.Server.Documents
 
                     RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx);
                     ExpirationStorage = new ExpirationStorage(DocumentDatabase, tx);
-                    ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx);
+                    ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx, ConflictsSchema);
                     AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx, AttachmentsSchema);
                     CountersStorage = new CountersStorage(DocumentDatabase, tx);
                     TimeSeriesStorage = new TimeSeriesStorage(DocumentDatabase, tx);
