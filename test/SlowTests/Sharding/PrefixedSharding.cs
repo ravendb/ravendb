@@ -1,12 +1,21 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,9 +26,10 @@ public class PrefixedSharding : RavenTestBase
 {
     public PrefixedSharding(ITestOutputHelper output) : base(output)
     {
+        ServerStore.BlockPrefixedSharding = false;
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sharding)]
     public async Task CanShardByDocumentsPrefix()
     {
         using var store = Sharding.GetDocumentStore(new Options
@@ -133,8 +143,7 @@ public class PrefixedSharding : RavenTestBase
         }
     }
 
-
-    [Fact]
+    [RavenFact(RavenTestCategory.Sharding)]
     public async Task ShouldThrowOnAttemptToAddPrefixThatDoesntEndWithSlashOrComma()
     {
         using var store = Sharding.GetDocumentStore();
@@ -156,7 +165,7 @@ public class PrefixedSharding : RavenTestBase
             e.Message);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sharding)]
     public async Task ShouldNotAllowToAddPrefixIfWeHaveDocsStartingWith()
     {
         using var store = Sharding.GetDocumentStore(new Options
@@ -202,7 +211,7 @@ public class PrefixedSharding : RavenTestBase
             e.Message);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sharding)]
     public async Task ShouldNotAllowToDeletePrefixIfWeHaveDocsStartingWith()
     {
         using var store = Sharding.GetDocumentStore(new Options
@@ -249,7 +258,7 @@ public class PrefixedSharding : RavenTestBase
             e.Message);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sharding)]
     public async Task CanAddPrefixIfNoDocsStartingWith()
     {
         using var store = Sharding.GetDocumentStore(new Options
@@ -299,7 +308,7 @@ public class PrefixedSharding : RavenTestBase
         Assert.Equal(6, shardingConfiguration.BucketRanges.Count);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sharding)]
     public async Task CanDeletePrefixIfNoDocsStartingWith()
     {
         using var store = Sharding.GetDocumentStore(new Options
@@ -344,7 +353,7 @@ public class PrefixedSharding : RavenTestBase
         Assert.Equal(3, shardingConfiguration.BucketRanges.Count);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sharding)]
     public async Task CanDeleteOnePrefixThenAddAnotherIfNoDocsStartingWith()
     {
         using var store = Sharding.GetDocumentStore(new Options
@@ -409,6 +418,257 @@ public class PrefixedSharding : RavenTestBase
         Assert.Equal(ShardHelper.NumberOfBuckets * 2.5, shardingConfiguration.BucketRanges[4].BucketRangeStart);
         Assert.Equal(ShardHelper.NumberOfBuckets * 3, shardingConfiguration.BucketRanges[5].BucketRangeStart);
         Assert.Equal(ShardHelper.NumberOfBuckets * 3.5, shardingConfiguration.BucketRanges[6].BucketRangeStart);
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+    public async Task BackupAndRestoreShardedDatabase_ShouldPreservePrefixedSettingsAndBucketRanges()
+    {
+        using (var store = Sharding.GetDocumentStore())
+        {
+            var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            databaseRecord.Sharding.Prefixed ??= new List<PrefixedShardingSetting>();
+            databaseRecord.Sharding.Prefixed.Add(new PrefixedShardingSetting
+            {
+                Prefix = "users/",
+                Shards = new List<int> { 0 }
+            });
+            databaseRecord.Sharding.Prefixed.Add(new PrefixedShardingSetting
+            {
+                Prefix = "orders/",
+                Shards = new List<int> { 1 }
+            });
+            databaseRecord.Sharding.Prefixed.Add(new PrefixedShardingSetting
+            {
+                Prefix = "employees/",
+                Shards = new List<int> { 2 }
+            });
+
+            await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(databaseRecord, replicationFactor: 1, databaseRecord.Etag));
+            var sharding = await Sharding.GetShardingConfigurationAsync(store);
+
+            Assert.Equal(6, sharding.BucketRanges.Count);
+            Assert.Equal(ShardHelper.NumberOfBuckets, sharding.BucketRanges[3].BucketRangeStart);
+            Assert.Equal(ShardHelper.NumberOfBuckets * 2, sharding.BucketRanges[4].BucketRangeStart);
+            Assert.Equal(ShardHelper.NumberOfBuckets * 3, sharding.BucketRanges[5].BucketRangeStart);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    await session.StoreAsync(new User(), $"users/{i}");
+                    await session.StoreAsync(new Order(), $"orders/{i}");
+                    await session.StoreAsync(new Employee(), $"employees/{i}");
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 0)))
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    var doc = await session.LoadAsync<User>($"users/{i}");
+                    Assert.NotNull(doc);
+                }
+            }
+            using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 1)))
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    var doc = await session.LoadAsync<Order>($"orders/{i}");
+                    Assert.NotNull(doc);
+                }
+            }
+            using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(store.Database, 2)))
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    var doc = await session.LoadAsync<Employee>($"employees/{i}");
+                    Assert.NotNull(doc);
+                }
+            }
+
+            var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var config = Backup.CreateBackupConfiguration(backupPath);
+
+            await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
+            Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+            var dirs = Directory.GetDirectories(backupPath);
+            Assert.Equal(3, dirs.Length);
+
+            sharding = await Sharding.GetShardingConfigurationAsync(store);
+            var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
+
+            // restore the database with a different name
+            var restoredDatabaseName = $"restored_database-{Guid.NewGuid()}";
+            using (Sharding.Backup.ReadOnly(backupPath))
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+            {
+                DatabaseName = restoredDatabaseName,
+                ShardRestoreSettings = settings
+
+            }, timeout: TimeSpan.FromSeconds(60)))
+            {
+                var newDatabaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredDatabaseName));
+                Assert.Equal(3, newDatabaseRecord.Sharding.Shards.Count);
+                Assert.Equal(3, newDatabaseRecord.Sharding.Prefixed.Count);
+
+                var usersPrefixSetting = newDatabaseRecord.Sharding.Prefixed[0];
+                Assert.Equal("users/", usersPrefixSetting.Prefix);
+                Assert.Equal(1, usersPrefixSetting.Shards.Count);
+                Assert.Equal(0, usersPrefixSetting.Shards[0]);
+                Assert.Equal(ShardHelper.NumberOfBuckets, usersPrefixSetting.BucketRangeStart);
+
+                var ordersPrefixSetting = newDatabaseRecord.Sharding.Prefixed[1];
+                Assert.Equal("orders/", ordersPrefixSetting.Prefix);
+                Assert.Equal(1, ordersPrefixSetting.Shards.Count);
+                Assert.Equal(1, ordersPrefixSetting.Shards[0]);
+                Assert.Equal(ShardHelper.NumberOfBuckets * 2, ordersPrefixSetting.BucketRangeStart);
+
+                var employeesPrefixSetting = newDatabaseRecord.Sharding.Prefixed[2];
+                Assert.Equal("employees/", employeesPrefixSetting.Prefix);
+                Assert.Equal(1, employeesPrefixSetting.Shards.Count);
+                Assert.Equal(2, employeesPrefixSetting.Shards[0]);
+                Assert.Equal(ShardHelper.NumberOfBuckets * 3, employeesPrefixSetting.BucketRangeStart);
+
+                Assert.Equal(6, sharding.BucketRanges.Count);
+                Assert.Equal(ShardHelper.NumberOfBuckets, sharding.BucketRanges[3].BucketRangeStart);
+                Assert.Equal(ShardHelper.NumberOfBuckets * 2, sharding.BucketRanges[4].BucketRangeStart);
+                Assert.Equal(ShardHelper.NumberOfBuckets * 3, sharding.BucketRanges[5].BucketRangeStart);
+
+                using (var session = store.OpenAsyncSession(database: restoredDatabaseName))
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var user = await session.LoadAsync<User>($"users/{i}");
+                        Assert.NotNull(user);
+
+                        var order = await session.LoadAsync<Order>($"orders/{i}");
+                        Assert.NotNull(order);
+
+                        var employee = await session.LoadAsync<Employee>($"employees/{i}");
+                        Assert.NotNull(employee);
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession(database: restoredDatabaseName))
+                {
+                    await session.StoreAsync(new User(), "users/11");
+                    await session.StoreAsync(new Order(), "orders/11");
+                    await session.StoreAsync(new Employee(), "employees/11");
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(restoredDatabaseName, 0)))
+                {
+                    var user = await session.LoadAsync<User>("users/11");
+                    Assert.NotNull(user);
+                }
+
+                using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(restoredDatabaseName, 1)))
+                {
+                    var order = await session.LoadAsync<Order>("orders/11");
+                    Assert.NotNull(order);
+                }
+
+                using (var session = store.OpenAsyncSession(database: ShardHelper.ToShardName(restoredDatabaseName, 2)))
+                {
+                    var employee = await session.LoadAsync<Employee>("employees/11");
+                    Assert.NotNull(employee);
+                }
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Sharding)]
+    public async Task CanMoveOneBucketFromPrefixedRange()
+    {
+        using var store = Sharding.GetDocumentStore(new Options
+        {
+            ModifyDatabaseRecord = record =>
+            {
+                record.Sharding ??= new ShardingConfiguration();
+                record.Sharding.Prefixed = new List<PrefixedShardingSetting>
+                    {
+                        new PrefixedShardingSetting
+                        {
+                            // bucket range for 'users/' is : 
+                            // shard 0 : [1M, 1.5M]
+                            // shard 1 : [1.5M, 2M]
+                            Prefix = "users/",
+                            Shards = new List<int> { 0, 1 }
+                        }
+                    };
+            }
+        });
+
+        const string id = "users/1";
+        using (var session = store.OpenAsyncSession())
+        {
+            var user = new User
+            {
+                Name = "Original shard"
+            };
+            await session.StoreAsync(user, id);
+            await session.SaveChangesAsync();
+        }
+
+        var shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+
+        Assert.Equal(5, shardingConfiguration.BucketRanges.Count);
+        Assert.Equal(ShardHelper.NumberOfBuckets, shardingConfiguration.Prefixed[0].BucketRangeStart);
+
+        var bucket = Sharding.GetBucket(id);
+        bucket += ShardHelper.NumberOfBuckets;
+
+        var originalLocation = ShardHelper.GetShardNumberFor(shardingConfiguration, bucket);
+        Assert.Contains(originalLocation, shardingConfiguration.Prefixed[0].Shards);
+        var newLocation = shardingConfiguration.Prefixed[0].Shards.Single(s => s != originalLocation);
+
+        await Sharding.Resharding.MoveShardForId(store, id);
+
+        shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
+        Assert.Equal(7, shardingConfiguration.BucketRanges.Count);
+
+        Assert.Equal(bucket, shardingConfiguration.BucketRanges[^2].BucketRangeStart);
+        Assert.Equal(newLocation, shardingConfiguration.BucketRanges[^2].ShardNumber);
+
+        Assert.Equal(bucket + 1, shardingConfiguration.BucketRanges[^1].BucketRangeStart);
+        Assert.Equal(originalLocation, shardingConfiguration.BucketRanges[^1].ShardNumber);
+
+        using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, originalLocation)))
+        {
+            var user = await session.LoadAsync<User>(id);
+            Assert.Null(user);
+        }
+        using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
+        {
+            var user = await session.LoadAsync<User>(id);
+            Assert.Equal("Original shard", user.Name);
+        }
+
+        // the document will be written to the new location
+        using (var session = store.OpenAsyncSession())
+        {
+            var user = await session.LoadAsync<User>(id);
+            user.Name = "New shard";
+            await session.SaveChangesAsync();
+        }
+
+        using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, originalLocation)))
+        {
+            var user = await session.LoadAsync<User>(id);
+            Assert.Null(user);
+        }
+
+        using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
+        {
+            var user = await session.LoadAsync<User>(id);
+            Assert.Equal("New shard", user.Name);
+        }
     }
 
     private class Item

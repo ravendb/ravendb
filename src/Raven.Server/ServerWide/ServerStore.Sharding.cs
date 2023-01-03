@@ -17,11 +17,10 @@ using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
 {
-    /// <summary>
-    /// Persistent store for server-wide configuration, such as cluster settings, database configuration, etc
-    /// </summary>
     public partial class ServerStore
     {
+        public static bool BlockPrefixedSharding = true;
+
         public static void FillShardingConfiguration(ServerStore serverStore, AddDatabaseCommand addDatabase, ClusterTopology clusterTopology)
         {
             var shardingConfiguration = addDatabase.Record.Sharding;

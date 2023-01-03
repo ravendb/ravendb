@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -18,7 +17,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents;
@@ -1107,94 +1105,6 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 await CheckData(store, database: ShardHelper.ToShardName(store.Database, newLocation), expectedRevisionsCount: 11);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Sharding)]
-        public async Task CanMoveOneBucketFromPrefixedRange()
-        {
-            using var store = Sharding.GetDocumentStore(new Options
-            {
-                ModifyDatabaseRecord = record =>
-                {
-                    record.Sharding ??= new ShardingConfiguration();
-                    record.Sharding.Prefixed = new List<PrefixedShardingSetting>
-                    {
-                        new PrefixedShardingSetting
-                        {
-                            // bucket range for 'users/' is : 
-                            // shard 0 : [1M, 1.5M]
-                            // shard 1 : [1.5M, 2M]
-                            Prefix = "users/",
-                            Shards = new List<int> { 0, 1 }
-                        }
-                    };
-                }
-            });
-
-            const string id = "users/1";
-            using (var session = store.OpenAsyncSession())
-            {
-                var user = new User
-                {
-                    Name = "Original shard"
-                };
-                await session.StoreAsync(user, id);
-                await session.SaveChangesAsync();
-            }
-
-            var shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
-
-            Assert.Equal(5, shardingConfiguration.BucketRanges.Count);
-            Assert.Equal(ShardHelper.NumberOfBuckets, shardingConfiguration.Prefixed[0].BucketRangeStart);
-
-            var bucket = Sharding.GetBucket(id);
-            bucket += ShardHelper.NumberOfBuckets;
-
-            var originalLocation = ShardHelper.GetShardNumberFor(shardingConfiguration, bucket);
-            Assert.Contains(originalLocation, shardingConfiguration.Prefixed[0].Shards);
-            var newLocation = shardingConfiguration.Prefixed[0].Shards.Single(s => s != originalLocation);
-
-            await Sharding.Resharding.MoveShardForId(store, id);
-
-            shardingConfiguration = await Sharding.GetShardingConfigurationAsync(store);
-            Assert.Equal(7, shardingConfiguration.BucketRanges.Count);
-
-            Assert.Equal(bucket, shardingConfiguration.BucketRanges[^2].BucketRangeStart);
-            Assert.Equal(newLocation, shardingConfiguration.BucketRanges[^2].ShardNumber);
-
-            Assert.Equal(bucket + 1, shardingConfiguration.BucketRanges[^1].BucketRangeStart);
-            Assert.Equal(originalLocation, shardingConfiguration.BucketRanges[^1].ShardNumber);
-
-            using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, originalLocation)))
-            {
-                var user = await session.LoadAsync<User>(id);
-                Assert.Null(user);
-            }
-            using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
-            {
-                var user = await session.LoadAsync<User>(id);
-                Assert.Equal("Original shard", user.Name);
-            }
-
-            // the document will be written to the new location
-            using (var session = store.OpenAsyncSession())
-            {
-                var user = await session.LoadAsync<User>(id);
-                user.Name = "New shard";
-                await session.SaveChangesAsync();
-            }
-
-            using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, originalLocation)))
-            {
-                var user = await session.LoadAsync<User>(id);
-                Assert.Null(user);
-            }
-
-            using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newLocation)))
-            {
-                var user = await session.LoadAsync<User>(id);
-                Assert.Equal("New shard", user.Name);
             }
         }
 
