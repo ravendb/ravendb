@@ -98,9 +98,8 @@ class shell extends viewModelBase {
     cloudClusterAdmin: KnockoutObservable<boolean>;
     colorCustomizationDisabled = ko.observable<boolean>(false);
     applyColorCustomization: KnockoutObservable<boolean>;
-    singleShardActive: KnockoutObservable<boolean>;
+    singleShardName: KnockoutObservable<string>;
     allShardsUrl: KnockoutObservable<string>;
-    
     clientCertificate = clientCertificateModel.certificateInfo;
     certificateExpirationState = clientCertificateModel.certificateExpirationState;
     
@@ -171,13 +170,14 @@ class shell extends viewModelBase {
             return !disableColors && cloudClusterAdmin;
         });
         
-        this.singleShardActive = ko.pureComputed(() => {
+        this.singleShardName = ko.pureComputed(() => {
             const db = this.activeDatabase();
             if (!db) {
-                return false;
+                return null;
             }
             
-            return db instanceof shard;
+            const isShard = db instanceof shard;
+            return isShard ? db.shardName : null;
         });
         
         this.allShardsUrl = ko.pureComputed(() => {

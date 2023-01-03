@@ -26,6 +26,7 @@ import {
 } from "components/common/RichPanel";
 import { useDraggableItem } from "hooks/useDraggableItem";
 import { NodeInfo } from "components/models/databases";
+import appUrl from "common/appUrl";
 
 interface OrchestratorInfoComponentProps {
     node: NodeInfo;
@@ -185,12 +186,13 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
 
 interface ShardInfoComponentProps {
     node: NodeInfo;
+    shardName: string;
     databaseLockMode: DatabaseLockMode;
     deleteFromGroup: (nodeTag: string, hardDelete: boolean) => void;
 }
 
 export function ShardInfoComponent(props: ShardInfoComponentProps) {
-    const { node, databaseLockMode, deleteFromGroup } = props;
+    const { node, databaseLockMode, deleteFromGroup, shardName } = props;
 
     const deleteLockId = useId("delete-lock");
 
@@ -200,6 +202,9 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
     const showErrorsDetails = useCallback(() => {
         app.showBootstrapDialog(new showDataDialog("Error details. Node: " + node.tag, node.lastError, "plain"));
     }, [node]);
+
+    const documentsUrl = appUrl.forDocuments(null, shardName);
+    const debugUrl = appUrl.toExternalUrl(node.nodeUrl, documentsUrl);
 
     return (
         <RichPanel className="flex-row">
@@ -214,6 +219,17 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
                         </RichPanelName>
                     </RichPanelInfo>
                     <RichPanelActions>
+                        <UncontrolledDropdown key="advanced">
+                            <DropdownToggle caret>
+                                <i className="icon-debug-advanced" />
+                                Advanced
+                            </DropdownToggle>
+                            <DropdownMenu>
+                                <DropdownItem href={debugUrl} target="_blank">
+                                    Debug this shard
+                                </DropdownItem>
+                            </DropdownMenu>
+                        </UncontrolledDropdown>
                         {node.responsibleNode && (
                             <div
                                 className="text-center"
