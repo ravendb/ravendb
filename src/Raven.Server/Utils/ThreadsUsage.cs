@@ -33,7 +33,7 @@ namespace Raven.Server.Utils
                         {
                             // thread has exited
                         }
-                        catch (Win32Exception e) when (e.HResult == 0x5)
+                        catch (Win32Exception e) when (e.NativeErrorCode == 0x5)
                         {
                             // thread has exited
                         }
