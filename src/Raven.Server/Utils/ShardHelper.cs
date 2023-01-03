@@ -149,6 +149,11 @@ namespace Raven.Server.Utils
             return FindBucketShard(configuration.BucketRanges, bucket);
         }
 
+        public static int GetShardNumberFor(RawShardingConfiguration configuration, int bucket)
+        {
+            return FindBucketShard(configuration.BucketRanges, bucket);
+        }
+
         public static int GetShardNumberFor(ShardingConfiguration configuration, ByteStringContext allocator, string id)
         {
             using (DocumentIdWorker.GetLower(allocator, id, out var lowerId))
