@@ -4,12 +4,12 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -36,21 +36,16 @@ namespace Raven.Server.Documents
         private readonly DocumentsStorage _documentsStorage;
         private readonly Logger _logger;
 
-        public ConflictsStorage(DocumentDatabase documentDatabase, Transaction tx)
+        public ConflictsStorage([NotNull] DocumentDatabase documentDatabase, [NotNull] Transaction tx, [NotNull] TableSchema schema)
         {
-            _documentDatabase = documentDatabase;
-            if (_documentDatabase is ShardedDocumentDatabase)
-            {
-                ConflictsSchema = Schemas.Conflicts.ShardingConflictsSchemaBase;
+            if (tx == null)
+                throw new ArgumentNullException(nameof(tx));
 
-            }
-            else
-            {
-                ConflictsSchema = Schemas.Conflicts.ConflictsSchemaBase;
-
-            }
-
+            _documentDatabase = documentDatabase ?? throw new ArgumentNullException(nameof(documentDatabase));
             _documentsStorage = documentDatabase.DocumentsStorage;
+
+            ConflictsSchema = schema ?? throw new ArgumentNullException(nameof(schema));
+
             _logger = LoggingSource.Instance.GetLogger<ConflictsStorage>(documentDatabase.Name);
 
             ConflictsSchema.Create(tx, ConflictsSlice, 32);
@@ -130,7 +125,7 @@ namespace Raven.Server.Documents
                 var documentConflict = TableValueToConflictDocument(context, ref tvr.Reader);
 
                 if (conflictsDictionary.TryAdd(documentConflict.Id,
-                        new GetConflictsPreviewResult.ConflictPreview {Id = documentConflict.Id, LastModified = documentConflict.LastModified, ScannedResults = 0}))
+                        new GetConflictsPreviewResult.ConflictPreview { Id = documentConflict.Id, LastModified = documentConflict.LastModified, ScannedResults = 0 }))
                 {
                     pageSize--;
                 }
@@ -139,11 +134,11 @@ namespace Raven.Server.Documents
             }
 
             var conflicts = conflictsDictionary.Values.ToList();
-          
+
             return new GetConflictsPreviewResult
             {
                 TotalResults = GetNumberOfDocumentsConflicts(context),
-                Results = conflicts.Select(c=>
+                Results = conflicts.Select(c =>
                 {
                     c.ConflictsPerDocument = GetConflictsFor(context, c.Id).Count;
                     return c;
