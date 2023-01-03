@@ -572,7 +572,8 @@ namespace Voron.Impl.Journal
             private readonly object _flushingLock = new object();
             private readonly SemaphoreSlim _fsyncLock = new SemaphoreSlim(1);
             private readonly WriteAheadJournal _waj;
-            private readonly ManualResetEventSlim _waitForJournalStateUpdateUnderTx = new ManualResetEventSlim();
+            private readonly ManualResetEventSlim _waitForJournalStateUpdateUnderTx = new();
+            private readonly ManualResetEventSlim _onWriteTransactionCompleted = new();
             private readonly LockTaskResponsible _flushLockTaskResponsible;
 
             public class LastFlushState
@@ -623,7 +624,10 @@ namespace Voron.Impl.Journal
 
             public void OnTransactionCompleted()
             {
-               _waitForJournalStateUpdateUnderTx.Set();
+                if (_waitForJournalStateUpdateUnderTx.IsSet == false)
+                {
+                    _onWriteTransactionCompleted.Set();
+                }
             }
 
             public long LastFlushedTransactionId => _lastFlushed.TransactionId;
@@ -811,6 +815,7 @@ namespace Voron.Impl.Journal
                 {
                     var transactionPersistentContext = new TransactionPersistentContext(true);
                     _waitForJournalStateUpdateUnderTx.Reset();
+                    _onWriteTransactionCompleted.Reset();
                     ExceptionDispatchInfo edi = null;
                     var sp = Stopwatch.StartNew();
 
@@ -875,24 +880,33 @@ namespace Voron.Impl.Journal
                         {
                             // couldn't get the transaction lock, we'll wait for the running transaction to complete
                             // for a bit, and then try again
-                            try
-                            {
-                                _flushLockTaskResponsible.RunTaskIfNotAlreadyRan();
 
-                                // 2 options here:
-                                // - we got a notification after the transaction was committed, in which case 
-                                //   _updateJournalStateAfterFlush was set to null while it was holding the write tx lock
-                                //   and we'll exit (from the while)
-                                // - we got a notification that the transaction is over (for any reason)
-                                //   and we'll try to acquire the write tx lock again
-                                _waitForJournalStateUpdateUnderTx.Wait(TimeSpan.FromMilliseconds(250), token);
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                break;
-                            }
+                            _flushLockTaskResponsible.RunTaskIfNotAlreadyRan();
 
-                            continue;
+                            // 2 options here:
+                            // - we got a notification after the transaction was committed, in which case 
+                            //   _updateJournalStateAfterFlush was set to null while it was holding the write tx lock
+                            //   and we'll exit (from the while)
+                            // - we got a notification that the transaction is over (for any reason)
+                            //   and we'll try to acquire the write tx lock again
+
+                            var satisfiedIndex = WaitHandle.WaitAny(new[] { _waitForJournalStateUpdateUnderTx.WaitHandle, _onWriteTransactionCompleted.WaitHandle, token.WaitHandle }, TimeSpan.FromMilliseconds(250));
+
+                            switch (satisfiedIndex)
+                            {
+                                case 0:
+                                case 2:
+                                    // _waitForJournalStateUpdateUnderTx or cancellation token
+                                    return;
+
+                                case 1:
+                                case WaitHandle.WaitTimeout:
+                                    // _onWriteTransactionCompleted or timeout
+                                    continue;
+
+                                default:
+                                    throw new InvalidOperationException($"Unknown handle at index: {satisfiedIndex}");
+                            }
                         }
 
                         var action = _updateJournalStateAfterFlush;
