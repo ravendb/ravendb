@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
@@ -40,11 +42,11 @@ public readonly struct ShardedSubscriptionTryoutOperation : IShardedOperation<Ge
         var getDocumentsResult = new GetDocumentsResult();
         var objList = new List<BlittableJsonReaderObject>();
 
-        foreach (var shardResult in results.Values)
+        foreach (var (shardNumber, shardResult) in results)
         {
             foreach (BlittableJsonReaderObject obj in shardResult.Result.Results)
             {
-                objList.Add(obj.Clone(_context));
+                objList.Add(obj.AddToMetadata(_context, Constants.Documents.Metadata.ShardNumber, shardNumber));
             }
         }
 
