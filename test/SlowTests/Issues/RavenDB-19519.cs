@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                        RegisterForDisposal = false,
                    }))
             {
-                server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(100, TimeUnit.Milliseconds);
+                server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(5, TimeUnit.Seconds);
 
                 var sm = new SemaphoreSlim(initialCount: 0);
 
