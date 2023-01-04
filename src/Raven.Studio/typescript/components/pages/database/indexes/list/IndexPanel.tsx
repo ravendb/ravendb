@@ -13,7 +13,6 @@ import { useAccessManager } from "hooks/useAccessManager";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import { UncontrolledTooltip } from "components/common/UncontrolledTooltip";
 import { IndexDistribution, IndexProgress } from "./IndexDistribution";
-import { IndexProgressTooltip } from "./IndexProgressTooltip";
 import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 import {
     RichPanel,
@@ -24,11 +23,12 @@ import {
     RichPanelInfo,
     RichPanelName,
     RichPanelSelect,
-} from "../../../../common/RichPanel";
+} from "components/common/RichPanel";
 import {
     Badge,
     Button,
     ButtonGroup,
+    Collapse,
     DropdownItem,
     DropdownMenu,
     DropdownToggle,
@@ -38,6 +38,7 @@ import {
 } from "reactstrap";
 import assertUnreachable from "../../../../utils/assertUnreachable";
 import useId from "hooks/useId";
+import useBoolean from "hooks/useBoolean";
 
 interface IndexPanelProps {
     database: database;
@@ -91,9 +92,10 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
 
     const { canReadWriteDatabase, canReadOnlyDatabase } = useAccessManager();
 
+    const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
+
     const isReplacement = IndexUtils.isSideBySide(index);
     const isFaulty = IndexUtils.hasAnyFaultyNode(index);
-    const inlineDetails = index.nodesInfo.length === 1;
 
     const eventsCollector = useEventsCollector();
 
@@ -377,7 +379,7 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                             )}
                         </ButtonGroup>
 
-                        {inlineDetails && isFaulty && (
+                        {isFaulty && (
                             <Button onClick={() => openFaulty(index.nodesInfo[0].location)} className="me-1">
                                 Open faulty index
                             </Button>
@@ -393,6 +395,9 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                                 </Button>
                             </ButtonGroup>
                         )}
+                        <Button color="secondary" onClick={togglePanelCollapsed} title="Toggle distribution details">
+                            <i className={panelCollapsed ? "icon-expand-vertical" : "icon-collapse-vertical"} />
+                        </Button>
                     </RichPanelActions>
                 </RichPanelHeader>
                 <RichPanelDetails>
@@ -465,22 +470,17 @@ export function IndexPanelInternal(props: IndexPanelProps, ref: ForwardedRef<HTM
                         <i className="icon-search" />
                         {index.searchEngine}
                     </RichPanelDetailItem>
-                    {inlineDetails && !isFaulty && (
-                        <InlineDetails
-                            index={index}
-                            globalIndexingStatus={globalIndexingStatus}
-                            showStaleReason={(location) => showStaleReasons(index, location)}
-                        />
-                    )}
+
+                    {!isFaulty && <InlineDetails index={index} />}
                 </RichPanelDetails>
-                {index.nodesInfo.length > 1 && (
+                <Collapse isOpen={!panelCollapsed}>
                     <IndexDistribution
                         index={index}
                         globalIndexingStatus={globalIndexingStatus}
                         showStaleReason={(location) => showStaleReasons(index, location)}
                         openFaulty={openFaulty}
                     />
-                )}
+                </Collapse>
             </RichPanel>
         </>
     );
@@ -515,15 +515,11 @@ function IndexSourceTypeComponent(props: { sourceType: IndexSourceType }) {
 
 interface InlineDetailsProps {
     index: IndexSharedInfo;
-    globalIndexingStatus: IndexRunningStatus;
-    showStaleReason: (location: databaseLocationSpecifier) => void;
 }
 
 function InlineDetails(props: InlineDetailsProps) {
-    const { index, globalIndexingStatus, showStaleReason } = props;
+    const { index } = props;
     const nodeInfo = index.nodesInfo[0];
-
-    const [indexId] = useState(() => _.uniqueId("index-inline-details-id"));
 
     return (
         <>
@@ -541,16 +537,9 @@ function InlineDetails(props: InlineDetailsProps) {
                 Errors
                 <div className="value">{nodeInfo.details.errorCount.toLocaleString()}</div>
             </RichPanelDetailItem>
-            <RichPanelDetailItem id={indexId}>
+            <RichPanelDetailItem>
                 <IndexProgress inline nodeInfo={nodeInfo} />
             </RichPanelDetailItem>
-            <IndexProgressTooltip
-                target={indexId}
-                nodeInfo={index.nodesInfo[0]}
-                index={index}
-                globalIndexingStatus={globalIndexingStatus}
-                showStaleReason={showStaleReason}
-            />
         </>
     );
 }
