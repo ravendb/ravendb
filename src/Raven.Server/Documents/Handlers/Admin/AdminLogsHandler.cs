@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/admin/microsoft-logs/loggers", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/logs/microsoft/loggers", "GET", AuthorizationStatus.Operator)]
         public async Task GetMicrosoftLoggers()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
         
-        [RavenAction("/admin/microsoft-logs/configuration", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/logs/microsoft/configuration", "GET", AuthorizationStatus.Operator)]
         public async Task GetMicrosoftConfiguration()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -180,13 +180,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/admin/microsoft-logs/configuration", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/logs/microsoft/configuration", "POST", AuthorizationStatus.Operator)]
         public async Task SetMicrosoftConfiguration()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 bool reset = GetBoolValueQueryString("reset", required: false) ?? false;
-                await Server.MicrosoftLogger.ReadAndApplyConfiguration(RequestBodyStream(), context, reset);
+                await Server.MicrosoftLogger.ReadAndApplyConfigurationAsync(RequestBodyStream(), context, reset);
             }
 
             NoContentStatus();

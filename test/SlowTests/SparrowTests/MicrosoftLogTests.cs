@@ -90,7 +90,7 @@ public class MicrosoftLogTests : RavenTestBase
         
         using (var httpClient = new HttpClient())
         {
-            var serverWebUrl = $"{server.WebUrl}/admin/microsoft-logs/configuration";
+            var serverWebUrl = $"{server.WebUrl}/admin/logs/microsoft/configuration";
             var httpMethod = new HttpMethod("Post");
             var httpRequestMessage = new HttpRequestMessage(httpMethod, new Uri(serverWebUrl));
             httpRequestMessage.Content = new StringContent(configurationContent);
