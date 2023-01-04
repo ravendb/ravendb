@@ -53,13 +53,7 @@ namespace Raven.Server.Web.Studio.Processors
                             LastModified = bucket.LastModified,
                             DocumentsCount = bucket.NumberOfDocuments
                         };
-                        if (range == 1)
-                        {
-                            var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(RequestHandler.Database);
-                            bucketRange.Documents = database.ShardedDocumentsStorage.GetDocumentsByBucketFrom(context, bucket.Bucket, 0)
-                                .Select(x => (string)x.Id)
-                                .ToList();
-                        }
+                        
                         ranges[id] = bucketRange;
                     }
 
@@ -82,8 +76,7 @@ namespace Raven.Server.Web.Studio.Processors
         public long NumberOfBuckets;
         public long RangeSize;
         public HashSet<int> ShardNumbers = new();
-        public List<string> Documents;
-
+        
         public string RangeSizeHumane => Size.Humane(RangeSize);
         public long DocumentsCount;
         public DateTime LastModified;
@@ -101,34 +94,43 @@ namespace Raven.Server.Web.Studio.Processors
                 [nameof(DocumentsCount)] = DocumentsCount,
                 [nameof(LastModified)] = LastModified,
             };
-            if (Documents is {Count: > 0})
-            {
-                json[nameof(Documents)] = new DynamicJsonArray(Documents);
-            }
+            
             return json;
         }
     }
 
-    public class BucketsResults : IDynamicJson
+    public class BucketsResults
     {
         public long TotalSize;
         public string TotalSizeHumane => Size.Humane(TotalSize);
         public Dictionary<int, BucketRange> BucketRanges = new();
 
-        public DynamicJsonValue ToJson()
+        public DynamicJsonValue ToJson(bool fromStudio = false)
         {
-            var ranges = new DynamicJsonValue();
-            foreach (var range in BucketRanges)
+            var json = new DynamicJsonValue()
             {
-                ranges[range.Key.ToString()] = range.Value.ToJson();
+                [nameof(TotalSizeHumane)] = TotalSizeHumane,
+                [nameof(TotalSize)] = TotalSize,
+            };
+
+            
+            if (fromStudio == false)
+            {
+                var ranges = new DynamicJsonValue();
+                foreach (var range in BucketRanges)
+                {
+                    ranges[range.Key.ToString()] = range.Value.ToJson();
+                }
+
+                json[nameof(BucketRanges)] = ranges;
+            }
+            else
+            {
+                var ranges = new DynamicJsonArray(BucketRanges.Select(x => x.Value.ToJson()));
+                json[nameof(BucketRanges)] = ranges;
             }
 
-            return new DynamicJsonValue()
-            {
-                [nameof(TotalSizeHumane)] = TotalSizeHumane, 
-                [nameof(TotalSize)] = TotalSize, 
-                [nameof(BucketRanges)] = ranges
-            };
+            return json;
         }
     }
 }

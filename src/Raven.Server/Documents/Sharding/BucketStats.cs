@@ -13,7 +13,7 @@ public class BucketStats : IDynamicJson
 
     public DateTime LastModified;
 
-    public DynamicJsonValue ToJson()
+    public virtual DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue()
         {
