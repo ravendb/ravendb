@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide;
@@ -66,7 +67,7 @@ namespace Raven.Server.Smuggler.Documents
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
         private DatabaseItemType _operateOnTypes;
         private readonly DatabaseSmugglerOptionsServerSide _options;
-        private readonly ByteStringContext _allocator;
+        protected readonly ByteStringContext _allocator;
 
         public StreamSource(Stream stream, JsonOperationContext context, string databaseName, DatabaseSmugglerOptionsServerSide options = null)
         {
@@ -1522,11 +1523,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (attachments == null)
                                 attachments = new List<DocumentItem.AttachmentStream>();
 
-                            var attachment = new DocumentItem.AttachmentStream
-                            {
-                                Stream = actions != null ? actions.GetTempStream() : GetTempStream()
-                            };
-                            attachment = await ProcessAttachmentStreamAsync(context, data, attachment);
+                            var attachment = await ProcessAttachmentStreamAsync(context, data, actions);
                             attachments.Add(attachment);
                             continue;
                         }
@@ -1576,7 +1573,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public Stream GetTempStream() => StreamDestination.GetTempStream(_options);
+        public Stream GetTempStream() => StreamDestination.GetTempStream( _options);
 
         private async IAsyncEnumerable<Tombstone> ReadTombstonesAsync(List<string> collectionsToOperate, INewDocumentActions actions = null)
         {
@@ -1866,7 +1863,8 @@ namespace Raven.Server.Smuggler.Documents
         private const char RecordSeparator = (char)SpecialChars.RecordSeparator;
         private const string DummyDocumentPrefix = "files/";
 
-        public async Task<DocumentItem.AttachmentStream> ProcessAttachmentStreamAsync(JsonOperationContext context, BlittableJsonReaderObject data, DocumentItem.AttachmentStream attachment)
+        public virtual async Task<DocumentItem.AttachmentStream> ProcessAttachmentStreamAsync(JsonOperationContext context, BlittableJsonReaderObject data,
+            INewDocumentActions actions)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
                 data.TryGet(nameof(AttachmentName.Size), out long size) == false ||
@@ -1876,9 +1874,14 @@ namespace Raven.Server.Smuggler.Documents
             if (_writeBuffer == null)
                 _returnWriteBuffer = _context.GetMemoryBuffer(out _writeBuffer);
 
-            attachment.Data = data;
+            var attachment = new DocumentItem.AttachmentStream
+            {
+                Data = data
+            };
+
             attachment.Base64HashDispose = Slice.External(_allocator, hash, out attachment.Base64Hash);
             attachment.TagDispose = Slice.External(_allocator, tag, out attachment.Tag);
+            attachment.Stream = actions != null ? actions.GetTempStream() : GetTempStream();
 
             while (size > 0)
             {
@@ -1984,7 +1987,7 @@ namespace Raven.Server.Smuggler.Documents
             return DatabaseItemType.Unknown;
         }
 
-        public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
+        public virtual Stream GetAttachmentStream(LazyStringValue hash, out string tag)
         {
             tag = null;
             return null;
@@ -1997,7 +2000,7 @@ namespace Raven.Server.Smuggler.Documents
                                             "it is only supported from Sharded Database Source.");
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             _peepingTomStream.Dispose();
             _allocator.Dispose();

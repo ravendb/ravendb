@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
         {
         }
 
-        protected abstract ValueTask ExecuteSmugglerAsync(JsonOperationContext context, ISmugglerSource source, Stream sampleData, DatabaseItemType operateOnTypes);
+        protected abstract ValueTask ExecuteSmugglerAsync(JsonOperationContext context, Stream sampleDataStream, DatabaseItemType operateOnTypes);
 
         protected abstract ValueTask<bool> IsDatabaseEmptyAsync();
 
@@ -82,9 +82,8 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
                 await using (var sampleData = typeof(SampleDataHandler).Assembly
                                  .GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind.ravendbdump"))
                 await using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
-                using (var source = new StreamSource(stream, context, databaseName))
                 {
-                    await ExecuteSmugglerAsync(context, source, sampleData, operateOnTypes);
+                    await ExecuteSmugglerAsync(context, stream, operateOnTypes);
                 }
 
                 await RequestHandler.NoContent();

@@ -15,18 +15,21 @@ namespace Raven.Server.Documents.Handlers.Processors.SampleData
         {
         }
 
-        protected override async ValueTask ExecuteSmugglerAsync(JsonOperationContext context, ISmugglerSource source, Stream sampleData, DatabaseItemType operateOnTypes)
+        protected override async ValueTask ExecuteSmugglerAsync(JsonOperationContext context, Stream sampleDataStream, DatabaseItemType operateOnTypes)
         {
-            var destination = RequestHandler.Database.Smuggler.CreateDestination();
+            using (var source = new StreamSource(sampleDataStream, context, RequestHandler.DatabaseName))
+            {
+                var destination = RequestHandler.Database.Smuggler.CreateDestination();
 
-            var smuggler = RequestHandler.Database.Smuggler.Create(source, destination, context,
-                options: new DatabaseSmugglerOptionsServerSide
-                {
-                    OperateOnTypes = operateOnTypes,
-                    SkipRevisionCreation = true
-                });
+                var smuggler = RequestHandler.Database.Smuggler.Create(source, destination, context,
+                    options: new DatabaseSmugglerOptionsServerSide
+                    {
+                        OperateOnTypes = operateOnTypes,
+                        SkipRevisionCreation = true
+                    });
 
-            await smuggler.ExecuteAsync();
+                await smuggler.ExecuteAsync();
+            }
         }
 
         protected override ValueTask<bool> IsDatabaseEmptyAsync()

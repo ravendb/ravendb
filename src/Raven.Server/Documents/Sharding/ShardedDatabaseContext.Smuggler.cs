@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Sharding
             {
                 return async (context, stream, options, result, onProgress, operationId, token) =>
                 {
-                    using (var source = new StreamSource(stream, context, _context.DatabaseName, options))
+                    using (var source = new OrchestratorStreamSource(stream, context, _context.DatabaseName, options))
                     {
                         DatabaseRecord record;
                         using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
