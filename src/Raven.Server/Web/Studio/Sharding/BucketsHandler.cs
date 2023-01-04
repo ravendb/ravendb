@@ -8,7 +8,7 @@ namespace Raven.Server.Web.Studio.Sharding
 {
     public class BucketsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/buckets", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/debug/buckets", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetBuckets()
         {
             using (var processor = new BucketsHandlerProcessorForGetBuckets(this))
