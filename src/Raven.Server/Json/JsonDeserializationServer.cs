@@ -285,6 +285,8 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, BucketsResults> BucketsResults = GenerateJsonDeserializationRoutine<BucketsResults>();
 
+        internal static readonly Func<BlittableJsonReaderObject, BucketInfo> BucketInfo = GenerateJsonDeserializationRoutine<BucketInfo>();
+
         public class Parameters
         {
             private Parameters()

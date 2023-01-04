@@ -61,19 +61,6 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
                         existing.RangeSize += cur.RangeSize;
                         existing.NumberOfBuckets += cur.NumberOfBuckets;
                         existing.ShardNumbers.UnionWith(cur.ShardNumbers);
-
-                        // this can only happen if we have the *same* bucket in multiple shards at the same time, did we catch it mid-migration?
-                        if (existing.Documents != null)
-                        {
-                            if (cur.Documents != null)
-                            {
-                                existing.Documents.AddRange(cur.Documents);
-                            }
-                        }
-                        else
-                        {
-                            existing.Documents = cur.Documents;
-                        }
                     }
                     else
                     {

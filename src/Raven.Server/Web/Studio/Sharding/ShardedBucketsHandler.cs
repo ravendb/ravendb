@@ -13,5 +13,12 @@ namespace Raven.Server.Web.Studio.Sharding
             using (var processor = new ShardedBucketsHandlerProcessorForGetBuckets(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/debug/bucket", "GET")]
+        public async Task GetBucket()
+        {
+            using (var processor = new ShardedBucketsHandlerProcessorForGetBucket(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
