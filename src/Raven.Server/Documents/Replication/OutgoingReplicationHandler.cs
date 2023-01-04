@@ -1150,7 +1150,7 @@ namespace Raven.Server.Documents.Replication
                 case ReplicationMessageReply.ReplyType.MissingAttachments:
                     if (++MissingAttachmentsRetries > 1)
                         RaiseAlertAndThrowMissingAttachmentException($"Failed to send batch successfully to {Destination.FromString()}. " +
-                                                                     $"Destination reported missing attachments {MissingAttachmentsRetries} times.\n" +
+                                                                     $"Destination reported missing attachments {MissingAttachmentsRetries} times.{Environment.NewLine}" +
                                                                      $"{replicationBatchReply.Exception}");
 
                     if (_log.IsInfoEnabled)
