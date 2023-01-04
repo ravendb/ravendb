@@ -1,14 +1,10 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Extensions;
 using Raven.Server.Rachis;
-using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json.Parsing;
-using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {
@@ -71,7 +67,13 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override string AdditionalDebugInformation(Exception exception)
         {
-            return $"Index name: '{Definition.Name}' for database '{DatabaseName}'";
+            var msg = $"Index name: '{Definition.Name}' for database '{DatabaseName}'";
+            if (exception != null)
+            {
+                msg += $" Exception: {exception}.";
+            }
+
+            return msg;
         }
     }
 }
