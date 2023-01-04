@@ -68,5 +68,10 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(RevisionsToKeep)] = RevisionsToKeep;
             json[nameof(DefaultDeploymentMode)] = DefaultDeploymentMode;
         }
+
+        public override string AdditionalDebugInformation(Exception exception)
+        {
+            return $"Index name: {Definition.Name}";
+        }
     }
 }
