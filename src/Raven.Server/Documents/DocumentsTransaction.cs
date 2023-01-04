@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
             _changes = changes;
 
             transaction.Owner = _context.DocumentDatabase;
-            transaction.LowLevelTransaction.OnBeforeCommit += _context.DocumentDatabase.DocumentsStorage.OnBeforeCommit;
+            transaction.OnBeforeCommit += _context.DocumentDatabase.DocumentsStorage.OnBeforeCommit;
         }
 
         public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction(DocumentsOperationContext context)

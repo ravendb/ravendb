@@ -239,15 +239,15 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         inMemoryBucketStats[bucket] = bucketStats;
     }
 
-    internal void UpdateBucketStatsTreeBeforeCommit(LowLevelTransaction llt)
+    internal void UpdateBucketStatsTreeBeforeCommit(Transaction tx)
     {
         if (_bucketStatistics == null)
             return;
 
-        var tree = llt.Transaction.ReadTree(BucketStatsSlice);
+        var tree = tx.ReadTree(BucketStatsSlice);
         foreach ((int bucket, Documents.BucketStats inMemoryStats) in _bucketStatistics)
         {
-            using (llt.Allocator.Allocate(sizeof(int), out var keyBuffer))
+            using (tx.Allocator.Allocate(sizeof(int), out var keyBuffer))
             {
                 *(int*)keyBuffer.Ptr = bucket;
                 var keySlice = new Slice(keyBuffer);

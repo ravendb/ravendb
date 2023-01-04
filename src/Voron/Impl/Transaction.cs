@@ -36,6 +36,8 @@ namespace Voron.Impl
 
         public bool IsWriteTransaction => _lowLevelTransaction.Flags == TransactionFlags.ReadWrite;
 
+        public event Action<Transaction> OnBeforeCommit;
+
         internal Dictionary<long, ByteString> CachedDecompressedBuffersByStorageId =>
             _cachedDecompressedBuffersByStorageId ??= new Dictionary<long, ByteString>();
 
@@ -229,6 +231,8 @@ namespace Voron.Impl
 
         internal void PrepareForCommit()
         {
+            OnBeforeCommit?.Invoke(this);
+
             if (_multiValueTrees != null)
             {
                 foreach (var multiValueTree in _multiValueTrees)

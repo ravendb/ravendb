@@ -67,7 +67,7 @@ namespace Raven.Server.Documents
         public DocumentPutAction DocumentPut;
         public StorageEnvironment Environment { get; private set; }
 
-        public Action<LowLevelTransaction> OnBeforeCommit { get; protected set; }
+        public Action<Transaction> OnBeforeCommit { get; protected set; }
 
         protected Dictionary<string, CollectionName> _collectionsCache;
         private static readonly Slice LastReplicatedEtagsSlice;

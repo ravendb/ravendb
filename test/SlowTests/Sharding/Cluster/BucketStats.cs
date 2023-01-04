@@ -637,6 +637,62 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task CanGetBucketStats_ManyDocs()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                await using (var bulk = store.BulkInsert())
+                {
+                    for (int i = 0; i < 100_000; i++)
+                    {
+                        var id = $"users/{i}";
+                        await bulk.StoreAsync(new User(), id);
+                    }
+                }
+
+                var total = 0L;
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                foreach (var shardNumber in sharding.Shards.Keys)
+                {
+                    var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shardNumber));
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var numberOfDocsInShard = ShardedDocumentsStorage.GetBucketStatistics(ctx, fromBucket: 0, toBucket: int.MaxValue)
+                            .Sum(s => s.NumberOfDocuments);
+
+                        total += numberOfDocsInShard;
+                    }
+                }
+
+                Assert.Equal(100_000, total);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sharding)]
+        public async Task CanGetBucketStatsForSampleData()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+                var total = 0L;
+
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                foreach (var shardNumber in sharding.Shards.Keys)
+                {
+                    var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shardNumber));
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var stats = ShardedDocumentsStorage.GetBucketStatistics(ctx, 0, int.MaxValue).Sum(x => x.NumberOfDocuments);
+                        total += stats;
+                    }
+                }
+                Assert.Equal(1059, total);
+            }
+        }
+
         private static void AssertStats(DocumentDatabase db, int bucket, int expectedSize, int expectedDocs = 1)
         {
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
