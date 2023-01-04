@@ -45,6 +45,9 @@ namespace Raven.Server.Smuggler.Documents
         public async ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
             _options = options;
+
+            // we will send decrypted data to the shards
+            _options.EncryptionKey = null;
             var holders = new Dictionary<int, StreamDestinationHolder>(_databaseContext.ShardCount);
 
             foreach (var shardNumber in _databaseContext.ShardsTopology.Keys)

@@ -17,25 +17,28 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
         {
         }
 
-        protected override async ValueTask ExecuteSmugglerAsync(JsonOperationContext context, ISmugglerSource source, Stream sampleData, DatabaseItemType operateOnTypes)
+        protected override async ValueTask ExecuteSmugglerAsync(JsonOperationContext context, Stream sampleDataStream, DatabaseItemType operateOnTypes)
         {
             var operationId = RequestHandler.DatabaseContext.Operations.GetNextOperationId();
             var record = RequestHandler.DatabaseContext.DatabaseRecord;
+            
+            using (var source = new OrchestratorStreamSource(sampleDataStream, context, RequestHandler.DatabaseName))
+            {
+                var smuggler = new ShardedDatabaseSmuggler(
+                    source,
+                    new MultiShardedDestination(source, RequestHandler.DatabaseContext, RequestHandler, operationId),
+                    context,
+                    record,
+                    RequestHandler.ServerStore,
+                    options: new DatabaseSmugglerOptionsServerSide
+                    {
+                        OperateOnTypes = operateOnTypes,
+                        SkipRevisionCreation = true
+                    },
+                    result: null);
 
-            var smuggler = new ShardedDatabaseSmuggler(
-                source,
-                new MultiShardedDestination(source, RequestHandler.DatabaseContext, RequestHandler, operationId),
-                context,
-                record,
-                RequestHandler.ServerStore,
-                options: new DatabaseSmugglerOptionsServerSide
-                {
-                    OperateOnTypes = operateOnTypes,
-                    SkipRevisionCreation = true
-                },
-                result: null);
-
-            await smuggler.ExecuteAsync();
+                await smuggler.ExecuteAsync();
+            }
         }
 
         protected override async ValueTask<bool> IsDatabaseEmptyAsync()

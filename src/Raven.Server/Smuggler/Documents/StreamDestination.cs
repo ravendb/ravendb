@@ -1159,6 +1159,7 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DatabaseSmugglerOptionsServerSide _options;
             private readonly Func<LazyStringValue, bool> _filterMetadataProperty;
             private HashSet<string> _attachmentStreamsAlreadyExported;
+            private Stream _attachmentStreamsTempFile;
 
             public StreamDocumentActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, ISmugglerSource source, DatabaseSmugglerOptionsServerSide options, Func<LazyStringValue, bool> filterMetadataProperty, string propertyName)
                 : base(writer, propertyName)
@@ -1266,7 +1267,7 @@ namespace Raven.Server.Smuggler.Documents
                 yield break;
             }
 
-            public Stream GetTempStream() => StreamDestination.GetTempStream(_options);
+            public Stream GetTempStream() => _attachmentStreamsTempFile ??= StreamDestination.GetTempStream(_options);
 
             private async ValueTask WriteUniqueAttachmentStreamsAsync(Document document, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
             {
@@ -1347,6 +1348,15 @@ namespace Raven.Server.Smuggler.Documents
                 await Writer.WriteStreamAsync(stream);
 
                 await Writer.MaybeFlushAsync();
+            }
+
+            public override async ValueTask DisposeAsync()
+            {
+                await base.DisposeAsync();
+                await using (_attachmentStreamsTempFile)
+                {
+                    
+                }
             }
         }
 

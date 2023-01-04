@@ -649,53 +649,42 @@ namespace SlowTests.Sharding.Backup
             return assembly.GetManifestResourceStream("SlowTests.Data." + name);
         }
 
-        [Fact(Skip = "TODO")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
         public async Task RegularToShardToRegularEncrypted()
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Efrat, DevelopmentHelper.Severity.Normal, "Handle RegularToShardToRegularEncrypted");
-
             var file = GetTempFileName();
             var file2 = Path.GetTempFileName();
             try
             {
-                using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
+                var operateOnTypes = DatabaseItemType.Documents
+                                     | DatabaseItemType.TimeSeries
+                                     | DatabaseItemType.CounterGroups
+                                     | DatabaseItemType.Attachments
+                                     | DatabaseItemType.Tombstones
+                                     | DatabaseItemType.DatabaseRecord
+                                     | DatabaseItemType.Subscriptions
+                                     | DatabaseItemType.Identities
+                                     | DatabaseItemType.CompareExchange
+                                     | DatabaseItemType.CompareExchangeTombstones
+                                     | DatabaseItemType.RevisionDocuments
+                                     | DatabaseItemType.Indexes;
+
+                using (var store1 = GetDocumentStore())
                 {
                     await Sharding.Backup.InsertData(store1);
-                    //WaitForUserToContinueTheTest(store1);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
                         EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                        OperateOnTypes = DatabaseItemType.Documents
-                        // | DatabaseItemType.TimeSeries
-                        // | DatabaseItemType.CounterGroups
-                        // | DatabaseItemType.Attachments
-                        // | DatabaseItemType.Tombstones
-                        // | DatabaseItemType.DatabaseRecord
-                        // | DatabaseItemType.Subscriptions
-                        // | DatabaseItemType.Identities
-                        // | DatabaseItemType.CompareExchange
-                        //| DatabaseItemType.CompareExchangeTombstones
-                        //| DatabaseItemType.RevisionDocuments
+                        OperateOnTypes = operateOnTypes
                     }, file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); //TODO - EFRAT
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     using (var store2 = Sharding.GetDocumentStore())
                     {
                         operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
                         {
                             EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                            OperateOnTypes = DatabaseItemType.Documents
-                            // | DatabaseItemType.TimeSeries
-                            // | DatabaseItemType.CounterGroups
-                            // | DatabaseItemType.Attachments
-                            // | DatabaseItemType.Tombstones
-                            // | DatabaseItemType.DatabaseRecord
-                            // | DatabaseItemType.Subscriptions
-                            // | DatabaseItemType.Identities
-                            // | DatabaseItemType.CompareExchange
-                            // | DatabaseItemType.CompareExchangeTombstones
-                            //| DatabaseItemType.RevisionDocuments
-                            //| DatabaseItemType.RevisionDocuments 
+                            OperateOnTypes = operateOnTypes
 
                         }, file);
                         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -703,16 +692,7 @@ namespace SlowTests.Sharding.Backup
                         operation = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                         {
                             EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                            OperateOnTypes = DatabaseItemType.Documents
-                            // | DatabaseItemType.TimeSeries
-                            // | DatabaseItemType.CounterGroups
-                            // | DatabaseItemType.Attachments
-                            // | DatabaseItemType.Tombstones
-                            // | DatabaseItemType.DatabaseRecord
-                            // | DatabaseItemType.Subscriptions
-                            // | DatabaseItemType.Identities
-                            // | DatabaseItemType.CompareExchange
-                            //| DatabaseItemType.CompareExchangeTombstones
+                            OperateOnTypes = operateOnTypes
                         }, file2);
                         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -721,21 +701,10 @@ namespace SlowTests.Sharding.Backup
                             operation = await store3.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
                             {
                                 EncryptionKey = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
-                                OperateOnTypes = DatabaseItemType.Documents
-                                // | DatabaseItemType.TimeSeries
-                                // | DatabaseItemType.CounterGroups
-                                // | DatabaseItemType.Attachments
-                                // | DatabaseItemType.Tombstones
-                                // | DatabaseItemType.DatabaseRecord
-                                // | DatabaseItemType.Subscriptions
-                                // | DatabaseItemType.Identities
-                                // | DatabaseItemType.CompareExchange
-                                //| DatabaseItemType.CompareExchangeTombstones
-                                //| DatabaseItemType.RevisionDocuments
+                                OperateOnTypes = operateOnTypes
 
                             }, file2);
                             await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-                            WaitForUserToContinueTheTest(store3);
                             await Sharding.Backup.CheckData(store3);
                         }
                     }
@@ -940,6 +909,23 @@ namespace SlowTests.Sharding.Backup
             Assert.NotNull(result);
             Assert.Equal(1, result.CompareExchangeTombstones.ReadCount);
             Assert.Equal(10, result.Documents.ReadCount);
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task CanImportUniqueAttachments()
+        {
+            await using var stream = typeof(ShardedSmugglerTests).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_19723.RavenDB_19723.ravendbdump");
+            var operateOnTypes = DatabaseItemType.Documents
+                                 | DatabaseItemType.Attachments;
+
+            using (var store1 = Sharding.GetDocumentStore())
+            {
+                var operation = await store1.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
+                {
+                    OperateOnTypes = operateOnTypes
+                }, stream);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+            }
         }
     }
 }

@@ -185,6 +185,13 @@ namespace Raven.Server.Documents
                     }
                 });
             }
+
+            public LimitedStream CreateDisposableReaderStream()
+            {
+                var disposableAction = CreateReaderStream(out var stream);
+                stream._disposable = disposableAction;
+                return stream;
+            }
         }
 
         private class InnerPartStream : Stream

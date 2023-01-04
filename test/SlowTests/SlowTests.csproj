@@ -90,6 +90,8 @@
     <EmbeddedResource Include="Data\RavenDB_19449\RavenDB_19449.zip" />
     <None Remove="Data\RavenDB_19560\ravendb_19560.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_19560\ravendb_19560.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_19723\RavenDB_19723.ravendbdump" />
+    <None Remove="Data\RavenDB_19723\RavenDB_19723.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />

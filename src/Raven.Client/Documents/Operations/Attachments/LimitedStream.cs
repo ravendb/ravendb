@@ -14,6 +14,7 @@ namespace Raven.Client.Documents.Operations.Attachments
         private readonly Stream _inner;
         private long _read;
         private bool _disposed;
+        internal IDisposable _disposable;
 
         public LimitedStream(Stream inner, long length, long currentPos, long overallRead)
         {
@@ -91,6 +92,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                 return;
 
             _disposed = true;
+            _disposable?.Dispose();
         }
 
         private void ReadToEnd()
