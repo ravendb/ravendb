@@ -8,8 +8,8 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using JetBrains.Annotations;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
@@ -21,7 +21,9 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -36,8 +38,6 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using Raven.Server.Exceptions;
-using Raven.Server.Documents.Replication.ReplicationItems;
 using Voron;
 
 namespace Raven.Server.Documents.Replication
@@ -1150,7 +1150,8 @@ namespace Raven.Server.Documents.Replication
                 case ReplicationMessageReply.ReplyType.MissingAttachments:
                     if (++MissingAttachmentsRetries > 1)
                         RaiseAlertAndThrowMissingAttachmentException($"Failed to send batch successfully to {Destination.FromString()}. " +
-                                                                     $"Destination reported missing attachments {MissingAttachmentsRetries} times.");
+                                                                     $"Destination reported missing attachments {MissingAttachmentsRetries} times.\n" +
+                                                                     $"{replicationBatchReply.Exception}");
 
                     if (_log.IsInfoEnabled)
                     {
@@ -1184,7 +1185,7 @@ namespace Raven.Server.Documents.Replication
                 msg,
                 AlertType.Replication,
                 NotificationSeverity.Error);
-            _parent._server.NotificationCenter.Add(_missingAttachmentsAlert);
+            _parent.Database.NotificationCenter.Add(_missingAttachmentsAlert);
 
             throw new MissingAttachmentException(msg);
         }
@@ -1282,7 +1283,7 @@ namespace Raven.Server.Documents.Replication
             SuccessfulReplication?.Invoke(this);
             if (_missingAttachmentsAlert != null)
             {
-                _parent._server.NotificationCenter.Dismiss(_missingAttachmentsAlert.Id);
+                _parent.Database.NotificationCenter.Dismiss(_missingAttachmentsAlert.Id);
                 _missingAttachmentsAlert = null;
             }
          
