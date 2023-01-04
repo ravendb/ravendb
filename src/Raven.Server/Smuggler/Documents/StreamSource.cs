@@ -754,7 +754,7 @@ namespace Raven.Server.Smuggler.Documents
                         throw new InvalidOperationException($"Trying to read time series entry without size specified: doc: {reader}");
 
                     if (reader.TryGet(Constants.Documents.Blob.Document, out BlittableJsonReaderObject blobMetadata) == false ||
-                        blobMetadata.TryGet(nameof(TimeSeriesItem.Collection), out string collection) == false)
+                        blobMetadata.TryGet(nameof(TimeSeriesItem.Collection), out LazyStringValue collection) == false)
                     {
                         await SkipEntryAsync(reader, size, skipDueToReadError: true);
                         continue;
@@ -766,7 +766,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (blobMetadata.TryGet(nameof(TimeSeriesItem.DocId), out string docId) == false ||
+                    if (blobMetadata.TryGet(nameof(TimeSeriesItem.DocId), out LazyStringValue docId) == false ||
                         blobMetadata.TryGet(nameof(TimeSeriesItem.Name), out string name) == false ||
                         blobMetadata.TryGet(nameof(TimeSeriesItem.ChangeVector), out string cv) == false ||
                         blobMetadata.TryGet(nameof(TimeSeriesItem.Baseline), out DateTime baseline) == false)

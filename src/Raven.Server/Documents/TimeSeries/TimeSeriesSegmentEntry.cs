@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.TimeSeries
 {
-    public class TimeSeriesSegmentEntry
+    public class TimeSeriesSegmentEntry : IDisposable
     {
         public LazyStringValue Key;
 
@@ -24,5 +24,14 @@ namespace Raven.Server.Documents.TimeSeries
         public DateTime Start;
 
         public long Etag;
+
+        public void Dispose()
+        {
+            Key?.Dispose();
+            LuceneKey?.Dispose();
+            DocId?.Dispose();
+            Name?.Dispose();
+            Collection?.Dispose();
+        }
     }
 }
