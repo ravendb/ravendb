@@ -21,6 +21,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Iteration;
 using Raven.Server.Utils.Enumerators;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
@@ -534,17 +535,20 @@ namespace Raven.Server.Smuggler.Documents
             var database = context.DocumentDatabase;
             foreach (var ts in database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, startEtag, long.MaxValue))
             {
-                yield return new TimeSeriesItem
+                using (ts)
                 {
-                    Name = database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, ts.DocId, ts.Name),
-                    DocId = ts.DocId,
-                    Baseline = ts.Start,
-                    ChangeVector = ts.ChangeVector,
-                    Collection = ts.Collection,
-                    SegmentSize = ts.SegmentSize,
-                    Segment = ts.Segment,
-                    Etag = ts.Etag
-                };
+                    yield return new TimeSeriesItem
+                    {
+                        Name = database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, ts.DocId, ts.Name),
+                        DocId = ts.DocId.Clone(context),
+                        Baseline = ts.Start,
+                        ChangeVector = ts.ChangeVector,
+                        Collection = ts.Collection.Clone(context),
+                        SegmentSize = ts.SegmentSize,
+                        Segment = ts.Segment,
+                        Etag = ts.Etag
+                    };
+                }
             }
         }
 
@@ -561,17 +565,20 @@ namespace Raven.Server.Smuggler.Documents
 
                 foreach (var ts in database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, collection, etag, long.MaxValue))
                 {
-                    yield return new TimeSeriesItem
+                    using (ts)
                     {
-                        Name = database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, ts.DocId, ts.Name),
-                        DocId = ts.DocId,
-                        Baseline = ts.Start,
-                        ChangeVector = ts.ChangeVector,
-                        Collection = ts.Collection,
-                        SegmentSize = ts.SegmentSize,
-                        Segment = ts.Segment,
-                        Etag = ts.Etag,
-                    };
+                        yield return new TimeSeriesItem
+                        {
+                            Name = database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, ts.DocId, ts.Name),
+                            DocId = ts.DocId.Clone(context),
+                            Baseline = ts.Start,
+                            ChangeVector = ts.ChangeVector,
+                            Collection = ts.Collection.Clone(context),
+                            SegmentSize = ts.SegmentSize,
+                            Segment = ts.Segment,
+                            Etag = ts.Etag,
+                        };
+                    }
                 }
             }
         }

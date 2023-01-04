@@ -64,9 +64,9 @@ namespace Raven.Server.Smuggler.Documents
     }
 
 
-    public class TimeSeriesItem
+    public class TimeSeriesItem : IDisposable
     {
-        public string DocId;
+        public LazyStringValue DocId;
 
         public string Name;
 
@@ -76,10 +76,16 @@ namespace Raven.Server.Smuggler.Documents
 
         public int SegmentSize;
 
-        public string Collection;
+        public LazyStringValue Collection;
 
         public DateTime Baseline;
 
         public long Etag;
+
+        public void Dispose()
+        {
+            DocId?.Dispose();
+            Collection?.Dispose();
+        }
     }
 }

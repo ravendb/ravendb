@@ -992,49 +992,52 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteTimeSeriesAsync(TimeSeriesItem item)
             {
-                if (First == false)
-                    Writer.WriteComma();
-                First = false;
-
-                Writer.WriteStartObject();
+                using (item)
                 {
-                    Writer.WritePropertyName(Constants.Documents.Blob.Document);
+                    if (First == false)
+                        Writer.WriteComma();
+                    First = false;
 
                     Writer.WriteStartObject();
                     {
-                        Writer.WritePropertyName(nameof(TimeSeriesItem.DocId));
-                        Writer.WriteString(item.DocId);
-                        Writer.WriteComma();
+                        Writer.WritePropertyName(Constants.Documents.Blob.Document);
 
-                        Writer.WritePropertyName(nameof(TimeSeriesItem.Name));
-                        Writer.WriteString(item.Name);
-                        Writer.WriteComma();
+                        Writer.WriteStartObject();
+                        {
+                            Writer.WritePropertyName(nameof(TimeSeriesItem.DocId));
+                            Writer.WriteString(item.DocId);
+                            Writer.WriteComma();
 
-                        Writer.WritePropertyName(nameof(TimeSeriesItem.ChangeVector));
-                        Writer.WriteString(item.ChangeVector);
-                        Writer.WriteComma();
+                            Writer.WritePropertyName(nameof(TimeSeriesItem.Name));
+                            Writer.WriteString(item.Name);
+                            Writer.WriteComma();
 
-                        Writer.WritePropertyName(nameof(TimeSeriesItem.Collection));
-                        Writer.WriteString(item.Collection);
-                        Writer.WriteComma();
+                            Writer.WritePropertyName(nameof(TimeSeriesItem.ChangeVector));
+                            Writer.WriteString(item.ChangeVector);
+                            Writer.WriteComma();
 
-                        Writer.WritePropertyName(nameof(TimeSeriesItem.Baseline));
-                        Writer.WriteDateTime(item.Baseline, true);
+                            Writer.WritePropertyName(nameof(TimeSeriesItem.Collection));
+                            Writer.WriteString(item.Collection);
+                            Writer.WriteComma();
+
+                            Writer.WritePropertyName(nameof(TimeSeriesItem.Baseline));
+                            Writer.WriteDateTime(item.Baseline, true);
+                        }
+                        Writer.WriteEndObject();
+
+                        Writer.WriteComma();
+                        Writer.WritePropertyName(Constants.Documents.Blob.Size);
+                        Writer.WriteInteger(item.SegmentSize);
                     }
                     Writer.WriteEndObject();
 
-                    Writer.WriteComma();
-                    Writer.WritePropertyName(Constants.Documents.Blob.Size);
-                    Writer.WriteInteger(item.SegmentSize);
-                }
-                Writer.WriteEndObject();
+                    unsafe
+                    {
+                        Writer.WriteMemoryChunk(item.Segment.Ptr, item.Segment.NumberOfBytes);
+                    }
 
-                unsafe
-                {
-                    Writer.WriteMemoryChunk(item.Segment.Ptr, item.Segment.NumberOfBytes);
+                    await Writer.MaybeFlushAsync();
                 }
-
-                await Writer.MaybeFlushAsync();
             }
         }
 
