@@ -23,7 +23,7 @@ namespace Raven.Server.Web.Studio.Processors
         {
             if (ShardHelper.TryGetShardNumberAndDatabaseName(RequestHandler.DatabaseName, out string shardedDatabaseName, out int shardNumber) == false)
             {
-                throw new InvalidOperationException();
+                throw new InvalidOperationException($"Attempted to get buckets of a shard. Expected a shard database but instead got {RequestHandler.Database}");
             }
 
             using (context.OpenReadTransaction())
@@ -38,7 +38,6 @@ namespace Raven.Server.Web.Studio.Processors
                         existing.RangeSize += bucket.Size;
                         existing.DocumentsCount += bucket.NumberOfDocuments;
                         existing.LastModified = existing.LastModified > bucket.LastModified ? existing.LastModified : bucket.LastModified;
-                        existing.ToBucket = existing.ToBucket > bucket.Bucket ? existing.ToBucket : bucket.Bucket;
                         existing.NumberOfBuckets++;
 
                     }
