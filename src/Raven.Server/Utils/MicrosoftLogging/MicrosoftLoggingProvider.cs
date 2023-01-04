@@ -64,13 +64,13 @@ public class MicrosoftLoggingProvider : ILoggerProvider
             var alert = CreateAlert(msg, e);
             _ = _notificationCenter.InitializeTask.ContinueWith(task => task.Result.Add(alert));
             
-            if(Logger.IsInfoEnabled)
-                Logger.Info(msg, e);
+            if(Logger.IsOperationsEnabled)
+                Logger.Operations(msg, e);
             return;
         }
         await using (var configurationFile = fileStream)
         {
-            await ReadAndApplyConfiguration(configurationFile, context);
+            await ReadAndApplyConfigurationAsync(configurationFile, context);
         }
     }
 
@@ -86,14 +86,14 @@ public class MicrosoftLoggingProvider : ILoggerProvider
     {
         return _configuration.Select(x => (x.Key.ToString(), x.Value));
     }
-    public async Task ReadAndApplyConfiguration(Stream streamConfiguration, JsonOperationContext context, bool reset = true)
+    public async Task ReadAndApplyConfigurationAsync(Stream streamConfiguration, JsonOperationContext context, bool reset = true)
     {
         try
         {
             if(reset)
                 _configuration.Clear();
 
-            await ReadConfiguration(streamConfiguration, context);
+            await ReadConfigurationAsync(streamConfiguration, context);
             ApplyConfiguration();
             
             //If the code run on server startup the notification center is not initialized 
@@ -107,8 +107,8 @@ public class MicrosoftLoggingProvider : ILoggerProvider
             //If the code run on server startup the notification center is not initialized 
             _ = _notificationCenter.InitializeTask.ContinueWith(task => task.Result.Add(alert));
                 
-            if (Logger.IsInfoEnabled) 
-                Logger.Info(msg, e);
+            if (Logger.IsOperationsEnabled) 
+                Logger.Operations(msg, e);
         }
     }
 
@@ -124,7 +124,7 @@ public class MicrosoftLoggingProvider : ILoggerProvider
             details: new ExceptionDetails(e));
     }
 
-    private async Task ReadConfiguration(Stream configurationStr, JsonOperationContext context)
+    private async Task ReadConfigurationAsync(Stream configurationStr, JsonOperationContext context)
     {
         var blitConfiguration = await context.ReadForMemoryAsync(configurationStr, "logs/configuration");
         ReadConfiguration(blitConfiguration, null);
