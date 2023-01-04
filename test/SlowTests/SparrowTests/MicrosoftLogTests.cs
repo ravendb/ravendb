@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
 using Microsoft.Extensions.Logging;
+using Raven.Server.Utils;
 using Raven.Server.Utils.MicrosoftLogging;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -32,13 +33,13 @@ public class MicrosoftLogTests : RavenTestBase
             {"Logs.Path",mainLogPath}
         };
         var server = GetNewServer(options);
-        GetDocumentStore(new Options {Server = server}).Dispose();
+        GetDocumentStore(new Options { Server = server }).Dispose();
 
         string combine = Path.Combine(mainLogPath, "MicrosoftLogs");
         var logFile = await AssertWaitForNotNullAsync(() => Task.FromResult(Directory.GetFiles(combine).FirstOrDefault()));
-        await AssertLogs(logFile, LogLevel.Critical); 
+        await AssertLogs(logFile, LogLevel.Critical);
     }
-    
+
     [Fact]
     public async Task EnableMicrosoftLogs_WhenSetDefaultToDebug_ShouldWriteMinimumDebug()
     {
@@ -57,10 +58,10 @@ public class MicrosoftLogTests : RavenTestBase
             {"Logs.Microsoft.ConfigurationPath", configurationFile}
         };
         var server = GetNewServer(options);
-        GetDocumentStore(new Options {Server = server}).Dispose();
+        GetDocumentStore(new Options { Server = server }).Dispose();
 
         var logFile = await AssertWaitForNotNullAsync(() => Task.FromResult(Directory.GetFiles(logPath).FirstOrDefault()));
-        await AssertLogs(logFile, LogLevel.Debug); 
+        await AssertLogs(logFile, LogLevel.Debug);
     }
 
     private async Task<string> CreateConfigurationFile(string configurationContent)
@@ -85,9 +86,9 @@ public class MicrosoftLogTests : RavenTestBase
 {
     """": ""Debug""
 }";
-        
+
         var server = GetNewServer(options);
-        
+
         using (var httpClient = new HttpClient())
         {
             var serverWebUrl = $"{server.WebUrl}/admin/logs/microsoft/configuration";
@@ -96,12 +97,12 @@ public class MicrosoftLogTests : RavenTestBase
             httpRequestMessage.Content = new StringContent(configurationContent);
             await httpClient.SendAsync(httpRequestMessage);
         }
-        GetDocumentStore(new Options {Server = server}).Dispose();
-        
+        GetDocumentStore(new Options { Server = server }).Dispose();
+
         var logFile = await AssertWaitForNotNullAsync(() => Task.FromResult(Directory.GetFiles(logPath).FirstOrDefault()));
-        await AssertLogs(logFile, LogLevel.Debug); 
+        await AssertLogs(logFile, LogLevel.Debug);
     }
-    
+
     [Fact]
     public async Task EnableMicrosoftLogs_WhenSetSpecificLogger_ShouldApplyOnlyOnIt()
     {
@@ -113,7 +114,7 @@ public class MicrosoftLogTests : RavenTestBase
     ""Microsoft.AspNetCore.Server.Kestrel"": ""Debug""
 }";
         await File.WriteAllTextAsync(configurationFile, configurationContent);
-        
+
         var options = new ServerCreationOptions();
         options.CustomSettings = new Dictionary<string, string>
         {
@@ -122,10 +123,10 @@ public class MicrosoftLogTests : RavenTestBase
             {"Logs.Microsoft.ConfigurationPath", configurationFile}
         };
         var server = GetNewServer(options);
-        GetDocumentStore(new Options {Server = server}).Dispose();
+        GetDocumentStore(new Options { Server = server }).Dispose();
 
         var logFile = await AssertWaitForNotNullAsync(() => Task.FromResult(Directory.GetFiles(logPath).FirstOrDefault()));
-        await AssertLogs(logFile, LogLevel.Debug, "Microsoft.AspNetCore.Server.Kestrel"); 
+        await AssertLogs(logFile, LogLevel.Debug, "Microsoft.AspNetCore.Server.Kestrel");
     }
 
     private static async Task AssertLogs(string logFile, LogLevel logLevel)
@@ -136,7 +137,7 @@ public class MicrosoftLogTests : RavenTestBase
             Assert.True(lineLogLevel >= logLevel, $"Line {lineNum} contains loglevel is greater then {logLevel} - {line}");
         });
     }
-    
+
     private static async Task AssertLogs(string logFile, LogLevel logLevel, string category)
     {
         await AssertLogs(logFile, (lineNum, line) =>
@@ -145,10 +146,10 @@ public class MicrosoftLogTests : RavenTestBase
             var lineLogLevel = Enum.Parse<LogLevel>(lineParts[5]);
             Assert.True(lineLogLevel >= logLevel, $"Line {lineNum} contains loglevel is greater then {logLevel} - {line}");
             var lineCategory = (lineParts[3] + '.' + lineParts[4]).Replace(" ", "");
-            Assert.True( lineCategory.StartsWith(category), $"Line {lineNum} contains category that is not {category} - {line}");
+            Assert.True(lineCategory.StartsWith(category), $"Line {lineNum} contains category that is not {category} - {line}");
         });
     }
-    
+
     private static async Task AssertLogs(string logFile, Action<int, string> predicate)
     {
         using (StreamReader file = new StreamReader(logFile))
@@ -166,24 +167,18 @@ public class MicrosoftLogTests : RavenTestBase
     private string GetEmptyDirectory()
     {
         var mainLogPath = NewDataPath();
-        try
-        {
-            Directory.Delete(mainLogPath, true);
-        }
-        catch (Exception e)
-        {
-        }
+        IOExtensions.DeleteDirectory(mainLogPath);
 
         return mainLogPath;
     }
-    
-    
+
+
     [Fact]
     public async Task MicrosoftLoggerProvider_WhenDefineNestedCategory_ShouldHandleAsRootProp()
     {
         var loggingSource = new LoggingSource(LogMode.None, "", "", TimeSpan.Zero, 0);
         var provider = new MicrosoftLoggingProvider(loggingSource, Server.ServerStore.NotificationCenter);
-        
+
         var configurationFile = await CreateConfigurationFile(@"
 {
     ""Microsoft"": ""Debug"",
@@ -199,17 +194,17 @@ public class MicrosoftLogTests : RavenTestBase
         }
 
         var configuration = provider.GetConfiguration().ToArray();
-        Assert.Contains(configuration, x => x is {Category: "Microsoft", LogLevel: LogLevel.Debug});
-        Assert.Contains(configuration, x => x is {Category: "Key1", LogLevel: LogLevel.Information});
-        Assert.Contains(configuration, x => x is {Category: "Key1.Key2", LogLevel: LogLevel.Error});
+        Assert.Contains(configuration, x => x is { Category: "Microsoft", LogLevel: LogLevel.Debug });
+        Assert.Contains(configuration, x => x is { Category: "Key1", LogLevel: LogLevel.Information });
+        Assert.Contains(configuration, x => x is { Category: "Key1.Key2", LogLevel: LogLevel.Error });
     }
-    
+
     [Fact]
     public async Task MicrosoftLoggerProvider_WhenErrorConfiguration_ShouldNotThrow()
     {
         var loggingSource = new LoggingSource(LogMode.None, "", "", TimeSpan.Zero, 0);
         var provider = new MicrosoftLoggingProvider(loggingSource, Server.ServerStore.NotificationCenter);
-        
+
         var configurationFile = await CreateConfigurationFile(@"
 {
     ""Microsoft"", ""Debug"",
