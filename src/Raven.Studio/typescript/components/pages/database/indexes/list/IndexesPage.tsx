@@ -21,24 +21,21 @@ import collection from "models/database/documents/collection";
 import IndexUtils from "../../../../utils/IndexUtils";
 import genUtils from "common/generalUtils";
 import viewHelpers from "common/helpers/view/viewHelpers";
-import { CheckboxTriple } from "../../../../common/CheckboxTriple";
+import { CheckboxTriple } from "components/common/CheckboxTriple";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import bulkIndexOperationConfirm from "viewmodels/database/indexes/bulkIndexOperationConfirm";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
-import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
 import { useAccessManager } from "hooks/useAccessManager";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import { shardingTodo } from "common/developmentHelper";
-import useTimeout from "hooks/useTimeout";
 import useInterval from "hooks/useInterval";
 import messagePublisher from "common/messagePublisher";
 
 import "./IndexesPage.scss";
 import { useChanges } from "hooks/useChanges";
-import { delay } from "../../../../utils/common";
+import { delay } from "components/utils/common";
 import { Button, Card, Col, Row, Spinner } from "reactstrap";
-import { EmptySet } from "../../../../../components/common/EmptySet";
+import { EmptySet } from "components/common/EmptySet";
 
 interface IndexesPageProps {
     database: database;
@@ -304,10 +301,14 @@ export function IndexesPage(props: IndexesPageProps) {
     const [resettingIndex, setResettingIndex] = useState(false);
 
     useEffect(() => {
-        const nodeTag = clusterTopologyManager.default.localNodeTag();
-        const initialLocation = database.getFirstLocation(nodeTag);
+        const fetchData = async () => {
+            const tasks = database.getLocations().map(fetchStats);
+            await Promise.all(tasks);
 
-        fetchStats(initialLocation);
+            throttledProgressRefresh.current();
+        };
+
+        fetchData();
     }, [fetchStats, database]);
 
     const processIndexEvent = useCallback(
@@ -569,22 +570,6 @@ export function IndexesPage(props: IndexesPageProps) {
         },
         [setIndexLockModeInternal]
     );
-
-    const loadMissing = async () => {
-        if (stats.indexes.length > 0) {
-            const tasks = stats.indexes[0].nodesInfo.map(async (nodeInfo) => {
-                if (nodeInfo.status === "notLoaded") {
-                    await fetchStats(nodeInfo.location);
-                }
-            });
-
-            await Promise.all(tasks);
-
-            throttledProgressRefresh.current();
-        }
-    };
-
-    useTimeout(loadMissing, 3_000);
 
     const toggleSelection = (index: IndexSharedInfo) => {
         setSelectedIndexes((s) => {

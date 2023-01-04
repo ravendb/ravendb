@@ -35,8 +35,8 @@ describe("IndexesPage", function () {
     it("can open faulty index - sharded", async () => {
         const { screen } = rtlRender(<FaultyIndexSharded />);
 
-        const openFaultyButton = await screen.findByText(/Open faulty index/);
-        expect(openFaultyButton).toBeInTheDocument();
+        const openFaultyButtons = await screen.findAllByText(/Open faulty index/);
+        expect(openFaultyButtons).toHaveLength(2);
 
         expect(screen.queryByText(/Set State/)).not.toBeInTheDocument();
     });
@@ -44,8 +44,8 @@ describe("IndexesPage", function () {
     it("can open faulty index - single node", async () => {
         const { screen } = rtlRender(<FaultyIndexSingleNode />);
 
-        const openFaultyButton = await screen.findByText(/Open faulty index/);
-        expect(openFaultyButton).toBeInTheDocument();
+        const openFaultyButtons = await screen.findAllByText(/Open faulty index/);
+        expect(openFaultyButtons).toHaveLength(2);
 
         expect(screen.queryByText(/Set State/)).not.toBeInTheDocument();
     });

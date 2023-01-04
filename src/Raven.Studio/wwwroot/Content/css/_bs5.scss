@@ -16,7 +16,7 @@
 @import "../../../node_modules/boostrap5/scss/root";
 
 .bs5 {
-    @import "../scss/bs5extend";
+    
 
     // Optional Bootstrap components
     @import "../../../node_modules/boostrap5/scss/reboot";
@@ -55,6 +55,8 @@
 
     // Pages
     @import "../scss/pages/stats.scss";
+
+    @import "../scss/bs5extend";
 }
 
 // Storybook theme testing

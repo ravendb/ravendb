@@ -144,3 +144,11 @@ $additional-utilities: (
 @each $key, $utility in $additional-utilities {    
     @include generate-utility($utility, null);
 }
+
+
+[class*=" icon-addon-"],
+[class^="icon-addon-"] {
+      &::before {
+        clip-path: polygon(0 0, 100% 0, 100% 59%, 95.5% 54.5%, 88% 50.3%, 80% 48.5%, 71% 49.2%, 64% 52%, 58% 56%, 53% 62%, 50% 69%, 48.8% 79%, 50.5% 87%, 55% 95%, 60% 100%, 0 100%);
+      }
+}

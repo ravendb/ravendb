@@ -181,21 +181,29 @@ export default class IndexUtils {
         return index.nodesInfo.filter((x) => x.location.shardNumber === 0).length;
     }
 
-    static estimateEntriesCount(index: IndexSharedInfo): { entries: number; estimated: boolean } {
-        if (index.nodesInfo.some((x) => x.status !== "loaded" || x.details?.faulty)) {
-            return {
-                entries: null,
-                estimated: true,
-            };
+    static estimateEntriesCount(index: IndexSharedInfo): number | undefined {
+        const shardNumbers = new Set<number>();
+        const perShardMax = new Map<number, number>();
+
+        index.nodesInfo.forEach((info) => {
+            const shardNumber = info.location.shardNumber;
+            shardNumbers.add(shardNumber);
+
+            const canUseValue = info.status === "loaded" && info.details && !info.details.faulty;
+            if (canUseValue) {
+                const currentValue = perShardMax.get(shardNumber) ?? 0;
+                perShardMax.set(shardNumber, Math.max(currentValue, info.details.entriesCount));
+            }
+        });
+
+        const shardCount = shardNumbers.size;
+        const maxsCount = perShardMax.size;
+
+        if (shardCount !== maxsCount) {
+            // looks like we don't have data from all shards
+            return undefined;
         }
 
-        const divideBy = IndexUtils.isSharded(index) ? IndexUtils.replicasCount(index) : index.nodesInfo.length;
-
-        const totalEntries = index.nodesInfo.reduce((prev, b) => prev + b.details.entriesCount, 0);
-
-        return {
-            entries: totalEntries / divideBy,
-            estimated: divideBy > 1,
-        };
+        return Array.from(perShardMax.values()).reduce((a, b) => a + b, 0);
     }
 }

@@ -29,7 +29,7 @@ export function IndexDistribution(props: IndexDistributionProps) {
     const totalErrors = index.nodesInfo
         .filter((x) => x.status === "loaded")
         .reduce((prev, current) => prev + current.details.errorCount, 0);
-    const estimatedEntries = IndexUtils.estimateEntriesCount(index);
+    const estimatedEntries = IndexUtils.estimateEntriesCount(index)?.toLocaleString() ?? "-";
 
     const sharded = IndexUtils.isSharded(index);
 
@@ -117,10 +117,7 @@ export function IndexDistribution(props: IndexDistributionProps) {
             <DistributionSummary>
                 <div className="top">Total</div>
                 {sharded && <div> </div>}
-                <div>
-                    {estimatedEntries.estimated && estimatedEntries.entries != null ? "~" : ""}
-                    {estimatedEntries.entries?.toLocaleString() ?? "-"}
-                </div>
+                <div>{estimatedEntries}</div>
                 <div>{totalErrors}</div>
                 <div></div>
             </DistributionSummary>
