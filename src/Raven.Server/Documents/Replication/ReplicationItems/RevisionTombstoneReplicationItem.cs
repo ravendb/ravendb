@@ -1,9 +1,11 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using Raven.Server.Documents.Replication.Stats;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
@@ -76,6 +78,32 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Collection = Collection.Clone(context),
                 Id = Id.Clone(context)
             };
+        }
+
+        public unsafe void StripDocumentIdFromKeyIfNeeded(JsonOperationContext context)
+        {
+            var p = Id.Buffer;
+            var size = Id.Size;
+            int sizeOfDocId = 0;
+            for (; sizeOfDocId < size; sizeOfDocId++)
+            {
+                if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
+                    break;
+            }
+
+            var changeVectorIndex = sizeOfDocId + 1;
+            if (changeVectorIndex >= size)
+                return;
+
+            Id = context.AllocateStringValue(null, p + changeVectorIndex, size - sizeOfDocId - 1);
+        }
+
+        public static ByteStringContext.InternalScope TryExtractChangeVectorSliceFromKey(ByteStringContext allocator, LazyStringValue key, out Slice changeVectorSlice)
+        {
+            var index = key.IndexOf((char)SpecialChars.RecordSeparator, StringComparison.OrdinalIgnoreCase);
+            var changeVectorIndex = index + 1;
+            var changeVector = changeVectorIndex >= key.Size ? key : key.Substring(changeVectorIndex);
+            return Slice.From(allocator, changeVector, out changeVectorSlice);
         }
 
         public override void InnerDispose()

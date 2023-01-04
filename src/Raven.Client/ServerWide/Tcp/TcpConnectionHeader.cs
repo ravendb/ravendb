@@ -78,6 +78,7 @@ namespace Raven.Client.ServerWide.Tcp
         
         public static readonly int ReplicationWithTimeSeries = 50_000;
         public static readonly int ReplicationWithDeduplicatedAttachments = 53_001;
+        public static readonly int ReplicationWithRevisionTombstones = 60_000;
 
         public static readonly int TcpConnectionsWithCompression = 53_000;
         public static readonly int SubscriptionBaseLine = 40;
@@ -88,7 +89,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public static readonly int ClusterTcpVersion = ClusterWithTcpCompression;
         public static readonly int HeartbeatsTcpVersion = HeartbeatsWithTcpCompression;
-        public static readonly int ReplicationTcpVersion = ReplicationWithDeduplicatedAttachments;
+        public static readonly int ReplicationTcpVersion = ReplicationWithRevisionTombstones;
         public static readonly int SubscriptionTcpVersion = TcpConnectionsWithCompression; 
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
 
@@ -262,6 +263,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool TimeSeries;
                 public bool IncrementalTimeSeries;
                 public bool DeduplicatedAttachments;
+                public bool RevisionTombstonesWithId;
             }
         }
 
@@ -290,6 +292,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new List<int>
                 {
+                    ReplicationWithRevisionTombstones,
                     ReplicationWithDeduplicatedAttachments,
                     TcpConnectionsWithCompression,
                     ReplicationWithTimeSeries,
@@ -384,6 +387,22 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new Dictionary<int, SupportedFeatures>
                 {
+                    [ReplicationWithRevisionTombstones] = new SupportedFeatures(ReplicationWithRevisionTombstones)
+                    {
+                        DataCompression = true,
+                        Replication = new SupportedFeatures.ReplicationFeatures
+                        {
+                            RevisionTombstonesWithId = true,
+                            DeduplicatedAttachments = true,
+                            MissingAttachments = true,
+                            CountersBatch = true,
+                            PullReplication = true,
+                            TimeSeries = true,
+                            CaseInsensitiveCounters = true,
+                            ClusterTransaction = true,
+                            IncrementalTimeSeries = true
+                        }
+                    },
                     [ReplicationWithDeduplicatedAttachments] = new SupportedFeatures(ReplicationWithDeduplicatedAttachments)
                     {
                         DataCompression = true,

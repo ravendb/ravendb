@@ -26,7 +26,8 @@ namespace Raven.Server.Documents.Replication.Senders
             Parent = parent;
         }
 
-        protected override IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters)
+        protected override IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats, 
+            bool caseInsensitiveCounters, bool revisionTombstonesWithId)
         {
             var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(ctx.DocumentDatabase);
             var documentsStorage = database.ShardedDocumentsStorage;

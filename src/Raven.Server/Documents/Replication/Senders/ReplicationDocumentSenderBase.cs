@@ -56,15 +56,15 @@ namespace Raven.Server.Documents.Replication.Senders
         }
 
         protected virtual IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats,
-            bool caseInsensitiveCounters)
+            bool caseInsensitiveCounters, bool revisionTombstonesWithId)
         {
-            return GetReplicationItems(_parent._database, ctx, etag, stats, caseInsensitiveCounters);
+            return GetReplicationItems(_parent._database, ctx, etag, stats, caseInsensitiveCounters, revisionTombstonesWithId);
         }
 
-        protected internal static IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentDatabase database, DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters)
+        protected internal static IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentDatabase database, DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters, bool revisionTombstonesWithId)
         {
             var docs = database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
-            var tombs = database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
+            var tombs = database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1, revisionTombstonesWithId);
             var conflicts = database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1).Select(DocumentReplicationItem.From);
             var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
             var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, long.MaxValue).Select(DocumentReplicationItem.From);
@@ -143,8 +143,10 @@ namespace Raven.Server.Documents.Replication.Senders
 
                     using (_stats.Storage.Start())
                     {
+  						bool caseInsensitiveCounters = _parent.SupportedFeatures.Replication.CaseInsensitiveCounters;
+                        bool revisionTombstones = _parent.SupportedFeatures.Replication.RevisionTombstonesWithId;
                         using var enumerator = new PulsedTransactionEnumerator<ReplicationBatchItem, ReplicationBatchState>(documentsContext, _ =>
-                            GetReplicationItems(documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication.CaseInsensitiveCounters), state);
+                            GetReplicationItems(documentsContext, _lastEtag, _stats, caseInsensitiveCounters, revisionTombstones), state);
 
                         while (enumerator.MoveNext())
                         {

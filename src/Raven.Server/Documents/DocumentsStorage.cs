@@ -1216,14 +1216,19 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<ReplicationBatchItem> GetTombstonesFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<ReplicationBatchItem> GetTombstonesFrom(DocumentsOperationContext context, long etag, bool revisionTombstonesWithId = true)
         {
             var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
             {
-                yield return TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Reader));
+                var tombstoneItem = TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Reader));
+
+                if (revisionTombstonesWithId == false && tombstoneItem is RevisionTombstoneReplicationItem revisionTombstone)
+                    revisionTombstone.StripDocumentIdFromKeyIfNeeded(context);
+                
+                yield return tombstoneItem;
             }
         }
 
