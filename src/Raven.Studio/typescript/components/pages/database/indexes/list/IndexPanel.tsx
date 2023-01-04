@@ -12,7 +12,7 @@ import app from "durandal/app";
 import { useAccessManager } from "hooks/useAccessManager";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import { UncontrolledTooltip } from "components/common/UncontrolledTooltip";
-import { IndexDistribution, IndexProgress } from "./IndexDistribution";
+import { IndexDistribution, IndexProgress, JoinedIndexProgress } from "./IndexDistribution";
 import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 import {
     RichPanel,
@@ -519,26 +519,28 @@ interface InlineDetailsProps {
 
 function InlineDetails(props: InlineDetailsProps) {
     const { index } = props;
-    const nodeInfo = index.nodesInfo[0];
+
+    const estimatedEntries = IndexUtils.estimateEntriesCount(index)?.toLocaleString() ?? "-";
+    const errorsCount = index.nodesInfo.filter((x) => x.details).reduce((prev, x) => prev + x.details.errorCount, 0);
 
     return (
         <>
             <RichPanelDetailItem>
                 <i className="icon-list" />
                 Entries
-                <div className="value">{nodeInfo.details.entriesCount.toLocaleString()}</div>
+                <div className="value">{estimatedEntries}</div>
             </RichPanelDetailItem>
             <RichPanelDetailItem
                 className={classNames("index-detail-item", {
-                    "text-danger": nodeInfo.details.errorCount > 0,
+                    "text-danger": errorsCount > 0,
                 })}
             >
                 <i className="icon-warning" />
                 Errors
-                <div className="value">{nodeInfo.details.errorCount.toLocaleString()}</div>
+                <div className="value">{errorsCount.toLocaleString()}</div>
             </RichPanelDetailItem>
             <RichPanelDetailItem>
-                <IndexProgress inline nodeInfo={nodeInfo} />
+                <JoinedIndexProgress index={index} />
             </RichPanelDetailItem>
         </>
     );
