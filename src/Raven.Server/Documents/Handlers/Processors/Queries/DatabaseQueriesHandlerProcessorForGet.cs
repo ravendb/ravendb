@@ -8,6 +8,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -36,7 +37,7 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
 
     protected override RavenConfiguration Configuration => RequestHandler.Database.Configuration;
 
-    protected override async ValueTask HandleDebug(IndexQueryServerSide query, QueryOperationContext queryContext, string debug, long? existingResultEtag,
+    protected override async ValueTask HandleDebugAsync(IndexQueryServerSide query, QueryOperationContext queryContext, string debug, long? existingResultEtag,
         OperationCancelToken token)
     {
         if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
@@ -61,7 +62,7 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
         throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
     }
 
-    protected override async ValueTask HandleFacetedQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override async ValueTask HandleFacetedQueryAsync(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
     {
         var result = await RequestHandler.Database.QueryRunner.ExecuteFacetedQuery(query, existingResultEtag, queryContext, token);
 
@@ -86,29 +87,12 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
             RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"FacetedQuery ({result.IndexName})", $"{query.Metadata.QueryText}\n{query.QueryParameters}", numberOfResults, query.PageSize, result.DurationInMs, -1);
     }
 
-    protected override async ValueTask HandleSuggestQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override async ValueTask<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
     {
-        var result = await RequestHandler.Database.QueryRunner.ExecuteSuggestionQuery(query, queryContext, existingResultEtag, token);
-        if (result.NotModified)
-        {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-            return;
-        }
-
-        HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
-
-        long numberOfResults;
-        long totalDocumentsSizeInBytes;
-        await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, RequestHandler.ResponseBodyStream()))
-        {
-            (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteSuggestionQueryResultAsync(queryContext.Documents, result, token.Token);
-        }
-
-        if (RequestHandler.ShouldAddPagingPerformanceHint(numberOfResults))
-            RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"SuggestQuery ({result.IndexName})", query.Query, numberOfResults, query.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
+        return await RequestHandler.Database.QueryRunner.ExecuteSuggestionQuery(query, queryContext, existingResultEtag, token);
     }
 
-    protected override async ValueTask<QueryResultServerSide<Document>> GetQueryResults(IndexQueryServerSide query, QueryOperationContext queryContext,
+    protected override async ValueTask<QueryResultServerSide<Document>> GetQueryResultsAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
         long? existingResultEtag, bool metadataOnly, OperationCancelToken token)
     {
         return await RequestHandler.Database.QueryRunner.ExecuteQuery(query, queryContext, existingResultEtag, token).ConfigureAwait(false);

@@ -16,7 +16,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
-using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Counters;
 using Raven.Server.Documents.Sharding.Operations;
