@@ -71,7 +71,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override string AdditionalDebugInformation(Exception exception)
         {
-            return $"Index name: {Definition.Name}";
+            return $"Index name: '{Definition.Name}' for database '{DatabaseName}'";
         }
     }
 }
