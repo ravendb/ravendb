@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public abstract class AbstractQueryCommand<TParameters, TResult> : RavenCommand<TResult>
+    public abstract class AbstractQueryCommand<TResult, TParameters> : RavenCommand<TResult>
     {
         private static readonly TimeSpan AdditionalTimeToAddToTimeout = TimeSpan.FromSeconds(10);
 
@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Commands
         }
     }
 
-    public class QueryCommand : AbstractQueryCommand<Parameters, QueryResult>
+    public class QueryCommand : AbstractQueryCommand<QueryResult, Parameters>
     {
         private readonly DocumentConventions _conventions;
         private readonly IndexQuery _indexQuery;

@@ -6,7 +6,9 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Queries;
+using Raven.Server.Documents.Sharding.Queries.Suggestions;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -34,28 +36,35 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
 
     protected override RavenConfiguration Configuration => RequestHandler.DatabaseContext.Configuration;
 
-    protected override ValueTask HandleDebug(IndexQueryServerSide query, TransactionOperationContext queryContext, string debug, long? existingResultEtag, OperationCancelToken token)
+    protected override ValueTask HandleDebugAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, string debug, long? existingResultEtag, OperationCancelToken token)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19071 Implement debug");
 
         throw new NotSupportedInShardingException("Query debug is not supported");
     }
 
-    protected override ValueTask HandleFacetedQuery(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override ValueTask HandleFacetedQueryAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Implement facets - RavenDB-18765");
 
         throw new NotSupportedInShardingException("Facets are not supported");
     }
 
-    protected override ValueTask HandleSuggestQuery(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override async ValueTask<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Implement suggest - RavenDB-18857");
+        var indexName = AbstractQueryRunner.GetIndexName(query);
 
-        throw new NotSupportedInShardingException("Suggestions are not supported");
+        using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+        {
+            var queryProcessor = new ShardedSuggestionQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, token.Token);
+
+            queryProcessor.Initialize();
+
+            return await queryProcessor.ExecuteShardedOperations();
+        }
     }
 
-    protected override async ValueTask<QueryResultServerSide<BlittableJsonReaderObject>> GetQueryResults(IndexQueryServerSide query,
+    protected override async ValueTask<QueryResultServerSide<BlittableJsonReaderObject>> GetQueryResultsAsync(IndexQueryServerSide query,
         TransactionOperationContext queryContext, long? existingResultEtag, bool metadataOnly, OperationCancelToken token)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,

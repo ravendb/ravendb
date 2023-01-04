@@ -336,7 +336,7 @@ namespace SlowTests.Core.Commands
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetSuggestions(Options options)
         {
             using (var store = GetDocumentStore(options))

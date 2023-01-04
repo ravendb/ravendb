@@ -43,6 +43,7 @@ using Raven.Server.Documents.Handlers.Processors.Subscriptions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Revisions;

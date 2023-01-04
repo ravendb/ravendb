@@ -429,7 +429,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void UsingSuggest(Options options)
         {
             using (var store = GetDocumentStore(options))

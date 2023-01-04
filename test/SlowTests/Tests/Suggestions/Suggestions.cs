@@ -57,7 +57,7 @@ namespace SlowTests.Tests.Suggestions
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void ExactMatch(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -78,7 +78,7 @@ namespace SlowTests.Tests.Suggestions
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void UsingLinq(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -97,7 +97,7 @@ namespace SlowTests.Tests.Suggestions
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void UsingLinq_with_typo_with_options_multiple_fields(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -116,7 +116,7 @@ namespace SlowTests.Tests.Suggestions
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void UsingLinq_with_typo_multiple_fields_in_reverse_order(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -135,7 +135,7 @@ namespace SlowTests.Tests.Suggestions
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void UsingLinq_WithOptions(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -157,7 +157,7 @@ namespace SlowTests.Tests.Suggestions
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void UsingLinq_Multiple_words(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -180,7 +180,7 @@ namespace SlowTests.Tests.Suggestions
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void WithTypo(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -204,7 +204,7 @@ namespace SlowTests.Tests.Suggestions
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetSuggestions(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -246,7 +246,7 @@ namespace SlowTests.Tests.Suggestions
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetResultAfterAddingADocument(Options options)
         {
             using (var store = GetDocumentStore(options))

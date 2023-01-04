@@ -9,7 +9,9 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -31,13 +33,13 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
     protected abstract IDisposable AllocateContextForQueryOperation(out TQueryContext queryContext, out TOperationContext context);
 
-    protected abstract ValueTask HandleDebug(IndexQueryServerSide query, TQueryContext queryContext, string debug, long? existingResultEtag, OperationCancelToken token);
+    protected abstract ValueTask HandleDebugAsync(IndexQueryServerSide query, TQueryContext queryContext, string debug, long? existingResultEtag, OperationCancelToken token);
 
-    protected abstract ValueTask HandleFacetedQuery(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
+    protected abstract ValueTask HandleFacetedQueryAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
 
-    protected abstract ValueTask HandleSuggestQuery(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
+    protected abstract ValueTask<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
 
-    protected abstract ValueTask<QueryResultServerSide<TQueryResult>> GetQueryResults(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag,
+    protected abstract ValueTask<QueryResultServerSide<TQueryResult>> GetQueryResultsAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag,
         bool metadataOnly,
         OperationCancelToken token);
 
@@ -71,7 +73,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
                     if (string.IsNullOrWhiteSpace(debug) == false)
                     {
-                        await HandleDebug(indexQuery, queryContext, debug, existingResultEtag, token);
+                        await HandleDebugAsync(indexQuery, queryContext, debug, existingResultEtag, token);
                         return;
                     }
 
@@ -80,20 +82,20 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
                     if (indexQuery.Metadata.HasFacet)
                     {
-                        await HandleFacetedQuery(indexQuery, queryContext, existingResultEtag, token);
+                        await HandleFacetedQueryAsync(indexQuery, queryContext, existingResultEtag, token);
                         return;
                     }
 
                     if (indexQuery.Metadata.HasSuggest)
                     {
-                        await HandleSuggestQuery(indexQuery, queryContext, existingResultEtag, token);
+                        await HandleSuggestQueryAsync(indexQuery, queryContext, context, existingResultEtag, token);
                         return;
                     }
 
                     QueryResultServerSide<TQueryResult> result;
                     try
                     {
-                        result = await GetQueryResults(indexQuery, queryContext, existingResultEtag, metadataOnly, token);
+                        result = await GetQueryResultsAsync(indexQuery, queryContext, existingResultEtag, metadataOnly, token);
                     }
                     catch (IndexDoesNotExistException)
                     {
@@ -179,5 +181,28 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                 w.WriteArray(nameof(indexQuery.Diagnostics), indexQuery.Diagnostics);
             }
         };
+    }
+
+    private async ValueTask HandleSuggestQueryAsync(IndexQueryServerSide query, TQueryContext queryContext, TOperationContext operationContext, long? existingResultEtag, OperationCancelToken token)
+    {
+        var result = await GetSuggestionQueryResultAsync(query, queryContext, existingResultEtag, token);
+
+        if (result.NotModified)
+        {
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+            return;
+        }
+
+        HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
+
+        long numberOfResults;
+        long totalDocumentsSizeInBytes;
+        await using (var writer = new AsyncBlittableJsonTextWriter(operationContext, RequestHandler.ResponseBodyStream()))
+        {
+            (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteSuggestionQueryResultAsync(operationContext, result, token.Token);
+        }
+
+        if (RequestHandler.ShouldAddPagingPerformanceHint(numberOfResults))
+            RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"SuggestQuery ({result.IndexName})", query.Query, numberOfResults, query.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
     }
 }
