@@ -624,7 +624,7 @@ namespace Voron.Impl.Journal
 
             public void OnTransactionCompleted()
             {
-                // no-op if there no waiters
+                // no-op if there are no waiters
                 _onWriteTransactionCompleted.Set();
             }
 
@@ -898,9 +898,13 @@ namespace Voron.Impl.Journal
                                     return;
 
                                 case 1:
-                                case WaitHandle.WaitTimeout:
-                                    // _onWriteTransactionCompleted or timeout
+                                    // once we get a signal (_onWriteTransactionCompleted), we should be able to acquire the write tx lock since we prevent new write transactions.
+                                    // this is just a precaution in order to prevent a loop here if the implementation will change in the future.
                                     _onWriteTransactionCompleted.Reset();
+                                    continue;
+
+                                case WaitHandle.WaitTimeout:
+                                    // timeout
                                     continue;
 
                                 default:
