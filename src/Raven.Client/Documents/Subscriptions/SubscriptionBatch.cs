@@ -44,8 +44,7 @@ namespace Raven.Client.Documents.Subscriptions
             public BlittableJsonReaderObject RawResult { get; internal set; }
             public BlittableJsonReaderObject RawMetadata { get; internal set; }
 
-            private IMetadataDictionary _metadata;
-            public IMetadataDictionary Metadata => _metadata ?? (_metadata = new MetadataAsDictionary(RawMetadata));
+            public IMetadataDictionary Metadata { get; internal set; }
         }
 
         public int NumberOfItemsInBatch => Items?.Count ?? 0;
@@ -180,6 +179,7 @@ namespace Raven.Client.Documents.Subscriptions
                     Id = item.Id,
                     Document = item.RawResult,
                     Metadata = item.RawMetadata,
+                    MetadataInstance = item.Metadata,
                     ChangeVector = item.ChangeVector,
                     Entity = item.Result,
                     IsNewDocument = false
@@ -262,6 +262,7 @@ namespace Raven.Client.Documents.Subscriptions
                     Id = id,
                     RawResult = curDoc,
                     RawMetadata = metadata,
+                    Metadata = new MetadataAsDictionary(metadata),
                     Result = instance,
                     ExceptionMessage = item.Exception,
                     Projection = projection,
