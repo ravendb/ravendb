@@ -378,12 +378,17 @@ namespace Raven.Server.Documents.ETL
 
             return false;
         }
-        
-        private JsValue GetRevisionsCount(JsValue self, JsValue[] args) => 
-            (Current.Document.Flags & DocumentFlags.HasRevisions) == DocumentFlags.HasRevisions 
-                ? Database.DocumentsStorage.RevisionsStorage.GetRevisionsCount(Context, Current.DocumentId)
-                : JsValue.Null;
 
+        private JsValue GetRevisionsCount(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 0)
+                ThrowInvalidScriptMethodCall("getRevisionsCount() must be called without any argument");
+            
+            return (Current.Document.Flags & DocumentFlags.HasRevisions) == DocumentFlags.HasRevisions 
+                    ? Database.DocumentsStorage.RevisionsStorage.GetRevisionsCount(Context, Current.DocumentId)
+                    : 0L;
+        }
+        
         protected abstract string[] LoadToDestinations { get; }
 
         protected abstract void LoadToFunction(string tableName, ScriptRunnerResult colsAsObject);
