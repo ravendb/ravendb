@@ -359,6 +359,84 @@ namespace SlowTests.Sharding.Replication
         }
 
         [Fact]
+        public async Task ExternalReplicationWithRevisionTombstones_NonShardedToNonSharded()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                await store1.Maintenance.ForDatabase(store1.Database).SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        PurgeOnDelete = true
+                    }
+                }));
+
+                var id1 = "foo/bar/0";
+
+                await SetupReplicationAsync(store1, store2);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    for (int i = 0; i < 50; i++)
+                    {
+                        s1.Store(new User(), $"foo/bar/{i}");
+                    }
+
+                    s1.SaveChanges();
+                }
+
+                for (int i = 0; i < 50; i++)
+                {
+                    var id = $"foo/bar/{i}";
+                    Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
+                }
+               
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Delete(id1);
+                    s1.SaveChanges();
+                }
+
+                await EnsureReplicatingAsync(store1, store2);
+
+                using (var session = store1.OpenSession())
+                {
+                    var revisions = session.Advanced.Revisions.GetFor<User>(id1);
+                    Assert.Equal(0, revisions.Count);
+                }
+
+                using (var session = store2.OpenSession())
+                {
+                    var revisions = session.Advanced.Revisions.GetFor<User>(id1);
+                    Assert.Equal(0, revisions.Count);
+                }
+
+                var db = await GetDocumentDatabaseInstanceFor(store1, store1.Database);
+                var storage = db.DocumentsStorage;
+                using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tombs = storage.GetTombstonesFrom(context, 0).ToList();
+                    Assert.Equal(2, tombs.Count);
+
+                    int revisionTombsCount = 0, documentTombsCount = 0;
+                    foreach (var item in tombs)
+                    {
+                        if (item is RevisionTombstoneReplicationItem)
+                            revisionTombsCount++;
+                        else if (item is DocumentReplicationItem)
+                            documentTombsCount++;
+                    }
+
+                    Assert.Equal(1, revisionTombsCount);
+                    Assert.Equal(1, documentTombsCount);
+                }
+            }
+        }
+
+        [Fact]
         public async Task ServerWideExternalReplicationShouldWork_NonShardedToSharded()
         {
             var clusterSize = 3;
@@ -1757,7 +1835,7 @@ namespace SlowTests.Sharding.Replication
                     Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
                 }
 
-                var location = await Sharding.GetShardNumber(store2, id1);
+                var location = await Sharding.GetShardNumberFor(store2, id1);
 
                 using (var s1 = store1.OpenSession())
                 {
@@ -1807,7 +1885,7 @@ namespace SlowTests.Sharding.Replication
                     Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
                 }
 
-                var location = await Sharding.GetShardNumber(store2, id1);
+                var location = await Sharding.GetShardNumberFor(store2, id1);
 
                 using (var s1 = store1.OpenSession())
                 {
@@ -1860,7 +1938,7 @@ namespace SlowTests.Sharding.Replication
                     Assert.True(WaitForDocument<User>(store2, id, predicate: null, timeout: 30_000));
                 }
 
-                var location = await Sharding.GetShardNumber(store2, id1);
+                var location = await Sharding.GetShardNumberFor(store2, id1);
 
                 using (var s1 = store1.OpenSession())
                 {
@@ -1901,7 +1979,7 @@ namespace SlowTests.Sharding.Replication
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store1);
 
-                var location = await Sharding.GetShardNumber(store2, id1);
+                var location = await Sharding.GetShardNumberFor(store2, id1);
 
                 using (var s1 = store1.OpenSession())
                 {
@@ -1924,7 +2002,7 @@ namespace SlowTests.Sharding.Replication
                     using (context.OpenReadTransaction())
                     {
                         var tombstonesCount = db.DocumentsStorage.GetNumberOfTombstones(context);
-                        Assert.Equal(4, tombstonesCount);
+                        Assert.Equal(0, tombstonesCount);
                     }
                 }
                 

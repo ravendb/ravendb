@@ -26,7 +26,24 @@ namespace Raven.Server.Documents.Replication
             _tmpLazyStringInstance.Renew(null, key.Content.Ptr, sepIdx, _context);
             return _tmpLazyStringInstance;
         }
-        
+
+        public unsafe LazyStringValue GetDocumentId(LazyStringValue key)
+        {
+            int sizeOfDocId = 0;
+            var tmpStr = key.ToCharArray();
+            for (; sizeOfDocId < key.Size; sizeOfDocId++)
+            {
+                if (tmpStr[sizeOfDocId] == (char)SpecialChars.RecordSeparator)
+                    break;
+            }
+
+            if (sizeOfDocId >= key.Size)
+                return null;
+
+            _tmpLazyStringInstance = _context.GetLazyString(key.Buffer, sizeOfDocId);
+            return _tmpLazyStringInstance;
+        }
+
         // TODO unify if possible with AllowedPathsValidator
         public LazyStringValue GetDocumentId(ReplicationBatchItem item)
         {
@@ -36,7 +53,7 @@ namespace Raven.Server.Documents.Replication
                 AttachmentTombstoneReplicationItem at => GetDocumentId(at.Key),
                 CounterReplicationItem c => c.Id,
                 DocumentReplicationItem d => d.Id,
-                RevisionTombstoneReplicationItem r => r.Id,
+                RevisionTombstoneReplicationItem r => GetDocumentId(r.Id),
                 TimeSeriesDeletedRangeItem td => GetDocumentId(td.Key),
                 TimeSeriesReplicationItem t => GetDocumentId(t.Key),
                 _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")

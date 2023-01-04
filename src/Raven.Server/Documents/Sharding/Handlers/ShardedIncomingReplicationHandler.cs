@@ -186,6 +186,16 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 if (item is RevisionTombstoneReplicationItem revisionTombstoneItem)
                 {
+                    if (SupportedFeatures.Replication.RevisionTombstonesWithId)
+                    {
+                        var docId = _documentInfoHelper.GetDocumentId(revisionTombstoneItem);
+                        if (docId != null)
+                        {
+                            batches[_parent.Context.GetShardNumberFor(context, docId)].Items.Add(item);
+                            continue;
+                        }
+                    }
+
                     foreach (var batch in batches.Values)
                         batch.Items.Add(revisionTombstoneItem);
 
@@ -259,6 +269,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 case DocumentReplicationItem:
                 case TimeSeriesDeletedRangeItem:
                 case TimeSeriesReplicationItem:
+                case RevisionTombstoneReplicationItem:
                     return _parent.Context.GetShardNumberFor(context, _documentInfoHelper.GetDocumentId(item));
                 default:
                     throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}");

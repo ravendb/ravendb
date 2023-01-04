@@ -9,7 +9,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -694,7 +694,9 @@ namespace Raven.Server.Documents.Revisions
 
                         hasValue = true;
 
-                        using (Slice.From(context.Allocator, revision.ChangeVector, out var keySlice))
+                        using (Slice.From(context.Allocator, revision.ChangeVector, out var changeVectorSlice))
+                        using (context.Allocator.Allocate(prefixSlice.Size + changeVectorSlice.Size, out var keyBuffer))
+                        using (CreateRevisionTombstoneKeySlice(context, keyBuffer, prefixSlice, changeVectorSlice, out var keySlice))
                         {
                             CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks, flags);
 
@@ -711,7 +713,7 @@ namespace Raven.Server.Documents.Revisions
                                 writeTable = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, new CollectionName(docCollection));
                             }
 
-                            writeTable.DeleteByKey(keySlice);
+                            writeTable.DeleteByKey(changeVectorSlice);
                         }
                     }
 
@@ -727,13 +729,30 @@ namespace Raven.Server.Documents.Revisions
             return deletedRevisionsCount;
         }
 
-        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks)
+        internal static unsafe ByteStringContext.ExternalScope CreateRevisionTombstoneKeySlice(DocumentsOperationContext context, ByteString buffer, Slice documentIdPrefix, Slice changeVectorSlice, out Slice keySlice)
+        {
+            var scope = Slice.External(context.Allocator, buffer.Ptr, buffer.Length, out keySlice);
+            documentIdPrefix.CopyTo(buffer.Ptr);
+            int pos = documentIdPrefix.Size;
+            buffer.Ptr[pos - 1] = SpecialChars.RecordSeparator;
+            changeVectorSlice.CopyTo(buffer.Ptr + pos);
+            return scope;
+        }
+
+        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks, LazyStringValue revisionTombstoneKey = null)
         {
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
             long revisionEtag;
-            if (table.ReadByKey(key, out TableValueReader tvr))
+
+            Slice changeVectorSlice = key;
+            if (revisionTombstoneKey != null)
+            {
+                using var scope = RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, revisionTombstoneKey, out changeVectorSlice);
+            }
+            
+            if (table.ReadByKey(changeVectorSlice, out TableValueReader tvr))
             {
                 using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr, out Slice lowerId))
                 using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
@@ -772,11 +791,11 @@ namespace Raven.Server.Documents.Revisions
         private unsafe void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag,
             CollectionName collectionName, string changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
         {
-            var newEtag = _documentsStorage.GenerateNextEtag();
-
             var table = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, RevisionsTombstonesSlice);
             if (table.VerifyKeyExists(keySlice))
                 return; // revisions (and revisions tombstones) are immutable, we can safely ignore this
+
+            var newEtag = _documentsStorage.GenerateNextEtag();
 
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
             using (Slice.From(context.Allocator, changeVector, out var cv))
