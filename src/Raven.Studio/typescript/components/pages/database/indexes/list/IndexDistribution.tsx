@@ -128,7 +128,6 @@ export function IndexDistribution(props: IndexDistributionProps) {
 
 interface IndexProgressProps {
     nodeInfo: IndexNodeInfo;
-    inline?: boolean;
 }
 
 function iconForState(status: Raven.Client.Documents.Indexes.IndexRunningStatus) {
@@ -146,12 +145,81 @@ function iconForState(status: Raven.Client.Documents.Indexes.IndexRunningStatus)
     }
 }
 
+interface JoinedIndexProgressProps {
+    index: IndexSharedInfo;
+}
+
+export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
+    const { index } = props;
+
+    if (index.nodesInfo.some((x) => x.status === "error")) {
+        return (
+            <ProgressCircle inline state="failed" icon="icon-cancel">
+                Load error
+            </ProgressCircle>
+        );
+    }
+    if (index.nodesInfo.some((x) => x.details?.faulty)) {
+        return (
+            <ProgressCircle inline state="failed" icon="icon-cancel">
+                Faulty
+            </ProgressCircle>
+        );
+    }
+
+    if (index.nodesInfo.some((x) => x.details?.state === "Error")) {
+        return (
+            <ProgressCircle inline state="failed" icon="icon-cancel">
+                Error
+            </ProgressCircle>
+        );
+    }
+
+    if (index.nodesInfo.some((x) => x.details?.status === "Disabled")) {
+        return (
+            <ProgressCircle inline state="running" icon={iconForState("Disabled")}>
+                Disabled
+            </ProgressCircle>
+        );
+    }
+
+    if (index.nodesInfo.some((x) => x.details?.status === "Paused")) {
+        return (
+            <ProgressCircle inline state="running" icon={iconForState("Paused")}>
+                Paused
+            </ProgressCircle>
+        );
+    }
+
+    if (index.nodesInfo.some((x) => x.details?.status === "Pending")) {
+        return (
+            <ProgressCircle inline state="running" icon={iconForState("Pending")}>
+                Pending
+            </ProgressCircle>
+        );
+    }
+
+    if (index.nodesInfo.some((x) => x.progress)) {
+        return (
+            <ProgressCircle inline state="running">
+                Running
+            </ProgressCircle>
+        );
+    }
+
+    return (
+        <ProgressCircle inline state="success" icon="icon-check">
+            up to date
+        </ProgressCircle>
+    );
+}
+
 export function IndexProgress(props: IndexProgressProps) {
-    const { nodeInfo, inline } = props;
+    const { nodeInfo } = props;
 
     if (nodeInfo.status === "error") {
         return (
-            <ProgressCircle inline={inline} state="failed" icon="icon-cancel">
+            <ProgressCircle state="failed" icon="icon-cancel">
                 Load error
             </ProgressCircle>
         );
@@ -163,7 +231,7 @@ export function IndexProgress(props: IndexProgressProps) {
 
     if (nodeInfo.details.faulty) {
         return (
-            <ProgressCircle inline={inline} state="failed" icon="icon-cancel">
+            <ProgressCircle state="failed" icon="icon-cancel">
                 Faulty
             </ProgressCircle>
         );
@@ -171,7 +239,7 @@ export function IndexProgress(props: IndexProgressProps) {
 
     if (nodeInfo.details.state === "Error") {
         return (
-            <ProgressCircle inline={inline} state="failed" icon="icon-cancel">
+            <ProgressCircle state="failed" icon="icon-cancel">
                 Error
             </ProgressCircle>
         );
@@ -187,7 +255,6 @@ export function IndexProgress(props: IndexProgressProps) {
         if (nodeInfo.details.stale) {
             return (
                 <ProgressCircle
-                    inline={inline}
                     state="running"
                     icon={nodeInfo.details.status === "Running" ? null : icon}
                     progress={progress}
@@ -204,14 +271,14 @@ export function IndexProgress(props: IndexProgressProps) {
         nodeInfo.details.status === "Pending"
     ) {
         return (
-            <ProgressCircle inline={inline} state="running" icon={icon}>
+            <ProgressCircle state="running" icon={icon}>
                 {nodeInfo.details.status}
             </ProgressCircle>
         );
     }
 
     return (
-        <ProgressCircle inline={inline} state="success" icon={icon}>
+        <ProgressCircle state="success" icon={icon}>
             up to date
         </ProgressCircle>
     );

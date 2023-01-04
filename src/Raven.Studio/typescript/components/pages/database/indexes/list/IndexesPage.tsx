@@ -36,6 +36,8 @@ import { useChanges } from "hooks/useChanges";
 import { delay } from "components/utils/common";
 import { Button, Card, Col, Row, Spinner } from "reactstrap";
 import { EmptySet } from "components/common/EmptySet";
+import { LoadingView } from "components/common/LoadingView";
+import useBoolean from "hooks/useBoolean";
 
 interface IndexesPageProps {
     database: database;
@@ -207,6 +209,7 @@ export function IndexesPage(props: IndexesPageProps) {
     const { indexesService } = useServices();
     const eventsCollector = useEventsCollector();
     const { databaseChangesApi } = useChanges();
+    const { value: loadingView, setFalse: viewLoaded } = useBoolean(true);
 
     const { canReadWriteDatabase } = useAccessManager();
     const [stats, dispatch] = useReducer(indexesStatsReducer, locations, indexesStatsReducerInitializer);
@@ -303,9 +306,19 @@ export function IndexesPage(props: IndexesPageProps) {
     useEffect(() => {
         const fetchData = async () => {
             const tasks = database.getLocations().map(fetchStats);
-            await Promise.all(tasks);
+            try {
+                await Promise.race(tasks);
+            } catch {
+                // ignore - we handle that below
+            }
 
-            throttledProgressRefresh.current();
+            viewLoaded();
+
+            try {
+                await Promise.all(tasks);
+            } finally {
+                throttledProgressRefresh.current();
+            }
         };
 
         fetchData();
@@ -675,6 +688,10 @@ export function IndexesPage(props: IndexesPageProps) {
         }
         return "unchecked";
     };
+
+    if (loadingView) {
+        return <LoadingView />;
+    }
 
     if (stats.indexes.length === 0) {
         return <NoIndexes database={database} />;
