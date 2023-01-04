@@ -22,7 +22,7 @@ public class MicrosoftLoggingProvider : ILoggerProvider
     private readonly NotificationCenter.NotificationCenter _notificationCenter;
     private readonly ConcurrentDictionary<string, SparrowLoggerWrapper> _loggers = new ConcurrentDictionary<string, SparrowLoggerWrapper>(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<StringSegment, LogLevel> _configuration = new ConcurrentDictionary<StringSegment, LogLevel>();
-    
+
     public MicrosoftLoggingProvider(LoggingSource loggingSource, NotificationCenter.NotificationCenter notificationCenter)
     {
         _loggingSource = loggingSource;
@@ -43,7 +43,7 @@ public class MicrosoftLoggingProvider : ILoggerProvider
             MinLogLevel = GetLogLevelForCategory(categoryName)
         });
     }
-    
+
     public void Dispose()
     {
     }
@@ -57,14 +57,14 @@ public class MicrosoftLoggingProvider : ILoggerProvider
         }
         catch (Exception e)
         {
-            if (e is FileNotFoundException) 
+            if (e is FileNotFoundException)
                 return;
-            
+
             var msg = $"Failed to open microsoft configuration file. FilePath:\"{configurationPath}\"";
             var alert = CreateAlert(msg, e);
             _ = _notificationCenter.InitializeTask.ContinueWith(task => task.Result.Add(alert));
-            
-            if(Logger.IsOperationsEnabled)
+
+            if (Logger.IsOperationsEnabled)
                 Logger.Operations(msg, e);
             return;
         }
@@ -78,11 +78,11 @@ public class MicrosoftLoggingProvider : ILoggerProvider
     private const AlertType AlertType = NotificationCenter.Notifications.AlertType.MicrosoftLogsConfigurationLoadError;
     private readonly string _notificationId = AlertRaised.GetKey(AlertType, NotificationKey);
 
-    public IEnumerable<(string name, LogLevel minLogLevel)> GetLoggers()
+    public IEnumerable<(string Name, LogLevel MinLogLevel)> GetLoggers()
     {
         return _loggers.Select(x => (x.Key, x.Value.MinLogLevel));
     }
-    public IEnumerable<(string category, LogLevel logLevel)> GetConfiguration()
+    public IEnumerable<(string Category, LogLevel LogLevel)> GetConfiguration()
     {
         return _configuration.Select(x => (x.Key.ToString(), x.Value));
     }
@@ -90,12 +90,12 @@ public class MicrosoftLoggingProvider : ILoggerProvider
     {
         try
         {
-            if(reset)
+            if (reset)
                 _configuration.Clear();
 
             await ReadConfigurationAsync(streamConfiguration, context);
             ApplyConfiguration();
-            
+
             //If the code run on server startup the notification center is not initialized 
             _ = _notificationCenter.InitializeTask.ContinueWith(task => task.Result.Dismiss(_notificationId));
         }
@@ -103,11 +103,11 @@ public class MicrosoftLoggingProvider : ILoggerProvider
         {
             var msg = $"Failed to init Microsoft log configuration. configuration content : {streamConfiguration}";
             var alert = CreateAlert(msg, e);
-            
+
             //If the code run on server startup the notification center is not initialized 
             _ = _notificationCenter.InitializeTask.ContinueWith(task => task.Result.Add(alert));
-                
-            if (Logger.IsOperationsEnabled) 
+
+            if (Logger.IsOperationsEnabled)
                 Logger.Operations(msg, e);
         }
     }
@@ -141,7 +141,7 @@ public class MicrosoftLoggingProvider : ILoggerProvider
                     : rootCategory + subCategory;
                 _configuration[category] = logLevel;
             }
-            else if(jConfiguration.TryGetWithoutThrowingOnError(subCategory, out BlittableJsonReaderObject jObjectValue))
+            else if (jConfiguration.TryGetWithoutThrowingOnError(subCategory, out BlittableJsonReaderObject jObjectValue))
             {
                 ReadConfiguration(jObjectValue, rootCategory + subCategory + '.');
             }
