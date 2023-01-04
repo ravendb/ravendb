@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests;
 using Microsoft.Extensions.Logging;
@@ -152,7 +153,7 @@ public class MicrosoftLogTests : RavenTestBase
 
     private static async Task AssertLogs(string logFile, Action<int, string> predicate)
     {
-        using (StreamReader file = new StreamReader(logFile))
+        using (StreamReader file = new StreamReader(File.Open(logFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
         {
             await file.ReadLineAsync();
             var lineNum = 1;
@@ -164,9 +165,9 @@ public class MicrosoftLogTests : RavenTestBase
         }
     }
 
-    private string GetEmptyDirectory()
+    private string GetEmptyDirectory([CallerMemberName] string caller = null)
     {
-        var mainLogPath = NewDataPath();
+        var mainLogPath = NewDataPath(caller);
         IOExtensions.DeleteDirectory(mainLogPath);
 
         return mainLogPath;
