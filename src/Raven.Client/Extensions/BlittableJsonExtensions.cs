@@ -75,15 +75,29 @@ namespace Raven.Client.Extensions
 
         internal static BlittableJsonReaderObject AddToMetadata<T>(this BlittableJsonReaderObject item, JsonOperationContext context, string key, T value)
         {
-            item.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
-            metadata.Modifications = new DynamicJsonValue(metadata)
+            if (item.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
             {
-                [key] = value
-            };
-            item.Modifications = new DynamicJsonValue(item)
+                metadata.Modifications = new DynamicJsonValue(metadata)
+                {
+                    [key] = value
+                };
+
+                item.Modifications = new DynamicJsonValue(item)
+                {
+                    [Constants.Documents.Metadata.Key] = metadata
+                };
+            }
+            else
             {
-                [Constants.Documents.Metadata.Key] = metadata
-            };
+                item.Modifications = new DynamicJsonValue(item)
+                {
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [key] = value
+                    }
+                };
+            }
+            
             using (var old = item)
             {
                 return context.ReadObject(item, "add-to-metadata");
