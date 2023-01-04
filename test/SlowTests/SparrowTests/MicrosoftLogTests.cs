@@ -199,9 +199,9 @@ public class MicrosoftLogTests : RavenTestBase
         }
 
         var configuration = provider.GetConfiguration().ToArray();
-        Assert.Contains(configuration, x => x is {category: "Microsoft", logLevel: LogLevel.Debug});
-        Assert.Contains(configuration, x => x is {category: "Key1", logLevel: LogLevel.Information});
-        Assert.Contains(configuration, x => x is {category: "Key1.Key2", logLevel: LogLevel.Error});
+        Assert.Contains(configuration, x => x is {Category: "Microsoft", LogLevel: LogLevel.Debug});
+        Assert.Contains(configuration, x => x is {Category: "Key1", LogLevel: LogLevel.Information});
+        Assert.Contains(configuration, x => x is {Category: "Key1.Key2", LogLevel: LogLevel.Error});
     }
     
     [Fact]
