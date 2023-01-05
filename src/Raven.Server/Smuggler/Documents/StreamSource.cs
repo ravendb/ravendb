@@ -778,10 +778,10 @@ namespace Raven.Server.Smuggler.Documents
                     var segment = await ReadSegmentAsync(size);
                     yield return new TimeSeriesItem
                     {
-                        DocId = docId,
+                        DocId = docId.Clone(_context),
                         Name = name,
                         Baseline = baseline,
-                        Collection = collection,
+                        Collection = collection.Clone(_context),
                         ChangeVector = cv,
                         Segment = segment
                     };
