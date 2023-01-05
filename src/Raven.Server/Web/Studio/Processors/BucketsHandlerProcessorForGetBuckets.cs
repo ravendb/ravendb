@@ -19,7 +19,7 @@ namespace Raven.Server.Web.Studio.Processors
         {
         }
         
-        protected override ValueTask<BucketsResults> GetBucketsResults(DocumentsOperationContext context, int fromBucket, int toBucket, int range, int? _, CancellationToken token)
+        protected override ValueTask<BucketsResults> GetBucketsResults(DocumentsOperationContext context, int fromBucket, int toBucket, int range, CancellationToken token)
         {
             if (ShardHelper.TryGetShardNumberAndDatabaseName(RequestHandler.DatabaseName, out string shardedDatabaseName, out int shardNumber) == false)
             {
@@ -49,7 +49,7 @@ namespace Raven.Server.Web.Studio.Processors
                             RangeSize = bucket.Size,
                             FromBucket = id,
                             NumberOfBuckets = 1,
-                            ToBucket = id + range,
+                            ToBucket = id + range - 1,
                             LastModified = bucket.LastModified,
                             DocumentsCount = bucket.NumberOfDocuments
                         };

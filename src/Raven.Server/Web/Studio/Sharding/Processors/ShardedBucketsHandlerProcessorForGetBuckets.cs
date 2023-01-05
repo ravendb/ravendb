@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
@@ -18,8 +19,9 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
         {
         }
         
-        protected override async ValueTask<BucketsResults> GetBucketsResults(TransactionOperationContext context, int fromBucket, int toBucket, int range, int? shardNumber, CancellationToken token)
+        protected override async ValueTask<BucketsResults> GetBucketsResults(TransactionOperationContext context, int fromBucket, int toBucket, int range, CancellationToken token)
         {
+            var shardNumber = RequestHandler.GetIntValueQueryString(Constants.QueryString.ShardNumber, required: false);
             if (shardNumber.HasValue)
                 return await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new GetBucketsCommand(fromBucket, toBucket, range), shardNumber.Value, token);
 
