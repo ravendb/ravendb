@@ -147,5 +147,49 @@ namespace Raven.Server.Documents.Handlers.Admin
                 await stream.CopyToAsync(ResponseBodyStream());
             }
         }
+
+        [RavenAction("/admin/logs/microsoft/loggers", "GET", AuthorizationStatus.Operator)]
+        public async Task GetMicrosoftLoggers()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var djv = new DynamicJsonValue();
+                foreach (var (name, minLogLevel) in Server.MicrosoftLogger.GetLoggers())
+                {
+                    djv[name] = minLogLevel;
+                }
+                var json = context.ReadObject(djv, "logs/configuration");
+                writer.WriteObject(json);
+            }
+        }
+        
+        [RavenAction("/admin/logs/microsoft/configuration", "GET", AuthorizationStatus.Operator)]
+        public async Task GetMicrosoftConfiguration()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var djv = new DynamicJsonValue();
+                foreach (var (category, logLevel) in Server.MicrosoftLogger.GetConfiguration())
+                {
+                    djv[category] = logLevel;
+                }
+                var json = context.ReadObject(djv, "logs/configuration");
+                writer.WriteObject(json);
+            }
+        }
+
+        [RavenAction("/admin/logs/microsoft/configuration", "POST", AuthorizationStatus.Operator)]
+        public async Task SetMicrosoftConfiguration()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                bool reset = GetBoolValueQueryString("reset", required: false) ?? false;
+                await Server.MicrosoftLogger.ReadAndApplyConfigurationAsync(RequestBodyStream(), context, reset);
+            }
+
+            NoContentStatus();
+        }
     }
 }
