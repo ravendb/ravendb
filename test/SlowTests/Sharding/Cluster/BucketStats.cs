@@ -3,12 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Schemas;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -16,6 +20,7 @@ using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
 using Voron;
+using Voron.Data.Tables;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
@@ -669,27 +674,51 @@ namespace SlowTests.Sharding.Cluster
                 Assert.Equal(100_000, total);
             }
         }
-
+        
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanGetBucketStatsForSampleData()
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.Documents | DatabaseItemType.Attachments));
                 var total = 0L;
+                long bucketsSize = 0;
+                long docsSize = 0;
 
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                
                 foreach (var shardNumber in sharding.Shards.Keys)
                 {
                     var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shardNumber));
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        var stats = ShardedDocumentsStorage.GetBucketStatistics(ctx, 0, int.MaxValue).Sum(x => x.NumberOfDocuments);
+                        var tableValuesSize = 0l;
+                        var schema = db.DocumentsStorage.DocsSchema;
+                        var table = new Table(schema, ctx.Transaction.InnerTransaction);
+                        foreach (var result in table.SeekForwardFrom(schema.FixedSizeIndexes[Documents.AllDocsEtagsSlice], 0, 0))
+                        {
+                            tableValuesSize += result.Reader.Size;
+                        }
+
+                        docsSize += tableValuesSize;
+                    }
+                }
+
+                foreach (var shardNumber in sharding.Shards.Keys)
+                {
+                    var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shardNumber));
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var bucketsStats = ShardedDocumentsStorage.GetBucketStatistics(ctx, 0, int.MaxValue).ToList();
+                        var stats = bucketsStats.Sum(x => x.NumberOfDocuments);
                         total += stats;
+                        bucketsSize += bucketsStats.Sum(x => x.Size);
                     }
                 }
                 Assert.Equal(1059, total);
+                Assert.Equal(docsSize, bucketsSize);
             }
         }
 

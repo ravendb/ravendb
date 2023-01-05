@@ -55,12 +55,14 @@ namespace Raven.Server.Web.Studio.Processors
         private readonly int _fromBucket;
         private readonly int _toBucket;
         private readonly int _range;
+        private readonly int? _shardNumber;
 
-        internal GetBucketsCommand(int fromBucket, int toBucket, int range)
+        internal GetBucketsCommand(int fromBucket, int toBucket, int range, int? shardNumber = null)
         {
             _fromBucket = fromBucket;
             _toBucket = toBucket;
             _range = range;
+            _shardNumber = shardNumber;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -70,6 +72,9 @@ namespace Raven.Server.Web.Studio.Processors
             pathBuilder.Append($"&fromBucket={_fromBucket}");
             pathBuilder.Append($"&toBucket={_toBucket}");
             pathBuilder.Append($"&range={_range}");
+
+            if (_shardNumber.HasValue)
+                pathBuilder.Append($"&{Constants.QueryString.ShardNumber}={_shardNumber}");
 
             var request = new HttpRequestMessage
             {
