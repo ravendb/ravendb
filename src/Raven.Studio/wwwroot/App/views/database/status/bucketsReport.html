@@ -17,6 +17,7 @@
             <tr>
                 <th class="column-min-width">Range</th>
                 <th>Documents count</th>
+                <th>Shards</th>
                 <th>Size (&sum; <span data-bind="text: node().formatSize()"></span>)</th>
                 <th>% Total</th>
             </tr>
@@ -30,6 +31,13 @@
                     </div>
                 </td>
                 <td data-bind="text: documentsCount.toLocaleString()"></td>
+                <td>
+                    <!-- ko foreach: shards -->
+                        <span class="label label-primary" data-bind="text: '#' + $data">
+                            
+                        </span>
+                    <!-- /ko -->
+                </td>
                 <td data-bind="html: formatSize(false)"></td>
                 <td data-bind="text: formatPercentage($parent.node().size)"></td>
             </tr>

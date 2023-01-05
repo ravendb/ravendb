@@ -88,7 +88,7 @@ class bucketsReport extends shardViewModelBase {
         
         const totalSize = mappedData.reduce((p, c) => p + c.size, 0);
         const totalDocuments = mappedData.reduce((p, c) => p + c.documentsCount, 0);
-        this.root = new bucketReportItem( "/", totalSize, totalDocuments, mappedData);
+        this.root = new bucketReportItem( "/", totalSize, totalDocuments, [], mappedData);
 
         this.sortBySize(this.root);
 
@@ -105,7 +105,7 @@ class bucketsReport extends shardViewModelBase {
 
     private mapBucket(dto: Raven.Server.Web.Studio.Processors.BucketRange): bucketReportItem {
         const name = dto.FromBucket + " - " + dto.ToBucket;
-        const item = new bucketReportItem(name, dto.RangeSize, dto.DocumentsCount);
+        const item = new bucketReportItem(name, dto.RangeSize, dto.DocumentsCount, dto.ShardNumbers);
         item.fromRange = dto.FromBucket;
         item.toRange = dto.ToBucket;
         item.lazyLoadChildren = true;
@@ -235,7 +235,7 @@ class bucketsReport extends shardViewModelBase {
         const cell = container.selectAll("g.cell-no-such") // we always select non-existing nodes to draw from scratch - we don't update elements here
             .data(nodes)
             .enter().append("svg:g")
-            .attr("class", d => "cell")
+            .attr("class", d => "cell index")
             .attr("transform", d => "translate(" + d.x + "," + d.y + ")")
             .on("click", d => this.onClick(d, true))
             .on("mouseover", d => this.onMouseOver(d))
@@ -422,6 +422,7 @@ class bucketsReport extends shardViewModelBase {
             .style("opacity", 1);
         let html = "<div class='tooltip-li'>Range: <div class='value'>" + d.name + "</div></div>";
         html += "<div class='tooltip-li'>Document Count: <div class='value'>" + d.documentsCount + "</div></div>";
+        html += "<div class='tooltip-li'>Shards: <div class='value'>" + d.shards.map(x => `<span># ${x}</span>`).join("") + "</div></div>";
         html += "<div class='tooltip-li'>Size: <div class='value'>" + generalUtils.formatBytesToSize(d.size) + "</div></div>";
 
         this.tooltip.html(html);

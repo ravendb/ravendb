@@ -20,10 +20,13 @@ class bucketReportItem {
     w?: number; // used for storing text width
     lazyLoadChildren = false;
     
-    constructor(name: string, size: number, documentsCount: number, internalChildren: bucketReportItem[] = null) {
+    shards: number[] = [];
+    
+    constructor(name: string, size: number, documentsCount: number, shards: number[], internalChildren: bucketReportItem[] = null) {
         this.name = name;
         this.size = size;
         this.documentsCount = documentsCount;
+        this.shards = shards;
         this.internalChildren = internalChildren;
     }
 
