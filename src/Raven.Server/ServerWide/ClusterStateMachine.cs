@@ -3472,6 +3472,15 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public ShardingConfiguration ReadShardingConfiguration(string database)
+        {
+            using (_parent.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return ReadShardingConfiguration(context, database);
+            }
+        }
+
         public ShardingConfiguration ReadShardingConfiguration<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
             where TTransaction : RavenTransaction
         {

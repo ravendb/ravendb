@@ -414,7 +414,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             var databaseName = rawRecord.DatabaseName;
             var sharding = rawRecord.Sharding;
-            var currentMigration = sharding.BucketMigrations.SingleOrDefault(pair => pair.Value.Status < MigrationStatus.OwnershipTransferred).Value;
+            var currentMigration = sharding.BucketMigrations.SingleOrDefault(pair => pair.Value.Status == MigrationStatus.Moved).Value;
             if (currentMigration == null)
                 return;
 
@@ -423,6 +423,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 var tag = node.Key;
                 var nodeReport = node.Value;
+
                 if (nodeReport.Report.TryGetValue(destination, out var destinationReport))
                 {
                     if (destinationReport.ReportPerBucket.TryGetValue(currentMigration.Bucket, out var bucketReport))
@@ -435,7 +436,16 @@ namespace Raven.Server.ServerWide.Maintenance
                             confirmCommands ??= new List<DestinationMigrationConfirmCommand>();
                             confirmCommands.Add(new DestinationMigrationConfirmCommand(currentMigration.Bucket,
                                 currentMigration.MigrationIndex, tag, databaseName, $"Confirm-{currentMigration.Bucket}@{currentMigration.MigrationIndex}/{tag}"));
+                            continue;
                         }
+                    }
+
+                    if (currentMigration.LastSourceChangeVector == null)
+                    {
+                        // moving empty bucket
+                        confirmCommands ??= new List<DestinationMigrationConfirmCommand>();
+                        confirmCommands.Add(new DestinationMigrationConfirmCommand(currentMigration.Bucket,
+                            currentMigration.MigrationIndex, tag, databaseName, $"Confirm-{currentMigration.Bucket}@{currentMigration.MigrationIndex}/{tag}"));
                     }
                 }
             }

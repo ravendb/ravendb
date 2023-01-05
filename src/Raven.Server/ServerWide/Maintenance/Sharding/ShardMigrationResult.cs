@@ -13,7 +13,7 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
         public int DestinationShard;
         public int Bucket;
 
-        public StartBucketMigrationCommand GetMigrationCommand => new StartBucketMigrationCommand(Bucket, SourceShard, DestinationShard, Database, RaftId);
+        public StartBucketMigrationCommand GetMigrationCommand => new StartBucketMigrationCommand(Bucket, DestinationShard, Database, RaftId);
 
         public override string ToString()
         {

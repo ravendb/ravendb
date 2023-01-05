@@ -74,5 +74,8 @@ public enum OperationType
     DumpRawIndexData,
 
     [Description("Lucene: optimize index")]
-    LuceneOptimizeIndex
+    LuceneOptimizeIndex,
+
+    [Description("Resharding")]
+    Resharding
 }

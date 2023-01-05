@@ -15,7 +15,6 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 {
     public class StartBucketMigrationCommand : UpdateDatabaseCommand
     {
-        public int SourceShard;
         public int DestinationShard;
         public int Bucket;
 
@@ -25,15 +24,18 @@ namespace Raven.Server.ServerWide.Commands.Sharding
         {
         }
 
-        public StartBucketMigrationCommand(int bucket, int sourceShard, int destShard, string database, string raftId) : base(database, raftId)
+        public StartBucketMigrationCommand(int bucket, int destShard, string database, string raftId) : base(database, raftId)
         {
             Bucket = bucket;
-            SourceShard = sourceShard;
             DestinationShard = destShard;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            var sourceShard = ShardHelper.GetShardNumberFor(record.Sharding, Bucket);
+            if (sourceShard == DestinationShard)
+                return; // nothing to do
+
             if (record.Sharding.BucketMigrations.Count > 0)
             {
                 foreach (var migration in record.Sharding.BucketMigrations)
@@ -47,10 +49,6 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 }
             }
 
-            var sourceShard = ShardHelper.GetShardNumberFor(record.Sharding, Bucket);
-            if (sourceShard != SourceShard)
-                throw new RachisApplyException($"Bucket {Bucket} expected to be on shard {SourceShard}, but is actually on shard {sourceShard}");
-
             if (record.Sharding.Shards.ContainsKey(DestinationShard) == false)
                 throw new RachisApplyException($"Destination shard {DestinationShard} doesn't exists");
 
@@ -58,7 +56,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             {
                 Bucket = Bucket,
                 DestinationShard = DestinationShard,
-                SourceShard = SourceShard,
+                SourceShard = sourceShard,
                 MigrationIndex = etag,
                 Status = MigrationStatus.Moving
             };
@@ -102,7 +100,6 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(SourceShard)] = SourceShard;
             json[nameof(DestinationShard)] = DestinationShard;
             json[nameof(Bucket)] = Bucket;
         }

@@ -54,7 +54,7 @@ public partial class RavenTestBase
             {
                 try
                 {
-                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, shardNumber, moveToShard);
+                    await server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, moveToShard);
                     break;
                 }
                 catch
