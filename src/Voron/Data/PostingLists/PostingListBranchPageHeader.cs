@@ -1,9 +1,9 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Voron.Data.Sets
+namespace Voron.Data.PostingLists
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1, Size = PageHeader.SizeOf)]
-    public struct SetBranchPageHeader
+    public struct PostingListBranchPageHeader
     {
         [FieldOffset(0)]
         public long PageNumber;

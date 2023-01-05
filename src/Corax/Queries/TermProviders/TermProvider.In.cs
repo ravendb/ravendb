@@ -1,25 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Corax.Mappings;
 
 namespace Corax.Queries
 {
     [DebuggerDisplay("{DebugView,nq}")]
     public struct InTermProvider : ITermProvider
     {
-        private readonly int _fieldId;
         private readonly IndexSearcher _searcher;
-        private readonly string _field;
         private readonly List<string> _terms;
         private int _termIndex;
+        private readonly FieldMetadata _field;
 
-        public InTermProvider(IndexSearcher searcher, string field, List<string> terms, int fieldId)
+        public InTermProvider(IndexSearcher searcher, FieldMetadata field, List<string> terms)
         {
-            _searcher = searcher;
             _field = field;
+            _searcher = searcher;
             _terms = terms;
             _termIndex = -1;
-            _fieldId = fieldId;
         }
 
         public void Reset() => _termIndex = -1;
@@ -32,7 +31,7 @@ namespace Corax.Queries
                 term = TermMatch.CreateEmpty(_searcher.Allocator);
                 return false;
             }
-            term = _searcher.TermQuery(_field, _terms[_termIndex], _fieldId);
+            term = _searcher.TermQuery(_field, _terms[_termIndex]);
             return true;
         }
         public QueryInspectionNode Inspect()
@@ -40,7 +39,7 @@ namespace Corax.Queries
             return new QueryInspectionNode($"{nameof(InTermProvider)}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _field },
+                                { "Field", _field.ToString() },
                                 { "Terms", string.Join(",", _terms)}
                             });
         }

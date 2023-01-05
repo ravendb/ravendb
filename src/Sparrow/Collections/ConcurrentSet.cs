@@ -24,6 +24,7 @@ namespace Sparrow.Collections
             public object[] Items => _parent.Cast<object>().ToArray();
         }
 
+        private int _innerCountForEmpty;
         private readonly ConcurrentDictionary<T, object> _inner;
 
         public ConcurrentSet()
@@ -37,6 +38,8 @@ namespace Sparrow.Collections
         }
 
         public int Count => _inner.Count;
+        
+        public bool IsEmpty => _innerCountForEmpty == 0;
 
         public void Add(T item)
         {
@@ -45,7 +48,12 @@ namespace Sparrow.Collections
 
         public bool TryAdd(T item)
         {
-            return _inner.TryAdd(item, null);
+            var b = _inner.TryAdd(item, null);
+            if (b)
+            {
+                Interlocked.Increment(ref _innerCountForEmpty);
+            }
+            return b;
         }
 
         public bool Contains(T item)
@@ -56,7 +64,13 @@ namespace Sparrow.Collections
         public bool TryRemove(T item)
         {
             object _;
-            return _inner.TryRemove(item, out _);
+            var b = _inner.TryRemove(item, out _);
+            if (b)
+            {
+                Interlocked.Decrement(ref _innerCountForEmpty);
+            }
+
+            return b;
         }
 
         public IEnumerator<T> GetEnumerator()
@@ -71,7 +85,13 @@ namespace Sparrow.Collections
 
         public void Clear()
         {
-            _inner.Clear();
+            while (true)
+            {
+                var old = Volatile.Read(ref _innerCountForEmpty);
+                _inner.Clear();
+                if (Interlocked.CompareExchange(ref _innerCountForEmpty, 0, old) == old)
+                    break;
+            }
         }
 
         public override string ToString()

@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                             {
                                 try
                                 {
-                                    return x.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context);
+                                    return x.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: ShouldCalculateStats, queryContext: context);
                                 }
                                 catch (OperationCanceledException)
                                 {
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
                             return ValueTask.CompletedTask;
                         }
 
-                        indexesStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context) };
+                        indexesStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: ShouldCalculateStats, queryContext: context) };
                     }
                 }
 

@@ -951,6 +951,8 @@ namespace Voron
                 _writeTransactionRunning.Reset();
                 _transactionWriter.Release();
 
+                Journal.Applicator.OnTransactionCompleted();
+
                 if (tx.FlushInProgressLockTaken)
                     FlushInProgressLock.ExitReadLock();
             }
@@ -1143,7 +1145,7 @@ namespace Voron
                                 detailedReportInput.Containers[currentKey] = container;
                                 break;
                             case RootObjectType.Set:
-                                var set = tx.OpenSet(currentKey);
+                                var set = tx.OpenPostingList(currentKey);
                                 detailedReportInput.Sets.Add(set);
                                 break;
                             case RootObjectType.CompactTree:

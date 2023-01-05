@@ -90,6 +90,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Features.Availability", ConfigurationEntryScope.ServerWideOnly)]
         public FeaturesAvailability FeaturesAvailability { get; set; }
 
+        [Description("EXPERT: Allow to test network status of the system to discover kernel level issues")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Testing.EchoSocket.Port", ConfigurationEntryScope.ServerWideOnly)]
+        public int? EchoSocketPort { get; set; }
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);

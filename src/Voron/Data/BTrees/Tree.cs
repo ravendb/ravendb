@@ -242,7 +242,9 @@ namespace Voron.Data.BTrees
             var length = (int)value.Length;
 
             using (DirectAdd(key, length, out byte* ptr))
-                CopyStreamToPointer(_llt, value, ptr);
+            {
+                value.ReadExactly(new Span<byte>(ptr, length));
+            }
         }
 
         private static void ValidateValueLength(Stream value)
@@ -287,28 +289,7 @@ namespace Voron.Data.BTrees
             using (DirectAdd(key, value.Size, out byte* ptr))
                 value.CopyTo(ptr);
         }
-
-        private static void CopyStreamToPointer(LowLevelTransaction tx, Stream value, byte* pos)
-        {
-            using (tx.Environment.GetTemporaryPage(tx, out TemporaryPage tmp))
-            {
-                var tempPageBuffer = tmp.TempPageBuffer;
-                var tempPagePointer = tmp.TempPagePointer;
-
-                while (true)
-                {
-                    var read = value.Read(tempPageBuffer, 0, tempPageBuffer.Length);
-                    if (read == 0)
-                        break;
-
-                    Memory.Copy(pos, tempPagePointer, read);
-                    pos += read;
-
-                    if (read != tempPageBuffer.Length)
-                        break;
-                }
-            }
-        }
+        
 
         public static int CalcSizeOfEmbeddedEntry(int keySize, int entrySize)
         {

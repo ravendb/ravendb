@@ -11,7 +11,7 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
 using Voron.Data.Containers;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -89,9 +89,9 @@ public class DeleteTest : StorageTest
             Assert.NotEqual(0, containerId & (long)TermIdMask.Set);
             var setId = containerId & ~0b11;
             var setStateSpan = Container.GetMutable(llt, setId);
-            ref var setState = ref MemoryMarshal.AsRef<SetState>(setStateSpan);
+            ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             using var _ = Slice.From(llt.Allocator, "Content", ByteStringType.Immutable, out var fieldName);
-            var set = new Set(llt, fieldName, in setState);
+            var set = new PostingList(llt, fieldName, in setState);
             setState = set.State;
             Assert.Equal(count - previousIds.Count, setState.NumberOfEntries);
 
@@ -108,11 +108,11 @@ public class DeleteTest : StorageTest
 
             for (int i = 0; i < read; i++)
             {
-                var entry = indexSearcher.GetReaderFor(ids[i]);
-                Assert.True(entry.GetReaderFor(0).Read(out Span<byte> id));
+                var entry = indexSearcher.GetEntryReaderFor(ids[i]);
+                Assert.True(entry.GetFieldReaderFor(0).Read(out Span<byte> id));
                 if (idAsBytes.SequenceEqual(id))
                 {
-                    entry.GetReaderFor(ContentId).Read(out Span<byte> content);
+                    entry.GetFieldReaderFor(ContentId).Read(out Span<byte> content);
                     // Assert.False(nine.SequenceEqual(content));
                 }
             }

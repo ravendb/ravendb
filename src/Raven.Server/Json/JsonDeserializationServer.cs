@@ -25,6 +25,7 @@ using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
+using Raven.Server.Dashboard;
 using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Commands.ETL;
 using Raven.Server.Documents.Commands.Indexes;
@@ -63,6 +64,7 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
+using DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
@@ -216,7 +218,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, FacetOptions> FacetOptions = GenerateJsonDeserializationRoutine<FacetOptions>();
 
-        public static readonly Func<BlittableJsonReaderObject, DatabaseInfo> DatabaseInfo = GenerateJsonDeserializationRoutine<DatabaseInfo>();
+        public static readonly Func<BlittableJsonReaderObject, ExtendedDatabaseInfo> DatabaseInfo = GenerateJsonDeserializationRoutine<ExtendedDatabaseInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, ClusterTopologyChanged> ClusterTopologyChanged = GenerateJsonDeserializationRoutine<ClusterTopologyChanged>();
 

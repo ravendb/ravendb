@@ -1,19 +1,19 @@
 using System;
 using System.Text;
 
-namespace Voron.Data.Sets
+namespace Voron.Data.PostingLists
 {
-    public unsafe struct SetCursorState
+    public unsafe struct PostingListCursorState
     {
         public Page Page;
         public int LastMatch;
         public int LastSearchPosition;
-        public SetLeafPageHeader* LeafHeader => (SetLeafPageHeader*)Page.Pointer;
-        public SetBranchPageHeader* BranchHeader => (SetBranchPageHeader*)Page.Pointer;
+        public PostingListLeafPageHeader* LeafHeader => (PostingListLeafPageHeader*)Page.Pointer;
+        public PostingListBranchPageHeader* BranchHeader => (PostingListBranchPageHeader*)Page.Pointer;
 
         public bool IsLeaf => LeafHeader->SetFlags == ExtendedPageType.SetLeaf;
 
-        public SetCursorState(Page page)
+        public PostingListCursorState(Page page)
         {
             Page = page;
             LastMatch = 0;

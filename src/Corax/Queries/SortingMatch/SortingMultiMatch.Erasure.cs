@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Corax.Mappings;
 
 namespace Corax.Queries
 {
@@ -67,7 +68,7 @@ namespace Corax.Queries
         {
             public MatchCompareFieldType FieldType => throw new NotSupportedException();
 
-            public int FieldId => throw new NotSupportedException();
+            public FieldMetadata Field => throw new NotSupportedException();
 
             public int CompareById(long idx, long idy) { throw new NotSupportedException(); }
 

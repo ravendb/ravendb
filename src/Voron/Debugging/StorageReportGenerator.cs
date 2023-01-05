@@ -15,7 +15,7 @@ using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Global;
@@ -58,7 +58,7 @@ namespace Voron.Debugging
         public JournalFile[] FlushedJournals { get; set; }
         public List<Table> Tables;
         public Dictionary<Slice, long> Containers;
-        public List<Set> Sets;
+        public List<PostingList> Sets;
         public List<PersistentDictionaryRootHeader> PersistentDictionaries;
         public List<CompactTree> CompactTrees;
         public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
@@ -157,7 +157,7 @@ namespace Voron.Debugging
                     _streamsAllocatedSpaceInBytes += treeReport.Streams.AllocatedSpaceInBytes;
             }
 
-            foreach (Set set in input.Sets)
+            foreach (PostingList set in input.Sets)
             {
                 trees.Add(GetReport(set, input.IncludeDetails));
             }
@@ -393,23 +393,23 @@ namespace Voron.Debugging
             return treeReport;
         }
 
-        public TreeReport GetReport(Set set, bool includeDetails)
+        public TreeReport GetReport(PostingList postingList, bool includeDetails)
         {
             List<double> pageDensities = null;
             if (includeDetails)
             {
-                pageDensities = GetPageDensities(set);
+                pageDensities = GetPageDensities(postingList);
             }
-            int pageCount = set.State.BranchPages + set.State.LeafPages;
+            int pageCount = postingList.State.BranchPages + postingList.State.LeafPages;
             double density = pageDensities?.Average() ?? -1;
             var treeReport = new TreeReport
             {
                 Type = RootObjectType.Set,
-                Name = set.Name.ToString(),
-                BranchPages = set.State.BranchPages,
-                Depth = set.State.Depth,
-                NumberOfEntries = set.State.NumberOfEntries,
-                LeafPages = set.State.LeafPages,
+                Name = postingList.Name.ToString(),
+                BranchPages = postingList.State.BranchPages,
+                Depth = postingList.State.Depth,
+                NumberOfEntries = postingList.State.NumberOfEntries,
+                LeafPages = postingList.State.LeafPages,
                 PageCount = pageCount,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(pageCount),
@@ -450,11 +450,10 @@ namespace Voron.Debugging
 
             if (includeDetails)
             {
-                var allPages = Container.GetAllPagesSet(_tx, page).Iterate();
                 pageDensities = new();
-                while (allPages.MoveNext())
+                foreach (var pageNum in Container.GetAllPagesSet(_tx, page))
                 {
-                    Page cur = _tx.GetPage(allPages.Current);
+                    Page cur = _tx.GetPage(pageNum);
                     if (cur.IsOverflow)
                     {
                         int numberOfOverflowPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(cur.OverflowSize);
@@ -749,9 +748,9 @@ namespace Voron.Debugging
             return densities;
         }
         
-        public static List<double> GetPageDensities(Set set)
+        public static List<double> GetPageDensities(PostingList postingList)
         {
-            var allPages = set.AllPages();
+            var allPages = postingList.AllPages();
             if (allPages.Count == 0)
                 return null;
 
@@ -759,15 +758,15 @@ namespace Voron.Debugging
 
             foreach (var p in allPages)
             {
-                var page = set.Llt.GetPage(p);
-                var state = new SetCursorState { Page = page };
+                var page = postingList.Llt.GetPage(p);
+                var state = new PostingListCursorState { Page = page };
                 if (state.IsLeaf)
                 {
-                    densities.Add((double)new SetLeafPage(page).SpaceUsed / Constants.Storage.PageSize);
+                    densities.Add((double)new PostingListLeafPage(page).SpaceUsed / Constants.Storage.PageSize);
                 }
                 else
                 {
-                    densities.Add((double)new SetBranchPage(page).SpaceUsed / Constants.Storage.PageSize);
+                    densities.Add((double)new PostingListBranchPage(page).SpaceUsed / Constants.Storage.PageSize);
                 }
             }
             return densities;

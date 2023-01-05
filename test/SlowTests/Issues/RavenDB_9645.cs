@@ -7,6 +7,8 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,15 +23,18 @@ namespace SlowTests.Issues
         public const int LENGTH_OF_NAME = 2;
         public const string BLOB_OF_DATA = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris massa. Vestibulum lacinia arcu eget nulla. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur sodales ligula in libero. Sed dignissim lacinia nunc. Curabitur tortor. Pellentesque nibh. Aenean quam. In scelerisque sem at dolor. Maecenas mattis. Sed convallis tristique sem. Proin ut ligula vel nunc egestas porttitor. Morbi lectus risus, iaculis vel, suscipit quis, luctus non, massa. Fusce ac turpis quis ligula lacinia aliquet. Mauris ipsum. Nulla metus metus, ullamcorper vel, tincidunt sed, euismod in, nibh. Quisque volutpat condimentum velit. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Nam nec ante. Sed lacinia, urna non tincidunt mattis, tortor neque adipiscing diam, a cursus ipsum ante quis turpis. Nulla facilisi. Ut fringilla. Suspendisse potenti. Nunc feugiat mi a tellus consequat imperdiet. Vestibulum sapien. Proin quam. Etiam ultrices. Suspendisse in justo eu magna luctus suscipit. Sed lectus. Integer euismod lacus luctus magna. Quisque cursus, metus vitae pharetra auctor, sem massa mattis sem, at interdum magna augue eget diam. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Morbi lacinia molestie dui. Praesent blandit dolor. Sed non quam. In vel mi sit amet augue congue elementum. Morbi in ipsum sit amet pede facilisis laoreet. Donec lacus nunc, viverra nec.";
 
-        [Theory]
-        [InlineData(5000, true)]
-        [InlineData(5000, false)]
-        public void Should_correctly_reduce_after_updating_all_documents(int numberOfClaimsToGenerate, bool compressed)
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenExplicitData(Data = new object[]{5000, true}, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenExplicitData(Data = new object[]{5000, false}, SearchEngineMode = RavenSearchEngineMode.All)]       
+        public void Should_correctly_reduce_after_updating_all_documents(RavenTestParameters parameters, int numberOfClaimsToGenerate, bool compressed)
         {
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record =>
                 {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = parameters.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = parameters.SearchEngine.ToString();
+                    
                     if (compressed)
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration
@@ -51,11 +56,12 @@ namespace SlowTests.Issues
                 {
                     using (var claimSession = store.OpenSession())
                     {
-                        var query = claimSession.Query<Claim>()
+                        var queryRaw = claimSession.Query<Claim>()
                             .Customize(x => x.WaitForNonStaleResults())
                             .Take(100)
                             .Where(c => c.MatchingStatus.Equals("UNKNOWN"))
-                            .OrderBy(c => c.ControlNumber).ToList();
+                            .OrderBy(c => c.ControlNumber);
+                        var query = queryRaw.ToList();
 
                         if (query.Count == 0)
                             break;
@@ -72,9 +78,8 @@ namespace SlowTests.Issues
                 }
 
                 Indexes.WaitForIndexing(store);
-
                 Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
-
+                
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<ClaimsByBillTypeAndMatchingStatus.Result, ClaimsByBillTypeAndMatchingStatus>().OrderBy(x => x.BillType).ToList();

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Sparrow.Server;
+using Corax.Mappings;
 using Voron;
 using Voron.Data.CompactTrees;
 
@@ -15,14 +15,14 @@ namespace Corax.Queries
     public struct StartWithTermProvider : ITermProvider
     {
         private readonly IndexSearcher _searcher;
-        private readonly CompactTree.Iterator _iterator;
-        private readonly Slice _fieldName;
+        private CompactTree.Iterator _iterator;
+        private readonly FieldMetadata _field;
         private readonly Slice _startWith;
         private readonly CompactTree _tree;
-        public StartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName, int fieldId, Slice startWith)
+        public StartWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice startWith)
         {
             _searcher = searcher;
-            _fieldName = fieldName;
+            _field = field;
             _iterator = tree.Iterate();
             _startWith = startWith;
             _tree = tree;
@@ -52,7 +52,7 @@ namespace Corax.Queries
             return new QueryInspectionNode($"{nameof(StartWithTermProvider)}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _fieldName.ToString() },
+                                { "Field", _field.ToString() },
                                 { "Terms", _startWith.ToString()}
                             });
         }

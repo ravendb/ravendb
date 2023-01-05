@@ -43,7 +43,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ReplicationLoader : AbstractReplicationLoader, ITombstoneAware
+    public class ReplicationLoader : AbstractReplicationLoader<DocumentsContextPool, DocumentsOperationContext>, ITombstoneAware
     {
         private readonly Timer _reconnectAttemptTimer;
         private long _reconnectInProgress;
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Replication
             public long LastEtag;
         }
 
-        public ReplicationLoader(DocumentDatabase database, ServerStore server) : base(server, database.Name)
+        public ReplicationLoader(DocumentDatabase database, ServerStore server) : base(server, database.Name, database.DocumentsStorage.ContextPool, database.DatabaseShutdown)
         {
             Database = database;
             _shutdownToken = database.DatabaseShutdown;
@@ -1747,6 +1747,7 @@ namespace Raven.Server.Documents.Replication
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Closing and disposing document replication connections.");
 
+                ForTestingPurposes?.BeforeDisposingIncomingReplicationHandlers?.Invoke();
                 foreach (var incoming in _incoming)
                     ea.Execute(incoming.Value.Dispose);
 
@@ -1940,22 +1941,6 @@ namespace Raven.Server.Documents.Replication
             }
 
             return false;
-        }
-
-        internal TestingStuff ForTestingPurposes;
-
-        internal TestingStuff ForTestingPurposesOnly()
-        {
-            if (ForTestingPurposes != null)
-                return ForTestingPurposes;
-
-            return ForTestingPurposes = new TestingStuff();
-        }
-
-        internal class TestingStuff
-        {
-            public Action<DatabaseOutgoingReplicationHandler> OnOutgoingReplicationStart;
-            public Action<Exception> OnIncomingReplicationHandlerFailure;
         }
     }
 

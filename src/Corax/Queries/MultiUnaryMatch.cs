@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Mappings;
 using Voron;
 
 namespace Corax.Queries;
@@ -15,8 +16,7 @@ public unsafe struct MultiUnaryItem
      *  We decided to drop Generics here (like in rest of the code) and push comparers by pointer functions due to problems of creation complex unary queries.
      *  We've 5 diffrent comparers (Equals are handled by TermMatch, not by scanning) so number of possible permutations grows extremly fast)
      */
-    public int FieldId;
-
+    public FieldMetadata Binding;
     public DataType Type;
     internal Slice SliceValueLeft;
     internal long LongValueLeft;
@@ -48,7 +48,7 @@ public unsafe struct MultiUnaryItem
     private readonly delegate*<long, long, bool> _longComparerRight;
     private readonly delegate*<double, double, bool> _doubleComparerRight;
 
-    private MultiUnaryItem(int fieldId, DataType dataType, bool isBetween, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
+    private MultiUnaryItem(FieldMetadata binding, DataType dataType, bool isBetween, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
     {
         Unsafe.SkipInit(out DoubleValueLeft);
         Unsafe.SkipInit(out LongValueLeft);
@@ -58,7 +58,7 @@ public unsafe struct MultiUnaryItem
         Unsafe.SkipInit(out SliceValueRight);
 
         Mode = UnaryMode.Any;
-        FieldId = fieldId;
+        Binding = binding;
         Type = dataType;
         this.IsBetween = isBetween;
         LeftSideOperation = leftOperation;
@@ -162,36 +162,36 @@ public unsafe struct MultiUnaryItem
             : leftResult;
     }
 
-    public MultiUnaryItem(IndexSearcher searcher, int fieldId, string value, UnaryMatchOperation operation) : this(fieldId, DataType.Slice, false, operation, default)
+    public MultiUnaryItem(IndexSearcher searcher, FieldMetadata binding, string value, UnaryMatchOperation operation) : this(binding, DataType.Slice, false, operation, default)
     {
-        SliceValueLeft = searcher.EncodeAndApplyAnalyzer(value, fieldId);
+        SliceValueLeft = searcher.EncodeAndApplyAnalyzer(binding, value);
     }
 
-    public MultiUnaryItem(int fieldId, long value, UnaryMatchOperation operation) : this(fieldId, DataType.Long, false, operation, default)
+    public MultiUnaryItem(FieldMetadata binding, long value, UnaryMatchOperation operation) : this(binding, DataType.Long, false, operation, default)
     {
         LongValueLeft = value;
     }
 
-    public MultiUnaryItem(int fieldId, double value, UnaryMatchOperation operation) : this(fieldId, DataType.Double, false, operation, default)
+    public MultiUnaryItem(FieldMetadata binding, double value, UnaryMatchOperation operation) : this(binding, DataType.Double, false, operation, default)
     {
         DoubleValueLeft = value;
     }
 
-    public MultiUnaryItem(IndexSearcher searcher, int fieldId, string leftValue, string rightValue, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
-        : this(fieldId, DataType.Slice, true, leftOperation, rightOperation)
+    public MultiUnaryItem(IndexSearcher searcher, FieldMetadata binding, string leftValue, string rightValue, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation)
+        : this(binding, DataType.Slice, true, leftOperation, rightOperation)
     {
-        SliceValueRight = searcher.EncodeAndApplyAnalyzer(rightValue, fieldId);
-        SliceValueLeft = searcher.EncodeAndApplyAnalyzer(leftValue, fieldId);
+        SliceValueRight = searcher.EncodeAndApplyAnalyzer(binding, rightValue);
+        SliceValueLeft = searcher.EncodeAndApplyAnalyzer(binding, leftValue);
     }
 
-    public MultiUnaryItem(int fieldId, long valueLeft, long valueRight, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation) : this(fieldId,
+    public MultiUnaryItem(FieldMetadata binding, long valueLeft, long valueRight, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation) : this(binding,
         DataType.Long, true, leftOperation, rightOperation)
     {
         LongValueLeft = valueLeft;
         LongValueRight = valueRight;
     }
 
-    public MultiUnaryItem(int fieldId, double valueLeft, double valueRight, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation) : this(fieldId,
+    public MultiUnaryItem(FieldMetadata binding, double valueLeft, double valueRight, UnaryMatchOperation leftOperation, UnaryMatchOperation rightOperation) : this(binding,
         DataType.Double, true, leftOperation, rightOperation)
     {
         DoubleValueLeft = valueLeft;
@@ -386,12 +386,14 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
         int currentIdx = 0;
         for (int i = 0; i < read; ++i)
         {
-            var reader = _searcher.GetReaderFor(matches[i]);
+            var reader = _searcher.GetEntryReaderFor(matches[i]);
             int comparerId = 0;
             for (; comparerId < _comparers.Length; ++comparerId)
             {
                 var comparer = _comparers[comparerId];
-                var fieldType = reader.GetFieldType(comparer.FieldId, out _);
+                var binding = comparer.Binding;
+                var fieldReader = reader.GetFieldReaderFor(binding);
+                var fieldType = fieldReader.Type;
                 bool isAccepted;
                 switch (fieldType)
                 {
@@ -404,7 +406,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                         break;
 
                     case IndexEntryFieldType.TupleList:
-                        if (reader.GetReaderFor(comparer.FieldId).TryReadMany(out var iterator) == false)
+                        if (fieldReader.TryReadMany(out var iterator) == false)
                             goto NotMatch;
 
                         while (iterator.ReadNext())
@@ -419,9 +421,9 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                         break;
 
                     case IndexEntryFieldType.Tuple:
-                        if (reader.GetReaderFor(comparer.FieldId).Read(out _, out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
+                        if (fieldReader.Read(out _, out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
                             goto NotMatch;
-                        using (_searcher.ApplyAnalyzer(valueInEntry, comparer.FieldId, out var analyzedTerm))
+                        using (_searcher.ApplyAnalyzer(binding, valueInEntry, out var analyzedTerm))
                             isAccepted = IsAcceptedItem(comparer, analyzedTerm, in lVal, in dVal);
                         
                         if (isAccepted == false)
@@ -435,7 +437,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                     case IndexEntryFieldType.TupleListWithNulls:
                     case IndexEntryFieldType.ListWithNulls:
                     case IndexEntryFieldType.List:
-                        if (reader.GetReaderFor(comparer.FieldId).TryReadMany(out iterator) == false)
+                        if (fieldReader.TryReadMany(out iterator) == false)
                             goto NotMatch;
 
                         while (iterator.ReadNext())
@@ -456,7 +458,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                                 if (comparer.Mode == MultiUnaryItem.UnaryMode.Any)
                                 {
                                     //Lets stop on first match
-                                    using (_searcher.ApplyAnalyzer(iterator.Sequence, comparer.FieldId, out var analyzedTerm))
+                                    using (_searcher.ApplyAnalyzer(binding, iterator.Sequence, out var analyzedTerm))
                                     {
                                         if (comparer.Type == MultiUnaryItem.DataType.Slice && comparer.CompareLiteral(analyzedTerm))
                                             break;
@@ -465,7 +467,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                                 else
                                 {
                                     //If something is not accepted we should escape loop immediately
-                                    using (_searcher.ApplyAnalyzer(iterator.Sequence, comparer.FieldId, out var analyzedTerm))
+                                    using (_searcher.ApplyAnalyzer(binding, iterator.Sequence, out var analyzedTerm))
                                     {
                                         if (comparer.Type != MultiUnaryItem.DataType.Slice || comparer.CompareLiteral(analyzedTerm) == false)
                                             goto NotMatch;
@@ -480,10 +482,10 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
                     case IndexEntryFieldType.Invalid:
                         break;
                     default:
-                        if (reader.GetReaderFor(comparer.FieldId).Read(out var value) == false)
+                        if (fieldReader.Read(out var value) == false)
                             goto NotMatch;
 
-                        using (_searcher.ApplyAnalyzer(value, comparer.FieldId, out var analyzedTerm))
+                        using (_searcher.ApplyAnalyzer(binding, value, out var analyzedTerm))
                         {
                             if (comparer.Type != MultiUnaryItem.DataType.Slice || comparer.CompareLiteral(analyzedTerm) == false)
                                 goto NotMatch;

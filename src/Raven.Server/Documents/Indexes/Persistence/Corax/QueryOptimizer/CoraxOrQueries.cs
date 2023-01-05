@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Corax;
+using Corax.Mappings;
 using Corax.Queries;
 using Sparrow.Extensions;
 
@@ -9,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 public class CoraxOrQueries : CoraxBooleanQueryBase
 {
     private List<CoraxBooleanItem> _unaryMatchesList;
-    private Dictionary<(string FieldName, int FieldId), List<string>> _termMatchesList; 
+    private Dictionary<FieldMetadata, List<string>> _termMatchesList; 
     private List<IQueryMatch> _complexMatches;
 
     public CoraxOrQueries(IndexSearcher indexSearcher, IQueryScoreFunction scoreFunction) : base(indexSearcher, scoreFunction)
@@ -32,7 +33,7 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
 
         if (other._termMatchesList != null)
         {
-            _termMatchesList ??= new();
+            _termMatchesList ??= new(FieldMetadataComparer.Instance);
             foreach (var (key, value) in other._termMatchesList)
             {
                 if (_termMatchesList.TryGetValue(key, out var list))
@@ -89,8 +90,8 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
         {
             _termMatchesList ??= new();
 
-            if (_termMatchesList.TryGetValue((itemToAdd.Name, itemToAdd.FieldId), out var list) == false)
-                _termMatchesList.Add((itemToAdd.Name, itemToAdd.FieldId), new List<string>() {itemToAdd.TermAsString});
+            if (_termMatchesList.TryGetValue(itemToAdd.Field, out var list) == false)
+                _termMatchesList.Add(itemToAdd.Field, new List<string>() {itemToAdd.TermAsString});
             else
                 list.Add(itemToAdd.TermAsString);
         }
@@ -113,18 +114,18 @@ public class CoraxOrQueries : CoraxBooleanQueryBase
         
         if (_termMatchesList != null)
         {
-            foreach (var ((fieldName, fieldId), terms) in _termMatchesList)
-                AddToQueryTree(IndexSearcher.InQuery(fieldName, terms, fieldId));
+            foreach (var (field, terms) in _termMatchesList)
+                AddToQueryTree(IndexSearcher.InQuery(field, terms));
         }
 
-        if (ScoreFunction is not NullScoreFunction && ScoreFunction != null)
-            baseQuery = IndexSearcher.Boost(baseQuery, ScoreFunction);
-        
         if (_complexMatches != null)
         {
             foreach (var complex in _complexMatches ?? Enumerable.Empty<IQueryMatch>())
                 AddToQueryTree(complex);
         }
+
+        if (ScoreFunction is not NullScoreFunction && ScoreFunction != null)
+            baseQuery = IndexSearcher.Boost(baseQuery, ScoreFunction);
 
         return baseQuery;
         

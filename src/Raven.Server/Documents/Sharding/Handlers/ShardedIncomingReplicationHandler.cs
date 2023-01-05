@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public ShardedIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ShardedDatabaseContext.ShardedReplicationContext parent,
             JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag)
-            : base(tcpConnectionOptions, buffer, parent.Server, parent.DatabaseName, replicatedLastEtag, parent.Context.DatabaseShutdown, parent.Server.ContextPool)
+            : base(parent, tcpConnectionOptions, buffer, replicatedLastEtag)
         {
             _parent = parent;
             _attachmentStreamsTempFile = GetTempFile();

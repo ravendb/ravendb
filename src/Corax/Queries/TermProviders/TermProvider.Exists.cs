@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Corax.Mappings;
 using Sparrow;
-using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
 
@@ -12,14 +12,13 @@ namespace Corax.Queries
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
-        private readonly Slice _fieldName;
         private CompactTree.Iterator _iterator;
-
-        public ExistsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, Slice fieldName)
+        private readonly FieldMetadata _field;
+        public ExistsTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field)
         {
             _tree = tree;
+            _field = field;
             _searcher = searcher;
-            _fieldName = fieldName;
             _iterator = tree.Iterate();
             _iterator.Reset();
         }
@@ -66,7 +65,7 @@ namespace Corax.Queries
             return new QueryInspectionNode($"{nameof(ExistsTermProvider)}",
                             parameters: new Dictionary<string, string>()
                             {
-                                { "Field", _fieldName.ToString() }
+                                { "Field", _field.ToString() }
                             });
         }
     }

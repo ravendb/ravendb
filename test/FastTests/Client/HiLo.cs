@@ -12,6 +12,7 @@ using Sparrow.Collections;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+#pragma warning disable CS0618
 
 namespace FastTests.Client
 {

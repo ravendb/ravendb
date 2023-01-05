@@ -1,5 +1,5 @@
+using Corax.Mappings;
 using Corax.Queries;
-using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
 
@@ -7,33 +7,31 @@ namespace Corax;
 
 public partial class IndexSearcher
 {
-      private MultiTermMatch MultiTermMatchBuilder<TScoreFunction, TTermProvider>(Slice fieldName, Slice term, TScoreFunction scoreFunction, bool isNegated, int fieldId)
+    private MultiTermMatch MultiTermMatchBuilder<TScoreFunction, TTermProvider>(FieldMetadata field, Slice term, TScoreFunction scoreFunction, bool isNegated)
         where TScoreFunction : IQueryScoreFunction
         where TTermProvider : ITermProvider
     {
-        var terms = _fieldsTree?.CompactTreeFor(fieldName);
+        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-        return MultiTermMatchBuilderBase<TScoreFunction, TTermProvider>(fieldName, terms, term, scoreFunction, isNegated, fieldId);
+        return MultiTermMatchBuilderBase<TScoreFunction, TTermProvider>(field, terms, term, scoreFunction, isNegated);
     }
 
-    private MultiTermMatch MultiTermMatchBuilder<TScoreFunction, TTermProvider>(string field, string term, TScoreFunction scoreFunction, bool isNegated, int fieldId)
+    private MultiTermMatch MultiTermMatchBuilder<TScoreFunction, TTermProvider>(FieldMetadata field, string term, TScoreFunction scoreFunction, bool isNegated)
         where TScoreFunction : IQueryScoreFunction
         where TTermProvider : ITermProvider
     {
-        using var _ = Slice.From(Allocator, field, ByteStringType.Immutable, out var fieldName);
-
-        var terms = _fieldsTree?.CompactTreeFor(field);
+        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
-        
-        var slicedTerm = EncodeAndApplyAnalyzer(term, fieldId);
-        return MultiTermMatchBuilderBase<TScoreFunction, TTermProvider>(fieldName, terms, slicedTerm, scoreFunction, isNegated, fieldId);
+
+        var slicedTerm = EncodeAndApplyAnalyzer(field, term);
+        return MultiTermMatchBuilderBase<TScoreFunction, TTermProvider>(field, terms, slicedTerm, scoreFunction, isNegated);
     }
 
-    private MultiTermMatch MultiTermMatchBuilderBase<TScoreFunction, TTermProvider>(Slice fieldName, CompactTree terms, Slice slicedTerm, TScoreFunction scoreFunction,
-        bool isNegated, int fieldId)
+    private MultiTermMatch MultiTermMatchBuilderBase<TScoreFunction, TTermProvider>(FieldMetadata field, CompactTree termTree, Slice term, TScoreFunction scoreFunction,
+        bool isNegated)
         where TScoreFunction : IQueryScoreFunction
         where TTermProvider : ITermProvider
     {
@@ -42,18 +40,18 @@ public partial class IndexSearcher
             return (isNegated, scoreFunction) switch
             {
                 (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator,
-                    new StartWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm))),
+                    new StartWithTermProvider(this, termTree, field, term))),
 
                 (true, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<NotStartWithTermProvider>(_transaction.Allocator,
-                    new NotStartWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm))),
+                    new NotStartWithTermProvider(this, _transaction.Allocator, termTree, field, term))),
 
                 (false, _) => MultiTermMatch.Create(
                     MultiTermBoostingMatch<StartWithTermProvider>.Create(
-                        this, new StartWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm), scoreFunction)),
+                        this, new StartWithTermProvider(this, termTree, field, term), scoreFunction)),
 
                 (true, _) => MultiTermMatch.Create(
                     MultiTermBoostingMatch<NotStartWithTermProvider>.Create(
-                        this, new NotStartWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm), scoreFunction))
+                        this, new NotStartWithTermProvider(this, _transaction.Allocator, termTree, field, term), scoreFunction))
             };
         }
 
@@ -62,18 +60,18 @@ public partial class IndexSearcher
             return (isNegated, scoreFunction) switch
             {
                 (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<EndsWithTermProvider>(_transaction.Allocator,
-                    new EndsWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm))),
+                    new EndsWithTermProvider(this, termTree, field, term))),
 
                 (true, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<NotEndsWithTermProvider>(_transaction.Allocator,
-                    new NotEndsWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm))),
+                    new NotEndsWithTermProvider(this, termTree, field, term))),
 
                 (false, _) => MultiTermMatch.Create(
                     MultiTermBoostingMatch<EndsWithTermProvider>.Create(
-                        this, new EndsWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm), scoreFunction)),
+                        this, new EndsWithTermProvider(this, termTree, field, term), scoreFunction)),
 
                 (true, _) => MultiTermMatch.Create(
                     MultiTermBoostingMatch<NotEndsWithTermProvider>.Create(
-                        this, new NotEndsWithTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm), scoreFunction))
+                        this, new NotEndsWithTermProvider(this, termTree, field, term), scoreFunction))
             };
         }
 
@@ -82,18 +80,18 @@ public partial class IndexSearcher
             return (isNegated, scoreFunction) switch
             {
                 (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<ContainsTermProvider>(_transaction.Allocator,
-                    new ContainsTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm))),
+                    new ContainsTermProvider(this, termTree, field, term))),
 
                 (true, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<NotContainsTermProvider>(_transaction.Allocator,
-                    new NotContainsTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm))),
+                    new NotContainsTermProvider(this, termTree, field, term))),
 
                 (false, _) => MultiTermMatch.Create(
                     MultiTermBoostingMatch<ContainsTermProvider>.Create(
-                        this, new ContainsTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm), scoreFunction)),
+                        this, new ContainsTermProvider(this, termTree, field, term), scoreFunction)),
 
                 (true, _) => MultiTermMatch.Create(
                     MultiTermBoostingMatch<NotContainsTermProvider>.Create(
-                        this, new NotContainsTermProvider(this, _transaction.Allocator, terms, fieldName, fieldId, slicedTerm), scoreFunction))
+                        this, new NotContainsTermProvider(this, termTree, field, term), scoreFunction))
             };
         }
 
@@ -101,11 +99,11 @@ public partial class IndexSearcher
         {
             if (typeof(TScoreFunction) == typeof(NullScoreFunction))
                 return MultiTermMatch.Create(new MultiTermMatch<ExistsTermProvider>(_transaction.Allocator,
-                    new ExistsTermProvider(this, _transaction.Allocator, terms, fieldName)));
+                    new ExistsTermProvider(this, termTree, field)));
 
             return MultiTermMatch.Create(
                 MultiTermBoostingMatch<ExistsTermProvider>.Create(
-                    this, new ExistsTermProvider(this, _transaction.Allocator, terms, fieldName), scoreFunction));
+                    this, new ExistsTermProvider(this, termTree, field), scoreFunction));
         }
 
         return MultiTermMatch.CreateEmpty(_transaction.Allocator);

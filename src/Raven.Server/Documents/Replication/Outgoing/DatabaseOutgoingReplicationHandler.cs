@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public event Action<DatabaseOutgoingReplicationHandler> DocumentsSend;
 
         protected DatabaseOutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo)
-        : base(connectionInfo, parent._server, database.Name, node, database.DatabaseShutdown, database.DocumentsStorage.ContextPool)
+        : base(connectionInfo, parent._server, database.Name, node, database.DocumentsStorage.ContextPool, database.DatabaseShutdown)
         {
             _parent = parent;
             _database = database;
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 Logger.Info($"Start pull replication as hub {FromToString}");
 
             using (_stream)
-            using (_interruptibleRead = new InterruptibleRead<DocumentsContextPool, DocumentsOperationContext>(_database.DocumentsStorage.ContextPool, _stream))
+            using (_interruptibleRead = new InterruptibleRead<DocumentsContextPool, DocumentsOperationContext>(_parent.ContextPool, _stream))
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (context.GetMemoryBuffer(out _buffer))
             {

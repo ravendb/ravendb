@@ -16,6 +16,8 @@ using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Validators;
 using Corax;
 using Corax.Mappings;
+using Corax.Queries;
+using Corax.Utils;
 using Sparrow.Server;
 using Sparrow.Threading;
 
@@ -237,10 +239,11 @@ namespace Voron.Benchmark.Corax
         [Benchmark]
         public void OrderByRuntimeQuery()
         {            
-            var typeTerm = _indexSearcher.TermQuery(_typeSlice, "Dog");
-            var ageTerm = _indexSearcher.StartWithQuery(_ageSlice, _ageValueSlice);
+            var typeTerm = _indexSearcher.TermQuery(_typeSlice, _dogSlice);
+            var ageField = FieldMetadata.Build(_ageSlice, 2, default, default);
+            var ageTerm = _indexSearcher.StartWithQuery(ageField, _ageValueSlice);
             var andQuery = _indexSearcher.And(typeTerm, ageTerm);
-            var query = _indexSearcher.OrderByAscending(andQuery, fieldId: 2, take: TakeSize);           
+            var query = _indexSearcher.OrderByAscending(andQuery, new OrderMetadata(ageField, true, MatchCompareFieldType.Sequence), take: TakeSize);           
 
             Span<long> ids = _ids;
             while (query.Fill(ids) != 0)

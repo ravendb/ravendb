@@ -19,6 +19,8 @@ public class IndexFieldBinding
     private string _fieldName;
     
     private readonly bool _isFieldBindingForWriter;
+
+    public readonly FieldMetadata Metadata;
     
     public IndexFieldBinding(int fieldId, Slice fieldName, Slice fieldNameLong, Slice fieldNameDouble, bool isFieldBindingForWriter,
         Analyzer analyzer = null, bool hasSuggestions = false,
@@ -34,6 +36,7 @@ public class IndexFieldBinding
         HasSpatial = hasSpatial;
         _isFieldBindingForWriter = isFieldBindingForWriter;
         _analyzer = analyzer;
+        Metadata = FieldMetadata.Build(fieldName, fieldId, fieldIndexingMode, analyzer);
     }
 
     public string FieldNameAsString

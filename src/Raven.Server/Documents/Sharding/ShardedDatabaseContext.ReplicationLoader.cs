@@ -22,12 +22,12 @@ namespace Raven.Server.Documents.Sharding
     {
         public readonly ShardedReplicationContext Replication;
 
-        public class ShardedReplicationContext : AbstractReplicationLoader
+        public class ShardedReplicationContext : AbstractReplicationLoader<TransactionContextPool, TransactionOperationContext>
         {
             private readonly ShardedDatabaseContext _context;
             public ShardedDatabaseContext Context => _context;
 
-            public ShardedReplicationContext([NotNull] ShardedDatabaseContext context, ServerStore serverStore) : base(serverStore, context.DatabaseName)
+            public ShardedReplicationContext([NotNull] ShardedDatabaseContext context, ServerStore serverStore) : base(serverStore, context.DatabaseName, serverStore.ContextPool, context.DatabaseShutdown)
             {
                 _context = context ?? throw new ArgumentNullException(nameof(context));
             }

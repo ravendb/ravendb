@@ -52,6 +52,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
+                    WaitForUserToContinueTheTest(store);
                     var query1 = session.Advanced.DocumentQuery<Post>("TagsIndex");
                     query1 = query1.WhereEquals("Tags", "NoSpace:1", exact: true);
                     var posts = query1.ToArray();

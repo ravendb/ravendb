@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Corax.Mappings;
 using Sparrow;
 using Sparrow.Server;
 using Size = Voron.Global.Constants.Size;
@@ -11,7 +12,7 @@ namespace Corax.Queries
     {
         public MatchCompareFieldType FieldType => MatchCompareFieldType.Score;
 
-        public int FieldId => throw new NotSupportedException($"{nameof(FieldId)} is not supported for {nameof(BoostingComparer)}");
+        public FieldMetadata Field => throw new NotSupportedException($"{nameof(Field)} is not supported for {nameof(BoostingComparer)}");
 
         public int CompareById(long idx, long idy)
         {

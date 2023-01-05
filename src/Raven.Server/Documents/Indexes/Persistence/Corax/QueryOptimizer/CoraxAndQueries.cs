@@ -65,7 +65,7 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
                 break;
 
             //We're always do TermMatch (true and NOT (X))
-            IQueryMatch second = IndexSearcher.TermQuery(query.Name, query.TermAsString, query.FieldId);
+            IQueryMatch second = IndexSearcher.TermQuery(query.Field, query.TermAsString);
 
             if (query.Operation is UnaryMatchOperation.NotEquals)
             {
@@ -79,7 +79,7 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
                 }
 
                 //In the first place we've to do (true and NOT))
-                baseMatch = IndexSearcher.AndNot<MultiTermMatch, TermMatch>(IndexSearcher.ExistsQuery(query.Name), (TermMatch)second);
+                baseMatch = IndexSearcher.AndNot<MultiTermMatch, TermMatch>(IndexSearcher.ExistsQuery(query.Field), (TermMatch)second);
                 _hasBinary = true;
                 goto Reduce;
             }
@@ -123,11 +123,11 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
             {
                 listOfMergedUnaries[index - 1] = (query.Term, query.Term2) switch
                 {
-                    (long l, long l2) => new MultiUnaryItem(query.FieldId, l, l2, query.BetweenLeft, query.BetweenRight),
-                    (double d, double d2) => new MultiUnaryItem(query.FieldId, d, d2, query.BetweenLeft, query.BetweenRight),
-                    (string s, string s2) => new MultiUnaryItem(IndexSearcher, query.FieldId, s, s2, query.BetweenLeft, query.BetweenRight),
-                    (long l, double d) => new MultiUnaryItem(query.FieldId, Convert.ToDouble(l), d, query.BetweenLeft, query.BetweenRight),
-                    (double d, long l) => new MultiUnaryItem(query.FieldId, d, Convert.ToDouble(l), query.BetweenLeft, query.BetweenRight),
+                    (long l, long l2) => new MultiUnaryItem(query.Field, l, l2, query.BetweenLeft, query.BetweenRight),
+                    (double d, double d2) => new MultiUnaryItem(query.Field, d, d2, query.BetweenLeft, query.BetweenRight),
+                    (string s, string s2) => new MultiUnaryItem(IndexSearcher, query.Field, s, s2, query.BetweenLeft, query.BetweenRight),
+                    (long l, double d) => new MultiUnaryItem(query.Field, Convert.ToDouble(l), d, query.BetweenLeft, query.BetweenRight),
+                    (double d, long l) => new MultiUnaryItem(query.Field, d, Convert.ToDouble(l), query.BetweenLeft, query.BetweenRight),
                     _ => throw new InvalidOperationException($"UnaryMatchOperation {query.Operation} is not supported for type {query.Term.GetType()}")
                 };
             }
@@ -135,16 +135,16 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
             {
                 listOfMergedUnaries[index - 1] = query.Term switch
                 {
-                    long longTerm => new MultiUnaryItem(query.FieldId, longTerm, query.Operation),
-                    double doubleTerm => new MultiUnaryItem(query.FieldId, doubleTerm, query.Operation),
-                    _ => new MultiUnaryItem(IndexSearcher, query.FieldId, query.Term as string, query.Operation),
+                    long longTerm => new MultiUnaryItem(query.Field, longTerm, query.Operation),
+                    double doubleTerm => new MultiUnaryItem(query.Field, doubleTerm, query.Operation),
+                    _ => new MultiUnaryItem(IndexSearcher, query.Field, query.Term as string, query.Operation),
                 };
             }
         }
 
         if (listOfMergedUnaries.Length > 0)
         {
-            baseMatch = IndexSearcher.CreateMultiUnaryMatch(baseMatch ?? IndexSearcher.ExistsQuery(stack[1].Name), listOfMergedUnaries);
+            baseMatch = IndexSearcher.CreateMultiUnaryMatch(baseMatch ?? IndexSearcher.ExistsQuery(stack[1].Field), listOfMergedUnaries);
         }
 
         Return:

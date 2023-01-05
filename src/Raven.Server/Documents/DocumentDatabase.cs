@@ -15,11 +15,11 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Changes;
 using Raven.Server.Config.Settings;
+using Raven.Server.Dashboard;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers.Batches.Commands;
@@ -65,6 +65,7 @@ using Voron.Exceptions;
 using Voron.Impl.Backup;
 using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
+using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents
@@ -82,6 +83,8 @@ namespace Raven.Server.Documents
         private readonly object _idleLocker = new object();
 
         private readonly object _clusterLocker = new object();
+
+        public Action<string> AddToInitLog => _addToInitLog;
 
         /// <summary>
         /// The current lock, used to make sure indexes have a unique names
@@ -146,7 +149,6 @@ namespace Raven.Server.Documents
                 IndexStore = new IndexStore(this, serverStore);
                 QueryRunner = new QueryRunner(this);
                 EtlLoader = new EtlLoader(this, serverStore);
-                ReplicationLoader = new ReplicationLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
                 Metrics = new MetricCounters();
                 MetricCacher = new DatabaseMetricCacher(this);
@@ -361,6 +363,7 @@ namespace Raven.Server.Documents
                 InitializeSubscriptionStorage();
                 InitializeCompareExchangeStorage();
 
+                ReplicationLoader = new ReplicationLoader(this, _serverStore);
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
                 _addToInitLog("Initializing IndexStore (async)");
@@ -1063,33 +1066,33 @@ namespace Raven.Server.Documents
 
             var databaseInfo = new DynamicJsonValue
             {
-                [nameof(DatabaseInfo.HasRevisionsConfiguration)] = DocumentsStorage.RevisionsStorage.Configuration != null,
-                [nameof(DatabaseInfo.HasExpirationConfiguration)] = (ExpiredDocumentsCleaner?.ExpirationConfiguration?.Disabled ?? true) == false,
-                [nameof(DatabaseInfo.HasRefreshConfiguration)] = (ExpiredDocumentsCleaner?.RefreshConfiguration?.Disabled ?? true) == false,
-                [nameof(DatabaseInfo.IsAdmin)] = true, //TODO: implement me!
-                [nameof(DatabaseInfo.IsEncrypted)] = DocumentsStorage.Environment.Options.Encryption.IsEnabled,
-                [nameof(DatabaseInfo.Name)] = Name,
-                [nameof(DatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
-                [nameof(DatabaseInfo.TotalSize)] = new DynamicJsonValue
+                [nameof(ExtendedDatabaseInfo.HasRevisionsConfiguration)] = DocumentsStorage.RevisionsStorage.Configuration != null,
+                [nameof(ExtendedDatabaseInfo.HasExpirationConfiguration)] = (ExpiredDocumentsCleaner?.ExpirationConfiguration?.Disabled ?? true) == false,
+                [nameof(ExtendedDatabaseInfo.HasRefreshConfiguration)] = (ExpiredDocumentsCleaner?.RefreshConfiguration?.Disabled ?? true) == false,
+                [nameof(ExtendedDatabaseInfo.IsAdmin)] = true, //TODO: implement me!
+                [nameof(ExtendedDatabaseInfo.IsEncrypted)] = DocumentsStorage.Environment.Options.Encryption.IsEnabled,
+                [nameof(ExtendedDatabaseInfo.Name)] = Name,
+                [nameof(ExtendedDatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
+                [nameof(ExtendedDatabaseInfo.TotalSize)] = new DynamicJsonValue
                 {
                     [nameof(Size.HumaneSize)] = sizeOnDisk.Data.HumaneSize,
                     [nameof(Size.SizeInBytes)] = sizeOnDisk.Data.SizeInBytes
                 },
-                [nameof(DatabaseInfo.TempBuffersSize)] = new DynamicJsonValue
+                [nameof(ExtendedDatabaseInfo.TempBuffersSize)] = new DynamicJsonValue
                 {
                     [nameof(Size.HumaneSize)] = "0 Bytes",
                     [nameof(Size.SizeInBytes)] = 0
                 },
-                [nameof(DatabaseInfo.IndexingErrors)] = indexingErrors,
-                [nameof(DatabaseInfo.Alerts)] = alertCount,
-                [nameof(DatabaseInfo.PerformanceHints)] = performanceHints,
-                [nameof(DatabaseInfo.UpTime)] = null, //it is shutting down
-                [nameof(DatabaseInfo.BackupInfo)] = backupInfo,
-                [nameof(DatabaseInfo.MountPointsUsage)] = new DynamicJsonArray(mountPointsUsage),
-                [nameof(DatabaseInfo.DocumentsCount)] = documentsCount,
-                [nameof(DatabaseInfo.IndexesCount)] = indexesCount,
-                [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
-                [nameof(DatabaseInfo.IndexingStatus)] = indexesStatus,
+                [nameof(ExtendedDatabaseInfo.IndexingErrors)] = indexingErrors,
+                [nameof(ExtendedDatabaseInfo.Alerts)] = alertCount,
+                [nameof(ExtendedDatabaseInfo.PerformanceHints)] = performanceHints,
+                [nameof(ExtendedDatabaseInfo.UpTime)] = null, //it is shutting down
+                [nameof(ExtendedDatabaseInfo.BackupInfo)] = backupInfo,
+                [nameof(ExtendedDatabaseInfo.MountPointsUsage)] = new DynamicJsonArray(mountPointsUsage),
+                [nameof(ExtendedDatabaseInfo.DocumentsCount)] = documentsCount,
+                [nameof(ExtendedDatabaseInfo.IndexesCount)] = indexesCount,
+                [nameof(ExtendedDatabaseInfo.RejectClients)] = false, //TODO: implement me!
+                [nameof(ExtendedDatabaseInfo.IndexingStatus)] = indexesStatus,
                 ["CachedDatabaseInfo"] = true
             };
             return databaseInfo;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Corax.Mappings;
 using Corax.Utils.Spatial;
 using Sparrow.Server;
 using Spatial4n.Context;
@@ -16,29 +17,25 @@ public class SpatialMatch : IQueryMatch
 {
     private readonly IndexSearcher _indexSearcher;
     private readonly SpatialContext _spatialContext;
-    private readonly string _fieldName;
     private readonly double _error;
     private readonly IShape _shape;
     private readonly CompactTree _tree;
+    private readonly FieldMetadata _field;
     private IEnumerator<(string Geohash, bool isTermMatch)> _termGenerator;
     private TermMatch _currentMatch;
     private readonly ByteStringContext _allocator;
-    private readonly int _fieldId;
     private readonly Utils.Spatial.SpatialRelation _spatialRelation;
     private bool _isTermMatch;
     private IDisposable _startsWithDisposeHandler;
     private HashSet<long> _alreadyReturned;
-    private Slice _fieldNameSlice;
 
-    public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, string fieldName, IShape shape,
+    public SpatialMatch(IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, FieldMetadata field, IShape shape,
         CompactTree tree,
-        double errorInPercentage, int fieldId, Utils.Spatial.SpatialRelation spatialRelation)
+        double errorInPercentage, Utils.Spatial.SpatialRelation spatialRelation)
     {
-        _fieldId = fieldId;
         _indexSearcher = indexSearcher;
         _spatialContext = spatialContext ?? throw new ArgumentNullException($"{nameof(spatialContext)} passed to {nameof(SpatialMatch)} is null.");
-        _fieldName = fieldName;
-        Slice.From(allocator, fieldName, out _fieldNameSlice);
+        _field = field;
         _error = SpatialUtils.GetErrorFromPercentage(spatialContext, shape, errorInPercentage);
         _shape = shape;
         _tree = tree;
@@ -109,8 +106,8 @@ public class SpatialMatch : IQueryMatch
 
     private bool CheckEntryManually(long id)
     {
-        var reader = _indexSearcher.GetReaderFor(id);
-        var fieldReader = reader.GetReaderFor(_fieldNameSlice, _fieldId);
+        var reader = _indexSearcher.GetEntryReaderFor(id);
+        var fieldReader = reader.GetFieldReaderFor(_field);
         if (_alreadyReturned?.TryGetValue(id, out _) ?? false)
         {
             return false;
@@ -155,11 +152,11 @@ public class SpatialMatch : IQueryMatch
         var currentIdx = 0;
         for (int i = 0; i < matches; ++i)
         {
-            var reader = _indexSearcher.GetReaderFor(buffer[i]);
-            var entryReader = reader.GetReaderFor(_fieldNameSlice, _fieldId);
-            if (entryReader.Read(out (double Lat, double Lon) coorinate))
+            var reader = _indexSearcher.GetEntryReaderFor(buffer[i]);
+            var entryReader = reader.GetFieldReaderFor(_field);
+            if (entryReader.Read(out (double Lat, double Lon) coordinate))
             {
-                var point = new Point(coorinate.Lon, coorinate.Lat, _spatialContext);
+                var point = new Point(coordinate.Lon, coordinate.Lat, _spatialContext);
                 if (IsTrue(point.Relate(_shape)))
                 {
                     buffer[currentIdx++] = buffer[i];
@@ -180,8 +177,7 @@ public class SpatialMatch : IQueryMatch
         return new QueryInspectionNode($"{nameof(StartWithTermProvider)}",
             parameters: new Dictionary<string, string>()
             {
-                {"Field", _fieldName},
-                {"FieldId", _fieldId.ToString()},
+                {"Field", _field.ToString()},
                 {"Shape", _shape.ToString()},
                 {"Error", _error.ToString(CultureInfo.InvariantCulture)},
                 {"SpatialRelation", _spatialRelation.ToString()},

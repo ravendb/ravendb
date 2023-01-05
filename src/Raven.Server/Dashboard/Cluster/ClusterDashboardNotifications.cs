@@ -60,8 +60,9 @@ namespace Raven.Server.Dashboard.Cluster
         {
             while (true)
             {
-                if (Watchers.Count >= 1)
-                    return Watchers.First();
+                ConnectedWatcher maybe = Watchers.FirstOrDefault();
+                if (maybe != null)
+                    return maybe;
 
                 await Task.Delay(200, _shutdown);
             }

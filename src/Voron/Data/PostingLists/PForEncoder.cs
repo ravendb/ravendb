@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow.Binary;
+using Sparrow.Compression;
 
-namespace Voron.Data.Sets
+namespace Voron.Data.PostingLists
 {
     
     /*
@@ -25,15 +27,16 @@ namespace Voron.Data.Sets
    * * 0b10   (15 bits) - repeated header marker - followed by 8 bits value (number of repetitions) and 5 bits value (B bits per number) 
    * * 0b11   - reserved
    */
-    public ref struct PForEncoder
+    public unsafe ref struct PForEncoder
     {
         public const int BufferLen = 128;
 
         private readonly Span<byte> _output;
         private int _bufPos, _bitPos;
         private readonly int _maxNumOfBits;
-        private readonly Span<uint> _deltasBuffer;
-        private int _prev;
+        private readonly uint* _deltasBuffer;
+        public int Last;
+        public int First;
         public int NumberOfAdditions;
         public int SizeInBytes;
         public int ConsumedBits => _bitPos;
@@ -43,44 +46,48 @@ namespace Voron.Data.Sets
             return PForDecoder.GetDebugOutput(_output);
         }
         
-        public PForEncoder(Span<byte> output, Span<uint> scratchBuffer)
+        public PForEncoder(Span<byte> output, uint* scratchBuffer)
         {
             _output = output;
             _output[0] = 0; // do not assume the buffer is clean
             _bufPos = 0;
             _bitPos = 0;
             _maxNumOfBits = output.Length * 8;
-            _prev = 0;
+            Last = 0;
+            First = 0;
             SizeInBytes = -1;
             NumberOfAdditions = 0;
-            _deltasBuffer = scratchBuffer.Slice(0, BufferLen);
+            _deltasBuffer = scratchBuffer;
         }
 
         public bool TryAdd(int value)
         {
             if (value < 0)
                 throw new ArgumentOutOfRangeException();
-            if (NumberOfAdditions > 0 && _prev > value)
+            if (NumberOfAdditions > 0 && Last > value)
                 throw new ArgumentOutOfRangeException();
+            if (Last == value)
+                return true; // duplicate addition
 
             if (NumberOfAdditions++==0)
             {
                 _deltasBuffer[_bufPos++] = (uint)value;
-                _prev = value;
+                Last = value;
+                First = value;
                 return TryFlush();
             }
 
             if (_bufPos < BufferLen)
             {
-                var diff = value - _prev;
-                _prev = value;
+                var diff = value - Last;
+                Last = value;
                 _deltasBuffer[_bufPos++] = (uint)diff;
                 return true;
             }
 
-            if (TryFlush() == false)
-                return false;
-            return TryAdd(value);
+            NumberOfAdditions--;
+
+            return TryFlush() && TryAdd(value);
         }
 
         public bool TryClose()
@@ -88,14 +95,26 @@ namespace Voron.Data.Sets
             var result = TryFlush() &&
                          TryPushBits(0b11, 2) &&
                          TryPushBits(0, BitsAvailableInCurrentByte); // align to byte boundary
+
+            byte* buf = stackalloc byte[10];
+            var lenAdditions = VariableSizeEncoding.Write(buf, NumberOfAdditions);
+            var lenLen = VariableSizeEncoding.Write(buf + lenAdditions, Last);
             
             var pos = _bitPos / 8;
-            if (pos + sizeof(int) > _output.Length)
+            if (pos + lenAdditions + lenLen > _output.Length)
                 return false;
-            // now write last value...
-            MemoryMarshal.Cast<byte, int>(_output.Slice(pos))[0] = _prev;
 
-            SizeInBytes = pos + sizeof(int);
+            // copy the count of items & last value as reversed var-ints
+            for (int i = lenAdditions - 1; i >= 0; i--)
+            {
+                _output[pos++] = buf[i];
+            }
+            for (int i = lenAdditions + lenLen - 1; i >= lenAdditions; i--)
+            {
+                _output[pos++] = buf[i];
+            }
+            
+            SizeInBytes = pos;
             _bitPos = int.MaxValue;
             return result;
         }
@@ -186,7 +205,7 @@ namespace Voron.Data.Sets
         {
             var oldPos = _bufPos;
             _bufPos = 0;
-            return TryFlush(_deltasBuffer.Slice(0, oldPos));
+            return TryFlush(new Span<uint>(_deltasBuffer, oldPos));
         }
 
         private static int MaxBits(Span<uint> buffer)

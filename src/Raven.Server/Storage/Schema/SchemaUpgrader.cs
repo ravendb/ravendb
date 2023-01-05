@@ -72,7 +72,7 @@ namespace Raven.Server.Storage.Schema
             internal bool Upgrade(SchemaUpgradeTransactions transactions, int currentVersion, out int versionAfterUpgrade)
             {
                 currentVersion = FixCurrentVersion(_storageType, currentVersion);
-
+                bool shouldAddToInitLog = false;
                 switch (_storageType)
                 {
                     case StorageType.Server:
@@ -80,8 +80,10 @@ namespace Raven.Server.Storage.Schema
                     case StorageType.Configuration:
                         break;
                     case StorageType.Documents:
+                        shouldAddToInitLog = true;
                         if (SkippedDocumentsVersion.Contains(currentVersion))
-                            throw new NotSupportedException($"Documents schema upgrade from version {currentVersion} is not supported, use the recovery tool to dump the data and then import it into a new database");
+                            throw new NotSupportedException(
+                                $"Documents schema upgrade from version {currentVersion} is not supported, use the recovery tool to dump the data and then import it into a new database");
                         break;
                     case StorageType.Index:
                         break;
@@ -96,11 +98,26 @@ namespace Raven.Server.Storage.Schema
 
                 versionAfterUpgrade = updater.To;
 
-                return updater.Update(new UpdateStep(transactions)
+                if (shouldAddToInitLog)
+                {
+                    var msg = $"Started schema upgrade from version #{updater.From} to version #{updater.To}";
+                    _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(msg);
+                }
+
+                bool result =  updater.Update(new UpdateStep(transactions)
                 {
                     ConfigurationStorage = _configurationStorage,
                     DocumentsStorage = _documentsStorage,
                 });
+
+                if (shouldAddToInitLog)
+                {
+
+                    var msg = $"{(result ? "Finished" : "Failed to")} schema upgrade from version #{updater.From} to version #{updater.To}";
+                    _documentsStorage.DocumentDatabase.AddToInitLog?.Invoke(msg);
+                }
+
+                return result;
             }
 
             private static int FixCurrentVersion(StorageType storageType, int currentVersion)

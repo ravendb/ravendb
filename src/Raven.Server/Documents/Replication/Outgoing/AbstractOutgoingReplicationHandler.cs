@@ -34,7 +34,6 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using static Nest.JoinField;
 
 namespace Raven.Server.Documents.Replication.Outgoing
 {
@@ -91,7 +90,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public virtual string FromToString => $"from {_databaseName} at {_server.NodeTag} to {Destination.FromString()}";
 
         protected AbstractOutgoingReplicationHandler(TcpConnectionInfo connectionInfo, ServerStore server, string databaseName, ReplicationNode node,
-            CancellationToken token, TContextPool contextPool)
+            TContextPool contextPool, CancellationToken token)
         {
             _connectionInfo = connectionInfo;
             _server = server;

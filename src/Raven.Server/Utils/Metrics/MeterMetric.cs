@@ -47,6 +47,25 @@ namespace Raven.Server.Utils.Metrics
             return sum / oldCount;
         }
 
+        internal int GetIntRate(int count)
+        {
+            if (count == 0)
+                return 0;
+
+            var oldCount = count;
+            double sum = 0;
+            var index = Volatile.Read(ref _index) % _m15Rate.Length;
+            for (int i = index; i >= 0 && count >= 0; i--, count--)
+            {
+                sum += _m15Rate[i];
+            }
+            for (int i = _m15Rate.Length - 1; i >= 0 && count >= 0; i--, count--)
+            {
+                sum += _m15Rate[i];
+            }
+            return (int)Math.Ceiling(sum / oldCount);
+        }
+
         public double MeanRate => GetMeanRate(Clock.Nanoseconds - _startTime);
 
         public long Count => _count;

@@ -104,7 +104,64 @@ namespace Raven.Client.Util
                     try
                     {
                         result = await task().ConfigureAwait(false);
-                    }   
+                    }
+                    catch (Exception e)
+                    {
+                        synch.InnerException = e;
+                        throw;
+                    }
+                    finally
+                    {
+                        sw.Stop();
+                        synch.EndMessageLoop();
+                    }
+                }, null);
+                synch.BeginMessageLoop();
+            }
+            catch (AggregateException ex)
+            {
+                var exception = ex.ExtractSingleInnerException();
+                if (exception is OperationCanceledException)
+                    throw new TimeoutException("Operation timed out after: " + sw.Elapsed, ex);
+                ExceptionDispatchInfo.Capture(exception).Throw();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(oldContext);
+            }
+
+            _pool.Free(synch);
+
+            return result;
+        }
+
+        internal static T RunSync<T>(Func<ValueTask<T>> taskFactory)
+        {
+            var oldContext = SynchronizationContext.Current;
+
+            var task = taskFactory();
+
+            // Do we have an active synchronization context?
+            if (UseTaskAwaiterWhenNoSynchronizationContextIsAvailable && oldContext == null && task.IsCompleted)
+            {
+                // We can run synchronously without any issue.
+                return task.GetAwaiter().GetResult();
+            }
+
+            var result = default(T);
+
+            var sw = Stopwatch.StartNew();
+            var synch = _pool.Allocate();
+
+            SynchronizationContext.SetSynchronizationContext(synch);
+            try
+            {
+                synch.Post(async _ =>
+                {
+                    try
+                    {
+                        result = await task.ConfigureAwait(false);
+                    }
                     catch (Exception e)
                     {
                         synch.InnerException = e;

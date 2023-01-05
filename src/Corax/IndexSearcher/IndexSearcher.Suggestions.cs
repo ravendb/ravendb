@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Corax.Mappings;
 using Corax.Queries;
 using Sparrow.Server.Strings;
 using static Corax.Constants;
@@ -14,28 +15,26 @@ public enum StringDistanceAlgorithm
 }
 public partial class IndexSearcher
 {
-
-
-    public IRawTermProvider Suggest(int fieldId, string term, bool sortByPopularity, StringDistanceAlgorithm algorithm, 
+    public IRawTermProvider Suggest(FieldMetadata field, string term, bool sortByPopularity, StringDistanceAlgorithm algorithm, 
         float accuracy = Suggestions.DefaultAccuracy,
         int take = Constants.IndexSearcher.TakeAll) => algorithm switch
     {
-        StringDistanceAlgorithm.None => Suggest<NoStringDistance>(fieldId, term, sortByPopularity, accuracy, take),
-        StringDistanceAlgorithm.NGram => Suggest<NGramDistance>(fieldId, term, sortByPopularity, accuracy, take),
-        StringDistanceAlgorithm.JaroWinkler => Suggest<JaroWinklerDistance>(fieldId, term, sortByPopularity, accuracy, take),
-        StringDistanceAlgorithm.Levenshtein => Suggest<LevenshteinDistance>(fieldId, term, sortByPopularity, accuracy, take),
-        _ => Suggest<LevenshteinDistance>(fieldId, term, sortByPopularity, accuracy, take)
+        StringDistanceAlgorithm.None => Suggest<NoStringDistance>(field, term, sortByPopularity, accuracy, take),
+        StringDistanceAlgorithm.NGram => Suggest<NGramDistance>(field, term, sortByPopularity, accuracy, take),
+        StringDistanceAlgorithm.JaroWinkler => Suggest<JaroWinklerDistance>(field, term, sortByPopularity, accuracy, take),
+        StringDistanceAlgorithm.Levenshtein => Suggest<LevenshteinDistance>(field, term, sortByPopularity, accuracy, take),
+        _ => Suggest<LevenshteinDistance>(field, term, sortByPopularity, accuracy, take)
     };
 
-    private SuggestionTermProvider<TDistanceProvider> Suggest<TDistanceProvider>(int fieldId, string term, bool sortByPopularity, float accuracy = Suggestions.DefaultAccuracy, int take = Constants.IndexSearcher.TakeAll)
+    private SuggestionTermProvider<TDistanceProvider> Suggest<TDistanceProvider>(FieldMetadata field, string term, bool sortByPopularity, float accuracy = Suggestions.DefaultAccuracy, int take = Constants.IndexSearcher.TakeAll)
         where TDistanceProvider : IStringDistance
     {
-        var termSlice = EncodeAndApplyAnalyzer(term, fieldId);
-        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false)
+        var termSlice = EncodeAndApplyAnalyzer(field, term);
+        if (_fieldMapping.TryGetByFieldId(field.FieldId, out var binding) == false)
         {
             throw new InvalidDataException($"Field '{binding.FieldName}' is not indexed for suggestions.");
         }
 
-        return SuggestionTermProvider<TDistanceProvider>.YieldSuggestions(this, fieldId, termSlice, binding, default, sortByPopularity, accuracy, take);        
+        return SuggestionTermProvider<TDistanceProvider>.YieldSuggestions(this, binding.FieldId, termSlice, binding, default, sortByPopularity, accuracy, take);        
     }
 }

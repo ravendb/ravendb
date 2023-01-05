@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                 }
 
-                Debug.Assert(dataPosInTempPage + sizeof(ResultHeader) + result.Size <= tmp.TempPageBuffer.Length);
+                Debug.Assert(dataPosInTempPage + sizeof(ResultHeader) + result.Size <= tmp.PageSize);
                 var newEntry = (ResultHeader*)(tmp.TempPagePointer + dataPosInTempPage);
                 newEntry->Id = id;
                 newEntry->Size = (ushort)result.Size;

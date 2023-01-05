@@ -36,29 +36,37 @@ namespace FastTests.Voron
         [Fact]
         public void CanScanValues()
         {
-            using var wtx = Env.WriteTransaction();
-
-            var containerId = Container.Create(wtx.LowLevelTransaction);
-
             var expected = new List<long>();
-            for (int i = 0; i < 1024; i++)
+            long containerId;
+
+            using (var wtx = Env.WriteTransaction())
             {
-                var id = Container.Allocate(wtx.LowLevelTransaction, containerId, 8, out _);
-                expected.Add(id);
+                containerId = Container.Create(wtx.LowLevelTransaction);
+
+                for (int i = 0; i < 1024; i++)
+                {
+                    var id = Container.Allocate(wtx.LowLevelTransaction, containerId, 8, out _);
+                    expected.Add(id);
+                }
+
+                for (int i = 0; i < 16; i++)
+                {
+                    var id = Container.Allocate(wtx.LowLevelTransaction, containerId, 10_000, out _);
+                    expected.Add(id);
+                }
+
+                wtx.Commit();
             }
 
-            for (int i = 0; i < 16; i++)
-            {
-                var id = Container.Allocate(wtx.LowLevelTransaction, containerId, 10_000, out _);
-                expected.Add(id);
-            }
-            
             expected.Sort();
 
-            var actual = Container.GetAllIds(wtx.LowLevelTransaction, containerId);
-            actual.Sort();
-            Assert.Equal(expected.Count, actual.Count);
-            Assert.Equal(expected, actual);
+            using (var rtx = Env.ReadTransaction())
+            {
+                var actual = Container.GetAllIds(rtx.LowLevelTransaction, containerId);
+                actual.Sort();
+                Assert.Equal(expected.Count, actual.Count);
+                Assert.Equal(expected, actual);
+            }
         }
 
 

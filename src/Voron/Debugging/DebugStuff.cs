@@ -13,7 +13,7 @@ using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Compression;
 using Voron.Data.Fixed;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Voron.Global;
 using Voron.Impl;
 
@@ -368,14 +368,14 @@ namespace Voron.Debugging
  
 
         [Conditional("DEBUG")]
-        public static void RenderAndShow(Set tree)
+        public static void RenderAndShow(PostingList tree)
         {
             var headerData = $"<p>{tree.State}</p>";
             RenderAndShowTCompactTree(tree, tree.State.RootPage, headerData);
         }
 
         [Conditional("DEBUG")]
-        public static void RenderAndShowTCompactTree(Set tree, long startPageNumber, string headerData = null)
+        public static void RenderAndShowTCompactTree(PostingList tree, long startPageNumber, string headerData = null)
         {
             RenderHtmlTreeView(writer =>
             {
@@ -389,15 +389,15 @@ namespace Voron.Debugging
             });
         }
 
-        private static unsafe void RenderPageInternal(Set tree, Page page, TextWriter sw, string text, bool open)
+        private static unsafe void RenderPageInternal(PostingList tree, Page page, TextWriter sw, string text, bool open)
         {
-            var header = new SetCursorState { Page = page };
-            var leaf = new SetLeafPage(page);
-            var branch = new SetBranchPage(page);
+            var header = new PostingListCursorState { Page = page };
+            var leaf = new PostingListLeafPage(page);
+            var branch = new PostingListBranchPage(page);
 
             List<long> leafEntries = null;
             if (header.IsLeaf)
-                leafEntries = leaf.GetDebugOutput(tree.Llt);
+                leafEntries = leaf.GetDebugOutput();
             sw.WriteLine(
                 string.Format("<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries - {5}</label><ul>",
                     page.PageNumber, header.IsLeaf ? "leaf" : "branch", header.IsLeaf ? leafEntries!.Count : branch.Header->NumberOfEntries, open ? "checked" : "", text, 
@@ -408,12 +408,12 @@ namespace Voron.Debugging
                 //sw.WriteLine(
                 //    string.Format("<ul><li><input type='checkbox' id='page-{0}-details'/><label for='page-{0}-details'>Compression details</label><ul>",
                 //        page.PageNumber));
-                for (int i = 0; i < leaf.Header->NumberOfCompressedPositions; i++)
+                for (int i = 0; i < leaf.Header->NumberOfCompressedRuns; i++)
                 {
-                    var entry = leaf.Positions[i];
-                    sw.Write($"<li>Compressed with {entry.Length:#,#;;0} bytes</li>");
+                    var entry = leaf.Runs[i];
+                    int count = PForDecoder.ReadCount(leaf.SpanFor(i));
+                    sw.Write($"<li>Compressed {count:#,#;;0} entries with {entry.Length:#,#;;0} bytes</li>");
                 }
-                sw.Write($"<li>Raw with {leaf.Header->NumberOfRawValues:#,#;;0} values</li>");
                 var range = leaf.GetRange();
                 sw.WriteLine($"<li>Range {range.First} ... {range.Last}</li>");
 

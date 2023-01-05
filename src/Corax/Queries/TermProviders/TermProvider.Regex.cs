@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using Corax.Mappings;
 using Voron;
 using Voron.Data.CompactTrees;
 
@@ -11,16 +12,16 @@ public struct RegexTermProvider : ITermProvider
     private readonly Regex _regex;
     private CompactTree.Iterator _iterator;
     private readonly CompactTree _tree;
-    private readonly string _fieldName;
+    private readonly FieldMetadata _field;
 
-    public RegexTermProvider(IndexSearcher searcher, CompactTree tree, string field, Regex regex)
+    public RegexTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Regex regex)
     {
         _searcher = searcher;
         _regex = regex;
         _tree = tree;
         _iterator = tree.Iterate();
         _iterator.Reset();
-        _fieldName = field;
+        _field = field;
     }
 
 
@@ -50,7 +51,7 @@ public struct RegexTermProvider : ITermProvider
         return new QueryInspectionNode($"{nameof(RegexTermProvider)}",
             parameters: new Dictionary<string, string>()
             {
-                { "Field", _fieldName },
+                { "Field", _field.ToString() },
                 { "Regex", _regex.ToString()}
             });
     }

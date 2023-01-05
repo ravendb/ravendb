@@ -9,7 +9,7 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.RawData;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
 using Encoding = System.Text.Encoding;

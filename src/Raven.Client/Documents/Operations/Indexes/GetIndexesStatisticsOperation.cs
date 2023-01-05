@@ -22,14 +22,22 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         internal class GetIndexesStatisticsCommand : RavenCommand<IndexStats[]>
         {
-            public GetIndexesStatisticsCommand(string nodeTag = null)
+            internal const string IncludeStatsParamName = "includeStats";
+            private bool? _includeStats;
+            public GetIndexesStatisticsCommand(string nodeTag = null, bool? includeStats = null)
             {
+                _includeStats = includeStats;
                 SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/stats";
+
+                if (_includeStats.HasValue)
+                {
+                    url += $"?{IncludeStatsParamName}={_includeStats}";
+                }
 
                 return new HttpRequestMessage
                 {

@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sparrow.Server;
 using Voron;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Voron.Global;
 using Voron.Impl;
 using Xunit;
 
 namespace FastTests.Voron.Sets
 {
-    public unsafe class SetLeafPageTests : IDisposable
+    public unsafe class PostingListLeafPageTests : IDisposable
     {
         private readonly Transaction _tx;
         private readonly StorageEnvironment _env;
@@ -17,7 +18,7 @@ namespace FastTests.Voron.Sets
         private readonly byte* _pagePtr;
         private readonly LowLevelTransaction _llt;
 
-        public SetLeafPageTests()
+        public PostingListLeafPageTests()
         {
             _env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly());
             _tx = _env.WriteTransaction();
@@ -34,8 +35,8 @@ namespace FastTests.Voron.Sets
         [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
         public void CanAddAndRead(int size)
         {
-            var leaf = new SetLeafPage(new Page(_pagePtr));
-            leaf.Init(0);
+            var leaf = new PostingListLeafPage(new Page(_pagePtr));
+            PostingListLeafPage.InitLeaf(leaf.Header, 0);
             var list = new List<long>();
             var buf = new int[] {12, 18};
             var start = 24;
@@ -43,9 +44,15 @@ namespace FastTests.Voron.Sets
             {
                 start += buf[i % buf.Length];
                 list.Add(start);
-                Assert.True(leaf.Add(_llt, start));
             }
-            Assert.Equal(list, leaf.GetDebugOutput(_llt));
+
+            Span<long> span = list.ToArray();
+            var empty = Span<long>.Empty;
+            var extras = leaf.Update(_llt, ref span, ref empty, long.MaxValue);
+            Assert.Null(extras);
+            Assert.True(span.IsEmpty);
+
+            Assert.Equal(list, leaf.GetDebugOutput());
         }
         
         [Theory]
@@ -56,23 +63,30 @@ namespace FastTests.Voron.Sets
         [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
         public void CanAddAndRemove(int size)
         {
-            var leaf = new SetLeafPage(new Page(_pagePtr));
-            leaf.Init(0);
+            var leaf = new PostingListLeafPage(new Page(_pagePtr));
+            PostingListLeafPage.InitLeaf(leaf.Header, 0);
             var buf = new int[] {12, 18};
             var start = 24;
+            var list = new long[size];
             for (int i = 0; i < size; i++)
             {
                 start += buf[i % buf.Length];
-                Assert.True(leaf.Add(_llt, start));
+                list[i] = start;
             }
+            Span<long> additions = list;
+            var empty = Span<long>.Empty;
+            var extras = leaf.Update(_llt, ref additions, ref empty, long.MaxValue);
+            Assert.Null(extras);
+            Assert.True(additions.IsEmpty);
             
-            start = 24;
-            for (int i = 0; i < size; i++)
-            {
-                start += buf[i % buf.Length];
-                Assert.True(leaf.Remove(_llt, start));
-            }
-            Assert.Empty(leaf.GetDebugOutput(_llt));
+            
+            Assert.NotEmpty(leaf.GetDebugOutput());
+            
+            Span<long> reomvals = list; // now remove
+            extras = leaf.Update(_llt, ref empty, ref reomvals, long.MaxValue);
+            Assert.Null(extras);
+            Assert.True(reomvals.IsEmpty);
+            Assert.Empty(leaf.GetDebugOutput());
         }
 
         
@@ -84,19 +98,28 @@ namespace FastTests.Voron.Sets
         [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
         public void CanHandleDuplicateValues(int size)
         {
-            var leaf = new SetLeafPage(new Page(_pagePtr));
-            leaf.Init(0);
+            var leaf = new PostingListLeafPage(new Page(_pagePtr));
+            PostingListLeafPage.InitLeaf(leaf.Header, 0);
             var list = new List<long>();
             var buf = new int[] {12, 18};
             var start = 24;
             for (int i = 0; i < size; i++)
             {
                 list.Add(start);
-                Assert.True(leaf.Add(_llt, start));
                 start += buf[i % buf.Length];
             }
-            Assert.True(leaf.Add(_llt, 24)); // should be no op
-            Assert.Equal(list, leaf.GetDebugOutput(_llt));
+            Span<long> additions = list.ToArray();
+            var empty = Span<long>.Empty;
+            var extras = leaf.Update(_llt, ref additions, ref empty, long.MaxValue);
+            Assert.Null(extras);
+            Assert.True(additions.IsEmpty);
+            additions = new long[] { 24 };
+            
+            extras = leaf.Update(_llt, ref additions, ref empty, long.MaxValue);
+            Assert.Null(extras);
+            Assert.True(additions.IsEmpty);
+
+            Assert.Equal(list, leaf.GetDebugOutput());
         }
 
         public void Dispose()

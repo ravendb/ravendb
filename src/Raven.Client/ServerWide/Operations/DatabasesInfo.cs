@@ -48,7 +48,6 @@ namespace Raven.Client.ServerWide.Operations
         public bool IsEncrypted { get; set; }
         public TimeSpan? UpTime { get; set; }
         public BackupInfo BackupInfo { get; set; }
-        public List<MountPointUsage> MountPointsUsage { get; set; }
 
         public long? Alerts { get; set; }
         public long? PerformanceHints { get; set; }

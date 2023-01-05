@@ -12,9 +12,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Corax.Bugs;
 
-public class SetAddRemoval : StorageTest
+public class PostingListAddRemoval : StorageTest
 {
-    public SetAddRemoval(ITestOutputHelper output) : base(output)
+    public PostingListAddRemoval(ITestOutputHelper output) : base(output)
     {
     }
     
@@ -24,7 +24,7 @@ public class SetAddRemoval : StorageTest
         var ops = ReadOperationsFrom("3-2015-10.txt.gz");
         using (var wtx = Env.WriteTransaction())
         {
-            var set = wtx.OpenSet("test");
+            var set = wtx.OpenPostingList("test");
             foreach (var op in ops)
             {
                 if (op.Add)
@@ -37,21 +37,30 @@ public class SetAddRemoval : StorageTest
                 }
             }
 
+            wtx.Commit();
+        }
+
+        using (var wtx = Env.WriteTransaction())
+        {
+            var set = wtx.OpenPostingList("test");
             set.DumpAllValues();
         }
     }
 
-    [Fact]
-    public void AdditionsAndRemovalWork()
+    [Theory]
+    [InlineData(300)]
+    [InlineData(5000)]
+    [InlineData(int.MaxValue)]
+    public void AdditionsAndRemovalWork(int size)
     {
         var maxSize = 0;
-        List<long> items = ReadNumbersFromResource("Corax.Set.Adds.txt");
+        List<long> items = ReadNumbersFromResource("Corax.Set.Adds.txt").Take(size).ToList();
         items.Sort();
         
         maxSize = items.Count;
         using (var wtx = Env.WriteTransaction())
         {
-            var set = wtx.OpenSet("test");
+            var set = wtx.OpenPostingList("test");
             foreach (long id in  items)
             {
                 set.Add(id);
@@ -59,10 +68,19 @@ public class SetAddRemoval : StorageTest
             wtx.Commit();
         }
 
+        using (var rtx = Env.ReadTransaction())
+        {
+            var set = rtx.OpenPostingList("test");
+           
+
+            Assert.Equal(items, set.DumpAllValues());
+            Assert.Equal(items.Count, set.State.NumberOfEntries);
+        }
+
         var removals = ReadNumbersFromResource("Corax.Set.Removals.txt").ToList();
         using (var wtx = Env.WriteTransaction())
         {
-            var set = wtx.OpenSet("test");
+            var set = wtx.OpenPostingList("test");
             foreach (long id in removals)
             {
                 set.Remove(id);
@@ -75,7 +93,8 @@ public class SetAddRemoval : StorageTest
         
         using (var rtx = Env.ReadTransaction())
         {
-            var set = rtx.OpenSet("test");
+            var set = rtx.OpenPostingList("test");
+            Assert.Equal(items, set.DumpAllValues());
 
             Assert.Equal(items.Count, set.State.NumberOfEntries);
         }
@@ -83,7 +102,7 @@ public class SetAddRemoval : StorageTest
         using (var rtx = Env.ReadTransaction())
         {
             var matches = new long[maxSize * 2];
-            var set = rtx.OpenSet("test");
+            var set = rtx.OpenPostingList("test");
             set.Iterate().Fill(matches, out int read);
             Assert.Equal(items.Count, read);
             for (int i = 0; i < items.Count; i++)
@@ -95,7 +114,7 @@ public class SetAddRemoval : StorageTest
 
     private static List<long> ReadNumbersFromResource(string file)
     {
-        var reader = new StreamReader(typeof(SetAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file));
+        var reader = new StreamReader(typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file));
         var adds = new List<long>();
         string line = null;
         while ((line = reader.ReadLine()) != null)
@@ -108,7 +127,7 @@ public class SetAddRemoval : StorageTest
     
     private static List<(bool Add, List<long> Ids)> ReadOperationsFrom(string file)
     {
-        var reader = new StreamReader(new GZipStream(typeof(SetAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file), CompressionMode.Decompress));
+        var reader = new StreamReader(new GZipStream(typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file), CompressionMode.Decompress));
         var adds = new List<(bool Add, List<long> Ids)>();
         string line = null;
         while ((line = reader.ReadLine()) != null)

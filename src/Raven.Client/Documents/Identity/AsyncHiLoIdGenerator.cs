@@ -14,21 +14,19 @@ using Sparrow.Json;
 namespace Raven.Client.Documents.Identity
 {
     /// <summary>
-    /// Generate hilo numbers against a RavenDB document
+    /// Generate HiLo numbers against a RavenDB document
     /// </summary>
     public class AsyncHiLoIdGenerator
     {
-        protected string Prefix;
-        protected string ServerTag;
-
         private readonly DocumentStore _store;
         private readonly string _tag;
+        protected string Prefix;
         private long _lastBatchSize;
         private DateTime _lastRangeDate;
         private readonly string _dbName;
         private readonly char _identityPartsSeparator;
         private volatile RangeValue _range;
-        private Lazy<Task> _nextRangeTask = new Lazy<Task>(() => Task.CompletedTask);
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncHiLoIdGenerator"/> class.
@@ -39,9 +37,10 @@ namespace Raven.Client.Documents.Identity
             _tag = tag;
             _dbName = dbName;
             _identityPartsSeparator = identityPartsSeparator;
-            _range = new RangeValue(1, 0);
+            _range = new RangeValue(1, 0, null);
         }
 
+        [Obsolete("Will be removed in next major version of the product. Use the GetDocumentIdFromId(NextId) overload.")]
         protected virtual string GetDocumentIdFromId(long nextId)
         {
             return $"{Prefix}{nextId}-{ServerTag}";
@@ -59,27 +58,41 @@ namespace Raven.Client.Documents.Identity
             public readonly long Min;
             public readonly long Max;
             public long Current;
+            public string ServerTag;
 
-            public RangeValue(long min, long max)
+            [Obsolete("Will be removed in next major version of the product. Use RangeValue(min, max, serverTag) instead.")]
+            public RangeValue(long min, long max) : this(min, max, null)
+            {
+            }
+
+            public RangeValue(long min, long max, string serverTag)
             {
                 Min = min;
                 Max = max;
                 Current = min - 1;
+                ServerTag = serverTag;
             }
         }
+
+        private Lazy<Task> _nextRangeTask = new Lazy<Task>(() => Task.CompletedTask);
+
+        [Obsolete("Will be removed in next major version of the product. Use field Range.ServerTag instead.")]
+        protected string ServerTag;
 
         /// <summary>
         /// Generates the document ID.
         /// </summary>
         /// <param name="entity">The entity.</param>
         /// <returns></returns>
-        public async Task<string> GenerateDocumentIdAsync(object entity)
+        public virtual async Task<string> GenerateDocumentIdAsync(object entity)
         {
-            var nextId = await NextIdAsync().ConfigureAwait(false);
-            return GetDocumentIdFromId(nextId);
+            var result = await GetNextIdAsync().ConfigureAwait(false);
+#pragma warning disable CS0618
+            return GetDocumentIdFromId(result.Id);
+#pragma warning restore CS0618
         }
 
-        public async Task<long> NextIdAsync()
+        public async Task<NextId> GetNextIdAsync()
         {
             while (true)
             {
@@ -89,7 +102,13 @@ namespace Raven.Client.Documents.Identity
                 var range = Range;
                 var id = Interlocked.Increment(ref range.Current);
                 if (id <= range.Max)
-                    return id;
+                {
+                    return new NextId
+                    {
+                        Id = id,
+                        ServerTag = range.ServerTag
+                    };
+                }
 
                 try
                 {
@@ -124,21 +143,31 @@ namespace Raven.Client.Documents.Identity
             }
         }
 
+        [Obsolete("Will be removed in next major version of the product. Use GetNextIdAsync instead")]
+        public async Task<long> NextIdAsync()
+        {
+            var result = await GetNextIdAsync().ConfigureAwait(false);
+            return result.Id;
+        }
+
         private async Task GetNextRangeAsync()
         {
             var hiloCommand = new NextHiLoCommand(_tag, _lastBatchSize, _lastRangeDate, _identityPartsSeparator, Range.Max);
 
             var re = _store.GetRequestExecutor(_dbName);
-            using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            JsonOperationContext context;
+            using (re.ContextPool.AllocateOperationContext(out context))
             {
                 await re.ExecuteAsync(hiloCommand, context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
             }
 
             Prefix = hiloCommand.Result.Prefix;
+#pragma warning disable CS0618
             ServerTag = hiloCommand.Result.ServerTag;
+#pragma warning restore CS0618
             _lastRangeDate = hiloCommand.Result.LastRangeAt;
             _lastBatchSize = hiloCommand.Result.LastSize;
-            Range = new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High);
+            Range = new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High, hiloCommand.Result.ServerTag);
         }
 
         public async Task ReturnUnusedRangeAsync()
@@ -146,10 +175,18 @@ namespace Raven.Client.Documents.Identity
             var returnCommand = new HiLoReturnCommand(_tag, Range.Current, Range.Max);
 
             var re = _store.GetRequestExecutor(_dbName);
-            using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            JsonOperationContext context;
+            using (re.ContextPool.AllocateOperationContext(out context))
             {
                 await re.ExecuteAsync(returnCommand, context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
             }
+        }
+
+        public struct NextId
+        {
+            public long Id;
+
+            public string ServerTag;
         }
     }
 }

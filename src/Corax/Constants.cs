@@ -44,7 +44,7 @@ namespace Corax
         public static class IndexWriter
         {
             // This is the schema version for the indexes. 
-            public const long SchemaVersion = 54_003;
+            public const long SchemaVersion = 54_004;
             
             
             public static ReadOnlySpan<byte> DoubleTreeSuffix => DoubleTreeSuffixBytes.AsSpan();
@@ -102,7 +102,7 @@ namespace Corax
 
         public static class Analyzers
         {
-            internal const int DefaultBufferForAnalyzers = 4 * Sparrow.Global.Constants.Size.Kilobyte;
+            public const int DefaultBufferForAnalyzers = 4 * Sparrow.Global.Constants.Size.Kilobyte;
         }
         
         public static class Suggestions

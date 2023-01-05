@@ -13,7 +13,7 @@ using Sparrow.Server;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.RawData;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl
@@ -30,6 +30,14 @@ namespace Voron.Impl
 
         public ByteStringContext Allocator => _lowLevelTransaction.Allocator;
 
+        private Dictionary<Slice, PostingList> _postingLists;
+        
+        private Dictionary<Slice, Table> _tables;
+
+        private Dictionary<Slice, Tree> _trees;
+
+        private Dictionary<Slice, FixedSizeTree> _globalFixedSizeTree;
+
         public IEnumerable<Tree> Trees => _trees?.Values ?? Enumerable.Empty<Tree>();
         
         public IEnumerable<Table> Tables => _tables?.Values ?? Enumerable.Empty<Table>();
@@ -42,10 +50,6 @@ namespace Voron.Impl
             _cachedDecompressedBuffersByStorageId ??= new Dictionary<long, ByteString>();
 
         private LowLevelTransaction _lowLevelTransaction;
-        private Dictionary<Slice, Set> _sets;
-        private Dictionary<Slice, Table> _tables;
-        private Dictionary<Slice, Tree> _trees;
-        private Dictionary<Slice, FixedSizeTree> _globalFixedSizeTree;
         private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
         private Dictionary<long, ByteString> _cachedDecompressedBuffersByStorageId;
 
@@ -170,18 +174,18 @@ namespace Voron.Impl
             return id;
         }
 
-        public Set OpenSet(string name)
+        public PostingList OpenPostingList(string name)
         {
             using (Slice.From(Allocator, name, ByteStringType.Immutable, out Slice nameSlice))
             {
-                return OpenSet(nameSlice);
+                return OpenPostingList(nameSlice);
             }
         }
 
-        public Set OpenSet(Slice name)
+        public PostingList OpenPostingList(Slice name)
         {
-            _sets ??= new Dictionary<Slice, Set>(SliceStructComparer.Instance);
-            if (_sets.TryGetValue(name, out var set))
+            _postingLists ??= new Dictionary<Slice, PostingList>(SliceStructComparer.Instance);
+            if (_postingLists.TryGetValue(name, out var set))
                 return set;
 
             var clonedName = name.Clone(Allocator);
@@ -189,15 +193,15 @@ namespace Voron.Impl
             var existing = LowLevelTransaction.RootObjects.Read(name);
             if (existing == null)
             {
-                using var _ = LowLevelTransaction.RootObjects.DirectAdd(name, sizeof(SetState), out var p);
-                Set.Create(this.LowLevelTransaction, ref MemoryMarshal.AsRef<SetState>(new Span<byte>(p, sizeof(SetState))));
+                using var _ = LowLevelTransaction.RootObjects.DirectAdd(name, sizeof(PostingListState), out var p);
+                PostingList.Create(this.LowLevelTransaction, ref MemoryMarshal.AsRef<PostingListState>(new Span<byte>(p, sizeof(PostingListState))));
                 existing = LowLevelTransaction.RootObjects.Read(name);
             }
  
-            set = new Set(LowLevelTransaction, clonedName,
-                MemoryMarshal.AsRef<SetState>(existing.Reader.AsSpan())
+            set = new PostingList(LowLevelTransaction, clonedName,
+                MemoryMarshal.AsRef<PostingListState>(existing.Reader.AsSpan())
             );
-            _sets[clonedName] = set;
+            _postingLists[clonedName] = set;
             return set;
         }
 
@@ -246,14 +250,15 @@ namespace Voron.Impl
                 }
             }
             
-            if (_sets != null)
+            if (_postingLists != null)
             {
-                foreach (Set set in _sets.Values)
+                foreach (PostingList set in _postingLists.Values)
                 {
-                    using (_lowLevelTransaction.RootObjects.DirectAdd(set.Name, sizeof(SetState), out byte* ptr))
+                    set.PrepareForCommit();
+                    using (_lowLevelTransaction.RootObjects.DirectAdd(set.Name, sizeof(PostingListState), out byte* ptr))
                     {
-                        Span<byte> span = new Span<byte>(ptr, sizeof(SetState));
-                        ref var savedState = ref MemoryMarshal.AsRef<SetState>(span);
+                        Span<byte> span = new Span<byte>(ptr, sizeof(PostingListState));
+                        ref var savedState = ref MemoryMarshal.AsRef<PostingListState>(span);
                         savedState = set.State;
                     }
                 }
