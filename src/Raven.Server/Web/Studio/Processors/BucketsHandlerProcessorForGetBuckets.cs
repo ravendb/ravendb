@@ -105,30 +105,21 @@ namespace Raven.Server.Web.Studio.Processors
         public string TotalSizeHumane => Size.Humane(TotalSize);
         public Dictionary<int, BucketRange> BucketRanges = new();
 
-        public DynamicJsonValue ToJson(bool fromStudio = false)
+        public DynamicJsonValue ToJson()
         {
-            var json = new DynamicJsonValue()
+            var json = new DynamicJsonValue
             {
                 [nameof(TotalSizeHumane)] = TotalSizeHumane,
                 [nameof(TotalSize)] = TotalSize,
             };
 
-            
-            if (fromStudio == false)
+            var ranges = new DynamicJsonValue();
+            foreach (var range in BucketRanges)
             {
-                var ranges = new DynamicJsonValue();
-                foreach (var range in BucketRanges)
-                {
-                    ranges[range.Key.ToString()] = range.Value.ToJson();
-                }
+                ranges[range.Key.ToString()] = range.Value.ToJson();
+            }
 
-                json[nameof(BucketRanges)] = ranges;
-            }
-            else
-            {
-                var ranges = new DynamicJsonArray(BucketRanges.Select(x => x.Value.ToJson()));
-                json[nameof(BucketRanges)] = ranges;
-            }
+            json[nameof(BucketRanges)] = ranges;
 
             return json;
         }
