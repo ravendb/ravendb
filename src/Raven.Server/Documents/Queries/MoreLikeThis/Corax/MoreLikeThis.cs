@@ -313,7 +313,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
                 break;
         }
 
-        return query ?? indexSearcher.EmptySet();
+        return query ?? indexSearcher.EmptyMatch();
     }
 
     /// <summary>

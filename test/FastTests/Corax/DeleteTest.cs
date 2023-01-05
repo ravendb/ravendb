@@ -31,7 +31,7 @@ namespace FastTests.Corax
         [Fact]
         public void CanDelete()
         {
-            PrepareData();
+            PrepareData(batchSize: 1000);
             IndexEntries(CreateKnownFields(_bsc));
 
             Span<long> ids = stackalloc long[1024];
@@ -240,6 +240,7 @@ namespace FastTests.Corax
             }
 
             indexWriter.Commit();
+            entryWriter.Dispose();
         }
 
         private ByteStringContext<ByteStringMemoryCache>.InternalScope CreateIndexEntry(
