@@ -1,21 +1,26 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Jint;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
+using Raven.Server.Documents;
+using Raven.Server.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Server.Collections;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
@@ -32,9 +37,9 @@ namespace Raven.Server.ServerWide
             _serverStore = serverStore ?? throw new ArgumentNullException(nameof(serverStore));
         }
 
-        public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int fromShard, int toShard, string raftId = null)
+        public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int toShard, string raftId = null)
         {
-            var cmd = new StartBucketMigrationCommand(bucket, fromShard, toShard, database, raftId ?? RaftIdGenerator.NewId());
+            var cmd = new StartBucketMigrationCommand(bucket, toShard, database, raftId ?? RaftIdGenerator.NewId());
             return _serverStore.SendToLeaderAsync(cmd);
         }
 
@@ -54,6 +59,57 @@ namespace Raven.Server.ServerWide
         {
             var cmd = new SourceMigrationCleanupCommand(bucket, migrationIndex, _serverStore.NodeTag, database, raftId ?? RaftIdGenerator.NewId());
             return _serverStore.SendToLeaderAsync(cmd);
+        }
+
+        public IDisposable RegisterForReshardingStatusUpdate(string database, AsyncQueue<string> messages)
+        {
+            var del = CreateDelegateForReshardingStatus(database, messages);
+            _serverStore.Engine.StateMachine.Changes.DatabaseChanged += del;
+
+            return new DisposableAction(() =>
+            {
+                _serverStore.Engine.StateMachine.Changes.DatabaseChanged -= del;
+            });
+        }
+
+        public bool HasActiveMigrations(string database)
+        {
+            var config = _serverStore.Cluster.ReadShardingConfiguration(database);
+            foreach (var m in config.BucketMigrations)
+            {
+                if (m.Value.Status < MigrationStatus.OwnershipTransferred) 
+                    return true;
+            }
+
+            return false;
+        }
+
+        private ClusterChanges.DatabaseChangedDelegate CreateDelegateForReshardingStatus(string database, AsyncQueue<string> messages)
+        {
+            return (name, index, type, _, __) =>
+            {
+                if (string.Equals(name, database, StringComparison.OrdinalIgnoreCase) == false)
+                    return Task.CompletedTask;
+
+                switch (type)
+                {
+                    case nameof(StartBucketMigrationCommand):
+                    case nameof(SourceMigrationSendCompletedCommand):
+                    case nameof(DestinationMigrationConfirmCommand):
+                    case nameof(SourceMigrationCleanupCommand):
+                        var config = _serverStore.Cluster.ReadShardingConfiguration(database);
+                        foreach (var (_, migration) in config.BucketMigrations)
+                        {
+                            messages.Enqueue(migration.ToString());
+                        }
+                        break;
+
+                    default:
+                        break;
+                }
+
+                return Task.CompletedTask;
+            };
         }
 
         public void FillShardingConfiguration(AddDatabaseCommand addDatabase, ClusterTopology clusterTopology)

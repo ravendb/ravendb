@@ -69,7 +69,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.NotNull(user);
                 }
 
-                var result = await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, shardNumber, toShard, RaftIdGenerator.NewId());
+                var result = await Server.ServerStore.Sharding.StartBucketMigration(store.Database, bucket, toShard, RaftIdGenerator.NewId());
 
                 var exists = WaitForDocument<User>(store, id, predicate: null, database: ShardHelper.ToShardName(store.Database, toShard));
                 Assert.True(exists);
