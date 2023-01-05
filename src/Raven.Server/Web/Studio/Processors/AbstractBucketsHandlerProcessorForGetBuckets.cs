@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
@@ -21,22 +22,23 @@ namespace Raven.Server.Web.Studio.Processors
         {
         }
 
-        protected (int FromBucket, int ToBucket, int Range) GetParameters()
+        protected (int FromBucket, int ToBucket, int Range, int? ShardNumber) GetParameters()
         {
             var fromBucket = RequestHandler.GetIntValueQueryString("fromBucket", required: false) ?? 0;
             var toBucket = RequestHandler.GetIntValueQueryString("toBucket", required: false) ?? int.MaxValue;
             var range = RequestHandler.GetIntValueQueryString("range", required: false) ?? (32 * 1024);
-            return (fromBucket, toBucket, range);
+            var shardNumber = RequestHandler.GetIntValueQueryString(Constants.QueryString.ShardNumber, required: false);
+            return (fromBucket, toBucket, range, shardNumber);
         }
 
         public override async ValueTask ExecuteAsync()
         {
-            (int fromBucket, int toBucket, int range) = GetParameters();
+            (int fromBucket, int toBucket, int range, int? shardNumber) = GetParameters();
             
             using(ContextPool.AllocateOperationContext(out TOperationContext context))
             using (var token = RequestHandler.CreateOperationToken())
             {
-                var bucketsResults = await GetBucketsResults(context, fromBucket, toBucket, range, token.Token);
+                var bucketsResults = await GetBucketsResults(context, fromBucket, toBucket, range, shardNumber, token.Token);
 
                 await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, RequestHandler.ResponseBodyStream()))
                 {
@@ -45,7 +47,7 @@ namespace Raven.Server.Web.Studio.Processors
             }
         }
 
-        protected abstract ValueTask<BucketsResults> GetBucketsResults(TOperationContext context, int fromBucket, int toBucket, int range, CancellationToken token);
+        protected abstract ValueTask<BucketsResults> GetBucketsResults(TOperationContext context, int fromBucket, int toBucket, int range, int? shardNumber, CancellationToken token);
     }
 
     public class GetBucketsCommand : RavenCommand<BucketsResults>

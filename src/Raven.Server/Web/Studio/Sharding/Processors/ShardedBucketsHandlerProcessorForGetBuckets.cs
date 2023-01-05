@@ -18,8 +18,11 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
         {
         }
         
-        protected override async ValueTask<BucketsResults> GetBucketsResults(TransactionOperationContext context, int fromBucket, int toBucket, int range, CancellationToken token)
+        protected override async ValueTask<BucketsResults> GetBucketsResults(TransactionOperationContext context, int fromBucket, int toBucket, int range, int? shardNumber, CancellationToken token)
         {
+            if (shardNumber.HasValue)
+                return await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new GetBucketsCommand(fromBucket, toBucket, range), shardNumber.Value, token);
+
             var shardedGetBucketsOperation = new ShardedGetBucketsOperation(RequestHandler.HttpContext.Request, fromBucket, toBucket, range);
             return await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(shardedGetBucketsOperation, token);
         }
