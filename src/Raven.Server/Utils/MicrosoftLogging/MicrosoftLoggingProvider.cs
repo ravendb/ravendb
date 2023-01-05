@@ -18,14 +18,14 @@ public class MicrosoftLoggingProvider : ILoggerProvider
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", nameof(MicrosoftLoggingProvider));
 
-    private readonly LoggingSource _loggingSource;
+    public readonly LoggingSource LoggingSource;
     private readonly NotificationCenter.NotificationCenter _notificationCenter;
     private readonly ConcurrentDictionary<string, SparrowLoggerWrapper> _loggers = new ConcurrentDictionary<string, SparrowLoggerWrapper>(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<StringSegment, LogLevel> _configuration = new ConcurrentDictionary<StringSegment, LogLevel>();
 
     public MicrosoftLoggingProvider(LoggingSource loggingSource, NotificationCenter.NotificationCenter notificationCenter)
     {
-        _loggingSource = loggingSource;
+        LoggingSource = loggingSource;
         _notificationCenter = notificationCenter;
     }
 
@@ -35,7 +35,7 @@ public class MicrosoftLoggingProvider : ILoggerProvider
         (string source, string loggerName) = lastDot >= 0
             ? (categoryName[..lastDot], categoryName.Substring(lastDot + 1, categoryName.Length - lastDot - 1))
             : (categoryName, categoryName);
-        var sparrowLogger = _loggingSource.GetLogger(source, loggerName);
+        var sparrowLogger = LoggingSource.GetLogger(source, loggerName);
 
         //Basically the logger is created only once but just for the safe side.
         return _loggers.GetOrAdd(categoryName, s => new SparrowLoggerWrapper(sparrowLogger)
