@@ -38,6 +38,10 @@ public class MicrosoftLogTests : RavenTestBase
 
         string combine = Path.Combine(mainLogPath, "MicrosoftLogs");
         var logFile = await AssertWaitForNotNullAsync(() => Task.FromResult(Directory.GetFiles(combine).FirstOrDefault()));
+        
+        server.Dispose();
+        server.MicrosoftLogger.LoggingSource.EndLogging();
+        
         await AssertLogs(logFile, LogLevel.Critical);
     }
 
@@ -62,6 +66,10 @@ public class MicrosoftLogTests : RavenTestBase
         GetDocumentStore(new Options { Server = server }).Dispose();
 
         var logFile = await AssertWaitForNotNullAsync(() => Task.FromResult(Directory.GetFiles(logPath).FirstOrDefault()));
+
+        server.Dispose();
+        server.MicrosoftLogger.LoggingSource.EndLogging();
+        
         await AssertLogs(logFile, LogLevel.Debug);
     }
 
@@ -101,6 +109,10 @@ public class MicrosoftLogTests : RavenTestBase
         GetDocumentStore(new Options { Server = server }).Dispose();
 
         var logFile = await AssertWaitForNotNullAsync(() => Task.FromResult(Directory.GetFiles(logPath).FirstOrDefault()));
+
+        server.Dispose();
+        server.MicrosoftLogger.LoggingSource.EndLogging();
+        
         await AssertLogs(logFile, LogLevel.Debug);
     }
 
@@ -127,6 +139,10 @@ public class MicrosoftLogTests : RavenTestBase
         GetDocumentStore(new Options { Server = server }).Dispose();
 
         var logFile = await AssertWaitForNotNullAsync(() => Task.FromResult(Directory.GetFiles(logPath).FirstOrDefault()));
+
+        server.Dispose();
+        server.MicrosoftLogger.LoggingSource.EndLogging();
+        
         await AssertLogs(logFile, LogLevel.Debug, "Microsoft.AspNetCore.Server.Kestrel");
     }
 
