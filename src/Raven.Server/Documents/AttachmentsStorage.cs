@@ -728,7 +728,7 @@ namespace Raven.Server.Documents
             return tree.ReadStream(hashSlice);
         }
 
-        private static long GetAttachmentStreamLength(DocumentsOperationContext context, Slice hashSlice)
+        public static long GetAttachmentStreamLength(DocumentsOperationContext context, Slice hashSlice)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
             var info = tree.GetStreamInfo(hashSlice, false);
@@ -900,7 +900,7 @@ namespace Raven.Server.Documents
             Prefix
         }
 
-        private static Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)
+        public static Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var result = new Attachment
             {

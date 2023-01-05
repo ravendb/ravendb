@@ -701,6 +701,17 @@ namespace SlowTests.Sharding.Cluster
                             tableValuesSize += result.Reader.Size;
                         }
 
+                        schema = db.DocumentsStorage.AttachmentsStorage.AttachmentsSchema;
+                        table = ctx.Transaction.InnerTransaction.OpenTable(schema, Attachments.AttachmentsMetadataSlice);
+
+                        foreach (var result in table.SeekForwardFrom(schema.FixedSizeIndexes[Attachments.AttachmentsEtagSlice], 0, 0))
+                        {
+                            var attachment = AttachmentsStorage.TableValueToAttachment(ctx, ref result.Reader);
+                            var size = AttachmentsStorage.GetAttachmentStreamLength(ctx, attachment.Base64Hash);
+                            tableValuesSize += result.Reader.Size;
+                            tableValuesSize += size;
+                        }
+
                         docsSize += tableValuesSize;
                     }
                 }
