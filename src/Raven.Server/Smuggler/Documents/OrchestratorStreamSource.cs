@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -11,21 +14,36 @@ namespace Raven.Server.Smuggler.Documents;
 
 public class OrchestratorStreamSource : StreamSource
 {
-    public OrchestratorStreamSource(Stream stream, JsonOperationContext context, string databaseName, DatabaseSmugglerOptionsServerSide options = null) : base(stream, context, databaseName, options)
+    private readonly int _numberOfShards;
+
+    public OrchestratorStreamSource(Stream stream, JsonOperationContext context, string databaseName, int numberOfShards, DatabaseSmugglerOptionsServerSide options = null) : base(stream, context, databaseName, options)
     {
-            
+        _numberOfShards = numberOfShards;
     }
 
-    private Dictionary<Slice, StreamsTempFile.InnerStream> _uniqueStreams = new Dictionary<Slice, StreamsTempFile.InnerStream>(SliceComparer.Instance);
+    // use ConcurrentDictionary to prevent race between the dispose and release the stream due to reaching number of shards limit
+    private ConcurrentDictionary<Slice, UniqueStreamValue> _uniqueStreams = new ConcurrentDictionary<Slice, UniqueStreamValue>(SliceComparer.Instance);
 
     public override Stream GetAttachmentStream(LazyStringValue hash, out string tag)
     {
         using (Slice.From(_allocator, hash, out var slice))
         {
-            if (_uniqueStreams.TryGetValue(slice, out var stream))
+            if (_uniqueStreams.TryGetValue(slice, out var item))
             {
                 tag = "$from-sharding-import";
-                return stream.CreateDisposableReaderStream();
+                return item.Stream.CreateDisposableReaderStream(new DisposableAction(() =>
+                {
+                    if (Interlocked.Increment(ref item.Usages) == _numberOfShards)
+                    {
+                        if (_uniqueStreams.TryRemove(slice, out var streamValue))
+                        {
+                            using (streamValue)
+                            {
+                                slice.Release(_allocator);
+                            }
+                        }
+                    }
+                }));
             }
         }
         tag = null;
@@ -41,7 +59,11 @@ public class OrchestratorStreamSource : StreamSource
         if (_uniqueStreams.ContainsKey(r.Base64Hash) == false)
         {
             var hash = r.Base64Hash.Clone(_allocator);
-            _uniqueStreams.Add(hash, inner);
+            _uniqueStreams.TryAdd(hash, new UniqueStreamValue
+            {
+                Usages = 1,
+                Stream = inner
+            });
         }
             
         return r;
@@ -49,15 +71,29 @@ public class OrchestratorStreamSource : StreamSource
 
     public override void Dispose()
     {
-        foreach (var (_, stream) in _uniqueStreams)
+        foreach (var (key, _) in _uniqueStreams)
         {
-            using (stream)
+            if (_uniqueStreams.TryRemove(key, out var streamValue))
             {
-                
+                using (streamValue)
+                {
+                    key.Release(_allocator);
+                }
             }
         }
 
         // here we release the allocator
         base.Dispose();
+    }
+
+    private class UniqueStreamValue : IDisposable
+    {
+        public StreamsTempFile.InnerStream Stream;
+        public int Usages;
+
+        public void Dispose()
+        {
+            Stream?.Dispose();
+        }
     }
 }
