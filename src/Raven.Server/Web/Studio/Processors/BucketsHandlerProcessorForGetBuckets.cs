@@ -19,7 +19,7 @@ namespace Raven.Server.Web.Studio.Processors
         {
         }
         
-        protected override ValueTask<BucketsResults> GetBucketsResults(DocumentsOperationContext context, int fromBucket, int toBucket, int range, CancellationToken token)
+        protected override ValueTask<BucketsResults> GetBucketsResults(DocumentsOperationContext context, int fromBucket, int toBucket, int range, int? _, CancellationToken token)
         {
             if (ShardHelper.TryGetShardNumberAndDatabaseName(RequestHandler.DatabaseName, out string shardedDatabaseName, out int shardNumber) == false)
             {
