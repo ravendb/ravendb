@@ -590,14 +590,22 @@ public unsafe struct IndexEntryReader
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public FieldReader GetReaderFor(ReadOnlySpan<byte> fieldName, int fieldId)
+    public FieldReader GetFieldReaderFor(in FieldMetadata binding)
     {
-        return fieldId == Constants.IndexWriter.DynamicField 
-            ? GetReaderFor(fieldName) 
-            : GetReaderFor(fieldId);
+        return binding.FieldId == Constants.IndexWriter.DynamicField
+            ? GetFieldReaderFor(binding.FieldName)
+            : GetFieldReaderFor(binding.FieldId);
     }
     
-    public FieldReader GetReaderFor(ReadOnlySpan<byte> name)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public FieldReader GetFieldReaderFor(ReadOnlySpan<byte> fieldName, int fieldId)
+    {
+        return fieldId == Constants.IndexWriter.DynamicField 
+            ? GetFieldReaderFor(fieldName) 
+            : GetFieldReaderFor(fieldId);
+    }
+    
+    public FieldReader GetFieldReaderFor(ReadOnlySpan<byte> name)
     {
         if (ReadDynamicValueOffset(name, out var intOffset, out bool isTyped))
         {
@@ -612,7 +620,7 @@ public unsafe struct IndexEntryReader
     }
 
     [Pure]
-    public FieldReader GetReaderFor(int field)
+    public FieldReader GetFieldReaderFor(int field)
     {
         var intOffset = GetMetadataFieldLocation(_buffer, field, out var isTyped);
         IndexEntryFieldType type = IndexEntryFieldType.Invalid;
@@ -641,9 +649,7 @@ public unsafe struct IndexEntryReader
 
         return IndexEntryFieldType.Simple;
     }
-
     
-
     //<type:byte><amount_of_items:int><geohashLevel:int><geohash_ptr:int>
     //<longitudes_ptr:int><latitudes_list:double[]><longtitudes_list:double[]><geohashes_list:bytes[]>
     public SpatialPointFieldIterator ReadManySpatialPoint(int field)
@@ -730,7 +736,7 @@ public unsafe struct IndexEntryReader
         string result = string.Empty;
         foreach (var (name, field) in knownFields.Select(x => (x.FieldName, x.FieldId)))
         {
-            var reader = GetReaderFor(field);
+            var reader = GetFieldReaderFor(field);
             var type = GetFieldType(field, out _);
             if (type is IndexEntryFieldType.Simple or IndexEntryFieldType.Tuple)
             {

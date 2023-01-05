@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using Corax;
+using Corax.Mappings;
 using Corax.Queries;
 using Raven.Server.Documents.Queries;
 using Sparrow.Extensions;
@@ -9,8 +10,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 
 public readonly struct CoraxBooleanItem : IQueryMatch
 {
-    public readonly string Name;
-    public readonly int FieldId;
+    public readonly FieldMetadata Field;
     public readonly object Term;
     public readonly object Term2;
     public readonly string TermAsString;
@@ -24,15 +24,14 @@ public readonly struct CoraxBooleanItem : IQueryMatch
 
     public long Count { get; }
 
-    public CoraxBooleanItem(IndexSearcher searcher, Index index, string name, int fieldId, object term, UnaryMatchOperation operation, IQueryScoreFunction scoreFunction = default)
+    public CoraxBooleanItem(IndexSearcher searcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation, IQueryScoreFunction scoreFunction = default)
     {
         _scoreFunction = scoreFunction;
-        Name = name;
-        FieldId = fieldId;
+        Field = field;
         var ticks = default(long);
-        _isTime = term is not null && index.IndexFieldsPersistence.HasTimeValues(name) && QueryBuilderHelper.TryGetTime(index, term, out ticks);
+        
+        _isTime = term is not null && index.IndexFieldsPersistence.HasTimeValues(Field.FieldName.ToString()) && QueryBuilderHelper.TryGetTime(index, term, out ticks);
         Term = _isTime ? ticks : term;
-
         Operation = operation;
         _indexSearcher = searcher;
 
@@ -43,22 +42,22 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         if (operation is UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals)
         {
             TermAsString = QueryBuilderHelper.CoraxGetValueAsString(term);
-            Count = searcher.TermAmount(name, TermAsString, fieldId);
+            Count = searcher.TermAmount(Field, TermAsString);
         }
         else
         {
             Unsafe.SkipInit(out TermAsString);
-            Count = searcher.GetEntriesAmountInField(name);
+            Count = searcher.GetEntriesAmountInField(Field);
         }
     }
 
-    public CoraxBooleanItem(IndexSearcher searcher, Index index, string name, int fieldId, object term1, object term2, UnaryMatchOperation operation, UnaryMatchOperation left, UnaryMatchOperation right, IQueryScoreFunction scoreFunction = default) : this(searcher, index, name, fieldId, term1, operation, scoreFunction)
+    public CoraxBooleanItem(IndexSearcher searcher, Index index, FieldMetadata field, object term1, object term2, UnaryMatchOperation operation, UnaryMatchOperation left, UnaryMatchOperation right, IQueryScoreFunction scoreFunction = default) : this(searcher, index, field, term1, operation, scoreFunction)
     {
         //Between handler
         
         if (_isTime) //found time at `Term1`, lets check if second item also contains time
         {
-            if (term2 != null && index.IndexFieldsPersistence.HasTimeValues(name) && QueryBuilderHelper.TryGetTime(index, term2, out var ticks))
+            if (term2 != null && index.IndexFieldsPersistence.HasTimeValues(field.FieldName.ToString()) && QueryBuilderHelper.TryGetTime(index, term2, out var ticks))
             {
                 Term2 = ticks;
             }
@@ -87,12 +86,7 @@ public readonly struct CoraxBooleanItem : IQueryMatch
             _ => false
         };
     }
-
-    public static bool CanBeMergedForOr(CoraxBooleanItem lhs, CoraxBooleanItem rhs)
-    {
-        return CanBeMergedForAnd(lhs, rhs) && lhs.Name == rhs.Name && lhs.FieldId == rhs.FieldId;
-    }
-
+    
     public bool CompareScoreFunction(IQueryScoreFunction scoreFunction)
     {
         return (scoreFunction, _scoreFunction) switch
@@ -107,9 +101,9 @@ public readonly struct CoraxBooleanItem : IQueryMatch
     {
         if (Operation is UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals)
         {
-            IQueryMatch match = _indexSearcher.TermQuery(Name, TermAsString, FieldId);
+            IQueryMatch match = _indexSearcher.TermQuery(Field, TermAsString);
             if (Operation is UnaryMatchOperation.NotEquals)
-                match = _indexSearcher.AndNot(_indexSearcher.ExistsQuery(Name), match);
+                match = _indexSearcher.AndNot(_indexSearcher.ExistsQuery(Field), match);
             if (_scoreFunction is NullScoreFunction)
                 return match;
             return _indexSearcher.Boost(match, _scoreFunction);
@@ -121,11 +115,11 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         {
             baseMatch = (Term, Term2) switch
             {
-                (long l, long l2) => _indexSearcher.BetweenQuery(Name, l, l2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
-                (double d, double d2) => _indexSearcher.BetweenQuery(Name, d, d2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
-                (string s, string s2) => _indexSearcher.BetweenQuery(Name, s, s2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
-                (long l, double d) => _indexSearcher.BetweenQuery(Name, Convert.ToDouble(l), d, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
-                (double d, long l) => _indexSearcher.BetweenQuery(Name, d, Convert.ToDouble(l), _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight, fieldId: FieldId),
+                (long l, long l2) => _indexSearcher.BetweenQuery(Field, l, l2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight),
+                (double d, double d2) => _indexSearcher.BetweenQuery(Field, d, d2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight),
+                (string s, string s2) => _indexSearcher.BetweenQuery(Field, s, s2, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight),
+                (long l, double d) => _indexSearcher.BetweenQuery(Field, Convert.ToDouble(l), d, _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight),
+                (double d, long l) => _indexSearcher.BetweenQuery(Field, d, Convert.ToDouble(l), _scoreFunction, leftSide: BetweenLeft, rightSide: BetweenRight),
                 _ => throw new InvalidOperationException($"UnaryMatchOperation {Operation} is not supported for type {Term.GetType()}")
             };
         }
@@ -133,22 +127,22 @@ public readonly struct CoraxBooleanItem : IQueryMatch
         {
             baseMatch = (Operation, Term) switch
             {
-                (UnaryMatchOperation.LessThan, long term) => _indexSearcher.LessThanQuery(Name, term, _scoreFunction, false, FieldId),
-                (UnaryMatchOperation.LessThan, double term) => _indexSearcher.LessThanQuery(Name, term, _scoreFunction, false, FieldId),
-                (UnaryMatchOperation.LessThan, string term) => _indexSearcher.LessThanQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.LessThan, long term) => _indexSearcher.LessThanQuery(Field, term, _scoreFunction, false),
+                (UnaryMatchOperation.LessThan, double term) => _indexSearcher.LessThanQuery(Field, term, _scoreFunction, false),
+                (UnaryMatchOperation.LessThan, string term) => _indexSearcher.LessThanQuery(Field, term, _scoreFunction, false),
 
-                (UnaryMatchOperation.LessThanOrEqual, long term) => _indexSearcher.LessThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
-                (UnaryMatchOperation.LessThanOrEqual, double term) => _indexSearcher.LessThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
-                (UnaryMatchOperation.LessThanOrEqual, string term) => _indexSearcher.LessThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.LessThanOrEqual, long term) => _indexSearcher.LessThanOrEqualsQuery(Field, term, _scoreFunction, false),
+                (UnaryMatchOperation.LessThanOrEqual, double term) => _indexSearcher.LessThanOrEqualsQuery(Field, term, _scoreFunction, false),
+                (UnaryMatchOperation.LessThanOrEqual, string term) => _indexSearcher.LessThanOrEqualsQuery(Field, term, _scoreFunction, false),
 
-                (UnaryMatchOperation.GreaterThan, long term) => _indexSearcher.GreaterThanQuery(Name, term, _scoreFunction, false, FieldId),
-                (UnaryMatchOperation.GreaterThan, double term) => _indexSearcher.GreaterThanQuery(Name, term, _scoreFunction, false, FieldId),
-                (UnaryMatchOperation.GreaterThan, string term) => _indexSearcher.GreaterThanQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.GreaterThan, long term) => _indexSearcher.GreaterThanQuery(Field, term, _scoreFunction, false),
+                (UnaryMatchOperation.GreaterThan, double term) => _indexSearcher.GreaterThanQuery(Field, term, _scoreFunction, false),
+                (UnaryMatchOperation.GreaterThan, string term) => _indexSearcher.GreaterThanQuery(Field, term, _scoreFunction, false),
 
 
-                (UnaryMatchOperation.GreaterThanOrEqual, long term) => _indexSearcher.GreatThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
-                (UnaryMatchOperation.GreaterThanOrEqual, double term) => _indexSearcher.GreatThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
-                (UnaryMatchOperation.GreaterThanOrEqual, string term) => _indexSearcher.GreatThanOrEqualsQuery(Name, term, _scoreFunction, false, FieldId),
+                (UnaryMatchOperation.GreaterThanOrEqual, long term) => _indexSearcher.GreatThanOrEqualsQuery(Field, term, _scoreFunction, false),
+                (UnaryMatchOperation.GreaterThanOrEqual, double term) => _indexSearcher.GreatThanOrEqualsQuery(Field, term, _scoreFunction, false),
+                (UnaryMatchOperation.GreaterThanOrEqual, string term) => _indexSearcher.GreatThanOrEqualsQuery(Field, term, _scoreFunction, false),
                 _ => throw new ArgumentException("This is only Greater*/Less* Query part")
             };
         }
@@ -170,8 +164,7 @@ public readonly struct CoraxBooleanItem : IQueryMatch
     {
         if (Operation is UnaryMatchOperation.Between or UnaryMatchOperation.NotBetween)
         {
-            return $"Field name: '{Name}'{Environment.NewLine}" +
-                   $"Field id: '{FieldId}'{Environment.NewLine}" +
+            return $"Field: {Field.ToString()} {Environment.NewLine}" +
                    $"Operation: '{Operation}'{Environment.NewLine}" +
                    $"Between options:{Environment.NewLine}" +
                    $"\tLeft operation: '{BetweenLeft}'{Environment.NewLine}" +
@@ -180,8 +173,7 @@ public readonly struct CoraxBooleanItem : IQueryMatch
                    $"Right term: '{Term2}'{Environment.NewLine}";
         }
 
-        return $"Field name: '{Name}'{Environment.NewLine}" +
-               $"Field id: '{FieldId}'{Environment.NewLine}" +
+        return $"Field: {Field.ToString()} {Environment.NewLine}" +
                $"Term: '{Term}'{Environment.NewLine}" +
                $"Operation: '{Operation}'{Environment.NewLine}";
     }

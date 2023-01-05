@@ -66,8 +66,7 @@ public static class CoraxIndexingHelpers
                 switch (value.Indexing)
                 {
                     case FieldIndexing.Exact:
-                        defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultExactAnalyzerType.Value.Type,
-                            CreateKeywordAnalyzer);
+                        defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer);
                         break;
 
                     case FieldIndexing.Search:
@@ -162,11 +161,11 @@ public static class CoraxIndexingHelpers
         
         return mappingBuilder.Build();
 
-        CoraxAnalyzer GetOrCreateAnalyzer(string fieldName, Type analyzerType, Func<string, Type, CoraxAnalyzer> createAnalyzer)
+        CoraxAnalyzer GetOrCreateAnalyzer(string fieldName, Type analyzerType, Func<ByteStringContext, string, Type, CoraxAnalyzer> createAnalyzer)
         {
             if (analyzers.TryGetValue(analyzerType, out var analyzer) == false)
             {
-                analyzers[analyzerType] = analyzer = createAnalyzer(fieldName, analyzerType);
+                analyzers[analyzerType] = analyzer = createAnalyzer(context, fieldName, analyzerType);
             }
 
             return analyzer;
@@ -175,7 +174,7 @@ public static class CoraxIndexingHelpers
         CoraxAnalyzer CreateDefaultAnalyzer(string fieldName, Type analyzerType)
         {
             if (analyzerType == typeof(LowerCaseKeywordAnalyzer))
-                return CoraxAnalyzer.Create(default(KeywordTokenizer), default(LowerCaseTransformer));
+                return CoraxAnalyzer.Create(context, default(KeywordTokenizer), default(LowerCaseTransformer));
 
             if (analyzerType.IsSubclassOf(typeof(LuceneAnalyzer)))
                 return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType));
@@ -183,10 +182,10 @@ public static class CoraxIndexingHelpers
             return CoraxIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
         }
 
-        CoraxAnalyzer CreateKeywordAnalyzer(string fieldName, Type analyzerType)
+        CoraxAnalyzer CreateKeywordAnalyzer(ByteStringContext context, string fieldName, Type analyzerType)
         {
             if (analyzerType == typeof(KeywordAnalyzer))
-                return CoraxAnalyzer.Create(default(KeywordTokenizer), default(ExactTransformer));
+                return CoraxAnalyzer.Create(context, default(KeywordTokenizer), default(ExactTransformer));
 
             if (analyzerType.IsSubclassOf(typeof(LuceneAnalyzer)))
                 return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType));
@@ -194,7 +193,7 @@ public static class CoraxIndexingHelpers
             return CoraxIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
         }
 
-        CoraxAnalyzer CreateStandardAnalyzer(string fieldName, Type analyzerType)
+        CoraxAnalyzer CreateStandardAnalyzer(ByteStringContext context, string fieldName, Type analyzerType)
         {
             if (analyzerType == typeof(RavenStandardAnalyzer))
                 return LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_29));    

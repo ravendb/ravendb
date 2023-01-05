@@ -49,6 +49,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         private readonly TcpClient _tcpClient;
 
         protected readonly Stream _stream;
+        private readonly AbstractReplicationLoader<TContextPool, TOperationContext> _parent;
         protected readonly TcpConnectionOptions _tcpConnectionOptions;
         protected readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         protected readonly CancellationTokenSource _cts;
@@ -68,22 +69,22 @@ namespace Raven.Server.Documents.Replication.Incoming
         public virtual string FromToString => $"In database {_server.NodeTag}-{_databaseName} @ {_server.GetNodeTcpServerUrl()} " +
                                               $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
 
-        protected AbstractIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer,
-            ServerStore server, string databaseName, ReplicationLatestEtagRequest replicatedLastEtag, CancellationToken token, TContextPool contextPool)
+        protected AbstractIncomingReplicationHandler(AbstractReplicationLoader<TContextPool, TOperationContext> parent, TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, ReplicationLatestEtagRequest replicatedLastEtag)
         {
+            _parent = parent;
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             _tcpConnectionOptions = tcpConnectionOptions;
             _copiedBuffer = buffer.Clone(_tcpConnectionOptions.ContextPool);
-            _replicationFromAnotherSource = new AsyncManualResetEvent(token);
+            _replicationFromAnotherSource = new AsyncManualResetEvent(parent.Token);
 
             _tcpClient = tcpConnectionOptions.TcpClient;
             _stream = tcpConnectionOptions.Stream;
-            _server = server;
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            _databaseName = databaseName;
-            _contextPool = contextPool;
+            _server = _parent.Server;
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(parent.Token);
+            _databaseName = _parent.DatabaseName;
+            _contextPool = _parent.ContextPool;
 
-            Logger = LoggingSource.Instance.GetLogger(databaseName, GetType().FullName);
+            Logger = LoggingSource.Instance.GetLogger(_databaseName, GetType().FullName);
 
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(tcpConnectionOptions.Operation, tcpConnectionOptions.ProtocolVersion);
@@ -130,6 +131,8 @@ namespace Raven.Server.Documents.Replication.Incoming
             NativeMemory.EnsureRegistered();
             try
             {
+                _parent.ForTestingPurposes?.OnIncomingReplicationHandlerStart?.Invoke();
+
                 using (_connectionOptionsDisposable = _tcpConnectionOptions.ConnectionProcessingInProgress("Replication"))
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead<TContextPool, TOperationContext>(_contextPool, _stream))
@@ -591,6 +594,18 @@ namespace Raven.Server.Documents.Replication.Incoming
         public void Dispose()
         {
             _disposeOnce.Dispose();
+            if (_incomingWork != PoolOfThreads.LongRunningWork.Current)
+            {
+                try
+                {
+                    _incomingWork?.Join(int.MaxValue);
+                }
+                catch (ThreadStateException)
+                {
+                    // expected if the thread hasn't been started yet
+                }
+            }
+            _incomingWork = null;
         }
 
         protected virtual void DisposeInternal()
@@ -632,19 +647,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     // do nothing
                 }
-
-                if (_incomingWork != PoolOfThreads.LongRunningWork.Current)
-                {
-                    try
-                    {
-                        _incomingWork?.Join(int.MaxValue);
-                    }
-                    catch (ThreadStateException)
-                    {
-                        // expected if the thread hasn't been started yet
-                    }
-                }
-                _incomingWork = null;
 
                 _cts.Dispose();
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Corax.Mappings;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Spatial4n.Shapes;
@@ -12,7 +13,7 @@ unsafe partial struct SortingMatch
     public struct SpatialDescendingMatchComparer : ISpatialComparer
     {
         private readonly IndexSearcher _searcher;
-        private readonly int _fieldId;
+        private readonly FieldMetadata _field;
         private readonly delegate*<ref SpatialDescendingMatchComparer, long, long, int> _compareFunc;
         private readonly MatchCompareFieldType _fieldType;
         private readonly IPoint _point;
@@ -24,15 +25,15 @@ unsafe partial struct SortingMatch
         public double Round => _round;
 
         public SpatialUnits Units => _units;
-        
-        public int FieldId => _fieldId;
+
+        public FieldMetadata Field => _field;
         
         public MatchCompareFieldType FieldType => _fieldType;
 
         public SpatialDescendingMatchComparer(IndexSearcher searcher, in OrderMetadata metadata)
         {
             _searcher = searcher;
-            _fieldId = metadata.FieldId;
+            _field = metadata.Field;
             _fieldType = metadata.FieldType;
             _point = metadata.Point;
             _round = metadata.Round;
@@ -45,11 +46,11 @@ unsafe partial struct SortingMatch
             
             static int CompareWithSpatialLoad<T>(ref SpatialDescendingMatchComparer comparer, long x, long y) where T : unmanaged
             {
-                var readerX = comparer._searcher.GetReaderFor(x);
-                var readX = readerX.GetReaderFor(comparer._fieldId).Read(out (double lat, double lon) resultX);
+                var readerX = comparer._searcher.GetEntryReaderFor(x);
+                var readX = readerX.GetFieldReaderFor(comparer._field).Read(out (double lat, double lon) resultX);
 
-                var readerY = comparer._searcher.GetReaderFor(y);
-                var readY = readerY.GetReaderFor(comparer._fieldId).Read(out (double lat, double lon) resultY);
+                var readerY = comparer._searcher.GetEntryReaderFor(y);
+                var readY = readerY.GetFieldReaderFor(comparer._field).Read(out (double lat, double lon) resultY);
 
                 if (readX && readY)
                 {

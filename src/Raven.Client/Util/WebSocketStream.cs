@@ -119,7 +119,7 @@ namespace Raven.Client.Util
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            if (_activeWriteTasks.Count > 0)
+            if (_activeWriteTasks.IsEmpty == false)
             {
                 await Task.WhenAll(_activeWriteTasks).ConfigureAwait(false);
                 _activeWriteTasks.Clear();

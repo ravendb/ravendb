@@ -75,15 +75,15 @@ public class SpatialTests : StorageTest
             using (var searcher = new IndexSearcher(Env, _fieldsMapping))
             {
                 Span<long> ids = new long[16];
-                var entries = searcher.TermQuery("Coordinates", partialGeohash, CoordinatesIndex);
+                var entries = searcher.TermQuery("Coordinates", partialGeohash);
                 Assert.Equal(1, entries.Fill(ids));
 
-                var reader = searcher.GetReaderFor(ids[0]);
+                var reader = searcher.GetEntryReaderFor(ids[0]);
 
                 var fieldType = reader.GetFieldType(CoordinatesIndex, out int intOffset);
                 Assert.Equal(IndexEntryFieldType.SpatialPoint, fieldType);
                 
-                reader.GetReaderFor(CoordinatesIndex).Read(out (double, double) coords);
+                reader.GetFieldReaderFor(CoordinatesIndex).Read(out (double, double) coords);
                 Assert.Equal(coords.Item1, latitude);
                 Assert.Equal(coords.Item2, longitude);
             }
@@ -98,7 +98,7 @@ public class SpatialTests : StorageTest
         using (var searcher = new IndexSearcher(Env, _fieldsMapping))
         {
             Span<long> ids = new long[16];
-            var entries = searcher.TermQuery("Coordinates", geohash, CoordinatesIndex);
+            var entries = searcher.TermQuery("Coordinates", geohash);
             Assert.Equal(0, entries.Fill(ids));
         }
     }

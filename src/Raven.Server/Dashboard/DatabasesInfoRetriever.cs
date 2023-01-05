@@ -125,12 +125,12 @@ namespace Raven.Server.Dashboard
                             var trafficWatchItem = new TrafficWatchItem
                             {
                                 Database = databaseName,
-                                RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.GetRate(rate),
+                                RequestsPerSecond = database.Metrics.Requests.RequestsPerSec.GetIntRate(rate),
                                 AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
-                                DocumentWritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.GetRate(rate),
-                                AttachmentWritesPerSecond = (int)database.Metrics.Attachments.PutsPerSec.GetRate(rate),
-                                CounterWritesPerSecond = (int)database.Metrics.Counters.PutsPerSec.GetRate(rate),
-                                TimeSeriesWritesPerSecond = (int)database.Metrics.TimeSeries.PutsPerSec.GetRate(rate),
+                                DocumentWritesPerSecond = database.Metrics.Docs.PutsPerSec.GetIntRate(rate),
+                                AttachmentWritesPerSecond = database.Metrics.Attachments.PutsPerSec.GetIntRate(rate),
+                                CounterWritesPerSecond = database.Metrics.Counters.PutsPerSec.GetIntRate(rate),
+                                TimeSeriesWritesPerSecond = database.Metrics.TimeSeries.PutsPerSec.GetIntRate(rate),
                                 DocumentsWriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.GetRate(rate),
                                 AttachmentsWriteBytesPerSecond = database.Metrics.Attachments.BytesPutsPerSec.GetRate(rate),
                                 CountersWriteBytesPerSecond = database.Metrics.Counters.BytesPutsPerSec.GetRate(rate),
@@ -237,12 +237,12 @@ namespace Raven.Server.Dashboard
                 var trafficWatchItem = new TrafficWatchItem
                 {
                     Database = database.Name,
-                    RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.GetRate(rate),
+                    RequestsPerSecond = database.Metrics.Requests.RequestsPerSec.GetIntRate(rate),
                     AverageRequestDuration = database.Metrics.Requests.AverageDuration.GetRate(),
-                    DocumentWritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.GetRate(rate),
-                    AttachmentWritesPerSecond = (int)database.Metrics.Attachments.PutsPerSec.GetRate(rate),
-                    CounterWritesPerSecond = (int)database.Metrics.Counters.PutsPerSec.GetRate(rate),
-                    TimeSeriesWritesPerSecond = (int)database.Metrics.TimeSeries.PutsPerSec.GetRate(rate),
+                    DocumentWritesPerSecond = database.Metrics.Docs.PutsPerSec.GetIntRate(rate),
+                    AttachmentWritesPerSecond = database.Metrics.Attachments.PutsPerSec.GetIntRate(rate),
+                    CounterWritesPerSecond = database.Metrics.Counters.PutsPerSec.GetIntRate(rate),
+                    TimeSeriesWritesPerSecond = database.Metrics.TimeSeries.PutsPerSec.GetIntRate(rate),
                     DocumentsWriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.GetRate(rate),
                     AttachmentsWriteBytesPerSecond = database.Metrics.Attachments.BytesPutsPerSec.GetRate(rate),
                     CountersWriteBytesPerSecond = database.Metrics.Counters.BytesPutsPerSec.GetRate(rate),
@@ -525,7 +525,7 @@ namespace Raven.Server.Dashboard
         private static void UpdateDatabaseInfo(RawDatabaseRecord databaseRecord, ServerStore serverStore, string databaseName, DrivesUsage existingDrivesUsage,
             DatabaseInfoItem databaseInfoItem)
         {
-            DatabaseInfo databaseInfo = null;
+            ExtendedDatabaseInfo databaseInfo = null;
             if (serverStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson =>
             {
                 databaseInfo = JsonDeserializationServer.DatabaseInfo(databaseInfoJson);
@@ -582,5 +582,10 @@ namespace Raven.Server.Dashboard
                 UpdateMountPoint(serverStore.Configuration.Storage, mountPointUsage, databaseName, existingDrivesUsage);
             }
         }
+    }
+    
+    public class ExtendedDatabaseInfo : DatabaseInfo
+    {
+        public List<Client.ServerWide.Operations.MountPointUsage> MountPointsUsage { get; set; }
     }
 }

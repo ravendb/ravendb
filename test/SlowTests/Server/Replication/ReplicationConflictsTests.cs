@@ -1302,12 +1302,10 @@ namespace SlowTests.Server.Replication
 
                 await EnsureReplicatingAsync(store2, store1);
 
-                var database = Servers.Single(s => s.WebUrl == store1.Urls[0]).ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database).Result;
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                using (var session = store1.OpenAsyncSession())
                 {
-                    var count = database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
-                    Assert.Equal(3, count);
+                    var reivisions = await session.Advanced.Revisions.GetForAsync<User>("foo/bar");
+                    Assert.Equal(3, reivisions.Count);
                 }
 
             }

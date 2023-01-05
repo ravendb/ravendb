@@ -619,7 +619,7 @@ namespace Raven.Server.Documents.Subscriptions
         {
             var errorMessage = CreateStatusMessage(ConnectionStatus.Fail, e.ToString());
             AddToStatusDescription($"{errorMessage}. Sending response to client");
-            if (_logger.IsOperationsEnabled)
+            if (_logger.IsInfoEnabled && e is not OperationCanceledException)
                 _logger.Info(errorMessage, e);
 
             await ReportExceptionToClientAsync(e);
@@ -755,11 +755,15 @@ namespace Raven.Server.Documents.Subscriptions
                         await ReportExceptionToClientAsync(commandExecution.InnerException, recursionDepth - 1);
                         break;
                     default:
-                        AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Fail, $"Subscription error on subscription {ex}"));
 
-                        if (_logger.IsInfoEnabled)
+                        if (ex is not OperationCanceledException)
                         {
-                            _logger.Info("Subscription error", ex);
+                            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Fail, $"Subscription error on subscription {ex}"));
+
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info("Subscription error", ex);
+                            }
                         }
 
                         await WriteJsonAsync(new DynamicJsonValue

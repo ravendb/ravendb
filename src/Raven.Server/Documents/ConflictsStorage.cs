@@ -201,15 +201,10 @@ namespace Raven.Server.Documents
                 long largestEtag = 0;
                 if (conflicts.Count > 0)
                 {
-                    var conflictRecords = new List<GetConflictsResult.Conflict>();
                     foreach (var conflict in conflicts)
                     {
                         if (largestEtag < conflict.Etag)
                             largestEtag = conflict.Etag;
-                        conflictRecords.Add(new GetConflictsResult.Conflict
-                        {
-                            ChangeVector = conflict.ChangeVector
-                        });
                     }
 
                     ThrowDocumentConflictException(lowerId.ToString(), largestEtag);

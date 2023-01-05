@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Queries.Results
             BlittableJsonReaderObject result;
             if (retrieverInput.LuceneDocument is null)
             {
-                retrieverInput.CoraxEntry.GetReaderFor(FieldsToFetch.IndexFields.Count + 1).Read(out var binaryValue);
+                retrieverInput.CoraxEntry.GetFieldReaderFor(FieldsToFetch.IndexFields.Count + 1).Read(out var binaryValue);
                 fixed (byte* ptr = &binaryValue.GetPinnableReference())
                 {
                     using var temp = new BlittableJsonReaderObject(ptr, binaryValue.Length, _context);

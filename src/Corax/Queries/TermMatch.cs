@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 using Sparrow.Server.Compression;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Voron.Data.Containers;
 using System;
 using System.Diagnostics;
@@ -28,7 +28,7 @@ namespace Corax.Queries
         private long _current;
 
         private Container.Item _container;
-        private Set.Iterator _set;
+        private PostingList.Iterator _set;
         private ByteStringContext _ctx;
 
         public bool IsBoosting => _scoreFunc != null;
@@ -235,7 +235,7 @@ namespace Corax.Queries
             };
         }
 
-        public static TermMatch YieldSet(ByteStringContext ctx, Set set, bool useAccelerated = true)
+        public static TermMatch YieldSet(ByteStringContext ctx, PostingList postingList, bool useAccelerated = true)
         {
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -245,7 +245,7 @@ namespace Corax.Queries
 
                 var it = term._set;
 
-                it.MaybeSeek(buffer[0] - 1);
+                it.Seek(buffer[0] - 1);
                 if (it.MoveNext() == false)
                     goto Fail;                    
                 
@@ -300,7 +300,7 @@ namespace Corax.Queries
 
                 Debug.Assert(Vector256<long>.Count == 4);
 
-                term._set.MaybeSeek(buffer[0] - 1);
+                term._set.Seek(buffer[0] - 1);
                 
                 // PERF: The AND operation can be performed in place, because we end up writing the same value that we already read. 
                 fixed (long* inputStartPtr = buffer)
@@ -322,7 +322,7 @@ namespace Corax.Queries
                         if (result == false)
                             break;
 
-                        Debug.Assert(read < BlockSize);
+                        Debug.Assert(read <= BlockSize);
 
                         if (read == 0)
                             continue;
@@ -460,9 +460,9 @@ namespace Corax.Queries
                 useAccelerated = false;
 
             // We will select the AVX version if supported.             
-            return new TermMatch(ctx, set.State.NumberOfEntries, &FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc, inspectFunc: &InspectFunc)
+            return new TermMatch(ctx, postingList.State.NumberOfEntries, &FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc, inspectFunc: &InspectFunc)
             {
-                _set = set.Iterate(),
+                _set = postingList.Iterate(),
                 _current = long.MinValue
             };
         }

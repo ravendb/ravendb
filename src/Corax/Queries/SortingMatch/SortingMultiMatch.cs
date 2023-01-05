@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Corax.Mappings;
 using Corax.Utils.Spatial;
 using Sparrow;
 using static Corax.Queries.SortingMatch;
@@ -172,7 +173,7 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool Get<TOut, TIn>(in IndexEntryReader reader, int fieldId, long x, out TOut storedValue, in TIn comparer)
+        private static bool Get<TOut, TIn>(IndexEntryReader reader, FieldMetadata binding, out TOut storedValue, in TIn comparer)
             where TOut : struct
             where TIn : IMatchComparer
         {
@@ -181,7 +182,7 @@ namespace Corax.Queries
                 if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
                     goto Failed;
 
-                var readX = reader.GetReaderFor(fieldId).Read( out (double lat, double lon) coordinates);
+                var readX = reader.GetFieldReaderFor(binding).Read( out (double lat, double lon) coordinates);
                 var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
                 
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
@@ -192,7 +193,7 @@ namespace Corax.Queries
                 if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
                     goto Failed;
                 
-                var readX = reader.GetReaderFor(fieldId).Read( out (double lat, double lon) coordinates);
+                var readX = reader.GetFieldReaderFor(binding).Read( out (double lat, double lon) coordinates);
                 var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
 
                 storedValue = (TOut)(object)new NumericalItem<double>(distance);
@@ -200,7 +201,7 @@ namespace Corax.Queries
             }
             else if (typeof(TOut) == typeof(SequenceItem))
             {
-                var readX = reader.GetReaderFor(fieldId).Read( out var sv);
+                var readX = reader.GetFieldReaderFor(binding).Read( out var sv);
                 fixed (byte* svp = sv)
                 {
                     storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
@@ -210,13 +211,14 @@ namespace Corax.Queries
             }
             else if (typeof(TOut) == typeof(NumericalItem<long>))
             {
-                var readX = reader.GetReaderFor(fieldId).Read<long>( out var value);
+                var readX = reader.GetFieldReaderFor(binding).Read<long>( out var value);
                 storedValue = (TOut)(object)new NumericalItem<long>(value);
                 return readX;
             }
             else if (typeof(TOut) == typeof(NumericalItem<double>))
             {
-                var readX = reader.GetReaderFor(fieldId).Read<double>(out var value);
+                
+                var readX = reader.GetFieldReaderFor(binding).Read<double>(out var value);
                 storedValue = (TOut)(object)new NumericalItem<double>(value);
                 return readX;
             }
@@ -345,13 +347,13 @@ namespace Corax.Queries
             }
 
             var searcher = _searcher;
-            var fieldId = typeof(TComparer1) != typeof(BoostingComparer) ? _comparer1.FieldId : 0;
+            var binding = typeof(TComparer1) != typeof(BoostingComparer) ? _comparer1.Field : default;
             var comparer = new MultiMatchComparer<TComparer1, TOut>(this);            
             for (int i = 0; i < totalMatches; i++)
             {
                 UnmanagedSpan matchIndexEntry = searcher.GetIndexEntryPointer(matches[i]);
                 var read = typeof(TComparer1) == typeof(BoostingComparer) || 
-                           Get(new IndexEntryReader(matchIndexEntry.Address, matchIndexEntry.Length), fieldId, matches[i], out matchesKeys[i].Value, in _comparer1);
+                           Get(new IndexEntryReader(matchIndexEntry.Address, matchIndexEntry.Length), binding, out matchesKeys[i].Value, in _comparer1);
                 matchesKeys[i].Key = read ? matches[i] : -matches[i];
                 matchesKeys[i].Entry = matchIndexEntry;
 
@@ -389,7 +391,7 @@ namespace Corax.Queries
                 for (int i = 0; i < bTotalMatches; i++)
                 {
                     UnmanagedSpan matchIndexEntry = searcher.GetIndexEntryPointer(matches[i]);
-                    var read = Get(new IndexEntryReader(matchIndexEntry.Address, matchIndexEntry.Length), fieldId, bValues[i], out bKeys[i].Value, in _comparer1);
+                    var read = Get(new IndexEntryReader(matchIndexEntry.Address, matchIndexEntry.Length), binding, out bKeys[i].Value, in _comparer1);
                     bKeys[i].Key = read ? bValues[i] : -bValues[i];
                     bKeys[i].Entry = matchIndexEntry;
                     
@@ -531,10 +533,10 @@ namespace Corax.Queries
         {
             var comparer = (TComparer)GetComparer(ref current, comparerIdx);
             var readerX = new IndexEntryReader(item1.Address, item1.Length);
-            var readX = readerX.GetReaderFor(comparer.FieldId).Read(out (double lat, double lon) resultX);
+            var readX = readerX.GetFieldReaderFor(comparer.Field).Read(out (double lat, double lon) resultX);
 
             var readerY = new IndexEntryReader(item2.Address, item2.Length);
-            var readY = readerY.GetReaderFor(comparer.FieldId).Read(out (double lat, double lon) resultY);
+            var readY = readerY.GetFieldReaderFor(comparer.Field).Read(out (double lat, double lon) resultY);
 
             if (readX && readY)
             {
@@ -562,8 +564,8 @@ namespace Corax.Queries
             var comp1Reader = new IndexEntryReader(item1.Address, item1.Length);
             var comp2Reader = new IndexEntryReader(item2.Address, item2.Length);
 
-            bool read1 = comp1Reader.GetReaderFor(comparer.FieldId).Read(out var sv1);
-            bool read2 = comp2Reader.GetReaderFor(comparer.FieldId).Read(out var sv2);
+            bool read1 = comp1Reader.GetFieldReaderFor(comparer.Field).Read(out var sv1);
+            bool read2 = comp2Reader.GetFieldReaderFor(comparer.Field).Read(out var sv2);
             if (read1 && read2)
             {
                 var result = comparer.CompareSequence(sv1, sv2);
@@ -592,8 +594,8 @@ namespace Corax.Queries
 
             if (typeof(T) == typeof(long))
             {
-                read1 = comp1Reader.GetReaderFor(comparer.FieldId).Read<long>(out var si1);
-                read2 = comp2Reader.GetReaderFor(comparer.FieldId).Read<long>(out var si2);
+                read1 = comp1Reader.GetFieldReaderFor(comparer.Field).Read<long>(out var si1);
+                read2 = comp2Reader.GetFieldReaderFor(comparer.Field).Read<long>(out var si2);
                 if (read1 && read2)
                 {
                     var result = comparer.CompareNumerical(si1, si2);
@@ -607,8 +609,8 @@ namespace Corax.Queries
             }
             else
             {
-                read1 = comp1Reader.GetReaderFor(comparer.FieldId).Read<double>(out var sd1);
-                read2 = comp2Reader.GetReaderFor(comparer.FieldId).Read<double>(out var sd2);
+                read1 = comp1Reader.GetFieldReaderFor(comparer.Field).Read<double>(out var sd1);
+                read2 = comp2Reader.GetFieldReaderFor(comparer.Field).Read<double>(out var sd2);
                 if (read1 && read2)
                 {
                     var result = comparer.CompareNumerical<double>(sd1, sd2);

@@ -173,6 +173,7 @@ namespace SlowTests.Issues
                     Indexes.WaitForIndexing(store);
                 }
 
+                WaitForUserToContinueTheTest(store);
                 AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, id);
             }
         }
@@ -278,7 +279,7 @@ namespace SlowTests.Issues
                             .Execute();
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
-
+WaitForUserToContinueTheTest(store);
                         CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
                     }
                 }
@@ -332,7 +333,7 @@ namespace SlowTests.Issues
                             .Execute();
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
-
+WaitForUserToContinueTheTest(store);
                         CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
                     }
                 }

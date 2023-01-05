@@ -343,7 +343,7 @@ namespace Raven.Client.Documents
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>
-        public override Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, string database = null)
+        public override ValueTask<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, string database = null)
         {
             return AggressivelyCacheForAsync(cacheDuration, Conventions.AggressiveCache.Mode, database);
         }
@@ -356,7 +356,7 @@ namespace Raven.Client.Documents
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>
-        public override Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
+        public override ValueTask<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null)
         {
             var release = SetAggressiveCache(cacheDuration, mode, ref database);
 
@@ -375,11 +375,28 @@ namespace Raven.Client.Documents
 
             requestExecutor.AggressiveCaching.Value = newValue;
 
-            return new DisposableAction(() => requestExecutor.AggressiveCaching.Value = oldValue);
+            return new ReleaseAggressiveCache(requestExecutor, oldValue);
+        }
+
+        private readonly struct ReleaseAggressiveCache : IDisposable
+        {
+            private readonly RequestExecutor _requestExecutor;
+            private readonly AggressiveCacheOptions _oldValue;
+
+            public ReleaseAggressiveCache(RequestExecutor requestExecutor, AggressiveCacheOptions oldValue)
+            {
+                _requestExecutor = requestExecutor ?? throw new ArgumentNullException(nameof(requestExecutor));
+                _oldValue = oldValue;
+            }
+
+            public void Dispose()
+            {
+                _requestExecutor.AggressiveCaching.Value = _oldValue;
+            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private async Task<IDisposable> FinalizeAggressiveCacheAsync(IDisposable release, AggressiveCacheMode mode, string database)
+        private async ValueTask<IDisposable> FinalizeAggressiveCacheAsync(IDisposable release, AggressiveCacheMode mode, string database)
         {
             // this method is separated from the AggressivelyCacheForAsync because of how AsyncLocal works
             try
@@ -396,7 +413,7 @@ namespace Raven.Client.Documents
             }
         }
 
-        private Task ListenToChangesAndUpdateTheCacheAsync(string database)
+        private async ValueTask ListenToChangesAndUpdateTheCacheAsync(string database)
         {
             Debug.Assert(database != null);
 
@@ -406,7 +423,7 @@ namespace Raven.Client.Documents
                     () => new EvictItemsFromCacheBasedOnChanges(this, database)));
             }
             GC.KeepAlive(lazy.Value); // here we force it to be evaluated
-            return lazy.Value.EnsureConnectedAsync();
+            await lazy.Value.EnsureConnectedAsync().ConfigureAwait(false);
         }
 
         private AsyncDocumentSession OpenAsyncSessionInternal(SessionOptions options)

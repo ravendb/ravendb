@@ -16,13 +16,13 @@ namespace Raven.Server.Documents.Schemas
             TableType = (byte)TableType.Conflicts
         };
 
-        internal static readonly Slice ChangeVectorSlice;
         internal static readonly Slice IdAndChangeVectorSlice;
         internal static readonly Slice AllConflictedDocsEtagsSlice;
-        internal static readonly Slice ConflictedCollectionSlice;
         internal static readonly Slice ConflictsSlice;
         internal static readonly Slice ConflictsIdSlice;
         internal static readonly Slice ConflictsBucketAndEtagSlice;
+        internal static readonly Slice ChangeVectorSlice;
+        internal static readonly Slice ConflictedCollectionSlice;
 
         public enum ConflictsTable
         {

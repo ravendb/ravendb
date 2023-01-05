@@ -357,7 +357,7 @@ class revisions extends shardViewModelBase {
     }
 
     formattedDurationObservable(observable: KnockoutObservable<number>) {
-        return ko.pureComputed(() => generalUtils.formatTimeSpan(observable() * 1000));
+        return ko.pureComputed(() => generalUtils.formatTimeSpan(observable() * 1000, true));
     }
 
     enforceConfiguration() {

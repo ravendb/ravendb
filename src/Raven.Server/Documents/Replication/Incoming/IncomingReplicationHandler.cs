@@ -46,8 +46,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy,
-            ReplicationLatestEtagRequest.ReplicationType replicationType) : base(options, bufferToCopy, parent._server, parent.Database.Name, replicatedLastEtag,
-            options.DocumentDatabase.DatabaseShutdown, options.DocumentDatabase.DocumentsStorage.ContextPool)
+            ReplicationLatestEtagRequest.ReplicationType replicationType) : base(parent, options, bufferToCopy, replicatedLastEtag)
         {
             _database = options.DocumentDatabase;
             _parent = parent;

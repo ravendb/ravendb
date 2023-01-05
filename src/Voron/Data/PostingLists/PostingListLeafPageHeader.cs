@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace Voron.Data.Sets
+namespace Voron.Data.PostingLists
 {
     /*
      * Format of a set leaf page:
@@ -9,21 +9,18 @@ namespace Voron.Data.Sets
      * 0 - 64 bytes    -  short[16] PositionsOfCompressedEntries; (sorted by value)
      * 
      * actual compressed entries
-     *
-     * From the top: 0 - 256 values
-     * int[] RawValues;  // sorted array
      */
     [StructLayout(LayoutKind.Explicit, Pack = 1, Size = PageHeader.SizeOf)]
-    public struct SetLeafPageHeader
+    public unsafe struct PostingListLeafPageHeader
     {
         [FieldOffset(0)]
         public long PageNumber;
 
         [FieldOffset(8)]
-        public ushort CompressedValuesCeiling; 
+        public ushort NumberOfCompressedRuns;
 
         [FieldOffset(10)]
-        public ushort NumberOfRawValues;
+        public ushort Ceiling;
 
         [FieldOffset(12)]
         public PageFlags Flags;
@@ -32,12 +29,14 @@ namespace Voron.Data.Sets
         public ExtendedPageType SetFlags;
         
         [FieldOffset(14)]
-        public byte NumberOfCompressedPositions;
-
-        [FieldOffset(15)]
-        public byte Reserved;
+        private fixed byte Reserved[2];
         
         [FieldOffset(16)]
         public long Baseline;
+
+        [FieldOffset(24)]
+        public int NumberOfEntries;
+
+        public int Floor => PageHeader.SizeOf + (NumberOfCompressedRuns * sizeof(PostingListLeafPage.CompressedHeader));
     }
 }

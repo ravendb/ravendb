@@ -76,7 +76,7 @@ public abstract class AbstractNotificationCenter : NotificationsBase
                 }
             }
 
-            if (Watchers.Count == 0)
+            if (Watchers.IsEmpty)
                 return;
 
             using (Storage.Read(notification.Id, out NotificationTableValue existing))

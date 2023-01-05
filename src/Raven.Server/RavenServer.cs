@@ -141,7 +141,7 @@ namespace Raven.Server
             _externalCertificateValidator = new ExternalCertificateValidator(this, Logger);
             _tcpContextPool = new JsonContextPool(Configuration.Memory.MaxContextSizeToKeep);
         }
-        
+
         public TcpListenerStatus GetTcpServerStatus()
         {
             return _tcpListenerStatus;
@@ -150,6 +150,9 @@ namespace Raven.Server
         public void Initialize()
         {
             var sp = Stopwatch.StartNew();
+
+            EchoServer.StartEchoSockets(Configuration.Core.EchoSocketPort);
+
             Certificate = LoadCertificateAtStartup() ?? new CertificateUtils.CertificateHolder();
 
             CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
@@ -159,7 +162,7 @@ namespace Raven.Server
             CpuUsageCalculator.Init();
 
             DiskStatsGetter = DiskUtils.GetOsDiskUsageCalculator(Configuration.Monitoring.MinDiskStatsInterval.AsTimeSpan);
-            
+
             MetricCacher.Initialize();
 
             if (Logger.IsInfoEnabled)
@@ -314,7 +317,7 @@ namespace Raven.Server
                         Logger.Operations("Could not open the server store", e);
                     throw;
                 }
-                
+
                 ServerStore.TriggerDatabases();
 
                 StartSnmp();
@@ -823,7 +826,7 @@ namespace Raven.Server
                     .ToArray();
 
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"HTTPS is on. Setting up a new web host to redirect incoming HTTP traffic on port 80 to HTTPS on port 443. The new web host is listening to { string.Join(", ", serverUrlsToRedirect) }");
+                    Logger.Operations($"HTTPS is on. Setting up a new web host to redirect incoming HTTP traffic on port 80 to HTTPS on port 443. The new web host is listening to {string.Join(", ", serverUrlsToRedirect)}");
 
                 var webHostBuilder = new WebHostBuilder()
                     .UseKestrel()
@@ -1816,8 +1819,8 @@ namespace Raven.Server
                     }
                     catch (Exception ex)
                     {
-                        var msg = $"Unable to start tcp listener on {ipAddress} on port {port}.{ Environment.NewLine}" +
-                        $"Port might be already in use.{ Environment.NewLine}" +
+                        var msg = $"Unable to start tcp listener on {ipAddress} on port {port}.{Environment.NewLine}" +
+                        $"Port might be already in use.{Environment.NewLine}" +
                         $"Try running with an unused TCP port.{Environment.NewLine}" +
                         $"You can change the TCP port using one of the following options:{Environment.NewLine}" +
                         $"1) Change the ServerUrl.Tcp property in setting.json file.{Environment.NewLine}" +
@@ -1828,10 +1831,10 @@ namespace Raven.Server
                         errors.Add(new IOException(msg, ex));
                         if (Logger.IsOperationsEnabled)
                             Logger.Operations(msg, ex);
-                        
+
                         ServerStore.NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "Unable to start tcp listener", msg,
                             AlertType.TcpListenerError, NotificationSeverity.Error, key: $"tcp/listener/{ipAddress}/{port}", details: new ExceptionDetails(ex)));
-                        
+
                         continue;
                     }
 
@@ -1925,7 +1928,7 @@ namespace Raven.Server
                 EndPoint remoteEndPoint = null;
                 X509Certificate2 cert = null;
                 TcpConnectionHeaderMessage header = null;
-                
+
                 try
                 {
                     remoteEndPoint = tcpClient.Client.RemoteEndPoint;
@@ -2074,14 +2077,14 @@ namespace Raven.Server
                         {
                             throw new InvalidOperationException($"TCP negotiation dropped after reaching {maxRetries} retries, header:{headerJson}, this is probably a bug.");
                         }
-                        
+
                         header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
-                        
+
                         if (Logger.IsInfoEnabled)
                         {
                             Logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                         }
-                        
+
                         //In the case where we have mismatched version but the other side doesn't know how to handle it.
                         if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Drop)
                         {
@@ -2098,7 +2101,7 @@ namespace Raven.Server
                             return header;
                         }
                     }
-                    
+
                     var status = TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion, out supported);
                     if (status == TcpConnectionHeaderMessage.SupportedStatus.Supported)
                         break;
@@ -2125,7 +2128,7 @@ namespace Raven.Server
                             $"Got a request to establish TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
                             $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {supported}.");
                     }
-                    
+
                     await RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch,
                         supported);
                 }
@@ -2135,13 +2138,13 @@ namespace Raven.Server
 
                 if (header.LicensedFeatures != null)
                 {
-                    header.LicensedFeatures.DataCompression &= ServerStore.LicenseManager.LicenseStatus.HasTcpDataCompression && 
+                    header.LicensedFeatures.DataCompression &= ServerStore.LicenseManager.LicenseStatus.HasTcpDataCompression &&
                                                                Configuration.Server.DisableTcpCompression == false;
                 }
 
                 await RespondToTcpConnection(stream, context, err,
                     authSuccessful ? TcpConnectionStatus.Ok : statusResult,
-                    supported, licensedFeatures : header.LicensedFeatures);
+                    supported, licensedFeatures: header.LicensedFeatures);
 
                 tcp.ProtocolVersion = supported;
 
@@ -2515,7 +2518,7 @@ namespace Raven.Server
             msg = null;
             if (header.ServerId != null && header.ServerId != ServerStore.ServerId.ToString())
             {
-                msg = $"Tried to connect to server with Id {header.ServerId} at {tcpClient.Client.LocalEndPoint} "+
+                msg = $"Tried to connect to server with Id {header.ServerId} at {tcpClient.Client.LocalEndPoint} " +
                       $" but instead reached a server with Id {ServerStore.ServerId}. Check your network configuration.";
                 statusResult = TcpConnectionStatus.InvalidNetworkTopology;
                 return false;
@@ -2675,9 +2678,9 @@ namespace Raven.Server
         {
             var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(header.Operation, header.OperationVersion);
 
-            return supportedFeatures.DataCompression && 
-                   header.LicensedFeatures?.DataCompression == true && 
-                   (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication || 
+            return supportedFeatures.DataCompression &&
+                   header.LicensedFeatures?.DataCompression == true &&
+                   (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication ||
                     header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription);
         }
 
@@ -2830,8 +2833,6 @@ namespace Raven.Server
             {
                 internal string[] RoutesToSkip = new string[] { };
             }
-
-
         }
     }
 }

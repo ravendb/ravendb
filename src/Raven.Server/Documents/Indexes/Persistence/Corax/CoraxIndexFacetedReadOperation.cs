@@ -49,18 +49,19 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         Dictionary<string, Dictionary<string, FacetValues>> facetsByName = new();
         Dictionary<string, Dictionary<string, FacetValues>> facetsByRange = new();
 
-        var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, query.QueryParameters, _queryBuilderFactories,
-            _fieldMappings, null, null, -1, null);
+        var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, query.QueryParameters, _queryBuilderFactories, _fieldMappings, null, null, -1, null);
         var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out var isBinary);
         var coraxPageSize = CoraxGetPageSize(_indexSearcher, facetQuery.Query.PageSize, query, isBinary);
         var ids = CoraxIndexReadOperation.QueryPool.Rent(coraxPageSize);
+
         using var analyzersScope = new AnalyzersScope(_indexSearcher, _fieldMappings, _index.Definition.HasDynamicFields);
+
         int read = 0;
         while ((read = baseQuery.Fill(ids)) != 0)
         {
             for (int docId = 0; docId < read; docId++)
             {
-                var entryReader = _indexSearcher.GetReaderFor(ids[docId]);
+                var entryReader = _indexSearcher.GetEntryReaderFor(ids[docId]);
                 foreach (var result in results)
                 {
                     token.ThrowIfCancellationRequested();
@@ -333,12 +334,12 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         if (_fieldMappings.TryGetByFieldName(_allocator, name, out var binding))
         {
             // In this case we've to check if field is dynamic also
-            fieldReader = reader.GetReaderFor(binding.FieldId);
+            fieldReader = reader.GetFieldReaderFor(binding.FieldId);
             return;
         }
 
         var slicedFieldName = GetFieldNameAsSlice(name);
-        fieldReader = reader.GetReaderFor(slicedFieldName);
+        fieldReader = reader.GetFieldReaderFor(slicedFieldName);
     }
 
     private void ApplyAggregation(Dictionary<FacetAggregationField, FacetedQueryParser.FacetResult.Aggregation> aggregations, FacetValues values,

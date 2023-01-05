@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
 
@@ -8,9 +9,14 @@ namespace Corax;
 
 public partial class IndexSearcher
 {
-    public MultiTermMatch InQuery(string field, List<string> inTerms, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    /// <summary>
+    /// Test API only
+    /// </summary>
+    public MultiTermMatch InQuery(string field, List<string> inTerms) => InQuery(FieldMetadataBuilder(field), inTerms);
+    
+    public MultiTermMatch InQuery(FieldMetadata binding, List<string> inTerms)
     {
-        var terms = _fieldsTree?.CompactTreeFor(field);
+        var terms = _fieldsTree?.CompactTreeFor(binding.FieldName);
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 
@@ -21,12 +27,12 @@ public partial class IndexSearcher
         {
             var stack = new BinaryMatch[inTerms.Count / 2];
             for (int i = 0; i < inTerms.Count / 2; i++)
-                stack[i] = Or(TermQuery(terms, inTerms[i * 2], fieldId), TermQuery(terms, inTerms[i * 2 + 1], fieldId));
+                stack[i] = Or(TermQuery(binding, inTerms[i * 2], terms), TermQuery(binding, inTerms[i * 2 + 1], terms));
 
             if (inTerms.Count % 2 == 1)
             {
                 // We need even values to make the last work. 
-                stack[^1] = Or(stack[^1], TermQuery(terms, inTerms[^1], fieldId));
+                stack[^1] = Or(stack[^1], TermQuery(binding, inTerms[^1], terms));
             }
 
             int currentTerms = stack.Length;
@@ -47,15 +53,16 @@ public partial class IndexSearcher
             return MultiTermMatch.Create(stack[0]);
         }
 
-        return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, inTerms, fieldId)));
+        return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, binding, inTerms)));
     }
 
+    public IQueryMatch AllInQuery(string field, HashSet<string> allInTerms) => AllInQuery(FieldMetadataBuilder(field), allInTerms);
     //Unlike the In operation, this one requires us to check all entries in a given entry.
     //However, building a query with And can quickly lead to a Stackoverflow Exception.
     //In this case, when we get more conditions, we have to quit building the tree and manually check the entries with UnaryMatch.
-    public IQueryMatch AllInQuery(string field, HashSet<string> allInTerms, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    public IQueryMatch AllInQuery(FieldMetadata field, HashSet<string> allInTerms)
     {
-        var terms = _fieldsTree?.CompactTreeFor(field);
+        var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
 
         if (terms == null)
         {
@@ -71,7 +78,7 @@ public partial class IndexSearcher
         var it = 0;
         foreach (var item in allInTerms)
         {
-            var itemSlice = EncodeAndApplyAnalyzer(item, fieldId);
+            var itemSlice = EncodeAndApplyAnalyzer(field, item);
             var amount = TermAmount(terms, itemSlice);
             if (amount == 0)
             {
@@ -89,15 +96,15 @@ public partial class IndexSearcher
         var stack = new BinaryMatch[allInTermsCount / 2];
         for (int i = 0; i < allInTermsCount / 2; i++)
         {
-            var term1 = TermQuery(terms, list[i * 2].Item.Span, fieldId);
-            var term2 = TermQuery(terms, list[i * 2 + 1].Item.Span, fieldId);
+            var term1 = TermQuery(terms, list[i * 2].Item.Span);
+            var term2 = TermQuery(terms, list[i * 2 + 1].Item.Span);
             stack[i] = And(term1, term2);
         }
 
         if (allInTermsCount % 2 == 1)
         {
             // We need even values to make the last work. 
-            var term = TermQuery(terms, list[^1].Item.Span, fieldId);
+            var term = TermQuery(terms, list[^1].Item.Span);
             stack[^1] = And(stack[^1], term);
         }
 
@@ -127,13 +134,13 @@ public partial class IndexSearcher
 
         //BinarySearch requires sorted array.
         Array.Sort(list, ((item, inItem) => item.Item.Span.SequenceCompareTo(inItem.Item.Span)));
-        return UnaryQuery(stack[0], fieldId, list, UnaryMatchOperation.AllIn, -1);
+        return UnaryQuery(stack[0], field, list, UnaryMatchOperation.AllIn, -1);
     }
 
-    public MultiTermMatch InQuery<TScoreFunction>(string field, List<string> inTerms, TScoreFunction scoreFunction, int fieldId = Constants.IndexSearcher.NonAnalyzer)
+    public MultiTermMatch InQuery<TScoreFunction>(FieldMetadata binding, List<string> inTerms, TScoreFunction scoreFunction)
         where TScoreFunction : IQueryScoreFunction
     {
-        var terms = _fieldsTree?.CompactTreeFor(field);
+        var terms = _fieldsTree?.CompactTreeFor(binding.FieldName);
         if (terms == null)
         {
             // If either the term or the field does not exist the request will be empty. 
@@ -145,15 +152,15 @@ public partial class IndexSearcher
             var stack = new BinaryMatch[inTerms.Count / 2];
             for (int i = 0; i < inTerms.Count / 2; i++)
             {
-                var term1 = Boost(TermQuery(terms, inTerms[i * 2], fieldId), scoreFunction);
-                var term2 = Boost(TermQuery(terms, inTerms[i * 2 + 1], fieldId), scoreFunction);
+                var term1 = Boost(TermQuery(binding, inTerms[i * 2], terms), scoreFunction);
+                var term2 = Boost(TermQuery(binding, inTerms[i * 2 + 1], terms), scoreFunction);
                 stack[i] = Or(term1, term2);
             }
 
             if (inTerms.Count % 2 == 1)
             {
                 // We need even values to make the last work. 
-                var term = Boost(TermQuery(terms, inTerms[^1], fieldId), scoreFunction);
+                var term = Boost(TermQuery(binding, inTerms[^1], terms), scoreFunction);
                 stack[^1] = Or(stack[^1], term);
             }
 
@@ -177,23 +184,23 @@ public partial class IndexSearcher
 
         return MultiTermMatch.Create(
             MultiTermBoostingMatch<InTermProvider>.Create(
-                this, new InTermProvider(this, field, inTerms, fieldId), scoreFunction));
+                this, new InTermProvider(this, binding, inTerms), scoreFunction));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public AndNotMatch NotInQuery<TInner>(string field, TInner inner, List<string> notInTerms, int fieldId)
+    public AndNotMatch NotInQuery<TInner>(FieldMetadata binding, TInner inner, List<string> notInTerms)
         where TInner : IQueryMatch
     {
-        return AndNot(inner, MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, notInTerms, fieldId))));
+        return AndNot(inner, MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, binding, notInTerms))));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public AndNotMatch NotInQuery<TScoreFunction, TInner>(string field, TInner inner, List<string> notInTerms, int fieldId, TScoreFunction scoreFunction)
+    public AndNotMatch NotInQuery<TScoreFunction, TInner>(FieldMetadata field, TInner inner, List<string> notInTerms, TScoreFunction scoreFunction)
         where TScoreFunction : IQueryScoreFunction
         where TInner : IQueryMatch
     {
         return AndNot(inner, MultiTermMatch.Create(
             MultiTermBoostingMatch<InTermProvider>.Create(
-                this, new InTermProvider(this, field, notInTerms, fieldId), scoreFunction)));
+                this, new InTermProvider(this, field, notInTerms), scoreFunction)));
     }
 }

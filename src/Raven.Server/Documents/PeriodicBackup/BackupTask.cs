@@ -29,6 +29,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using StorageEnvironmentType = Voron.StorageEnvironmentWithType.StorageEnvironmentType;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -682,6 +683,10 @@ namespace Raven.Server.Documents.PeriodicBackup
             long totalUsedSpace = 0;
             foreach (var mountPointUsage in _database.GetMountPointsUsage(includeTempBuffers: false))
             {
+                if(mountPointUsage.Type == nameof(StorageEnvironmentType.Index) &&
+                   _configuration.SnapshotSettings is { ExcludeIndexes: true })
+                    continue;
+
                 totalUsedSpace += mountPointUsage.UsedSpace;
             }
 

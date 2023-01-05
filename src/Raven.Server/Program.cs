@@ -33,7 +33,7 @@ namespace Raven.Server
     public class Program
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Server");
-
+        
         public static unsafe int Main(string[] args)
         {
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();

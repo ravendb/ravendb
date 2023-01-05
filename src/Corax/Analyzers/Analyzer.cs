@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Diagnostics;
 using System.IO;
@@ -6,15 +6,42 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Pipeline;
+using Sparrow.Server;
 
 namespace Corax
 {
     public unsafe class Analyzer : IDisposable
     {
-        public static Analyzer DefaultAnalyzer = Create(default(KeywordTokenizer), default(ExactTransformer));
-        public static Analyzer DefaultLowercaseAnalyzer = Create(default(KeywordTokenizer), default(LowerCaseTransformer));
-        public static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Create();
-        public static readonly ArrayPool<Token> TokensPool = ArrayPool<Token>.Create();
+        public static Analyzer CreateDefaultAnalyzer(ByteStringContext context) => Create(context, default(KeywordTokenizer), default(ExactTransformer));
+        public static Analyzer CreateLowercaseAnalyzer(ByteStringContext context) => Create(context, default(KeywordTokenizer), default(LowerCaseTransformer));
+
+
+        // PERF: This is a hack in order to deal with RavenDB-19597. The ArrayPool creates contention under high requests environments.
+        // There are 2 ways to avoid this contention, one is to avoid using it altogether and the other one is separating the pools from
+        // the actual executing thread. While the correct approach would be to amp-up the usage of shared buffers (which would make) this
+        // hack irrelevant, the complexity it introduces is much greater than what it make sense to be done at the moment. Therefore, 
+        // we are building a quick fix that allow us to avoid the locking convoys and we will defer the real fix to RavenDB-19665. 
+        [ThreadStatic] private static ArrayPool<byte> _bufferPool;
+        [ThreadStatic] private static ArrayPool<Token> _tokensPool;
+
+        public static ArrayPool<byte> BufferPool
+        {
+            get
+            {
+                _bufferPool ??= ArrayPool<byte>.Create();
+                return _bufferPool;
+            }
+        }
+
+        public static ArrayPool<Token> TokensPool
+        {
+            get
+            {
+                _tokensPool ??= ArrayPool<Token>.Create();
+                return _tokensPool;
+            }
+        }
+
         public readonly int DefaultOutputSize;
         public readonly int DefaultTokenSize;
         
@@ -301,7 +328,8 @@ namespace Corax
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Analyzer Create<TTokenizer, TTransform1, TTransform2, TTransform3>(in TTokenizer tokenizer = default(TTokenizer), 
+        public static Analyzer Create<TTokenizer, TTransform1, TTransform2, TTransform3>(ByteStringContext context, 
+                            in TTokenizer tokenizer = default(TTokenizer), 
                             in TTransform1 transform1 = default(TTransform1),
                             in TTransform2 transform2 = default(TTransform2), 
                             in TTransform3 transform3 = default(TTransform3))
@@ -419,23 +447,25 @@ namespace Corax
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Analyzer Create<TTokenizer, TTransform1>(in TTokenizer tokenizer = default(TTokenizer),
+        public static Analyzer Create<TTokenizer, TTransform1>(ByteStringContext context, 
+                            in TTokenizer tokenizer = default(TTokenizer),
                             in TTransform1 transform1 = default(TTransform1))
             where TTokenizer : ITokenizer
             where TTransform1 : ITransformer
         {
-            return Create<TTokenizer, TTransform1, NullTransformer, NullTransformer>(tokenizer, transform1);
+            return Create<TTokenizer, TTransform1, NullTransformer, NullTransformer>(context, tokenizer, transform1);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Analyzer Create<TTokenizer, TTransform1, TTransform2>(in TTokenizer tokenizer = default(TTokenizer),
+        public static Analyzer Create<TTokenizer, TTransform1, TTransform2>(ByteStringContext context,
+                            in TTokenizer tokenizer = default(TTokenizer),
                             in TTransform1 transform1 = default(TTransform1),
                             in TTransform2 transform2 = default(TTransform2))
             where TTokenizer : ITokenizer
             where TTransform1 : ITransformer
             where TTransform2 : ITransformer
         {
-            return Create<TTokenizer, TTransform1, TTransform2, NullTransformer>(tokenizer, transform1, transform2);
+            return Create<TTokenizer, TTransform1, TTransform2, NullTransformer>(context, tokenizer, transform1, transform2);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

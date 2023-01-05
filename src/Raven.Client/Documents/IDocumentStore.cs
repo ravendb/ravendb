@@ -108,7 +108,7 @@ namespace Raven.Client.Documents
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>
-        Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, string database = null);
+        ValueTask<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, string database = null);
 
         /// <summary>
         /// Setup the context for aggressive caching.
@@ -121,7 +121,7 @@ namespace Raven.Client.Documents
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>
-        Task<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
+        ValueTask<IDisposable> AggressivelyCacheForAsync(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
 
         /// <summary>
         /// Setup the context for aggressive caching.
@@ -132,7 +132,7 @@ namespace Raven.Client.Documents
         /// without touching the server.
         /// </remarks>
         IDisposable AggressivelyCache(string database = null);
-        
+
         /// <summary>
         /// Setup the context for aggressive caching.
         /// </summary>
@@ -141,7 +141,7 @@ namespace Raven.Client.Documents
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>
-        Task<IDisposable> AggressivelyCacheAsync(string database = null);
+        ValueTask<IDisposable> AggressivelyCacheAsync(string database = null);
 
         /// <summary>
         /// Setup the context for no aggressive caching

@@ -3,18 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using Tests.Infrastructure;
 using Voron;
-using Voron.Data.Sets;
+using Voron.Data.PostingLists;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.Sets
 {
-    public class SetTests : StorageTest
+    public class PostingListTests : StorageTest
     {
         private readonly List<long> _data;
         private readonly List<long> _random;
 
-        public SetTests(ITestOutputHelper output) : base(output)
+        public PostingListTests(ITestOutputHelper output) : base(output)
         {
             const int Size = 400_000;
             var diff = new[] { 17, 250, 4828, 28, 12, 3 };
@@ -30,9 +30,9 @@ namespace FastTests.Voron.Sets
             _random = _data.OrderBy(x => random.Next()).ToList();
         }
 
-        private List<long> AllValues(Set set)
+        private List<long> AllValues(PostingList postingList)
         {
-            var it = set.Iterate();
+            var it = postingList.Iterate();
             var l = new List<long>();
             if (it.Seek(0) == false)
                 return l;
@@ -49,14 +49,14 @@ namespace FastTests.Voron.Sets
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = wtx.OpenSet("test");
+                var tree = wtx.OpenPostingList("test");
                 tree.Add(5);
                 wtx.Commit();
             }
 
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = rtx.OpenSet("test");
+                var tree = rtx.OpenPostingList("test");
                 var values = AllValues(tree);
                 Assert.Equal(new[] { 5L }, values);
             }
@@ -68,14 +68,14 @@ namespace FastTests.Voron.Sets
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = wtx.OpenSet("test");
+                var tree = wtx.OpenPostingList("test");
                 tree.Add(5L + int.MaxValue);
                 wtx.Commit();
             }
 
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = rtx.OpenSet("test");
+                var tree = rtx.OpenPostingList("test");
                 var values = AllValues(tree);
                 Assert.Equal(new[] { 5L + int.MaxValue }, values);
             }
@@ -87,21 +87,21 @@ namespace FastTests.Voron.Sets
         {
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = wtx.OpenSet("test");
+                var tree = wtx.OpenPostingList("test");
                 tree.Add(5);
                 wtx.Commit();
             }
 
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = wtx.OpenSet("test");
+                var tree = wtx.OpenPostingList("test");
                 tree.Remove(5);
                 wtx.Commit();
             }
 
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = rtx.OpenSet("test");
+                var tree = rtx.OpenPostingList("test");
                 Assert.Empty(AllValues(tree));
             }
         }
@@ -113,7 +113,7 @@ namespace FastTests.Voron.Sets
 
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = wtx.OpenSet("test");
+                var tree = wtx.OpenPostingList("test");
 
                 Span<long> buffer = stackalloc long[16];
 
@@ -143,7 +143,7 @@ namespace FastTests.Voron.Sets
 
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = rtx.OpenSet("test");
+                var tree = rtx.OpenPostingList("test");
                 var it = tree.DumpAllValues();
                 
                 foreach( long item in valuesInSet)
@@ -157,7 +157,7 @@ namespace FastTests.Voron.Sets
             int count = 3213 * 2;
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = wtx.OpenSet("test");
+                var tree = wtx.OpenPostingList("test");
                 foreach (long i in _random.Take(count))
                 {
                     tree.Add(i);
@@ -168,7 +168,7 @@ namespace FastTests.Voron.Sets
 
             using (var wtx = Env.WriteTransaction())
             {
-                var tree = wtx.OpenSet("test");
+                var tree = wtx.OpenPostingList("test");
                 foreach (long i in _random.Take(count))
                 {
                     tree.Remove(i);
@@ -179,7 +179,7 @@ namespace FastTests.Voron.Sets
 
             using (var rtx = Env.ReadTransaction())
             {
-                var tree = rtx.OpenSet("test");
+                var tree = rtx.OpenPostingList("test");
                 Assert.Empty(AllValues(tree));
                 Assert.Equal(0, tree.State.BranchPages);
                 Assert.Equal(1, tree.State.LeafPages);
@@ -214,7 +214,7 @@ namespace FastTests.Voron.Sets
             {
                 using (var wtx = Env.WriteTransaction())
                 {
-                    var set = wtx.OpenSet($"Set({name})");
+                    var set = wtx.OpenPostingList($"Set({name})");
                     for (int i = 0; i < size; i++)
                     {
                         var rname = (int)(uint)random.Next();
@@ -226,9 +226,14 @@ namespace FastTests.Voron.Sets
                         }
                     }
 
-                    Assert.Equal(inTreeKeys.Count, set.State.NumberOfEntries);
 
                     wtx.Commit();
+                }
+                
+                using (var rtx = Env.ReadTransaction())
+                {
+                    var set = rtx.OpenPostingList($"Set({name})");
+                    Assert.Equal(inTreeKeys.Count, set.State.NumberOfEntries);
                 }
 
                 var values = inTreeKeys.ToArray();
@@ -236,14 +241,12 @@ namespace FastTests.Voron.Sets
 
                 using (var wtx = Env.WriteTransaction())
                 {
-                    var set = wtx.OpenSet($"Set({name})");
+                    var set = wtx.OpenPostingList($"Set({name})");
                     for (int i = 0; i < size / 2; i++)
                     {
                         set.Remove(values[i]);
                         inTreeKeys.Remove(values[i]);
                         removedKeys.Add(values[i]);
-
-                        Assert.Equal(inTreeKeys.Count, set.State.NumberOfEntries);
                     }
 
                     wtx.Commit();
@@ -252,7 +255,7 @@ namespace FastTests.Voron.Sets
                 using (var rtx = Env.ReadTransaction())
                 {
                     var matches = new long[size * 4];
-                    var set = rtx.OpenSet($"Set({name})");
+                    var set = rtx.OpenPostingList($"Set({name})");
                     set.Iterate().Fill(matches, out int read);
                     Assert.Equal(inTreeKeys.Count, read);
                     for (int i = 0; i < read; i++)

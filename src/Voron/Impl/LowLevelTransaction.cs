@@ -500,6 +500,8 @@ namespace Voron.Impl
             return _freedPages;
         }
 
+        public bool IsDirtyPage(long p) => _dirtyPages.Contains(p);
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Page ModifyPage(long num)
         {

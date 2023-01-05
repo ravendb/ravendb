@@ -602,7 +602,7 @@ namespace Raven.Server.Documents.Queries.Results
         private static unsafe bool TryGetValueFromCoraxIndex(JsonOperationContext context, string fieldName, int fieldId, ref RetrieverInput retrieverInput, out object value)
         {
             var fieldReader = fieldId == Corax.Constants.IndexWriter.DynamicField 
-                ? retrieverInput.CoraxEntry.GetReaderFor(Encodings.Utf8.GetBytes(fieldName)) : retrieverInput.CoraxEntry.GetReaderFor(fieldId);
+                ? retrieverInput.CoraxEntry.GetFieldReaderFor(Encodings.Utf8.GetBytes(fieldName)) : retrieverInput.CoraxEntry.GetFieldReaderFor(fieldId);
             var fieldType = fieldReader.Type;
             value = null;
             switch (fieldType)

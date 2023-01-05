@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
 using Sparrow.Server;
@@ -13,16 +14,15 @@ namespace Corax;
 
 public partial class IndexSearcher
 {
-    public IQueryMatch SearchQuery(string field, string searchTerm, Constants.Search.Operator @operator, bool isNegated, int analyzerId)
+    public IQueryMatch SearchQuery(FieldMetadata field, string searchTerm, Constants.Search.Operator @operator, bool isNegated)
     {
-        return SearchQuery<NullScoreFunction>(field, searchTerm, default, @operator, analyzerId, isNegated);
+        return SearchQuery<NullScoreFunction>(field, searchTerm, default, @operator, isNegated);
     }
 
-    public IQueryMatch SearchQuery<TScoreFunction>(string field, string searchTerm, TScoreFunction scoreFunction, Constants.Search.Operator @operator, int analyzerId,
-        bool isNegated = false, bool manuallyCutWildcards = false)
+    public IQueryMatch SearchQuery<TScoreFunction>(FieldMetadata field, string searchTerm, TScoreFunction scoreFunction, Constants.Search.Operator @operator, bool isNegated = false, bool manuallyCutWildcards = false)
         where TScoreFunction : IQueryScoreFunction
     {
-        bool isDynamic = analyzerId == Constants.IndexWriter.DynamicField;
+        bool isDynamic = field.FieldId == Constants.IndexWriter.DynamicField;
         ReadOnlySpan<byte> term = Encoding.UTF8.GetBytes(searchTerm).AsSpan();
         if (isNegated)
         {
@@ -34,16 +34,16 @@ public partial class IndexSearcher
             };
         }
 
-        if ((_fieldMapping.TryGetByFieldId(analyzerId, out var indexFieldBinding) == false || indexFieldBinding.Analyzer is null) && isDynamic == false)
+        if (field.Analyzer == null && isDynamic == false)
         {
             throw new InvalidOperationException($"{nameof(SearchQuery)} requires analyzer.");
         }
 
         var searchAnalyzer = isDynamic 
-            ? _fieldMapping.SearchAnalyzer(field) 
-            : indexFieldBinding?.Analyzer;
+            ? _fieldMapping.SearchAnalyzer(field.FieldName.ToString()) 
+            : field.Analyzer;
         
-        var wildcardAnalyzer = Analyzer.Create<WhitespaceTokenizer, ExactTransformer>();
+        var wildcardAnalyzer = Analyzer.Create<WhitespaceTokenizer, ExactTransformer>(this.Allocator);
 
         searchAnalyzer.GetOutputBuffersSize(term.Length, out var outputSize, out var tokenSize);
         wildcardAnalyzer.GetOutputBuffersSize(term.Length, out var wildcardSize, out var wildcardTokenSize);
@@ -61,7 +61,6 @@ public partial class IndexSearcher
 
 
         wildcardAnalyzer.Execute(term, ref encodedWildcard, ref tokensWildcard);
-        using var _ = Slice.From(Allocator, field, ByteStringType.Immutable, out var fieldName);
         IQueryMatch match = null;
         foreach (var tokenWildcard in tokensWildcard)
         {
@@ -96,8 +95,8 @@ public partial class IndexSearcher
 
                 (int startIncrement, int lengthIncrement) = mode switch
                 {
-                    Constants.Search.SearchMatchOptions.StartsWith => (1,-1),
-                    Constants.Search.SearchMatchOptions.EndsWith => (0,-1),
+                    Constants.Search.SearchMatchOptions.StartsWith => (0,-1),
+                    Constants.Search.SearchMatchOptions.EndsWith => (1,0),
                     Constants.Search.SearchMatchOptions.Contains => (1,-3),
                     Constants.Search.SearchMatchOptions.TermMatch => (0,0),
                     _ => throw new InvalidExpressionException("Unknown flag inside Search match.")
@@ -126,7 +125,7 @@ public partial class IndexSearcher
             {
                 case Constants.Search.SearchMatchOptions.TermMatch:
                     IQueryMatch exactMatch = isNegated
-                        ? UnaryQuery(AllEntries(), analyzerId, encodedString, UnaryMatchOperation.NotEquals)
+                        ? UnaryQuery(AllEntries(), field, encodedString, UnaryMatchOperation.NotEquals)
                         : TermQuery(field, encodedString);
 
                     if (match is null)
@@ -142,35 +141,35 @@ public partial class IndexSearcher
                 case Constants.Search.SearchMatchOptions.StartsWith:
                     if (match is null)
                     {
-                        match = StartWithQuery(fieldName, encodedString, isNegated);
+                        match = StartWithQuery(field, encodedString, isNegated);
                         return;
                     }
 
                     match = @operator is Constants.Search.Operator.Or
-                        ? Or(match, StartWithQuery(fieldName, encodedString, isNegated))
-                        : And(match, StartWithQuery(fieldName, encodedString, isNegated));
+                        ? Or(match, StartWithQuery(field, encodedString, isNegated))
+                        : And(match, StartWithQuery(field, encodedString, isNegated));
                     break;
                 case Constants.Search.SearchMatchOptions.EndsWith:
                     if (match is null)
                     {
-                        match = EndsWithQuery(fieldName, encodedString, isNegated);
+                        match = EndsWithQuery(field, encodedString, isNegated);
                         return;
                     }
 
                     match = @operator is Constants.Search.Operator.Or
-                        ? Or(match, EndsWithQuery(fieldName, encodedString, isNegated))
-                        : And(match, EndsWithQuery(fieldName, encodedString, isNegated));
+                        ? Or(match, EndsWithQuery(field, encodedString, isNegated))
+                        : And(match, EndsWithQuery(field, encodedString, isNegated));
                     break;
                 case Constants.Search.SearchMatchOptions.Contains:
                     if (match is null)
                     {
-                        match = ContainsQuery(fieldName, encodedString, isNegated);
+                        match = ContainsQuery(field, encodedString, isNegated);
                         return;
                     }
 
                     match = @operator is Constants.Search.Operator.Or
-                        ? Or(match, ContainsQuery(fieldName, encodedString, isNegated))
-                        : And(match, ContainsQuery(fieldName, encodedString, isNegated));
+                        ? Or(match, ContainsQuery(field, encodedString, isNegated))
+                        : And(match, ContainsQuery(field, encodedString, isNegated));
                     break;
                 default:
                     throw new InvalidExpressionException("Unknown flag inside Search match.");

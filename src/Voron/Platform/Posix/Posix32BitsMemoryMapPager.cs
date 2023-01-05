@@ -374,7 +374,7 @@ namespace Voron.Platform.Posix
                     Syscall.munmap(addr.Address, (UIntPtr)addr.Size);
                     NativeMemory.UnregisterFileMapping(addr.File, addr.Address, addr.Size);
 
-                    if (set.Count == 0)
+                    if (set.IsEmpty)
                     {
                         _globalMapping.TryRemove(addr.StartPage, out set);
                     }

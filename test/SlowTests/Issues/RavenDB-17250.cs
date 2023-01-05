@@ -198,9 +198,12 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
             using var session = store.OpenSession();
             var date = default(DateOnly).AddDays(500);
             var time = default(TimeOnly);
-            var resultRawQuery = session.Query<DateAndTimeOnly>().Where(p => p.DateOnly >= date && p.TimeOnly > time);
+            var resultRawQuery = session
+                .Query<DateAndTimeOnly>()
+                .Customize(i => i.WaitForNonStaleResults())
+                .Where(p => p.DateOnly >= date && p.TimeOnly > time);
             var result = resultRawQuery.ToList();
-            WaitForUserToContinueTheTest(store);
+            //WaitForUserToContinueTheTest(store);
             Assert.Equal(500, result.Count);
             var definitions = store.Maintenance.Send(new GetIndexesOperation(0, 1));
             foreach (var indexDefinition in definitions)

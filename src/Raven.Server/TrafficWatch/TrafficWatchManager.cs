@@ -8,7 +8,7 @@ namespace Raven.Server.TrafficWatch
     {
         private static readonly ConcurrentSet<TrafficWatchConnection> ServerHttpTrace = new();
         
-        public static bool HasRegisteredClients => ServerHttpTrace.Count != 0 || TrafficWatchToLog.Instance.LogToFile ;
+        public static bool HasRegisteredClients => ServerHttpTrace.IsEmpty == false || TrafficWatchToLog.Instance.LogToFile ;
 
         public static void AddConnection(TrafficWatchConnection connection)
         {

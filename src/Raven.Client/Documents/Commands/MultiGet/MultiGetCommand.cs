@@ -130,8 +130,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
             for (int i = 0; i < _commands.Count; i++)
             {
                 var command = _commands[i];
-                
-                if(command.Headers.ContainsKey(Constants.Headers.IfNoneMatch))
+
+                if (command.Headers.ContainsKey(Constants.Headers.IfNoneMatch))
                     continue; // command already explicitly handling setting this, let's not touch it.
 
                 var cacheKey = GetCacheKey(command, out _);
@@ -180,41 +180,41 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
-                var state = new JsonParserState();
-                using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
+            var state = new JsonParserState();
+            using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
             using (context.GetMemoryBuffer(out var buffer))
-                using (var peepingTomStream = new PeepingTomStream(stream, context))
+            using (var peepingTomStream = new PeepingTomStream(stream, context))
             using (_cached)
-                {
-                    if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
-                        ThrowInvalidJsonResponse(peepingTomStream);
+            {
+                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                    ThrowInvalidJsonResponse(peepingTomStream);
 
-                    if (state.CurrentTokenType != JsonParserToken.StartObject)
-                        ThrowInvalidJsonResponse(peepingTomStream);
+                if (state.CurrentTokenType != JsonParserToken.StartObject)
+                    ThrowInvalidJsonResponse(peepingTomStream);
 
-                    var property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
-                    if (property != nameof(BlittableArrayResult.Results))
-                        ThrowInvalidJsonResponse(peepingTomStream);
+                var property = UnmanagedJsonParserHelper.ReadString(context, peepingTomStream, parser, state, buffer);
+                if (property != nameof(BlittableArrayResult.Results))
+                    ThrowInvalidJsonResponse(peepingTomStream);
 
-                    var i = 0;
+                var i = 0;
                 Result = new List<GetResponse>(_commands.Count);
-                    foreach (var getResponse in ReadResponses(context, peepingTomStream, parser, state, buffer))
-                    {
-                        var command = _commands[i];
+                foreach (var getResponse in ReadResponses(context, peepingTomStream, parser, state, buffer))
+                {
+                    var command = _commands[i];
 
-                        MaybeSetCache(getResponse, command, i);
+                    MaybeSetCache(getResponse, command, i);
                     Result.Add(_cached != null && getResponse.StatusCode == HttpStatusCode.NotModified ? new GetResponse { Result = _cached.Values[i].Cached?.Clone(context), StatusCode = HttpStatusCode.NotModified } : getResponse);
 
-                        i++;
-                    }
-
-                    if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
-                        ThrowInvalidJsonResponse(peepingTomStream);
-
-                    if (state.CurrentTokenType != JsonParserToken.EndObject)
-                        ThrowInvalidJsonResponse(peepingTomStream);
+                    i++;
                 }
+
+                if (UnmanagedJsonParserHelper.Read(peepingTomStream, parser, state, buffer) == false)
+                    ThrowInvalidJsonResponse(peepingTomStream);
+
+                if (state.CurrentTokenType != JsonParserToken.EndObject)
+                    ThrowInvalidJsonResponse(peepingTomStream);
             }
+        }
 
         private static IEnumerable<GetResponse> ReadResponses(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
         {
@@ -348,7 +348,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             if (_cached != null)
             {
                 _cached.Dispose();
-            _cached = null;
+                _cached = null;
 
                 // The client sends the commands.
                 // Some of which could be saved in cache with a response 
@@ -359,8 +359,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 foreach (var command in _commands)
                 {
                     command.Headers.Remove(Constants.Headers.IfNoneMatch);
-        }
-            } 
+                }
+            }
         }
 
         private class Cached : IDisposable
@@ -381,7 +381,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 for (int i = 0; i < _size; i++)
                 {
                     Values[i].Release.Dispose();
-}
+                }
                 ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Return(Values);
                 Values = null;
             }

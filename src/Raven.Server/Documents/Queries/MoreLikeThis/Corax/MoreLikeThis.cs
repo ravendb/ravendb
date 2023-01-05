@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Corax;
+using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Queries;
 using Lucene.Net.Support;
@@ -11,6 +12,8 @@ using Lucene.Net.Util;
 using Raven.Client.Exceptions.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Sparrow.Json;
+using Sparrow.Server;
+using Voron;
 using CoraxProj = global::Corax;
 
 /*
@@ -35,16 +38,17 @@ using CoraxProj = global::Corax;
 
 namespace Raven.Server.Documents.Queries.MoreLikeThis.Corax;
 
-internal class RavenMoreLikeThis : MoreLikeThisBase
+internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
 {
     private readonly CoraxQueryBuilder.Parameters _builderParameters;
     private readonly Analyzer _analyzer;
-
+    private readonly AnalyzersScope _analyzersScope;
 
     public RavenMoreLikeThis(CoraxQueryBuilder.Parameters builderParameters, Analyzer analyzer = null)
     {
-        _analyzer = analyzer ?? Analyzer.DefaultAnalyzer;
+        _analyzer = analyzer ?? Analyzer.CreateDefaultAnalyzer(builderParameters.Allocator);
         _builderParameters = builderParameters;
+        _analyzersScope = new(builderParameters.IndexSearcher, builderParameters.IndexFieldsMapping, builderParameters.HasDynamics);
     }
 
     protected override PriorityQueue<object[]> CreateQueue(IDictionary<string, Int> words)
@@ -67,8 +71,8 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
 
             foreach (var fieldName in _fieldNames)
             {
-                var fieldId = QueryBuilderHelper.GetFieldId(_builderParameters.Allocator, fieldName, _builderParameters.Index, _builderParameters.IndexFieldsMapping, _builderParameters.FieldsToFetch, _builderParameters.HasDynamics, _builderParameters.DynamicFields);
-                var freq = indexSearcher.TermAmount(fieldName, word, fieldId);
+                var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(_builderParameters.Allocator, fieldName, _builderParameters.Index, _builderParameters.IndexFieldsMapping, _builderParameters.FieldsToFetch, _builderParameters.HasDynamics, _builderParameters.DynamicFields);
+                var freq = indexSearcher.TermAmount(fieldMetadata, word);
                 topField = freq > docFreq ? fieldName : topField;
                 docFreq = freq > docFreq ? freq : docFreq;
             }
@@ -105,18 +109,14 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
     {
         //We dont have any streaming option for analyzing in Corax so we've to read all
         var termOriginal = Encoding.UTF8.GetBytes(r.ReadToEnd());
+
+        using var _ = Slice.From(this._builderParameters.Allocator, fieldName, ByteStringType.Immutable, out var fieldNameSlice);
+        using var __ = _analyzersScope.Execute(_analyzer, termOriginal, out var outputBuffer, out var outputTokens);
+
         var tokenCount = 0;
-        _analyzer.GetOutputBuffersSize(termOriginal.Length, out int outputSize, out int tokenSize);
-        var bufferHandler = Analyzer.BufferPool.Rent(outputSize);
-        var tokensHandler = Analyzer.TokensPool.Rent(tokenSize);
-
-        var buffer = bufferHandler.AsSpan();
-        var tokens = tokensHandler.AsSpan();
-        _analyzer.Execute(termOriginal, ref buffer, ref tokens);
-
-        foreach (var token in tokens)
+        foreach (var token in outputTokens)
         {
-            var word = Encoding.UTF8.GetString(buffer.Slice(token.Offset, (int)token.Length));
+            var word = Encoding.UTF8.GetString(outputBuffer.Slice(token.Offset, (int)token.Length));
             tokenCount++;
 
             if (tokenCount > _maxNumTokensParsed)
@@ -140,43 +140,35 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
                 cnt.X++;
             }
         }
-
-        Analyzer.BufferPool.Return(bufferHandler);
-        Analyzer.TokensPool.Return(tokensHandler);
     }
 
     /// <summary> Adds term frequencies found by tokenizing text from reader into the Map words</summary>
     protected void AddTermFrequencies(ref IndexEntryReader entryReader, IDictionary<string, Int> termFreqMap, string fieldName)
     {
-        if (_builderParameters.IndexFieldsMapping.TryGetByFieldName(_builderParameters.Allocator, fieldName, out var binding) == false || binding.FieldIndexingMode is FieldIndexingMode.No)
-        {
-            //We don't have such data in index so nothing to do
-            return;
-        }
-
-        var analyzer = binding.Analyzer;
-
-        byte[] buffer = Array.Empty<byte>();
-        Token[] tokens = Array.Empty<Token>();
-        var fieldType = entryReader.GetFieldType(binding.FieldId, out _); // var type, out Span<byte> sourceTerm) == false)
+        var field = _builderParameters.IndexSearcher.GetWriterFieldMetadata(fieldName);
+        var fieldReader = entryReader.GetFieldReaderFor(field);
+        var fieldType = fieldReader.Type;
         switch (fieldType)
         {
             case IndexEntryFieldType.Empty:
             case IndexEntryFieldType.Null:
-                var termValue = fieldType == IndexEntryFieldType.Null ? CoraxProj.Constants.NullValueSlice : CoraxProj.Constants.EmptyStringSlice;
-                InsertTerm(termValue.AsReadOnlySpan());
+                var termValue = fieldType == IndexEntryFieldType.Null 
+                    ? CoraxProj.Constants.NullValueSlice 
+                    : CoraxProj.Constants.EmptyStringSlice;
+                
+                InsertTerm(termValue.AsReadOnlySpan(), exactInsert: true);
                 break;
 
             case IndexEntryFieldType.TupleListWithNulls:
             case IndexEntryFieldType.TupleList:
-                if (entryReader.GetReaderFor(binding.FieldId).TryReadMany(out var iterator) == false)
+                if (fieldReader.TryReadMany(out var iterator) == false)
                     break;
 
                 while (iterator.ReadNext())
                 {
                     if (iterator.IsNull)
                     {
-                        InsertTerm(CoraxProj.Constants.NullValueSlice);
+                        InsertTerm(CoraxProj.Constants.NullValueSlice, exactInsert: true);
                     }
                     else if (iterator.IsEmptyString)
                     {
@@ -184,43 +176,43 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
                     }
                     else
                     {
-                        InsertTerm(iterator.Sequence);
+                        InsertTerm(iterator.Sequence, exactInsert: true);
                     }
                 }
 
                 break;
 
             case IndexEntryFieldType.Tuple:
-                if (entryReader.Read(binding.FieldId, out _, out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
+                if (fieldReader.TryReadTuple(out long lVal, out double dVal, out Span<byte> valueInEntry) == false)
                     break;
 
                 InsertTerm(valueInEntry);
                 break;
 
             case IndexEntryFieldType.SpatialPointList:
-                if (entryReader.GetReaderFor(binding.FieldId).TryReadManySpatialPoint(out var spatialIterator) == false)
+                if (fieldReader.TryReadManySpatialPoint(out var spatialIterator) == false)
                     break;
 
                 while (spatialIterator.ReadNext())
                 {
                     for (int i = 1; i <= spatialIterator.Geohash.Length; ++i)
-                        InsertTerm(spatialIterator.Geohash.Slice(0, i));
+                        InsertTerm(spatialIterator.Geohash.Slice(0, i), exactInsert: true);
                 }
 
                 break;
 
             case IndexEntryFieldType.SpatialPoint:
-                if (entryReader.GetReaderFor(binding.FieldId).Read(out valueInEntry) == false)
+                if (fieldReader.Read(out valueInEntry) == false)
                     break;
 
                 for (int i = 1; i <= valueInEntry.Length; ++i)
-                    InsertTerm(valueInEntry.Slice(0, i));
+                    InsertTerm(valueInEntry.Slice(0, i), exactInsert: true);
 
                 break;
 
             case IndexEntryFieldType.ListWithNulls:
             case IndexEntryFieldType.List:
-                if (entryReader.GetReaderFor(binding.FieldId).TryReadMany(out iterator) == false)
+                if (fieldReader.TryReadMany(out iterator) == false)
                     break;
 
                 while (iterator.ReadNext())
@@ -229,8 +221,10 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
 
                     if (iterator.IsEmptyCollection || iterator.IsNull)
                     {
-                        var fieldValue = iterator.IsNull ? CoraxProj.Constants.NullValueSlice : CoraxProj.Constants.EmptyStringSlice;
-                        InsertTerm(fieldValue.AsReadOnlySpan());
+                        var fieldValue = iterator.IsNull 
+                            ? CoraxProj.Constants.NullValueSlice 
+                            : CoraxProj.Constants.EmptyStringSlice;
+                        InsertTerm(fieldValue.AsReadOnlySpan(), exactInsert: true);
                     }
                     else
                     {
@@ -244,22 +238,17 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
             case IndexEntryFieldType.Invalid:
                 break;
             default:
-                if (entryReader.GetReaderFor(binding.FieldId).Read(out var value) == false)
+                if (fieldReader.Read(out var value) == false)
                     break;
 
                 InsertTerm(value);
                 break;
         }
 
-        Analyzer.BufferPool.Return(buffer);
-        Analyzer.TokensPool.Return(tokens);
-
-        void InsertTerm(ReadOnlySpan<byte> termToAdd)
+        
+        void InsertTerm(ReadOnlySpan<byte> termToAdd, bool exactInsert = false)
         {
-            UnlikelyGrowBuffer(termToAdd);
-            var bufferSpan = buffer.AsSpan();
-            var tokensSpan = tokens.AsSpan();
-            analyzer.Execute(termToAdd, ref bufferSpan, ref tokensSpan);
+            using var _ = _analyzersScope.Execute(field, termToAdd, out var bufferSpan, out var tokensSpan, exactInsert);
             for (int index = 0; index < tokensSpan.Length; index++)
             {
                 Token token = tokensSpan[index];
@@ -276,24 +265,6 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
                     termFreqMap[termAsString] = new();
                 else
                     counter.X++;
-            }
-        }
-
-        void UnlikelyGrowBuffer(ReadOnlySpan<byte> input)
-        {
-            analyzer.GetOutputBuffersSize(input.Length, out var outputSize, out int tokenSize);
-            if (tokenSize > tokens.Length)
-            {
-                Analyzer.TokensPool.Return(tokens);
-                tokens = null;
-                tokens = Analyzer.TokensPool.Rent(tokenSize);
-            }
-
-            if (outputSize > buffer.Length)
-            {
-                Analyzer.BufferPool.Return(buffer);
-                buffer = null;
-                buffer = Analyzer.BufferPool.Rent(outputSize);
             }
         }
     }
@@ -331,7 +302,11 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
                 throw new NotSupportedInCoraxException("Boosting inside MoreLikeThis is not supported yet.");
             }
 
-            query = query is null ? indexSearcher.TermQuery(fieldName, term) : indexSearcher.Or(query, indexSearcher.TermQuery(fieldName, term));
+            var fieldMetadata = indexSearcher.GetFieldMetadata(fieldName);
+            query = query is null 
+                ? indexSearcher.TermQuery(fieldMetadata, term) 
+                : indexSearcher.Or(query, indexSearcher.TermQuery(fieldMetadata, term));
+            
             qterms++;
 
             if (_maxQueryTerms > 0 && qterms >= _maxQueryTerms)
@@ -359,7 +334,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
     {
         var indexSearcher = _builderParameters.IndexSearcher;
         IDictionary<string, Int> termFreqMap = new HashMap<string, Int>();
-        var indexEntry = indexSearcher.GetReaderFor(documentId);
+        var indexEntry = indexSearcher.GetEntryReaderFor(documentId);
 
         for (var i = 0; i < _fieldNames.Length; i++)
         {
@@ -368,5 +343,10 @@ internal class RavenMoreLikeThis : MoreLikeThisBase
         }
 
         return CreateQueue(termFreqMap);
+    }
+
+    public void Dispose()
+    {
+        _analyzersScope?.Dispose();
     }
 }

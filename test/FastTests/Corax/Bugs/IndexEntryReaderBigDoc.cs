@@ -53,12 +53,12 @@ public class IndexEntryReaderBigDoc : NoDisposalNeeded
 
         indexEntryWriter.Finish(out var output);
 
-        new IndexEntryReader(output.Ptr, output.Length).GetReaderFor(0).Read(out var id);
+        new IndexEntryReader(output.Ptr, output.Length).GetFieldReaderFor(0).Read(out var id);
     }
     
     private static JArray  ReadDocFromResource(string file)
     {
-        var reader = new StreamReader(typeof(SetAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file));
+        var reader = new StreamReader(typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + file));
         return JArray.Parse(reader.ReadToEnd());
     }
 }

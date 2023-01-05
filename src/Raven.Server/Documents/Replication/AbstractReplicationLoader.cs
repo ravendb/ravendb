@@ -31,11 +31,15 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Replication
 {
-    public abstract class AbstractReplicationLoader : IDisposable
+    public abstract class AbstractReplicationLoader<TContextPool, TOperationContext> : IDisposable 
+        where TContextPool : JsonContextPoolBase<TOperationContext>
+        where TOperationContext : JsonOperationContext
     {
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
         private int _replicationStatsId;
         private readonly string _databaseName;
+        public readonly TContextPool ContextPool;
+        public readonly CancellationToken Token;
 
         internal readonly ServerStore _server;
 
@@ -52,11 +56,31 @@ namespace Raven.Server.Documents.Replication
         public string DatabaseName => _databaseName;
         public ServerStore Server => _server;
 
-        protected AbstractReplicationLoader(ServerStore serverStore, string databaseName)
+        protected AbstractReplicationLoader(ServerStore serverStore, string databaseName, TContextPool contextPool, CancellationToken token)
         {
             _databaseName = databaseName;
+            ContextPool = contextPool;
+            Token = token;
             _server = serverStore;
             _logger = LoggingSource.Instance.GetLogger(GetType().FullName, databaseName);
+        }
+        
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        public class TestingStuff
+        {
+            public Action<DatabaseOutgoingReplicationHandler> OnOutgoingReplicationStart;
+            public Action<Exception> OnIncomingReplicationHandlerFailure;
+            public Action OnIncomingReplicationHandlerStart;
+            public Action BeforeDisposingIncomingReplicationHandlers;
         }
 
         public int GetNextReplicationStatsId() => Interlocked.Increment(ref _replicationStatsId);

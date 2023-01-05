@@ -333,7 +333,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
 
     public bool IsSubscriptionActive()
     {
-        return _connections.Count != 0;
+        return _connections.IsEmpty == false;
     }
 
     public Task<bool> WaitForSubscriptionActiveLock(int millisecondsTimeout)
@@ -402,7 +402,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
     private bool TryRegisterFirstConnection(TSubscriptionConnection incomingConnection)
     {
         var current = _connections;
-        if (current.Count == 0)
+        if (current.IsEmpty)
         {
             var firstConnection = new ConcurrentSet<TSubscriptionConnection> {incomingConnection};
             return Interlocked.CompareExchange(ref _connections, firstConnection, current) == current;
@@ -466,7 +466,7 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
 
         try
         {
-            if (_connections.Count != 0)
+            if (_connections.IsEmpty == false)
                 throw new TimeoutException();
 
             if (TryAddConnection(incomingConnection) == false)
