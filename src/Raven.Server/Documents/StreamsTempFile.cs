@@ -186,9 +186,17 @@ namespace Raven.Server.Documents
                 });
             }
 
-            public LimitedStream CreateDisposableReaderStream()
+            public LimitedStream CreateDisposableReaderStream(IDisposable onDisposable)
             {
-                var disposableAction = CreateReaderStream(out var stream);
+                var streamDispose = CreateReaderStream(out var stream);
+                var disposableAction = new DisposableAction(() =>
+                {
+                    using (onDisposable)
+                    using (streamDispose)
+                    {
+                        
+                    }
+                });
                 stream._disposable = disposableAction;
                 return stream;
             }

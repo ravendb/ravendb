@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.SampleData
             var operationId = RequestHandler.DatabaseContext.Operations.GetNextOperationId();
             var record = RequestHandler.DatabaseContext.DatabaseRecord;
             
-            using (var source = new OrchestratorStreamSource(sampleDataStream, context, RequestHandler.DatabaseName))
+            using (var source = new OrchestratorStreamSource(sampleDataStream, context, RequestHandler.DatabaseName, RequestHandler.DatabaseContext.ShardCount))
             {
                 var smuggler = new ShardedDatabaseSmuggler(
                     source,
