@@ -6,7 +6,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -20,13 +19,26 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (loh)
                 GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
 
-            var memoryBefore = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
-            var startTime = DateTime.UtcNow;
-
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
 
-            var actionTime = DateTime.UtcNow - startTime;
-            var memoryAfter = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
+            var gcMemoryInfo = GC.GetGCMemoryInfo(GCKind.Any);
+
+            long memoryBefore = 0;
+            long memoryAfter = 0;
+            long durationInMs = 0;
+
+            for (int index = 0; index < gcMemoryInfo.GenerationInfo.Length; index++)
+            {
+                var info = gcMemoryInfo.GenerationInfo[index];
+                memoryBefore += info.SizeBeforeBytes;
+                memoryAfter += info.SizeAfterBytes;
+            }
+
+            for (int index = 0; index < gcMemoryInfo.PauseDurations.Length; index++)
+            {
+                var duration = gcMemoryInfo.PauseDurations[index];
+                durationInMs += duration.Milliseconds;
+            }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -45,8 +57,20 @@ namespace Raven.Server.Documents.Handlers.Admin
                 writer.WriteString(new Size(memoryBefore - memoryAfter, SizeUnit.Bytes).ToString());
                 writer.WriteComma();
 
-                writer.WritePropertyName("OperationTimeInSeconds");
-                writer.WriteDouble(actionTime.TotalSeconds);
+                writer.WritePropertyName("DurationInMs");
+                writer.WriteDouble(durationInMs);
+                writer.WriteComma();
+
+                writer.WritePropertyName("PinnedObjectsCount");
+                writer.WriteInteger(gcMemoryInfo.PinnedObjectsCount);
+                writer.WriteComma();
+
+                writer.WritePropertyName("FinalizationPendingCount");
+                writer.WriteInteger(gcMemoryInfo.FinalizationPendingCount);
+                writer.WriteComma();
+
+                writer.WritePropertyName("PauseTimePercentage");
+                writer.WriteString($"{gcMemoryInfo.PauseTimePercentage}%");
 
                 writer.WriteEndObject();
             }
