@@ -30,6 +30,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private Page _lastPage = default;
     private long? _numberOfEntries;
+    private long? _numberOfTermsInIndex;
 
     /// <summary>
     /// When true no SIMD instruction will be used. Useful for checking that optimized algorithms behave in the same
@@ -41,7 +42,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
 
-    public ByteStringContext Allocator => _transaction.Allocator;
+    public long NumberOfTermsInIndex => _numberOfTermsInIndex ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfTermsInIndex) ?? 0;
+
+    internal ByteStringContext Allocator => _transaction.Allocator;
 
     internal Transaction Transaction => _transaction;
 
@@ -249,7 +252,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new AllEntriesMatch(this, _transaction);
     }
 
-    public TermMatch EmptySet() => TermMatch.CreateEmpty(Allocator);
+    public TermMatch EmptyMatch() => TermMatch.CreateEmpty(this, Allocator);
 
     public long GetEntriesAmountInField(FieldMetadata field)
     {

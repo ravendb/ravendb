@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
+using Corax.Utils;
 using Sparrow;
 using Sparrow.Server;
 using Size = Voron.Global.Constants.Size;
@@ -77,7 +78,7 @@ namespace Corax.Queries
                 bufferSize = 4 * Size.Kilobyte;
             }
 
-            _bufferHandler = searcher.Allocator.Allocate(bufferSize * sizeof(long), out buffer);
+            _bufferHandler = searcher.Allocator.Allocate(bufferSize * sizeof(long) + bufferSize, out buffer);
             _bufferSize = bufferSize;
             _buffer = (long*)buffer.Ptr;
         }
@@ -129,6 +130,8 @@ namespace Corax.Queries
                 bufferSlice = new Span<long>(_buffer + _bufferIdx, _bufferSize - _bufferIdx);
             }
 
+            var frequencyBuffer = new Span<byte>(_buffer + _bufferSize + _bufferIdx, _bufferSize - _bufferIdx);
+         //   (FrequencyUtils.DecodeWithFrequenciesIntoBuffersAndDiscard(Span<long> source,)
             matches.Slice(0, results).CopyTo(bufferSlice);
 
             _bufferIdx += results;
@@ -260,7 +263,7 @@ namespace Corax.Queries
                 }
             }
         }
-
+        
         internal static void TermFrequencyScoreFunc(ref BoostingMatch<TInner, TermFrequencyScoreFunction> match, Span<long> matches, Span<float> scores)
         {
             if (typeof(TInner) != typeof(TermMatch))

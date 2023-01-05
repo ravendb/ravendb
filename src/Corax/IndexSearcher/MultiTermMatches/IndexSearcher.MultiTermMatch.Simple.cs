@@ -109,7 +109,7 @@ public partial class IndexSearcher
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-        return MultiTermMatch.Create(new MultiTermMatch<RegexTermProvider>(_transaction.Allocator,
+        return MultiTermMatch.Create(new MultiTermMatch<RegexTermProvider>(field, _transaction.Allocator,
             new RegexTermProvider(this, terms, field, regex)));
     }
 }

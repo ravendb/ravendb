@@ -164,14 +164,7 @@ public partial class IndexSearcher
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-        return (isNegated, scoreFunction) switch
-        {
-            (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<TermRangeProvider<TLow, THigh>>(_transaction.Allocator,
-                new TermRangeProvider<TLow, THigh>(this, terms, field, low, high))),
-            (false, ConstantScoreFunction) =>  MultiTermMatch.Create(MultiTermBoostingMatch<TermRangeProvider<TLow, THigh>>.Create<ConstantScoreFunction>(this,
-                new TermRangeProvider<TLow, THigh>(this, terms, field, low, high), (ConstantScoreFunction)(object)scoreFunction)),
-            _ => throw new NotSupportedException()
-        };
+        return MultiTermMatch.Create(new MultiTermMatch<TermRangeProvider<TLow, THigh>>(field, _transaction.Allocator, new TermRangeProvider<TLow, THigh>(this, terms, field, low, high)));
     }
 
     private MultiTermMatch RangeBuilder<TScoreFunction, TLow, THigh>(FieldMetadata field, Slice fieldLong, long low, long high, TScoreFunction scoreFunction, bool isNegated)
@@ -185,14 +178,7 @@ public partial class IndexSearcher
 
         var set = _fieldsTree?.FixedTreeFor(fieldLong, sizeof(long));
 
-        return (isNegated, scoreFunction) switch
-        {
-            (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, long>>(_transaction.Allocator,
-                new TermNumericRangeProvider<TLow, THigh, long>(this, set, terms, field, low, high))),
-            (false, ConstantScoreFunction) => MultiTermMatch.Create(MultiTermBoostingMatch<TermNumericRangeProvider<TLow, THigh, long>>.Create<ConstantScoreFunction>(this,
-                new TermNumericRangeProvider<TLow, THigh, long>(this, set, terms, field, low, high), (ConstantScoreFunction)(object)scoreFunction)),
-            _ => throw new NotSupportedException()
-        };
+        return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, long>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, long>(this, set, terms, field, low, high)));
     }
 
     private MultiTermMatch RangeBuilder<TScoreFunction, TLow, THigh>(FieldMetadata field, double low, double high, TScoreFunction scoreFunction, bool isNegated)
@@ -207,13 +193,6 @@ public partial class IndexSearcher
         field = field.GetNumericFieldMetadata<double>(Allocator);
         var set = _fieldsTree?.FixedTreeForDouble(field.FieldName, sizeof(long));
             
-        return (isNegated, scoreFunction) switch
-        {
-            (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, double>>(_transaction.Allocator,
-                new TermNumericRangeProvider<TLow, THigh, double>(this, set, terms, field, low, high))),
-            (false, ConstantScoreFunction) => MultiTermMatch.Create(MultiTermBoostingMatch<TermNumericRangeProvider<TLow, THigh, double>>.Create<ConstantScoreFunction>(this,
-                new TermNumericRangeProvider<TLow, THigh, double>(this, set, terms, field, low, high), (ConstantScoreFunction)(object)scoreFunction)),
-            _ => throw new NotSupportedException()
-        };
+        return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, double>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, double>(this, set, terms, field, low, high)));
     }
 }

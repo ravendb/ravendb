@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using Sparrow.Server;
 
 namespace Corax.Queries
@@ -129,13 +126,6 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static MultiTermMatch Create<TInner>(in MultiTermBoostingMatch<TInner> query)
-            where TInner : ITermProvider
-        {
-            return new MultiTermMatch(query, StaticFunctionCache<MultiTermBoostingMatch<TInner>>.FunctionTable);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static MultiTermMatch Create(in BinaryMatch query)
         { 
             return new MultiTermMatch(query, StaticFunctionCache<BinaryMatch>.FunctionTable);
@@ -167,7 +157,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static MultiTermMatch CreateEmpty(ByteStringContext context)
         {
-            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(context, new EmptyTermProvider()), StaticFunctionCache<MultiTermMatch<EmptyTermProvider>>.FunctionTable);
+            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(default, context, new EmptyTermProvider()), StaticFunctionCache<MultiTermMatch<EmptyTermProvider>>.FunctionTable);
         }
     }
 }
