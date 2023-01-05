@@ -113,7 +113,7 @@ namespace SlowTests.Issues
                 s4.Advanced.SessionInfo.SetContext("monkey");
 
                 var sessionInfo = s4.Advanced.SessionInfo;
-                s3Ctx = sessionInfo.SessionId;
+                s4Ctx = sessionInfo.SessionId;
             }
 
             Assert.NotEqual(s4Ctx, s3Ctx);
