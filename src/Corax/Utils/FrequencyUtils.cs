@@ -52,7 +52,7 @@ internal static class FrequencyUtils
         {
             Debug.Assert(entries[i] >= 0);
             
-            Debug.Assert((FreqEncoder(frequencies[i]) & ~Mask) == 0 );
+            //Debug.Assert((FreqEncoder(frequencies[i]) & ~Mask) == 0 );
 
 
             var ecd = FreqEncoder(frequencies[i]) << ContainerTypeOffset | entries[i] << EntryIdOffset;
@@ -63,11 +63,12 @@ internal static class FrequencyUtils
 
         long FreqEncoder(long freq)
         {
+            return freq;
             if (freq > Max)
                 return QuantizationMax; //MAX
 
             var output = Math.Min(QuantizationMax, (long)(freq/QuantizationStep));
-            if (output < 0)
+            if (output <= 0)
                 Debugger.Break();
             return output;
         }

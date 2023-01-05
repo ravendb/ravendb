@@ -500,7 +500,7 @@ internal static class CoraxQueryBuilder
             if (firstArgumentBool)
                 return indexSearcher.AllEntries();
 
-            return indexSearcher.EmptySet(); // empty boolean query yields 0 documents
+            return indexSearcher.EmptyMatch(); // empty boolean query yields 0 documents
         }
 
         baseDocument = firstArgumentValue;

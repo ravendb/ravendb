@@ -23,7 +23,7 @@ public class EntriesModificationsTests : NoDisposalNeeded
         entries.Removal(1);
         entries.Addition(3);
         entries.Removal(2);
-        entries.SortAndRemoveDuplicates();
+        entries.PrepareDataForCommiting();
 
         AssertEntriesCase(ref entries);
     }
