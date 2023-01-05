@@ -92,7 +92,7 @@ namespace SlowTests.Voron.Issues
         }
 
         [Fact]
-        public void ScratchSpaceSizeMustIncludeDecompressionBuffers()
+        public unsafe void ScratchSpaceSizeMustIncludeDecompressionBuffers()
         {
             RequireFileBasedPager();
             var temp = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).TempPath.FullPath;

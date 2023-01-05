@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Sparrow.Server;
 using Voron.Impl;
 using Constants = Voron.Global.Constants;
 
@@ -340,16 +341,18 @@ public readonly unsafe struct PostingListLeafPage
             if (_additions.Length == 0 && _removals.Length == 0)
                 return; // nothing to do
 
-            using var _ = _tx.Environment.GetTemporaryPage(_tx, out var newPage);
-            PostingListLeafPageHeader* newHeader = (PostingListLeafPageHeader*)newPage.TempPagePointer;
-            Memory.Copy(newPage.TempPagePointer, Header, PageHeader.SizeOf);
+            using var _ = _tx.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
+            var newPagePtr = tmp.Ptr;
+            
+            PostingListLeafPageHeader* newHeader = (PostingListLeafPageHeader*)newPagePtr;
+            Memory.Copy(newPagePtr, Header, PageHeader.SizeOf);
             InitLeaf(newHeader, Header->Baseline);
 
             MergeCompressedAdditionsAndRemovals(newHeader);
 
             // clear the middle of the page
-            Memory.Set(newPage.TempPagePointer + newHeader->Floor, 0, newHeader->Ceiling - newHeader->Floor);
-            Memory.Copy(_parent.Header, newPage.TempPagePointer, Constants.Storage.PageSize);
+            Memory.Set(newPagePtr + newHeader->Floor, 0, newHeader->Ceiling - newHeader->Floor);
+            Memory.Copy(_parent.Header, newPagePtr, Constants.Storage.PageSize);
         }
 
         private void MergeCompressedAdditionsAndRemovals(PostingListLeafPageHeader* newHeader)
@@ -567,9 +570,10 @@ public readonly unsafe struct PostingListLeafPage
 
     public static void Merge(LowLevelTransaction llt, PostingListLeafPageHeader* dest, PostingListLeafPageHeader* first, PostingListLeafPageHeader* second)
     {
-        using(llt.Environment.GetTemporaryPage(llt, out var tmp))
+        using (llt.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp))
         {
-            PostingListLeafPageHeader* newHeader = (PostingListLeafPageHeader*)tmp.TempPagePointer;
+            var tmpPtr = tmp.Ptr;
+            PostingListLeafPageHeader* newHeader = (PostingListLeafPageHeader*)tmpPtr;
             newHeader->PageNumber = dest->PageNumber;
             InitLeaf(newHeader, dest->Baseline);
             for (int i = 0; i < first->NumberOfCompressedRuns; i++)
@@ -586,7 +590,7 @@ public readonly unsafe struct PostingListLeafPage
                     throw new InvalidOperationException("Not enough space in new page, should never happen, caller handled that");
                 }
             }
-            tmp.AsSpan().CopyTo(new Span<byte>(dest, Constants.Storage.PageSize));
+            tmp.CopyTo((byte*)dest);
         }
     }
 

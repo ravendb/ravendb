@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanCleanupAndGetTempPagesConcurrentlyFromDecompressionBuffers()
+        public unsafe void CanCleanupAndGetTempPagesConcurrentlyFromDecompressionBuffers()
         {
             var run = true;
             var task = Task.Factory.StartNew(() =>

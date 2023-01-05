@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Compression;
+using Sparrow.Server;
 using Voron.Global;
 using Voron.Impl;
 
@@ -67,10 +68,11 @@ namespace Voron.Data.PostingLists
 
         private void Defrag(LowLevelTransaction tx)
         {
-            using var _ = tx.Environment.GetTemporaryPage(tx, out var tmp);
-            Span<byte> tmpSpan = tmp.AsSpan();
+            using var _ = tx.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
+
+            Span<byte> tmpSpan = tmp.ToSpan();
             Span.CopyTo(tmpSpan);
-            var header = (PostingListBranchPageHeader*)tmp.TempPagePointer;
+            var header = (PostingListBranchPageHeader*)tmp.Ptr;
             header->Upper = Constants.Storage.PageSize;
             var positions = MemoryMarshal.Cast<byte, ushort>(tmpSpan.Slice(PageHeader.SizeOf)).Slice(0, header->NumberOfEntries);
             int endOfPositionsArray = PageHeader.SizeOf + sizeof(ushort) * positions.Length;

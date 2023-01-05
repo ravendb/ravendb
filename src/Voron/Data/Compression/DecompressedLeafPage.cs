@@ -9,15 +9,13 @@ namespace Voron.Data.Compression
 {
     public unsafe class DecompressedLeafPage : TreePage, IDisposable
     {
-        private readonly TemporaryPage _tempPage;
-
         private bool _disposed;
 
-        public DecompressedLeafPage(byte* basePtr, int pageSize, DecompressionUsage usage, TreePage original, TemporaryPage tempPage) : base(basePtr, pageSize)
+        public DecompressedLeafPage(byte* basePtr, int pageSize, DecompressionUsage usage, TreePage original, IDisposable disposable) : base(basePtr, pageSize)
         {
             Original = original;
+            _disposable = disposable;
             Usage = usage;
-            _tempPage = tempPage;
 
             PageNumber = Original.PageNumber;
             TreeFlags = Original.TreeFlags;
@@ -25,6 +23,7 @@ namespace Voron.Data.Compression
         }
 
         public TreePage Original;
+        private readonly IDisposable _disposable;
 
         public bool Cached;
 
@@ -38,7 +37,7 @@ namespace Voron.Data.Compression
             if (_disposed)
                 return;
 
-            _tempPage.ReturnTemporaryPageToPool.Dispose();
+            _disposable.Dispose();
 
             _disposed = true;
         }

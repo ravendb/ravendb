@@ -143,10 +143,9 @@ namespace Voron.Data.BTrees
         {
             Debug.Assert(newSize > currentSize);
 
-            TemporaryPage tmp;
-            using (_llt.Environment.GetTemporaryPage(_llt, out tmp))
+            using (_llt.GetTempPage(out var tmp))
             {
-                var tempPagePointer = tmp.TempPagePointer;
+                var tempPagePointer = tmp.Base;
                 Memory.Copy(tempPagePointer, nestedPagePtr, currentSize);
                 Delete(key); // release our current page
                 TreePage nestedPage = new TreePage(tempPagePointer, (ushort)currentSize);

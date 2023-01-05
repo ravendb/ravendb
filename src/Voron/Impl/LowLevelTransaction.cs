@@ -1490,5 +1490,18 @@ namespace Voron.Impl
                 return _tx._pagerStates;
             }
         }
+
+        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetTempPage(out TreePage page)
+        {
+            var dispose = Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp);
+            tmp.Clear();
+            page = new TreePage(tmp.Ptr, Constants.Storage.PageSize)
+            {
+                Upper = Constants.Storage.PageSize,
+                Lower = Constants.Tree.PageHeaderSize,
+                TreeFlags = TreePageFlags.None,
+            };
+            return dispose;
+        }
     }
 }

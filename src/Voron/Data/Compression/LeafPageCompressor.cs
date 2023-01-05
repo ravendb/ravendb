@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Sparrow;
 using Sparrow.Compression;
+using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Global;
 using Voron.Impl;
@@ -13,21 +14,22 @@ namespace Voron.Data.Compression
     {
         public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true)
         {
-            var returnTempPage = tx.Environment.GetTemporaryPage(tx, out TemporaryPage temp);
+            var returnTempPage = tx.GetTempPage(out var tmp);
 
-            var tempPage = temp.GetTempPage();
+            var tmpPtr = tmp.Base;
+            TreePageHeader* pageHeader = (TreePageHeader*)tmpPtr;
 
             if (page.NumberOfEntries == 0)
             {
-                Memory.Copy(tempPage.Base, page.Base, Constants.Tree.PageHeaderSize);
-                tempPage.Lower = Constants.Tree.PageHeaderSize;
-                tempPage.Upper = (ushort)tempPage.PageSize;
+                Memory.Copy(tmpPtr, page.Base, Constants.Tree.PageHeaderSize);
+                pageHeader->Lower = Constants.Tree.PageHeaderSize;
+                pageHeader->Upper = Constants.Storage.PageSize;
 
-                Debug.Assert(tempPage.Lower <= tempPage.Upper);
+                Debug.Assert(pageHeader->Lower <= pageHeader->Upper);
 
                 result = new CompressionResult
                 {
-                    CompressedPage = tempPage,
+                    CompressedPage = new TreePage(tmpPtr, Constants.Storage.PageSize),
                     CompressionOutputPtr = null,
                     Header = new CompressedNodesHeader
                     {
@@ -51,7 +53,7 @@ namespace Voron.Data.Compression
             var valuesSize = page.PageSize - page.Upper;
 
             var compressionInput = page.Base + page.Upper;
-            var compressionResult = tempPage.Base + Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize; // temp compression result has compressed values at the beginning of the page
+            var compressionResult = tmpPtr + Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize; // temp compression result has compressed values at the beginning of the page
             var offsetsSize = page.NumberOfEntries * Constants.Tree.NodeOffsetSize;
 
             var compressionOutput = compressionResult + offsetsSize;
@@ -60,7 +62,7 @@ namespace Voron.Data.Compression
                 compressionInput,
                 compressionOutput,
                 valuesSize,
-                tempPage.PageSize - (Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize) - offsetsSize);
+                Constants.Storage.PageSize - (Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize) - offsetsSize);
 
             if (compressedSize == 0 || compressedSize > valuesSize)
             {
@@ -101,15 +103,15 @@ namespace Voron.Data.Compression
                           (Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize)) 
                          <= Constants.Compression.MaxPageSize);
 
-            Memory.Copy(tempPage.Base, page.Base, Constants.Tree.PageHeaderSize);
-            tempPage.Lower = (ushort)(Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize);
-            tempPage.Upper = (ushort)tempPage.PageSize;
+            Memory.Copy(tmpPtr, page.Base, Constants.Tree.PageHeaderSize);
+            pageHeader->Lower = (ushort)(Constants.Tree.PageHeaderSize + Constants.Compression.HeaderSize + compressionSectionSize);
+            pageHeader->Upper = Constants.Storage.PageSize;
 
-            Debug.Assert(tempPage.Lower <= tempPage.Upper);
+            Debug.Assert(pageHeader->Lower <= pageHeader->Upper);
 
             result = new CompressionResult
             {
-                CompressedPage = tempPage,
+                CompressedPage = new TreePage(tmpPtr, Constants.Storage.PageSize),
                 CompressionOutputPtr = compressionResult,
                 Header = new CompressedNodesHeader
                 {

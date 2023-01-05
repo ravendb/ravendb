@@ -160,8 +160,8 @@ namespace Voron.Data.Containers
 
         private void Defrag(LowLevelTransaction llt)
         {
-            using var _ = llt.Environment.GetTemporaryPage(llt, out var tmp);
-            var tmpSpan = tmp.AsSpan();
+            using var _ = llt.Allocator.Allocate(Constants.Storage.PageSize, out Span<byte> tmpSpan);
+            tmpSpan.Clear();
             _page.AsSpan(0, Header.CeilingOfOffsets).CopyTo(tmpSpan);
             tmpSpan.Slice(Header.CeilingOfOffsets).Clear();
             ref var tmpHeader = ref MemoryMarshal.AsRef<ContainerPageHeader>(tmpSpan);

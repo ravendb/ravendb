@@ -78,14 +78,12 @@ namespace Voron.Data.Compression
 
         public DecompressedLeafPage GetPage(LowLevelTransaction tx, int pageSize, DecompressionUsage usage, TreePage original)
         {
-            GetTemporaryPage(tx, pageSize, out var tempPage);
+            var disposable = GetTemporaryPage(tx, pageSize, out var tempPage);
 
-            var treePage = tempPage.GetTempPage();
-
-            return new DecompressedLeafPage(treePage.Base, treePage.PageSize, usage, original, tempPage);
+            return new DecompressedLeafPage(tempPage, Constants.Storage.PageSize, usage, original, disposable);
         }
 
-        public IDisposable GetTemporaryPage(LowLevelTransaction tx, int pageSize, out TemporaryPage tmp)
+        public IDisposable GetTemporaryPage(LowLevelTransaction tx, int pageSize, out byte* tmp)
         {
             if (pageSize < Constants.Storage.PageSize)
                 ThrowInvalidPageSize(pageSize);
@@ -132,7 +130,7 @@ namespace Voron.Data.Compression
                 try
                 {
                     buffer.EnsureValidPointer(tx);
-                    tmp = buffer.TempPage;
+                    tmp = buffer.Pointer;
                     break;
                 }
                 catch (ObjectDisposedException)
@@ -183,12 +181,12 @@ namespace Voron.Data.Compression
                     }
                 }
 
-                tmp = buffer.TempPage;
+                tmp = buffer.Pointer;
             }
 
             Interlocked.Add(ref _currentlyUsedBytes, pageSize);
 
-            return tmp.ReturnTemporaryPageToPool;
+            return buffer;
         }
 
         private static void ThrowPageSizeTooBig(int pageSize)
@@ -285,6 +283,7 @@ namespace Voron.Data.Compression
             private readonly int _size;
             private readonly DecompressionBuffersPool _pool;
             private readonly int _index;
+            public byte* Pointer;
 
             public DecompressionBuffer(AbstractPager pager, long position, int size, DecompressionBuffersPool pool, int index, LowLevelTransaction tx)
             {
@@ -294,19 +293,14 @@ namespace Voron.Data.Compression
                 _pool = pool;
                 _index = index;
                 _pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
-                var ptr = _pager.AcquirePagePointer(tx, position);
-
-                TempPage = new TemporaryPage(ptr, size) { ReturnTemporaryPageToPool = this };
+                Pointer = _pager.AcquirePagePointer(tx, position);
             }
 
-            public readonly TemporaryPage TempPage;
 
             public void EnsureValidPointer(LowLevelTransaction tx)
             {
                 _pager.EnsureMapped(tx, _position, _size / Constants.Storage.PageSize);
-                var p = _pager.AcquirePagePointer(tx, _position);
-
-                TempPage.SetPointer(p);
+                Pointer = _pager.AcquirePagePointer(tx, _position);
             }
 
             public bool CanReuse => _pager.Disposed == false;
@@ -314,7 +308,7 @@ namespace Voron.Data.Compression
             public void Dispose()
             {
                 if (_pager.Options.Encryption.IsEnabled)
-                    Sodium.sodium_memzero(TempPage.TempPagePointer, (UIntPtr)TempPage.PageSize);
+                    Sodium.sodium_memzero(Pointer, Constants.Storage.PageSize);
 
                 // return it to the pool
                 _pool._pool[_index].Enqueue(this);
