@@ -37,73 +37,44 @@ public partial class IndexSearcher
     {
         if (typeof(TTermProvider) == typeof(StartWithTermProvider))
         {
-            return (isNegated, scoreFunction) switch
+            return (isNegated) switch
             {
-                (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator,
+                (false) => MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(field, _transaction.Allocator,
                     new StartWithTermProvider(this, termTree, field, term))),
 
-                (true, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<NotStartWithTermProvider>(_transaction.Allocator,
+                (true) => MultiTermMatch.Create(new MultiTermMatch<NotStartWithTermProvider>(field, _transaction.Allocator,
                     new NotStartWithTermProvider(this, _transaction.Allocator, termTree, field, term))),
-
-                (false, _) => MultiTermMatch.Create(
-                    MultiTermBoostingMatch<StartWithTermProvider>.Create(
-                        this, new StartWithTermProvider(this, termTree, field, term), scoreFunction)),
-
-                (true, _) => MultiTermMatch.Create(
-                    MultiTermBoostingMatch<NotStartWithTermProvider>.Create(
-                        this, new NotStartWithTermProvider(this, _transaction.Allocator, termTree, field, term), scoreFunction))
             };
         }
 
         if (typeof(TTermProvider) == typeof(EndsWithTermProvider))
         {
-            return (isNegated, scoreFunction) switch
+            return (isNegated) switch
             {
-                (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<EndsWithTermProvider>(_transaction.Allocator,
+                (false) => MultiTermMatch.Create(new MultiTermMatch<EndsWithTermProvider>(field, _transaction.Allocator,
                     new EndsWithTermProvider(this, termTree, field, term))),
 
-                (true, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<NotEndsWithTermProvider>(_transaction.Allocator,
-                    new NotEndsWithTermProvider(this, termTree, field, term))),
-
-                (false, _) => MultiTermMatch.Create(
-                    MultiTermBoostingMatch<EndsWithTermProvider>.Create(
-                        this, new EndsWithTermProvider(this, termTree, field, term), scoreFunction)),
-
-                (true, _) => MultiTermMatch.Create(
-                    MultiTermBoostingMatch<NotEndsWithTermProvider>.Create(
-                        this, new NotEndsWithTermProvider(this, termTree, field, term), scoreFunction))
+                (true) => MultiTermMatch.Create(new MultiTermMatch<NotEndsWithTermProvider>(field, _transaction.Allocator,
+                    new NotEndsWithTermProvider(this, termTree, field, term)))
             };
         }
 
         if (typeof(TTermProvider) == typeof(ContainsTermProvider))
         {
-            return (isNegated, scoreFunction) switch
+            return (isNegated) switch
             {
-                (false, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<ContainsTermProvider>(_transaction.Allocator,
+                (false) => MultiTermMatch.Create(new MultiTermMatch<ContainsTermProvider>(field, _transaction.Allocator,
                     new ContainsTermProvider(this, termTree, field, term))),
 
-                (true, NullScoreFunction) => MultiTermMatch.Create(new MultiTermMatch<NotContainsTermProvider>(_transaction.Allocator,
+                (true) => MultiTermMatch.Create(new MultiTermMatch<NotContainsTermProvider>(field, _transaction.Allocator,
                     new NotContainsTermProvider(this, termTree, field, term))),
-
-                (false, _) => MultiTermMatch.Create(
-                    MultiTermBoostingMatch<ContainsTermProvider>.Create(
-                        this, new ContainsTermProvider(this, termTree, field, term), scoreFunction)),
-
-                (true, _) => MultiTermMatch.Create(
-                    MultiTermBoostingMatch<NotContainsTermProvider>.Create(
-                        this, new NotContainsTermProvider(this, termTree, field, term), scoreFunction))
             };
         }
 
         if (typeof(TTermProvider) == typeof(ExistsTermProvider))
         {
             if (typeof(TScoreFunction) == typeof(NullScoreFunction))
-                return MultiTermMatch.Create(new MultiTermMatch<ExistsTermProvider>(_transaction.Allocator,
-                    new ExistsTermProvider(this, termTree, field)));
-
-            return MultiTermMatch.Create(
-                MultiTermBoostingMatch<ExistsTermProvider>.Create(
-                    this, new ExistsTermProvider(this, termTree, field), scoreFunction));
+                return MultiTermMatch.Create(new MultiTermMatch<ExistsTermProvider>(field, _transaction.Allocator, new ExistsTermProvider(this, termTree, field)));
         }
 
         return MultiTermMatch.CreateEmpty(_transaction.Allocator);
