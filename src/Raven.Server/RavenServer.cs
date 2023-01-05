@@ -54,6 +54,7 @@ using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
+using Raven.Server.Utils.MicrosoftLogging;
 using Raven.Server.Web.ResponseCompression;
 using Sparrow;
 using Sparrow.Json;
@@ -94,6 +95,7 @@ namespace Raven.Server
         private IWebHost _redirectingWebHost;
 
         private readonly Logger _tcpLogger;
+        public MicrosoftLoggingProvider MicrosoftLogger;
         private readonly ExternalCertificateValidator _externalCertificateValidator;
         internal readonly JsonContextPool _tcpContextPool;
 
@@ -221,6 +223,7 @@ namespace Raven.Server
                 }
 
                 var webHostBuilder = new WebHostBuilder()
+                    .ConfigureMicrosoftLogging(ref MicrosoftLogger, Configuration.Logs, ServerStore.NotificationCenter)
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
                     .UseUrls(Configuration.Core.ServerUrls)

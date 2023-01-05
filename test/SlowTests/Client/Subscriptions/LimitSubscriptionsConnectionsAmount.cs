@@ -10,6 +10,7 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Collections;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Xunit;
@@ -53,13 +54,13 @@ namespace SlowTests.Client.Subscriptions
                     Assert.True(await curMre.WaitAsync(_reasonableWaitTime));
                 }
 
-                var errors = new List<Exception>();
+                var errors = new ConcurrentSet<Exception>();
                 using var subscription = OpenAndRunSubscription(store, () => { }, run: false).SubscriptionObject;
                 subscription.OnSubscriptionConnectionRetry += ex =>
                 {
                     errors.Add(ex);
                 };
-                var subscriptionTask = subscription.Run(_ => {});
+                var subscriptionTask = subscription.Run(_ => { });
 
                 var completed = await Task.WhenAny(subscriptionTask, Task.Delay(_reasonableWaitTime));
                 if (completed.Equals(subscriptionTask) == false)

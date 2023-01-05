@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Dashboard;
@@ -9,7 +10,6 @@ using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Collections;
@@ -50,8 +50,13 @@ namespace Raven.Server.NotificationCenter
                 BackgroundWorkers.Add(new DatabaseStatsSender(database, this));
 
             IsInitialized = true;
+            
+            _initializeTaskSource.SetResult(this);
         }
 
+        private readonly TaskCompletionSource<NotificationCenter> _initializeTaskSource = new TaskCompletionSource<NotificationCenter>(TaskCreationOptions.RunContinuationsAsynchronously);
+        public Task<NotificationCenter> InitializeTask => _initializeTaskSource.Task;
+        
         public readonly Paging Paging;
         public readonly Indexing Indexing;
         public readonly RequestLatency RequestLatency;
