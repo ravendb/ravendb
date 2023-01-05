@@ -148,10 +148,8 @@ namespace Voron.Data.BTrees
 
         private bool TryMergePages(TreePage parentPage, TreePage left, TreePage right)
         {
-            TemporaryPage tmp;
-            using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
+            using (_tx.GetTempPage(out var mergedPage))
             {
-                var mergedPage = tmp.GetTempPage();
                 Memory.Copy(mergedPage.Base, left.Base, left.PageSize);
 
                 var previousSearchPosition = right.LastSearchPosition;

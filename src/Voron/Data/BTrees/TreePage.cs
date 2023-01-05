@@ -427,25 +427,24 @@ namespace Voron.Data.BTrees
             // when truncating, we copy the values to a tmp page
             // this has the effect of compacting the page data and avoiding
             // internal page fragmentation
-            TemporaryPage tmp;
-            using (PageSize <= Constants.Storage.PageSize ? 
-                tx.Environment.GetTemporaryPage(tx, out tmp) : 
-                tx.Environment.DecompressionBuffers.GetTemporaryPage(tx, PageSize, out tmp))
+            using (tx.GetTempPage(out var tmp))
             {
-                var copy = tmp.GetTempPage();
-                copy.TreeFlags = TreeFlags;
+                var tmpPtr = tmp.Base;
+                var copy = new TreePage(tmpPtr, PageSize)
+                {
+                    TreeFlags = TreeFlags
+                };
 
-                var slice = default(Slice);
                 for (int j = 0; j < i; j++)
                 {
                     var node = GetNode(j);
-                    using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out slice))
+                    using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out Slice slice))
                         copy.CopyNodeDataToEndOfPage(node, slice);
                 }
 
                 Memory.Copy(Base + Constants.Tree.PageHeaderSize,
-                            copy.Base + Constants.Tree.PageHeaderSize,
-                            PageSize - Constants.Tree.PageHeaderSize);
+                    tmpPtr + Constants.Tree.PageHeaderSize,
+                    PageSize - Constants.Tree.PageHeaderSize);
 
                 Upper = copy.Upper;
                 Lower = copy.Lower;
@@ -518,12 +517,8 @@ namespace Voron.Data.BTrees
 
         internal void Defrag(LowLevelTransaction tx)
         {
-            TemporaryPage tmp;
-            using (PageSize <= Constants.Storage.PageSize ?
-               tx.Environment.GetTemporaryPage(tx, out tmp) :
-               tx.Environment.DecompressionBuffers.GetTemporaryPage(tx, PageSize, out tmp))
+            using (tx.GetTempPage(out var tempPage))
             {
-                var tempPage = tmp.GetTempPage();
                 Memory.Copy(tempPage.Base, Base, PageSize);
 
                 var numberOfEntries = NumberOfEntries;

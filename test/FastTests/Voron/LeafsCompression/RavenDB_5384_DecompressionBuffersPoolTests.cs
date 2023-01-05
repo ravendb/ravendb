@@ -20,19 +20,17 @@ namespace FastTests.Voron.LeafsCompression
         }
 
         [Fact]
-        public void Should_cleanup_scratch_files_which_are_no_longer_necessary()
+        public unsafe void Should_cleanup_scratch_files_which_are_no_longer_necessary()
         {
             using (var tx = Env.ReadTransaction())
             {
                 var llt = tx.LowLevelTransaction;
                 
-                TemporaryPage temp;
-                TemporaryPage temp3;
-                var page1 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp);
+                var page1 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out var temp);
 
                 var page2 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp);
 
-                var page3 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp3);
+                var page3 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out var temp3);
 
                 var page4 = Env.DecompressionBuffers.GetTemporaryPage(llt, _64KB, out temp);
 

@@ -143,10 +143,12 @@ namespace Voron.Data.RawData
                 return pageHeader;
             }
 
-            using (_llt.Environment.GetTemporaryPage(_llt, out TemporaryPage tmp))
+            using (_llt.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp))
             {
+                tmp.Clear();
                 var maxUsedPos = pageHeader->NextAllocation;
-                Memory.Copy(tmp.TempPagePointer, (byte*)pageHeader, Constants.Storage.PageSize);
+                var tmpPtr = tmp.Ptr;
+                Memory.Copy(tmpPtr, (byte*)pageHeader, Constants.Storage.PageSize);
 
                 pageHeader->NextAllocation = (ushort)sizeof(RawDataSmallPageHeader);
                 Memory.Set((byte*)pageHeader + pageHeader->NextAllocation, 0,
@@ -157,7 +159,7 @@ namespace Voron.Data.RawData
 
                 while (pos < maxUsedPos)
                 {
-                    var oldSize = (RawDataEntrySizes*)(tmp.TempPagePointer + pos);
+                    var oldSize = (RawDataEntrySizes*)(tmpPtr + pos);
 
                     if (oldSize->AllocatedSize <= 0)
                         VoronUnrecoverableErrorException.Raise(_llt, $"Allocated size cannot be zero or negative, but was {oldSize->AllocatedSize} in page {pageHeader->PageNumber}");
@@ -170,7 +172,7 @@ namespace Voron.Data.RawData
 
                     var prevId = (pageHeader->PageNumber) * Constants.Storage.PageSize + pos;
                     var newId = (pageHeader->PageNumber) * Constants.Storage.PageSize + pageHeader->NextAllocation;
-                    byte* entryPos = tmp.TempPagePointer + pos + sizeof(RawDataEntrySizes);
+                    byte* entryPos = tmpPtr + pos + sizeof(RawDataEntrySizes);
                     if (prevId != newId)
                     {
                         var size = oldSize->UsedSize;

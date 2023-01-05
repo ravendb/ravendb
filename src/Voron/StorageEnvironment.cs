@@ -111,7 +111,6 @@ namespace Voron
 
         public DateTime LastWorkTime;
 
-        private readonly ConcurrentQueue<TemporaryPage> _tempPagesPool = new ConcurrentQueue<TemporaryPage>();
         public bool Disposed;
         private readonly Logger _log;
         public static int MaxConcurrentFlushes = 10; // RavenDB-5221
@@ -547,7 +546,7 @@ namespace Voron
                     _scratchBufferPool,
                     _decompressionBuffers,
                     _options.OwnsPagers ? _options : null,
-                }.Concat(_tempPagesPool))
+                })
                 {
                     try
                     {
@@ -1363,59 +1362,6 @@ namespace Voron
             return Hashing.Streamed.XXHash64.EndProcess(ref ctx);
         }
 
-        public IDisposable GetTemporaryPage(LowLevelTransaction tx, out TemporaryPage tmp)
-        {
-            if (tx.Flags != TransactionFlags.ReadWrite)
-                throw new ArgumentException("Temporary pages are only available for write transactions");
-
-            if (_tempPagesPool.TryDequeue(out tmp) == false)
-            {
-                tmp = new TemporaryPage(Options);
-                try
-                {
-                    tmp.ReturnTemporaryPageToPool = new ReturnTemporaryPageToPool(this, tmp);
-                }
-                catch (Exception)
-                {
-                    tmp.Dispose();
-                    throw;
-                }
-            }
-
-            tmp.PinMemory();
-
-            return tmp.ReturnTemporaryPageToPool;
-        }
-
-        private class ReturnTemporaryPageToPool : IDisposable
-        {
-            private readonly TemporaryPage _tmp;
-            private readonly StorageEnvironment _env;
-
-            public ReturnTemporaryPageToPool(StorageEnvironment env, TemporaryPage tmp)
-            {
-                _tmp = tmp;
-                _env = env;
-            }
-
-            public unsafe void Dispose()
-            {
-                try
-                {
-                    if (_env.Options.Encryption.IsEnabled)
-                        Sodium.sodium_memzero(_tmp.TempPagePointer, (UIntPtr)_tmp.PageSize);
-
-                    _tmp.UnpinMemory();
-                    _env._tempPagesPool.Enqueue(_tmp);
-                }
-                catch (Exception)
-                {
-                    _tmp.Dispose();
-                    throw;
-                }
-            }
-        }
-
         public TransactionsModeResult SetTransactionMode(TransactionsMode mode, TimeSpan duration)
         {
             var transactionPersistentContext = new TransactionPersistentContext();
@@ -1478,11 +1424,6 @@ namespace Voron
             Journal.TryReduceSizeOfCompressionBufferIfNeeded();
             ScratchBufferPool.Cleanup();
             DecompressionBuffers.Cleanup();
-
-            while (_tempPagesPool.TryDequeue(out var tempPage))
-            {
-                tempPage.Dispose();
-            }
         }
 
         public override string ToString()

@@ -640,12 +640,11 @@ namespace Voron.Data.Fixed
 
         private byte* AddEmbeddedEntry(TVal key, out bool isNew)
         {
-            TemporaryPage tmp;
-            using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
+            using (_tx.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp))
             {
-                int newSize;
-                int srcCopyStart;
-                var newEntriesCount = CopyEmbeddedContentToTempPage(key, tmp, out isNew, out newSize, out srcCopyStart);
+                tmp.Clear();
+                byte* tmpPtr = tmp.Ptr;
+                var newEntriesCount = CopyEmbeddedContentToTempPage(key, tmpPtr, out isNew, out int newSize, out int srcCopyStart);
 
                 if (newEntriesCount > _maxEmbeddedEntries)
                 {
@@ -667,7 +666,7 @@ namespace Voron.Data.Fixed
                         allocatePage.NumberOfEntries = newEntriesCount;
                         allocatePage.ValueSize = _valSize;
                         allocatePage.StartPosition = (ushort)Constants.FixedSizeTree.PageHeaderSize;
-                        Memory.Copy(allocatePage.Pointer + allocatePage.StartPosition, tmp.TempPagePointer,
+                        Memory.Copy(allocatePage.Pointer + allocatePage.StartPosition, tmpPtr,
                             newSize);
 
                         return allocatePage.Pointer + allocatePage.StartPosition + srcCopyStart + sizeof(long);
@@ -682,7 +681,7 @@ namespace Voron.Data.Fixed
                     header->RootObjectType = RootObjectType.EmbeddedFixedSizeTree;
                     header->NumberOfEntries = newEntriesCount;
 
-                    Memory.Copy(newData + sizeof(FixedSizeTreeHeader.Embedded), tmp.TempPagePointer,
+                    Memory.Copy(newData + sizeof(FixedSizeTreeHeader.Embedded), tmpPtr,
                         newSize);
 
                     return newData + sizeof(FixedSizeTreeHeader.Embedded) + srcCopyStart + sizeof(long);
@@ -690,7 +689,7 @@ namespace Voron.Data.Fixed
             }
         }
 
-        private ushort CopyEmbeddedContentToTempPage(TVal key, TemporaryPage tmp, out bool isNew, out int newSize, out int srcCopyStart)
+        private ushort CopyEmbeddedContentToTempPage(TVal key, byte* tmpPtr, out bool isNew, out int newSize, out int srcCopyStart)
         {
             var ptr = _parent.DirectRead(_treeName);
             if (ptr == null)
@@ -699,7 +698,7 @@ namespace Voron.Data.Fixed
                 isNew = true;
                 newSize = _entrySize;
                 srcCopyStart = 0;
-                *((TVal*)tmp.TempPagePointer) = key;
+                *((TVal*)tmpPtr) = key;
 
                 return 1;
             }
@@ -722,22 +721,22 @@ namespace Voron.Data.Fixed
             if (_lastMatch == 0)
             {
                 // can just copy as is
-                Memory.Copy(tmp.TempPagePointer, dataStart, startingEntryCount * _entrySize);
+                Memory.Copy(tmpPtr, dataStart, startingEntryCount * _entrySize);
             }
             else
             {
                 // copy with a gap
-                Memory.Copy(tmp.TempPagePointer, dataStart, srcCopyStart);
+                Memory.Copy(tmpPtr, dataStart, srcCopyStart);
                 var sizeLeftToCopy = (startingEntryCount - pos) * _entrySize;
                 if (sizeLeftToCopy > 0)
                 {
-                    Memory.Copy(tmp.TempPagePointer + srcCopyStart + _entrySize,
+                    Memory.Copy(tmpPtr + srcCopyStart + _entrySize,
                         dataStart + srcCopyStart, sizeLeftToCopy);
                 }
             }
 
 
-            var newEntryStart = tmp.TempPagePointer + srcCopyStart;
+            var newEntryStart = tmpPtr + srcCopyStart;
             *((TVal*)newEntryStart) = key;
 
             return newEntriesCount;
@@ -950,19 +949,21 @@ namespace Voron.Data.Fixed
                 return entriesDeleted;
             }
 
-            using (_tx.Environment.GetTemporaryPage(_tx, out TemporaryPage tmp))
+            using (_tx.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp))
             {
+                tmp.Clear();
                 int srcCopyStart = startPos * _entrySize + sizeof(FixedSizeTreeHeader.Embedded);
 
-                Memory.Copy(tmp.TempPagePointer, ptr, srcCopyStart);
-                Memory.Copy(tmp.TempPagePointer + srcCopyStart, ptr + srcCopyStart + (_entrySize * entriesDeleted), (startingEntryCount - endPos) * _entrySize);
+                byte* tmpPtr = tmp.Ptr;
+                Memory.Copy(tmpPtr, ptr, srcCopyStart);
+                Memory.Copy(tmpPtr + srcCopyStart, ptr + srcCopyStart + (_entrySize * entriesDeleted), (startingEntryCount - endPos) * _entrySize);
 
                 int newDataSize = sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount - entriesDeleted) * _entrySize);
 
                 byte* newData;
                 using (_parent.DirectAdd(_treeName, newDataSize, out newData))
                 {
-                    Memory.Copy(newData, tmp.TempPagePointer, newDataSize);
+                    Memory.Copy(newData, tmpPtr, newDataSize);
 
                     header = (FixedSizeTreeHeader.Embedded*)newData;
                     header->NumberOfEntries -= entriesDeleted;
@@ -1481,19 +1482,20 @@ namespace Voron.Data.Fixed
                 return new DeletionResult { NumberOfEntriesDeleted = 1, TreeRemoved = true };
             }
 
-            TemporaryPage tmp;
-            using (_tx.Environment.GetTemporaryPage(_tx, out tmp))
+            using (_tx.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp))
             {
+                tmp.Clear();
                 int srcCopyStart = pos * _entrySize + sizeof(FixedSizeTreeHeader.Embedded);
-                Memory.Copy(tmp.TempPagePointer, ptr, srcCopyStart);
-                Memory.Copy(tmp.TempPagePointer + srcCopyStart, ptr + srcCopyStart + _entrySize, (header->NumberOfEntries - pos - 1) * _entrySize);
+                byte* tmpPtr = tmp.Ptr;
+                Memory.Copy(tmpPtr, ptr, srcCopyStart);
+                Memory.Copy(tmpPtr + srcCopyStart, ptr + srcCopyStart + _entrySize, (header->NumberOfEntries - pos - 1) * _entrySize);
 
                 var newDataSize = sizeof(FixedSizeTreeHeader.Embedded) + ((startingEntryCount - 1) * _entrySize);
 
                 byte* addPtr;
                 using (_parent.DirectAdd(_treeName, newDataSize, out addPtr))
                 {
-                    Memory.Copy(addPtr, tmp.TempPagePointer, newDataSize);
+                    Memory.Copy(addPtr, tmpPtr, newDataSize);
 
                     header = (FixedSizeTreeHeader.Embedded*)addPtr;
                     header->NumberOfEntries--;

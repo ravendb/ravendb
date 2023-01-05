@@ -1534,8 +1534,8 @@ namespace Voron.Data.CompactTrees
             var oldDictionary = GetEncodingDictionary(state.Header->DictionaryId);
             var newDictionary = GetEncodingDictionary(_state.TreeDictionaryId);                
 
-            using var _ = _llt.Environment.GetTemporaryPage(_llt, out var tmp);
-            Memory.Copy(tmp.TempPagePointer, state.Page.Pointer, Constants.Storage.PageSize);
+            using var _ = _llt.GetTempPage(out var tmp);
+            Memory.Copy(tmp.Base, state.Page.Pointer, Constants.Storage.PageSize);
 
             // TODO: Remove
             // new CursorState() {Page = new Page(tmp.TempPagePointer)}.DumpPageDebug(this);
@@ -1549,11 +1549,11 @@ namespace Voron.Data.CompactTrees
             var decodeBuffer = new Span<byte>(buffer.Ptr, 2048);
             var encodeBuffer = new Span<byte>(buffer.Ptr + 2048, 2048);
 
-            var tmpHeader = (CompactPageHeader*)tmp.TempPagePointer;
+            var tmpHeader = (CompactPageHeader*)tmp.Base;
 
-            var oldEntries = new Span<ushort>(tmp.TempPagePointer + PageHeader.SizeOf, tmpHeader->NumberOfEntries);
+            var oldEntries = new Span<ushort>(tmp.Base + PageHeader.SizeOf, tmpHeader->NumberOfEntries);
             var newEntries = new Span<ushort>(state.Page.Pointer + PageHeader.SizeOf, tmpHeader->NumberOfEntries);
-            var tmpPage = new Page(tmp.TempPagePointer);
+            var tmpPage = new Page(tmp.Base);
 
             var valueBufferPtr = stackalloc byte[16];
             var keySizeBufferPtr = stackalloc byte[16];
@@ -1602,7 +1602,7 @@ namespace Voron.Data.CompactTrees
 
             Failure:
             // TODO: Probably it is best to just not allocate and copy the page afterwards if we use it. 
-            Memory.Copy(state.Page.Pointer, tmp.TempPagePointer, Constants.Storage.PageSize);
+            Memory.Copy(state.Page.Pointer, tmp.Base, Constants.Storage.PageSize);
             return false;
         }
 
@@ -1656,13 +1656,14 @@ namespace Voron.Data.CompactTrees
 
         private static void DefragPage(LowLevelTransaction llt, ref CursorState state)
         {                     
-            using (llt.Environment.GetTemporaryPage(llt, out var tmp))
+            using (llt.GetTempPage(out var tmpPage))
             {
                 // Ensure we clean up the page.               
-                Unsafe.InitBlock(tmp.TempPagePointer, 0, Constants.Storage.PageSize);
+                var tmpPtr = tmpPage.Base;
+                Unsafe.InitBlock(tmpPtr, 0, Constants.Storage.PageSize);
 
                 // We copy just the header and start working from there.
-                var tmpHeader = (CompactPageHeader*)tmp.TempPagePointer;
+                var tmpHeader = (CompactPageHeader*)tmpPtr;
                 *tmpHeader = *(CompactPageHeader*)state.Page.Pointer;
                                 
                 Debug.Assert(tmpHeader->Upper - tmpHeader->Lower >= 0);
@@ -1671,7 +1672,7 @@ namespace Voron.Data.CompactTrees
                 // We reset the data pointer                
                 tmpHeader->Upper = Constants.Storage.PageSize;
 
-                var tmpEntriesOffsets = new Span<ushort>(tmp.TempPagePointer + PageHeader.SizeOf, state.Header->NumberOfEntries);
+                var tmpEntriesOffsets = new Span<ushort>(tmpPtr + PageHeader.SizeOf, state.Header->NumberOfEntries);
 
                 // For each entry in the source page, we copy it to the temporary page.
                 var sourceEntriesOffsets = state.EntriesOffsets;
@@ -1684,7 +1685,7 @@ namespace Voron.Data.CompactTrees
                     ushort lowerIndex = (ushort)(tmpHeader->Upper - len);
 
                     // Note: Since we are just defragmentating, FreeSpace doesn't change.
-                    Unsafe.CopyBlockUnaligned(tmp.TempPagePointer + lowerIndex, entryBuffer, (uint)len);
+                    Unsafe.CopyBlockUnaligned(tmpPtr + lowerIndex, entryBuffer, (uint)len);
 
                     tmpEntriesOffsets[i] = lowerIndex;
                     tmpHeader->Upper = lowerIndex;
@@ -1693,7 +1694,7 @@ namespace Voron.Data.CompactTrees
                 tmpHeader->FreeSpace = (ushort)(tmpHeader->Upper - tmpHeader->Lower);
 
                 // We copy back the defragmented structure on the temporary page to the actual page.
-                Unsafe.CopyBlockUnaligned(state.Page.Pointer, tmp.TempPagePointer, Constants.Storage.PageSize);
+                Unsafe.CopyBlockUnaligned(state.Page.Pointer, tmpPtr, Constants.Storage.PageSize);
                 Debug.Assert(state.Header->FreeSpace == (state.Header->Upper - state.Header->Lower));
             }
         }

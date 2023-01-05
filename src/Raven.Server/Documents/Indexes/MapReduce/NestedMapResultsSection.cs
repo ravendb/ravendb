@@ -7,7 +7,9 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Paging;
 using System;
+using Sparrow.Server;
 using Voron.Util;
+using Voron.Global;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
@@ -50,8 +52,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             IsModified = true;
 
-            using (_env.GetTemporaryPage(_parent.Llt, out TemporaryPage tmp))
+            using (_parent.Llt.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp))
             {
+                tmp.Clear();
+                var tmpPtr = tmp.Ptr;
                 var dataPosInTempPage = 0;
                 var readResult = _parent.Read(_nestedValueKey);
                 if (readResult != null)
@@ -81,19 +85,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     if (readResult != null)
                     {
-                        Memory.Copy(tmp.TempPagePointer, readResult.Reader.Base, readResult.Reader.Length);
+                        Memory.Copy(tmpPtr, readResult.Reader.Base, readResult.Reader.Length);
                         dataPosInTempPage = readResult.Reader.Length;
                     }
                 }
 
-                Debug.Assert(dataPosInTempPage + sizeof(ResultHeader) + result.Size <= tmp.PageSize);
-                var newEntry = (ResultHeader*)(tmp.TempPagePointer + dataPosInTempPage);
+                Debug.Assert(dataPosInTempPage + sizeof(ResultHeader) + result.Size <= tmp.Length);
+                var newEntry = (ResultHeader*)(tmpPtr + dataPosInTempPage);
                 newEntry->Id = id;
                 newEntry->Size = (ushort)result.Size;
-                Memory.Copy(tmp.TempPagePointer + dataPosInTempPage + sizeof(ResultHeader), result.BasePointer, result.Size);
+                Memory.Copy(tmpPtr + dataPosInTempPage + sizeof(ResultHeader), result.BasePointer, result.Size);
                 dataPosInTempPage += result.Size + sizeof(ResultHeader);
                 using (_parent.DirectAdd(_nestedValueKey, dataPosInTempPage, out byte* destPtr))
-                    Memory.Copy(destPtr, tmp.TempPagePointer, dataPosInTempPage);
+                    Memory.Copy(destPtr, tmpPtr, dataPosInTempPage);
 
                 _dataSize += result.Size + sizeof(ResultHeader);
             }
@@ -186,8 +190,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             IsModified = true;
 
-            using (_env.GetTemporaryPage(_parent.Llt, out TemporaryPage tmp))
+            using(_parent.Llt.Allocator.Allocate(Constants.Storage.PageSize, out ByteString tmp))
             {
+                tmp.Clear();
+                var tmpPtr = tmp.Ptr;
                 var readResult = _parent.Read(_nestedValueKey);
                 if (readResult == null)
                     return;
@@ -210,13 +216,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         _dataSize = 0;
                         break;
                     }
-                    Memory.Copy(tmp.TempPagePointer, reader.Base, copiedDataStart);
-                    Memory.Copy(tmp.TempPagePointer + copiedDataStart,
+                    Memory.Copy(tmpPtr, reader.Base, copiedDataStart);
+                    Memory.Copy(tmpPtr + copiedDataStart,
                         reader.Base + copiedDataStart + sizeof(ResultHeader) + entry->Size, copiedDataEnd);
 
                     var sizeAfterDel = (int)(copiedDataStart + copiedDataEnd);
                     using (_parent.DirectAdd(_nestedValueKey, sizeAfterDel, out byte* ptr))
-                        Memory.Copy(ptr, tmp.TempPagePointer, sizeAfterDel);
+                        Memory.Copy(ptr, tmpPtr, sizeAfterDel);
 
                     _dataSize -= reader.Length - sizeAfterDel;
                     break;
