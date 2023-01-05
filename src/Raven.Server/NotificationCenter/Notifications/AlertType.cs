@@ -75,6 +75,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         LowSwapSize,
 
-        UnrecoverableClusterError
+        UnrecoverableClusterError,
+        
+        MicrosoftLogsConfigurationLoadError
     }
 }
