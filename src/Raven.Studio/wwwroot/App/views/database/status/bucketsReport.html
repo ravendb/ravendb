@@ -1,0 +1,38 @@
+<div id="storage-report" class="content-margin">
+    <div id="storage-report-container" data-bind="css: { 'processing': showLoader() }">
+        <div class="chart-tooltip tooltip tooltip-inner" style="opacity: 0">
+        </div>
+        <div class="chart"></div>
+    </div>
+    <div class="current-path">
+            <span data-bind="foreach: currentPath">
+                <a href="#" data-bind="click: _.partial($root.onClick, $data, false)">
+                    <span data-bind="text: name"></span>
+                </a>
+                <i data-bind="visible: $index() < $root.currentPath().length - 1" class="icon-arrow-filled-right"></i>
+            </span>
+    </div>
+    <table class="table table-condensed table-striped on-base-background margin-top margin-top-sm" data-bind="if: node() && node().internalChildren">
+        <thead>
+            <tr>
+                <th class="column-min-width">Range</th>
+                <th>Documents count</th>
+                <th>Size (&sum; <span data-bind="text: node().formatSize()"></span>)</th>
+                <th>% Total</th>
+            </tr>
+        </thead>
+        <tbody data-bind="foreach: node().internalChildren">
+            <tr>
+                <td class="position-relative">
+                    <div class="table-items">
+                        <a href="#" class="table-item-name text-elipsis" data-bind="text: name, click: _.partial($root.onClick, $data, true), visible: hasChildren(), attr: { title: name }"></a>
+                        <span href="#" class="table-item-name text-elipsis" data-bind="text: name, visible: !hasChildren(), attr: { title: name }"></span>
+                    </div>
+                </td>
+                <td data-bind="text: documentsCount.toLocaleString()"></td>
+                <td data-bind="html: formatSize(false)"></td>
+                <td data-bind="text: formatPercentage($parent.node().size)"></td>
+            </tr>
+        </tbody>
+    </table>
+</div>

@@ -42,7 +42,7 @@ namespace Raven.Server.Web.Studio.Processors
 
                 await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, RequestHandler.ResponseBodyStream()))
                 {
-                    writer.WriteObject(context.ReadObject(bucketsResults.ToJson(RequestHandler.HttpContext.Request.IsFromStudio()), "buckets/results"));
+                    writer.WriteObject(context.ReadObject(bucketsResults.ToJson(), "buckets/results"));
                 }
             }
         }

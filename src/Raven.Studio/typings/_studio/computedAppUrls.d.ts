@@ -80,6 +80,7 @@ interface computedAppUrls {
     ioStats: KnockoutComputed<string>;
 
     statusStorageReport: KnockoutComputed<string>;
+    statusBucketsReport: KnockoutComputed<string>;
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
     databasesManagement: KnockoutComputed<string>;

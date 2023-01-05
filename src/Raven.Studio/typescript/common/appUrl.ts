@@ -103,6 +103,7 @@ class appUrl {
         conflictResolution: ko.pureComputed(() => appUrl.forConflictResolution(appUrl.currentDatabase())),
 
         statusStorageReport: ko.pureComputed(() => appUrl.forStatusStorageReport(appUrl.currentDatabase())),
+        statusBucketsReport: ko.pureComputed(() => appUrl.forStatusBucketsReport(appUrl.currentDatabase())),
         isAreaActive: (routeRoot: string) => ko.pureComputed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.pureComputed(() => router.navigationModel().find(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.pureComputed(() => appUrl.forDatabases()),
@@ -322,6 +323,10 @@ class appUrl {
 
     static forStatusStorageReport(db: database | string): string {
         return '#databases/status/storage/report?' + appUrl.getEncodedDbPart(db);
+    }
+
+    static forStatusBucketsReport(db: database | string): string {
+        return '#databases/status/buckets/report?' + appUrl.getEncodedDbPart(db);
     }
 
     static forSettings(db: database): string {

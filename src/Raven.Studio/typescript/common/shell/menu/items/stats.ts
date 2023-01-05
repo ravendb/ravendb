@@ -37,6 +37,16 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.statusStorageReport
         }),
         new leafMenuItem({
+            route: 'databases/status/buckets/report',
+            moduleId: require('viewmodels/database/status/bucketsReport'),
+            shardingMode: "allShards",
+            title: 'Buckets Report',
+            tooltip: "Buckets Report",
+            nav: true,
+            css: 'icon-storage', //TODO:
+            dynamicHash: appUrls.statusBucketsReport
+        }),
+        new leafMenuItem({
             route: "virtual", // here we only redirect to global section with proper db set in url
             moduleId: () => { /* empty */},
             title: 'Running Queries',
