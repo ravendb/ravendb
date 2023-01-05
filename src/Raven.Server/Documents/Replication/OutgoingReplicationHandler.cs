@@ -1149,9 +1149,11 @@ namespace Raven.Server.Documents.Replication
                         $"Received failure reply for replication batch. Error string received = {replicationBatchReply.Exception}");
                 case ReplicationMessageReply.ReplyType.MissingAttachments:
                     if (++MissingAttachmentsRetries > 1)
-                        RaiseAlertAndThrowMissingAttachmentException($"Failed to send batch successfully to {Destination.FromString()}. " +
-                                                                     $"Destination reported missing attachments {MissingAttachmentsRetries} times.{Environment.NewLine}" +
-                                                                     $"{replicationBatchReply.Exception}");
+                    {
+                        var msg = $"Failed to send batch successfully to {Destination.FromString()}. " +
+                                  $"Destination reported missing attachments {MissingAttachmentsRetries} times.";
+                        RaiseAlertAndThrowMissingAttachmentException(msg, replicationBatchReply.Exception);
+                    }
 
                     if (_log.IsInfoEnabled)
                     {
@@ -1171,7 +1173,7 @@ namespace Raven.Server.Documents.Replication
 
         private AlertRaised _missingAttachmentsAlert;
 
-        private void RaiseAlertAndThrowMissingAttachmentException(string msg)
+        private void RaiseAlertAndThrowMissingAttachmentException(string msg, string exceptionDetails)
         {
             if (_log.IsInfoEnabled)
             {
@@ -1184,10 +1186,11 @@ namespace Raven.Server.Documents.Replication
                 "Replication delay due to a missing attachments loop",
                 msg,
                 AlertType.Replication,
-                NotificationSeverity.Error);
+                NotificationSeverity.Error,
+                details: new ExceptionDetails { Exception = exceptionDetails});
             _parent.Database.NotificationCenter.Add(_missingAttachmentsAlert);
 
-            throw new MissingAttachmentException(msg);
+            throw new MissingAttachmentException($"{msg}.{Environment.NewLine}{exceptionDetails}");
         }
 
         private void OnDocumentChange(DocumentChange change)
