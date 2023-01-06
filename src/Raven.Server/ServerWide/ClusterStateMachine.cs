@@ -4349,7 +4349,7 @@ namespace Raven.Server.ServerWide
                 new Span<byte>(p, size).CopyTo(buffer);
                 using var knownCert = CertificateLoaderUtil.CreateCertificate(buffer);
 
-                if (CertificateUtils.CertHasKnownIssuer(userCert, knownCert, securityConfiguration, out var _) == false)
+                if (CertificateUtils.CertHasKnownIssuer(userCert, knownCert, securityConfiguration) == false)
                     continue;
 
                 access = JsonDeserializationCluster.DetailedReplicationHubAccess(obj);
