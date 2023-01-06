@@ -40,7 +40,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             {
                 foreach (var migration in record.Sharding.BucketMigrations)
                 {
-                    if (migration.Value.Status < MigrationStatus.OwnershipTransferred)
+                    if (migration.Value.IsActive)
                         throw new RachisApplyException(
                             $"Only one bucket can be transferred at a time, currently bucket {migration.Key} is {migration.Value.Status}");
 

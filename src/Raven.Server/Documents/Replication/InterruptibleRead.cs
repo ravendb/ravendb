@@ -131,7 +131,15 @@ namespace Raven.Server.Documents.Replication
             _isDisposed = true;
 
             SafelyDispose(_stream); // need to dispose the current stream to abort the operation
-            SafelyDispose(_prevCall?.Result);
+            try
+            {
+                var result = _prevCall?.Result;
+                SafelyDispose(result);
+            }
+            catch
+            {
+                // nothing can do here
+            }
 
             _prevCall = null;
 

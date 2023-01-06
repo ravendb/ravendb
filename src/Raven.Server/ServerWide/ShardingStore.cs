@@ -77,7 +77,7 @@ namespace Raven.Server.ServerWide
             var config = _serverStore.Cluster.ReadShardingConfiguration(database);
             foreach (var m in config.BucketMigrations)
             {
-                if (m.Value.Status < MigrationStatus.OwnershipTransferred) 
+                if (m.Value.IsActive) 
                     return true;
             }
 
@@ -98,6 +98,12 @@ namespace Raven.Server.ServerWide
                     case nameof(DestinationMigrationConfirmCommand):
                     case nameof(SourceMigrationCleanupCommand):
                         var config = _serverStore.Cluster.ReadShardingConfiguration(database);
+                        
+                        if (config.BucketMigrations.Count == 0)
+                        {
+                            messages.Enqueue($"command {type} was skipped.");
+                        }
+
                         foreach (var (_, migration) in config.BucketMigrations)
                         {
                             messages.Enqueue(migration.ToString());

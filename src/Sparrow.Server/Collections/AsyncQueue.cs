@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Sparrow.Server.Collections
@@ -8,8 +9,13 @@ namespace Sparrow.Server.Collections
     public class AsyncQueue<T> 
     {
         private readonly ConcurrentQueue<T> _inner = new ConcurrentQueue<T>();
-        private readonly AsyncManualResetEvent _event = new AsyncManualResetEvent();
+        private readonly AsyncManualResetEvent _event;
         public int Count => _inner.Count;
+
+        public AsyncQueue(CancellationToken token = default)
+        {
+            _event = new AsyncManualResetEvent(token);
+        }
 
         public void Enqueue(T item)
         {

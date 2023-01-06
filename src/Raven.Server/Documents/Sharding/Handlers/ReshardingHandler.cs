@@ -4,10 +4,12 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 
@@ -35,25 +37,32 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
 
             var fromBucket = int.Parse(buckets[0]);
-            var toBucket = int.Parse(buckets[1]);
+            var toBucket = fromBucket;
 
-            var id = ServerStore.Operations.GetNextOperationId();
+            if (buckets.Count == 2)
+            {
+                toBucket = int.Parse(buckets[1]);
+            }
+
+            var operationId = ServerStore.Operations.GetNextOperationId();
             var opDesc = new ReshardingOperationDetails
             {
                 FromBucket = fromBucket,
                 ToBucket = toBucket,   
                 ToShard = toShard
             };
-
-            _ = ServerStore.Operations.AddLocalOperation(id, OperationType.Resharding, $"Move to shard {toShard} buckets [{fromBucket}-{toBucket}]", opDesc, async action =>
+            var token = CreateOperationToken();
+            _ = ServerStore.Operations.AddLocalOperation(operationId, OperationType.Resharding, $"Move to shard {toShard} buckets [{fromBucket}-{toBucket}]", opDesc, async action =>
             {
                 var result = new ReshardingResult();
-                var messages = new AsyncQueue<string>();
+                var messages = new AsyncQueue<string>(token.Token);
                 using (ServerStore.Sharding.RegisterForReshardingStatusUpdate(database, messages))
                 {
                     var bucket = fromBucket;
                     while (ServerStore.ServerShutdown.IsCancellationRequested == false)
                     {
+                        token.ThrowIfCancellationRequested();
+
                         if (ServerStore.Sharding.HasActiveMigrations(database) == false)
                         {
                             if (bucket > toBucket)
@@ -70,16 +79,25 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 }
                 result.Message = $"Finished resharding to shard {toShard} buckets [{fromBucket}-{toBucket}]";
                 return result;
-            });
+            }, token);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+            }
         }
 
         public class ReshardingResult : IOperationResult, IOperationProgress
         {
             public string Message { get; set; }
 
-            DynamicJsonValue IOperationResult.ToJson()
+            public DynamicJsonValue ToJson()
             {
-                throw new NotImplementedException();
+                return new DynamicJsonValue
+                {
+                    [nameof(Message)] = Message
+                };
             }
 
             public IOperationProgress Clone()
@@ -88,13 +106,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
 
             public bool ShouldPersist => false;
-            DynamicJsonValue IOperationProgress.ToJson()
-            {
-                return new DynamicJsonValue
-                {
-                    [nameof(Message)] = Message
-                };
-            }
 
             public bool CanMerge => false;
             public void MergeWith(IOperationProgress progress)

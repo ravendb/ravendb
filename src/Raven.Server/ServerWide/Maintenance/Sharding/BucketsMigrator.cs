@@ -19,7 +19,7 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
             if (shards.Count < 1)
                 return false;
 
-            if (record.Sharding.BucketMigrations.Any(b => b.Value.Status < MigrationStatus.OwnershipTransferred))
+            if (record.Sharding.BucketMigrations.Any(b => b.Value.IsActive))
                 return false; // other migration is ongoing
 
             return moveStrategy(record, shards, policy, ref result);

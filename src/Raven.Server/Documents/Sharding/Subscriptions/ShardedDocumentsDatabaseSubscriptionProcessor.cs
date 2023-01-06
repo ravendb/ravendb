@@ -50,7 +50,7 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
             }
             if (_sharding.BucketMigrations.TryGetValue(bucket, out var migration))
             {
-                if (migration.Status < MigrationStatus.OwnershipTransferred)
+                if (migration.IsActive)
                 {
                     reason = $"The document {item.Id} from bucket {bucket} is under active migration)";
                     item.Data = null;

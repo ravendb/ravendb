@@ -2,7 +2,7 @@
 
 public enum MigrationStatus
 {
-    None,
+    Pending,
 
     // source is in progress of sending the bucket
     Moving,
