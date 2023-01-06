@@ -11,16 +11,12 @@ namespace EmbeddedTests.Issues
         [Fact]
         public void Can_Use_Custom_Analyzer()
         {
-            var paths = CopyServer();
-            CopyCustomAnalyzer(paths.ServerDirectory);
+            var options = CopyServerAndCreateOptions();
+            CopyCustomAnalyzer(options.ServerDirectory);
 
             using (var embedded = new EmbeddedServer())
             {
-                embedded.StartServer(new ServerOptions
-                {
-                    ServerDirectory = paths.ServerDirectory,
-                    DataDirectory = paths.DataDirectory,
-                });
+                embedded.StartServer(options);
 
                 using (var store = embedded.GetDocumentStore("DatabaseWithCustomAnalyzers"))
                 {
