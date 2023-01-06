@@ -16,6 +16,7 @@
         <thead>
             <tr>
                 <th class="column-min-width">Range</th>
+                <th>Non-empty buckets count</th>
                 <th>Documents count</th>
                 <th>Shards</th>
                 <th>Size (&sum; <span data-bind="text: node().formatSize()"></span>)</th>
@@ -30,6 +31,7 @@
                         <span href="#" class="table-item-name text-elipsis" data-bind="text: name, visible: !hasChildren(), attr: { title: name }"></span>
                     </div>
                 </td>
+                <td data-bind="text: numberOfBuckets.toLocaleString()"></td>
                 <td data-bind="text: documentsCount.toLocaleString()"></td>
                 <td>
                     <!-- ko foreach: shards -->

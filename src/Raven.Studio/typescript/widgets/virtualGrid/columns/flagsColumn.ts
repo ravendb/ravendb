@@ -16,7 +16,7 @@ class flagsColumn implements virtualColumn {
         return false;
     }
 
-    width = "140px";
+    width = "100px";
     
     header = `<div style="padding-left: 8px;"><i class="icon-flag"></i></div>`;
 
@@ -46,7 +46,7 @@ class flagsColumn implements virtualColumn {
                 extraClasses.push("time-series");
             }
             
-            shardText = metadata.shardNumber != null ? '<span class="label label-default">SHARD #' + metadata.shardNumber + '</span>' : "";
+            shardText = metadata.shardNumber != null ? '<span class="label label-default" title="Shard #">#' + metadata.shardNumber + '</span>' : "";
         }
         
         return `<div class="cell text-cell flags-cell ${extraClasses.join(" ")}" style="width: ${this.width}"><i title="Attachments" class="icon-attachment"></i><i title="Revisions" class="icon-revisions"></i><i title="Counters" class="icon-new-counter"></i><i title="Time Series" class="icon-new-time-series"></i>${shardText}</div>`;
