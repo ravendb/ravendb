@@ -14,7 +14,7 @@ class getBucketsCommand extends commandBase {
         const args = this.range ? {
             fromBucket: this.range.from,
             toBucket: this.range.to,
-            range: (this.range.to - this.range.from) / getBucketsCommand.expectedNumberOfRanges
+            range: (this.range.to - this.range.from + 1) / getBucketsCommand.expectedNumberOfRanges
         } : {};
         const url = endpoints.databases.buckets.debugBuckets + this.urlEncodeArgs(args);
         return this.query<Raven.Server.Web.Studio.Processors.BucketsResults>(url, null, this.db)

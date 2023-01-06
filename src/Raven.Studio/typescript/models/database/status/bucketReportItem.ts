@@ -6,7 +6,6 @@ class bucketReportItem {
     name: string;
     internalChildren: bucketReportItem[];
     size?: number;
-    length?: number;
     x?: number;
     y?: number;
     dx?: number;
@@ -16,15 +15,17 @@ class bucketReportItem {
     toRange: number;
     
     documentsCount: number = null;
+    numberOfBuckets: number;
     parent?: bucketReportItem;
     w?: number; // used for storing text width
     lazyLoadChildren = false;
     
     shards: number[] = [];
     
-    constructor(name: string, size: number, documentsCount: number, shards: number[], internalChildren: bucketReportItem[] = null) {
+    constructor(name: string, size: number, numberOfBuckets: number, documentsCount: number, shards: number[], internalChildren: bucketReportItem[] = null) {
         this.name = name;
         this.size = size;
+        this.numberOfBuckets = numberOfBuckets;
         this.documentsCount = documentsCount;
         this.shards = shards;
         this.internalChildren = internalChildren;

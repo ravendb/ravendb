@@ -1,5 +1,3 @@
-import router = require("plugins/router");
-import appUrl = require("common/appUrl");
 import accessManager = require("common/shell/accessManager");
 import getBucketsCommand = require("commands/database/debug/getBucketsCommand");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
@@ -88,7 +86,8 @@ class bucketsReport extends shardViewModelBase {
         
         const totalSize = mappedData.reduce((p, c) => p + c.size, 0);
         const totalDocuments = mappedData.reduce((p, c) => p + c.documentsCount, 0);
-        this.root = new bucketReportItem( "/", totalSize, totalDocuments, [], mappedData);
+        const totalBuckets = mappedData.reduce((p, c) => p + c.numberOfBuckets, 0);
+        this.root = new bucketReportItem( "/", totalSize, totalBuckets, totalDocuments, [], mappedData);
 
         this.sortBySize(this.root);
 
@@ -104,11 +103,11 @@ class bucketsReport extends shardViewModelBase {
     }
 
     private mapBucket(dto: Raven.Server.Web.Studio.Processors.BucketRange): bucketReportItem {
-        const name = dto.FromBucket + " - " + dto.ToBucket;
-        const item = new bucketReportItem(name, dto.RangeSize, dto.DocumentsCount, dto.ShardNumbers);
+        const name = dto.FromBucket === dto.ToBucket ? "Bucket: " + dto.FromBucket : (dto.FromBucket + " - " + dto.ToBucket);
+        const item = new bucketReportItem(name, dto.RangeSize, dto.NumberOfBuckets, dto.DocumentsCount, dto.ShardNumbers);
         item.fromRange = dto.FromBucket;
         item.toRange = dto.ToBucket;
-        item.lazyLoadChildren = true;
+        item.lazyLoadChildren = (item.toRange - item.fromRange) > 1;
         return item;
     }
 
@@ -230,7 +229,6 @@ class bucketsReport extends shardViewModelBase {
     private drawNewTreeMap(nodes: bucketReportItem[], container: d3.Selection<any>) {
         // eslint-disable-next-line @typescript-eslint/no-this-alias
         const self = this;
-        const showTypeOffset = 7;
 
         const cell = container.selectAll("g.cell-no-such") // we always select non-existing nodes to draw from scratch - we don't update elements here
             .data(nodes)
@@ -421,7 +419,8 @@ class bucketsReport extends shardViewModelBase {
             .duration(200)
             .style("opacity", 1);
         let html = "<div class='tooltip-li'>Range: <div class='value'>" + d.name + "</div></div>";
-        html += "<div class='tooltip-li'>Document Count: <div class='value'>" + d.documentsCount + "</div></div>";
+        html += "<div class='tooltip-li'>Documents Count: <div class='value'>" + d.documentsCount + "</div></div>";
+        html += "<div class='tooltip-li'>Buckets Count: <div class='value'>" + d.numberOfBuckets + "</div></div>";
         html += "<div class='tooltip-li'>Shards: <div class='value'>" + d.shards.map(x => `<span># ${x}</span>`).join("") + "</div></div>";
         html += "<div class='tooltip-li'>Size: <div class='value'>" + generalUtils.formatBytesToSize(d.size) + "</div></div>";
 
