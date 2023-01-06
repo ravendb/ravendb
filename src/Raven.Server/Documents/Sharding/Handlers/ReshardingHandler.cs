@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -17,13 +15,17 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ReshardingHandler : ServerRequestHandler
     {
-        [RavenAction("/admin/resharding/start", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/resharding/start", "POST", AuthorizationStatus.Operator)]
         public async Task StartResharding()
         {
             var database = GetStringQueryString("database");
-            var buckets = GetStringValuesQueryString("bucket");
-            var toShard = GetIntValueQueryString("to").Value;
+            var fromBucket = GetIntValueQueryString("fromBucket").Value;
+            var toBucket = GetIntValueQueryString("toBucket").Value;
+            var toShard = GetIntValueQueryString("toShard").Value;
             var raftId = GetRaftRequestIdFromQuery();
+
+            if (fromBucket > toBucket || fromBucket < 0 || toBucket < 0)
+                throw new ArgumentException($"Invalid buckets range [{fromBucket}-{toBucket}]");
 
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -34,14 +36,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 if (raw.IsSharded == false)
                     throw new InvalidOperationException($"{database} is not sharded");
-            }
-
-            var fromBucket = int.Parse(buckets[0]);
-            var toBucket = fromBucket;
-
-            if (buckets.Count == 2)
-            {
-                toBucket = int.Parse(buckets[1]);
             }
 
             var operationId = ServerStore.Operations.GetNextOperationId();

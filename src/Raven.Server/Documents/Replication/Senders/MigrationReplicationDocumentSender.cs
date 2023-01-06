@@ -34,6 +34,17 @@ namespace Raven.Server.Documents.Replication.Senders
             var bucket = Destination.Bucket;
             _lastBatchChangeVector = ctx.GetChangeVector(string.Empty);
 
+            foreach (var replicationBatchItem in ReplicationBatchItemsForBucket(documentsStorage, ctx, etag, stats, bucket))
+            {
+                yield return replicationBatchItem;
+                
+                if (_lastBatchChangeVector.IsNullOrEmpty == false)
+                    Parent.LastChangeVectorInBucket = _lastBatchChangeVector;
+            }
+        }
+
+        public static IEnumerable<ReplicationBatchItem> ReplicationBatchItemsForBucket(ShardedDocumentsStorage documentsStorage, DocumentsOperationContext ctx, long etag, ReplicationStats stats, int bucket)
+        {
             var docs = documentsStorage.GetDocumentsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
             var tombs = documentsStorage.GetTombstonesByBucketFrom(ctx, bucket, etag + 1);
             var conflicts = documentsStorage.ConflictsStorage.GetConflictsByBucketFrom(ctx, bucket, etag + 1).Select(DocumentReplicationItem.From);
@@ -52,7 +63,8 @@ namespace Raven.Server.Documents.Replication.Senders
             using (var countersIt = counters.GetEnumerator())
             using (var timeSeriesIt = timeSeries.GetEnumerator())
             using (var deletedTimeSeriesRangesIt = deletedTimeSeriesRanges.GetEnumerator())
-            using (var mergedInEnumerator = new MergedReplicationBatchEnumerator(stats.DocumentRead, stats.AttachmentRead, stats.TombstoneRead, stats.CounterRead, stats.TimeSeriesRead))
+            using (var mergedInEnumerator =
+                   new MergedReplicationBatchEnumerator(stats.DocumentRead, stats.AttachmentRead, stats.TombstoneRead, stats.CounterRead, stats.TimeSeriesRead))
             {
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.Document, docsIt);
                 mergedInEnumerator.AddEnumerator(ReplicationBatchItem.ReplicationItemType.DocumentTombstone, tombsIt);
@@ -67,11 +79,7 @@ namespace Raven.Server.Documents.Replication.Senders
                 {
                     yield return mergedInEnumerator.Current;
                 }
-
-                if (_lastBatchChangeVector.IsNullOrEmpty == false)
-                    Parent.LastChangeVectorInBucket = _lastBatchChangeVector;
             }
-
         }
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
