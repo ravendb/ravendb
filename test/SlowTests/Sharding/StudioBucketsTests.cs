@@ -148,7 +148,7 @@ namespace SlowTests.Sharding
 
                             if (bucketInfos.TryGetValue(bucket, out var bucketInfo))
                             {
-                                bucketInfo.Documents.Add(id);
+                                bucketInfo.Items.Add(id);
                                 bucketInfo.NumberOfDocuments += 1;
                             }
                             else
@@ -156,7 +156,7 @@ namespace SlowTests.Sharding
                                 bucketInfos.Add(bucket, new BucketInfo()
                                 {
                                     Bucket = bucket,
-                                    Documents = new List<string>() { id },
+                                    Items = new List<string>() { "Document "  + id },
                                     NumberOfDocuments = 1
                                 });
                             }
@@ -181,8 +181,8 @@ namespace SlowTests.Sharding
                 {
                     var results = await store.Operations.SendAsync(new GetBucketInfoOperation(bucket));
                     Assert.Equal(info.Bucket, results.Bucket);
-                    Assert.Equal(info.Documents.Count, results.NumberOfDocuments);
-                    Assert.True(EnumerableExtension.ElementsEqual(info.Documents, results.Documents));
+                    Assert.Equal(info.Items.Count, results.NumberOfDocuments);
+                    Assert.True(EnumerableExtension.ElementsEqual(info.Items, results.Items));
                     Assert.Equal(info.Size, results.Size);
                 }
             }

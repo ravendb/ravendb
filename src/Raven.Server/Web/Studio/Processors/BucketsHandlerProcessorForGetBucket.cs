@@ -1,13 +1,11 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Raven.Server.Web.Http;
-using NotImplementedException = System.NotImplementedException;
 
 namespace Raven.Server.Web.Studio.Processors
 {
@@ -21,8 +19,17 @@ namespace Raven.Server.Web.Studio.Processors
         {
             using (context.OpenReadTransaction())
             {
-                var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(RequestHandler.Database);
-                var docs = database.ShardedDocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0);
+                var shardedDocumentDatabase = ShardedDocumentDatabase.CastToShardedDocumentDatabase(RequestHandler.Database);
+                var stats = new ReplicationDocumentSenderBase.ReplicationStats();
+                using var helper = new DocumentInfoHelper(context);
+
+                var items = new List<string>();
+                foreach (var item in MigrationReplicationDocumentSender.ReplicationBatchItemsForBucket(shardedDocumentDatabase.ShardedDocumentsStorage, context, 0, stats, bucket))
+                {
+                    var info = helper.GetItemInformation(item); 
+                    items.Add(info);
+                }
+
                 var bucketStats = ShardedDocumentsStorage.GetBucketStatisticsFor(context, bucket);
 
                 if (bucketStats == null)
@@ -30,7 +37,7 @@ namespace Raven.Server.Web.Studio.Processors
                     return ValueTask.FromResult(new BucketInfo()
                     {
                         Bucket = bucket,
-                        Documents = docs.Select(d => d.Id.ToString()).ToList()
+                        Items = items
                     });
                 }
 
@@ -40,7 +47,7 @@ namespace Raven.Server.Web.Studio.Processors
                     Size = bucketStats.Size,
                     NumberOfDocuments = bucketStats.NumberOfDocuments,
                     LastModified = bucketStats.LastModified,
-                    Documents = docs.Select(d => d.Id.ToString()).ToList()
+                    Items = items
                 };
 
                 return ValueTask.FromResult(bucketInfo);

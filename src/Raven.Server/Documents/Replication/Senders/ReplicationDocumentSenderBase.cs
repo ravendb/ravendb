@@ -721,7 +721,7 @@ namespace Raven.Server.Documents.Replication.Senders
             _stats.TimeSeriesRead = _stats.Storage.For(ReplicationOperation.Outgoing.TimeSeriesRead, start: false);
         }
 
-        protected internal class ReplicationStats
+        public class ReplicationStats
         {
             public OutgoingReplicationStatsScope Network;
             public OutgoingReplicationStatsScope Storage;

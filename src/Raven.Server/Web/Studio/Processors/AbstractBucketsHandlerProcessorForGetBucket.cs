@@ -77,12 +77,12 @@ namespace Raven.Server.Web.Studio.Processors
 
     public class BucketInfo : BucketStats
     {
-        public List<string> Documents;
+        public List<string> Items;
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(Documents)] = new DynamicJsonArray(Documents);
+            json[nameof(Items)] = new DynamicJsonArray(Items);
             return json;
         }
     }

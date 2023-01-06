@@ -17,7 +17,7 @@ namespace Raven.Server.Documents
 {
     public unsafe partial class AttachmentsStorage
     {
-        public IEnumerable<ReplicationBatchItem> GetAttachmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        public IEnumerable<AttachmentReplicationItem> GetAttachmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 

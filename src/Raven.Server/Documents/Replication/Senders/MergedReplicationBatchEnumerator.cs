@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
             if (enumerator.MoveNext())
             {
-                using (GetStatsFor(type).Start())
+                using (GetStatsFor(type)?.Start())
                 {
                     _workEnumerators.Add(enumerator);
                 }
@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Replication.Senders
             }
 
             _currentItem = current.Current;
-            using (GetStatsFor(_currentItem.Type).Start())
+            using (GetStatsFor(_currentItem.Type)?.Start())
             {
                 if (current.MoveNext() == false)
                 {
