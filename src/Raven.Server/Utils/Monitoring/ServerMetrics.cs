@@ -213,13 +213,16 @@ namespace Raven.Server.Utils.Monitoring
     {
         public double? ServerCertificateExpirationLeftInSec { get; set; }
         public string[] WellKnownAdminCertificates { get; set; }
+        
+        public string[] WellKnownAdminIssuers { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(ServerCertificateExpirationLeftInSec)] = ServerCertificateExpirationLeftInSec,
-                [nameof(WellKnownAdminCertificates)] = WellKnownAdminCertificates
+                [nameof(WellKnownAdminCertificates)] = WellKnownAdminCertificates,
+                [nameof(WellKnownAdminIssuers)] = WellKnownAdminIssuers
             };
         }
     }
