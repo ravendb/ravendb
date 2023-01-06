@@ -337,7 +337,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             if (record.Sharding.BucketMigrations.TryGetValue(bucket, out var migration) == false)
                 return false;
 
-            return migration.Status < MigrationStatus.OwnershipTransferred;
+            return migration.IsActive;
         }
 
         private bool IsFromProperShard(ClusterOperationContext context, RawDatabaseRecord record, string id)

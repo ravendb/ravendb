@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using Sparrow;
 
 namespace Raven.Client.ServerWide.Sharding;
@@ -18,12 +19,28 @@ public class ShardBucketMigration : IDatabaseTask
     public List<string> ConfirmedSourceCleanup = new List<string>();
 
     public string MentorNode;
+
     public override string ToString()
     {
-        return $"Bucket '{Bucket}' is migrated from '{SourceShard}' to '{DestinationShard}' at status '{Status}'.{Environment.NewLine}" +
-               $"Migrations index '{MigrationIndex}', Last change vector from source '{LastSourceChangeVector}', " +
-               $"Propagated to {string.Join(", ", ConfirmedDestinations)} and confirmed at {ConfirmationIndex}, Cleaned up at {string.Join(", ", ConfirmedSourceCleanup)}";
+        var sb = new StringBuilder($"Bucket '{Bucket}' is migrating from '{SourceShard}' to '{DestinationShard}'. current status: '{Status}'.");
+        switch (Status)
+        {
+            case MigrationStatus.Pending:
+            case MigrationStatus.Moving:
+                break;
+            case MigrationStatus.Moved:
+            case MigrationStatus.OwnershipTransferred:
+                sb.AppendLine($"Migrations index '{MigrationIndex}', Last change vector from source '{LastSourceChangeVector}',");
+                sb.AppendLine(
+                    $"Propagated to {string.Join(", ", ConfirmedDestinations)} and confirmed at {ConfirmationIndex}, Cleaned up at {string.Join(", ", ConfirmedSourceCleanup)}");
+                return sb.ToString();
+            default:
+                throw new ArgumentOutOfRangeException(nameof(Status));
+        }
+        return sb.ToString();
     }
+
+    public bool IsActive => Status == MigrationStatus.Moved || Status == MigrationStatus.Moving;
 
     private ulong? _hashCode;
 

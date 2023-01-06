@@ -178,7 +178,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
 
                     var sharding = rawRecord.Sharding;
-                    var currentMigration = sharding?.BucketMigrations.SingleOrDefault(pair => pair.Value.Status < MigrationStatus.OwnershipTransferred).Value;
+                    var currentMigration = sharding?.BucketMigrations.SingleOrDefault(pair => pair.Value.IsActive).Value;
                     
                     //create mock database report for the sharded db for the cluster observer topology update
                     if (rawRecord.IsSharded && sharding.Orchestrator.Topology.RelevantFor(_server.NodeTag))

@@ -7,6 +7,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Operations;
 
@@ -88,7 +89,7 @@ public abstract class AbstractOperation
 
         if (_throttle.Scheduled == null)
         {
-            _throttle.Scheduled = System.Threading.Tasks.Task.Delay(_throttleTime - sinceLastSent).ContinueWith(x =>
+            _throttle.Scheduled = TimeoutManager.WaitFor(_throttleTime - sinceLastSent, Token.Token).ContinueWith(x =>
             {
                 if (State.Status == OperationStatus.InProgress)
                     addToNotificationCenter(_throttle.Notification);
