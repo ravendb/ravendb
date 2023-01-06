@@ -13,15 +13,11 @@ namespace EmbeddedTests
         [Fact]
         public void TestEmbedded()
         {
-            var paths = CopyServer();
+            var options = CopyServerAndCreateOptions();
 
             using (var embedded = new EmbeddedServer())
             {
-                embedded.StartServer(new ServerOptions
-                {
-                    ServerDirectory = paths.ServerDirectory,
-                    DataDirectory = paths.DataDirectory,
-                });
+                embedded.StartServer(options);
 
                 using (var store = embedded.GetDocumentStore(new DatabaseOptions("Test")
                 {
@@ -48,11 +44,7 @@ namespace EmbeddedTests
 
             using (var embedded = new EmbeddedServer())
             {
-                embedded.StartServer(new ServerOptions
-                {
-                    ServerDirectory = paths.ServerDirectory,
-                    DataDirectory = paths.DataDirectory,
-                });
+                embedded.StartServer(options);
 
                 using (var store = embedded.GetDocumentStore("Test"))
                 {
@@ -73,15 +65,11 @@ namespace EmbeddedTests
         [Fact]
         public async Task TestEmbeddedRestart()
         {
-            var paths = CopyServer();
+            var options = CopyServerAndCreateOptions();
 
             using (var embedded = new EmbeddedServer())
             {
-                embedded.StartServer(new ServerOptions
-                {
-                    ServerDirectory = paths.ServerDirectory,
-                    DataDirectory = paths.DataDirectory,
-                });
+                embedded.StartServer(options);
 
                 var pid1 = await embedded.GetServerProcessIdAsync();
                 Assert.True(pid1 > 0);
@@ -124,16 +112,10 @@ namespace EmbeddedTests
         [Fact]
         public async Task TestEmbedded_RuntimeFrameworkVersionMatcher()
         {
-            var paths = CopyServer();
+            var options = CopyServerAndCreateOptions();
 
             using (var embedded = new EmbeddedServer())
             {
-                var options = new ServerOptions
-                {
-                    ServerDirectory = paths.ServerDirectory,
-                    DataDirectory = paths.DataDirectory,
-                };
-
                 var frameworkVersion = new RuntimeFrameworkVersionMatcher.RuntimeFrameworkVersion(options.FrameworkVersion)
                 {
                     Patch = null

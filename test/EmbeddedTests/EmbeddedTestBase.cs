@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using EmbeddedTests.Platform;
+using Raven.Embedded;
 using Sparrow.Collections;
 
 namespace EmbeddedTests
@@ -76,6 +77,12 @@ namespace EmbeddedTests
             return (serverDirectory, dataDirectory);
         }
 
+        protected ServerOptions CopyServerAndCreateOptions()
+        {
+            var (severDirectory, dataDirectory) = CopyServer();
+            return new ServerOptions { ServerDirectory = severDirectory, DataDirectory = dataDirectory, LogsPath = Path.Combine(severDirectory, "Logs") };
+        }
+        
         public virtual void Dispose()
         {
             foreach (var path in _localPathsToDelete)
