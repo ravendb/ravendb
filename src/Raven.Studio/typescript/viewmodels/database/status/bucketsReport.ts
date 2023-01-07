@@ -144,7 +144,7 @@ class bucketsReport extends shardViewModelBase {
         item.fromRange = dto.FromBucket;
         item.toRange = dto.ToBucket;
         item.lazyLoadChildren = !leafBucket;
-        const leafItem = new bucketReportItem("Bucket:" + dto.FromBucket, dto.RangeSize, dto.NumberOfBuckets, dto.DocumentsCount, dto.ShardNumbers);
+        const leafItem = new bucketReportItem("Bucket: " + dto.FromBucket, dto.RangeSize, dto.NumberOfBuckets, dto.DocumentsCount, dto.ShardNumbers);
         item.internalChildren = [leafItem];
         return item;
     }
@@ -428,7 +428,7 @@ class bucketsReport extends shardViewModelBase {
     }
     
     private maybeUpdateTable() {
-        if (this.node().fromRange === this.node().toRange) {
+        if (this.root !== this.node() && this.node().fromRange === this.node().toRange) {
             this.showBucketContents(true); 
             this.gridController().reset(true);
             
