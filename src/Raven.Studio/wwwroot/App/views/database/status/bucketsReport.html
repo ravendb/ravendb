@@ -5,12 +5,12 @@
         <div class="chart"></div>
     </div>
     <div class="current-path">
-            <span data-bind="foreach: currentPath">
-                <a href="#" data-bind="click: _.partial($root.onClick, $data, false)">
-                    <span data-bind="text: name"></span>
-                </a>
-                <i data-bind="visible: $index() < $root.currentPath().length - 1" class="icon-arrow-filled-right"></i>
-            </span>
+        <span data-bind="foreach: currentPath">
+            <a href="#" data-bind="click: _.partial($root.onClick, $data, false)">
+                <span data-bind="text: name"></span>
+            </a>
+            <i data-bind="visible: $index() < $root.currentPath().length - 1" class="icon-arrow-filled-right"></i>
+        </span>
     </div>
     <table class="table table-condensed table-striped on-base-background margin-top margin-top-sm" data-bind="if: node() && node().internalChildren">
         <thead>
@@ -36,7 +36,6 @@
                 <td>
                     <!-- ko foreach: shards -->
                         <span class="label label-primary" data-bind="text: '#' + $data">
-                            
                         </span>
                     <!-- /ko -->
                 </td>
@@ -45,4 +44,13 @@
             </tr>
         </tbody>
     </table>
+    
+    <div data-bind="visible: showBucketContents">
+        <h3>Document IDs stored in this bucket:</h3>
+
+
+        <div class="margin-bottom" style="position: relative; height: 80vw">
+            <virtual-grid style="height: 80vw" class="resizable flex-window" params="controller: gridController"></virtual-grid>
+        </div>
+    </div>
 </div>

@@ -6,6 +6,9 @@ import d3 = require("d3");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
 import bucketReportItem from "models/database/status/bucketReportItem";
+import virtualGridController from "widgets/virtualGrid/virtualGridController";
+import textColumn from "widgets/virtualGrid/columns/textColumn";
+import getBucketCommand from "commands/database/debug/getBucketCommand";
 
 type positionAndSizes = {
     dx: number,
@@ -13,6 +16,8 @@ type positionAndSizes = {
     x: number,
     y: number
 }
+
+type gridItem = { id: string };
 
 class bucketsReport extends shardViewModelBase {
 
@@ -39,7 +44,10 @@ class bucketsReport extends shardViewModelBase {
 
     private transitioning = false;
 
+    private gridController = ko.observable<virtualGridController<gridItem>>();
     showLoader = ko.observable<boolean>(false);
+    
+    showBucketContents = ko.observable<boolean>(false);
 
     constructor(db: database, location: databaseLocationSpecifier) {
         super(db, location);
@@ -60,9 +68,36 @@ class bucketsReport extends shardViewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        
+        this.showBucketContents.subscribe(visible => {
+            if (visible) {
+                const grid = this.gridController();
+                grid.headerVisible(true);
+
+                grid.init(() => this.fetcher(), () => {
+                    return [
+                        new textColumn<gridItem>(grid, x => x.id, "Document ID", "90%"),
+                    ];
+                });
+            }
+        })
 
         this.initGraph();
         this.draw(undefined);
+    }
+
+    private fetcher(): JQueryPromise<pagedResult<gridItem>> {
+        const bucket = this.node().fromRange;
+        return new getBucketCommand(this.db, bucket)
+            .execute()
+            .then(result => {
+                const ids = result.Documents.map(id => ({ id }));
+                
+                return {
+                    items: ids,
+                    totalResultCount: ids.length
+                }
+            });
     }
 
     private initObservables() {
@@ -103,11 +138,14 @@ class bucketsReport extends shardViewModelBase {
     }
 
     private mapBucket(dto: Raven.Server.Web.Studio.Processors.BucketRange): bucketReportItem {
-        const name = dto.FromBucket === dto.ToBucket ? "Bucket: " + dto.FromBucket : (dto.FromBucket + " - " + dto.ToBucket);
+        const leafBucket = dto.FromBucket === dto.ToBucket;
+        const name = leafBucket ? "Bucket: " + dto.FromBucket : (dto.FromBucket + " - " + dto.ToBucket);
         const item = new bucketReportItem(name, dto.RangeSize, dto.NumberOfBuckets, dto.DocumentsCount, dto.ShardNumbers);
         item.fromRange = dto.FromBucket;
         item.toRange = dto.ToBucket;
-        item.lazyLoadChildren = (item.toRange - item.fromRange) > 1;
+        item.lazyLoadChildren = !leafBucket;
+        const leafItem = new bucketReportItem("Bucket:" + dto.FromBucket, dto.RangeSize, dto.NumberOfBuckets, dto.DocumentsCount, dto.ShardNumbers);
+        item.internalChildren = [leafItem];
         return item;
     }
 
@@ -273,23 +311,11 @@ class bucketsReport extends shardViewModelBase {
             textLength = (self.node() as any).getComputedTextLength();
         }
     } 
-
-    private findDatafile(d: bucketReportItem): bucketReportItem {
-        while (d.parent.parent && d.parent.parent.name !== "/") {
-            d = d.parent;
-        }
-        
-        return d;
-    }
     
-    private loadDetailedReport(d: bucketReportItem): JQueryPromise<any> { //TODO: typE
+    private loadDetailedReport(d: bucketReportItem): JQueryPromise<Raven.Server.Web.Studio.Processors.BucketsResults> {
         if (!d.lazyLoadChildren) {
             return;
         }
-
-        const datafile = this.findDatafile(d);
-        const full = datafile !== d; // load full details only when loadDetailedReport was requested from child of data file 
-        const env = datafile.parent;
 
         const showLoaderTimer = setTimeout(() => {
             this.showLoader(true);
@@ -374,6 +400,8 @@ class bucketsReport extends shardViewModelBase {
                     this.node(nodeAfterLoad);
                     
                     this.draw(true, oldLocation);
+                    
+                    this.maybeUpdateTable();
                 })
                 .always(() => requestExecution.markCompleted());
 
@@ -390,10 +418,22 @@ class bucketsReport extends shardViewModelBase {
         this.node(d);
         this.draw(goingIn);
 
+        this.maybeUpdateTable();
+
         this.updateTooltips();
         
         if (d3.event) {
             (d3.event as any).stopPropagation();
+        }
+    }
+    
+    private maybeUpdateTable() {
+        if (this.node().fromRange === this.node().toRange) {
+            this.showBucketContents(true); 
+            this.gridController().reset(true);
+            
+        } else {
+            this.showBucketContents(false);
         }
     }
     

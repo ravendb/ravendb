@@ -586,6 +586,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(MemoryDebugHandler.MemoryInfo));
             scripter.AddType(typeof(TombstoneCleaner.TombstonesState));
             scripter.AddType(typeof(BucketsResults));
+            scripter.AddType(typeof(BucketInfo));
 
             // counters
             scripter.AddType(typeof(CounterBatch));
