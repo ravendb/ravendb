@@ -18,7 +18,7 @@ class getBucketsCommand extends commandBase {
         } : {};
         const url = endpoints.databases.buckets.debugBuckets + this.urlEncodeArgs(args);
         return this.query<Raven.Server.Web.Studio.Processors.BucketsResults>(url, null, this.db)
-            .fail((response: JQueryXHR) => this.reportError("Failed to buckets report", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => this.reportError("Failed to load buckets report", response.responseText, response.statusText));
     }
 }
 
