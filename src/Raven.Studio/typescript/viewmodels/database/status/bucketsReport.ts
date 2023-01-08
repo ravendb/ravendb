@@ -124,6 +124,8 @@ class bucketsReport extends shardViewModelBase {
         const totalDocuments = mappedData.reduce((p, c) => p + c.documentsCount, 0);
         const totalBuckets = mappedData.reduce((p, c) => p + c.numberOfBuckets, 0);
         this.root = new bucketReportItem( "/", totalSize, totalBuckets, totalDocuments, [], mappedData);
+        this.root.fromRange = 0;
+        this.root.toRange = 1024 * 1024;
 
         this.sortBySize(this.root);
 
@@ -145,8 +147,13 @@ class bucketsReport extends shardViewModelBase {
         item.fromRange = dto.FromBucket;
         item.toRange = dto.ToBucket;
         item.lazyLoadChildren = !leafBucket;
-        const leafItem = new bucketReportItem("Bucket: " + dto.FromBucket, dto.RangeSize, dto.NumberOfBuckets, dto.DocumentsCount, dto.ShardNumbers);
-        item.internalChildren = [leafItem];
+        if (leafBucket) {
+            const leafItem = new bucketReportItem("Bucket: " + dto.FromBucket, dto.RangeSize, dto.NumberOfBuckets, dto.DocumentsCount, dto.ShardNumbers);
+            leafItem.fromRange = dto.FromBucket;
+            leafItem.toRange = dto.ToBucket;
+            item.internalChildren = [leafItem];
+        }
+        
         return item;
     }
 
