@@ -56,20 +56,20 @@ namespace Raven.Server.Documents.Replication.Senders
         }
 
         protected virtual IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats,
-            bool caseInsensitiveCounters, bool revisionTombstonesWithId)
+            ReplicationSupportedFeatures replicationSupportedFeatures)
         {
-            return GetReplicationItems(_parent._database, ctx, etag, stats, caseInsensitiveCounters, revisionTombstonesWithId);
+            return GetReplicationItems(_parent._database, ctx, etag, stats, replicationSupportedFeatures);
         }
 
-        protected internal static IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentDatabase database, DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters, bool revisionTombstonesWithId)
+        protected internal static IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentDatabase database, DocumentsOperationContext ctx, long etag, ReplicationStats stats, ReplicationSupportedFeatures replicationSupportedFeatures)
         {
             var docs = database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
-            var tombs = database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1, revisionTombstonesWithId);
+            var tombs = database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1, replicationSupportedFeatures.RevisionTombstonesWithId);
             var conflicts = database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1).Select(DocumentReplicationItem.From);
             var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
             var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, long.MaxValue).Select(DocumentReplicationItem.From);
             var attachments = database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
-            var counters = database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1, caseInsensitiveCounters);
+            var counters = database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1, replicationSupportedFeatures.CaseInsensitiveCounters);
             var timeSeries = database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(ctx, etag + 1);
             var deletedTimeSeriesRanges = database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(ctx, etag + 1);
 
@@ -141,12 +141,17 @@ namespace Raven.Server.Documents.Replication.Senders
                         Size = 0L,
                     };
 
+                    var replicationSupportedFeatures = new ReplicationSupportedFeatures
+                    {
+                        CaseInsensitiveCounters = _parent.SupportedFeatures.Replication.CaseInsensitiveCounters,
+                        RevisionTombstonesWithId = _parent.SupportedFeatures.Replication.RevisionTombstonesWithId
+                    };
+
                     using (_stats.Storage.Start())
                     {
-  						bool caseInsensitiveCounters = _parent.SupportedFeatures.Replication.CaseInsensitiveCounters;
-                        bool revisionTombstones = _parent.SupportedFeatures.Replication.RevisionTombstonesWithId;
+                        foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats, caseInsensitiveCounters, revisionTombstones))
                         using var enumerator = new PulsedTransactionEnumerator<ReplicationBatchItem, ReplicationBatchState>(documentsContext, _ =>
-                            GetReplicationItems(documentsContext, _lastEtag, _stats, caseInsensitiveCounters, revisionTombstones), state);
+                            GetReplicationItems(documentsContext, _lastEtag, _stats,replicationSupportedFeatures), state);
 
                         while (enumerator.MoveNext())
                         {
@@ -777,6 +782,12 @@ namespace Raven.Server.Documents.Replication.Senders
 
                 return false;
             }
+        }
+
+        protected internal class ReplicationSupportedFeatures
+        {
+            public bool CaseInsensitiveCounters;
+            public bool RevisionTombstonesWithId;
         }
 
         public virtual void Dispose()

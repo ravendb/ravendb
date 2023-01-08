@@ -694,9 +694,7 @@ namespace Raven.Server.Documents.Revisions
 
                         hasValue = true;
 
-                        using (Slice.From(context.Allocator, revision.ChangeVector, out var changeVectorSlice))
-                        using (context.Allocator.Allocate(prefixSlice.Size + changeVectorSlice.Size, out var keyBuffer))
-                        using (CreateRevisionTombstoneKeySlice(context, keyBuffer, prefixSlice, changeVectorSlice, out var keySlice))
+                        using (CreateRevisionTombstoneKeySlice(context, prefixSlice, revision.ChangeVector, out var changeVectorSlice, out var keySlice))
                         {
                             CreateTombstone(context, keySlice, revision.Etag, collectionName, changeVector, lastModifiedTicks, flags);
 
@@ -729,29 +727,25 @@ namespace Raven.Server.Documents.Revisions
             return deletedRevisionsCount;
         }
 
-        internal static unsafe ByteStringContext.ExternalScope CreateRevisionTombstoneKeySlice(DocumentsOperationContext context, ByteString buffer, Slice documentIdPrefix, Slice changeVectorSlice, out Slice keySlice)
+        private unsafe ByteStringContext.ExternalScope CreateRevisionTombstoneKeySlice(DocumentsOperationContext context, Slice documentIdSlice, string changeVector, out Slice changeVectorSlice, out Slice keySlice)
         {
-            var scope = Slice.External(context.Allocator, buffer.Ptr, buffer.Length, out keySlice);
-            documentIdPrefix.CopyTo(buffer.Ptr);
-            int pos = documentIdPrefix.Size;
-            buffer.Ptr[pos - 1] = SpecialChars.RecordSeparator;
-            changeVectorSlice.CopyTo(buffer.Ptr + pos);
+            Slice.From(context.Allocator, changeVector, out changeVectorSlice);
+            context.Allocator.Allocate(documentIdSlice.Size + changeVectorSlice.Size, out var keyBuffer);
+            var scope = Slice.External(context.Allocator, keyBuffer.Ptr, keyBuffer.Length, out keySlice);
+            documentIdSlice.CopyTo(keyBuffer.Ptr);
+            int pos = documentIdSlice.Size;
+            keyBuffer.Ptr[pos - 1] = SpecialChars.RecordSeparator;
+            changeVectorSlice.CopyTo(keyBuffer.Ptr + pos);
             return scope;
         }
 
-        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks, LazyStringValue revisionTombstoneKey = null)
+        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks, Slice changeVectorSlice)
         {
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
             long revisionEtag;
 
-            Slice changeVectorSlice = key;
-            if (revisionTombstoneKey != null)
-            {
-                using var scope = RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, revisionTombstoneKey, out changeVectorSlice);
-            }
-            
             if (table.ReadByKey(changeVectorSlice, out TableValueReader tvr))
             {
                 using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr, out Slice lowerId))
