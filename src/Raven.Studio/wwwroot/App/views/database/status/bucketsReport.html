@@ -43,9 +43,19 @@
                 <td data-bind="html: formatSize(false)"></td>
                 <td data-bind="text: formatPercentage($parent.node().size)"></td>
                 <td>
-                    <button class="btn btn-sm btn-default" data-bind="click: _.partial($root.moveToDifferentShard, $data)">
-                        Move to different shard
-                    </button>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-default dropdown-toggle" data-toggle="dropdown">
+                            <span>Move to</span> <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" data-bind="foreach: $root.shardNumbers">
+                            <li>
+                                <a href="#" data-bind="click: _.partial($root.moveToDifferentShard, $parent, $data)">
+                                    Shard #<span data-bind="text: $data"></span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                   
                 </td>
             </tr>
         </tbody>
