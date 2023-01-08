@@ -15,6 +15,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Actions;
@@ -609,7 +610,10 @@ namespace Raven.Server.Smuggler.Documents
                                     break;
 
                                 case Tombstone.TombstoneType.Revision:
-                                    _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, tombstone.ChangeVector, tombstone.LastModified.Ticks);
+                                    using (RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, tombstone.LowerId, out var changeVectorSlice))
+                                    {
+                                        _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, tombstone.ChangeVector, tombstone.LastModified.Ticks, changeVectorSlice);
+                                    }
                                     break;
 
                                 case Tombstone.TombstoneType.Counter:

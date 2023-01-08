@@ -29,18 +29,11 @@ namespace Raven.Server.Documents.Replication
 
         public unsafe LazyStringValue GetDocumentId(LazyStringValue key)
         {
-            int sizeOfDocId = 0;
-            var tmpStr = key.ToCharArray();
-            for (; sizeOfDocId < key.Size; sizeOfDocId++)
-            {
-                if (tmpStr[sizeOfDocId] == (char)SpecialChars.RecordSeparator)
-                    break;
-            }
-
-            if (sizeOfDocId >= key.Size)
+            var index = key.IndexOf((char)SpecialChars.RecordSeparator, StringComparison.OrdinalIgnoreCase);
+            if (index == -1)
                 return null;
 
-            _tmpLazyStringInstance = _context.GetLazyString(key.Buffer, sizeOfDocId);
+            _tmpLazyStringInstance = _context.GetLazyString(key.Buffer, index);
             return _tmpLazyStringInstance;
         }
 

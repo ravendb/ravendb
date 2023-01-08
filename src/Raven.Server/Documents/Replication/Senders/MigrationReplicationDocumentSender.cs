@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Server.Documents.Replication.Outgoing;
@@ -26,8 +25,8 @@ namespace Raven.Server.Documents.Replication.Senders
             Parent = parent;
         }
 
-        protected override IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats, 
-            bool caseInsensitiveCounters, bool revisionTombstonesWithId)
+        protected override IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats,
+            ReplicationSupportedFeatures replicationSupportedFeatures)
         {
             var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(ctx.DocumentDatabase);
             var documentsStorage = database.ShardedDocumentsStorage;

@@ -390,9 +390,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                             case RevisionTombstoneReplicationItem revisionTombstone:
 
                                 var id = HandleRevisionTombstone(context, revisionTombstone.Id, toDispose);
-
+                                toDispose.Add(RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, revisionTombstone.Id, out var changeVectorSlice));
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, id, revisionTombstone.Collection,
-                                    changeVectorVersion, revisionTombstone.LastModifiedTicks, revisionTombstone.Id);
+                                    changeVectorVersion, revisionTombstone.LastModifiedTicks, changeVectorSlice);
                                 break;
 
                             case CounterReplicationItem counter:

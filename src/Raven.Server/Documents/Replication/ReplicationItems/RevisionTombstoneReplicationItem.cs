@@ -82,27 +82,22 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public unsafe void StripDocumentIdFromKeyIfNeeded(JsonOperationContext context)
         {
-            var p = Id.Buffer;
-            var size = Id.Size;
-            int sizeOfDocId = 0;
-            for (; sizeOfDocId < size; sizeOfDocId++)
-            {
-                if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
-                    break;
-            }
-
-            var changeVectorIndex = sizeOfDocId + 1;
-            if (changeVectorIndex >= size)
+            var index = Id.IndexOf((char)SpecialChars.RecordSeparator, StringComparison.OrdinalIgnoreCase);
+            if (index == -1)
                 return;
 
-            Id = context.AllocateStringValue(null, p + changeVectorIndex, size - sizeOfDocId - 1);
+            Id = context.AllocateStringValue(null, Id.Buffer + index + 1, Id.Size - index - 1);
         }
 
         public static ByteStringContext.InternalScope TryExtractChangeVectorSliceFromKey(ByteStringContext allocator, LazyStringValue key, out Slice changeVectorSlice)
         {
             var index = key.IndexOf((char)SpecialChars.RecordSeparator, StringComparison.OrdinalIgnoreCase);
-            var changeVectorIndex = index + 1;
-            var changeVector = changeVectorIndex >= key.Size ? key : key.Substring(changeVectorIndex);
+            string changeVector;
+            if (index == -1)
+                changeVector = key;
+            else
+                changeVector = key.Substring(index + 1);
+
             return Slice.From(allocator, changeVector, out changeVectorSlice);
         }
 
