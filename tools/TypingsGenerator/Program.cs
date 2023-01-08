@@ -82,6 +82,7 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
@@ -326,6 +327,7 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(Raven.Client.ServerWide.Operations.DatabasesInfo));
             scripter.AddType(typeof(RawShardingConfiguration));
+            scripter.AddType(typeof(ReshardingHandler.ReshardingResult));
 
             // smuggler
             scripter.AddType(typeof(DatabaseSmugglerImportOptions));

@@ -23,6 +23,7 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import smugglerDatabaseDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/smugglerDatabaseDetails");
 import sqlMigrationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/sqlMigrationDetails");
 import patchDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/patchDocumentsDetails");
+import reshardingDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/reshardingDetails");
 import virtualBulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualBulkInsertDetails");
 import virtualBulkInsertFailuresDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualBulkInsertFailuresDetails");
 import virtualUpdateByQueryDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualUpdateByQueryDetails");
@@ -141,6 +142,7 @@ class notificationCenter {
             smugglerDatabaseDetails,
             sqlMigrationDetails,
             patchDocumentsDetails,
+            reshardingDetails,
             generateClientCertificateDetails,
             deleteDocumentsDetails,
             bulkInsertDetails,

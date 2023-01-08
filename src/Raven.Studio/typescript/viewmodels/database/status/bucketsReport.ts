@@ -10,6 +10,7 @@ import virtualGridController from "widgets/virtualGrid/virtualGridController";
 import textColumn from "widgets/virtualGrid/columns/textColumn";
 import getBucketCommand from "commands/database/debug/getBucketCommand";
 import startReshardingCommand from "commands/database/dbGroup/startReshardingCommand";
+import notificationCenter from "common/notifications/notificationCenter";
 
 type positionAndSizes = {
     dx: number,
@@ -28,6 +29,8 @@ class bucketsReport extends shardViewModelBase {
 
     static readonly animationLength = 200;
     static readonly maxChildrenToShow = 1000;
+    
+    shardNumbers = ko.observableArray<number>([]);
 
     private currentPath: KnockoutComputed<Array<bucketReportItem>>;
 
@@ -52,6 +55,8 @@ class bucketsReport extends shardViewModelBase {
 
     constructor(db: database, location: databaseLocationSpecifier) {
         super(db, location);
+        
+        this.shardNumbers(db.isSharded() ? db.shards().map(x => x.shardNumber) : []);
         this.bindToCurrentInstance("onClick", "moveToDifferentShard");
     }
 
@@ -279,7 +284,7 @@ class bucketsReport extends shardViewModelBase {
         const cell = container.selectAll("g.cell-no-such") // we always select non-existing nodes to draw from scratch - we don't update elements here
             .data(nodes)
             .enter().append("svg:g")
-            .attr("class", d => "cell index")
+            .attr("class", () => "cell index")
             .attr("transform", d => "translate(" + d.x + "," + d.y + ")")
             .on("click", d => this.onClick(d, true))
             .on("mouseover", d => this.onMouseOver(d))
@@ -482,12 +487,22 @@ class bucketsReport extends shardViewModelBase {
             .style("opacity", 0);
     }
 
-    moveToDifferentShard(item: bucketReportItem) {
-        //TODO: provide better UI for getting shard number...
-        const response = prompt("Enter shard#");
-        const shardNumber = parseInt(response);
-        new startReshardingCommand(this.db, { from: item.fromRange, to: item.toRange }, shardNumber)
-            .execute();
+    moveToDifferentShard(item: bucketReportItem, shardNumber: number) {
+        const range = item.fromRange === item.toRange ? "bucket " + item.fromRange : "range [" + item.fromRange + " - " + item.toRange + "]";
+        const question = "Do you want to move " + range + " to shard #" + shardNumber + "?";
+        
+        this.confirmationMessage("Confirm resharding", question, {
+            buttons: ["Cancel", "Start resharding"]
+        })
+            .done(result => {
+                if (result.can) {
+                    new startReshardingCommand(this.db, { from: item.fromRange, to: item.toRange }, shardNumber)
+                        .execute()
+                        .done(result => {
+                            notificationCenter.instance.openDetailsForOperationById(null, result.OperationId);
+                        });
+                }
+            });
     }
 }
 
