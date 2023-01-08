@@ -21,9 +21,9 @@ public class ShardingConfiguration
     // the dbid part with the MOVE tag upon migration
     public string DatabaseId;
 
-    public bool DoesShardHaveBuckets(int shardNumber) => DoesShardHaveBuckets(BucketRanges, shardNumber);
+    internal bool DoesShardHaveBuckets(int shardNumber) => DoesShardHaveBuckets(BucketRanges, shardNumber);
 
-    public static bool DoesShardHaveBuckets(List<ShardBucketRange> bucketRanges, int shardNumber)
+    internal static bool DoesShardHaveBuckets(List<ShardBucketRange> bucketRanges, int shardNumber)
     {
         foreach (var bucketRange in bucketRanges)
         {
