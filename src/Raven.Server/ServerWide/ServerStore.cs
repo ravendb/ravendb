@@ -85,6 +85,7 @@ using Voron;
 using Voron.Exceptions;
 using Constants = Raven.Client.Constants;
 using NodeInfo = Raven.Client.ServerWide.Commands.NodeInfo;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.ServerWide
 {
@@ -821,11 +822,19 @@ namespace Raven.Server.ServerWide
                 var errorThreshold = new Sparrow.Size(128, SizeUnit.Megabytes);
                 var swapSize = MemoryInformation.GetMemoryInfo().TotalSwapSize;
                 if (swapSize < Configuration.PerformanceHints.MinSwapSize - errorThreshold)
+                {
+                    bool noSwapFile = swapSize == Size.Zero;
+                    string title = noSwapFile ? "No swap file" : "Low swap size";
+                    string message = noSwapFile ? $"There is no swap file, it is advised to set up a '{Configuration.PerformanceHints.MinSwapSize}' swap file" : 
+                        $"The current swap size is '{swapSize}' and it is lower then the threshold defined '{Configuration.PerformanceHints.MinSwapSize}'";
+
                     NotificationCenter.Add(AlertRaised.Create(null,
-                        "Low swap size",
-                        $"The current swap size is '{swapSize}' and it is lower then the threshold defined '{Configuration.PerformanceHints.MinSwapSize}'",
+                        title,
+                        message,
                         AlertType.LowSwapSize,
                         NotificationSeverity.Warning));
+                }
+
                 return;
             }
 
