@@ -469,7 +469,7 @@ namespace Raven.Client.ServerWide
             return $"{node}${shardNumber.Value}";
         }
 
-        public bool IsShardBeingDeletedOnAnyNode(int shardNumber)
+        internal bool IsShardBeingDeletedOnAnyNode(int shardNumber)
         {
             foreach (var deletion in DeletionInProgress)
             {
