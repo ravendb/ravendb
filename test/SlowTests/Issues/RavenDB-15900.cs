@@ -60,7 +60,7 @@ namespace SlowTests.Issues
 
 
             // Get last raft index from leader
-            var testCmdIndex = await WaitForCommandIndex(nodes, "TestCommandWithRaftId");
+            var testCmdIndex = await WaitForCommandIndex(nodes, nameof(RachisConsensusTestBase.TestCommandWithRaftId));
             Assert.NotEqual(testCmdIndex, -1);
 
             // Wait for all nodes to be updated to leader last raft index
@@ -175,7 +175,7 @@ namespace SlowTests.Issues
             _ = leader.ServerStore.Engine.CurrentLeader.PutAsync(testCmd, TimeSpan.FromSeconds(2));
 
             // Get last raft index from leader
-            var testCmdIndex = await WaitForCommandIndex(nodes, "TestCommandWithRaftId");
+            var testCmdIndex = await WaitForCommandIndex(nodes, nameof(RachisConsensusTestBase.TestCommandWithRaftId));
             Assert.NotEqual(testCmdIndex, -1);
 
             // Wait for all nodes to be updated to leader last raft index
@@ -228,7 +228,7 @@ namespace SlowTests.Issues
 
         }
 
-        private async Task<long> WaitForCommandIndex(List<RavenServer> nodes, string commandType, long timeout = 15_000)
+        private async Task<long> WaitForCommandIndex(List<RavenServer> nodes, string commandType, long timeout = 15_000, long interval = 100)
         {
             var sw = Stopwatch.StartNew();
             long index = -1;
@@ -238,7 +238,7 @@ namespace SlowTests.Issues
                 {
                     try
                     {
-                        var lastIndex = Cluster.LastRaftIndexForCommand(nodes[0], commandType);
+                        var lastIndex = Cluster.LastRaftIndexForCommand(server, commandType);
                         index = lastIndex;
                     }
                     catch (TrueException)
@@ -252,23 +252,18 @@ namespace SlowTests.Issues
                 {
                     return index;
                 }
+
+                await Task.Delay(TimeSpan.FromMilliseconds(interval));
             }
 
             return index;
         }
 
-        private static long GetLastEntryIndex(RavenServer server)
-        {
-            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-                return server.ServerStore.Engine.GetLastEntryIndex(context);
-        }
-
         public async Task AssertRaftIndexToBeUpdatedOnNodesAsync(long index, List<RavenServer> nodes, int timeout = 15000, int interval = 100)
         {
-
             var sw = Stopwatch.StartNew();
-            List<string> nodeTags = new List<string>();
+
+            var nodeTags = new List<string>();
             var updated = false;
             while (sw.ElapsedMilliseconds < timeout)
             {
@@ -285,27 +280,5 @@ namespace SlowTests.Issues
             Assert.True(updated, $"Nodes {string.Join(" ", nodeTags)} are not updated to the index {index}");
         }
 
-        internal class TestCommandWithRaftId : CommandBase
-        {
-            private string Name;
-
-#pragma warning disable 649
-            private object Value;
-#pragma warning restore 649
-
-            public TestCommandWithRaftId(string name, string uniqueRequestId) : base(uniqueRequestId)
-            {
-                Name = name;
-            }
-
-            public override DynamicJsonValue ToJson(JsonOperationContext context)
-            {
-                var djv = base.ToJson(context);
-                djv[nameof(Name)] = Name;
-                djv[nameof(Value)] = Value;
-
-                return djv;
-            }
-        }
     }
 }
