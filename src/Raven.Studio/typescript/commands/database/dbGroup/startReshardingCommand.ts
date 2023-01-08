@@ -9,13 +9,14 @@ class startReshardingCommand extends commandBase {
 
     execute(): JQueryPromise<operationIdDto> {
         const args = {
-            bucket: [this.range.from, this.range.to],
-            to: this.targetShard,
+            fromBucket: this.range.from,
+            toBucket: this.range.to,
+            toShard: this.targetShard,
             database: this.db.name
         }
      
         const url = endpoints.global.resharding.adminReshardingStart + this.urlEncodeArgs(args);
-        return this.query<operationIdDto>(url, null, undefined)
+        return this.post<operationIdDto>(url, null, undefined)
             .fail((response: JQueryXHR) => this.reportError("Failed to start resharding operation", response.responseText, response.statusText));
     }
 }

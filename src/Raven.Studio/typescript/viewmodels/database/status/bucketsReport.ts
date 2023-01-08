@@ -77,7 +77,7 @@ class bucketsReport extends shardViewModelBase {
 
                 grid.init(() => this.fetcher(), () => {
                     return [
-                        new textColumn<gridItem>(grid, x => x.id, "Document ID", "90%"),
+                        new textColumn<gridItem>(grid, x => x.id, "Item", "90%"),
                     ];
                 });
             }
@@ -92,7 +92,7 @@ class bucketsReport extends shardViewModelBase {
         return new getBucketCommand(this.db, bucket)
             .execute()
             .then(result => {
-                const ids = result.Documents.map(id => ({ id }));
+                const ids = result.Items.map(id => ({ id }));
                 
                 return {
                     items: ids,
