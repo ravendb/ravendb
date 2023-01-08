@@ -1107,7 +1107,12 @@ namespace Raven.Client.Documents.Session
                 newFieldsToFetch = FieldsToFetchToken.Create(fields, queryData.Projections.ToArray(), queryData.IsCustomFunction, sourceAlias);
             }
             else
+            {
                 newFieldsToFetch = null;
+                queryData = new QueryData(FieldsToFetchToken.FieldsToFetch, FieldsToFetchToken.Projections, FromToken.Alias, DeclareTokens, LoadTokens,
+                    FieldsToFetchToken.IsCustomFunction);
+            }
+
 
             if (newFieldsToFetch != null)
                 UpdateFieldsToFetchToken(newFieldsToFetch);
@@ -1164,7 +1169,6 @@ namespace Raven.Client.Documents.Session
         public IRavenQueryable<T> ToQueryable()
         {
             var type = typeof(T);
-
             var queryStatistics = new QueryStatistics();
             var highlightings = new LinqQueryHighlightings();
 
