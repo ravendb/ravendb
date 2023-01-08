@@ -21,6 +21,7 @@
                 <th>Shards</th>
                 <th>Size (&sum; <span data-bind="text: node().formatSize()"></span>)</th>
                 <th>% Total</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody data-bind="foreach: node().internalChildren">
@@ -41,6 +42,11 @@
                 </td>
                 <td data-bind="html: formatSize(false)"></td>
                 <td data-bind="text: formatPercentage($parent.node().size)"></td>
+                <td>
+                    <button class="btn btn-sm btn-default" data-bind="click: _.partial($root.moveToDifferentShard, $data)">
+                        Move to different shard
+                    </button>
+                </td>
             </tr>
         </tbody>
     </table>

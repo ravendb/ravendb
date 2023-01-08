@@ -9,6 +9,7 @@ import bucketReportItem from "models/database/status/bucketReportItem";
 import virtualGridController from "widgets/virtualGrid/virtualGridController";
 import textColumn from "widgets/virtualGrid/columns/textColumn";
 import getBucketCommand from "commands/database/debug/getBucketCommand";
+import startReshardingCommand from "commands/database/dbGroup/startReshardingCommand";
 
 type positionAndSizes = {
     dx: number,
@@ -51,7 +52,7 @@ class bucketsReport extends shardViewModelBase {
 
     constructor(db: database, location: databaseLocationSpecifier) {
         super(db, location);
-        this.bindToCurrentInstance("onClick");
+        this.bindToCurrentInstance("onClick", "moveToDifferentShard");
     }
 
     activate(args: any) {
@@ -472,6 +473,14 @@ class bucketsReport extends shardViewModelBase {
         this.tooltip.transition()
             .duration(500)
             .style("opacity", 0);
+    }
+
+    moveToDifferentShard(item: bucketReportItem) {
+        //TODO: provide better UI for getting shard number...
+        const response = prompt("Enter shard#");
+        const shardNumber = parseInt(response);
+        new startReshardingCommand(this.db, { from: item.fromRange, to: item.toRange }, shardNumber)
+            .execute();
     }
 }
 
