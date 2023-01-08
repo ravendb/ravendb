@@ -18,11 +18,13 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace SlowTests.Issues
 {
@@ -46,72 +48,70 @@ namespace SlowTests.Issues
         [Fact]
         public async Task RemoveEntryFromRaftLogEP()
         {
-            var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+
+            await ActionWithLeader(l => l.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator());
+
+            using var store = GetDocumentStore(new Options() { Server = leader, ReplicationFactor = 1 });
+
+            // Stuck leader on this command
+            var testCmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
+            await Assert.ThrowsAsync<UnknownClusterCommandException>(() => leader.ServerStore.SendToLeaderAsync(testCmd));
+
+
+            // Get last raft index from leader
+            var testCmdIndex = await WaitForCommandIndex(nodes, "TestCommandWithRaftId");
+            Assert.NotEqual(testCmdIndex, -1);
+
+            // Wait for all nodes to be updated to leader last raft index
+            var lastNotifiedIndex = leader.ServerStore.Engine.StateMachine.LastNotifiedIndex;
+            await AssertRaftIndexToBeUpdatedOnNodesAsync(lastNotifiedIndex, nodes);
+
             var database = GetDatabaseName();
-
-            await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
-            using (var store = new DocumentStore { Database = database, Urls = new[] { leader.WebUrl } }.Initialize())
+            _ = leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
             {
-                leader.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator();
-
-                var cmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
-
-                await Assert.ThrowsAsync<UnknownClusterCommandException>(() => leader.ServerStore.SendToLeaderAsync(cmd));
-
-                var cmd2 = new CreateDatabaseOperation.CreateDatabaseCommand(new DatabaseRecord("Toli"), 1);
-
-                _ = leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
+                Record = new DatabaseRecord(database)
                 {
-                    Record = new DatabaseRecord("Toli")
+                    Topology = new DatabaseTopology { Members = new List<string> { "A", "B", "C" }, Rehabs = new List<string> { }, ReplicationFactor = 3 }
+                },
+                Name = database
+            });
+
+            foreach (var server in Servers)
+            {
+                Assert.False(server.ServerStore.DatabasesLandlord.IsDatabaseLoaded(database));
+            }
+
+            List<string> nodelist = new List<string>();
+            var nodesCount = await WaitForValueAsync(async () =>
+            {
+                nodelist = await store.Maintenance.SendAsync(new RemoveEntryFromRaftLogOperation(testCmdIndex));
+                return nodelist.Count;
+            }, 3);
+            Assert.Equal(3, nodesCount);
+
+
+            foreach (var server in Servers)
+            {
+                long lastCommittedIndex = 0;
+                var res = await WaitForValueAsync(() =>
+                {
+                    using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
                     {
-                        Topology = new DatabaseTopology
-                        {
-                            Members = new List<string> { "A", "B", "C" },
-                            Rehabs = new List<string> { },
-                            ReplicationFactor = 3
-                        }
-                    },
-                    Name = "Toli"
-                });
+                        server.ServerStore.Engine.GetLastCommitIndex(context, out lastCommittedIndex, out long _);
+                    }
+                    return lastCommittedIndex > testCmdIndex;
+                }, true);
+                Assert.True(res, $"State machine is stuck. raft index was {testCmdIndex}, after remove raft entry index is {lastCommittedIndex} ");
+            }
 
-                foreach (var server in Servers)
-                {
-                    Assert.False(server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
-                }
+            foreach (var server in Servers)
+            {
+                var val = await WaitForValueAsync(() => server.ServerStore.DatabasesLandlord.IsDatabaseLoaded(database), true);
+                Assert.True(val);
 
-                var index = Cluster.LastRaftIndexForCommand(leader, nameof(TestCommandWithRaftId));
-
-                List<string> nodelist = new List<string>();
-                var res = await WaitForValueAsync(async () =>
-                {
-                    nodelist = await store.Maintenance.SendAsync(new RemoveEntryFromRaftLogOperation(index));
-                    return nodelist.Count;
-                }, 3);
-                Assert.Equal(3, res);
-
-                long index2 = 0;
-                foreach (var server in Servers)
-                {
-                    await WaitForValueAsync(async () =>
-                    {
-                        var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                        using (documentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                        using (var tx = context.OpenReadTransaction())
-                        {
-                            server.ServerStore.Engine.GetLastCommitIndex(context, out index2, out long term);
-                        }
-
-                        return index2 > index;
-                    }, true);
-                }
-                Assert.True(index2 > index, $"State machine is stuck. raft index was {index}, after remove raft entry index is {index2} ");
-
-                foreach (var server in Servers)
-                {
-                    var val = WaitForValueAsync(() => server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"), true);
-                    Assert.True(val.Result);
-                    Assert.Contains(server.ServerStore.NodeTag, nodelist);
-                }
+                Assert.Contains(server.ServerStore.NodeTag, nodelist);
             }
         }
 
@@ -167,83 +167,101 @@ namespace SlowTests.Issues
         public async Task RemoveEntryFromRaftLogTest()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+
+            await ActionWithLeader(l => l.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator());
+
+            // Stuck leader on this command
+            var testCmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
+            _ = leader.ServerStore.Engine.CurrentLeader.PutAsync(testCmd, TimeSpan.FromSeconds(2));
+
+            // Get last raft index from leader
+            var testCmdIndex = await WaitForCommandIndex(nodes, "TestCommandWithRaftId");
+            Assert.NotEqual(testCmdIndex, -1);
+
+            // Wait for all nodes to be updated to leader last raft index
+            var lastNotifiedIndex = leader.ServerStore.Engine.StateMachine.LastNotifiedIndex;
+            await AssertRaftIndexToBeUpdatedOnNodesAsync(lastNotifiedIndex, nodes);
+
             var database = GetDatabaseName();
-
-            await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
-            using (var store = new DocumentStore
+            _ = leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
             {
-                Database = database,
-                Urls = new[] { leader.WebUrl }
-            }.Initialize())
+                Record = new DatabaseRecord(database)
+                {
+                    Topology = new DatabaseTopology { Members = new List<string> { "A", "B", "C" }, Rehabs = new List<string> { }, ReplicationFactor = 3 }
+                },
+                Name = database
+            });
+
+            foreach (var server in Servers)
             {
-                await ActionWithLeader(l => l.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator());
+                Assert.False(server.ServerStore.DatabasesLandlord.IsDatabaseLoaded(database));
+            }
 
-                var documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+            foreach (var server in Servers)
+            {
+                var res = await WaitForValueAsync(() => server.ServerStore.Engine.RemoveEntryFromRaftLog(testCmdIndex), true);
 
-                var cmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
+                Assert.True(res);
+            }
 
-                _ = leader.ServerStore.Engine.CurrentLeader.PutAsync(cmd, TimeSpan.FromSeconds(2));
-
-                // Get last raft index from leader
-                var leaderLastIndex = leader.ServerStore.Engine.StateMachine.LastNotifiedIndex;
-
-                // Wait for all nodes to be updated to leader last raft index
-                await AssertRaftIndexToBeUpdatedOnNodesAsync(leaderLastIndex, nodes);
-
-                var cmd2 = new CreateDatabaseOperation.CreateDatabaseCommand(new DatabaseRecord("Toli"), 1);
-
-                _ = leader.ServerStore.SendToLeaderAsync(new AddDatabaseCommand(Guid.NewGuid().ToString())
+            
+            foreach (var server in Servers)
+            {
+                long lastCommittedIndex = 0;
+                var res = await WaitForValueAsync(() =>
                 {
-                    Record = new DatabaseRecord("Toli")
+                    using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
                     {
-                        Topology = new DatabaseTopology
-                        {
-                            Members = new List<string> { "A", "B", "C" },
-                            Rehabs = new List<string> { },
-                            ReplicationFactor = 3
-                        }
-                    },
-                    Name = "Toli"
-                });
+                        server.ServerStore.Engine.GetLastCommitIndex(context, out lastCommittedIndex, out long _);
+                    }
+                    return lastCommittedIndex > testCmdIndex;
+                }, true);
+                Assert.True(res, $"State machine is stuck. raft index was {testCmdIndex}, after remove raft entry index is {lastCommittedIndex} ");
+            }
 
-                foreach (var server in Servers)
+            foreach (var server in Servers)
+            {
+                var val = await WaitForValueAsync(() => server.ServerStore.DatabasesLandlord.IsDatabaseLoaded(database), true);
+                Assert.True(val);
+            }
+
+        }
+
+        private async Task<long> WaitForCommandIndex(List<RavenServer> nodes, string commandType, long timeout = 15_000)
+        {
+            var sw = Stopwatch.StartNew();
+            long index = -1;
+            while (sw.ElapsedMilliseconds < timeout)
+            {
+                foreach (var server in nodes)
                 {
-                    Assert.False(server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
-                }
-
-                long index = leaderLastIndex;
-                foreach (var server in Servers)
-                {
-                    var res = await WaitForValueAsync(() => server.ServerStore.Engine.RemoveEntryFromRaftLog(index + 1), true);
-
-                    Assert.True(res);
-                }
-
-                long index2 = 0;
-                foreach (var server in Servers)
-                {
-                    await WaitForValueAsync(async () =>
+                    try
                     {
-                        index2 = 0;
-                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                        using (documentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                        using (var tx = context.OpenReadTransaction())
-                        {
-                            server.ServerStore.Engine.GetLastCommitIndex(context, out index2, out long term);
-
-                        }
-
-                        return index2 > index;
-                    }, true);
+                        var lastIndex = Cluster.LastRaftIndexForCommand(nodes[0], commandType);
+                        index = lastIndex;
+                    }
+                    catch (TrueException)
+                    {
+                        index = -1;
+                        break;
+                    }
                 }
-                Assert.True(index2 > index, $"State machine is stuck. raft index was {index}, after remove raft entry index is {index2} ");
 
-                foreach (var server in Servers)
+                if (index != -1)
                 {
-                    var val = await WaitForValueAsync(() => server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"), true);
-                    Assert.True(val);
+                    return index;
                 }
             }
+
+            return index;
+        }
+
+        private static long GetLastEntryIndex(RavenServer server)
+        {
+            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+                return server.ServerStore.Engine.GetLastEntryIndex(context);
         }
 
         public async Task AssertRaftIndexToBeUpdatedOnNodesAsync(long index, List<RavenServer> nodes, int timeout = 15000, int interval = 100)
