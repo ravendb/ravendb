@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Replication
                 AttachmentReplicationItem a => "Attachment for " + GetDocumentId(a.Key),
                 AttachmentTombstoneReplicationItem at => "Attachment tombstone for: " + GetDocumentId(at.Key),
                 CounterReplicationItem c => "Counter for " + c.Id,
-                DocumentReplicationItem d => "Document " + d.Id,
+                DocumentReplicationItem d => d.Data != null ? "Document " + d.Id : "Tombstone "+ d.Id,
                 RevisionTombstoneReplicationItem r => "Revision for: " + r.Id,
                 TimeSeriesDeletedRangeItem td => "Time Series deletion range for: " + GetDocumentId(td.Key),
                 TimeSeriesReplicationItem t => "Time Series for: " + GetDocumentId(t.Key),
