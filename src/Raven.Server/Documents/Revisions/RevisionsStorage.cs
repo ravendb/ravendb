@@ -728,7 +728,13 @@ namespace Raven.Server.Documents.Revisions
             return deletedRevisionsCount;
         }
 
-        private unsafe IDisposable CreateRevisionTombstoneKeySlice(DocumentsOperationContext context, Slice documentIdSlice, string changeVector, out Slice changeVectorSlice, out Slice keySlice)
+        internal static void CreateRevisionTombstoneKeySlice(DocumentsOperationContext context, string documentId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
+        {
+            toDispose.Add(Slice.From(context.Allocator, documentId, out var documentIdSlice));
+            toDispose.Add(CreateRevisionTombstoneKeySlice(context, documentIdSlice, changeVector, out changeVectorSlice, out keySlice));
+        }
+
+        private static unsafe IDisposable CreateRevisionTombstoneKeySlice(DocumentsOperationContext context, Slice documentIdSlice, string changeVector, out Slice changeVectorSlice, out Slice keySlice)
         {
             var toDispose = new List<IDisposable>
             {

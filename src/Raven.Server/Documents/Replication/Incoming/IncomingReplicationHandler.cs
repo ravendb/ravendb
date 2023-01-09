@@ -303,10 +303,10 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return context.GetChangeVector(item.ChangeVector).Order;
             }
 
-            protected virtual Slice HandleRevisionTombstone(DocumentsOperationContext context, LazyStringValue id, List<IDisposable> toDispose)
+            protected virtual void HandleRevisionTombstone(DocumentsOperationContext context, LazyStringValue id, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
             {
-                toDispose.Add(Slice.From(context.Allocator, id, out Slice idSlice));
-                return idSlice;
+                toDispose.Add(Slice.From(context.Allocator, id, out keySlice));
+                toDispose.Add(RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, id, out changeVectorSlice));
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -389,9 +389,8 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                             case RevisionTombstoneReplicationItem revisionTombstone:
 
-                                var id = HandleRevisionTombstone(context, revisionTombstone.Id, toDispose);
-                                toDispose.Add(RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, revisionTombstone.Id, out var changeVectorSlice));
-                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, id, revisionTombstone.Collection,
+                                HandleRevisionTombstone(context, revisionTombstone.Id, out var changeVectorSlice, out var idKeySlice, toDispose);
+                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, idKeySlice, revisionTombstone.Collection,
                                     changeVectorVersion, revisionTombstone.LastModifiedTicks, changeVectorSlice);
                                 break;
 
