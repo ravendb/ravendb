@@ -765,12 +765,23 @@ namespace SlowTests.Sharding.Backup
                     Assert.NotNull(databaseRecord.Revisions);
 
                     var shardNodes = new HashSet<string>();
+                    var expectedShardNumber = 0;
                     foreach (var shardToTopology in databaseRecord.Sharding.Shards)
                     {
                         var shardTopology = shardToTopology.Value;
+                        var shardNumber = shardToTopology.Key;
+
                         Assert.Equal(1, shardTopology.Members.Count);
-                        Assert.Equal(sharding.Shards[shardToTopology.Key].Members[0], shardTopology.Members[0]);
+                        Assert.Equal(sharding.Shards[shardNumber].Members[0], shardTopology.Members[0]);
                         Assert.True(shardNodes.Add(shardTopology.Members[0]));
+
+                        Assert.Equal(expectedShardNumber++, shardNumber);
+                    }
+
+                    for (int i = 0; i < databaseRecord.Sharding.BucketRanges.Count; i++)
+                    {
+                        var shardBucketRange = databaseRecord.Sharding.BucketRanges[i];
+                        Assert.Equal(i, shardBucketRange.ShardNumber);
                     }
 
                     await Sharding.Backup.CheckData(store, RavenDatabaseMode.Sharded, expectedRevisionsCount: 18, database: databaseName);

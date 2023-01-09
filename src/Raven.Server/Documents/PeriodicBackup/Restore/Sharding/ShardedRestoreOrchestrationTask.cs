@@ -99,7 +99,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
 
             databaseRecord.Sharding = new ShardingConfiguration
             {
-                BucketRanges = RestoreConfiguration.ShardRestoreSettings.BucketRanges,
                 Shards = new Dictionary<int, DatabaseTopology>(RestoreConfiguration.ShardRestoreSettings.Shards.Count),
                 Orchestrator = new OrchestratorConfiguration
                 {

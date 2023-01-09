@@ -126,19 +126,22 @@ public partial class RavenTestBase
             //Index
             await new Index().ExecuteAsync(store);
         }
-
         public ShardedRestoreSettings GenerateShardRestoreSettings(IReadOnlyCollection<string> backupPaths, ShardingConfiguration sharding)
         {
             var settings = new ShardedRestoreSettings
             {
                 Shards = new Dictionary<int, SingleShardRestoreSetting>(backupPaths.Count),
-                BucketRanges = sharding.BucketRanges
             };
 
+            var backupDirByShard = new SortedDictionary<int, string>();
             foreach (var dir in backupPaths)
             {
                 var shardNumber = GetShardNumberFromBackupPath(dir);
-                    
+                backupDirByShard.Add(shardNumber, dir);
+            }
+
+            foreach (var (shardNumber, dir) in backupDirByShard)
+            {
                 settings.Shards.Add(shardNumber, new SingleShardRestoreSetting
                 {
                     ShardNumber = shardNumber,
@@ -146,7 +149,6 @@ public partial class RavenTestBase
                     NodeTag = sharding.Shards[shardNumber].Members[0]
                 });
             }
-
             return settings;
         }
 
@@ -156,7 +158,6 @@ public partial class RavenTestBase
             var shardIndexPosition = path.LastIndexOf('$') + 1;
             return int.Parse(path[shardIndexPosition].ToString());
         }
-
 
         private class AtomicGuard
         {
