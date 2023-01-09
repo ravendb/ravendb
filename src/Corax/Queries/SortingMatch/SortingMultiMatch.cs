@@ -4,8 +4,11 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
+using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
+using Sparrow.Server.Utils;
+
 using static Corax.Queries.SortingMatch;
 
 namespace Corax.Queries
@@ -41,7 +44,15 @@ namespace Corax.Queries
                                            typeof(TComparer4) == typeof(BoostingComparer) || typeof(TComparer5) == typeof(BoostingComparer) || typeof(TComparer6) == typeof(BoostingComparer) ||
                                            typeof(TComparer7) == typeof(BoostingComparer) || typeof(TComparer8) == typeof(BoostingComparer) || typeof(TComparer9) == typeof(BoostingComparer);
 
-        private readonly delegate*<ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>, int, UnmanagedSpan, UnmanagedSpan, float, float, int>[] _compareFuncs;        
+        private readonly delegate*<ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>, int, UnmanagedSpan, UnmanagedSpan, float, float, int>[] _compareFuncs;
+
+
+        private const int NotStarted = -1;
+        private int _currentIdx;
+
+        internal long* _buffer;
+        internal int _bufferSize;
+        internal IDisposable _bufferHandler;
 
         public long TotalResults;
 
@@ -67,6 +78,7 @@ namespace Corax.Queries
             _searcher = searcher;
             _inner = inner;
             _take = take;
+            _currentIdx = NotStarted;
 
             // PERF: We dont want to initialize any if we are not going to be using them. 
             Unsafe.SkipInit(out _comparer2);
@@ -163,69 +175,13 @@ namespace Corax.Queries
         {
             return _comparer1.FieldType switch
             {
-                MatchCompareFieldType.Sequence => Fill<SequenceItem>(matches),
-                MatchCompareFieldType.Integer => Fill<NumericalItem<long>>(matches),
-                MatchCompareFieldType.Floating => Fill<NumericalItem<double>>(matches),
-                MatchCompareFieldType.Score => Fill<NumericalItem<float>>(matches),
-                MatchCompareFieldType.Spatial => Fill<NumericalItem<double>>(matches),
+                MatchCompareFieldType.Sequence or MatchCompareFieldType.Alphanumeric => Fill<ItemSorting<SequenceItem>>(ref this, matches),
+                MatchCompareFieldType.Integer => Fill<ItemSorting<NumericalItem<long>>>(ref this, matches),
+                MatchCompareFieldType.Floating => Fill<ItemSorting<NumericalItem<double>>>(ref this, matches),
+                MatchCompareFieldType.Spatial => Fill<ItemSorting<NumericalItem<double>>>(ref this, matches),
+                MatchCompareFieldType.Score => Fill<ItemSorting<NumericalItem<float>>>(ref this, matches),
                 _ => throw new ArgumentOutOfRangeException(_comparer1.FieldType.ToString())
             };
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool Get<TOut, TIn>(IndexEntryReader reader, FieldMetadata binding, out TOut storedValue, in TIn comparer)
-            where TOut : struct
-            where TIn : IMatchComparer
-        {
-            if (typeof(TIn) == typeof(SpatialAscendingMatchComparer))
-            {
-                if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
-                    goto Failed;
-
-                var readX = reader.GetFieldReaderFor(binding).Read( out (double lat, double lon) coordinates);
-                var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
-                
-                storedValue = (TOut)(object)new NumericalItem<double>(distance);
-                return readX;
-            }
-            else if (typeof(TIn) == typeof(SpatialDescendingMatchComparer))
-            {
-                if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
-                    goto Failed;
-                
-                var readX = reader.GetFieldReaderFor(binding).Read( out (double lat, double lon) coordinates);
-                var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
-
-                storedValue = (TOut)(object)new NumericalItem<double>(distance);
-                return readX; 
-            }
-            else if (typeof(TOut) == typeof(SequenceItem))
-            {
-                var readX = reader.GetFieldReaderFor(binding).Read( out var sv);
-                fixed (byte* svp = sv)
-                {
-                    storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
-                }
-
-                return readX;
-            }
-            else if (typeof(TOut) == typeof(NumericalItem<long>))
-            {
-                var readX = reader.GetFieldReaderFor(binding).Read<long>( out var value);
-                storedValue = (TOut)(object)new NumericalItem<long>(value);
-                return readX;
-            }
-            else if (typeof(TOut) == typeof(NumericalItem<double>))
-            {
-                
-                var readX = reader.GetFieldReaderFor(binding).Read<double>(out var value);
-                storedValue = (TOut)(object)new NumericalItem<double>(value);
-                return readX;
-            }
-
-            Failed:
-            Unsafe.SkipInit(out storedValue);
-            return false;
         }
 
         internal struct MultiMatchComparer<TComparer, TValue> : IComparer<MultiMatchComparer<TComparer, TValue>.Item>
@@ -305,195 +261,270 @@ namespace Corax.Queries
             }
         }
 
-        [SkipLocalsInit]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int Fill<TOut>(Span<long> matches) 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void UnlikelyGrowBuffer(int currentlyUsed)
+        {
+            // Calculate the new size. 
+            int size = (int)(currentlyUsed * (currentlyUsed > 16 * Voron.Global.Constants.Size.Megabyte ? 1.5 : 2));
+
+            // Allocate the new buffer
+            var bufferHandler = _searcher.Allocator.Allocate(size * sizeof(long), out var buffer);
+
+            // In case there exist already buffers in place, we copy the content.
+            if (_buffer != null)
+            {
+                // Ensure we copy the content and then switch the buffers. 
+                new Span<long>(_buffer, currentlyUsed).CopyTo(new Span<long>(buffer.Ptr, size));
+                _bufferHandler.Dispose();
+            }
+
+            _bufferSize = size;
+            _buffer = (long*)buffer.Ptr;
+            _bufferHandler = bufferHandler;
+        }
+
+        private interface IItemSorter
+        {
+            int Execute(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> match, Span<long> matches);
+        }
+
+        private struct ItemSorting<TOut> : IItemSorter
             where TOut : struct
         {
-            // Important: If you are going to request a massive take like 20K you need to pass at least a 20K size buffer to work with.
-            //            The rationale for such behavior is that sorting has to find among the candidates the order between elements,
-            //            and it can't do so without checking every single element found. If you fail to do so, your results may not be
-            //            correct. 
-            Debug.Assert(_take <= matches.Length);
-
-            int totalMatches = _inner.Fill(matches);
-            if (totalMatches == 0)
-                return 0;
-
-            int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
-            TotalResults += totalMatches;
-
-            int floatArraySize = 2 * sizeof(float) * matches.Length;
-            int matchesArraySize = sizeof(long) * matches.Length;
-            int itemArraySize = 2 * Unsafe.SizeOf<MultiMatchComparer<TComparer1, TOut>.Item>() * matches.Length;
-            using var _ = _searcher.Allocator.Allocate(itemArraySize + matchesArraySize + floatArraySize, out var bufferHolder);
-
-            var matchesKeysSpan = MemoryMarshal.Cast<byte, MultiMatchComparer<TComparer1, TOut>.Item>(bufferHolder.ToSpan().Slice(0, itemArraySize));
-            Debug.Assert(matchesKeysSpan.Length == 2 * matches.Length);
-
-            // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
-            var matchesKeys = matchesKeysSpan[0..matches.Length];
-            var bKeys = matchesKeysSpan[^matches.Length..];
-
-            Span<float> allScoresValues = MemoryMarshal.Cast<byte, float>(bufferHolder.ToSpan().Slice(itemArraySize, floatArraySize));
-            var matchesScores = allScoresValues[..matches.Length];
-            var bScores = allScoresValues[^matches.Length..];
-
-            if (HasBoostingComparer)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static bool Get<TIn>(IndexEntryReader reader, FieldMetadata binding, out TOut storedValue, in TIn comparer)
+                where TIn : IMatchComparer
             {
-                // Initializing the scores and retrieve them.
-                matchesScores.Fill(1);
-                _inner.Score(matches[0..totalMatches], matchesScores[0..totalMatches]);
-            }
-
-            var searcher = _searcher;
-            var binding = typeof(TComparer1) != typeof(BoostingComparer) ? _comparer1.Field : default;
-            var comparer = new MultiMatchComparer<TComparer1, TOut>(this);            
-            for (int i = 0; i < totalMatches; i++)
-            {
-                UnmanagedSpan matchIndexEntry = searcher.GetIndexEntryPointer(matches[i]);
-                var read = typeof(TComparer1) == typeof(BoostingComparer) || 
-                           Get(new IndexEntryReader(matchIndexEntry.Address, matchIndexEntry.Length), binding, out matchesKeys[i].Value, in _comparer1);
-                matchesKeys[i].Key = read ? matches[i] : -matches[i];
-                matchesKeys[i].Entry = matchIndexEntry;
-
-                if (HasBoostingComparer)
-                    matchesKeys[i].Score = matchesScores[i];
-            }
-            
-            // We sort the first batch. That will also mean that we will sort the indexes too. 
-            var sorter = new Sorter<MultiMatchComparer<TComparer1, TOut>.Item, long, MultiMatchComparer<TComparer1, TOut>>(comparer);
-            sorter.Sort(matchesKeys[0..totalMatches], matches);
-
-            Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan().Slice(floatArraySize + itemArraySize, matchesArraySize));
-            Debug.Assert(bValues.Length == matches.Length);
-
-            while (true)
-            {
-                // We get a new batch
-                int bTotalMatches = _inner.Fill(bValues);
-                TotalResults += bTotalMatches;
-
-                // When we don't have any new batch, we are done.
-                if (bTotalMatches == 0)
+                if (typeof(TIn) == typeof(SpatialAscendingMatchComparer))
                 {
-                    return totalMatches;
+                    if (comparer is not SpatialAscendingMatchComparer spatialAscendingMatchComparer)
+                        goto Failed;
+
+                    var readX = reader.GetFieldReaderFor(binding).Read(out (double lat, double lon) coordinates);
+                    var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialAscendingMatchComparer);
+
+                    storedValue = (TOut)(object)new NumericalItem<double>(distance);
+                    return readX;
+                }
+                else if (typeof(TIn) == typeof(SpatialDescendingMatchComparer))
+                {
+                    if (comparer is not SpatialDescendingMatchComparer spatialDescendingMatchComparer)
+                        goto Failed;
+
+                    var readX = reader.GetFieldReaderFor(binding).Read(out (double lat, double lon) coordinates);
+                    var distance = SpatialUtils.GetGeoDistance(in coordinates, in spatialDescendingMatchComparer);
+
+                    storedValue = (TOut)(object)new NumericalItem<double>(distance);
+                    return readX;
+                }
+                else if (typeof(TOut) == typeof(SequenceItem))
+                {
+                    var readX = reader.GetFieldReaderFor(binding).Read(out var sv);
+                    fixed (byte* svp = sv)
+                    {
+                        storedValue = (TOut)(object)new SequenceItem(svp, sv.Length);
+                    }
+
+                    return readX;
+                }
+                else if (typeof(TOut) == typeof(NumericalItem<long>))
+                {
+                    var readX = reader.GetFieldReaderFor(binding).Read<long>(out var value);
+                    storedValue = (TOut)(object)new NumericalItem<long>(value);
+                    return readX;
+                }
+                else if (typeof(TOut) == typeof(NumericalItem<double>))
+                {
+
+                    var readX = reader.GetFieldReaderFor(binding).Read<double>(out var value);
+                    storedValue = (TOut)(object)new NumericalItem<double>(value);
+                    return readX;
                 }
 
-                if (HasBoostingComparer)
+                Failed:
+                Unsafe.SkipInit(out storedValue);
+                return false;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Execute(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> match, Span<long> matches)
+            {
+                // PERF: This method assumes that we need to perform sorting of the whole set (even if we have a take statement).
+                // However, there is space to improve this further doing iterative sorting with element discarding in cases where
+                // take statements requires us to remove lots of elements. While we are not going to perform this optimization yet
+                // sorting is a costly primitive that if we can avoid it, would provide us a great opportunity for improvement. 
+
+                // It may happen that multiple calls to `.Fill()` would require us to remove duplicates. While sorting is not 
+                // required at this stage, to remove duplicates we need to sort anyways as we want to avoid further work down the line.
+                var totalMatches = Sorting.SortAndRemoveDuplicates(matches);
+
+                int scoresArraySize = sizeof(float) * totalMatches;
+                int itemArraySize = Unsafe.SizeOf<MultiMatchComparer<TComparer1, TOut>.Item>() * totalMatches;
+                using var _ = match._searcher.Allocator.Allocate(itemArraySize + scoresArraySize, out var bufferHolder);
+
+                var itemKeys = MemoryMarshal.Cast<byte, MultiMatchComparer<TComparer1, TOut>.Item>(bufferHolder.ToSpan().Slice(0, itemArraySize));
+                Debug.Assert(itemKeys.Length == totalMatches);
+
+                var scores = MemoryMarshal.Cast<byte, float>(bufferHolder.ToSpan().Slice(itemArraySize, scoresArraySize));
+                Debug.Assert(scores.Length == totalMatches);
+
+                if (match.HasBoostingComparer)
                 {
-                    // Initialize the scores and retrieve scores from the new batch. 
-                    bScores.Fill(1);
-                    _inner.Score(bValues[0..bTotalMatches], bScores[0..bTotalMatches]);
+                    // Initializing the scores and retrieve them.
+                    scores.Fill(1);
+                    match._inner.Score(matches, scores);
                 }
 
-                // We get the keys to sort.
-                for (int i = 0; i < bTotalMatches; i++)
+                var searcher = match._searcher;
+                var binding = typeof(TComparer1) != typeof(BoostingComparer) ? match._comparer1.Field : default;
+                var comparer = new MultiMatchComparer<TComparer1, TOut>(match);
+                for (int i = 0; i < totalMatches; i++)
                 {
                     UnmanagedSpan matchIndexEntry = searcher.GetIndexEntryPointer(matches[i]);
-                    var read = Get(new IndexEntryReader(matchIndexEntry.Address, matchIndexEntry.Length), binding, out bKeys[i].Value, in _comparer1);
-                    bKeys[i].Key = read ? bValues[i] : -bValues[i];
-                    bKeys[i].Entry = matchIndexEntry;
-                    
-                    if (HasBoostingComparer)
-                        bKeys[i].Score = bScores[i];
+                    var read = typeof(TComparer1) == typeof(BoostingComparer) ||
+                               Get(new IndexEntryReader(matchIndexEntry.Address, matchIndexEntry.Length), binding, out itemKeys[i].Value, in match._comparer1);
+
+                    itemKeys[i].Key = read ? matches[i] : -matches[i];
+                    itemKeys[i].Entry = matchIndexEntry;
+                    if (match.HasBoostingComparer)
+                        itemKeys[i].Score = scores[i];
                 }
 
-                int bIdx = 0;
-                int kIdx = 0;
+                // We sort the first batch. That will also mean that we will sort the indexes too. 
+                var sorter = new Sorter<MultiMatchComparer<TComparer1, TOut>.Item, long, MultiMatchComparer<TComparer1, TOut>>(comparer);
+                sorter.Sort(itemKeys[0..totalMatches], matches);
 
-                // Get rid of all the elements that are bigger than the last one.
-                ref var lastElement = ref matchesKeys[take - 1];
-                for (; bIdx < bTotalMatches; bIdx++)
-                {
-                    if (comparer.Compare(lastElement, bKeys[bIdx]) >= 0)
-                    {
-                        bKeys[kIdx] = bKeys[bIdx];
-                        
-                        kIdx++;
-                    }
-                        
-                }
-                bTotalMatches = kIdx;
 
-                // We sort the new batch
-                sorter.Sort(bKeys[0..bTotalMatches], bValues);
+                // We have a take statement so we are only going to care about the highest priority elements. 
+                if (match._take > 0)
+                    totalMatches = Math.Min(totalMatches, match._take);
 
-                // We merge both batches. 
-                int aTotalMatches = Math.Min(totalMatches, take);
-
-                int aIdx = aTotalMatches;
-                bIdx = 0;
-                kIdx = 0;
-
-                while (aIdx > 0 && aIdx >= aTotalMatches / 8)
-                {
-                    // If the 'bigger' of what we had is 'bigger than'
-                    if (comparer.Compare(matchesKeys[aIdx - 1], bKeys[0]) <= 0)
-                        break;
-
-                    aIdx /= 2;
-                }
-
-                // This is the new start location on the matches. 
-                kIdx = aIdx;
-
-                // If we bailed on the first check, nothing to do here. 
-                if (aIdx == aTotalMatches - 1 || kIdx >= take)
-                    goto End;
-
-                // PERF: This can be improved with TimSort like techniques (Galloping) but given the amount of registers and method calls
-                //       involved requires careful timing to understand if we are able to gain vs a more compact code and predictable
-                //       memory access patterns. 
-
-                while (aIdx < aTotalMatches && bIdx < bTotalMatches && kIdx < take)
-                {
-                    var result = comparer.Compare(matchesKeys[aIdx], bKeys[bIdx]);                    
-                    if (result == 0)
-                    {
-                        // We will only call this when there is no other choice. 
-                        ref var aItem = ref matchesKeys[aIdx];
-                        ref var bItem = ref matchesKeys[bIdx];
-                        result = _compareFuncs[0](ref this, 0, aItem.Entry, bItem.Entry, aItem.Score, bItem.Score);
-                    }
-
-                    if (result < 0)
-                    {
-                        matches[kIdx] = matchesKeys[aIdx].Key;
-                        aIdx++;
-                    }
-                    else
-                    {
-                        matches[kIdx] = bKeys[bIdx].Key;
-                        matchesKeys[kIdx] = bKeys[bIdx];
-                        bIdx++;
-                    }
-                    kIdx++;
-                }
-
-                // If there is no more space in the buffer, discard everything else.
-                if (kIdx >= take)
-                    goto End;
-
-                // PERF: We could improve this with a CopyTo (won't do that for now). 
-
-                // Copy the rest, given that we have failed on one of the other 2 only a single one will execute.
-                while (aIdx < aTotalMatches && kIdx < take)
-                {
-                    matches[kIdx++] = matchesKeys[aIdx++].Key;
-                }
-
-                while (bIdx < bTotalMatches && kIdx < take)
-                {
-                    matches[kIdx] = bKeys[bIdx].Key;
-                    matchesKeys[kIdx] = bKeys[bIdx]; // We are using a new key, therefore we have to update it. 
-                    kIdx++;
-                    bIdx++;
-                }
-
-            End:
-                totalMatches = kIdx;
+                return totalMatches;
             }
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int Fill<TSorter>(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> match, Span<long> matches)
+                where TSorter : struct, IItemSorter
+        {
+            // We will try to use the matches buffer for as long as we can, if it is not enough we will switch to a more complex 
+            // behavior. This method should also be re-entrant for the case where we have already pre-sorted everything and 
+            // we will just need to acquire via pages the totality of the results. 
+
+            if (match._currentIdx != NotStarted)
+                goto ReturnMatches;
+
+            // If there is nothing or just 1 element to return, we are done as there is no need to sort anything.
+            int totalMatches = match._inner.Fill(matches);
+            if (totalMatches is 0 or 1)
+            {
+                match.TotalResults = totalMatches;
+                match._currentIdx = totalMatches;
+                return totalMatches;
+            }
+
+            // Here comes the most important part on why https://issues.hibernatingrhinos.com/issue/RavenDB-19718 
+            // requires special handling of the situation of returning multiple pages. Sorting requires that we
+            // guarantee a global ordering, which cannot be done unless we have the whole set available already.
+            // Therefore, if the results are smaller than the buffer we were given to work with, everything
+            // would be fine. However, there might exist the case where the total amount of hits is bigger than
+            // the buffer we were given to work with. In those cases we have to recruit external memory to be able
+            // to execute multiple `.Fill()` calls. 
+
+            // To start with, we will try to get all the hits to sort and assume that the whole result-set will be
+            // able to be stored in the matches buffer until we figure out that is not the case.
+
+            bool isNotDone = true;
+            if (totalMatches < matches.Length)
+            {
+                while (isNotDone)
+                {
+                    // We get a new batch
+                    int bTotalMatches = match._inner.Fill(matches.Slice(totalMatches));
+                    totalMatches += bTotalMatches;
+
+                    // When we don't have any new batch, we are done.
+                    if (bTotalMatches == 0)
+                        isNotDone = false;
+
+                    if (totalMatches > (matches.Length - matches.Length / 8))
+                        break; // We are not done, therefore we will go to get extra temporary buffers.
+                }
+            }
+
+            if (isNotDone == false)
+            {
+                // If we are done (the expected outcome), we know that we can do this on a single call. Therefore,
+                // we will sort, remove duplicates and return the whole buffer.
+                totalMatches = ((TSorter)default).Execute(ref match, matches[..totalMatches]);
+                match.TotalResults = totalMatches;
+                match._currentIdx = totalMatches;
+
+                return totalMatches;
+            }
+
+            // However, it might happen that we are not actually done which means that we will need to recruit
+            // an external buffer memory to temporarily store the sorted data and for that we need to estimate 
+            // how much memory to recruit for doing so. 
+
+            if (match._inner.Confidence >= QueryCountConfidence.Normal && match._inner.Count < Constants.Primitives.DefaultBufferSize)
+            {
+                // Since we expect to find less than the default buffer size, we just ask for that much. We divide by 2 because
+                // the grow buffer function will adjust the used size to double the size. 
+                match.UnlikelyGrowBuffer(Constants.Primitives.DefaultBufferSize / 2);
+            }
+            else
+            {
+                // Since confidence is not good recruiting four times the size of the current matches in external memory is a sensible
+                // tradeoff, and we will just hit other grow sequences over time if needed. 
+                match.UnlikelyGrowBuffer(Math.Max(128, 4 * matches.Length));
+            }
+
+            // Copy to the buffer the matches that we already have.
+            matches[..totalMatches].CopyTo(new Span<long>(match._buffer, totalMatches));
+
+            long* buffer = match._buffer;
+            while (true)
+            {
+                // We will ensure we have enough space to fill matches.
+                int excessSpace = match._bufferSize - totalMatches;
+                if (excessSpace < 128)
+                {
+                    match.UnlikelyGrowBuffer(match._bufferSize);
+                    excessSpace = match._bufferSize - totalMatches;
+                }
+
+                // We will get more batches until we are done getting matches.
+                int bTotalMatches = match._inner.Fill(new Span<long>(buffer + totalMatches, excessSpace));
+                if (bTotalMatches == 0)
+                {
+                    // If we are done, we know that we can sort, remove duplicates and prepare the output buffer.
+                    totalMatches = ((TSorter)default).Execute(ref match, new Span<long>(match._buffer, totalMatches));
+
+                    match.TotalResults = totalMatches;
+                    match._currentIdx = 0;
+                    goto ReturnMatches;
+                }
+
+                totalMatches += bTotalMatches;
+            }
+
+            ReturnMatches:
+
+            if (match._currentIdx < match.TotalResults)
+            {
+                Debug.Assert(match._currentIdx != NotStarted);
+
+                // We will just copy as many already sorted elements into the output buffer.
+                int leftovers = Math.Min((int)(match.TotalResults - match._currentIdx), matches.Length);
+                new Span<long>(match._buffer + match._currentIdx, leftovers).CopyTo(matches);
+                match._currentIdx += leftovers;
+                return leftovers;
+            }
+
+            // There are no more matches to return.
+            return 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -529,7 +560,7 @@ namespace Corax.Queries
         private static int CompareSpatial<TComparer>(
             ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current,
             int comparerIdx, UnmanagedSpan item1, UnmanagedSpan item2, float scoreItem1, float scoreItem2)
-        where TComparer : ISpatialComparer, IMatchComparer
+            where TComparer : ISpatialComparer, IMatchComparer
         {
             var comparer = (TComparer)GetComparer(ref current, comparerIdx);
             var readerX = new IndexEntryReader(item1.Address, item1.Length);
