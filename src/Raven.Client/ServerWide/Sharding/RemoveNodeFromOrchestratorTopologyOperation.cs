@@ -13,28 +13,25 @@ namespace Raven.Client.ServerWide.Sharding
     {
         private readonly string _databaseName;
         private readonly string _node;
-        private readonly bool _force;
-
-        public RemoveNodeFromOrchestratorTopologyOperation(string databaseName, string node, bool force = false)
+        
+        public RemoveNodeFromOrchestratorTopologyOperation(string databaseName, string node)
         {
             ResourceNameValidator.AssertValidDatabaseName(databaseName);
             _node = node;
             _databaseName = databaseName;
-            _force = force;
         }
 
         public RavenCommand<ModifyOrchestratorTopologyResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new RemoveNodeFromOrchestratorTopologyCommand(_databaseName, _node, _force);
+            return new RemoveNodeFromOrchestratorTopologyCommand(_databaseName, _node);
         }
 
         private class RemoveNodeFromOrchestratorTopologyCommand : RavenCommand<ModifyOrchestratorTopologyResult>, IRaftCommand
         {
             private readonly string _databaseName;
             private readonly string _node;
-            private readonly bool _force;
 
-            public RemoveNodeFromOrchestratorTopologyCommand(string databaseName, string node, bool force = false)
+            public RemoveNodeFromOrchestratorTopologyCommand(string databaseName, string node)
             {
                 if (string.IsNullOrEmpty(databaseName))
                     throw new ArgumentNullException(databaseName);
@@ -44,12 +41,11 @@ namespace Raven.Client.ServerWide.Sharding
 
                 _databaseName = databaseName;
                 _node = node;
-                _force = force;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/databases/orchestrator?name={Uri.EscapeDataString(_databaseName)}&node={Uri.EscapeDataString(_node)}&force={_force}";
+                url = $"{node.Url}/admin/databases/orchestrator?name={Uri.EscapeDataString(_databaseName)}&node={Uri.EscapeDataString(_node)}";
                 
                 var request = new HttpRequestMessage
                 {

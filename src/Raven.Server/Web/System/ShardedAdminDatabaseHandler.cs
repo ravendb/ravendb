@@ -132,7 +132,6 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
             var node = GetStringQueryString("node", required: true);
-            var force = GetBoolValueQueryString("force", required: false) ?? false;
             var raftRequestId = GetRaftRequestIdFromQuery();
 
             AssertNotAShardDatabaseName(name);
@@ -161,8 +160,8 @@ namespace Raven.Server.Web.System
                     if (topology.RelevantFor(node) == false)
                         throw new InvalidOperationException($"Can't remove node {node} from {name} topology because it is already not a part of it");
 
-                    if (topology.Members.Count == 1 && force == false)
-                        throw new InvalidOperationException($"Can't remove node {node} from {name} orchestrator topology because it is the only one in the topology. To remove it anyway, use force=true");
+                    if (topology.Members.Count == 1)
+                        throw new InvalidOperationException($"Can't remove node {node} from {name} orchestrator topology because it is the only one in the topology.");
                 }
 
                 topology.RemoveFromTopology(node);
