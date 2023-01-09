@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -205,7 +204,7 @@ namespace InterversionTests
         [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions | RavenTestCategory.Sharding)]
         public async Task ExternalReplicationWithRevisionTombstones_ShardedToOldServer()
         {
-            var processNode = await GetServerAsync("5.3.0-nightly-20211107-0402");
+            var processNode = await GetServerAsync("5.4.5");
             var dbName = GetDatabaseName();
             using (var store = Sharding.GetDocumentStore())
             using (var oldStore = await GetStore(processNode.Url, processNode.Process, dbName))
@@ -402,194 +401,6 @@ namespace InterversionTests
                 var user = await session.LoadAsync<User>(id1);
                 user.Age = 10;
                 await session.SaveChangesAsync();
-            }
-        }
-
-        private async Task CheckData(IDocumentStore store, string database = null, long expectedRevisionsCount = 10, long expectedTombstoneCount = 0)
-        {
-            database ??= store.Database;
-            var db = await GetDocumentDatabaseInstanceFor(store, database);
-            var storage = db.DocumentsStorage;
-
-            var docsCount = storage.GetNumberOfDocuments();
-            using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                //tombstones
-                var tombstonesCount = storage.GetNumberOfTombstones(context);
-                Assert.Equal(expectedTombstoneCount, tombstonesCount);
-
-                //revisions
-                var revisionsCount = storage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
-                Assert.Equal(expectedRevisionsCount, revisionsCount);
-            }
-
-            //docs
-            Assert.Equal(4, docsCount);
-
-            var suffix = "usa";
-            using (var session = store.OpenSession(database))
-            {
-                //todo fix timeseries migration
-                /*var val = session.TimeSeriesFor("users/1$usa", "Heartrate")
-                    .Get(DateTime.MinValue, DateTime.MaxValue);
-
-                Assert.Equal(1, val.Length);
-
-                val = session.TimeSeriesFor("users/2$usa", "Heartrate")
-                    .Get(DateTime.MinValue, DateTime.MaxValue);
-
-                Assert.Equal(1, val.Length);*/
-
-                //Counters
-                var counterValue = session.CountersFor($"users/3${suffix}").Get("Downloads");
-                Assert.Equal(100, counterValue.Value);
-            }
-
-            //Attachments
-            using (var session = store.OpenAsyncSession(database))
-            {
-                var attachmentNames = new[]
-                {
-                    "background-photo.jpg",
-                    "fileNAME_#$1^%_בעברית.txt",
-                    "profile.png"
-                };
-
-                for (var i = 0; i < attachmentNames.Length; i++)
-                {
-                    var id = $"users/{i + 1}${suffix}";
-                    var user = await session.LoadAsync<User>(id);
-                    var metadata = session.Advanced.GetMetadataFor(user);
-
-                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
-                    Assert.Equal(1, attachments.Length);
-
-                    var attachment = attachments[0];
-                    var name = attachment.GetString(nameof(AttachmentName.Name));
-                    var hash = attachment.GetString(nameof(AttachmentName.Hash));
-                    var size = attachment.GetLong(nameof(AttachmentName.Size));
-
-                    Assert.Equal(attachmentNames[i], name);
-
-                    string expectedHash = default;
-                    long expectedSize = default;
-
-                    switch (i)
-                    {
-                        case 0:
-                            expectedHash = "igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=";
-                            expectedSize = 5;
-                            break;
-                        case 1:
-                            expectedHash = "Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=";
-                            expectedSize = 5;
-                            break;
-                        case 2:
-                            expectedHash = "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=";
-                            expectedSize = 3;
-                            break;
-                    }
-
-                    Assert.Equal(expectedHash, hash);
-                    Assert.Equal(expectedSize, size);
-
-                    var attachmentResult = await session.Advanced.Attachments.GetAsync(id, name);
-                    Assert.NotNull(attachmentResult);
-                }
-            }
-        }
-
-        private async Task CheckData(IDocumentStore store, DocumentDatabase db, long expectedRevisionsCount = 10, long expectedTombstoneCount = 0)
-        {
-            var storage = db.DocumentsStorage;
-
-            var docsCount = storage.GetNumberOfDocuments();
-            using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                //tombstones
-                var tombstonesCount = storage.GetNumberOfTombstones(context);
-                Assert.Equal(expectedTombstoneCount, tombstonesCount);
-
-                //revisions
-                var revisionsCount = storage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
-                Assert.Equal(expectedRevisionsCount, revisionsCount);
-            }
-
-            //docs
-            Assert.Equal(4, docsCount);
-
-            var suffix = "usa";
-            using (var session = store.OpenSession(db.Name))
-            {
-                //todo fix timeseries migration
-                /*var val = session.TimeSeriesFor("users/1$usa", "Heartrate")
-                    .Get(DateTime.MinValue, DateTime.MaxValue);
-
-                Assert.Equal(1, val.Length);
-
-                val = session.TimeSeriesFor("users/2$usa", "Heartrate")
-                    .Get(DateTime.MinValue, DateTime.MaxValue);
-
-                Assert.Equal(1, val.Length);*/
-
-                //Counters
-                var counterValue = session.CountersFor($"users/3${suffix}").Get("Downloads");
-                Assert.Equal(100, counterValue.Value);
-            }
-
-            //Attachments
-            using (var session = store.OpenAsyncSession(db.Name))
-            {
-                var attachmentNames = new[]
-                {
-                    "background-photo.jpg",
-                    "fileNAME_#$1^%_בעברית.txt",
-                    "profile.png"
-                };
-
-                for (var i = 0; i < attachmentNames.Length; i++)
-                {
-                    var id = $"users/{i + 1}${suffix}";
-                    var user = await session.LoadAsync<User>(id);
-                    var metadata = session.Advanced.GetMetadataFor(user);
-
-                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
-                    Assert.Equal(1, attachments.Length);
-
-                    var attachment = attachments[0];
-                    var name = attachment.GetString(nameof(AttachmentName.Name));
-                    var hash = attachment.GetString(nameof(AttachmentName.Hash));
-                    var size = attachment.GetLong(nameof(AttachmentName.Size));
-
-                    Assert.Equal(attachmentNames[i], name);
-
-                    string expectedHash = default;
-                    long expectedSize = default;
-
-                    switch (i)
-                    {
-                        case 0:
-                            expectedHash = "igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=";
-                            expectedSize = 5;
-                            break;
-                        case 1:
-                            expectedHash = "Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=";
-                            expectedSize = 5;
-                            break;
-                        case 2:
-                            expectedHash = "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=";
-                            expectedSize = 3;
-                            break;
-                    }
-
-                    Assert.Equal(expectedHash, hash);
-                    Assert.Equal(expectedSize, size);
-
-                    var attachmentResult = await session.Advanced.Attachments.GetAsync(id, name);
-                    Assert.NotNull(attachmentResult);
-                }
             }
         }
     }

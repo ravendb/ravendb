@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
@@ -270,7 +271,11 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 case TimeSeriesDeletedRangeItem:
                 case TimeSeriesReplicationItem:
                 case RevisionTombstoneReplicationItem:
-                    return _parent.Context.GetShardNumberFor(context, _documentInfoHelper.GetDocumentId(item));
+                    var id = _documentInfoHelper.GetDocumentId(item);
+                    if (string.IsNullOrEmpty(id))
+                        throw new ArgumentException("Document id cannot be null or empty", nameof(id));
+
+                    return _parent.Context.GetShardNumberFor(context, id);
                 default:
                     throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}");
             }

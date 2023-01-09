@@ -9,7 +9,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -30,6 +30,7 @@ using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Revisions;
 using Constants = Raven.Client.Constants;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.Revisions
 {
@@ -727,16 +728,27 @@ namespace Raven.Server.Documents.Revisions
             return deletedRevisionsCount;
         }
 
-        private unsafe ByteStringContext.ExternalScope CreateRevisionTombstoneKeySlice(DocumentsOperationContext context, Slice documentIdSlice, string changeVector, out Slice changeVectorSlice, out Slice keySlice)
+        private unsafe IDisposable CreateRevisionTombstoneKeySlice(DocumentsOperationContext context, Slice documentIdSlice, string changeVector, out Slice changeVectorSlice, out Slice keySlice)
         {
-            Slice.From(context.Allocator, changeVector, out changeVectorSlice);
-            context.Allocator.Allocate(documentIdSlice.Size + changeVectorSlice.Size, out var keyBuffer);
-            var scope = Slice.External(context.Allocator, keyBuffer.Ptr, keyBuffer.Length, out keySlice);
+            var toDispose = new List<IDisposable>
+            {
+                Slice.From(context.Allocator, changeVector, out changeVectorSlice),
+                context.Allocator.Allocate(documentIdSlice.Size + changeVectorSlice.Size, out var keyBuffer),
+                Slice.External(context.Allocator, keyBuffer.Ptr, keyBuffer.Length, out keySlice)
+            };
+
             documentIdSlice.CopyTo(keyBuffer.Ptr);
             int pos = documentIdSlice.Size;
             keyBuffer.Ptr[pos - 1] = SpecialChars.RecordSeparator;
             changeVectorSlice.CopyTo(keyBuffer.Ptr + pos);
-            return scope;
+
+            return new DisposableAction(() =>
+            {
+                foreach (var item in toDispose)
+                {
+                    item.Dispose();
+                }
+            });
         }
 
         public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks, Slice changeVectorSlice)
