@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Highlighting;
@@ -216,6 +217,23 @@ namespace Raven.Client.Documents.Linq
             foreach (var field in fields)
             {
                 _provider.FieldsToFetch.Add(new FieldToFetch(field, null));
+            }
+        }
+        
+        /// <summary>
+        /// Set the fields to fetch
+        /// </summary>
+        internal void FieldsToFetch(IEnumerable<MemberInfo> fields)
+        {
+            if (_provider.IsProjectInto)
+                throw new InvalidOperationException("'ProjectInto' was already called. You can perform this operation only once per query.");
+            
+            _provider.IsProjectInto = true;
+
+            foreach (var field in fields)
+            {
+                var fieldName = _conventions.GetConvertedPropertyNameFor(field);
+                _provider.FieldsToFetch.Add(new FieldToFetch(fieldName, null));
             }
         }
     }

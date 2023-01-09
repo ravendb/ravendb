@@ -380,7 +380,7 @@ namespace Raven.Client.Documents.Conventions
         {
             var converter = PropertyNameConverter;
             if (converter == null)
-                return member.Name;
+                return member?.Name;
             
             //do not use convention for types in system namespaces
             if (member.DeclaringType?.Namespace?.StartsWith("System") == true ||
@@ -1135,7 +1135,6 @@ namespace Raven.Client.Documents.Conventions
                 return info;
 
             var identityProperty = GetPropertiesForType(type).FirstOrDefault(FindIdentityProperty);
-
             if (identityProperty != null && identityProperty.DeclaringType != type)
             {
                 var propertyInfo = identityProperty.DeclaringType.GetProperty(identityProperty.Name);

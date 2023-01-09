@@ -3620,7 +3620,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             HandleKeywordsIfNeeded(ref field, ref alias);
 
             var identityProperty = DocumentQuery.Conventions.GetIdentityProperty(_ofType ?? _originalQueryType);
-            if (identityProperty != null && identityProperty.Name == field)
+            var identityConverted = DocumentQuery.Conventions.GetConvertedPropertyNameFor(identityProperty);
+
+            if (identityProperty != null && identityConverted == field)
             {
                 FieldsToFetch.Add(new FieldToFetch(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias));
                 return;
@@ -3772,7 +3774,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
         private string GetFieldNameForRangeQuery(ExpressionInfo expression, object value)
         {
             var identityProperty = DocumentQuery.Conventions.GetIdentityProperty(typeof(T));
-            if (identityProperty != null && identityProperty.Name == expression.Path)
+            var identityConverted = DocumentQuery.Conventions.GetConvertedPropertyNameFor(identityProperty);
+
+            if (identityProperty != null && identityConverted == expression.Path)
             {
                 if (identityProperty.Type() == typeof(int) ||
                     identityProperty.Type() == typeof(long) ||
