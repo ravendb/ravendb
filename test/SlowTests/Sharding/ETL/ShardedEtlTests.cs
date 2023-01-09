@@ -34,6 +34,7 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL.Olap;
 using SlowTests.Server.Documents.ETL.Raven;
@@ -1586,7 +1587,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             }
         }
 
-        [RequiresElasticSearchRetryFactAttribute]
+        [RequiresElasticSearchRetryFact]
         public void ElasticEtl_SimpleScript()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1649,7 +1650,7 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
             }
         }
 
-        [RequiresElasticSearchRetryFactAttribute]
+        [RequiresElasticSearchRetryFact]
         public void ElasticEtl__SimpleScriptWithManyDocuments()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1720,6 +1721,282 @@ loadToOrders(partitionBy(['order_date', key]), orderData);
 
                 Assert.Equal(0, ordersCountAfterDelete.Count);
                 Assert.Equal(0, orderLinesCountAfterDelete.Count);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
+        public async Task RavenEtl_Resharding1()
+        {
+            using (var src = Sharding.GetDocumentStore())
+            using (var dest = Sharding.GetDocumentStore())
+            {
+                SetupRavenEtl(src, dest, "Users", script: null);
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        session.Store(new User
+                        {
+                            Name = $"User-{i}"
+                        }, $"users/{i}/$eu");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                using (var session = dest.OpenSession())
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        var user = session.Load<User>($"users/{i}/$eu");
+
+                        Assert.NotNull(user);
+                        Assert.Equal($"User-{i}", user.Name);
+                    }
+                }
+
+                // move bucket of users/0/$eu
+
+                etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                const string id = "users/0/$eu";
+                var originalLocation = Sharding.GetShardNumberFor(src, id);
+
+                await Sharding.Resharding.MoveShardForId(src, id);
+                var newLocation = Sharding.GetShardNumberFor(src, id);
+
+                Assert.NotEqual(originalLocation, newLocation);
+
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                using (var session = dest.OpenSession())
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        var user = session.Load<User>($"users/{i}/$eu");
+
+                        Assert.NotNull(user);
+                        Assert.Equal($"User-{i}", user.Name);
+                    }
+                }
+
+                etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                // add new document to same bucket
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "User-10"
+                    }, "users/10/$eu");
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>("users/10/$eu");
+
+                    Assert.NotNull(user);
+                    Assert.Equal("User-10", user.Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
+        public async Task RavenEtl_Resharding2()
+        {
+            const string id = "users/1-A";
+            using (var src = Sharding.GetDocumentStore())
+            using (var dest = Sharding.GetDocumentStore())
+            {
+                SetupRavenEtl(src, dest, "Users", script: null);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "ayende"
+                    }, id);
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(dest, id, user => user.Name == "ayende", timeout: 30_000));
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= 100);
+
+                var originalLocation = await Sharding.GetShardNumberFor(src, id);
+                string originalShard = ShardHelper.ToShardName(src.Database, originalLocation);
+
+                // move bucket of users/1-A while writing
+
+                var writes = Task.Run(() =>
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        using (var session = src.OpenSession())
+                        {
+                            session.Store(new User(), $"num-{i}${id}");
+                            session.SaveChanges();
+                        }
+                    }
+                });
+
+                await Sharding.Resharding.MoveShardForId(src, id);
+                await Sharding.Resharding.MoveShardForId(src, id);
+                await Sharding.Resharding.MoveShardForId(src, id);
+                await Sharding.Resharding.MoveShardForId(src, id);
+
+                await writes;
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    using (var session = src.OpenAsyncSession())
+                    {
+                        var q = await session.Query<User>().ToListAsync();
+                        return q.Count;
+                    }
+                }, 101);
+
+                var newLocation = await Sharding.GetShardNumberFor(src, id);
+                string newShard = ShardHelper.ToShardName(src.Database, newLocation);
+
+                using (var session = src.OpenSession(originalShard))
+                {
+                    var doc = session.Load<User>(id);
+                    Assert.Null(doc);
+                }
+
+                for (int i = 0; i < 100; i++)
+                {
+                    using (var session = src.OpenSession(originalShard))
+                    {
+                        var docId = $"num-{i}${id}";
+                        var doc = session.Load<User>(docId);
+
+                        Assert.Null(doc);
+                    }
+
+                    using (var session = src.OpenSession(newShard))
+                    {
+                        var docId = $"num-{i}${id}";
+                        var doc = session.Load<User>(docId);
+
+                        Assert.NotNull(doc);
+                    }
+                }
+
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(90)));
+
+                using (var session = dest.OpenSession())
+                {
+                    var user = session.Load<User>(id);
+
+                    Assert.NotNull(user);
+                    Assert.Equal("ayende", user.Name);
+                }
+
+                for (int i = 0; i < 100; i++)
+                {
+                    using (var session = dest.OpenSession())
+                    {
+                        var docId = $"num-{i}${id}";
+                        var doc = session.Load<User>(docId);
+
+                        Assert.NotNull(doc);
+                    }
+                }
+
+                // add new document to same bucket
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "ayende2"
+                    }, $"users/2-A/{id}");
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(dest, $"users/2-A/{id}", user => user.Name == "ayende2", timeout: 30_000));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
+        public async Task RavenEtl_Resharding3()
+        {
+            var ids = new List<string>();
+            using (var src = Sharding.GetDocumentStore())
+            using (var dest = Sharding.GetDocumentStore())
+            {
+                SetupRavenEtl(src, dest, "Users", script: null);
+
+                using (var session = src.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var id = $"users/{i}";
+                        ids.Add(id);
+                        session.Store(new User(), id);
+
+                    }
+
+                    session.SaveChanges();
+                }
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    using (var session = dest.OpenAsyncSession())
+                    {
+                        var q = await session.Query<User>().ToListAsync();
+                        return q.Count;
+                    }
+                }, ids.Count);
+
+                // move buckets
+
+                foreach (var id in ids)
+                {
+                    await Sharding.Resharding.MoveShardForId(src, id);
+                }
+
+                for (int i = 10; i < 100; i++)
+                {
+                    using (var session = src.OpenSession())
+                    {
+                        var id = $"users/{i}${ids[i%10]}";
+                        ids.Add(id);
+                        session.Store(new User(), id);
+
+                        session.SaveChanges();
+                    }
+                }
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    using (var session = dest.OpenAsyncSession())
+                    {
+                        var q = await session.Query<User>().ToListAsync();
+                        return q.Count;
+                    }
+                }, ids.Count);
+
+                foreach (var id in ids)
+                {
+                    using (var session = dest.OpenSession())
+                    {
+                        var doc = session.Load<User>(id);
+                        Assert.NotNull(doc);
+                    }
+                }
             }
         }
 
