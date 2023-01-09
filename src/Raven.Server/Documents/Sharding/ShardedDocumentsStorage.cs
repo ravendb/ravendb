@@ -266,6 +266,12 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
                     stats.LastModifiedTicks = inMemoryStats.LastModifiedTicks;
                 }
 
+                if (stats.Size == 0 && stats.NumberOfDocuments == 0)
+                {
+                    tree.Delete(keySlice);
+                    continue;
+                }
+
                 using (tree.DirectAdd(keySlice, sizeof(Documents.BucketStats), out byte* ptr))
                     *(Documents.BucketStats*)ptr = stats;
             }

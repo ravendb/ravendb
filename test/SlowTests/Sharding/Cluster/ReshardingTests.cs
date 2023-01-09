@@ -1086,9 +1086,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(0, tombsCount);
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(context, bucket);
-                    Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(0, stats.Size);
-                    Assert.Equal(0, stats.NumberOfDocuments);
+                    Assert.Null(stats);
                 }
 
                 var newLocation = await Sharding.GetShardNumberFor(store, id1);
