@@ -300,15 +300,7 @@ class editCmpXchg extends viewModelBase {
                 placement: "bottom"
             });
         
-        popoverUtils.longWithHover($(".raft-index-info"),
-            {
-                content: `<ul class="margin-top margin-top-xs margin-bottom-xs margin-right">
-                              <li><small>The Raft Index indicates the <strong>Compare-Exchange item's version</strong>.</small></li>
-                              <li><small>Used for concurrency control.</small></li>
-                          </ul>`,
-                html: true,
-                placement: "bottom"
-            });
+        this.initTooltipAfterSave();
     }
 
     compositionComplete() {
@@ -338,6 +330,18 @@ class editCmpXchg extends viewModelBase {
                     }
                 });
         }
+    }
+    
+    private initTooltipAfterSave() {
+        popoverUtils.longWithHover($(".raft-index-info"),
+            {
+                content: `<ul class="margin-top margin-top-xs margin-bottom-xs margin-right">
+                              <li><small>The Raft Index indicates the <strong>Compare-Exchange item's version</strong>.</small></li>
+                              <li><small>Used for concurrency control.</small></li>
+                          </ul>`,
+                html: true,
+                placement: "bottom"
+            });
     }
 
     private maybeConfirmWarnings(): JQueryPromise<boolean> | boolean {
@@ -429,6 +433,7 @@ class editCmpXchg extends viewModelBase {
             this.updateUrl(this.key());
             this.dirtyFlag().reset();
             this.isCreatingNewItem(false);
+            this.initTooltipAfterSave();
             
             messagePublisher.reportSuccess(`Compare exchange item with key: ${this.key()} was saved successfully`);
         } else {
