@@ -12,7 +12,7 @@ using DataGenerator = System.Func<(int[] data, int[] sortedData)>;
 
 namespace SlowTests.SparrowTests.VxSort
 {
-    public class ParityTests : RavenTestBase
+    public class ParityTests : NoDisposalNeeded
     {
         static int NumCycles => int.Parse(Environment.GetEnvironmentVariable("NUM_CYCLES") ?? "10");
 

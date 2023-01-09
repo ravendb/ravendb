@@ -14,7 +14,7 @@ using DataGenerator = System.Func<(int[] data, int[] sortedData)>;
 
 namespace SlowTests.SparrowTests.VxSort
 {
-    public class BitonicSortTests : RavenTestBase
+    public class BitonicSortTests : NoDisposalNeeded
     {
         public BitonicSortTests(ITestOutputHelper output) : base(output) {}
 
