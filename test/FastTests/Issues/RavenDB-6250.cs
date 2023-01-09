@@ -49,7 +49,8 @@ namespace FastTests.Issues
                 OperationType.ReplayTransactionCommands,
                 OperationType.DatabaseRevert,
                 OperationType.EnforceRevisionConfiguration,
-                OperationType.DumpRawIndexData
+                OperationType.DumpRawIndexData,
+                OperationType.Resharding
             };
 
             var operationWithoutDetails = new HashSet<OperationType>

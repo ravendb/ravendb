@@ -1,5 +1,7 @@
 ﻿using System;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.TimeSeries;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server.Utils;
 using Voron;
@@ -41,19 +43,32 @@ namespace Raven.Server.Documents.Replication
             };
         }
 
-        public string GetItemInformation(ReplicationBatchItem item)
+        public unsafe string GetItemInformation(ReplicationBatchItem item)
         {
-            return item switch
+            switch (item)
             {
-                AttachmentReplicationItem a => "Attachment for " + GetDocumentId(a.Key),
-                AttachmentTombstoneReplicationItem at => "Attachment tombstone for: " + GetDocumentId(at.Key),
-                CounterReplicationItem c => "Counter for " + c.Id,
-                DocumentReplicationItem d => d.Data != null ? "Document " + d.Id : "Tombstone "+ d.Id,
-                RevisionTombstoneReplicationItem r => "Revision for: " + r.Id,
-                TimeSeriesDeletedRangeItem td => "Time Series deletion range for: " + GetDocumentId(td.Key),
-                TimeSeriesReplicationItem t => "Time Series for: " + GetDocumentId(t.Key),
-                _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")
-            };
+                case AttachmentReplicationItem a:
+                    return $"Attachment '{a.Name}' for {GetDocumentId(a.Key)}";
+                case AttachmentTombstoneReplicationItem at:
+                    var result = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(at.Key);
+                    return $"Attachment tombstone '{result.AttachmentName}' for {result.DocId}";
+                case CounterReplicationItem c:
+                    return $"Counter for {c.Id}";
+                case DocumentReplicationItem d:
+                    if (d.Flags.Contain(DocumentFlags.Revision))
+                        return $"Revision for {d.Id}";
+
+                    return d.Data != null ? "Document " + d.Id : "Tombstone " + d.Id;
+                case RevisionTombstoneReplicationItem r:
+                    return "Revision for " + r.Id;
+                case TimeSeriesDeletedRangeItem td:
+                    return "Time Series deletion range for: " + GetDocumentId(td.Key);
+                case TimeSeriesReplicationItem t:
+                    var baseline = TimeSeriesStorage.GetBaseline(t.Key.Content.Ptr, t.Key.Content.Length);
+                    return $"Time Series segment of '{t.Name}' [{baseline:s} - {t.Segment.GetLastTimestamp(baseline):s}] for {GetDocumentId(t.Key)}";
+                default:
+                    throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}");
+            }
         }
         public void Dispose()
         {

@@ -6,6 +6,7 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -79,6 +80,51 @@ namespace Raven.Server.Documents.Sharding.Handlers
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+            }
+        }
+
+        [RavenAction("/debug/sharding/find/bucket", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetBucket()
+        {
+            var id = GetStringQueryString("id");
+            var database = GetStringQueryString("name", required: false);
+
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            {
+                var bucket = ShardHelper.GetBucketFor(context, id);
+                int? shard = default;
+                if (database != null)
+                {
+                    using (context.OpenReadTransaction())
+                    using (var raw = ServerStore.Cluster.ReadRawDatabaseRecord(context, database))
+                    {
+                        if (raw == null)
+                            DatabaseDoesNotExistException.Throw(database);
+
+                        if (raw.IsSharded == false)
+                            throw new InvalidOperationException($"{database} is not sharded");
+
+                        shard = ShardHelper.GetShardNumberFor(raw.Sharding, context, id);
+                    }
+                }
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("Bucket");
+                    writer.WriteInteger(bucket);
+
+                    if (shard.HasValue)
+                    {
+                        writer.WriteComma();
+
+                        writer.WritePropertyName("Shard");
+                        writer.WriteInteger(shard.Value);
+                    }
+
+                    writer.WriteEndObject();
+                }
             }
         }
 
