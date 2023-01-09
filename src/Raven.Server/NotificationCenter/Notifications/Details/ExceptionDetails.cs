@@ -5,6 +5,10 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 {
     public class ExceptionDetails : INotificationDetails
     {
+        public ExceptionDetails()
+        {
+        }
+
         public ExceptionDetails(Exception e)
         {
             Exception = e.ToString();
