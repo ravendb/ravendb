@@ -447,6 +447,11 @@ namespace Raven.Server.Documents.TimeSeries
         private static DateTime GetBaseline(TableValueReader reader)
         {
             var key = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
+            return GetBaseline(key, keySize);
+        }
+
+        public static DateTime GetBaseline(byte* key, int keySize)
+        {
             var baselineMilliseconds = Bits.SwapBytes(
                 *(long*)(key + keySize - sizeof(long))
             );

@@ -1307,30 +1307,48 @@ namespace Raven.Server.Documents
             var p = attachmentTombstoneId.Buffer;
             var size = attachmentTombstoneId.Size;
 
-            int sizeOfDocId = 0;
+            ExtractDocIdAndAttachmentNameFromTombstone(p, size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName);
+
+            var doc = context.AllocateStringValue(null, p, sizeOfDocId);
+            var name = context.AllocateStringValue(null, p + attachmentNameIndex, sizeOfAttachmentName);
+
+            return (doc, name);
+        }
+
+        public static (string DocId, string AttachmentName) ExtractDocIdAndAttachmentNameFromTombstone(Slice attachmentTombstoneId)
+        {
+            var p = attachmentTombstoneId.Content.Ptr;
+            var size = attachmentTombstoneId.Size;
+
+            ExtractDocIdAndAttachmentNameFromTombstone(p, size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName);
+
+            var doc = Encodings.Utf8.GetString(p, sizeOfDocId);
+            var name = Encodings.Utf8.GetString(p + attachmentNameIndex, sizeOfAttachmentName);
+
+            return (doc, name);
+        }
+
+        private static void ExtractDocIdAndAttachmentNameFromTombstone(byte* p, int size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName)
+        {
+            sizeOfDocId = 0;
             for (; sizeOfDocId < size; sizeOfDocId++)
             {
                 if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
                     break;
             }
 
-            var attachmentNameIndex = sizeOfDocId +
-                                      1 + // separator
-                                      1 + // type: d
-                                      1; // separator
+            attachmentNameIndex = sizeOfDocId +
+                                  1 + // separator
+                                  1 + // type: d
+                                  1;
 
-            int sizeOfAttachmentName = 0;
+            sizeOfAttachmentName = 0;
 
             for (; sizeOfAttachmentName < size - (sizeOfDocId + 3); sizeOfAttachmentName++)
             {
                 if (p[attachmentNameIndex + sizeOfAttachmentName] == SpecialChars.RecordSeparator)
                     break;
             }
-
-            var doc = context.AllocateStringValue(null, p, sizeOfDocId);
-            var name = context.AllocateStringValue(null, p + attachmentNameIndex, sizeOfAttachmentName);
-
-            return (doc, name);
         }
 
         public static IEnumerable<BlittableJsonReaderObject> GetAttachmentsFromDocumentMetadata(BlittableJsonReaderObject document)
