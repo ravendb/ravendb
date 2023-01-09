@@ -34,7 +34,11 @@ namespace StressTests.Corax
             PrepareData();
 
             IndexEntries();
-            longList.Sort(CompareDescending);
+
+            // Since there are no repetition, Ascending must not trigger, if it does it is showing an error in the implementation
+            // of the sorter logic.
+            longList.Sort(CompareDescendingThenAscending);
+
             using var searcher = new IndexSearcher(Env);
             {
                 var match1 = searcher.AllEntries();
@@ -73,9 +77,9 @@ namespace StressTests.Corax
             {
                 var match1 = searcher.AllEntries();
 
-                var comparer1 = new DescendingMatchComparer(searcher, new OrderMetadata(searcher.FieldMetadataBuilder("Content1", Content1), false, MatchCompareFieldType.Integer));
-                var comparer2 = new AscendingMatchComparer(searcher, new OrderMetadata(searcher.FieldMetadataBuilder("Content2", Content2), true, MatchCompareFieldType.Integer));
-               
+                var comparer1 = new AscendingMatchComparer(searcher, new OrderMetadata(searcher.FieldMetadataBuilder("Content1", Content1), true, MatchCompareFieldType.Integer));
+                var comparer2 = new DescendingMatchComparer(searcher, new OrderMetadata(searcher.FieldMetadataBuilder("Content2", Content2), false, MatchCompareFieldType.Integer));
+
                 var match = SortingMultiMatch.Create(searcher, match1, comparer1, comparer2);
 
                 List<string> sortedByCorax = new();
@@ -145,6 +149,14 @@ namespace StressTests.Corax
         private static int CompareDescending(IndexSingleNumericalEntry<long, long> value1, IndexSingleNumericalEntry<long, long> value2)
         {
             return value2.Content1.CompareTo(value1.Content1);
+        }
+
+        private static int CompareDescendingThenAscending(IndexSingleNumericalEntry<long, long> value1, IndexSingleNumericalEntry<long, long> value2)
+        {
+            var result = value2.Content1.CompareTo(value1.Content1);
+            if (result == 0)
+                return value1.Content2.CompareTo(value2.Content2);
+            return result;
         }
 
         private void PrepareData(bool inverse = false)
