@@ -40,9 +40,12 @@ namespace SlowTests.MailingList
 
             private string FirstCharToLower(string str) => $"{Char.ToLower(str[0])}{str.Substring(1)}";
 
-            private void CreateData(IDocumentStore store)
+            private void CreateData(IDocumentStore store, bool lowerCaseIndex = false)
             {
-                new Person_IdCopy_Index().Execute(store);
+                if (lowerCaseIndex)
+                    new LowerCasePerson_IdCopy_Index().Execute(store);
+                else
+                    new Person_IdCopy_Index().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -94,13 +97,13 @@ namespace SlowTests.MailingList
                     }
                 }))
                 {
-                    CreateData(store);
+                    CreateData(store, lowerCaseIndex: true);
 
                     using (var session = store.OpenSession())
                     {
                         //WaitForUserToContinueTheTest(store);
 
-                        var results2 = session.Advanced.DocumentQuery<Person, Person_IdCopy_Index>()
+                        var results2 = session.Advanced.DocumentQuery<Person, LowerCasePerson_IdCopy_Index>()
                             .WaitForNonStaleResults()
                             .SelectFields<PersonIndexItemWithCustomConvention>()
                             .ToArray();
@@ -134,6 +137,22 @@ namespace SlowTests.MailingList
                     }
                 }
             }
+            
+            
+            private class LowerCasePerson_IdCopy_Index : AbstractIndexCreationTask<Person>
+            {
+                public LowerCasePerson_IdCopy_Index()
+                {
+                    Map = people =>
+                        from person in people
+                        select new
+                        {
+                            person.Id,
+                            StsId = person.UserId,
+                            _ = person.Family.Select(x => CreateField("family_" + x.Key + "_Id", x.Value.IdCopy, true, true)),
+                        };
+                }
+            }
 
             private class Person_IdCopy_Index : AbstractIndexCreationTask<Person>
             {
@@ -145,7 +164,7 @@ namespace SlowTests.MailingList
                           {
                               person.Id,
                               StsId = person.UserId,
-                              _ = person.Family.Select(x => CreateField("family_" + x.Key + "_Id", x.Value.IdCopy, true, true)),
+                              _ = person.Family.Select(x => CreateField("Family_" + x.Key + "_Id", x.Value.IdCopy, true, true)),
                           };
                 }
             }

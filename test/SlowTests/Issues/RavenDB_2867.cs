@@ -7,6 +7,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Xunit;
@@ -75,7 +76,7 @@ namespace SlowTests.Issues
                     }
                 });
 
-                Assert.Contains($"The field 'LastName' is not indexed for index '{index.IndexName}', cannot query/sort on fields that are not indexed", e.InnerException.Message);
+                Assert.Contains($"The field 'LastName' is not indexed, cannot query/sort on fields that are not indexed in query: from index '{index.IndexName}' where LastName = $p0 limit $p1, $p2", e.InnerException.Message);
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
