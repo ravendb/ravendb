@@ -145,7 +145,7 @@ namespace SlowTests.MailingList
                           {
                               person.Id,
                               StsId = person.UserId,
-                              _ = person.Family.Select(x => CreateField("Family_" + x.Key + "_Id", x.Value.IdCopy, true, true)),
+                              _ = person.Family.Select(x => CreateField("family_" + x.Key + "_Id", x.Value.IdCopy, true, true)),
                           };
                 }
             }

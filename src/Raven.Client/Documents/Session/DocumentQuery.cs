@@ -40,8 +40,8 @@ namespace Raven.Client.Documents.Session
         public IDocumentQuery<TProjection> SelectFields<TProjection>(ProjectionBehavior projectionBehavior)
         {
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(ReflectionUtil.BindingFlagsConstants.QueryingFields).ToList();
-            var projections = propertyInfos.Select(x => x.Name).ToArray();
-            var fields = propertyInfos.Select(p => p.Name).ToArray();
+            var projections = propertyInfos.Select(x => Conventions.GetConvertedPropertyNameFor(x)).ToArray();
+            var fields = propertyInfos.Select(p => Conventions.GetConvertedPropertyNameFor(p)).ToArray();
             return SelectFields<TProjection>(new QueryData(fields, projections)
             {
                 IsProjectInto = true,
@@ -1000,9 +1000,12 @@ namespace Raven.Client.Documents.Session
                 {
                     var identityProperty = Conventions.GetIdentityProperty(typeof(TResult));
                     if (identityProperty != null)
+                    {
+                        var id = Conventions.GetConvertedPropertyNameFor(identityProperty);
                         fields = queryData.Fields
-                            .Select(x => x == identityProperty.Name ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
+                            .Select(x => x == id ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
                             .ToArray();
+                    }
                 }
 
                 GetSourceAliasIfExists(queryData, fields, out var sourceAlias);

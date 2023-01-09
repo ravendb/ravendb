@@ -1013,9 +1013,12 @@ namespace Raven.Client.Documents.Session
                 {
                     var identityProperty = Conventions.GetIdentityProperty(typeof(TResult));
                     if (identityProperty != null)
+                    {
+                        var id = Conventions.GetConvertedPropertyNameFor(identityProperty);
                         fields = queryData.Fields
-                            .Select(x => x == identityProperty.Name ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
+                            .Select(x => x == id ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
                             .ToArray();
+                    }
                 }
 
                 GetSourceAliasIfExists(queryData, fields, out var sourceAlias);

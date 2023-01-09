@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Queries.Facets
             _conventions = conventions;
         }
 
-        public IFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
+        public IRangeFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
         {
             if (path == null)
                 throw new ArgumentNullException(nameof(path));

@@ -1705,7 +1705,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             foreach (var rootType in RootTypes)
             {
                 var identityProperty = TheSession.Conventions.GetIdentityProperty(rootType);
-                if (identityProperty != null && identityProperty.Name == fieldName)
+                var identityConverted = TheSession.Conventions.GetConvertedPropertyNameFor(identityProperty);
+
+                if (identityProperty != null && identityConverted == fieldName)
                 {
                     return Constants.Documents.Indexing.Fields.DocumentIdFieldName;
                 }

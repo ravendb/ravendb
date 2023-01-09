@@ -228,7 +228,8 @@ namespace Raven.Client.Documents
             var ravenQueryInspector = (RavenQueryInspector<TResult>)results;
 
             var membersList = ReflectionUtil.GetPropertiesAndFieldsFor<TResult>(ReflectionUtil.BindingFlagsConstants.QueryingFields).ToList();
-            ravenQueryInspector.FieldsToFetch(membersList.Select(x => x.Name));
+            
+            ravenQueryInspector.FieldsToFetch(membersList);
             return (IRavenQueryable<TResult>)results;
         }
 
