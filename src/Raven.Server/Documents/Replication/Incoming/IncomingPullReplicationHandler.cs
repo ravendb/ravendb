@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -161,14 +162,20 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return context.GetChangeVector(changeVectorToMerge);
             }
 
-            protected override Slice HandleRevisionTombstone(DocumentsOperationContext context, LazyStringValue id, List<IDisposable> toDispose)
+            protected override void HandleRevisionTombstone(DocumentsOperationContext context, LazyStringValue id, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
             {
-                Slice idSlice;
-                var currentId = id.ToString();
-                ReplaceKnownSinkEntries(context, ref currentId);
-                toDispose.Add(Slice.From(context.Allocator, currentId, out idSlice));
+                RevisionTombstoneReplicationItem.TryExtractDocumentIdAndChangeVectorFromKey(id, out var docId, out var changeVector);
+                ReplaceKnownSinkEntries(context, ref changeVector);
 
-                return idSlice;
+                if (docId != null)
+                {
+                    RevisionsStorage.CreateRevisionTombstoneKeySlice(context, docId, changeVector, out changeVectorSlice, out keySlice, toDispose);
+                }
+                else
+                {
+                    toDispose.Add(Slice.From(context.Allocator, changeVector, out keySlice));
+                    changeVectorSlice = keySlice;
+                }
             }
 
             public void HandleExpiredDocuments(DocumentsOperationContext ctx, ReplicationBatchItem item)

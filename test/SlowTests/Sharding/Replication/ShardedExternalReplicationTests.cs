@@ -1939,7 +1939,7 @@ namespace SlowTests.Sharding.Replication
                 }
 
                 var location = await Sharding.GetShardNumberFor(store2, id1);
-
+       
                 using (var s1 = store1.OpenSession())
                 {
                     s1.Delete(id1);
@@ -1955,6 +1955,9 @@ namespace SlowTests.Sharding.Replication
                 await EnsureReplicatingAsync(store2, store1);
 
                 await CheckData(store2, location);
+
+                // wait for the replication ping-pong to settle down
+                await Task.Delay(3000);
 
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store1.Database);
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store2.Database);
