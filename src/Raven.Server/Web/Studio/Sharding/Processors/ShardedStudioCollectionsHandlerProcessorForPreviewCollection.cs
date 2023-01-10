@@ -78,9 +78,10 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         public override DynamicJsonValue CreateMetadata(BlittableJsonReaderObject current)
         {
-            var r = base.CreateMetadata(current);
-            r[ShardNumberKey] = ShardNumber;
-            return r;
+            return new DynamicJsonValue(current)
+            {
+                [ShardNumberKey] = ShardNumber
+            };
         }
     }
 

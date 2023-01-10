@@ -14,6 +14,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Changes;
 
@@ -304,9 +305,16 @@ public class ShardedChangesClientConnection : AbstractChangesClientConnection<Tr
     {
         using (value)
         {
+            BlittableJsonReaderObject copy;
+            lock (this)
+            {
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Major, "avoid this lock here");
+                copy = value.Clone(_queueContext);
+            }
+
             AddToQueue(new SendQueueItem
             {
-                ValueToSend = value.Clone(_queueContext)
+                ValueToSend = copy
             });
         }
     }
