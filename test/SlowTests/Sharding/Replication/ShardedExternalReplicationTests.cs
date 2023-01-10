@@ -7,7 +7,6 @@ using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -23,6 +22,7 @@ using Raven.Server;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -30,10 +30,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Voron;
-using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1412,7 +1408,7 @@ namespace SlowTests.Sharding.Replication
                 using (context.OpenReadTransaction())
                 {
                     var tombs = db.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
-                    Assert.Equal(22, tombs.Count);
+                    Assert.Equal(24, tombs.Count);
                 }
 
                 var newLocation = await Sharding.GetShardNumberFor(replica, id);
@@ -1464,6 +1460,9 @@ namespace SlowTests.Sharding.Replication
 
                 var newLocation = await Sharding.GetShardNumberFor(replica, id);
                 await CheckData(replica, ShardHelper.ToShardName(replica.Database, newLocation));
+
+                // wait for the replication ping-pong to settle down
+                await Task.Delay(3000);
 
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, store.Database);
                 await ShardingCluster.EnsureNoReplicationLoopForSharding(Server, replica.Database);
@@ -1574,7 +1573,7 @@ namespace SlowTests.Sharding.Replication
                 using (context.OpenReadTransaction())
                 {
                     var tombs = db.DocumentsStorage.GetTombstonesFrom(context, 0).ToList();
-                    Assert.Equal(22, tombs.Count);
+                    Assert.Equal(24, tombs.Count);
                 }
 
                 var newLocation = await Sharding.GetShardNumberFor(store, id);
@@ -1649,153 +1648,6 @@ namespace SlowTests.Sharding.Replication
                         var userChangeVector = session.Advanced.GetChangeVectorFor(user);
                         Assert.True(changeVector.CompareTo(userChangeVector) < 0);
                     }
-                }
-            }
-        }
-
-        public class GetReplicationActiveConnectionsInfoOperation : IMaintenanceOperation<ReplicationActiveConnectionsPreview>
-        {
-            public RavenCommand<ReplicationActiveConnectionsPreview> GetCommand(DocumentConventions conventions, JsonOperationContext context)
-            {
-                return new GetReplicationActiveConnectionsInfoCommand();
-            }
-        }
-
-        private static async Task InsertData(IDocumentStore store, string suffix = "usa", bool purgeOnDelete = false)
-        {
-            var id1 = $"users/1${suffix}";
-            var id2 = $"users/2${suffix}";
-            var id3 = $"users/3${suffix}";
-            var id4 = $"users/4${suffix}";
-
-            using (var session = store.OpenAsyncSession())
-            {
-                await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
-                {
-                    Default = new RevisionsCollectionConfiguration
-                    {
-                        Disabled = false,
-                        PurgeOnDelete = purgeOnDelete
-                    }
-                }));
-
-                //Docs
-                await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1", Age = 5 }, id1);
-                await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2", Age = 78 }, id2);
-                await session.StoreAsync(new User { Name = "Name3", LastName = "LastName3", Age = 4 }, id3);
-                await session.StoreAsync(new User { Name = "Name4", LastName = "LastName4", Age = 15 }, id4);
-
-                //counters
-                session.CountersFor(id3).Increment("Downloads", 100);
-
-                //Attachments
-                var names = new[]
-                {
-                    "background-photo.jpg",
-                    "fileNAME_#$1^%_בעברית.txt",
-                    "profile.png"
-                };
-
-                await using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
-                await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
-                await using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
-                {
-                    session.Advanced.Attachments.Store(id1, names[0], backgroundStream, "ImGgE/jPeG");
-                    session.Advanced.Attachments.Store(id2, names[1], fileStream);
-                    session.Advanced.Attachments.Store(id3, names[2], profileStream, "image/png");
-                    await session.SaveChangesAsync();
-                }
-            }
-
-            // revision
-            using (var session = store.OpenAsyncSession())
-            {
-                var user = await session.LoadAsync<User>(id1);
-                user.Age = 10;
-                await session.SaveChangesAsync();
-            }
-        }
-
-        private async Task CheckData(IDocumentStore store, string database = null, long expectedRevisionsCount = 10, long expectedTombstoneCount = 0)
-        {
-            database ??= store.Database;
-            var db = await GetDocumentDatabaseInstanceFor(store, database);
-            var storage = db.DocumentsStorage;
-
-            var docsCount = storage.GetNumberOfDocuments();
-            using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                //tombstones
-                var tombstonesCount = storage.GetNumberOfTombstones(context);
-                Assert.Equal(expectedTombstoneCount, tombstonesCount);
-
-                //revisions
-                var revisionsCount = storage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
-                Assert.Equal(expectedRevisionsCount, revisionsCount);
-            }
-
-            //docs
-            Assert.Equal(4, docsCount);
-
-            var suffix = "usa";
-            using (var session = store.OpenSession(database))
-            {
-                //Counters
-                var counterValue = session.CountersFor($"users/3${suffix}").Get("Downloads");
-                Assert.Equal(100, counterValue.Value);
-            }
-
-            //Attachments
-            using (var session = store.OpenAsyncSession(database))
-            {
-                var attachmentNames = new[]
-                {
-                    "background-photo.jpg",
-                    "fileNAME_#$1^%_בעברית.txt",
-                    "profile.png"
-                };
-
-                for (var i = 0; i < attachmentNames.Length; i++)
-                {
-                    var id = $"users/{i + 1}${suffix}";
-                    var user = await session.LoadAsync<User>(id);
-                    var metadata = session.Advanced.GetMetadataFor(user);
-
-                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
-                    Assert.Equal(1, attachments.Length);
-
-                    var attachment = attachments[0];
-                    var name = attachment.GetString(nameof(AttachmentName.Name));
-                    var hash = attachment.GetString(nameof(AttachmentName.Hash));
-                    var size = attachment.GetLong(nameof(AttachmentName.Size));
-
-                    Assert.Equal(attachmentNames[i], name);
-
-                    string expectedHash = default;
-                    long expectedSize = default;
-
-                    switch (i)
-                    {
-                        case 0:
-                            expectedHash = "igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=";
-                            expectedSize = 5;
-                            break;
-                        case 1:
-                            expectedHash = "Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=";
-                            expectedSize = 5;
-                            break;
-                        case 2:
-                            expectedHash = "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=";
-                            expectedSize = 3;
-                            break;
-                    }
-
-                    Assert.Equal(expectedHash, hash);
-                    Assert.Equal(expectedSize, size);
-
-                    var attachmentResult = await session.Advanced.Attachments.GetAsync(id, name);
-                    Assert.NotNull(attachmentResult);
                 }
             }
         }
@@ -2026,7 +1878,15 @@ namespace SlowTests.Sharding.Replication
             }
         }
 
-        private static async Task InsertData(IDocumentStore store, string suffix = "usa")
+        public class GetReplicationActiveConnectionsInfoOperation : IMaintenanceOperation<ReplicationActiveConnectionsPreview>
+        {
+            public RavenCommand<ReplicationActiveConnectionsPreview> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new GetReplicationActiveConnectionsInfoCommand();
+            }
+        }
+
+        private static async Task InsertData(IDocumentStore store, string suffix = "usa", bool purgeOnDelete = false)
         {
             var id1 = $"users/1${suffix}";
             var id2 = $"users/2${suffix}";
@@ -2040,15 +1900,15 @@ namespace SlowTests.Sharding.Replication
                     Default = new RevisionsCollectionConfiguration
                     {
                         Disabled = false,
-                        PurgeOnDelete = true
+                        PurgeOnDelete = purgeOnDelete
                     }
                 }));
 
                 //Docs
-                await session.StoreAsync(new Raven.Tests.Core.Utils.Entities.User { Name = "Name1", LastName = "LastName1", Age = 5 }, id1);
-                await session.StoreAsync(new Raven.Tests.Core.Utils.Entities.User { Name = "Name2", LastName = "LastName2", Age = 78 }, id2);
-                await session.StoreAsync(new Raven.Tests.Core.Utils.Entities.User { Name = "Name3", LastName = "LastName3", Age = 4 }, id3);
-                await session.StoreAsync(new Raven.Tests.Core.Utils.Entities.User { Name = "Name4", LastName = "LastName4", Age = 15 }, id4);
+                await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1", Age = 5 }, id1);
+                await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2", Age = 78 }, id2);
+                await session.StoreAsync(new User { Name = "Name3", LastName = "LastName3", Age = 4 }, id3);
+                await session.StoreAsync(new User { Name = "Name4", LastName = "LastName4", Age = 15 }, id4);
 
                 //Time series
                 session.TimeSeriesFor(id1, "Heartrate")
@@ -2081,9 +1941,93 @@ namespace SlowTests.Sharding.Replication
             // revision
             using (var session = store.OpenAsyncSession())
             {
-                var user = await session.LoadAsync<Raven.Tests.Core.Utils.Entities.User>(id1);
+                var user = await session.LoadAsync<User>(id1);
                 user.Age = 10;
                 await session.SaveChangesAsync();
+            }
+        }
+
+        private async Task CheckData(IDocumentStore store, string database = null, long expectedRevisionsCount = 12, long expectedTombstoneCount = 0)
+        {
+            database ??= store.Database;
+            var db = await GetDocumentDatabaseInstanceFor(store, database);
+            var storage = db.DocumentsStorage;
+
+            var docsCount = storage.GetNumberOfDocuments();
+            using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                //tombstones
+                var tombstonesCount = storage.GetNumberOfTombstones(context);
+                Assert.Equal(expectedTombstoneCount, tombstonesCount);
+
+                //revisions
+                var revisionsCount = storage.RevisionsStorage.GetNumberOfRevisionDocuments(context);
+                Assert.Equal(expectedRevisionsCount, revisionsCount);
+            }
+
+            //docs
+            Assert.Equal(4, docsCount);
+
+            var suffix = "usa";
+            using (var session = store.OpenSession(database))
+            {
+                //Counters
+                var counterValue = session.CountersFor($"users/3${suffix}").Get("Downloads");
+                Assert.Equal(100, counterValue.Value);
+            }
+
+            //Attachments
+            using (var session = store.OpenAsyncSession(database))
+            {
+                var attachmentNames = new[]
+                {
+                    "background-photo.jpg",
+                    "fileNAME_#$1^%_בעברית.txt",
+                    "profile.png"
+                };
+
+                for (var i = 0; i < attachmentNames.Length; i++)
+                {
+                    var id = $"users/{i + 1}${suffix}";
+                    var user = await session.LoadAsync<User>(id);
+                    var metadata = session.Advanced.GetMetadataFor(user);
+
+                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                    Assert.Equal(1, attachments.Length);
+
+                    var attachment = attachments[0];
+                    var name = attachment.GetString(nameof(AttachmentName.Name));
+                    var hash = attachment.GetString(nameof(AttachmentName.Hash));
+                    var size = attachment.GetLong(nameof(AttachmentName.Size));
+
+                    Assert.Equal(attachmentNames[i], name);
+
+                    string expectedHash = default;
+                    long expectedSize = default;
+
+                    switch (i)
+                    {
+                        case 0:
+                            expectedHash = "igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=";
+                            expectedSize = 5;
+                            break;
+                        case 1:
+                            expectedHash = "Arg5SgIJzdjSTeY6LYtQHlyNiTPmvBLHbr/Cypggeco=";
+                            expectedSize = 5;
+                            break;
+                        case 2:
+                            expectedHash = "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=";
+                            expectedSize = 3;
+                            break;
+                    }
+
+                    Assert.Equal(expectedHash, hash);
+                    Assert.Equal(expectedSize, size);
+
+                    var attachmentResult = await session.Advanced.Attachments.GetAsync(id, name);
+                    Assert.NotNull(attachmentResult);
+                }
             }
         }
 
