@@ -1027,7 +1027,9 @@ namespace Sparrow.Server
             else
             {
                 _allocationBlockSize = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, _allocationBlockSize * 2);
-                _internalCurrent = AllocateSegment(_allocationBlockSize);
+                var toAllocate = Math.Max(_allocationBlockSize, allocationUnit);
+                _internalCurrent = AllocateSegment(toAllocate);
+                Debug.Assert(_internalCurrent.SizeLeft >= allocationUnit);
             }
 
             var byteString = Create(_internalCurrent.Current, length, allocationUnit, type);
