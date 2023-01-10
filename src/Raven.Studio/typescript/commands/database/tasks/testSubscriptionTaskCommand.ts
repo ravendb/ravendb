@@ -28,10 +28,10 @@ class testSubscriptionTaskCommand extends commandBase {
             .done((dto: queryResultDto<documentDto>) => { 
 
                 const result: testSubscriptionPagedResult<document> = {
-                    items: dto.Results.map((x: document | Raven.Server.Documents.Handlers.DocumentWithException) => {
+                    items: dto.Results.map((x: documentDto | Raven.Server.Documents.Handlers.DocumentWithException) => {
                         if ('@metadata' in x) {
                             // ==> plain document
-                            return x as document; 
+                            return new document(x); 
                         } else {
                             // ==> document with exception 
                             const ex = x as Raven.Server.Documents.Handlers.DocumentWithException;
