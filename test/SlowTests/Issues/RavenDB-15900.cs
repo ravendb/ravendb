@@ -60,7 +60,7 @@ namespace SlowTests.Issues
 
 
             // Get last raft index from leader
-            var testCmdIndex = await WaitForCommandIndex(nodes, nameof(RachisConsensusTestBase.TestCommandWithRaftId));
+            var testCmdIndex = await Cluster.WaitForRaftCommandToBeAppendedInClusterAsync(nodes, nameof(RachisConsensusTestBase.TestCommandWithRaftId));
             Assert.NotEqual(testCmdIndex, -1);
 
             // Wait for all nodes to be updated to leader last raft index
@@ -175,7 +175,7 @@ namespace SlowTests.Issues
             _ = leader.ServerStore.Engine.CurrentLeader.PutAsync(testCmd, TimeSpan.FromSeconds(2));
 
             // Get last raft index from leader
-            var testCmdIndex = await WaitForCommandIndex(nodes, nameof(RachisConsensusTestBase.TestCommandWithRaftId));
+            var testCmdIndex = await Cluster.WaitForRaftCommandToBeAppendedInClusterAsync(nodes, nameof(RachisConsensusTestBase.TestCommandWithRaftId));
             Assert.NotEqual(testCmdIndex, -1);
 
             // Wait for all nodes to be updated to leader last raft index
@@ -226,37 +226,6 @@ namespace SlowTests.Issues
                 Assert.True(val);
             }
 
-        }
-
-        private async Task<long> WaitForCommandIndex(List<RavenServer> nodes, string commandType, long timeout = 15_000, long interval = 100)
-        {
-            var sw = Stopwatch.StartNew();
-            long index = -1;
-            while (sw.ElapsedMilliseconds < timeout)
-            {
-                foreach (var server in nodes)
-                {
-                    try
-                    {
-                        var lastIndex = Cluster.LastRaftIndexForCommand(server, commandType);
-                        index = lastIndex;
-                    }
-                    catch (TrueException)
-                    {
-                        index = -1;
-                        break;
-                    }
-                }
-
-                if (index != -1)
-                {
-                    return index;
-                }
-
-                await Task.Delay(TimeSpan.FromMilliseconds(interval));
-            }
-
-            return index;
         }
 
         public async Task AssertRaftIndexToBeUpdatedOnNodesAsync(long index, List<RavenServer> nodes, int timeout = 15000, int interval = 100)
