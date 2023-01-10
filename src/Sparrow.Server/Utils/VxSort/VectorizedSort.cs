@@ -28,7 +28,7 @@ namespace Sparrow.Server.Utils.VxSort
             if (array == null)
                 throw new ArgumentNullException(nameof(array));
 
-            if (!Avx2.IsSupported)
+            if (Avx2.IsSupported == false || Popcnt.IsSupported == false)
             {
                 MemoryExtensions.Sort(array.AsSpan());
                 return;
@@ -47,7 +47,7 @@ namespace Sparrow.Server.Utils.VxSort
             if (array == null)
                 throw new ArgumentNullException(nameof(array));
 
-            if (!Avx2.IsSupported)
+            if (Avx2.IsSupported == false || Popcnt.IsSupported == false)
             {
                 MemoryExtensions.Sort(array);
                 return;
@@ -67,7 +67,7 @@ namespace Sparrow.Server.Utils.VxSort
             if (start == null)
                 throw new ArgumentNullException(nameof(start));
 
-            if (!Avx2.IsSupported)
+            if (Avx2.IsSupported == false || Popcnt.IsSupported == false)
             {
                 MemoryExtensions.Sort(new Span<T>(start, count));
                 return;
