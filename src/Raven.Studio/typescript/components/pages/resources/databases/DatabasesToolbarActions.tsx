@@ -2,7 +2,7 @@
 import { useAccessManager } from "../../../hooks/useAccessManager";
 import createDatabase from "viewmodels/resources/createDatabase";
 import app from "durandal/app";
-import { Button, ButtonGroup } from "reactstrap";
+import { Button, ButtonGroup, DropdownItem, DropdownMenu, DropdownToggle, UncontrolledDropdown } from "reactstrap";
 
 export function DatabasesToolbarActions() {
     const { isOperatorOrAbove } = useAccessManager();
@@ -10,6 +10,11 @@ export function DatabasesToolbarActions() {
 
     const newDatabase = useCallback(() => {
         const createDbView = new createDatabase("newDatabase");
+        app.showBootstrapDialog(createDbView);
+    }, []);
+
+    const newDatabaseFromBackup = useCallback(() => {
+        const createDbView = new createDatabase("restore");
         app.showBootstrapDialog(createDbView);
     }, []);
 
@@ -84,31 +89,18 @@ export function DatabasesToolbarActions() {
             </div>
             */}
             {canCreateNewDatabase && (
-                <ButtonGroup>
+                <UncontrolledDropdown group>
                     <Button color="primary" onClick={newDatabase}>
                         <i className="icon-new-database" />
                         <span>New database</span>
                     </Button>
-                    {/* TODO
-                <button type="button" className="btn btn-primary dropdown-toggle" data-toggle="dropdown"
-                        aria-haspopup="true" aria-expanded="false">
-                    <span className="caret" />
-                    <span className="sr-only">Toggle Dropdown</span>
-                </button>
-                <ul className="dropdown-menu dropdown-menu-right">
-                    <li>
-                        <a href="#" data-bind="click: newDatabaseFromBackup">
+                    <DropdownToggle color="primary" caret></DropdownToggle>
+                    <DropdownMenu>
+                        <DropdownItem onClick={newDatabaseFromBackup}>
                             <i className="icon-restore-backup" /> New database from backup (Restore)
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#" data-bind="click: newDatabaseFromLegacyDatafiles">
-                            <i className="icon-restore-backup" /> New database from v3.x (legacy) data files
-                        </a>
-                    </li>
-                </ul>
-                */}
-                </ButtonGroup>
+                        </DropdownItem>
+                    </DropdownMenu>
+                </UncontrolledDropdown>
             )}
         </div>
     );
