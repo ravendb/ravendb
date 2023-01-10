@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
@@ -9,6 +7,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Sharding;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Sharding.Background;
 using Raven.Server.Documents.Sharding.Smuggler;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -29,12 +28,15 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     public ShardedDocumentsStorage ShardedDocumentsStorage;
 
+    public ShardedPeriodicDocumentsMigrator PeriodicDocumentsMigrator { get; }
+
     public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         : base(name, configuration, serverStore, addToInitLog)
     {
         ShardNumber = ShardHelper.GetShardNumberFromDatabaseName(name);
         ShardedDatabaseName = ShardHelper.ToDatabaseName(name);
         Smuggler = new ShardedDatabaseSmugglerFactory(this);
+        PeriodicDocumentsMigrator = new ShardedPeriodicDocumentsMigrator(this);
     }
 
     protected override byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, ShardedDatabaseName);
