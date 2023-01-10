@@ -48,6 +48,7 @@ _Please delete below the options that are not relevant_
 ### Testing by RavenDB QA team
 
 - This change requires a special QA testing due to possible performance or resources usage implications (CPU, memory, IO). Please mark the issue on YouTrack using `QA Required` tag.
+- No special testing by RavenDB QA team is needed
 
 ### Is there any existing behavior change of other features due to this change?
 
