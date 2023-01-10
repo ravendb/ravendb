@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -34,9 +35,9 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
     private readonly long? _existingResultEtag;
 
     private readonly string _raftUniqueRequestId;
-    //private readonly HashSet<int> _filteredShardIndexes;
+    private readonly HashSet<int> _filteredShardIndexes;
 
-    // User should also be able to define a query parameter ("Sharding.Context") which is an array
+    // User should also be able to define a query parameter ("__shardContext") which is an array
     // that contains the ids whose shards the query should be limited to. Advanced: Optimization if user
     // want to run a query and knows what shards it is on. Such as:
     // from Orders where State = $state and User = $user where all the orders are on the same share as the user
@@ -49,18 +50,29 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Add an option to select the shards for query in the client");
         
-        //if (_query.QueryParameters != null && _query.QueryParameters.TryGet("@sharding-context", out BlittableJsonReaderArray filter))
-        //{
-        //    _filteredShardIndexes = new HashSet<int>();
-        //    foreach (object item in filter)
-        //    {
-        //        _filteredShardIndexes.Add(_requestHandler.ShardedDatabaseContext.GetShardIndex(_context, item.ToString()));
-        //    }
-        //}
-        //else
-        //{
-        //    _filteredShardIndexes = null;
-        //}
+        if (_query.QueryParameters != null && _query.QueryParameters.TryGetMember("__shardContext", out object filter))
+        {
+            _filteredShardIndexes = new HashSet<int>();
+            switch (filter)
+            {
+                case LazyStringValue id:
+                    _filteredShardIndexes.Add(_requestHandler.DatabaseContext.GetShardNumberFor(context, id));
+                    break;
+                case BlittableJsonReaderArray arr:
+                {
+                    for (int i = 0; i < arr.Length; i++)
+                    {
+                        var it = arr.GetStringByIndex(i);
+                        _filteredShardIndexes.Add(_requestHandler.DatabaseContext.GetShardNumberFor(context, it));
+                    }
+                    break;
+                }
+            }
+        }
+        else
+        {
+            _filteredShardIndexes = null;
+        }
     }
 
     protected override ShardedQueryCommand CreateCommand(BlittableJsonReaderObject query)
@@ -88,7 +100,8 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
         var operation = new ShardedQueryOperation(_query, _context, _requestHandler, _commands, documentsComparer, _existingResultEtag?.ToString());
 
-        var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(_commands.Keys.ToArray(), operation, _token);
+        int[] shards = _filteredShardIndexes == null ? _commands.Keys.ToArray() : _commands.Keys.Intersect(_filteredShardIndexes).ToArray();
+        var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, _token);
 
         if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
         {
