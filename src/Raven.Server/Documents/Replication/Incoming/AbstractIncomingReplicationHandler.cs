@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                             {
                                 if (msg.Document != null)
                                 {
-                                    EnsureNotDeleted(_server.NodeTag);
+                                    EnsureNotDeleted();
 
                                     using (var writer = new BlittableJsonTextWriter(msg.Context, _stream))
                                     {
@@ -569,7 +569,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             });
         }
 
-        protected abstract void EnsureNotDeleted(string nodeTag);
+        protected abstract void EnsureNotDeleted();
 
         protected abstract void InvokeOnDocumentsReceived();
 

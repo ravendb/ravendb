@@ -9,11 +9,13 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Exceptions;
@@ -80,8 +82,14 @@ namespace Raven.Server.Documents.Replication.Incoming
             _replicationFromAnotherSource.Set();
         }
 
-        protected override void EnsureNotDeleted(string nodeTag)
+        protected override void EnsureNotDeleted()
         {
+            if (_database is ShardedDocumentDatabase shardedDatabase)
+            {
+                _parent.EnsureNotDeleted(DatabaseRecord.GetKeyForDeletionInProgress(_parent.Server.NodeTag, shardedDatabase.ShardNumber));
+                return;
+            }
+
             _parent.EnsureNotDeleted(_parent._server.NodeTag);
         }
 
