@@ -1997,6 +1997,8 @@ namespace Raven.Server.Documents
 
             internal Action<PathSetting> ActionToCallOnGetTempPath;
 
+            internal bool EnableWritesToTheWrongShard = false;
+
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {
                 ActionToCallDuringDocumentDatabaseInternalDispose = action;

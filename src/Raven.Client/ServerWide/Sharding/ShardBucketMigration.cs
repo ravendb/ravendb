@@ -14,6 +14,7 @@ public class ShardBucketMigration : IDatabaseTask
     public long MigrationIndex;
     public long? ConfirmationIndex;
     public string LastSourceChangeVector;
+    public bool BackgroundMigration;
 
     public List<string> ConfirmedDestinations = new List<string>();
     public List<string> ConfirmedSourceCleanup = new List<string>();
