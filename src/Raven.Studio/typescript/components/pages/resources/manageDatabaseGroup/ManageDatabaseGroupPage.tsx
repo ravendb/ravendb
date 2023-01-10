@@ -1,5 +1,5 @@
 ﻿import React, { useCallback } from "react";
-import { Input, Label } from "reactstrap";
+import { Button, Input, Label } from "reactstrap";
 import { UncontrolledButtonWithDropdownPanel } from "components/common/DropdownPanel";
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
@@ -14,6 +14,9 @@ import { NodeGroup } from "components/pages/resources/manageDatabaseGroup/NodeGr
 import { useDatabaseManager } from "hooks/useDatabaseManager";
 import { OrchestratorsGroup } from "components/pages/resources/manageDatabaseGroup/OrchestratorsGroup";
 import { ShardsGroup } from "components/pages/resources/manageDatabaseGroup/ShardsGroup";
+import { FlexGrow } from "components/common/FlexGrow";
+import app from "durandal/app";
+import addNewShardToDatabaseGroup from "viewmodels/resources/addNewShardToDatabaseGroup";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -88,6 +91,11 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     const settingsUniqueId = useId("settings");
 
+    const addNewShard = useCallback(() => {
+        const addShardView = new addNewShardToDatabaseGroup(db.name);
+        app.showBootstrapDialog(addShardView);
+    }, [db]);
+
     const changeDynamicDatabaseDistribution = useCallback(async () => {
         toggleDynamicDatabaseDistribution();
 
@@ -104,26 +112,35 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     return (
         <div className="content-margin">
             <div className="sticky-header">
-                <UncontrolledButtonWithDropdownPanel buttonText="Settings">
-                    <>
-                        <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
-                            <div className="form-switch form-check-reverse">
-                                <Input
-                                    id={settingsUniqueId}
-                                    type="switch"
-                                    role="switch"
-                                    disabled={!enableDynamicDatabaseDistribution}
-                                    checked={dynamicDatabaseDistribution}
-                                    onChange={changeDynamicDatabaseDistribution}
-                                />
-                                Allow dynamic database distribution
-                            </div>
-                        </Label>
-                        {dynamicDatabaseDistributionWarning && (
-                            <div className="bg-faded-warning px-4 py-2">{dynamicDatabaseDistributionWarning}</div>
-                        )}
-                    </>
-                </UncontrolledButtonWithDropdownPanel>
+                <div className="flex-horizontal">
+                    <UncontrolledButtonWithDropdownPanel buttonText="Settings">
+                        <>
+                            <Label className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
+                                <div className="form-switch form-check-reverse">
+                                    <Input
+                                        id={settingsUniqueId}
+                                        type="switch"
+                                        role="switch"
+                                        disabled={!enableDynamicDatabaseDistribution}
+                                        checked={dynamicDatabaseDistribution}
+                                        onChange={changeDynamicDatabaseDistribution}
+                                    />
+                                    Allow dynamic database distribution
+                                </div>
+                            </Label>
+                            {dynamicDatabaseDistributionWarning && (
+                                <div className="bg-faded-warning px-4 py-2">{dynamicDatabaseDistributionWarning}</div>
+                            )}
+                        </>
+                    </UncontrolledButtonWithDropdownPanel>
+                    <FlexGrow />
+                    {db.isSharded() && (
+                        <Button color="primary" onClick={addNewShard}>
+                            <i className="icon-plus me-1" />
+                            Add Shard
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {db.isSharded() ? (

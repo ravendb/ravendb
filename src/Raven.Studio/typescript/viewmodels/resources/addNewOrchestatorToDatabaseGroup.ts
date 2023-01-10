@@ -7,9 +7,9 @@ interface nodeInfo {
     type: databaseGroupNodeType;
 }
 
-class addNewOrchestratorToDatabase extends dialogViewModelBase {
+class addNewOrchestratorToDatabaseGroup extends dialogViewModelBase {
 
-    view = require("views/resources/addNewOrchestratorToDatabase.html");
+    view = require("views/resources/addNewOrchestratorToDatabaseGroup.html");
 
     nodeTag = ko.observable<string>();
 
@@ -76,4 +76,4 @@ class addNewOrchestratorToDatabase extends dialogViewModelBase {
     }
 }
 
-export = addNewOrchestratorToDatabase;
+export = addNewOrchestratorToDatabaseGroup;
