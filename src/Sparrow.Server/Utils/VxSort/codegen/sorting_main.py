@@ -22,7 +22,7 @@ namespace {g.namespace}
         [SkipLocalsInit]
         public unsafe static void Run<T>(T* left, T* right) where T : unmanaged
         {{ 
-            if (Avx2.IsSupported == false || Popcnt.IsSupported == false)
+            if (Avx2.IsSupported == false || Popcnt.X64.IsSupported == false)
             {{
                 MemoryExtensions.Sort(new Span<T>(left, (int)(right - left) + 1));
                 return;
