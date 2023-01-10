@@ -183,7 +183,7 @@ namespace Raven.Client.Http
         public Dictionary<string, string> Watchers { get; protected set; }
 
         [JsonIgnore]
-        public int Count => Members.Count + Promotables.Count + Watchers.Count;
+        internal int Count => Members.Count + Promotables.Count + Watchers.Count;
     }
 
     public class NodeStatus : IDynamicJson
