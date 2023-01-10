@@ -17,6 +17,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Sdk;
 
 namespace FastTests;
 
@@ -43,6 +44,37 @@ public partial class RavenTestBase
         {
             var updateIndex = LastRaftIndexForCommand(_parent.Server, commandType);
             await _parent.Server.ServerStore.Cluster.WaitForIndexNotification(updateIndex, TimeSpan.FromSeconds(10));
+        }
+
+        public async Task<long> WaitForRaftCommandToBeAppendedInClusterAsync(List<RavenServer> nodes, string commandType, long timeout = 15_000, long interval = 100)
+        {
+            var sw = Stopwatch.StartNew();
+            long index = -1;
+            while (sw.ElapsedMilliseconds < timeout)
+            {
+                foreach (var server in nodes)
+                {
+                    try
+                    {
+                        var lastIndex = LastRaftIndexForCommand(server, commandType);
+                        index = lastIndex;
+                    }
+                    catch (TrueException)
+                    {
+                        index = -1;
+                        break;
+                    }
+                }
+
+                if (index != -1)
+                {
+                    return index;
+                }
+
+                await Task.Delay(TimeSpan.FromMilliseconds(interval));
+            }
+
+            return index;
         }
 
         public async Task CreateIndexInClusterAsync(IDocumentStore store, AbstractIndexCreationTask index, List<RavenServer> nodes = null)
