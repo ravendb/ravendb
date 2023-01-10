@@ -577,8 +577,7 @@ namespace SlowTests.Sharding.Cluster
                 using (ctx.OpenReadTransaction())
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
-                    Assert.Equal(0, stats.Size);
-                    Assert.Equal(0, stats.NumberOfDocuments);
+                    Assert.Null(stats);
                 }
             }
         }
@@ -739,6 +738,13 @@ namespace SlowTests.Sharding.Cluster
             using (ctx.OpenReadTransaction())
             {
                 var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
+                if (stats == null)
+                {
+                    Assert.Equal(expectedSize, 0);
+                    Assert.Equal(expectedDocs, 0);
+                    return;
+                }
+
                 Assert.Equal(expectedSize, stats.Size);
                 Assert.Equal(expectedDocs, stats.NumberOfDocuments);
             }

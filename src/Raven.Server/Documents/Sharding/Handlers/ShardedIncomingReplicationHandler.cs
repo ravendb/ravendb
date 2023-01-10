@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        protected override void EnsureNotDeleted(string nodeTag) => _parent.EnsureNotDeleted(_parent.Server.NodeTag);
+        protected override void EnsureNotDeleted() => _parent.EnsureNotDeleted(_parent.Server.NodeTag);
 
         protected override void InvokeOnFailed(Exception exception) => _parent.InvokeOnFailed(this, exception);
 

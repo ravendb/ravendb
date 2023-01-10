@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Replication
                 if (hub == null)
                     return;
 
-                foreach (var (_, repl) in _incoming)
+                foreach (var (key, repl) in _incoming)
                 {
                     if (repl is IncomingPullReplicationHandler pullHandler == false)
                         continue;
@@ -288,6 +288,7 @@ namespace Raven.Server.Documents.Replication
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Resetting {repl.ConnectionInfo} for {hub} on {certThumbprint} because replication configuration changed. Will be reconnected.");
                         repl.Dispose();
+                        _incoming.TryRemove(key, out _);
                     }
                     catch
                     {
@@ -308,6 +309,7 @@ namespace Raven.Server.Documents.Replication
                     try
                     {
                         repl.Dispose();
+                        _outgoing.TryRemove(repl);
                     }
                     catch
                     {
