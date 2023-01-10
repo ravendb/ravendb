@@ -149,9 +149,8 @@ namespace Raven.Server.Documents.Replication.Senders
 
                     using (_stats.Storage.Start())
                     {
-                        foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats, caseInsensitiveCounters, revisionTombstones))
                         using var enumerator = new PulsedTransactionEnumerator<ReplicationBatchItem, ReplicationBatchState>(documentsContext, _ =>
-                            GetReplicationItems(documentsContext, _lastEtag, _stats,replicationSupportedFeatures), state);
+                            GetReplicationItems(documentsContext, _lastEtag, _stats, replicationSupportedFeatures), state);
 
                         while (enumerator.MoveNext())
                         {
