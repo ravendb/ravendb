@@ -9,11 +9,11 @@ class addNodeToShardCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Client.ServerWide.Sharding.AddDatabaseShardResult> {
         const args = {
-            databaseName: this.databaseName,
+            name: this.databaseName,
             node: this.nodeTagToAdd,
             mentor: this.mentorNode
         };
-        const url = endpoints.global.shardedAdminDatabase.adminDatabasesShard + this.urlEncodeArgs(args);
+        const url = endpoints.global.adminDatabases.adminDatabasesNode + this.urlEncodeArgs(args);
 
         return this.put<Raven.Client.ServerWide.Sharding.AddDatabaseShardResult>(url, null)
             .done(() => this.reportSuccess("Node " + this.nodeTagToAdd + " was added to shard " + this.databaseName))

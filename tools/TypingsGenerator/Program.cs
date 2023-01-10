@@ -327,6 +327,7 @@ namespace TypingsGenerator
 
             scripter.AddType(typeof(Raven.Client.ServerWide.Operations.DatabasesInfo));
             scripter.AddType(typeof(RawShardingConfiguration));
+            scripter.AddType(typeof(AddDatabaseShardResult));
             scripter.AddType(typeof(ReshardingHandler.ReshardingResult));
 
             // smuggler

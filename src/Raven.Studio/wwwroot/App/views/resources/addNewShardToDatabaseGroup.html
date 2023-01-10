@@ -1,0 +1,36 @@
+<div class="modal-dialog add-new-node-to-db-group" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3>Add a new shard</h3>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="flex-form">
+                <div class="form-group" data-bind="validationElement: replicationFactor">
+                    <div>
+                        <label class="control-label">Replication factor</label>
+                    </div>
+                    <div class="flex-grow">
+                        <input class="form-control" type="number" min="1" placeholder="Enter number of nodes" data-bind="numericInput: replicationFactor">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div class="text-right">
+                <button type="button" class="btn btn-default" data-bind="click: close"><i class="icon-cancel"></i><span>Cancel</span></button>
+                <button data-bind="click: addShard, disable: spinners.addShard, css: { 'btn-spinner': spinners.addShard }" type="button" class="btn btn-primary">
+                    <i class="icon-plus"></i><span>Add shard</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
