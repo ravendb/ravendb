@@ -198,7 +198,7 @@ namespace Raven.Client.ServerWide
             for (var index = 0; index < Math.Min(Members.Count, PriorityOrder.Count); index++)
             {
                 var member = Members[index];
-                if (PriorityOrder[index] == member)
+                if (PriorityOrder[index] != member)
                     return true;
             }
 
