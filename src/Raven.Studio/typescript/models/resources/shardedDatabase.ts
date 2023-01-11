@@ -1,6 +1,7 @@
 import database from "models/resources/database";
 import shard from "models/resources/shard";
 import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
+import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
 
 class shardedDatabase extends database {
     
@@ -33,6 +34,12 @@ class shardedDatabase extends database {
         })
         
         return locationSpecifiers;
+    }
+    
+    toDto(): DatabaseSharedInfo {
+        const dto = super.toDto() as ShardedDatabaseSharedInfo;
+        dto.shards = this.shards().map(x => x.toDto());
+        return dto;
     }
 
     updateUsing(incomingCopy: StudioDatabaseInfo) {

@@ -12,7 +12,7 @@ export interface NodeInfo {
 
 export interface DatabaseSharedInfo {
     name: string;
-    sharded: boolean;
+    sharded: this is ShardedDatabaseSharedInfo;
     lockMode: DatabaseLockMode;
     deletionInProgress: string[];
     encrypted: boolean;
@@ -22,6 +22,10 @@ export interface DatabaseSharedInfo {
         disabled: boolean;
         isBeingDeleted: boolean;
     };
+}
+
+export interface ShardedDatabaseSharedInfo extends DatabaseSharedInfo {
+    shards: DatabaseSharedInfo[];
 }
 
 export interface DatabaseFilterCriteria {
