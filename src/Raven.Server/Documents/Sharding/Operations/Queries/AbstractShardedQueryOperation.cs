@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
@@ -86,20 +87,27 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
 
     protected void HandleDocumentIncludes(QueryResult cmdResult, QueryResult<List<TResult>, List<TIncludes>> result)
     {
-        foreach (var id in cmdResult.Includes.GetPropertyNames())
+        HashSet<string> missingDocumentIncludes = MissingDocumentIncludes;
+        HandleDocumentIncludesInternal(cmdResult.Includes, Context, result, ref missingDocumentIncludes);
+        MissingDocumentIncludes = missingDocumentIncludes;
+    }
+
+    public static void HandleDocumentIncludesInternal(BlittableJsonReaderObject includes, JsonOperationContext context, QueryResult<List<TResult>, List<TIncludes>> result, ref HashSet<string> missingDocumentIncludes)
+    {
+        foreach (var id in includes.GetPropertyNames())
         {
-            if (cmdResult.Includes.TryGet(id, out BlittableJsonReaderObject include) && include != null)
+            if (includes.TryGet(id, out BlittableJsonReaderObject include) && include != null)
             {
                 if (result.Includes is List<BlittableJsonReaderObject> blittableIncludes)
-                    blittableIncludes.Add(include.Clone(Context));
+                    blittableIncludes.Add(include.Clone(context));
                 else if (result.Includes is List<Document> documentIncludes)
-                    documentIncludes.Add(new Document { Id = Context.GetLazyString(id), Data = include.Clone(Context) });
+                    documentIncludes.Add(new Document { Id = context.GetLazyString(id), Data = include.Clone(context) });
                 else
                     throw new NotSupportedException($"Unknown includes type: {result.Includes.GetType().FullName}");
             }
             else
             {
-                (MissingDocumentIncludes ??= new HashSet<string>()).Add(id);
+                (missingDocumentIncludes ??= new HashSet<string>()).Add(id);
             }
         }
     }

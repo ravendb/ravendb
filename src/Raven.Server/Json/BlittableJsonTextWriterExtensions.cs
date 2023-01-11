@@ -1728,7 +1728,7 @@ namespace Raven.Server.Json
             }
         }
 
-        public static async Task<(long Count, long SizeInBytes)> WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> includes, CancellationToken token = default)
+        public static async ValueTask<(long Count, long SizeInBytes)> WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> includes, CancellationToken token = default)
         {
             writer.WriteStartObject();
 
@@ -1762,7 +1762,7 @@ namespace Raven.Server.Json
             return (count, sizeInBytes);
         }
 
-        public static async Task<(long Count, long SizeInBytes)> WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, IEnumerable<BlittableJsonReaderObject> includes, CancellationToken token = default)
+        public static async ValueTask<(long Count, long SizeInBytes)> WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, IEnumerable<BlittableJsonReaderObject> includes, CancellationToken token = default)
         {
             writer.WriteStartObject();
 

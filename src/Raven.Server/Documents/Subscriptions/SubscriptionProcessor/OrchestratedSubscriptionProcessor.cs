@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.ServerWide;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 
@@ -31,12 +31,18 @@ public class OrchestratedSubscriptionProcessor : SubscriptionProcessor
 
     // should never hit this
     public override Task AcknowledgeBatch(long batchId) => throw new NotImplementedException();
+    private SubscriptionIncludeCommands _includeCommands;
 
     protected override SubscriptionIncludeCommands CreateIncludeCommands()
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Major,
-            "https://issues.hibernatingrhinos.com/issue/RavenDB-16279");
-        return new SubscriptionIncludeCommands();
+        _includeCommands = new SubscriptionIncludeCommands
+        {
+            IncludeDocumentsCommand = new IncludeDocumentsOrchestratedSubscriptionCommand(ClusterContext, _state.CancellationTokenSource.Token),
+            IncludeCountersCommand = new ShardedCounterIncludes(_state.CancellationTokenSource.Token),
+            IncludeTimeSeriesCommand = new ShardedTimeSeriesIncludes(supportsMissingIncludes: false, _state.CancellationTokenSource.Token)
+        };
+
+        return _includeCommands;
     }
 
     public override IEnumerable<(Document Doc, Exception Exception)> GetBatch()
@@ -62,6 +68,14 @@ public class OrchestratedSubscriptionProcessor : SubscriptionProcessor
 
                 yield return (document, null);
             }
+
+            // clone includes to the orchestrator context
+            if (CurrentBatch._includes != null)
+                _includeCommands.IncludeDocumentsCommand.Gather(CurrentBatch._includes);
+            if (CurrentBatch._counterIncludes != null)
+                _includeCommands.IncludeCountersCommand.Gather(CurrentBatch._counterIncludes, ClusterContext);
+            if (CurrentBatch._timeSeriesIncludes != null)
+                _includeCommands.IncludeTimeSeriesCommand.Gather(CurrentBatch._timeSeriesIncludes, ClusterContext);
         }
     }
 }

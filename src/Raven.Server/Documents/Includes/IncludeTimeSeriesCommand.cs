@@ -19,7 +19,12 @@ namespace Raven.Server.Documents.Includes
         private readonly Dictionary<string, HashSet<AbstractTimeSeriesRange>> _timeSeriesRangesBySourcePath;
         private readonly Dictionary<string, Dictionary<string, (long Count, DateTime Start, DateTime End)>> _timeSeriesStatsPerDocumentId;
 
-        public readonly Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> Results;
+        public Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> Results;
+
+        protected IncludeTimeSeriesCommand()
+        {
+            Results = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
+        }
 
         public IncludeTimeSeriesCommand(DocumentsOperationContext context, Dictionary<string, HashSet<AbstractTimeSeriesRange>> timeSeriesRangesBySourcePath)
         {
@@ -83,6 +88,11 @@ namespace Raven.Server.Documents.Includes
 
                 Results.Add(docId, GetTimeSeriesForDocument(docId, tsRanges));
             }
+        }
+
+        public bool HasEntries()
+        {
+            return Results is { Count: > 0 };
         }
 
         private Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesForDocument(string docId, HashSet<AbstractTimeSeriesRange> timeSeriesToGet)
@@ -195,6 +205,13 @@ namespace Raven.Server.Documents.Includes
             writer.WriteEndObject();
 
             return size;
+        }
+
+        public void Gather(List<BlittableJsonReaderObject> list, ClusterOperationContext clusterOperationContext) => throw new NotImplementedException(@"Should be called only from Orchestrator.");
+
+        public long GetEntriesCountForStats()
+        {
+            return Results.Sum(x => x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length)));
         }
     }
 }

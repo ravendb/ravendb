@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -27,6 +26,11 @@ namespace Raven.Server.Documents.Includes
 
         public DocumentsOperationContext Context => _context;
 
+        protected IncludeDocumentsCommand()
+        {
+
+        }
+
         public IncludeDocumentsCommand(DocumentsStorage storage, DocumentsOperationContext context, string[] includes, bool isProjection)
         {
             _storage = storage;
@@ -35,7 +39,7 @@ namespace Raven.Server.Documents.Includes
             _isProjection = isProjection;
         }
 
-        internal bool HasIncludesIds() => _includedIds?.Count > 0;
+        internal virtual bool HasIncludesIds() => _includedIds?.Count > 0;
         
         public void AddRange(HashSet<string> ids, string documentId)
         {
@@ -50,7 +54,7 @@ namespace Raven.Server.Documents.Includes
             _includedIds.UnionWith(ids);
         }
 
-        public void Gather(Document document)
+        public virtual void Gather(Document document)
         {
             if (document == null)
                 return;
@@ -127,7 +131,17 @@ namespace Raven.Server.Documents.Includes
             }
         }
 
-        public void Fill(List<Document> result, bool includeMissingAsNull)
+        public virtual void Gather(List<BlittableJsonReaderObject> includes)
+        {
+            throw new NotImplementedException(@"Should be called only from Orchestrator.");
+        }
+
+        public virtual void Fill(List<BlittableJsonReaderObject> result)
+        {
+            throw new NotImplementedException(@"Should be called only from Orchestrator.");
+        }
+
+        public virtual void Fill(List<Document> result, bool includeMissingAsNull)
         {
             if (_includedIds == null || _includedIds.Count == 0)
                 return;

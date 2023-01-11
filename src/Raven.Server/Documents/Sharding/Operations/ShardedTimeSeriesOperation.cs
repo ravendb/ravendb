@@ -9,17 +9,17 @@ namespace Raven.Server.Documents.Sharding.Operations;
 
 internal class ShardedTimeSeriesOperation : IShardedOperation<GetMultipleTimeSeriesRangesCommand.Response>
 {
-    public HttpContext HttpContext { get; }
+    public HttpRequest _request { get; }
 
     private readonly Dictionary<int, GetMultipleTimeSeriesRangesCommand> _commandsPerShard;
 
-    public ShardedTimeSeriesOperation(HttpContext httpContext, Dictionary<int, GetMultipleTimeSeriesRangesCommand> commandsPerShard)
+    public ShardedTimeSeriesOperation(HttpRequest request, Dictionary<int, GetMultipleTimeSeriesRangesCommand> commandsPerShard)
     {
-        HttpContext = httpContext;
+        _request = request;
         _commandsPerShard = commandsPerShard;
     }
 
-    public HttpRequest HttpRequest { get; }
+    public HttpRequest HttpRequest => _request;
 
     public GetMultipleTimeSeriesRangesCommand.Response Combine(Dictionary<int, ShardExecutionResult<GetMultipleTimeSeriesRangesCommand.Response>> results)
     {

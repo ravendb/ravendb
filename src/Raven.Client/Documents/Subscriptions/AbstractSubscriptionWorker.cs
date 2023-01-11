@@ -567,7 +567,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                 _processingCts.Token.ThrowIfCancellationRequested();
 
-                batch.Initialize(incomingBatch);
+                await batch.InitializeAsync(incomingBatch).ConfigureAwait(false);
 
                 notifiedSubscriber = Task.Run(async () => // the 2'nd thread
                 {
@@ -687,6 +687,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 Messages = incomingBatch,
                 ReturnContext = returnContext,
+                Context =  context,
                 Includes = includes,
                 CounterIncludes = counterIncludes,
                 TimeSeriesIncludes = timeSeriesIncludes

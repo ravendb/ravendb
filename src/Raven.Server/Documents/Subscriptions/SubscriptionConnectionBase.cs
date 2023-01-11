@@ -291,9 +291,7 @@ namespace Raven.Server.Documents.Subscriptions
                                 }
 
                                 await WriteIncludedDocumentsAsync(writer, context, batchScope, includeCommand.IncludeDocumentsCommand);
-
-                                WriteIncludedCounters(writer, context, batchScope, includeCommand.IncludeCountersCommand);
-
+                                await WriteIncludedCountersAsync(writer, context, batchScope, includeCommand.IncludeCountersCommand);
                                 await WriteIncludedTimeSeriesAsync(writer, context, batchScope, includeCommand.IncludeTimeSeriesCommand);
 
                                 WriteEndOfBatch(writer);
@@ -302,7 +300,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                                 await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger, docsToFlush, endOfBatch: true,
                                     CancellationTokenSource.Token);
-                            } 
+                            }
                         }
                     }
                 }
@@ -988,9 +986,9 @@ namespace Raven.Server.Documents.Subscriptions
         protected abstract Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch);
 
         private async Task WriteIncludedTimeSeriesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
-            IncludeTimeSeriesCommand includeTimeSeriesCommand)
+            ITimeSeriesIncludes includeTimeSeriesCommand)
         {
-            if (includeTimeSeriesCommand != null)
+            if (includeTimeSeriesCommand != null && includeTimeSeriesCommand.HasEntries())
             {
                 writer.WriteStartObject();
 
@@ -1000,18 +998,17 @@ namespace Raven.Server.Documents.Subscriptions
 
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
                 var size = await includeTimeSeriesCommand.WriteIncludesAsync(writer, context, CancellationTokenSource.Token);
-
-                batchScope.RecordIncludedTimeSeriesInfo(includeTimeSeriesCommand.Results.Sum(x =>
-                    x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length))), size);
+  
+                batchScope.RecordIncludedTimeSeriesInfo(includeTimeSeriesCommand.GetEntriesCountForStats(), size);
 
                 writer.WriteEndObject();
             }
         }
 
-        private static void WriteIncludedCounters(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
-            IncludeCountersCommand includeCountersCommand)
+        protected virtual async Task WriteIncludedCountersAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
+            ICounterIncludes includeCountersCommand)
         {
-            if (includeCountersCommand != null)
+            if (includeCountersCommand != null && includeCountersCommand.HasCountersIncludes())
             {
                 writer.WriteStartObject();
 
@@ -1020,35 +1017,22 @@ namespace Raven.Server.Documents.Subscriptions
                 writer.WriteComma();
 
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(CounterIncludesSegment));
-                writer.WriteCounters(includeCountersCommand.Results);
+                await includeCountersCommand.WriteIncludesAsync(writer, context, CancellationTokenSource.Token);
                 writer.WriteComma();
 
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(IncludedCounterNamesSegment));
                 writer.WriteIncludedCounterNames(includeCountersCommand.IncludedCounterNames);
-
-                var size = includeCountersCommand.IncludedCounterNames.Sum(kvp =>
-                               kvp.Key.Length + kvp.Value.Sum(name => name.Length)) //IncludedCounterNames
-                           + includeCountersCommand.Results.Sum(kvp =>
-                               kvp.Value.Sum(counter => counter == null
-                                       ? 0
-                                       : counter.CounterName.Length
-                                         + counter.DocumentId.Length
-                                         + sizeof(long) //Etag
-                                         + sizeof(long) //Total Value
-                               ));
-                batchScope.RecordIncludedCountersInfo(includeCountersCommand.Results.Sum(x => x.Value.Count), size);
-
                 writer.WriteEndObject();
+
+                batchScope.RecordIncludedCountersInfo(includeCountersCommand.GetCountersCount(), includeCountersCommand.GetCountersSize());
             }
         }
-
-        private static async Task WriteIncludedDocumentsAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
+ 
+        protected virtual async Task WriteIncludedDocumentsAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
             IncludeDocumentsCommand includeDocumentsCommand)
         {
             if (includeDocumentsCommand != null && includeDocumentsCommand.HasIncludesIds())
             {
-                var includes = new List<Document>();
-                includeDocumentsCommand.Fill(includes, includeMissingAsNull: false);
                 writer.WriteStartObject();
 
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
@@ -1056,13 +1040,23 @@ namespace Raven.Server.Documents.Subscriptions
                 writer.WriteComma();
 
                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(IncludesSegment));
-
-                var (count, sizeInBytes) = await writer.WriteIncludesAsync(context, includes);
-
+                (long count, long sizeInBytes) = await WriteIncludedDocumentsInternalAsync(writer, context, batchScope, includeDocumentsCommand);
                 batchScope.RecordIncludedDocumentsInfo(count, sizeInBytes);
 
                 writer.WriteEndObject();
             }
+        }
+
+        protected virtual ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope, IncludeDocumentsCommand includeDocumentsCommand)
+        {
+            var includes = new List<Document>();
+            FillIncludedDocuments(includeDocumentsCommand, includes);
+            return writer.WriteIncludesAsync(context, includes);
+        }
+
+        protected virtual void FillIncludedDocuments(IncludeDocumentsCommand includeDocumentsCommand, List<Document> includes)
+        {
+            includeDocumentsCommand.Fill(includes, includeMissingAsNull: false);
         }
 
         internal static void WriteEndOfBatch(AsyncBlittableJsonTextWriter writer)

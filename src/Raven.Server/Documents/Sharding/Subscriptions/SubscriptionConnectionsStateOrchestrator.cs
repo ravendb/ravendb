@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions;
 
 public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsStateBase<OrchestratedSubscriptionConnection>
 {
-    private readonly ShardedDatabaseContext _databaseContext;
+    internal readonly ShardedDatabaseContext _databaseContext;
     private Dictionary<string, ShardedSubscriptionWorker> _shardWorkers;
     private TaskCompletionSource _initialConnection;
     private SubscriptionWorkerOptions _options;

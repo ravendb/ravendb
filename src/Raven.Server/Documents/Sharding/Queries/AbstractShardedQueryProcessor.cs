@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
@@ -420,11 +421,26 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         return queryTemplates;
     }
 
-    protected async Task HandleMissingDocumentIncludes<T, TIncludes>(HashSet<string> missingIncludes, QueryResult<List<T>, List<TIncludes>> result)
+    protected async ValueTask HandleMissingDocumentIncludesAsync<T, TIncludes>(TransactionOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext, HashSet<string> missingIncludes,
+        QueryResult<List<T>, List<TIncludes>> result, bool metadataOnly, CancellationToken token)
     {
-        var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(Context, RequestHandler.DatabaseContext, missingIncludes);
-        var missingIncludesOp = new FetchDocumentsFromShardsOperation(Context, RequestHandler, missingIncludeIdsByShard, null, null, counterIncludes: default, null, null, null, _metadataOnly);
-        var missingResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, Token);
+        var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(context, databaseContext, missingIncludes);
+        await HandleMissingDocumentIncludesInternalAsync(context, request, databaseContext, result, metadataOnly, missingIncludeIdsByShard, token);
+    }
+
+    public static async ValueTask HandleMissingDocumentIncludesAsync<T, TIncludes>(JsonOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext, HashSet<string> missingIncludes,
+        QueryResult<List<T>, List<TIncludes>> result, bool metadataOnly, CancellationToken token)
+    {
+        var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(databaseContext, missingIncludes);
+        await HandleMissingDocumentIncludesInternalAsync(context, request, databaseContext, result, metadataOnly, missingIncludeIdsByShard, token);
+    }
+
+    public static async Task HandleMissingDocumentIncludesInternalAsync<T, TIncludes>(JsonOperationContext context, HttpRequest request, ShardedDatabaseContext databaseContext,
+        QueryResult<List<T>, List<TIncludes>> result, bool metadataOnly, Dictionary<int, ShardLocator.IdsByShard<string>> missingIncludeIdsByShard, CancellationToken token)
+    {
+        var missingIncludesOp = new FetchDocumentsFromShardsOperation(context, request, databaseContext, missingIncludeIdsByShard, null, null, counterIncludes: default, null,
+            null, null, metadataOnly);
+        var missingResult = await databaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, token);
 
         var blittableIncludes = result.Includes as List<BlittableJsonReaderObject>;
         var documentIncludes = result.Includes as List<Document>;

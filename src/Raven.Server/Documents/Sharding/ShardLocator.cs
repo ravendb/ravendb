@@ -12,6 +12,14 @@ namespace Raven.Server.Documents.Sharding
 
         public static Dictionary<int, IdsByShard<Slice>> GetDocumentIdsByShards(TransactionOperationContext context, ShardedDatabaseContext databaseContext, IEnumerable<Slice> ids) =>
             GetDocumentIdsByShardsGeneric(context, databaseContext, ids);
+      
+        public static Dictionary<int, IdsByShard<string>> GetDocumentIdsByShards(ShardedDatabaseContext databaseContext, IEnumerable<string> ids)
+        {
+            using (databaseContext.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                return GetDocumentIdsByShardsGeneric(context, databaseContext, ids);
+            }
+        }
 
         private static Dictionary<int, IdsByShard<T>> GetDocumentIdsByShardsGeneric<T>(TransactionOperationContext context, ShardedDatabaseContext databaseContext, IEnumerable<T> ids)
         {

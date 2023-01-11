@@ -17,13 +17,14 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         private readonly RequestExecutor _shardRequestExecutor;
         private readonly SubscriptionConnectionsStateOrchestrator _state;
         private bool _closedDueNoDocsLeft;
+        private readonly ShardedDatabaseContext _databaseContext;
 
         public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re, SubscriptionConnectionsStateOrchestrator state) : base(options, dbName)
         {
             _shardNumber = ShardHelper.GetShardNumberFromDatabaseName(dbName);
             _shardRequestExecutor = re;
             _state = state;
-
+            _databaseContext = state._databaseContext;
             AfterAcknowledgment += batch =>
             {
                 batch.ConfirmFromShardSubscriptionConnectionTcs.TrySetResult();
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
          * 5. Set TCS so ShardedSubscriptionConnection will send CONFIRM to the client
          * 6. continue processing Subscription
          */
-        protected override ShardedSubscriptionBatch CreateEmptyBatch() => new ShardedSubscriptionBatch(_subscriptionLocalRequestExecutor, _dbName, _logger);
+        protected override ShardedSubscriptionBatch CreateEmptyBatch() => new ShardedSubscriptionBatch(_subscriptionLocalRequestExecutor, _dbName, _logger, _databaseContext);
 
         public async Task TryPublishBatchAsync(ShardedSubscriptionBatch batch)
         {
