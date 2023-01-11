@@ -1,5 +1,5 @@
 ﻿import React, { MouseEventHandler, useCallback, useState } from "react";
-import { DatabaseSharedInfo } from "../../../models/databases";
+import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "../../../models/databases";
 import classNames from "classnames";
 import { useActiveDatabase } from "hooks/useActiveDatabase";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -32,8 +32,8 @@ import {
     RichPanelStatus,
 } from "../../../common/RichPanel";
 import appUrl from "common/appUrl";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { NodeSet, NodeSetItem, NodeSetLabel } from "components/common/NodeSet";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -118,6 +118,95 @@ function toExternalUrl(db: DatabaseSharedInfo, url: string) {
         return "";
     }
     return appUrl.toExternalUrl(firstNode.nodeUrl, url);
+}
+interface DatabaseTopologyProps {
+    db: DatabaseSharedInfo;
+}
+
+function extractShardNumber(dbName: string) {
+    const [, shard] = dbName.split("$", 2);
+    return shard;
+}
+
+function DatabaseTopology(props: DatabaseTopologyProps) {
+    const { db } = props;
+
+    if (db.sharded) {
+        const shardedDb = db as ShardedDatabaseSharedInfo;
+        return (
+            <div className="px-3 py-2">
+                <NodeSet color="warning" className="m-1">
+                    <NodeSetLabel color="warning" icon="orchestrator">
+                        Orchestrators
+                    </NodeSetLabel>
+                    {db.nodes.map((node) => (
+                        <NodeSetItem key={node.tag} icon={iconForNodeType(node.type)} color="node" title={node.type}>
+                            {node.tag}
+                        </NodeSetItem>
+                    ))}
+                </NodeSet>
+
+                {shardedDb.shards.map((shard) => {
+                    return (
+                        <React.Fragment key={shard.name}>
+                            <NodeSet color="shard" className="m-1">
+                                <NodeSetLabel color="shard" icon="shard">
+                                    #{extractShardNumber(shard.name)}
+                                </NodeSetLabel>
+                                {shard.nodes.map((node) => {
+                                    return (
+                                        <NodeSetItem
+                                            key={node.tag}
+                                            icon={iconForNodeType(node.type)}
+                                            color="node"
+                                            title={node.type}
+                                        >
+                                            {node.tag}
+                                        </NodeSetItem>
+                                    );
+                                })}
+                            </NodeSet>
+                        </React.Fragment>
+                    );
+                })}
+            </div>
+        );
+    } else {
+        return (
+            <div className="px-3 py-2">
+                <NodeSet color="warning" className="m-1">
+                    <NodeSetLabel color="primary" icon="database">
+                        Nodes
+                    </NodeSetLabel>
+                    {db.nodes.map((node) => {
+                        return (
+                            <NodeSetItem
+                                key={node.tag}
+                                icon={iconForNodeType(node.type)}
+                                color="node"
+                                title={node.type}
+                            >
+                                {node.tag}
+                            </NodeSetItem>
+                        );
+                    })}
+                </NodeSet>
+            </div>
+        );
+    }
+}
+
+function iconForNodeType(type: databaseGroupNodeType) {
+    switch (type) {
+        case "Member":
+            return "dbgroup-member";
+        case "Rehab":
+            return "dbgroup-rehab";
+        case "Promotable":
+            return "dbgroup-promotable";
+        default:
+            assertUnreachable(type);
+    }
 }
 
 export function DatabasePanel(props: DatabasePanelProps) {
@@ -456,45 +545,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
                     <ValidDatabasePropertiesPanel db={db} />
 
-                    <div className="bg-faded-shard px-3 py-2">
-                        <NodeSet color="warning" className="m-1">
-                            <NodeSetLabel color="warning" icon="orchestrator">
-                                Orchestrators
-                            </NodeSetLabel>
-                            <NodeSetItem icon="zombie" color="danger">
-                                A
-                            </NodeSetItem>
-                            <NodeSetItem icon="node" color="node">
-                                B
-                            </NodeSetItem>
-                        </NodeSet>
-
-                        <NodeSet color="shard" className="m-1">
-                            <NodeSetLabel color="shard" icon="shard">
-                                #1
-                            </NodeSetLabel>
-                            <NodeSetItem icon="node" color="node">
-                                A
-                            </NodeSetItem>
-                            <NodeSetItem icon="node" color="node">
-                                B
-                            </NodeSetItem>
-                        </NodeSet>
-                        <NodeSet color="shard" className="m-1">
-                            <NodeSetLabel color="shard" icon="shard">
-                                #2
-                            </NodeSetLabel>
-                            <NodeSetItem icon="node" color="node">
-                                A
-                            </NodeSetItem>
-                            <NodeSetItem icon="node" color="node">
-                                B
-                            </NodeSetItem>
-                            <NodeSetItem icon="node" color="node">
-                                DEV
-                            </NodeSetItem>
-                        </NodeSet>
-                    </div>
+                    <DatabaseTopology db={db} />
                 </div>
             </div>
         </RichPanel>
