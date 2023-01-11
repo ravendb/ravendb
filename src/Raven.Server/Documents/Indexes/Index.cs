@@ -3830,7 +3830,7 @@ namespace Raven.Server.Documents.Indexes
 
         private static void ThrowInvalidField(string f, QueryMetadata queryMetadata)
         {
-            throw new ArgumentException($"The field '{f}' is not indexed, cannot query/sort on fields that are not indexed in query: " + queryMetadata.QueryText);
+            throw new ArgumentException($"The field '{f}' is not indexed in '{queryMetadata.IndexName}', cannot query/sort on fields that are not indexed in query: " + queryMetadata.QueryText);
         }
 
         private void FillFacetedQueryResult(FacetedQueryResult result, bool isStale, long facetSetupEtag, QueryMetadata q,
