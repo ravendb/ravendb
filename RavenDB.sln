@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33103.184
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02838C57-DE0E-465D-9FBB-248DA87BEAAE}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AbstractTransactionOperationsMerger", "AbstractTransactionOperationsMerger", "{02838C57-DE0E-465D-9FBB-248DA87BEAAE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7C0225BB-6184-4859-8ED1-2251A492A449}"
 	ProjectSection(SolutionItems) = preProject
@@ -86,6 +86,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Voron.Dictionary.Generator", "tools\Voron.Dictionary.Generator\Voron.Dictionary.Generator.csproj", "{4A27BC98-D655-4335-B761-A7084799CB77}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VxSort.Benchmark", "bench\VxSort.Benchmark\VxSort.Benchmark.csproj", "{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerStoreTxMerger.Benchmark", "bench\ServerStoreTxMerger.Benchmark\ServerStoreTxMerger.Benchmark.csproj", "{F3A0869F-CC53-4E09-9688-7A98A0AF2996}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -727,6 +729,24 @@ Global
 		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Validate|x64.Build.0 = Debug|Any CPU
 		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Validate|x86.ActiveCfg = Debug|Any CPU
 		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E}.Validate|x86.Build.0 = Debug|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Debug|x64.Build.0 = Debug|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Debug|x86.Build.0 = Debug|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Release|x64.ActiveCfg = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Release|x64.Build.0 = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Release|x86.ActiveCfg = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Release|x86.Build.0 = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|Any CPU.ActiveCfg = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|Any CPU.Build.0 = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x64.ActiveCfg = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x64.Build.0 = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x86.ActiveCfg = Release|Any CPU
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996}.Validate|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -767,6 +787,7 @@ Global
 		{9AE9D686-5E30-4F52-BC8B-DE08130F6843} = {02838C57-DE0E-465D-9FBB-248DA87BEAAE}
 		{4A27BC98-D655-4335-B761-A7084799CB77} = {FAAED88A-1C25-4853-9A1B-C41BCF9BED1F}
 		{BF70E6D6-9BF4-4580-85E9-E908CD7D823E} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
+		{F3A0869F-CC53-4E09-9688-7A98A0AF2996} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {032D6274-16A5-43ED-920F-D37BBD4B9628}

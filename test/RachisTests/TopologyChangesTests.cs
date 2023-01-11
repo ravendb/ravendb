@@ -159,13 +159,13 @@ namespace RachisTests
             using (ctx.OpenReadTransaction())
             {
                 id = node1.GetTopology(ctx).TopologyId;
-    }
+            }
 
-            node2.HardResetToPassive(id);
+            await node2.HardResetToPassiveAsync(id);
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
             {
                 await node2.WaitForState(RachisState.Passive, cts.Token);
-}
+            }
 
             await node1.AddToClusterAsync(url);
             await node2.WaitForTopology(Leader.TopologyModification.Voter);

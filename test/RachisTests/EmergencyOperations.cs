@@ -25,7 +25,7 @@ namespace RachisTests
             var (nodes, leader) = await CreateRaftCluster(3);
             ClusterTopology old, @new;
             old = leader.ServerStore.GetClusterTopology();
-            leader.ServerStore.Engine.HardResetToNewCluster("A");
+            await leader.ServerStore.Engine.HardResetToNewClusterAsync("A");
             await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None);
             @new = leader.ServerStore.GetClusterTopology();
             Assert.NotEqual(old.TopologyId, @new.TopologyId);

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <RuntimeFrameworkVersion>7.0.3</RuntimeFrameworkVersion>
+    <AssemblyName>ServerStoreTxMerger.Benchmark</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackageId>ServerStoreTxMerger.Benchmark</PackageId>
+    <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.13.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+	<ProjectReference Include="..\..\test\Tests.Infrastructure\Tests.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

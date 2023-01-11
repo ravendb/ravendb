@@ -71,7 +71,7 @@ namespace Raven.Server.Rachis
         public void Start()
         {
             _candidateAmbassadorLongRunningWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ThreadNames.ForCandidateAmbassador($"Candidate Ambassador for {_engine.Tag} > {_tag}", _engine.Tag, _tag));
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(Run, null, ThreadNames.ForCandidateAmbassador($"Candidate Ambassador for {_engine.Tag} > {_tag}", _engine.Tag, _tag));
         }
 
         public void Dispose()
@@ -113,7 +113,7 @@ namespace Raven.Server.Rachis
         /// This method may run for a long while, as we are trying to get agreement 
         /// from a majority of the cluster
         /// </summary>
-        private void Run()
+        private void Run(object o)
         {
             try
             {

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq; 
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -17,11 +18,14 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Monitoring.Snmp.Objects.Cluster;
+using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -34,6 +38,7 @@ using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
+using static FastTests.TestBase;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Tests.Infrastructure
@@ -66,8 +71,10 @@ namespace Tests.Infrastructure
 
         protected int LongWaitTime = 15000; //under stress the thread pool may take time to schedule the task to complete the set of the TCS
 
-        protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null)
+        protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null, bool watcherCluster = false, bool shouldRunInMemory = true)
         {
+            string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
+
             var initialCount = RachisConsensuses.Count;
             var leaderIndex = _random.Next(0, nodeCount);
             var timeout = TimeSpan.FromSeconds(10);
@@ -75,7 +82,7 @@ namespace Tests.Infrastructure
             for (var i = 0; i < nodeCount; i++)
             {
                 // ReSharper disable once ExplicitCallerInfoArgument
-                SetupServer(i == leaderIndex, electionTimeout: electionTimeout, caller: caller);
+                SetupServer(i == leaderIndex, nodeTag: allowedNodeTags[i], electionTimeout: electionTimeout, caller: caller, shouldRunInMemory: shouldRunInMemory);
             }
             var leader = RachisConsensuses[leaderIndex + initialCount];
             for (var i = 0; i < nodeCount; i++)
@@ -85,8 +92,8 @@ namespace Tests.Infrastructure
                     continue;
                 }
                 var follower = RachisConsensuses[i + initialCount];
-                await leader.AddToClusterAsync(follower.Url);
-                var done = await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitWithoutExceptionAsync(timeout);
+                await leader.AddToClusterAsync(follower.Url, asWatcher: watcherCluster, nodeTag: allowedNodeTags[i]);
+                var done = await follower.WaitForTopology(watcherCluster? Leader.TopologyModification.NonVoter : Leader.TopologyModification.Voter).WaitWithoutExceptionAsync(timeout);
                 Assert.True(done, "Waited for node to become a follower for too long");
             }
             var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentState;
@@ -178,7 +185,7 @@ namespace Tests.Infrastructure
             return sb.ToString();
         }
 
-        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null)
+        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null, bool shouldRunInMemory = true, string nodeTag=null)
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
@@ -192,21 +199,30 @@ namespace Tests.Infrastructure
                 ch = (char)(65 + Interlocked.Increment(ref _count));
             }
 
-            var url = $"tcp://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}/?{caller}#{ch}";
-
-            var server = StorageEnvironmentOptions.CreateMemoryOnly();
+            var url = $"tcp://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}/?{caller}#{nodeTag ?? $"{ch}"}";
 
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : (int)Interlocked.Read(ref _count);
             var configuration = RavenConfiguration.CreateForServer(caller);
             configuration.Initialize();
-            configuration.Core.RunInMemory = true;
             configuration.Core.PublicServerUrl = new UriSetting($"http://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}");
             configuration.Cluster.ElectionTimeout = new TimeSetting(electionTimeout, TimeUnit.Milliseconds);
+
+            configuration.Core.RunInMemory = shouldRunInMemory;
+            StorageEnvironmentOptions server = null;
+            if (shouldRunInMemory)
+                server = StorageEnvironmentOptions.CreateMemoryOnly();
+            else
+            {
+                string dataDirectory = NewDataPath(prefix: $"GetNewServer-{nodeTag ?? "A"}", forceCreateDir: true);
+                server = StorageEnvironmentOptions.ForPath(dataDirectory);
+                configuration.Core.DataDirectory = new PathSetting(dataDirectory);
+            }
+
             var serverStore = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true }.ServerStore;
             serverStore.Initialize();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
-            rachis.Initialize(storageEnvironment, configuration, new ClusterChanges(), configuration.Core.ServerUrls[0], out _);
+            rachis.Initialize(storageEnvironment, configuration, new ClusterChanges(), configuration.Core.ServerUrls[0], new DummyNotificationCenter(), new SystemTime(), out _, CancellationToken.None);
             rachis.OnDispose += (sender, args) =>
             {
                 serverStore.Dispose();
@@ -214,7 +230,7 @@ namespace Tests.Infrastructure
             };
             if (bootstrap)
             {
-                rachis.Bootstrap(url, "A");
+                rachis.Bootstrap(url, nodeTag ?? "A");
             }
 
             rachis.Url = url;
@@ -228,6 +244,19 @@ namespace Tests.Infrastructure
             }
 
             return rachis;
+        }
+
+        private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null, bool forceCreateDir = false)
+        {
+            if (suffix != null)
+                prefix += suffix;
+            var path = RavenTestHelper.NewDataPath(prefix, 0, forceCreateDir);
+
+            _localPathsToDelete.Add(path);
+
+            return path;
         }
 
         private void AcceptConnection(TcpListener tcpListener, RachisConsensus rachis)
@@ -258,7 +287,7 @@ namespace Tests.Infrastructure
                             MultiTree = true
                         }, () => tcpClient.Client?.Disconnect(false));
 
-                    rachis.AcceptNewConnection(remoteConnection, tcpClient.Client.RemoteEndPoint, hello =>
+                    await rachis.AcceptNewConnectionAsync(remoteConnection, tcpClient.Client.RemoteEndPoint, hello =>
                     {
                         if (rachis.Url == null)
                             return;
@@ -402,20 +431,36 @@ namespace Tests.Infrastructure
         {
             base.Dispose();
 
+            var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
+
+
             foreach (var rc in RachisConsensuses)
             {
-                rc.Dispose();
+                exceptionAggregator.Execute(() =>
+                {
+                    rc.Dispose();
+                });
             }
 
             foreach (var listener in _listeners)
             {
-                listener.Stop();
+                exceptionAggregator.Execute(() =>
+                {
+                    listener.Stop();
+                });
             }
 
-            foreach (var mustBeSuccessfulTask in _mustBeSuccessfulTasks)
+            exceptionAggregator.Execute(() =>
             {
-                Assert.True(mustBeSuccessfulTask.Wait(250));
-            }
+                foreach (var mustBeSuccessfulTask in _mustBeSuccessfulTasks)
+                {
+                    Assert.True(mustBeSuccessfulTask.Wait(250));
+                }
+            });
+
+            RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         public class CountingValidator : RachisVersionValidation
@@ -440,12 +485,38 @@ namespace Tests.Infrastructure
 
             protected override void Apply(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
             {
-                Assert.True(cmd.TryGet(nameof(TestCommand.Name), out string name));
-                Assert.True(cmd.TryGet(nameof(TestCommand.Value), out int val));
+                if (cmd.TryGet("Type", out string type) == false)
+                {
+                    // ReSharper disable once UseNullPropagation
+                    leader?.SetStateOf(index, tcs => { tcs.TrySetException(new RachisApplyException("Cannot execute command, wrong format")); });
+                    return;
+                }
 
-                var tree = context.Transaction.InnerTransaction.CreateTree("values");
-                var current = tree.Read(name)?.Reader.ToStringValue();
-                tree.Add(name, current + val);
+                switch (type)
+                {
+                    case nameof(TestCommand):
+                        Assert.True(cmd.TryGet(nameof(TestCommand.Name), out string name0));
+                        Assert.True(cmd.TryGet(nameof(TestCommand.Value), out int val0));
+                        var tree0 = context.Transaction.InnerTransaction.CreateTree("values");
+                        var current0 = tree0.Read(name0)?.Reader.ToStringValue();
+                        tree0.Add(name0, current0 + val0);
+                        break;
+
+                    case nameof(TestCommandWithLargeData):
+                        Assert.True(cmd.TryGet(nameof(TestCommandWithLargeData.Name), out string name1));
+                        Assert.True(cmd.TryGet(nameof(TestCommandWithLargeData.RandomData), out string randomData1));
+                        var tree1 = context.Transaction.InnerTransaction.CreateTree("values");
+                        tree1.Add(name1, randomData1);
+                        break;
+
+                    case nameof(TestCommandWithRaftId):
+                        Assert.True(cmd.TryGet(nameof(TestCommandWithRaftId.Name), out string name2));
+                        Assert.True(cmd.TryGet(nameof(TestCommandWithRaftId.Value), out int val2));
+                        var tree2 = context.Transaction.InnerTransaction.CreateTree("values");
+                        var current2 = tree2.Read(name2)?.Reader.ToStringValue();
+                        tree2.Add(name2, current2 + val2);
+                        break;
+                }
             }
 
             protected override RachisVersionValidation InitializeValidator()
@@ -507,7 +578,7 @@ namespace Tests.Infrastructure
             {
                 var djv = base.ToJson(context);
                 UniqueRequestId ??= Guid.NewGuid().ToString();
-                
+
                 djv[nameof(UniqueRequestId)] = UniqueRequestId;
                 djv[nameof(Name)] = Name;
                 djv[nameof(Value)] = Value;
@@ -516,12 +587,31 @@ namespace Tests.Infrastructure
             }
         }
 
+        public class TestCommandWithLargeData : CommandBase
+        {
+            public string Name;
+
+            public string RandomData = "";
+
+            public override DynamicJsonValue ToJson(JsonOperationContext context)
+            {
+                var djv = base.ToJson(context);
+                UniqueRequestId ??= Guid.NewGuid().ToString();
+
+                djv[nameof(UniqueRequestId)] = UniqueRequestId;
+                djv[nameof(Name)] = Name;
+                djv[nameof(RandomData)] = RandomData;
+
+                return djv;
+            }
+        }
+
         internal class TestCommandWithRaftId : CommandBase
         {
-            private string Name;
+            internal string Name;
 
 #pragma warning disable 649
-            private object Value;
+            internal object Value;
 #pragma warning restore 649
 
             public TestCommandWithRaftId(string name, string uniqueRequestId) : base(uniqueRequestId)
@@ -536,6 +626,13 @@ namespace Tests.Infrastructure
                 djv[nameof(Value)] = Value;
 
                 return djv;
+            }
+        }
+
+        private class DummyNotificationCenter : NotificationCenter
+        {
+            public DummyNotificationCenter() : base(null, null, CancellationToken.None, null)
+            {
             }
         }
     }

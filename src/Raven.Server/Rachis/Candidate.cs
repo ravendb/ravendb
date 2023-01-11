@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Sparrow.Threading;
 using Raven.Server.Utils;
+using Raven.Server.Rachis.Commands;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Rachis
@@ -21,7 +21,7 @@ namespace Raven.Server.Rachis
         private List<CandidateAmbassador> _voters = new List<CandidateAmbassador>();
         private readonly ManualResetEvent _peersWaiting = new ManualResetEvent(false);
         private PoolOfThreads.LongRunningWork _longRunningWork;
-        public long RunRealElectionAtTerm { get; private set; }
+        public long RunRealElectionAtTerm { get; internal set; }
 
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         public bool Running => _running.IsRaised();
@@ -37,9 +37,9 @@ namespace Raven.Server.Rachis
             return $"Candidate {_engine.Tag} ({Thread.CurrentThread.ManagedThreadId})";
         }
 
-        public long ElectionTerm { get; private set; }
+        public long ElectionTerm { get; internal set; }
 
-        private void Run()
+        private void Run(object obj)
         {
             var ambassadorsToRemove = new List<CandidateAmbassador>();
             try
@@ -249,15 +249,9 @@ namespace Raven.Server.Rachis
 
         private void CastVoteForSelf(long electionTerm, string reason, bool setStateChange = true)
         {
-            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                _engine.CastVoteInTerm(context, electionTerm, _engine.Tag, reason);
+            var command = new CandidateCastVoteInTermCommand(this, _engine, electionTerm, reason);
+            _engine.TxMerger.EnqueueSync(command);
 
-                ElectionTerm = RunRealElectionAtTerm = electionTerm;
-                
-                tx.Commit();
-            }
             if (_engine.Log.IsInfoEnabled)
             {
                 _engine.Log.Info($"Candidate {_engine.Tag}: casting vote for self ElectionTerm={electionTerm} RunRealElectionAtTerm={RunRealElectionAtTerm}");
@@ -277,7 +271,7 @@ namespace Raven.Server.Rachis
             {
                 dic.Add(voter.Tag, voter.GetStatus());
             }
-           
+
             return dic;
         }
 
@@ -295,7 +289,7 @@ namespace Raven.Server.Rachis
 
         public void Start()
         {
-            _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ThreadNames.ForCandidate("Candidate for - " + _engine.Tag, _engine.Tag));
+            _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(Run, null, ThreadNames.ForCandidate("Candidate for - " + _engine.Tag, _engine.Tag));
         }
 
         public void Dispose()

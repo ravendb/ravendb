@@ -11,8 +11,11 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler;
 using Sparrow.Json;
@@ -169,7 +172,7 @@ namespace Raven.Server.Documents.Handlers
                 var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var operationId = ServerStore.Operations.GetNextOperationId();
 
-                var command = new StartTransactionsRecordingCommand(
+                var command = new StartTransactionsRecordingCommand<DocumentsOperationContext, DocumentsTransaction>(
                         Database.TxMerger,
                         parameters.File,
                         () => tcs.SetResult(null) // we don't provide any completion details
@@ -204,7 +207,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/transactions/stop-recording", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task StopRecording()
         {
-            var command = new StopTransactionsRecordingCommand(Database.TxMerger);
+            var command = new StopTransactionsRecordingCommand<DocumentsOperationContext, DocumentsTransaction>(Database.TxMerger);
 
             await Database.TxMerger.Enqueue(command);
             NoContentStatus();
@@ -227,58 +230,62 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class StartTransactionsRecordingCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class StartTransactionsRecordingCommand<TOperationContext, TTransaction> : MergedTransactionCommand<TOperationContext, TTransaction>
+        where TOperationContext : TransactionOperationContext<TTransaction>
+        where TTransaction : RavenTransaction
     {
-        private readonly TransactionOperationsMerger _databaseTxMerger;
+        private readonly AbstractTransactionOperationsMerger<TOperationContext, TTransaction> _txMerger;
         private readonly string _filePath;
         private readonly Action _onStop;
 
-        public StartTransactionsRecordingCommand(TransactionOperationsMerger databaseTxMerger, string filePath, Action onStop)
+        public StartTransactionsRecordingCommand(AbstractTransactionOperationsMerger<TOperationContext, TTransaction> txMerger, string filePath, Action onStop)
         {
-            _databaseTxMerger = databaseTxMerger;
+            _txMerger = txMerger;
             _filePath = filePath;
             _onStop = onStop;
         }
 
-        public override long Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recordingState)
+        public override long Execute(TOperationContext context, AbstractTransactionOperationsMerger<TOperationContext, TTransaction>.RecordingState recordingState)
         {
             return ExecuteDirectly(context);
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(TOperationContext context)
         {
             return null;
         }
 
-        protected override long ExecuteCmd(DocumentsOperationContext context)
+        protected override long ExecuteCmd(TOperationContext context)
         {
-            _databaseTxMerger.StartRecording(_filePath, _onStop);
+            _txMerger.StartRecording(_filePath, _onStop);
             return 0;
         }
     }
 
-    public class StopTransactionsRecordingCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class StopTransactionsRecordingCommand<TOperationContext, TTransaction> : MergedTransactionCommand<TOperationContext, TTransaction>
+        where TOperationContext : TransactionOperationContext<TTransaction>
+        where TTransaction : RavenTransaction
     {
-        private readonly TransactionOperationsMerger _databaseTxMerger;
+        private readonly AbstractTransactionOperationsMerger<TOperationContext, TTransaction> _txMerger;
 
-        public StopTransactionsRecordingCommand(TransactionOperationsMerger databaseTxMerger)
+        public StopTransactionsRecordingCommand(AbstractTransactionOperationsMerger<TOperationContext, TTransaction> _txMerger)
         {
-            _databaseTxMerger = databaseTxMerger;
+            this._txMerger = _txMerger;
         }
 
-        public override long Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recordingState)
+        public override long Execute(TOperationContext context, AbstractTransactionOperationsMerger<TOperationContext, TTransaction>.RecordingState recordingState)
         {
             return ExecuteDirectly(context);
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(TOperationContext context)
         {
             return null;
         }
 
-        protected override long ExecuteCmd(DocumentsOperationContext context)
+        protected override long ExecuteCmd(TOperationContext context)
         {
-            _databaseTxMerger.StopRecording();
+            _txMerger.StopRecording();
             return 0;
         }
     }

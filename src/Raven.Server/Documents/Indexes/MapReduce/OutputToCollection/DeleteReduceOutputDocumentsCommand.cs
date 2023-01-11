@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes.MapReduce;
+using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -133,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
             return new DeleteReduceOutputDocumentsCommandDto
             {
@@ -149,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         }
     }
 
-    public class DeleteReduceOutputDocumentsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<DeleteReduceOutputDocumentsCommand>
+    public class DeleteReduceOutputDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteReduceOutputDocumentsCommand>
     {
         public string DocumentsPrefix;
         public string OriginalPattern;

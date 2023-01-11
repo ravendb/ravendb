@@ -10,13 +10,11 @@ namespace Raven.Server.ServerWide.Context
     public class ClusterOperationContext : TransactionOperationContext<ClusterTransaction>
     {
         private readonly ClusterChanges _changes;
-        public readonly StorageEnvironment Environment;
 
         public ClusterOperationContext(ClusterChanges changes, StorageEnvironment environment, int initialSize, int longLivedSize, int maxNumberOfAllocatedStringValues, SharedMultipleUseFlag lowMemoryFlag)
-            : base(initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
+            : base(environment, initialSize, longLivedSize, maxNumberOfAllocatedStringValues, lowMemoryFlag)
         {
             _changes = changes ?? throw new ArgumentNullException(nameof(changes));
-            Environment = environment ?? throw new ArgumentNullException(nameof(environment));
         }
 
         protected override ClusterTransaction CloneReadTransaction(ClusterTransaction previous)
@@ -51,6 +49,12 @@ namespace Raven.Server.ServerWide.Context
             _clusterChanges = clusterChanges ?? throw new System.ArgumentNullException(nameof(clusterChanges));
         }
 
+        public ClusterTransaction BeginAsyncCommitAndStartNewTransaction(ClusterOperationContext context)
+        {
+            var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction(context.PersistentContext);
+            return new ClusterTransaction(tx, _clusterChanges);
+        }
+
         public void AddAfterCommitNotification(CompareExchangeChange change)
         {
             Debug.Assert(_clusterChanges != null, "_clusterChanges != null");
@@ -75,5 +79,6 @@ namespace Raven.Server.ServerWide.Context
                 }
             }
         }
+
     }
 }

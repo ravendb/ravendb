@@ -37,6 +37,7 @@ using Raven.Server.Documents.Smuggler;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
@@ -158,7 +159,7 @@ namespace Raven.Server.Documents
                 OngoingTasks = new OngoingTasks.OngoingTasks(this);
                 Metrics = new MetricCounters();
                 MetricCacher = new DatabaseMetricCacher(this);
-                TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
+                TxMerger = new DocumentsTransactionOperationsMerger(this);
                 ConfigurationStorage = new ConfigurationStorage(this);
                 NotificationCenter = new DatabaseNotificationCenter(this);
                 HugeDocuments = new HugeDocuments(NotificationCenter, configuration.PerformanceHints.HugeDocumentsCollectionSize,
@@ -241,7 +242,8 @@ namespace Raven.Server.Documents
         public readonly SystemTime Time = new SystemTime();
 
         public ScriptRunnerCache Scripts;
-        public readonly TransactionOperationsMerger TxMerger;
+
+        public readonly DocumentsTransactionOperationsMerger TxMerger;
 
         public SubscriptionStorage SubscriptionStorage { get; }
 
@@ -360,6 +362,7 @@ namespace Raven.Server.Documents
                 _addToInitLog("Initializing DocumentStorage");
                 DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
                 _addToInitLog("Starting Transaction Merger");
+                TxMerger.Initialize(DocumentsStorage.ContextPool, NotificationCenter);
                 TxMerger.Start();
                 _addToInitLog("Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NetTopologySuite.Utilities;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -24,6 +25,7 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Global;
+using Memory = Sparrow.Memory;
 
 namespace Raven.Server.Rachis
 {
@@ -151,7 +153,7 @@ namespace Raven.Server.Rachis
         /// it is responsible for talking to the remote follower and maintaining its state.
         /// This can never throw, and will run on its own thread.
         /// </summary>
-        private unsafe void Run()
+        private unsafe void Run(object o)
         {
             _engine.ForTestingPurposes?.BeforeNegotiatingWithFollower();
 
@@ -191,7 +193,7 @@ namespace Raven.Server.Rachis
                                     var disconnect = connection.Disconnect;
                                     var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, connection.SupportedFeatures.Cluster, disconnect);
                                     Interlocked.Exchange(ref _connection, con);
-                                    
+
                                     ClusterTopology topology;
                                     using (context.OpenReadTransaction())
                                     {
@@ -629,7 +631,7 @@ namespace Raven.Server.Rachis
                             {
                                 case RootObjectType.VariableSizeTree:
                                     var tree = txr.ReadTree(currentTreeKey);
-                                    
+
                                     binaryWriter.Write(tree.State.NumberOfEntries);
                                     totalSizeInBytes += sizeof(long);
 
@@ -639,7 +641,7 @@ namespace Raven.Server.Rachis
                                         binaryWriter.Write((int)type);
                                         totalSizeInBytes += sizeof(int);
                                     }
-                                    
+
                                     using (var treeIterator = tree.Iterate(false))
                                     {
                                         if (treeIterator.Seek(Slices.BeforeAllKeys))
@@ -968,7 +970,7 @@ namespace Raven.Server.Rachis
         {
             UpdateLastMatchFromFollower(0);
             _followerAmbassadorLongRunningOperation =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ThreadNames.ForFollowerAmbassador(ToString(), _tag, $"{_term:#,#;;0}"));
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(Run, null, ThreadNames.ForFollowerAmbassador(ToString(), _tag, $"{_term:#,#;;0}"));
         }
 
         public override string ToString()

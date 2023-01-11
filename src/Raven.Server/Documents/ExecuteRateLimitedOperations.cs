@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Util.RateLimiting;
+using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -10,10 +12,10 @@ using Constants = Voron.Global.Constants;
 
 namespace Raven.Server.Documents
 {
-    public class ExecuteRateLimitedOperations<T> : TransactionOperationsMerger.MergedTransactionCommand
+    public class ExecuteRateLimitedOperations<T> : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         private readonly Queue<T> _documentIds;
-        private readonly Func<T, TransactionOperationsMerger.MergedTransactionCommand> _commandToExecute;
+        private readonly Func<T, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> _commandToExecute;
         private readonly RateGate _rateGate;
         private readonly OperationCancelToken _token;
         private readonly int? _maxTransactionSizeInPages;
@@ -21,11 +23,11 @@ namespace Raven.Server.Documents
         private readonly CancellationToken _cancellationToken;
 
         internal ExecuteRateLimitedOperations(
-            Queue<T> documentIds, 
-            Func<T, TransactionOperationsMerger.MergedTransactionCommand> commandToExecute, 
+            Queue<T> documentIds,
+            Func<T, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> commandToExecute,
             RateGate rateGate,
-            OperationCancelToken token, 
-            int? maxTransactionSize ,
+            OperationCancelToken token,
+            int? maxTransactionSize,
             int? batchSize)
         {
             _documentIds = documentIds;
@@ -42,7 +44,7 @@ namespace Raven.Server.Documents
 
         public long Processed { get; private set; }
 
-        public override long Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
+        public override long Execute(DocumentsOperationContext context, AbstractTransactionOperationsMerger<DocumentsOperationContext, DocumentsTransaction>.RecordingState recording)
         {
             var count = 0;
             foreach (T id in _documentIds)
@@ -94,11 +96,11 @@ namespace Raven.Server.Documents
                     _documentIds.Dequeue();
                 }
             };
-            
+
             return Processed;
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
             throw new NotSupportedException($"ToDto() of {nameof(ExecuteRateLimitedOperations<T>)} Should not be called");
         }

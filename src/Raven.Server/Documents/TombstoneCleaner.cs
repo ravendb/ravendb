@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Background;
+using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -292,7 +294,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand
+		internal class DeleteTombstonesCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly Dictionary<string, StateHolder> _tombstones;
             private readonly long _minAllDocsEtag;
@@ -362,7 +364,7 @@ namespace Raven.Server.Documents
                 return NumberOfTombstonesDeleted;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new DeleteTombstonesCommandDto
                 {
@@ -410,7 +412,7 @@ namespace Raven.Server.Documents
         }
     }
 
-    internal class DeleteTombstonesCommandDto : TransactionOperationsMerger.IReplayableCommandDto<TombstoneCleaner.DeleteTombstonesCommand>
+    internal class DeleteTombstonesCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, TombstoneCleaner.DeleteTombstonesCommand>
     {
         public Dictionary<string, TombstoneCleaner.StateHolder> Tombstones;
         public long MinAllDocsEtag;

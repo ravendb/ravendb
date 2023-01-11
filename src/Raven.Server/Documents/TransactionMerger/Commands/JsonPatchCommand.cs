@@ -12,9 +12,9 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Operation = Microsoft.AspNetCore.JsonPatch.Operations.Operation;
 
-namespace Raven.Server.Documents.TransactionCommands
+namespace Raven.Server.Documents.TransactionMerger.Commands
 {
-    public class JsonPatchCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class JsonPatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         private readonly string _id;
         private readonly List<Command> _commands;
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.TransactionCommands
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             var document = context.DocumentDatabase.DocumentsStorage.Get(context, _id);
-            
+
             if (document == null)
             {
                 throw new InvalidOperationException($"Cannot apply json patch because the document {_id} does not exist");
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.TransactionCommands
 
                 if (putResult == null)
                 {
-                    _patchResult = new JsonPatchResult {Status = PatchStatus.NotModified,};
+                    _patchResult = new JsonPatchResult { Status = PatchStatus.NotModified, };
                 }
                 else
                 {
@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.TransactionCommands
         {
             if (_patchResult.ModifiedDocument != null)
                 database.HugeDocuments.AddIfDocIsHuge(_id, _patchResult.ModifiedDocument.Size);
-            
+
             if (_patchResult.Collection != null)
                 modifiedCollections?.Add(_patchResult.Collection);
 
@@ -133,30 +133,30 @@ namespace Raven.Server.Documents.TransactionCommands
                 patchReply[nameof(PatchResult.ModifiedDocument)] = _patchResult.ModifiedDocument;
 
             reply.Add(patchReply);
-            
+
             return _patchResult.ChangeVector;
         }
-        
+
         public record Command(CommandTypes Type, string[] Paths, string[] FromPaths, string OriginalPath, string OriginalFrom, object Value)
         {
             public BlittableJsonReaderBase GetActionableObject(Document document, string[] paths, string fullPath)
             {
                 BlittableJsonReaderBase root = document.Data;
-                
+
                 for (int i = 1; i < paths.Length - 1; i++)
                 {
                     TryGetMember(root, paths[i], out var member, fullPath);
-                    
+
                     if (member is BlittableJsonReaderObject nested)
                         root = nested;
                     else if (member is BlittableJsonReaderArray arr)
                     {
-                        if(i == paths.Length - 2)
+                        if (i == paths.Length - 2)
                             return arr;
                         root = arr;
                     }
                     else
-                        throw new ArgumentException($"Cannot reach target location. Failed to fetch '{paths[i+1]}' in path '{fullPath}' for operation '{Type}' because element at {paths[i]} is not an object or a collection");
+                        throw new ArgumentException($"Cannot reach target location. Failed to fetch '{paths[i + 1]}' in path '{fullPath}' for operation '{Type}' because element at {paths[i]} is not an object or a collection");
                 }
 
                 return root;
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.TransactionCommands
                             throw new ArgumentException($"Expected an index but got a '{prop}' at path {OriginalPath}");
                         if (index >= arr.Length || index < 0)
                             throw new ArgumentOutOfRangeException($"Position {index} is out of array bounds at array {OriginalPath}");
-                        
+
                         arr.Modifications.Items.Insert(index, value);
                         break;
 
@@ -271,11 +271,11 @@ namespace Raven.Server.Documents.TransactionCommands
                 switch (blittable)
                 {
                     case BlittableJsonReaderArray arr:
-                    {
-                        arr.EnsureArrayModifiable();
-                        arr.Modifications.Items[int.Parse(prop)] = value; // Parse is sure to work because of TryGetMember
-                        break;
-                    }
+                        {
+                            arr.EnsureArrayModifiable();
+                            arr.Modifications.Items[int.Parse(prop)] = value; // Parse is sure to work because of TryGetMember
+                            break;
+                        }
                     case BlittableJsonReaderObject obj:
                         obj.Modifications ??= new DynamicJsonValue(obj);
                         obj.Modifications[prop] = value;
@@ -330,10 +330,10 @@ namespace Raven.Server.Documents.TransactionCommands
 
                 var paths = path.Split('/');
                 var fromPaths = from?.Split('/');
-                
+
                 for (int i = 1; i < paths.Length; i++)
                 {
-                    if(paths[i].IsNullOrWhiteSpace())
+                    if (paths[i].IsNullOrWhiteSpace())
                         throw new ArgumentException($"Invalid path {path}. Paths must be of format /*/*/*... ");
                     paths[i] = EscapePathMember(paths[i]);
                 }
@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.TransactionCommands
             return member.Replace("~0", "~").Replace("~1", "/");
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
             return new JsonPatchCommandDto
             {
@@ -367,17 +367,16 @@ namespace Raven.Server.Documents.TransactionCommands
             };
         }
 
-        public class JsonPatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand>
+        public class JsonPatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
         {
             public string Id;
             public List<Command> Commands;
             public bool ReturnDocument;
             public JsonOperationContext ExternalContext;
 
-            TransactionOperationsMerger.MergedTransactionCommand TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand>.ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            public MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction> ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                var jsonPatchCommand = new JsonPatchCommand(Id, Commands, ReturnDocument, ExternalContext);
-                return jsonPatchCommand;
+                return new JsonPatchCommand(Id, Commands, ReturnDocument, ExternalContext);
             }
         }
     }

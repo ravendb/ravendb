@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -10,6 +9,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using CsvHelper.Configuration.Attributes;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -17,12 +17,15 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.Rachis.Commands;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.TransactionMerger;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
@@ -36,7 +39,6 @@ using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Sparrow.Collections;
 using Sparrow.Threading;
 using Size = Sparrow.Size;
 
@@ -74,7 +76,8 @@ namespace Raven.Server.Rachis
 
         public override void Dispose()
         {
-            SetNewState(RachisState.Follower, new NullDisposable(), -1, "Disposing Rachis", asyncDispose: false);
+            TxMerger?.Dispose();
+            SetNewStateImmediately(RachisState.Follower, new NullDisposable(), -1, "Disposing Rachis", asyncDispose: false); // To prevent "Could not dispose server" exception.
             StateMachine?.Dispose();
             base.Dispose();
         }
@@ -112,7 +115,7 @@ namespace Raven.Server.Rachis
             if (_serverStore.Initialized == false)
                 throw new InvalidOperationException("Server store isn't initialized.");
 
-            if (ForTestingPurposes!=null && ForTestingPurposes.NodeTagsToDisconnect.Contains(tag))
+            if (ForTestingPurposes != null && ForTestingPurposes.NodeTagsToDisconnect.Contains(tag))
             {
                 throw new InvalidOperationException($"Exception was thrown for disconnecting  node {tag} - For testing purposes.");
             }
@@ -320,6 +323,8 @@ namespace Raven.Server.Rachis
         private string _clusterId;
 
         public ClusterContextPool ContextPool { get; private set; }
+        public ClusterTransactionOperationsMerger TxMerger { get; private set; }
+
         private StorageEnvironment _persistentState;
         internal Logger Log;
 
@@ -407,7 +412,7 @@ namespace Raven.Server.Rachis
         private readonly ManualResetEventSlim _disposeEvent = new ManualResetEventSlim();
         private readonly Random _rand;
         private string _lastStateChangeReason;
-        public Candidate Candidate { get; private set; }
+        public Candidate Candidate { get; internal set; }
 
         protected RachisConsensus(CipherSuitesPolicy cipherSuitesPolicy, int? seed = null)
         {
@@ -428,7 +433,7 @@ namespace Raven.Server.Rachis
             Timeout.TimeoutPeriod = _rand.Next(timeout / 3 * 2, timeout);
         }
 
-        public unsafe void Initialize(StorageEnvironment env, RavenConfiguration configuration, ClusterChanges changes, string myUrl, out long clusterTopologyEtag)
+        public void Initialize(StorageEnvironment env, RavenConfiguration configuration, ClusterChanges changes, string myUrl, NotificationCenter.NotificationCenter notificationCenter, SystemTime time, out long clusterTopologyEtag, CancellationToken shutdown)
         {
             try
             {
@@ -444,6 +449,9 @@ namespace Raven.Server.Rachis
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
 
                 ContextPool = new ClusterContextPool(changes, _persistentState, configuration.Memory.MaxContextSizeToKeep);
+                TxMerger = new ClusterTransactionOperationsMerger(this, configuration, time, shutdown);
+                TxMerger.Initialize(ContextPool, notificationCenter);
+                TxMerger.Start();
 
                 ClusterTopology topology;
                 using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -535,7 +543,7 @@ namespace Raven.Server.Rachis
             return readResult?.Reader.ToStringValue();
         }
 
-        private void SwitchToSingleLeader(ClusterOperationContext context)
+        internal void SwitchToSingleLeader(ClusterOperationContext context)
         {
             var electionTerm = CurrentTerm + 1;
             CastVoteInTerm(context, electionTerm, Tag, "Switching to single leader");
@@ -669,11 +677,25 @@ namespace Raven.Server.Rachis
 
         public void SetNewState(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null, bool asyncDispose = true)
         {
-            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenWriteTransaction()) // we use the write transaction lock here
+            var command = new SetNewStateCommand(this, rachisState, disposable, expectedTerm, stateChangedReason, beforeStateChangedEvent, asyncDispose);
+            TxMerger.EnqueueSync(command);
+            _leadershipTimeChanged.SetAndResetAtomically();
+        }
+
+        public async Task SetNewStateAsync(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null, bool asyncDispose = true)
+        {
+            var command = new SetNewStateCommand(this, rachisState, disposable, expectedTerm, stateChangedReason, beforeStateChangedEvent, asyncDispose);
+            await TxMerger.Enqueue(command);
+            _leadershipTimeChanged.SetAndResetAtomically();
+        }
+
+        public void SetNewStateImmediately(RachisState rachisState, IDisposable disposable, long expectedTerm, string stateChangedReason, Action beforeStateChangedEvent = null, bool asyncDispose = true)
+        {
+            using(ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
             {
                 SetNewStateInTx(context, rachisState, disposable, expectedTerm, stateChangedReason, beforeStateChangedEvent, asyncDispose);
-                context.Transaction.Commit();
+                tx.Commit();
             }
             _leadershipTimeChanged.SetAndResetAtomically();
         }
@@ -741,7 +763,7 @@ namespace Raven.Server.Rachis
                 {
                     if (IsLocked)
                     {
-                        if (_releaser.WaitOne(TimeSpan.FromSeconds(3)) == false) 
+                        if (_releaser.WaitOne(TimeSpan.FromSeconds(3)) == false)
                             Complete();
                     }
                 }
@@ -1064,53 +1086,57 @@ namespace Raven.Server.Rachis
             try
             {
                 Timeout.DisableTimeout();
+                ClusterTopology clusterTopology = null;
                 using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (var ctx = context.OpenWriteTransaction())
+                using (var ctx = context.OpenReadTransaction())
                 {
-                    var clusterTopology = GetTopology(context);
-                    if (clusterTopology.TopologyId == null ||
-                        clusterTopology.AllNodes.ContainsKey(_tag) == false)
-                    {
-                        if (Log.IsInfoEnabled)
-                        {
-                            Log.Info($"We are not a part of the cluster so moving to passive (candidate because: {reason})");
-                        }
-
-                        SetNewStateInTx(context, RachisState.Passive, null, currentTerm, "We are not a part of the cluster so moving to passive");
-                        ctx.Commit();
-                        return;
-                    }
-                    if (clusterTopology.Members.ContainsKey(_tag) == false)
-                    {
-                        if (Log.IsInfoEnabled)
-                        {
-                            Log.Info($"Candidate because: {reason}, but while we are part of the cluster, we aren't a member, so we can't be a candidate.");
-                        }
-                        // we aren't a member, nothing that we can do here
-                        return;
-                    }
-                    if (clusterTopology.AllNodes.Count == 1 &&
-                        clusterTopology.Members.Count == 1)
-                    {
-                        if (Log.IsInfoEnabled)
-                        {
-                            Log.Info("Trying to switch to candidate when I'm the only node in the cluster, turning into a leader, instead");
-                        }
-
-                        SwitchToSingleLeader(context);
-                        ctx.Commit();
-                        return;
-                    }
+                    clusterTopology = GetTopology(context);
                 }
+
+                if (clusterTopology.TopologyId == null ||
+                    clusterTopology.AllNodes.ContainsKey(_tag) == false)
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info($"We are not a part of the cluster so moving to passive (candidate because: {reason})");
+                    }
+
+                    var command = new SetNewStateCommand(this, RachisState.Passive, null, currentTerm, "We are not a part of the cluster so moving to passive");
+                    TxMerger.EnqueueSync(command);
+                    return;
+                }
+
+                if (clusterTopology.Members.ContainsKey(_tag) == false)
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info($"Candidate because: {reason}, but while we are part of the cluster, we aren't a member, so we can't be a candidate.");
+                    }
+
+                    // we aren't a member, nothing that we can do here
+                    return;
+                }
+
+                if (clusterTopology.AllNodes.Count == 1 &&
+                    clusterTopology.Members.Count == 1)
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info("Trying to switch to candidate when I'm the only node in the cluster, turning into a leader, instead");
+                    }
+
+                    var command = new SwitchToSingleLeaderCommand(this);
+                    TxMerger.EnqueueSync(command);
+                    return;
+                }
+
 
                 if (Log.IsInfoEnabled)
                 {
                     Log.Info($"Switching to candidate state because {reason} forced: {forced}");
                 }
-                var candidate = new Candidate(this)
-                {
-                    IsForcedElection = forced
-                };
+
+                var candidate = new Candidate(this) { IsForcedElection = forced };
 
                 Candidate = candidate;
                 SetNewState(RachisState.Candidate, candidate, currentTerm, reason);
@@ -1122,6 +1148,7 @@ namespace Raven.Server.Rachis
                 {
                     Log.Info($"An error occurred during switching to candidate state in term {currentTerm:#,#;;0}.", e);
                 }
+
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
         }
@@ -1186,7 +1213,7 @@ namespace Raven.Server.Rachis
             return topologyJson;
         }
 
-        public static unsafe BlittableJsonReaderObject SetTopology(RachisConsensus engine, ClusterOperationContext context,
+        internal static unsafe BlittableJsonReaderObject SetTopology(RachisConsensus engine, ClusterOperationContext context,
             ClusterTopology clusterTopology)
         {
             var topologyJson = context.ReadObject(clusterTopology.ToJson(), "topology");
@@ -1233,7 +1260,7 @@ namespace Raven.Server.Rachis
         /// This method is expected to run for a long time (lifetime of the connection)
         /// and can never throw. We expect this to be on a separate thread
         /// </summary>
-        public void AcceptNewConnection(RemoteConnection remoteConnection, EndPoint remoteEndpoint, Action<RachisHello> sayHello = null)
+        public async Task AcceptNewConnectionAsync(RemoteConnection remoteConnection, EndPoint remoteEndpoint, Action<RachisHello> sayHello = null)
         {
             try
             {
@@ -1272,15 +1299,8 @@ namespace Raven.Server.Rachis
                     }
                     if (_tag == InitialTag)
                     {
-                        using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                        using (context.OpenWriteTransaction())
-                        {
-                            if (_tag == InitialTag)// double checked locking under tx write lock
-                            {
-                                UpdateNodeTag(context, initialMessage.DebugDestinationIdentifier);
-                                context.Transaction.Commit();
-                            }
-                        }
+                        var command = new UpdateNodeTagCommand(this, _tag, initialMessage);
+                        await TxMerger.Enqueue(command);
 
                         if (_tag != initialMessage.DebugDestinationIdentifier)
                         {
@@ -1300,10 +1320,11 @@ namespace Raven.Server.Rachis
                             break;
 
                         case InitialMessageType.AppendEntries:
-                            if (Follower.CheckIfValidLeader(this, remoteConnection, out var negotiation))
+                            var r = Follower.CheckIfValidLeader(this, remoteConnection);
+                            if (r.Success)
                             {
-                                var follower = new Follower(this, negotiation.Term, remoteConnection);
-                                follower.AcceptConnection(negotiation);
+                                var follower = new Follower(this, r.Negotiation.Term, remoteConnection);
+                                await follower.AcceptConnectionAsync(r.Negotiation);
                             }
                             else
                             {
@@ -1394,53 +1415,13 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe bool RemoveEntryFromRaftLog(long index)
+        public async Task<bool> RemoveEntryFromRaftLogAsync(long index)
         {
             try
             {
-                using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    Table table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
-                    long reversedIndex = Bits.SwapBytes(index);
-
-                    long id;
-                    long term;
-                    using (Slice.External(context.Allocator, (byte*)&reversedIndex, sizeof(long), out Slice key))
-                    {
-                        if (table.ReadByKey(key, out TableValueReader reader))
-                        {
-                            term = *(long*)reader.Read(1, out int size);
-                            id = reader.Id;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
-
-                    var noopCmd = new DynamicJsonValue
-                    {
-                        ["Type"] = $"Noop for {Tag} in term {term}", 
-                        ["Command"] = "noop"
-                    };
-                    var cmd = context.ReadObject(noopCmd, "noop-cmd");
-
-                    using (table.Allocate(out TableValueBuilder tvb))
-                    {
-                        tvb.Add(reversedIndex);
-                        tvb.Add(term);
-                        tvb.Add(cmd.BasePointer, cmd.Size);
-                        tvb.Add((int)RachisEntryFlags.Noop);
-                        table.Update(id, tvb, true);
-                    }
-
-                    LogHistory.UpdateHistoryLogPreservingGuidAndStatus(context, index, term, cmd);
-
-                    tx.Commit();
-                }
-
-                return true;
+                var command = new RemoveEntryFromRaftLogCommand(Tag, index, LogHistory);
+                await TxMerger.Enqueue(command);
+                return command.Succeeded;
             }
             catch (Exception e)
             {
@@ -1492,7 +1473,7 @@ namespace Raven.Server.Rachis
                 GetLastTruncated(context, out lastIndex, out long _);
             }
             lastIndex += 1;
-            var guid = LogHistory.GetGuidFromCommand(cmd);
+            var guid = RachisLogHistory.GetUniqueRequestIdFromCommand(cmd);
             if (guid == RaftIdGenerator.DontCareId)
             {
                 var newGuid = $"DontCare/{term}-{lastIndex}";
@@ -1975,26 +1956,16 @@ namespace Raven.Server.Rachis
             if (term <= CurrentTerm)
                 return;
 
-            using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            {
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    // we check it here again because now we are under the tx lock, so we can't get into concurrency issues
-                    if (term <= CurrentTerm)
-                        return;
+            var command = new CastVoteInTermCommand(this, term, reason);
 
-                    CastVoteInTerm(context, term, votedFor: null, reason: reason);
-
-                    tx.Commit();
-                }
-            }
+            TxMerger.EnqueueSync(command);
         }
 
         public void ValidateTerm(long term)
         {
             if (term != CurrentTerm)
             {
-                throw new ConcurrencyException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
+                throw new RachisConcurrencyException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
             }
         }
 
@@ -2083,6 +2054,7 @@ namespace Raven.Server.Rachis
             _topologyChanged.TrySetCanceled();
             _stateChanged.TrySetCanceled();
             _commitIndexChanged.TrySetCanceled();
+            TxMerger?.Dispose();
             ContextPool?.Dispose();
         }
 
@@ -2142,80 +2114,42 @@ namespace Raven.Server.Rachis
 
         public string HardResetToNewCluster(string nodeTag = "A")
         {
-            var topologyId = Guid.NewGuid().ToString();
+            return HardResetToNewClusterAsync(nodeTag).GetAwaiter().GetResult();
+        }
+
+        public async Task<string> HardResetToNewClusterAsync(string nodeTag = "A")
+        {
             bool committed = false;
+            var topologyId = Guid.NewGuid().ToString();
             try
             {
-                using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-                using (var tx = ctx.OpenWriteTransaction())
-                {
-
-                    var topology = new ClusterTopology(
-                        topologyId,
-                        new Dictionary<string, string>
-                        {
-                            [nodeTag] = Url
-                        },
-                        new Dictionary<string, string>(),
-                        new Dictionary<string, string>(),
-                        _tag,
-                        GetLastEntryIndex(ctx) + 1
-                    );
-
-                    UpdateNodeTag(ctx, nodeTag);
-
-                    SetTopology(this, ctx, topology);
-
-                    SetSnapshotRequest(ctx, false);
-
-                    SwitchToSingleLeader(ctx);
-
-                    tx.Commit();
-
-                    if(ctx.Transaction.InnerTransaction.LowLevelTransaction.Committed)
-                        committed = true;
-                }
+                var command = new HardResetToNewClusterCommand(this, _tag, topologyId);
+                await TxMerger.Enqueue(command);
+                committed = command.Committed;
             }
-            catch(ConcurrencyException) when(committed)
+            catch (ConcurrencyException) when (committed)
             {
                 // Thrown in tx OnDispose (which is set in SwitchToSingleLeader)
                 // Happens when old Leader.Run->SwitchToCandidateState->SwitchToSingleLeader runs
                 // And then HardResetToNewCluster->SwitchToSingleLeader runs in parallel.
                 // In the second call of the SwitchToSingleLeader the 'leader.Run()' throws because it's term isn't updated.
             }
+            
+
+            // It was throwing in tx OnDispose (which is set in SwitchToSingleLeader)
+            // Happens when old Leader.Run->SwitchToCandidateState->SwitchToSingleLeader runs
+            // And then HardResetToNewCluster->SwitchToSingleLeader runs in parallel.
+            // In the second call of the SwitchToSingleLeader the 'leader.Run()' throws because it's term isn't updated.
+            // Was handled in 'RavenDB-16075'
+            // TODO: Run 'LeaderCanCecedeFromClusterAndNewLeaderWillBeElected' 10_000 times
+
             return topologyId;
         }
 
-        public void HardResetToPassive(string topologyId = null)
+        public Task HardResetToPassiveAsync(string topologyId = null)
         {
-            using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-            using (var tx = ctx.OpenWriteTransaction())
-            {
-                UpdateNodeTag(ctx, InitialTag);
-                var oldTopology = GetTopology(ctx);
-
-                var topology = new ClusterTopology(
-                    topologyId ?? oldTopology.TopologyId,
-                    new Dictionary<string, string>
-                    {
-                        [_tag] = Url
-                    },
-                    new Dictionary<string, string>(),
-                    new Dictionary<string, string>(),
-                    _tag,
-                    GetLastEntryIndex(ctx) + 1
-                );
-
-                if (topologyId != oldTopology.TopologyId)
-                    // if we are going to add this to a different cluster we must get a snapshot
-                    SetSnapshotRequest(ctx, true);
-
-                SetTopology(this, ctx, topology);
-
-                SetNewStateInTx(ctx, RachisState.Passive, null, CurrentTerm, "Hard reset to passive by admin");
-
-                tx.Commit();
-            }
+            var command = new HardResetToPassiveCommand(this, _tag, topologyId);
+            return TxMerger.Enqueue(command);
         }
 
         public static void ValidateNodeTag(string nodeTag)
@@ -2256,11 +2190,14 @@ namespace Raven.Server.Rachis
             if (leader == null)
                 throw new NotLeadingException("I am not the leader, cannot accept commands. " + _lastStateChangeReason);
 
-            Task task;
-            while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, out task, validateNotInTopology) == false)
-                await task;
+            while (true)
+            {
+                var result = await leader.TryModifyTopologyAsync(nodeTag, nodeUrl, modification, validateNotInTopology);
+                await result.Task;
 
-            await task;
+                if (result.Success)
+                    break;
+            }
         }
 
         private string _leaderTag;
@@ -2306,7 +2243,7 @@ namespace Raven.Server.Rachis
         public abstract void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token);
         public abstract Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token);
 
-        private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
+        internal readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;
 
         public void InvokeBeforeAppendToRaftLog(ClusterOperationContext context, CommandBase cmd)
