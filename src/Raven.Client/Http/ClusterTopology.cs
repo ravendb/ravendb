@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Http
@@ -180,6 +181,9 @@ namespace Raven.Client.Http
         public Dictionary<string, string> Members { get; protected set; }
         public Dictionary<string, string> Promotables { get; protected set; }
         public Dictionary<string, string> Watchers { get; protected set; }
+
+        [JsonIgnore]
+        internal int Count => Members.Count + Promotables.Count + Watchers.Count;
     }
 
     public class NodeStatus : IDynamicJson

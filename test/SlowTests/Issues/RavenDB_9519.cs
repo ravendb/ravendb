@@ -250,7 +250,7 @@ namespace SlowTests.Issues
             public string Title { get; set; }
         }
 
-        private class InValidCsvImportOptions
+        public class InValidCsvImportOptions
         {
             public string Delimiter { get; set; }
             public string Quote { get; set; } // Quote is char in CSVHelper
@@ -259,7 +259,7 @@ namespace SlowTests.Issues
             public string TrimOptions { get; set; }
         }
 
-        private class CsvImportCommand : RavenCommand
+        public class CsvImportCommand : RavenCommand
         {
             private readonly Stream _stream;
             private readonly string _collection;

@@ -455,6 +455,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
         public bool IsFull { get; set; }
 
+        public DateTime? OriginalBackupTime { get; set; }
+
         internal long TaskId { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -463,7 +465,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             {
                 [nameof(TimeSpan)] = TimeSpan,
                 [nameof(DateTime)] = DateTime,
-                [nameof(IsFull)] = IsFull
+                [nameof(IsFull)] = IsFull,
+                [nameof(OriginalBackupTime)] = OriginalBackupTime
             };
         }
     }

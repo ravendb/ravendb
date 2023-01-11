@@ -138,7 +138,9 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
             const backupType = this.getBackupType(this.backupType(), nextBackup.IsFull);
             const backupTypeText = backupType !== "Snapshot" ? `${backupType} Backup` : backupType;
             const formatDuration = generalUtils.formatDuration(moment.duration(diff), true, 2, true);
-            return `in ${formatDuration} (${backupTypeText})`;
+            const originalDate = this.nextBackup().OriginalBackupTime;
+            const originalDateText = originalDate ? ", delayed backup from: " + generalUtils.formatUtcDateAsLocal(originalDate) : "";
+            return `in ${formatDuration} (${backupTypeText}) ${originalDateText}`;
         });
 
         this.onGoingBackupHumanized = ko.pureComputed(() => {

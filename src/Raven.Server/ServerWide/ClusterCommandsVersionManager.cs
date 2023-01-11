@@ -145,6 +145,7 @@ namespace Raven.Server.ServerWide
 
             [nameof(EditLockModeCommand)] = 52_000,
             [nameof(PutRollingIndexCommand)] = 52_000,
+            [nameof(DelayBackupCommand)] = 52_001,
 
             [nameof(EditPostgreSqlConfigurationCommand)] = 53_000,
             [nameof(RecordBatchSubscriptionDocumentsCommand)] = 53_000,
