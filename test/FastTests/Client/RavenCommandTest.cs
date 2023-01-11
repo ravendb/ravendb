@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Http;
+using Raven.Server.ServerWide.Commands;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -62,7 +63,7 @@ namespace FastTests.Client
                 "SetDatabasesLockCommand",
                 "GetDatabaseSettingsCommand", "PutDatabaseConfigurationSettingsCommand", "ConfigurePostgreSqlCommand",
                 "GetTrafficWatchConfigurationCommand", "SetTrafficWatchConfigurationCommand",
-                "GetNextServerOperationIdCommand", "KillServerOperationCommand", "ModifyDatabaseTopologyCommand",
+                "GetNextServerOperationIdCommand", "KillServerOperationCommand", "ModifyDatabaseTopologyCommand", "DelayBackupCommand",
                 "PutDatabaseClientConfigurationCommand", "PutDatabaseSettingsCommand", "PutDatabaseStudioConfigurationCommand", "GetTcpInfoForReplicationCommand"
             }.OrderBy(t => t);
 

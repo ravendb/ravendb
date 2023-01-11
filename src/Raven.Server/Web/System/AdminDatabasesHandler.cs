@@ -30,7 +30,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Auto;
@@ -653,6 +652,24 @@ namespace Raven.Server.Web.System
                     writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                 }
             }
+        }
+
+        [RavenAction("/admin/backup-task/delay", "POST", AuthorizationStatus.Operator)]
+        public async Task DelayBackupTask()
+        {
+            var id = GetLongQueryString("taskId");
+            var delay = GetTimeSpanQueryString("duration");
+            if (delay <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(delay));
+
+            var databaseName = GetStringQueryString("database");
+            var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
+            if (database == null)
+                DatabaseDoesNotExistException.Throw(databaseName);
+
+            await database.PeriodicBackupRunner.DelayAsync(id, delay.Value, GetCurrentCertificate());
+            
+            NoContentStatus();
         }
 
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]

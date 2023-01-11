@@ -8,6 +8,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
@@ -117,6 +118,42 @@ namespace SlowTests.Server.Replication
             }
         }
 
+        [Fact]
+        public async Task EnsureCantUseFilteredReplicationOnUnsecuredHub()
+        {
+            var name = $"pull-replication {GetDatabaseName()}";
+            using (var hub = GetDocumentStore())
+            {
+                var error = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                {
+                    await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                    {
+                        WithFiltering = true
+                    }));
+                });
+
+                Assert.Contains("Server must be secured in order to use filtering in pull replication", error.Message);
+            }
+        }
+
+        [Fact]
+        public async Task EnsureCantUseSinkToHubReplicationOnUnsecuredHub()
+        {
+            var name = $"pull-replication {GetDatabaseName()}";
+            using (var hub = GetDocumentStore())
+            {
+                var error = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+                {
+                    await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                    {
+                        Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink
+                    }));
+                });
+
+                Assert.Contains($"Server must be secured in order to use Mode {nameof(PullReplicationMode.SinkToHub)} in pull replication {name}", error.Message);
+            }
+        }
+        
         [Fact]
         public async Task DeletePullReplicationFromSink()
         {

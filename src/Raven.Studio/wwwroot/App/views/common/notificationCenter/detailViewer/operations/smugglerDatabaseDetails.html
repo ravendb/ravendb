@@ -109,4 +109,17 @@
         <div class="modal-footer" data-bind="compose: $root.footerPartialView">
         </div>
     </div>
+                <div class="flex-separator"></div>
+                <div>
+                    <button type="button" class="btn btn-default" data-bind="click: close" title="Close this dialog">
+                        <i class="icon-cancel"></i><span>Close</span>
+                    </button>
+                    <button type="button" class="btn btn-danger" title="Abort this operation"
+                            data-bind="click: killOperation, visible: killable, css: { 'btn-spinner': spinners.kill }, disable: spinners.kill">
+                        <i class="icon-stop"></i><span>Abort</span>
+                    </button>
+</div>
+            </div>
+        </div>
+    </div>
 </div>

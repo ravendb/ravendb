@@ -21,16 +21,12 @@ namespace EmbeddedTests
         [Fact]
         public async Task SmugglerImportFileShouldThrowTimeout()
         {
-            var paths = CopyServer();
+            var options = CopyServerAndCreateOptions();
 
             using (var embedded = new EmbeddedServer())
             {
                 const string fileName = "dump.cmp";
-                embedded.StartServer(new ServerOptions
-                {
-                    ServerDirectory = paths.ServerDirectory,
-                    DataDirectory = paths.DataDirectory,
-                });
+                embedded.StartServer(options);
 
                 const string databaseName = "test";
                 var dummyDump = CreateDummyDump(1);
@@ -77,15 +73,11 @@ namespace EmbeddedTests
         [Fact]
         public async Task SmugglerImportStreamShouldThrowTimeout()
         {
-            var paths = CopyServer();
+            var options = CopyServerAndCreateOptions();
 
             using (var embedded = new EmbeddedServer())
             {
-                embedded.StartServer(new ServerOptions
-                {
-                    ServerDirectory = paths.ServerDirectory,
-                    DataDirectory = paths.DataDirectory,
-                });
+                embedded.StartServer(options);
 
                 const string databaseName = "test";
                 var dummyDump = CreateDummyDump(1);

@@ -5,6 +5,8 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
 import generalUtils = require("common/generalUtils");
 import genericProgress = require("common/helpers/database/genericProgress");
+import delayBackupCommand = require("commands/database/tasks/delayBackupCommand");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending" | "processedWithErrors";
 
@@ -41,6 +43,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     itemsLastCount: dictionary<number> = {};
     lastProcessingSpeedText = smugglerDatabaseDetails.ProcessingText;
     
+    canDelay: KnockoutComputed<boolean>;
+    
     exportItems: KnockoutComputed<Array<smugglerListItem>>;
     uploadItems: KnockoutComputed<Array<uploadListItem>>;
     messages: KnockoutComputed<Array<string>>;
@@ -57,6 +61,13 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
     protected initObservables() {
         super.initObservables();
+        
+        this.canDelay = ko.pureComputed(() => {
+            const completed = this.op.isCompleted();
+            const isBackup = this.op.taskType() === "DatabaseBackup";
+            
+            return !completed && isBackup;
+        });
 
         this.exportItems = ko.pureComputed(() => {
             if (this.op.status() === "Faulted") {
@@ -226,6 +237,32 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         if (this.operationFailed()) {
             this.detailsVisible(true);
         }
+    }
+
+    delayBackup(duration: string) {
+        if (!this.canDelay()) {
+            return;
+        }
+        
+        this.close();
+        
+        const durationFormatted = generalUtils.formatTimeSpan(duration, true);
+        
+        viewHelpers.confirmationMessage("Delay backup", "Do you want to delay backup by " + durationFormatted +  "?", {
+            buttons: ["Cancel", "Delay"]
+        })
+            .done(result => {
+                if (result.can) {
+                    new delayBackupCommand(this.op.database, this.op.operationId(), "01:00:00")
+                        .execute();
+                } else {
+                    this.openDetails();
+                }
+            })
+            .fail(() => {
+                this.openDetails();
+            })
+        
     }
     
     private static findCurrentlyProcessingItems(result: Array<smugglerListItem>): string[] {

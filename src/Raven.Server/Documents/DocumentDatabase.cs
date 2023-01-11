@@ -1279,7 +1279,7 @@ namespace Raven.Server.Documents
         /// </summary>
         public event Action<DatabaseRecord> DatabaseRecordChanged;
 
-        public void ValueChanged(long index)
+        public void ValueChanged(long index, string type, object changeState)
         {
             try
             {
@@ -1293,7 +1293,7 @@ namespace Raven.Server.Documents
                     record = _serverStore.Cluster.ReadDatabase(context, Name);
                 }
 
-                NotifyFeaturesAboutValueChange(record, index);
+                NotifyFeaturesAboutValueChange(record, index, type, changeState);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
@@ -1481,7 +1481,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index)
+        private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index, string type, object changeState)
         {
             if (CanSkipValueChange(record.DatabaseName, index))
                 return;
@@ -1505,6 +1505,7 @@ namespace Raven.Server.Documents
                     DatabaseShutdown.ThrowIfCancellationRequested();
                     SubscriptionStorage?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseValueChanged(record);
+                    PeriodicBackupRunner?.HandleDatabaseValueChanged(type, changeState);
 
                     LastValueChangeIndex = index;
                 }
