@@ -15,6 +15,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;

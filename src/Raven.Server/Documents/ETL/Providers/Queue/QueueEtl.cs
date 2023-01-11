@@ -14,7 +14,7 @@ using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Exceptions.ETL.QueueEtl;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

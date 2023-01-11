@@ -27,7 +27,7 @@ using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.TransactionMerger
 {
     /// <summary>
     /// Merges multiple commands into a single transaction. Any commands that implement IDisposable

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;

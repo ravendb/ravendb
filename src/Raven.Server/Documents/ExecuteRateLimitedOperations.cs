@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Util.RateLimiting;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;

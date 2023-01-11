@@ -25,6 +25,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;

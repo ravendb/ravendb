@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

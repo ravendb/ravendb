@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.TransactionCommands;
+namespace Raven.Server.Documents.TransactionMerger.Commands;
 
 public class DeleteDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
 {

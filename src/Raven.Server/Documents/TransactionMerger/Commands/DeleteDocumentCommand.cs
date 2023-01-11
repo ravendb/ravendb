@@ -1,9 +1,10 @@
 ﻿using System.Runtime.ExceptionServices;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.TransactionCommands
+namespace Raven.Server.Documents.TransactionMerger.Commands
 {
     public class DeleteDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand
     {

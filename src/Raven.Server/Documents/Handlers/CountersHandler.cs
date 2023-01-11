@@ -15,6 +15,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.Json.Serialization;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;

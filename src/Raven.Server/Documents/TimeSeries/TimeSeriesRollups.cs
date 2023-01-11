@@ -6,6 +6,7 @@ using System.Text;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;

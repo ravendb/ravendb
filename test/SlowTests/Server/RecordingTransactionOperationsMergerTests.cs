@@ -36,6 +36,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
