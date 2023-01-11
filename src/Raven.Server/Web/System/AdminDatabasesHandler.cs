@@ -664,6 +664,8 @@ namespace Raven.Server.Web.System
 
             var databaseName = GetStringQueryString("database");
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
+            if (database == null)
+                DatabaseDoesNotExistException.Throw(databaseName);
 
             await database.PeriodicBackupRunner.DelayAsync(id, delay.Value, GetCurrentCertificate());
             
