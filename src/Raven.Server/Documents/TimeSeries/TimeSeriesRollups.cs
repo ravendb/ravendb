@@ -6,6 +6,7 @@ using System.Text;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
@@ -69,13 +70,13 @@ namespace Raven.Server.Documents.TimeSeries
             RollupSchema.DefineKey(new TableSchema.IndexDef
             {
                 StartIndex = (int)RollupColumns.Key,
-                Count = 1, 
+                Count = 1,
                 Name = RollupKey
             });
 
             RollupSchema.DefineIndex(new TableSchema.IndexDef // this isn't fixed-size since we expect to have duplicates
             {
-                StartIndex = (int)RollupColumns.NextRollup, 
+                StartIndex = (int)RollupColumns.NextRollup,
                 Count = 1,
                 Name = NextRollupIndex
             });
@@ -130,7 +131,7 @@ namespace Raven.Server.Documents.TimeSeries
         public unsafe void MarkSegmentForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, TimeSeriesPolicy nextPolicy, DateTime timestamp, string changeVector)
         {
             var nextRollup = NextRollup(timestamp, nextPolicy);
-           
+
             // mark for rollup
             RollupSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollupTable, 16);
             var table = context.Transaction.InnerTransaction.OpenTable(RollupSchema, TimeSeriesRollupTable);
@@ -195,7 +196,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     if (take <= 0)
                         return;
-                    
+
                     var rollUpTime = DocumentsStorage.TableValueToEtag((int)RollupColumns.NextRollup, ref item.Result.Reader);
                     if (rollUpTime > currentTicks)
                         return;
@@ -235,7 +236,7 @@ namespace Raven.Server.Documents.TimeSeries
             name = Encoding.UTF8.GetString(bytes.Slice(index, bytes.Length - index));
         }
 
-        internal class TimeSeriesRetentionCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class TimeSeriesRetentionCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public const int BatchSize = 1024;
 
@@ -264,7 +265,7 @@ namespace Raven.Server.Documents.TimeSeries
                 foreach (var key in _keys)
                 {
                     SplitKey(key, out var docId, out var name);
-                         
+
                     request.Name = name;
                     request.DocumentId = docId;
 
@@ -279,12 +280,12 @@ namespace Raven.Server.Documents.TimeSeries
                 return retained;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new TimeSeriesRetentionCommandDto(_keys, _collection, _to);
             }
 
-            public class TimeSeriesRetentionCommandDto : TransactionOperationsMerger.IReplayableCommandDto<TimeSeriesRetentionCommand>
+            public class TimeSeriesRetentionCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, TimeSeriesRetentionCommand>
             {
                 public List<Slice> _keys;
                 public string _collection;
@@ -309,7 +310,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal class AddedNewRollupPoliciesCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class AddedNewRollupPoliciesCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public const int BatchSize = 1024;
             private readonly CollectionName _collection;
@@ -354,12 +355,12 @@ namespace Raven.Server.Documents.TimeSeries
                 return Marked;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new AddedNewRollupPoliciesCommandDto(_collection, _from, _to, _skip);
             }
 
-            public class AddedNewRollupPoliciesCommandDto : TransactionOperationsMerger.IReplayableCommandDto<AddedNewRollupPoliciesCommand>
+            public class AddedNewRollupPoliciesCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AddedNewRollupPoliciesCommand>
             {
                 public CollectionName _name;
                 public TimeSeriesPolicy _from;
@@ -388,7 +389,7 @@ namespace Raven.Server.Documents.TimeSeries
             table.DeleteByPrimaryKeyPrefix(prefix);
         }
 
-        internal class RollupTimeSeriesCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class RollupTimeSeriesCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly TimeSeriesConfiguration _configuration;
             private readonly DateTime _now;
@@ -422,7 +423,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     if (config.Disabled)
                         continue;
-                        
+
                     if (table.ReadByKey(item.Key, out var current) == false)
                         continue;
 
@@ -624,12 +625,12 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new RollupTimeSeriesCommandDto(_configuration, _now, _states, _isFirstInTopology);
             }
 
-            public class RollupTimeSeriesCommandDto : TransactionOperationsMerger.IReplayableCommandDto<RollupTimeSeriesCommand>
+            public class RollupTimeSeriesCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RollupTimeSeriesCommand>
             {
                 public TimeSeriesConfiguration _configuration;
                 public DateTime _now;
@@ -657,7 +658,7 @@ namespace Raven.Server.Documents.TimeSeries
             FromAggregated
         }
 
-        private static readonly AggregationType[] Aggregations = 
+        private static readonly AggregationType[] Aggregations =
         {
             // the order here matters, and should match TimeSeriesAggregation.AggregationType
             AggregationType.First,
@@ -753,7 +754,7 @@ namespace Raven.Server.Documents.TimeSeries
                             Values[i] += val.Sum;
                         else
                             Values[i] += val.Count;
-                        
+
                         break;
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + aggregation);
@@ -806,7 +807,7 @@ namespace Raven.Server.Documents.TimeSeries
             public void Step(Span<double> values)
             {
                 EnsureNumberOfValues(values.Length);
-                
+
                 for (int i = 0; i < values.Length; i++)
                 {
                     var val = values[i];
@@ -836,11 +837,11 @@ namespace Raven.Server.Documents.TimeSeries
 
             private void EnsureNumberOfValues(int numberOfValues)
             {
-                
+
                 switch (_mode)
                 {
                     case AggregationMode.FromRaw:
-                        
+
                         if (numberOfValues > 5)
                             throw new RollupExceedNumberOfValuesException(
                                 $"Rollup more than 5 values is not supported.{Environment.NewLine}" +
@@ -870,7 +871,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var aggStates = new TimeSeriesAggregation(mode); // we always will aggregate here by Min, Max, First, Last, Sum, Count, Mean
             var results = new List<SingleResult>();
-           
+
             foreach (var it in reader.SegmentsOrValues())
             {
                 if (it.IndividualValues != null)
@@ -945,7 +946,7 @@ namespace Raven.Server.Documents.TimeSeries
                         continue;
 
                     MaybeMoveToNextRange(cur.Timestamp);
-                    
+
                     aggStates.Step(cur.Values.Span);
                 }
             }

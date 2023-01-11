@@ -1,11 +1,9 @@
-﻿using System.Runtime.ExceptionServices;
-using Raven.Client.Exceptions;
-using Raven.Server.ServerWide.Context;
+﻿using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.TransactionCommands
+namespace Raven.Server.Documents.TransactionMerger.Commands
 {
-    public class DeleteDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class DeleteDocumentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         private readonly string _id;
         private readonly string _expectedChangeVector;
@@ -26,9 +24,9 @@ namespace Raven.Server.Documents.TransactionCommands
             return 1;
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new DeleteDocumentCommandDto()
+            return new DeleteDocumentCommandDto
             {
                 Id = _id,
                 ChangeVector = _expectedChangeVector,
@@ -36,7 +34,7 @@ namespace Raven.Server.Documents.TransactionCommands
         }
     }
 
-    public class DeleteDocumentCommandDto : TransactionOperationsMerger.IReplayableCommandDto<DeleteDocumentCommand>
+    public class DeleteDocumentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteDocumentCommand>
     {
         public string Id { get; set; }
         public string ChangeVector { get; set; }

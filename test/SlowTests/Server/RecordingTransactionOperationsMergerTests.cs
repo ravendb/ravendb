@@ -41,6 +41,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -48,6 +49,7 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using DeleteDocumentCommand = Raven.Client.Documents.Commands.DeleteDocumentCommand;
 
 namespace SlowTests.Server
 {
@@ -62,21 +64,21 @@ namespace SlowTests.Server
         {
             var exceptions = new[]
             {
-                typeof(TransactionOperationsMerger.MergedTransactionCommand),
+                typeof(MergedTransactionCommand<,>),
                 typeof(ExecuteRateLimitedOperations<>),
-                typeof(StartTransactionsRecordingCommand),
-                typeof(StopTransactionsRecordingCommand),
+                typeof(StartTransactionsRecordingCommand<,>),
+                typeof(StopTransactionsRecordingCommand<,>),
                 typeof(TransactionMergedCommand),
                 typeof(AbstractDatabaseQueryRunner.BulkOperationCommand<>)
             };
 
-            var commandBaseType = typeof(TransactionOperationsMerger.MergedTransactionCommand);
+            var commandBaseType = typeof(MergedTransactionCommand<,>);
             var types = commandBaseType.Assembly.GetTypes();
             var commandDeriveTypes = types
                 .Where(t => commandBaseType.IsAbstract == false && commandBaseType.IsAssignableFrom(t) && exceptions.Contains(t) == false)
                 .ToList();
 
-            var iRecordableType = typeof(TransactionOperationsMerger.IReplayableCommandDto<>);
+            var iRecordableType = typeof(IReplayableCommandDto<,,>);
             var genericTypes = iRecordableType.Assembly.GetTypes()
                 .Select(t => t
                     .GetInterfaces()

@@ -857,9 +857,14 @@ namespace RachisTests
 
             foreach (var follower in followers)
             {
-                while (cluster.Leader.ServerStore.Engine.CurrentLeader.TryModifyTopology(follower.ServerStore.NodeTag, follower.ServerStore.Engine.Url, Leader.TopologyModification.NonVoter, out var task) == false)
+                while (true)
                 {
-                    await task;
+                    var r = await cluster.Leader.ServerStore.Engine.CurrentLeader.TryModifyTopologyAsync(follower.ServerStore.NodeTag, follower.ServerStore.Engine.Url, Leader.TopologyModification.NonVoter);
+
+                    if (r.Success)
+                        break;
+
+                    await r.Task;
                 }
             }
 

@@ -11,6 +11,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -70,7 +71,7 @@ namespace Raven.Server.Documents.Replication
             // update to larger index;
             if (ThreadingHelper.InterlockedExchangeMax(ref _processedRaftIndex, index) == false)
                 return;
-            
+
             try
             {
                 using (await RunOnceAsync())
@@ -174,7 +175,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal class PutResolvedConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class PutResolvedConflictsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly ConflictsStorage _conflictsStorage;
             private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool resovedToLatest)> _resolvedConflicts;
@@ -212,10 +213,10 @@ namespace Raven.Server.Documents.Replication
                 return count;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 // The LowerId created as in memory LazyStringValue that doesn't have escape characters
-                // so EscapePositions set to empty to avoid reference to escape bytes (after string bytes) while serializing
+                // so EscapePositions set to empty to avoid reference to escape bytes (after string bytes) while serializing    
                 foreach (var conflict in _resolvedConflicts)
                 {
                     conflict.ResolvedConflict.LowerId.EscapePositions = Array.Empty<int>();
@@ -441,7 +442,7 @@ namespace Raven.Server.Documents.Replication
                 var msg = $"Script failed to resolve the conflict in doc: {updatedConflict?.Id} because exception was raised in it.";
                 if (_log.IsInfoEnabled)
                     _log.Info(msg, e);
-                
+
                 var alert = AlertRaised.Create(
                     _database.Name,
                     "User-provided conflict script raised an error during conflict resolution, manual intervention required!",
@@ -449,7 +450,7 @@ namespace Raven.Server.Documents.Replication
                     AlertType.Replication,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e));
-                
+
                 _database.NotificationCenter.Add(alert);
             }
             return false;
@@ -540,7 +541,7 @@ namespace Raven.Server.Documents.Replication
         }
     }
 
-    internal class PutResolvedConflictsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand>
+    internal class PutResolvedConflictsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand>
     {
         public List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool ResolvedToLatests)> ResolvedConflicts;
 

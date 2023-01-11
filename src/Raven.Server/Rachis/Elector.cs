@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis.Commands;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -26,7 +27,7 @@ namespace Raven.Server.Rachis
         {
             _engine.AppendElector(this);
 
-            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, ThreadNames.ForElector($"Elector for candidate {_connection.Source}", _connection.Source));
+            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(HandleVoteRequest, null, ThreadNames.ForElector($"Elector for candidate {_connection.Source}", _connection.Source));
         }
 
         public override string ToString()
@@ -34,8 +35,9 @@ namespace Raven.Server.Rachis
             return $"Elector {_engine.Tag} for {_connection.Source}";
         }
 
-        private void HandleVoteRequest()
+        private void HandleVoteRequest(object obj)
         {
+
             try
             {
                 ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, ToString(), _engine.Log);
@@ -44,6 +46,7 @@ namespace Raven.Server.Rachis
                 {
                     while (_engine.IsDisposed == false)
                     {
+
                         _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
 
                         using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -113,13 +116,14 @@ namespace Raven.Server.Rachis
                             var currentTerm = _engine.CurrentTerm;
                             if (rv.Term == currentTerm && rv.ElectionResult == ElectionResult.Won)
                             {
-                                if (Follower.CheckIfValidLeader(_engine, _connection, out var negotiation))
+                                var r = Follower.CheckIfValidLeader(_engine, _connection);
+                                if (r.Success)
                                 {
                                     _electionWon = true;
                                     try
                                     {
-                                        var follower = new Follower(_engine, negotiation.Term, _connection);
-                                        follower.AcceptConnection(negotiation);
+                                        var follower = new Follower(_engine, r.Negotiation.Term, _connection);
+                                        follower.AcceptConnectionAsync(r.Negotiation).GetAwaiter().GetResult();
                                     }
                                     catch
                                     {
@@ -203,15 +207,8 @@ namespace Raven.Server.Rachis
                                 // election on a term that is greater than the current term plus one, we should
                                 // consider this an indication that the cluster was able to move past our term
                                 // and update the term accordingly
-                                using (context.OpenWriteTransaction())
-                                {
-                                    // double checking things under the transaction lock
-                                    if (rv.Term > _engine.CurrentTerm + 1)
-                                    {
-                                        _engine.CastVoteInTerm(context, rv.Term - 1, null, "Noticed that the term in the cluster grew beyond what I was familiar with, increasing it");
-                                    }
-                                    context.Transaction.Commit();
-                                }
+                                var castVoteInTermCommand = new ElectorCastVoteInTermCommand(_engine, rv);
+                                _engine.TxMerger.EnqueueSync(castVoteInTermCommand);
 
                                 _connection.Send(context, new RequestVoteResponse
                                 {
@@ -259,16 +256,10 @@ namespace Raven.Server.Rachis
 
                             _engine.ForTestingPurposes?.BeforeCastingForRealElection();
 
-                            HandleVoteResult result;
-                            using (context.OpenWriteTransaction())
-                            {
-                                result = ShouldGrantVote(context, lastLogIndex, rv);
-                                if (result.DeclineVote == false)
-                                {
-                                    _engine.CastVoteInTerm(context, rv.Term, rv.Source, "Casting vote as elector");
-                                    context.Transaction.Commit();
-                                }
-                            }
+                            var castVoteInTermWithShouldGrantVoteCommand = new ElectorCastVoteInTermWithShouldGrantVoteCommand(_engine, rv, lastLogIndex);
+                            _engine.TxMerger.EnqueueSync(castVoteInTermWithShouldGrantVoteCommand);
+
+                            var result = castVoteInTermWithShouldGrantVoteCommand.VoteResult;
 
                             if (result.DeclineVote)
                             {
@@ -312,58 +303,11 @@ namespace Raven.Server.Rachis
             return e is OperationCanceledException || e is ObjectDisposedException;
         }
 
-        private class HandleVoteResult
+        internal class HandleVoteResult
         {
             public string DeclineReason;
             public bool DeclineVote;
             public long VotedTerm;
-        }
-
-        private HandleVoteResult ShouldGrantVote(ClusterOperationContext context, long lastIndex, RequestVote rv)
-        {
-            var result = new HandleVoteResult();
-            var lastLogIndexUnderWriteLock = _engine.GetLastEntryIndex(context);
-            var lastLogTermUnderWriteLock = _engine.GetTermFor(context, lastLogIndexUnderWriteLock);
-
-            if (lastLogIndexUnderWriteLock != lastIndex)
-            {
-                result.DeclineVote = true;
-                result.DeclineReason = "Log was changed";
-                return result;
-            }
-
-            if (lastLogTermUnderWriteLock > rv.LastLogTerm)
-            {
-                result.DeclineVote = true;
-                result.DeclineReason = $"My last log term {lastLogTermUnderWriteLock}, is higher than yours {rv.LastLogTerm}.";
-                return result;
-            }
-
-            if (lastLogIndexUnderWriteLock > rv.LastLogIndex)
-            {
-                result.DeclineVote = true;
-                result.DeclineReason = $"Vote declined because my last log index {lastLogIndexUnderWriteLock} is more up to date than yours {rv.LastLogIndex}";
-                return result;
-            }
-
-            var (whoGotMyVoteIn, votedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
-            result.VotedTerm = votedTerm;
-
-            if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
-            {
-                result.DeclineVote = true;
-                result.DeclineReason = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}";
-                return result;
-            }
-
-            if (votedTerm >= rv.Term)
-            {
-                result.DeclineVote = true;
-                result.DeclineReason = $"Already voted in {rv.LastLogTerm}, for another node in higher term: {votedTerm}";
-                return result;
-            }
-
-            return result;
         }
 
         public void Dispose()

@@ -680,13 +680,12 @@ namespace Raven.Server.Documents.Handlers.Admin
             var index = GetLongQueryString("index");
             var first = GetBoolValueQueryString("first", false) ?? true;
             var nodeList = new List<string>();
+            var removed = await ServerStore.Engine.RemoveEntryFromRaftLogAsync(index);
+            if (removed)
+                nodeList.Add(ServerStore.NodeTag);
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var removed = ServerStore.Engine.RemoveEntryFromRaftLog(index);
-                if (removed)
-                    nodeList.Add(ServerStore.NodeTag);
-
                 if (first)
                 {
                     foreach (var node in ServerStore.GetClusterTopology(context).AllNodes)

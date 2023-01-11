@@ -3,7 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Extensions;

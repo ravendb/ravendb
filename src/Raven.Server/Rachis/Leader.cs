@@ -6,22 +6,29 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Commercial;
+using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis.Commands;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
+using Voron.Impl;
 using Voron.Impl.Extensions;
 
 namespace Raven.Server.Rachis
@@ -31,7 +38,7 @@ namespace Raven.Server.Rachis
     /// actually does work in here, the leader thread. All other work is requested
     /// from it and it is done
     /// </summary>
-    public class Leader : IDisposable
+    public partial class Leader : IDisposable
     {
         private TaskCompletionSource<object> _topologyModification;
         private readonly RachisConsensus _engine;
@@ -105,8 +112,7 @@ namespace Raven.Server.Rachis
             RefreshAmbassadors(clusterTopology, connections);
 
             _leaderLongRunningWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null,
-                    ThreadNames.ForConsensusLeader($"Consensus Leader - {_engine.Tag} in term {Term}", _engine.Tag, Term));
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(Run, null, ThreadNames.ForConsensusLeader($"Consensus Leader - {_engine.Tag} in term {Term}", _engine.Tag, Term));
         }
 
         private int _steppedDown;
@@ -293,7 +299,7 @@ namespace Raven.Server.Rachis
         /// <summary>
         /// This is expected to run for a long time, and it cannot leak exceptions
         /// </summary>
-        private void Run()
+        private void Run(object obj)
         {
             try
             {
@@ -454,7 +460,7 @@ namespace Raven.Server.Rachis
 
             if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
             {
-                _engine.Log.Info($"{ToString()}:VoteOfNoConfidence{Environment.NewLine } {sb}");
+                _engine.Log.Info($"{ToString()}:VoteOfNoConfidence{Environment.NewLine} {sb}");
             }
             throw new TimeoutException(
                 "Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
@@ -495,7 +501,7 @@ namespace Raven.Server.Rachis
 
             bool changedFromLeaderElectToLeader;
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
+            using (var tx = context.OpenReadTransaction())
             {
                 if (_engine.ForTestingPurposes?.LeaderLock != null)
                     tx.InnerTransaction.LowLevelTransaction.OnDispose += _ => _engine.ForTestingPurposes?.LeaderLock?.Complete();
@@ -504,27 +510,20 @@ namespace Raven.Server.Rachis
 
                 _lastCommit = _engine.GetLastCommitIndex(context);
 
-                if (_lastCommit >= maxIndexOnQuorum ||
-                    maxIndexOnQuorum == 0)
+                if (_lastCommit >= maxIndexOnQuorum)
                     return; // nothing to do here
 
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < Term)
                     return;// can't commit until at least one entry from our term has been published
 
                 changedFromLeaderElectToLeader = _engine.TakeOffice();
-
-                var sp = Stopwatch.StartNew();
-                maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, sp);
-
-                context.Transaction.Commit();
-
-                var elapsed = sp.Elapsed;
-                if (RachisStateMachine.EnableDebugLongCommit && elapsed > TimeSpan.FromSeconds(5))
-                    Console.WriteLine($"Commiting from {_lastCommit} to {maxIndexOnQuorum} took {elapsed}");
-
-                _lastCommit = maxIndexOnQuorum;
             }
-            
+
+            var command = new LeaderApplyCommand(this, _engine, _lastCommit, maxIndexOnQuorum);
+            _engine.TxMerger.EnqueueSync(command);
+
+            _lastCommit = command.LastAppliedCommit;
+
             foreach (var kvp in _entries)
             {
                 if (kvp.Key > _lastCommit)
@@ -658,187 +657,29 @@ namespace Raven.Server.Rachis
                 if (ambassador.Value.FollowerMatchIndex != lastIndex)
                     continue;
 
-                TryModifyTopology(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter, out Task _);
+                TryModifyTopology(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter, out _);
 
                 break;
             }
         }
 
-        private class RachisMergedCommand
-        {
-            public CommandBase Command;
-            public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
-            public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
-        }
-
-        private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
-
-        private readonly AsyncManualResetEvent _waitForCommit = new AsyncManualResetEvent();
-
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
-            var rachisMergedCommand = new RachisMergedCommand
+            var rachisMergedCommand = new RachisMergedCommand(leader: this, engine: _engine)
             {
                 Command = command,
-                Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously)
             };
-            _commandsQueue.Enqueue(rachisMergedCommand);
 
-            while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
-            {
-                var lockTaken = false;
-                try
-                {
-                    var waitAsync = _waitForCommit.WaitAsync(timeout);
-                    Monitor.TryEnter(_commandsQueue, ref lockTaken);
-                    if (lockTaken)
-                    {
-                        EmptyQueue();
-                    }
-                    else
-                    {
-                        if (await waitAsync == false)
-                        {
-                            if (rachisMergedCommand.Consumed.Raise())
-                            {
-                                GetConvertResult(command)?.AboutToTimeout();
-                                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
-                            }
+            await _engine.TxMerger.Enqueue(rachisMergedCommand); //wait until 'rachisMergedCommand' is executed (until 'rachisMergedCommand.TaskResult' wont be null).
 
-                            // if the command is already dequeued we must let it continue to keep its context valid.
-                            await rachisMergedCommand.Tcs.Task;
-                        }
-                    }
-                }
-                finally
-                {
-                    if (lockTaken)
-                    {
-                        Monitor.Exit(_commandsQueue);
-                        _waitForCommit.SetAndResetAtomically();
-                    }
-                }
-            }
-
-            var inner = await rachisMergedCommand.Tcs.Task;
-            if (await inner.WaitWithTimeout(timeout) == false)
+            var t = rachisMergedCommand.TaskResult;
+            if (await t.WaitWithTimeout(timeout) == false)
             {
                 GetConvertResult(command)?.AboutToTimeout();
-                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+                throw new TimeoutException($"Waited for {timeout} but the command {command.RaftCommandIndex} was not applied in this time.");
             }
 
-            return await inner;
-        }
-
-        private void EmptyQueue()
-        {
-            var list = new List<TaskCompletionSource<Task<(long, object)>>>();
-            var tasks = new List<Task<(long, object)>>();
-            const string leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
-            var lostLeadershipException = new NotLeadingException(leaderDisposedMessage);
-
-            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            {
-                try
-                {
-                    using (context.OpenWriteTransaction())
-                    {
-                        var cmdsCount = 0;
-                        _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
-                        while (cmdsCount++ < 128 && _commandsQueue.TryDequeue(out var cmd))
-                        {
-                            if (cmd.Consumed.Raise() == false)
-                            {
-                                // if the command was aborted due to timeout, we should skip it.
-                                // The command is not appended, so We can and must do so, because the context of the command is no longer valid.
-                                continue;
-                            }
-
-                            if (_running.IsRaised() == false)
-                            {
-                                cmd.Tcs.TrySetException(lostLeadershipException);
-                                continue;
-                            }
-
-                            list.Add(cmd.Tcs);
-                            _engine.InvokeBeforeAppendToRaftLog(context, cmd.Command);
-
-                            var djv = cmd.Command.ToJson(context);
-                            var cmdJson = context.ReadObject(djv, "raft/command");
-
-                            if (_engine.LogHistory.HasHistoryLog(context, cmdJson, out var index, out var result, out var exception))
-                            {
-                                // if this command is already committed, we can skip it and notify the caller about it
-                                if (lastCommitted >= index)
-                                {
-                                    if (exception != null)
-                                    {
-                                        cmd.Tcs.TrySetException(exception);
-                                    }
-                                    else
-                                    {
-                                        if (result != null)
-                                        {
-                                            result = GetConvertResult(cmd.Command)?.Apply(result) ?? cmd.Command.FromRemote(result);
-                                        }
-
-                                        cmd.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
-                                    }
-                                    list.Remove(cmd.Tcs);
-                                    continue;
-                                }
-                            }
-                            else
-                            {
-                                index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
-                            }
-
-                            if (_entries.TryGetValue(index, out var state))
-                            {
-                                tasks.Add(state.TaskCompletionSource.Task);
-                            }
-                            else
-                            {
-                                var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                                tasks.Add(tcs.Task);
-                                state = new
-                                    CommandState
-                                // we need to add entry inside write tx lock to avoid
-                                // a situation when command will be applied (and state set)
-                                // before it is added to the entries list
-                                {
-                                    CommandIndex = index,
-                                    TaskCompletionSource = tcs,
-                                    ConvertResult = GetConvertResult(cmd.Command),
-                                };
-                                _entries[index] = state;
-                            }
-                        }
-                        context.Transaction.Commit();
-                    }
-
-                    if (tasks.Count > 0)
-                        _newEntry.Set();
-
-                    for (int i = 0; i < tasks.Count; i++)
-                    {
-                        list[i].TrySetResult(tasks[i]);
-                    }
-                }
-                catch (Exception e)
-                {
-                    if (_running.IsRaised() == false)
-                    {
-                        e = new NotLeadingException(leaderDisposedMessage, e);
-                    }
-                    foreach (var tcs in list)
-                    {
-                        tcs.TrySetException(e);
-                    }
-
-                    _errorOccurred.TrySetException(e);
-                }
-            }
+            return await t;
         }
 
         internal static ConvertResultAction GetConvertResult(CommandBase cmd)
@@ -1012,7 +853,14 @@ namespace Raven.Server.Rachis
             Remove
         }
 
-        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false, Action<TransactionOperationContext> beforeCommit = null)
+        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task,
+            bool validateNotInTopology = false)
+        {
+            (bool success, task) = TryModifyTopologyAsync(nodeTag, nodeUrl, modification, validateNotInTopology).GetAwaiter().GetResult();
+            return success;
+        }
+
+        public async Task<(bool Success, Task Task)> TryModifyTopologyAsync(string nodeTag, string nodeUrl, TopologyModification modification, bool validateNotInTopology = false)
         {
             if (nodeTag != null)
             {
@@ -1025,99 +873,14 @@ namespace Raven.Server.Rachis
                 var existing = Interlocked.CompareExchange(ref _topologyModification, topologyModification, null);
                 if (existing != null)
                 {
-                    task = existing.Task;
-                    return false;
+                    return (false, existing.Task);
                 }
-                task = topologyModification.Task;
+                var task = topologyModification.Task;
 
                 try
                 {
-                    using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    using (context.OpenWriteTransaction())
-                    {
-                        var clusterTopology = _engine.GetTopology(context);
-
-                        //We need to validate that the node doesn't exists before we generate the nodeTag
-                        if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.TryGetNodeTagByUrl(nodeUrl).HasUrl))
-                        {
-                            throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
-                                                                "with validation that it is not contained by the topology but current topology contains it.");
-                        }
-
-                        if (nodeTag == null)
-                        {
-                            nodeTag = GenerateNodeTag(clusterTopology);
-                        }
-
-                        var newVotes = new Dictionary<string, string>(clusterTopology.Members);
-                        newVotes.Remove(nodeTag);
-                        var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
-                        newPromotables.Remove(nodeTag);
-                        var newNonVotes = new Dictionary<string, string>(clusterTopology.Watchers);
-                        newNonVotes.Remove(nodeTag);
-
-                        var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new[] { nodeTag }).Max();
-
-                        if (nodeTag == _engine.Tag)
-                            RachisTopologyChangeException.Throw("Cannot modify the topology of the leader node.");
-
-                        switch (modification)
-                        {
-                            case TopologyModification.Voter:
-                                Debug.Assert(nodeUrl != null);
-                                newVotes[nodeTag] = nodeUrl;
-                                break;
-                            case TopologyModification.Promotable:
-                                Debug.Assert(nodeUrl != null);
-                                newPromotables[nodeTag] = nodeUrl;
-                                break;
-                            case TopologyModification.NonVoter:
-                                Debug.Assert(nodeUrl != null);
-                                newNonVotes[nodeTag] = nodeUrl;
-                                break;
-                            case TopologyModification.Remove:
-                                PeersVersion.TryRemove(nodeTag, out _);
-                                if (clusterTopology.Contains(nodeTag) == false)
-                                {
-                                    throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
-                                                                        "but it is not contained by the topology.");
-                                }
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
-                        }
-
-                        clusterTopology = new ClusterTopology(
-                            clusterTopology.TopologyId,
-                            newVotes,
-                            newPromotables,
-                            newNonVotes,
-                            highestNodeId,
-                            _engine.GetLastEntryIndex(context) + 1
-                        );
-
-                        var topologyJson = _engine.SetTopology(context, clusterTopology);
-                        var index = _engine.InsertToLeaderLog(context, Term, topologyJson, RachisEntryFlags.Topology);
-
-                        if (modification == TopologyModification.Remove)
-                        {
-                            _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, Term, nodeTag);
-                        }
-
-                        context.Transaction.Commit();
-
-                        var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                        _entries[index] = new CommandState
-                        {
-                            TaskCompletionSource = tcs,
-                            CommandIndex = index
-                        };
-
-                        tcs.Task.ContinueWith(_ =>
-                        {
-                            Interlocked.Exchange(ref _topologyModification, null)?.TrySetResult(null);
-                        });
-                    }
+                    var command = new LeaderModifyTopologyCommand(_engine, this, modification, nodeTag, nodeUrl, validateNotInTopology);
+                    await _engine.TxMerger.Enqueue(command);
                 }
                 catch (Exception e)
                 {
@@ -1129,29 +892,13 @@ namespace Raven.Server.Rachis
                 _voterResponded.Set();
                 _newEntry.Set();
 
-                return true;
+                return (true, task);
             }
         }
 
         public override string ToString()
         {
             return $"Leader {_engine.Tag} in term {Term}";
-        }
-
-        private static string GenerateNodeTag(ClusterTopology clusterTopology)
-        {
-            if (clusterTopology.LastNodeId.Length == 0)
-            {
-                return "A";
-            }
-
-            if (clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1 > 'Z')
-            {
-                return clusterTopology.LastNodeId + "A";
-            }
-
-            var lastChar = (char)(clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1);
-            return clusterTopology.LastNodeId.Substring(0, clusterTopology.LastNodeId.Length - 1) + lastChar;
         }
 
         public void SetStateOf(long index, Action<TaskCompletionSource<(long Index, object Result)>> onNotify)

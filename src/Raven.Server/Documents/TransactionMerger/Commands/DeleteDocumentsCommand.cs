@@ -2,9 +2,9 @@
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.TransactionCommands;
+namespace Raven.Server.Documents.TransactionMerger.Commands;
 
-public class DeleteDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
+public class DeleteDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
 {
     private readonly List<string> _ids;
     private readonly DocumentDatabase _database;
@@ -25,15 +25,15 @@ public class DeleteDocumentsCommand : TransactionOperationsMerger.MergedTransact
         return _ids.Count;
     }
 
-    public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+    public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
     {
-        return new DeleteDocumentsCommandDto()
+        return new DeleteDocumentsCommandDto
         {
             Ids = _ids
         };
     }
 
-    public class DeleteDocumentsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<DeleteDocumentsCommand>
+    public class DeleteDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DeleteDocumentsCommand>
     {
         public List<string> Ids { get; set; }
 

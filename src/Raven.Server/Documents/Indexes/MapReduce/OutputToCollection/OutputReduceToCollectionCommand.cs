@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -199,7 +200,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         }
     }
 
-    public abstract class OutputReduceAbstractCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public abstract class OutputReduceAbstractCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         protected readonly DocumentDatabase _database;
 
@@ -322,7 +323,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             {
                 if (skipAdd.Contains(output.Key))
                     continue;
-                
+
                 for (var i = 0; i < output.Value.Count; i++) // we have hash collision so there might be multiple outputs for the same reduce key hash
                 {
                     var id = output.Value.Count == 1 ? GetOutputDocumentKey(output.Key) : GetOutputDocumentKeyForSameReduceKeyHash(output.Key, i);
@@ -373,7 +374,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
             var dto = new OutputReduceToCollectionCommandDto
             {
@@ -604,7 +605,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         }
     }
 
-    public class OutputReduceToCollectionCommandDto : TransactionOperationsMerger.IReplayableCommandDto<OutputReduceToCollectionCommand>
+    public class OutputReduceToCollectionCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, OutputReduceToCollectionCommand>
     {
         public string OutputReduceToCollection;
         public long? ReduceOutputIndex;

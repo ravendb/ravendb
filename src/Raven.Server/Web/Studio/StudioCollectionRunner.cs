@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
-using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 

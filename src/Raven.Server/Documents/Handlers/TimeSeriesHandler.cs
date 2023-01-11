@@ -9,10 +9,13 @@ using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors.Configuration;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Web;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
@@ -138,7 +141,7 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public class ExecuteTimeSeriesBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly DocumentDatabase _database;
             private readonly string _documentId;
@@ -256,7 +259,7 @@ namespace Raven.Server.Documents.Handlers
                                                     "Cannot put TimeSeries on artificial documents.");
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 throw new System.NotImplementedException();
             }
@@ -268,22 +271,22 @@ namespace Raven.Server.Documents.Handlers
             FromSmuggler = true
         };
 
-        internal class SmugglerTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        public class SmugglerTimeSeriesBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
         {
             private readonly DocumentDatabase _database;
 
             private readonly Dictionary<string, List<TimeSeriesItem>> _dictionary;
-            
+
             private readonly DocumentsOperationContext _context;
 
             public DocumentsOperationContext Context => _context;
-            
+
             private IDisposable _releaseContext;
-            
+
             private bool _isDisposed;
-            
+
             private readonly List<IDisposable> _toDispose;
-            
+
             private readonly List<AllocatedMemoryData> _toReturn;
 
             public string LastChangeVector;
@@ -345,16 +348,11 @@ namespace Raven.Server.Documents.Handlers
                 return newItem;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
-            {
-                throw new System.NotImplementedException();
-            }
-
             public void AddToDisposal(IDisposable disposable)
             {
                 _toDispose.Add(disposable);
             }
-            
+
             public void AddToReturn(AllocatedMemoryData allocatedMemoryData)
             {
                 _toReturn.Add(allocatedMemoryData);
@@ -366,19 +364,23 @@ namespace Raven.Server.Documents.Handlers
                     return;
 
                 _isDisposed = true;
-                
+
                 foreach (var disposable in _toDispose)
                 {
                     disposable.Dispose();
                 }
                 _toDispose.Clear();
-                
+
                 foreach (var returnable in _toReturn)
                     _context.ReturnMemory(returnable);
                 _toReturn.Clear();
-                
+
                 _releaseContext?.Dispose();
                 _releaseContext = null;
+            }
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+            {
+                throw new NotImplementedException();
             }
         }
 

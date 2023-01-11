@@ -12,12 +12,10 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.Handlers.Batches;
-using Raven.Server.Documents.Handlers.Batches.Commands;
-using Raven.Server.Documents.Handlers.Processors.BulkInsert;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json.Converters;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -38,8 +36,8 @@ namespace SlowTests.Blittable
         [Fact]
         public async Task SerializeAndDeserialize_PutResolvedConflictsCommand()
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 //Arrange
                 var resolvedConflicts = new List<(DocumentConflict, long, bool)>
@@ -86,7 +84,8 @@ namespace SlowTests.Blittable
         [Fact]
         public async Task SerializeAndDeserialize_MergedDeleteAttachmentCommand()
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 //Arrange
                 var changeVector = context.GetLazyString("Some Lazy String");
@@ -122,20 +121,20 @@ namespace SlowTests.Blittable
                 }
 
                 //Assert
-                Assert.Equal(expected, actual, new CustomComparer<AttachmentHandler.MergedDeleteAttachmentCommand, RavenTransaction>(context));
+                Assert.Equal(expected, actual, new CustomComparer<AttachmentHandler.MergedDeleteAttachmentCommand, DocumentsOperationContext, DocumentsTransaction>(context));
             }
         }
 
         [Fact]
         public async Task SerializeAndDeserialize_MergedPutAttachmentCommand()
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 //Arrange
                 var recordFilePath = NewDataPath();
 
-                var attachmentStream = new StreamsTempFile(recordFilePath, database.DocumentsStorage.Environment.Options.Encryption.IsEnabled);
+                var attachmentStream = new StreamsTempFile(recordFilePath, database.DocumentsStorage.Environment);
                 var stream = attachmentStream.StartNewStream();
                 const string bufferContent = "Menahem";
                 var buffer = Encoding.ASCII.GetBytes(bufferContent);
@@ -178,7 +177,7 @@ namespace SlowTests.Blittable
 
                 //Assert
                 Assert.Equal(expected, actual,
-                    new CustomComparer<AttachmentHandler.MergedPutAttachmentCommand, RavenTransaction>(context, new[] { typeof(Stream) }));
+                    new CustomComparer<AttachmentHandler.MergedPutAttachmentCommand, DocumentsOperationContext, DocumentsTransaction>(context, new[] { typeof(Stream) }));
 
                 stream.Seek(0, SeekOrigin.Begin);
                 var expectedStream = expected.Stream.ReadData();
@@ -190,7 +189,8 @@ namespace SlowTests.Blittable
         [Fact]
         public async Task SerializeAndDeserialize_MergedPutCommandTest()
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 //Arrange
                 var data = new { ParentProperty = new { NestedProperty = "Some Value" } };
@@ -221,7 +221,7 @@ namespace SlowTests.Blittable
                 }
 
                 //Assert
-                Assert.Equal(expected, actual, new CustomComparer<MergedPutCommand, RavenTransaction>(context));
+                Assert.Equal(expected, actual, new CustomComparer<MergedPutCommand, DocumentsOperationContext, DocumentsTransaction>(context));
             }
         }
 
@@ -244,7 +244,7 @@ namespace SlowTests.Blittable
                     (patchRequest, arg),
                     (null, null),
                     null,
-                    database.IdentityPartsSeparator,
+                    database,
                     false, false, false, false);
 
                 //Action
@@ -269,14 +269,15 @@ namespace SlowTests.Blittable
                 }
 
                 //Assert
-                Assert.Equal(expected, actual, new CustomComparer<PatchDocumentCommand, DocumentsTransaction>(context));
+                Assert.Equal(expected, actual, new CustomComparer<PatchDocumentCommand, DocumentsOperationContext, DocumentsTransaction>(context));
             }
         }
 
         [Fact]
         public async Task SerializeAndDeserialize_DeleteDocumentCommandTest()
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 //Arrange
                 var expected = new DeleteDocumentCommand("Some Id", "Some Change Vector", null);
@@ -304,14 +305,15 @@ namespace SlowTests.Blittable
                 }
 
                 //Assert
-                Assert.Equal(expected, actual, new CustomComparer<DeleteDocumentCommand, RavenTransaction>(context));
-            }
+                Assert.Equal(expected, actual, new CustomComparer<DeleteDocumentCommand, DocumentsOperationContext, DocumentsTransaction>(context));
+            }   
         }
 
         [Fact]
         public async Task SerializeAndDeserialize_MergedBatchCommandCommandTest()
         {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 //Arrange
                 var data = new { ParentProperty = new { NestedProperty = "Some Value" } };
@@ -325,7 +327,7 @@ namespace SlowTests.Blittable
                         Patch = new PatchRequest("Some Script", PatchRequestType.None)
                     }
                 };
-                var expected = new MergedBatchCommand(null)
+                var expected = new BatchHandler.MergedBatchCommand(null)
                 {
                     ParsedCommands = commands
                 };
@@ -343,7 +345,7 @@ namespace SlowTests.Blittable
                 }
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
-                MergedBatchCommand actual;
+                BatchHandler.MergedBatchCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
                     reader.Initialize(fromStream);
@@ -353,7 +355,7 @@ namespace SlowTests.Blittable
                 }
 
                 //Assert
-                Assert.Equal(expected, actual, new CustomComparer<MergedBatchCommand, RavenTransaction>(context));
+                Assert.Equal(expected, actual, new CustomComparer<BatchHandler.MergedBatchCommand, DocumentsOperationContext, DocumentsTransaction>(context));
             }
         }
 
@@ -428,7 +430,7 @@ namespace SlowTests.Blittable
                         Patch = new PatchRequest("Some Script", PatchRequestType.None)
                     }
                 };
-                var expected = new MergedInsertBulkCommand
+                var expected = new BulkInsertHandler.MergedInsertBulkCommand
                 {
                     NumberOfCommands = commands.Length,
                     Commands = commands
@@ -447,7 +449,7 @@ namespace SlowTests.Blittable
                 }
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
-                MergedInsertBulkCommand actual;
+                BulkInsertHandler.MergedInsertBulkCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
                     reader.Initialize(fromStream);
@@ -457,7 +459,7 @@ namespace SlowTests.Blittable
                 }
 
                 //Assert
-                Assert.Equal(expected, actual, new CustomComparer<MergedInsertBulkCommand, DocumentsTransaction>(context));
+                Assert.Equal(expected, actual, new CustomComparer<BulkInsertHandler.MergedInsertBulkCommand, DocumentsOperationContext, DocumentsTransaction>(context));
             }
         }
 
@@ -470,51 +472,59 @@ namespace SlowTests.Blittable
             return jsonSerializer;
         }
 
-        private class CustomComparer<T, TTransaction> : IEqualityComparer<T> 
-            where T : TransactionOperationsMerger.IRecordableCommand
-            where TTransaction : RavenTransaction
-        {
+        private class CustomComparer<TRecordableCommand, TOperationContext, TTransaction> : IEqualityComparer<TRecordableCommand>
+            where TOperationContext : TransactionOperationContext<TTransaction>
+            where TRecordableCommand : IRecordableCommand<TOperationContext, TTransaction>
+            where TTransaction : RavenTransaction        {
             private readonly IEnumerable<Type> _notCheckTypes;
-            private readonly TransactionOperationContext<TTransaction> _context;
+            private readonly TOperationContext _context;
 
-            public CustomComparer(TransactionOperationContext<TTransaction> context) : this(context, Array.Empty<Type>())
+            public CustomComparer(TOperationContext context) : this(context, Array.Empty<Type>())
             {
             }
 
-            public CustomComparer(TransactionOperationContext<TTransaction> context, IEnumerable<Type> notCheckTypes)
+            public CustomComparer(TOperationContext context, IEnumerable<Type> notCheckTypes)
             {
                 _context = context;
                 _notCheckTypes = notCheckTypes;
             }
 
-            public bool Equals(T expected, T actual)
+            public bool Equals(TRecordableCommand expected, TRecordableCommand actual)
             {
                 var expectedDot = expected.ToDto(_context);
                 var actualDot = actual.ToDto(_context);
 
-                var jsonSerializer = GetJsonSerializer();
-                BlittableJsonReaderObject expectedBlittle;
-                BlittableJsonReaderObject actualBlittle;
-                using (var writer = new BlittableJsonWriter(_context))
-                {
-                    jsonSerializer.Serialize(writer, expectedDot);
-                    writer.FinalizeDocument();
+                var type = actualDot.GetType();
 
-                    expectedBlittle = writer.CreateReader();
+                var props = type.GetProperties();
+                foreach (var prop in props)
+                {
+                    var expectedValue = prop.GetValue(expectedDot);
+                    var actualValue = prop.GetValue(actualDot);
+                    InnerEquals(expectedValue, actualValue, prop.PropertyType);
                 }
 
-                using (var writer = new BlittableJsonWriter(_context))
+                var fields = type.GetFields();
+                foreach (var field in fields)
                 {
-                    jsonSerializer.Serialize(writer, actualDot);
-                    writer.FinalizeDocument();
-
-                    actualBlittle = writer.CreateReader();
+                    var expectedValue = field.GetValue(expectedDot);
+                    var actualValue = field.GetValue(actualDot);
+                    InnerEquals(expectedValue, actualValue, field.FieldType);
                 }
 
-                return expectedBlittle.Equals(actualBlittle);
+                return true;
             }
 
-            public int GetHashCode(T parameterValue)
+            private void InnerEquals(object expectedValue, object actualValue, Type type)
+            {
+                if (_notCheckTypes.Contains(type))
+                {
+                    return;
+                }
+                Assert.Equal(expectedValue, actualValue);
+            }
+
+            public int GetHashCode(TRecordableCommand parameterValue)
             {
                 return Tuple.Create(parameterValue).GetHashCode();
             }

@@ -17,6 +17,7 @@ using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Exceptions;
 using Sparrow;
 using Sparrow.Json;

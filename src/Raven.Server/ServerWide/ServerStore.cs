@@ -821,7 +821,7 @@ namespace Raven.Server.ServerWide
             _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
 
             var myUrl = GetNodeHttpServerUrl();
-            _engine.Initialize(_env, Configuration, clusterChanges, myUrl, out _lastClusterTopologyIndex);
+            _engine.Initialize(_env, Configuration, clusterChanges, myUrl, Server.ServerStore.NotificationCenter, Server.Time, out _lastClusterTopologyIndex, ServerShutdown);
 
             using (Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -3367,7 +3367,7 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForState(rachisState, token);
         }
 
-        public void ClusterAcceptNewConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, Action disconnect, EndPoint remoteEndpoint)
+        public async Task ClusterAcceptNewConnectionAsync(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, Action disconnect, EndPoint remoteEndpoint)
         {
             try
             {
@@ -3381,7 +3381,7 @@ namespace Raven.Server.ServerWide
                 var features = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Cluster, tcp.ProtocolVersion);
                 var remoteConnection = new RemoteConnection(_engine.Tag, _engine.CurrentTerm, tcp.Stream, features.Cluster, disconnect);
 
-                _engine.AcceptNewConnection(remoteConnection, remoteEndpoint);
+                await _engine.AcceptNewConnectionAsync(remoteConnection, remoteEndpoint);
             }
             catch (IOException e)
             {
