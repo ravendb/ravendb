@@ -3,8 +3,14 @@ import endpoints = require("endpoints");
 
 class addShardToDatabaseGroupCommand extends commandBase {
 
-    constructor(private databaseName: string, private replicationFactor: number) {
+    private databaseName: string;
+
+    private replicationFactor: number;
+
+    constructor(databaseName: string, replicationFactor: number) {
         super();
+        this.replicationFactor = replicationFactor;
+        this.databaseName = databaseName;
     }
 
     execute(): JQueryPromise<Raven.Client.ServerWide.Sharding.AddDatabaseShardResult> {

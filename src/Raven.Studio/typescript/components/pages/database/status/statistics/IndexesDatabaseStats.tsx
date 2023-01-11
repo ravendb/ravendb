@@ -7,7 +7,6 @@ import { produce } from "immer";
 import { databaseLocationComparator, withPreventDefault } from "components/utils/common";
 import IndexType = Raven.Client.Documents.Indexes.IndexType;
 import genUtils from "common/generalUtils";
-import shardedDatabase from "models/resources/shardedDatabase";
 import appUrl from "common/appUrl";
 import indexStalenessReasons from "viewmodels/database/indexes/indexStalenessReasons";
 import app from "durandal/app";
@@ -145,7 +144,7 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
     const indexStats = useMemo(() => mapIndexStats(perNodeStats), [perNodeStats]);
 
     const noData = perNodeStats.some((x) => x.status === "loaded" && x.data.length === 0);
-    const sharded = database instanceof shardedDatabase;
+    const sharded = database.isSharded();
     const locations = database.getLocations();
 
     const loadIndexStats = useCallback(() => {

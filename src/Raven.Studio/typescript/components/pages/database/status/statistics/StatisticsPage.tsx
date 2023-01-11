@@ -1,37 +1,34 @@
 ﻿import database from "models/resources/database";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback } from "react";
 import { useServices } from "hooks/useServices";
-import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 import { EssentialDatabaseStatsComponent } from "./EssentialDatabaseStatsComponent";
 import { useAppUrls } from "hooks/useAppUrls";
 import { DetailedDatabaseStats } from "./DetailedDatabaseStats";
 import { IndexesDatabaseStats } from "./IndexesDatabaseStats";
 import { Button, Col, Row } from "reactstrap";
+import useBoolean from "hooks/useBoolean";
+import { useAsync } from "react-async-hook";
 
 interface StatisticsPageProps {
     database: database;
 }
 
-export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
+export function StatisticsPage(props: StatisticsPageProps) {
     const { database } = props;
     const { databasesService } = useServices();
 
-    const [essentialStats, setEssentialStats] = useState<EssentialDatabaseStatistics>();
-    const [dbDetailsVisible, setDbDetailsVisible] = useState(false);
+    const fetchEssentialStats = useCallback(
+        async (database: database) => databasesService.getEssentialStats(database),
+        [databasesService]
+    );
 
-    const fetchEssentialStats = useCallback(async () => {
-        const stats = await databasesService.getEssentialStats(database);
-        setEssentialStats(stats);
-    }, [databasesService, database]);
+    const { loading, error, result: essentialStats, execute } = useAsync(fetchEssentialStats, [database]);
+    const { value: dbDetailsVisible, toggle: toggleDbDetailsVisible } = useBoolean(false);
 
+    const reloadStats = () => execute(database);
     const rawJsonUrl = useAppUrls().appUrl.forEssentialStatsRawData(database);
 
-    useEffect(() => {
-        // noinspection JSIgnoredPromiseFromCall
-        fetchEssentialStats();
-    }, [fetchEssentialStats]);
-
-    if (!essentialStats) {
+    if (loading) {
         return (
             <div>
                 <i className="btn-spinner margin-right" />
@@ -40,10 +37,14 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
         );
     }
 
-    const refreshStats = () => {
-        // noinspection JSIgnoredPromiseFromCall
-        fetchEssentialStats();
-    };
+    if (error) {
+        return (
+            <div>
+                Error loading data...
+                <Button onClick={reloadStats}>Reload</Button>
+            </div>
+        );
+    }
 
     return (
         <div className="stats content-margin">
@@ -63,16 +64,12 @@ export function StatisticsPage(props: StatisticsPageProps): JSX.Element {
                     </h2>
                 </Col>
                 <Col sm="auto">
-                    <Button
-                        color="primary"
-                        onClick={() => setDbDetailsVisible((x) => !x)}
-                        title="Click to load detailed statistics"
-                    >
+                    <Button color="primary" onClick={toggleDbDetailsVisible} title="Click to load detailed statistics">
                         <span>{dbDetailsVisible ? "Hide" : "Show"} details</span>
                     </Button>
                     <Button
                         color="primary"
-                        onClick={refreshStats}
+                        onClick={reloadStats}
                         className="margin-left-xs"
                         title="Click to refresh stats"
                     >
