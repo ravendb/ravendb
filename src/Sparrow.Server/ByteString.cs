@@ -684,8 +684,13 @@ namespace Sparrow.Server
         { }
     }
 
-    public unsafe class ByteStringContext<TAllocator> : IDisposable where TAllocator : struct, IByteStringAllocator
+    public unsafe class ByteStringContext<TAllocator> : IDisposable 
+        where TAllocator : struct, IByteStringAllocator
     {
+        private static readonly long DefragmentationSegmentsThresholdInBytes = (PlatformDetails.Is32Bits ? 32 : 128) * Sparrow.Global.Constants.Size.Megabyte;
+
+        private static readonly int MinNumberOfSegmentsToDefragment = PlatformDetails.Is32Bits ? 512 : 1024;
+
         public static TAllocator Allocator;
 
         public event Action AllocationFailed;
@@ -851,12 +856,12 @@ namespace Sparrow.Server
         public void DefragmentSegments()
         {
             // small allocators
-            if (_totalAllocated < 128 * Sparrow.Global.Constants.Size.Megabyte)
+            if (_totalAllocated <= DefragmentationSegmentsThresholdInBytes)
                 return;
 
             // small fragmentation
             var segments = _internalReadyToUseMemorySegments;
-            if (segments == null || segments.Count < 1024)
+            if (segments == null || segments.Count < MinNumberOfSegmentsToDefragment)
                 return;
 
             var orderedSegments = segments
