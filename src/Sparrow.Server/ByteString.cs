@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -858,80 +859,55 @@ namespace Sparrow.Server
             if (segments == null || segments.Count < 1024)
                 return;
 
-            var newSegments = MergeSegments(segments, ascending: true);
-            newSegments = MergeSegments(newSegments, ascending: false);
+            var orderedSegments = segments
+                .OrderBy(x => (long)x.Start)
+                .ToList();
 
-            Debug.Assert(_internalReadyToUseMemorySegments.Count == 0, $"{_internalReadyToUseMemorySegments.Count} == 0");
+            var newSegments = new List<SegmentInformation>();
+
+            SegmentInformation currentSegment = null;
+            int currentSegmentSize = 0;
+            byte* nextSegmentStart = null;
+            for (var i = 0; i < orderedSegments.Count; i++)
+            {
+                if (currentSegment == null)
+                {
+                    currentSegment = orderedSegments[i];
+                    currentSegmentSize = currentSegment.Size;
+                    nextSegmentStart = currentSegment.End;
+                    continue;
+                }
+
+                var segment = orderedSegments[i];
+
+                if (segment == null)
+                    continue;
+
+                Debug.Assert(segment.Size == segment.SizeLeft, $"{segment.Size} == {segment.SizeLeft}");
+
+                if (segment.Start == nextSegmentStart)
+                {
+                    nextSegmentStart = segment.End;
+                    currentSegmentSize += segment.Size;
+
+                    orderedSegments[i] = null;
+
+                    continue;
+                }
+
+                var newSegment = new SegmentInformation(currentSegment.Start, currentSegment.Start + currentSegmentSize, canDispose: false);
+                newSegments.Add(newSegment);
+
+                currentSegment = segment;
+                currentSegmentSize = segment.Size;
+                nextSegmentStart = segment.End;
+            }
+
+            if (currentSegment != null)
+                newSegments.Add(new SegmentInformation(currentSegment.Start, currentSegment.Start + currentSegmentSize, canDispose: false));
+
+            _internalReadyToUseMemorySegments.Clear();
             _internalReadyToUseMemorySegments.AddRange(newSegments);
-
-            static SegmentInformation FindSegment(List<SegmentInformation> segments, byte* start)
-            {
-                for (var i = 0; i < segments.Count; i++)
-                {
-                    var otherSegment = segments[i];
-                    if (otherSegment.Start != start)
-                        continue;
-
-                    segments.RemoveAt(i);
-                    return otherSegment;
-                }
-
-                return null;
-            }
-
-            static SegmentInformation FindSegmentBackwards(List<SegmentInformation> segments, byte* start)
-            {
-                for (var i = segments.Count - 1; i > 0; i--)
-                {
-                    var otherSegment = segments[i];
-                    if (otherSegment.Start != start)
-                        continue;
-
-                    segments.RemoveAt(i);
-                    return otherSegment;
-                }
-
-                return null;
-            }
-
-            static List<SegmentInformation> MergeSegments(List<SegmentInformation> segments, bool ascending)
-            {
-                var newSegments = new List<SegmentInformation>();
-
-                while (segments.Count > 0)
-                {
-                    var index = ascending ? 0 : segments.Count - 1;
-
-                    var segment = segments[index];
-                    segments.RemoveAt(index);
-
-                    var segmentSize = segment.Size;
-                    Debug.Assert(segment.Size == segment.SizeLeft, $"{segment.Size} == {segment.SizeLeft}");
-
-                    var nextSegmentStart = segment.End;
-
-                    while (true)
-                    {
-                        var nextSegment = ascending
-                            ? FindSegment(segments, nextSegmentStart)
-                            : FindSegmentBackwards(segments, nextSegmentStart);
-
-                        if (nextSegment != null)
-                        {
-                            nextSegmentStart = nextSegment.End;
-                            segmentSize += nextSegment.Size;
-                            continue;
-                        }
-
-                        break;
-                    }
-
-                    var newSegment = new SegmentInformation(segment.Start, segment.Start + segmentSize, canDispose: false);
-                    newSegments.Add(newSegment);
-                }
-
-                return newSegments;
-            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
