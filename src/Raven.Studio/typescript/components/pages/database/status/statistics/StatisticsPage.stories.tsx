@@ -2,8 +2,6 @@ import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { ComponentMeta } from "@storybook/react";
 import { StatisticsPage } from "./StatisticsPage";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
-import accessManager from "common/shell/accessManager";
-import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { mockServices } from "test/mocks/services/MockServices";
 import React from "react";
 import database from "models/resources/database";
@@ -19,9 +17,6 @@ export default {
 } as ComponentMeta<typeof StatisticsPage>;
 
 export const StatisticsTemplate = (args: { db: database; stats?: IndexStats[] }) => {
-    accessManager.default.securityClearance("ClusterAdmin");
-    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
-
     const { databasesService, indexesService } = mockServices;
 
     databasesService.withEssentialStats();
