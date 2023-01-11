@@ -376,7 +376,7 @@ namespace Raven.Client.Documents.Conventions
         }
 #endif
 
-        public string GetConvertedPropertyNameFor(MemberInfo member)
+        internal string GetConvertedPropertyNameFor(MemberInfo member)
         {
             var converter = PropertyNameConverter;
             if (converter == null)

@@ -431,14 +431,14 @@ WaitForUserToContinueTheTest(store);
                         select new QueryResult {FullName = format()};
 
                     var queryAsString = query.ToString();
-//                     RavenTestHelper.AssertEqualRespectingNewLines(
-//                         @"declare function output(user) {
-//     var first = user.name;
-//     var last = user.lastName;
-//     var format = function(){return first+"" ""+last;};
-//     return { FullName : format() };
-// }
-// from 'Users' as user select output(user)", queryAsString);
+                    RavenTestHelper.AssertEqualRespectingNewLines(
+                        @"declare function output(user) {
+	var first = user.name;
+	var last = user.lastName;
+	var format = ()=>first+"" ""+last;
+	return { FullName : format() };
+}
+from 'Users' as user select output(user)", queryAsString);
 
                     var queryResult = query.ToList();
 

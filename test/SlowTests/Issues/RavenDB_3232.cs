@@ -108,7 +108,7 @@ namespace SlowTests.Issues
                     }
                 });
 
-                Assert.Contains($"The field 'LastName' is not indexed, cannot query/sort on fields that are not indexed in query: from index '{index.IndexName}' where LastName = $p0 limit $p1, $p2", e.InnerException.Message);
+                Assert.Contains($"The field 'LastName' is not indexed in '{index.IndexName}', cannot query/sort on fields that are not indexed in query: from index '{index.IndexName}' where LastName = $p0 limit $p1, $p2", e.InnerException.Message);
 
                 var mre = new ManualResetEventSlim();
 
@@ -175,7 +175,7 @@ namespace SlowTests.Issues
                     }
                 });
 
-                Assert.Contains($"The field 'LastName' is not indexed, cannot query/sort on fields that are not indexed in query: from index '{oldIndexDef.Name}' where LastName = $p0 limit $p1, $p2", e.InnerException.Message);
+                Assert.Contains($"The field 'LastName' is not indexed in '{oldIndexDef.Name}', cannot query/sort on fields that are not indexed in query: from index '{oldIndexDef.Name}' where LastName = $p0 limit $p1, $p2", e.InnerException.Message);
 
                 var mre = new ManualResetEventSlim();
 
