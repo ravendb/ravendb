@@ -163,7 +163,7 @@ namespace Raven.Server.Documents
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
                 Metrics = new MetricCounters();
                 MetricCacher = new DatabaseMetricCacher(this);
-                TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
+                TxMerger = new DocumentsTransactionOperationsMerger(this);
                 ConfigurationStorage = new ConfigurationStorage(this);
                 NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, DatabaseShutdown, configuration);
                 HugeDocuments = new HugeDocuments(NotificationCenter, ConfigurationStorage.NotificationsStorage, Name, configuration.PerformanceHints.HugeDocumentsCollectionSize,
@@ -197,7 +197,8 @@ namespace Raven.Server.Documents
         public readonly SystemTime Time = new SystemTime();
 
         public ScriptRunnerCache Scripts;
-        public readonly TransactionOperationsMerger TxMerger;
+
+        public readonly DocumentsTransactionOperationsMerger TxMerger;
 
         public SubscriptionStorage SubscriptionStorage { get; }
 

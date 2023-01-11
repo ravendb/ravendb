@@ -13,7 +13,6 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
@@ -25,8 +24,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -511,7 +509,7 @@ namespace Raven.Server.Documents.Handlers
             return indexesToCheck;
         }
 
-        public abstract class TransactionMergedCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public abstract class TransactionMergedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             protected readonly DocumentDatabase Database;
             public HashSet<string> ModifiedCollections;
@@ -779,7 +777,7 @@ namespace Raven.Server.Documents.Handlers
                 return Database.DocumentsStorage.ExtractCollectionName(context, conflicts[0].Collection);
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
             {
                 return new ClusterTransactionMergedCommandDto
                 {
@@ -823,7 +821,7 @@ namespace Raven.Server.Documents.Handlers
                 return sb.ToString();
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
             {
                 return new MergedBatchCommandDto
                 {
@@ -1287,7 +1285,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class ClusterTransactionMergedCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BatchHandler.ClusterTransactionMergedCommand>
+    public class ClusterTransactionMergedCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, BatchHandler.ClusterTransactionMergedCommand>
     {
         public List<ClusterTransactionCommand.SingleClusterDatabaseCommand> Batch { get; set; }
 
@@ -1298,7 +1296,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class MergedBatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BatchHandler.MergedBatchCommand>
+    public class MergedBatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, BatchHandler.MergedBatchCommand>
     {
         public BatchRequestParser.CommandData[] ParsedCommands { get; set; }
         public List<BatchHandler.MergedBatchCommand.AttachmentStream> AttachmentStreams;

@@ -6,7 +6,6 @@ using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -14,7 +13,7 @@ using Operation = Microsoft.AspNetCore.JsonPatch.Operations.Operation;
 
 namespace Raven.Server.Documents.TransactionMerger.Commands
 {
-    public class JsonPatchCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class JsonPatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         private readonly string _id;
         private readonly List<Command> _commands;
@@ -356,7 +355,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
             return member.Replace("~0", "~").Replace("~1", "/");
         }
 
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
         {
             return new JsonPatchCommandDto
             {
@@ -367,17 +366,16 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
             };
         }
 
-        public class JsonPatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand>
+        public class JsonPatchCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>>
         {
             public string Id;
             public List<Command> Commands;
             public bool ReturnDocument;
             public JsonOperationContext ExternalContext;
 
-            TransactionOperationsMerger.MergedTransactionCommand TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand>.ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            public MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction> ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                var jsonPatchCommand = new JsonPatchCommand(Id, Commands, ReturnDocument, ExternalContext);
-                return jsonPatchCommand;
+                return new JsonPatchCommand(Id, Commands, ReturnDocument, ExternalContext);
             }
         }
     }

@@ -1,6 +1,6 @@
 using System;
 using Raven.Client.Exceptions.Documents.Revisions;
-using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Revisions
             _database.TxMerger.Enqueue(new DeleteRevisionsBeforeCommand(collection, time, _database)).GetAwaiter().GetResult();
         }
 
-        internal class DeleteRevisionsBeforeCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class DeleteRevisionsBeforeCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly string _collection;
             private readonly DateTime _time;
@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Revisions
                 return 1;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
             {
                 return new DeleteRevisionsBeforeCommandDto
                 {
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Revisions
         }
     }
 
-    internal class DeleteRevisionsBeforeCommandDto : TransactionOperationsMerger.IReplayableCommandDto<RevisionsOperations.DeleteRevisionsBeforeCommand>
+    internal class DeleteRevisionsBeforeCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RevisionsOperations.DeleteRevisionsBeforeCommand>
     {
         public string Collection;
         public DateTime Time;
