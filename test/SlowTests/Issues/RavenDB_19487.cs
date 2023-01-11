@@ -15,9 +15,15 @@ namespace SlowTests.Issues
         {
         }
 
+        class TestObj
+        {
+            public string Id { get; set; }
+            public string Prop { get; set; }
+        }
+
+
         [Fact]
-        [SuppressMessage("ReSharper", "Xunit.XunitTestWithConsoleOutput")]
-        public async Task TestCase()
+        public async Task ToQueryableShouldNotChopDeclareFunctionAsync()
         {
             using var store = GetDocumentStore();
             using (var session = store.OpenAsyncSession())
@@ -31,7 +37,6 @@ namespace SlowTests.Issues
                 var queryable = from r in session.Query<TestObj>()
                     let a = new { Prop = r.Prop }
                     select new { A = a };
-
 
                 var queryableStr = queryable.ToString();
 
@@ -51,15 +56,44 @@ namespace SlowTests.Issues
                 Assert.Equivalent(queryableResult, documentQueryResult);
                 Assert.Equivalent(queryableResult, queryable2Result);
                 Assert.Equivalent(documentQueryResult, queryable2Result);
-
             }
         }
 
-    }
 
-    class TestObj
-    {
-        public string Id { get; set; }
-        public string Prop { get; set; }
+        [Fact]
+        public void ToQueryableShouldNotChopDeclareFunction()
+        {
+            using var store = GetDocumentStore();
+            using (var session = store.OpenSession())
+            {
+                session.Store(new TestObj { Prop = "1234" });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var queryable = from r in session.Query<TestObj>()
+                    let a = new { Prop = r.Prop }
+                    select new { A = a };
+
+                var queryableStr = queryable.ToString();
+
+                var documentQuery = queryable.ToDocumentQuery();
+                var documentQueryStr = documentQuery.ToString();
+                Assert.Equal(queryableStr, documentQueryStr);
+
+                var queryable2 = documentQuery.ToQueryable();
+                var queryable2Str = queryable2.ToString();
+                Assert.Equal(queryableStr, queryable2Str);
+                Assert.Equal(documentQueryStr, queryable2Str);
+                var queryableResult = queryable.ToArray();
+                var documentQueryResult = documentQuery.ToArray();
+                var queryable2Result = queryable2.ToArray();
+
+                Assert.Equivalent(queryableResult, documentQueryResult);
+                Assert.Equivalent(queryableResult, queryable2Result);
+                Assert.Equivalent(documentQueryResult, queryable2Result);
+            }
+        }
     }
 }

@@ -1176,7 +1176,12 @@ namespace Raven.Client.Documents.Session
                 newFieldsToFetch = FieldsToFetchToken.Create(fields, queryData.Projections.ToArray(), queryData.IsCustomFunction, sourceAlias);
             }
             else
+            {
                 newFieldsToFetch = null;
+                if (FieldsToFetchToken != null)
+                    queryData = new QueryData(FieldsToFetchToken.FieldsToFetch, FieldsToFetchToken.Projections, FromToken.Alias, DeclareTokens, LoadTokens,
+                        FieldsToFetchToken.IsCustomFunction);
+            }
 
             if (newFieldsToFetch != null)
                 UpdateFieldsToFetchToken(newFieldsToFetch);

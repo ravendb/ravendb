@@ -1109,16 +1109,13 @@ namespace Raven.Client.Documents.Session
             else
             {
                 newFieldsToFetch = null;
-                if(FieldsToFetchToken != null)
-                   queryData = new QueryData(FieldsToFetchToken.FieldsToFetch, FieldsToFetchToken.Projections, FromToken.Alias, DeclareTokens, LoadTokens,
-                    FieldsToFetchToken.IsCustomFunction);
+                if (FieldsToFetchToken != null)
+                    queryData = new QueryData(FieldsToFetchToken.FieldsToFetch, FieldsToFetchToken.Projections, FromToken.Alias, DeclareTokens, LoadTokens,
+                        FieldsToFetchToken.IsCustomFunction);
             }
-
 
             if (newFieldsToFetch != null)
                 UpdateFieldsToFetchToken(newFieldsToFetch);
-
-
 
             var query = new AsyncDocumentQuery<TResult>(
                 TheSession,
