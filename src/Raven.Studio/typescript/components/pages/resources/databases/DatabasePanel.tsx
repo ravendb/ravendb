@@ -33,6 +33,7 @@ import {
 } from "../../../common/RichPanel";
 import appUrl from "common/appUrl";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import { NodeSet, NodeSetItem, NodeSetLabel } from "components/common/NodeSet";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -454,6 +455,46 @@ export function DatabasePanel(props: DatabasePanelProps) {
                     </RichPanelHeader>
 
                     <ValidDatabasePropertiesPanel db={db} />
+
+                    <div className="bg-faded-shard px-3 py-2">
+                        <NodeSet color="warning" className="m-1">
+                            <NodeSetLabel color="warning" icon="orchestrator">
+                                Orchestrators
+                            </NodeSetLabel>
+                            <NodeSetItem icon="zombie" color="danger">
+                                A
+                            </NodeSetItem>
+                            <NodeSetItem icon="node" color="node">
+                                B
+                            </NodeSetItem>
+                        </NodeSet>
+
+                        <NodeSet color="shard" className="m-1">
+                            <NodeSetLabel color="shard" icon="shard">
+                                #1
+                            </NodeSetLabel>
+                            <NodeSetItem icon="node" color="node">
+                                A
+                            </NodeSetItem>
+                            <NodeSetItem icon="node" color="node">
+                                B
+                            </NodeSetItem>
+                        </NodeSet>
+                        <NodeSet color="shard" className="m-1">
+                            <NodeSetLabel color="shard" icon="shard">
+                                #2
+                            </NodeSetLabel>
+                            <NodeSetItem icon="node" color="node">
+                                A
+                            </NodeSetItem>
+                            <NodeSetItem icon="node" color="node">
+                                B
+                            </NodeSetItem>
+                            <NodeSetItem icon="node" color="node">
+                                DEV
+                            </NodeSetItem>
+                        </NodeSet>
+                    </div>
                 </div>
             </div>
         </RichPanel>
