@@ -123,6 +123,61 @@ a.link {
     
 }
 
+// OUTLINES AND SETS
+
+[class*=" outline-"],
+[class^="outline-"] {
+    padding: $gutter-xxs $gutter-xs;
+    border-width: 1px;
+    border-style: solid;
+    border-color: $border-color;
+}
+
+@each $key, $value in $theme-colors {
+    
+    .outline-#{$key} {
+        border-color: $value;        
+    }
+    
+}
+
+
+.node-set {
+    display: inline-flex;    
+    flex-wrap: wrap;
+    
+    .node-set-label {
+        margin-right: $gutter-xs;
+
+        i {
+            transform: scale(1.2);
+            margin-right: .2em;
+        }
+
+        .node-set-label-name {
+            font-weight: normal;
+            color: $text-muted;
+        }
+    }
+
+    .node-set-item {   
+        margin: 0 $gutter-xxs;    
+
+        i {
+            opacity: .8;
+            margin-right: -.3em;
+            display: inline-block;
+        }
+
+        .node-set-item-name {
+            text-shadow: 0 0 5px $panel-bg-1;            
+            position: relative;
+            font-weight: 800;
+            color: $text-emphasis-var;
+        }
+    }
+}
+
 
 $additional-utilities: (
    
