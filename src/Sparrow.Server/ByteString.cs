@@ -861,7 +861,7 @@ namespace Sparrow.Server
             var newSegments = MergeSegments(segments, ascending: true);
             newSegments = MergeSegments(newSegments, ascending: false);
 
-            Debug.Assert(_internalReadyToUseMemorySegments.Count == 0);
+            Debug.Assert(_internalReadyToUseMemorySegments.Count == 0, $"{_internalReadyToUseMemorySegments.Count} == 0");
             _internalReadyToUseMemorySegments.AddRange(newSegments);
 
             static SegmentInformation FindSegment(List<SegmentInformation> segments, byte* start)
@@ -906,7 +906,7 @@ namespace Sparrow.Server
                     segments.RemoveAt(index);
 
                     var segmentSize = segment.Size;
-                    Debug.Assert(segment.Size == segment.SizeLeft);
+                    Debug.Assert(segment.Size == segment.SizeLeft, $"{segment.Size} == {segment.SizeLeft}");
 
                     var nextSegmentStart = segment.End;
 
@@ -1222,7 +1222,7 @@ namespace Sparrow.Server
                 _allocationBlockSize = Math.Min(2 * Sparrow.Global.Constants.Size.Megabyte, _allocationBlockSize * 2);
                 var toAllocate = Math.Max(_allocationBlockSize, allocationUnit);
                 _internalCurrent = AllocateSegment(toAllocate);
-                Debug.Assert(_internalCurrent.SizeLeft >= allocationUnit);
+                Debug.Assert(_internalCurrent.SizeLeft >= allocationUnit, $"{_internalCurrent.SizeLeft} >= {allocationUnit}");
             }
 
             var byteString = Create(_internalCurrent.Current, length, allocationUnit, type);
