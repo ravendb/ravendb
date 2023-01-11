@@ -8,7 +8,9 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
@@ -173,11 +175,11 @@ from TestObjs as o where o.Prop = null update
         
         }
     
-        private class FailedCommand : TransactionOperationsMerger.MergedTransactionCommand
+        private class FailedCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             protected override long ExecuteCmd(DocumentsOperationContext context) => throw new TestException();
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context) =>
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context) =>
                 throw new NotImplementedException();
         }
 

@@ -469,9 +469,8 @@ namespace SlowTests.Blittable
         }
 
         private class CustomComparer<T, TTransaction> : IEqualityComparer<T> 
-            where T : TransactionOperationsMerger.IRecordableCommand
-            where TTransaction : RavenTransaction
-        {
+			where T : IRecordableCommand<DocumentsOperationContext, DocumentsTransaction>
+			where TTransaction : RavenTransaction        {
             private readonly IEnumerable<Type> _notCheckTypes;
             private readonly TransactionOperationContext<TTransaction> _context;
 
