@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -11,10 +12,11 @@ namespace Raven.Server.Documents.Includes.Sharding;
 public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
 {
     private readonly bool _supportsMissingIncludes;
-
-    public ShardedTimeSeriesIncludes(bool supportsMissingIncludes)
+    private readonly CancellationToken _token;
+    public ShardedTimeSeriesIncludes(bool supportsMissingIncludes, CancellationToken token = default)
     {
         _supportsMissingIncludes = supportsMissingIncludes;
+        _token = token;
     }
 
     private Dictionary<string, BlittableJsonReaderObject> _resultsByDocumentId;
@@ -131,5 +133,33 @@ public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
         writer.WriteEndObject();
 
         return size;
+    }
+
+    public long GetEntriesCountForStats()
+    {
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Minor, "RavenDB-16279: for task stats in studio should we calculate the stats from each shard or orchestrator");
+        return 0L;
+    }
+
+    public void Gather(List<BlittableJsonReaderObject> list, ClusterOperationContext clusterOperationContext)
+    {
+        foreach (var item in list)
+        {
+            using (item)
+            {
+                _token.ThrowIfCancellationRequested();
+                AddResults(item, clusterOperationContext);
+            }
+        }
+    }
+
+    public void Fill(Document resultDoc)
+    {
+        // no-op
+    }
+
+    public bool HasEntries()
+    {
+        return _resultsByDocumentId is { Count: > 0 };
     }
 }

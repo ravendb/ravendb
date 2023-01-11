@@ -5,16 +5,17 @@
 // ----------------------------------------------------------------------
 
 using System;
-using System.Linq;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -148,6 +149,13 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         }
 
         protected override void OnError(Exception e) => _processor?.CurrentBatch?.SetException(e);
+
+        protected override ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope, IncludeDocumentsCommand includeDocumentsCommand)
+        {
+            var includes = new List<BlittableJsonReaderObject>();
+            includeDocumentsCommand.Fill(includes);
+            return writer.WriteIncludesAsync(includes);
+        }
 
         public override void Dispose()
         {

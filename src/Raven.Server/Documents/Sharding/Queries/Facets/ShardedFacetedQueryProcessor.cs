@@ -131,7 +131,8 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
             {
                 if (operation.MissingDocumentIncludes is { Count: > 0 })
                 {
-                    await HandleMissingDocumentIncludes(operation.MissingDocumentIncludes, result);
+                    await HandleMissingDocumentIncludesAsync(_context, _requestHandler.HttpContext.Request, _requestHandler.DatabaseContext,
+                        operation.MissingDocumentIncludes, result, _metadataOnly, _token);
                 }
             }
 

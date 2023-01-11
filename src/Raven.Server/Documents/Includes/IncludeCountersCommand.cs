@@ -92,5 +92,34 @@ namespace Raven.Server.Documents.Includes
         }
 
         public int Count => Results?.Count ?? 0;
+
+        public void Gather(List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> includes, ClusterOperationContext clusterOperationContext)
+        {
+            throw new NotImplementedException(@"Should be called only from Orchestrator.");
+        }
+
+        public long GetCountersSize()
+        {
+            return IncludedCounterNames.Sum(kvp =>
+                       kvp.Key.Length + kvp.Value.Sum(name => name.Length)) //IncludedCounterNames
+                   + Results.Sum(kvp =>
+                       kvp.Value.Sum(counter => counter == null
+                               ? 0
+                               : counter.CounterName.Length
+                                 + counter.DocumentId.Length
+                                 + sizeof(long) //Etag
+                                 + sizeof(long) //Total Value
+                       ));
+        }
+
+        public long GetCountersCount()
+        {
+            return Results.Sum(x => x.Value.Count);
+        }
+
+        public bool HasCountersIncludes()
+        {
+            return Results is { Count: > 0 };
+        }
     }
 }

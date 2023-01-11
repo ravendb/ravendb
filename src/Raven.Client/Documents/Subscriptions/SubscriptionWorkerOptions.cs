@@ -27,6 +27,7 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public List<SubscriptionConnectionServerMessage> Messages;
         public IDisposable ReturnContext;
+        public JsonOperationContext Context;
         public List<BlittableJsonReaderObject> Includes;
         public List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> CounterIncludes;
         public List<BlittableJsonReaderObject> TimeSeriesIncludes;

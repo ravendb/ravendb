@@ -91,19 +91,20 @@ public abstract class SubscriptionProcessor : IDisposable
         ClusterOperationContext clusterContext,
         out SubscriptionIncludeCommands includesCommands)
     {
+        InitializeProcessor();
+
         ClusterContext = clusterContext;
         includesCommands = CreateIncludeCommands();
         IncludesCmd = includesCommands.IncludeDocumentsCommand;
 
-        InitializeProcessor();
         return null;
     }
 
     public class SubscriptionIncludeCommands
     {
         public IncludeDocumentsCommand IncludeDocumentsCommand;
-        public IncludeTimeSeriesCommand IncludeTimeSeriesCommand;
-        public IncludeCountersCommand IncludeCountersCommand;
+        public ITimeSeriesIncludes IncludeTimeSeriesCommand;
+        public ICounterIncludes IncludeCountersCommand;
     }
 
     protected abstract SubscriptionIncludeCommands CreateIncludeCommands();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
@@ -111,4 +112,9 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
             subscriptionState.ShardingState.NodeTagPerShard.TryGetValue(ShardName, out var tag);
             return tag;
         });
+
+    protected override void FillIncludedDocuments(IncludeDocumentsCommand includeDocumentsCommand, List<Document> includes)
+    {
+        includeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
+    }
 }
