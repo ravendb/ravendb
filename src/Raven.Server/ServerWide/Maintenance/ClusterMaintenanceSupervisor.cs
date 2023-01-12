@@ -485,7 +485,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     connection = result.Stream;
                     supportedFeatures = result.SupportedFeatures;
 
-                    if (result.SupportedFeatures != null && result.SupportedFeatures.DataCompression)
+                    if (result.SupportedFeatures.DataCompression)
                     {
                         connection = new ReadWriteCompressedStream(connection);
                     }
