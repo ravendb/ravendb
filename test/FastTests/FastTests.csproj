@@ -82,4 +82,10 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <None Remove="Corax\Bugs\Corax.PostingList.RemBiggerThanInt" />
+    <EmbeddedResource Include="Corax\Bugs\Corax.PostingList.RemBiggerThanInt.txt" />
+    <None Remove="Corax\Bugs\Corax.PostingList.AddsBiggerThanInt" />
+    <EmbeddedResource Include="Corax\Bugs\Corax.PostingList.AddsBiggerThanInt.txt" />
+  </ItemGroup>
 </Project>
