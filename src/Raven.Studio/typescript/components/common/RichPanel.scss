@@ -59,11 +59,11 @@
     }
 
     .rich-panel-detail-item {
-        padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
+        margin: sizes.$gutter-xs math.div(sizes.$gutter, 2);
     }
 
     .rich-panel-detail-item-sm {
-        padding: sizes.$gutter-xs math.div(sizes.$gutter, 2);
+        margin: sizes.$gutter-xs math.div(sizes.$gutter, 2);
         font-size: sizes.$font-size-sm;
     }
 

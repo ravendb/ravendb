@@ -96,41 +96,5 @@
                 color: var(--icon-color);
             }
         }
-
-        @keyframes loadingAnimation {
-            0% {
-                background-position: 150% 0;
-            }
-
-            100% {
-                background-position: -150% 0;
-            }
-        }
-
-        $loading-animation-duration: 2s;
-        $delay-steps: 10;
-
-        &.loading {
-            border-color: colors.$border-color-light;
-            background: linear-gradient(45deg, colors.$panel-bg-1 40%, colors.$panel-bg-2 50%, colors.$panel-bg-1 60%),
-                colors.$panel-bg-1;
-            background-repeat: no-repeat;
-            background-size: 350% 100%;
-            animation: loadingAnimation $loading-animation-duration linear infinite;
-
-            & > div {
-                opacity: 0;
-            }
-            .shard,
-            .node {
-                opacity: 1;
-            }
-        }
-
-        @for $i from 0 through ($delay-steps - 1) {
-            &:nth-of-type(#{$delay-steps - 1}n - #{$i}) {
-                animation-delay: -$loading-animation-duration/($delay-steps - 1) * $i;
-            }
-        }
     }
 }

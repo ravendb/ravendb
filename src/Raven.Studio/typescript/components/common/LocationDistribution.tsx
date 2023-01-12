@@ -2,6 +2,7 @@
 
 import "./LocationDistribution.scss";
 import classNames from "classnames";
+import { LazyLoad } from "./LazyLoad";
 
 interface DistributionItemProps extends HTMLAttributes<HTMLDivElement> {
     loading?: boolean;
@@ -10,9 +11,11 @@ interface DistributionItemProps extends HTMLAttributes<HTMLDivElement> {
 export function DistributionItem(props: DistributionItemProps) {
     const { loading, children, ...rest } = props;
     return (
-        <div className={classNames("distribution-item", { loading })} {...rest}>
-            {children}
-        </div>
+        <LazyLoad active={loading ? true : false}>
+            <div className={classNames("distribution-item")} {...rest}>
+                {children}
+            </div>
+        </LazyLoad>
     );
 }
 
