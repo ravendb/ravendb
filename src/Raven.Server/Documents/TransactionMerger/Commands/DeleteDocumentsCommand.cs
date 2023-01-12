@@ -25,7 +25,7 @@ public class DeleteDocumentsCommand : MergedTransactionCommand<DocumentsOperatio
         return _ids.Count;
     }
 
-    public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+    public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
     {
         return new DeleteDocumentsCommandDto
         {

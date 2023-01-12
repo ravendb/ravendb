@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             }
         }
 
-        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
             return new DeleteReduceOutputDocumentsCommandDto
             {

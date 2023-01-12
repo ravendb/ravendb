@@ -8,5 +8,5 @@ public interface IRecordableCommand<TOperationContext, TTransaction>
     where TOperationContext : TransactionOperationContext<TTransaction>
     where TTransaction : RavenTransaction
 {
-    IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(JsonOperationContext context);
+    IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(TOperationContext context);
 }

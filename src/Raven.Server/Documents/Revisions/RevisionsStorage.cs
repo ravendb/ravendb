@@ -1424,7 +1424,7 @@ namespace Raven.Server.Documents.Revisions
                 return _ids.Count;
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new EnforceRevisionConfigurationCommandDto(_revisionsStorage, _ids);
             }
@@ -1730,7 +1730,7 @@ namespace Raven.Server.Documents.Revisions
                 return collectionName;
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new RevertDocumentsCommandDto(_list);
             }

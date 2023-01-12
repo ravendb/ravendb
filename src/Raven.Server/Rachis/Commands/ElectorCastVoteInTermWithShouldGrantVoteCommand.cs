@@ -32,8 +32,8 @@ internal class ElectorCastVoteInTermWithShouldGrantVoteCommand : MergedTransacti
         return 1;
     }
 
-    public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(JsonOperationContext context)
+    public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
     {
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 }

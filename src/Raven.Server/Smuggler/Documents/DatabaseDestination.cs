@@ -25,6 +25,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Routing;
@@ -1790,7 +1791,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private const int SchemaSize = 2 * 1024 * 1024;
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new MergedBatchPutCommandDto
                 {
@@ -1947,7 +1948,7 @@ namespace Raven.Server.Smuggler.Documents
                 _returnContext.Dispose();
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new MergedBatchFixDocumentMetadataCommandDto
                 {
@@ -2029,7 +2030,7 @@ namespace Raven.Server.Smuggler.Documents
                 _returnContext.Dispose();
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new MergedBatchDeleteRevisionCommandDto
                 {

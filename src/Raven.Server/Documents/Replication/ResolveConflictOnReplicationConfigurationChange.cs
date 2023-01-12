@@ -213,10 +213,10 @@ namespace Raven.Server.Documents.Replication
                 return count;
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 // The LowerId created as in memory LazyStringValue that doesn't have escape characters
-                // so EscapePositions set to empty to avoid reference to escape bytes (after string bytes) while serializing
+                // so EscapePositions set to empty to avoid reference to escape bytes (after string bytes) while serializing    
                 foreach (var conflict in _resolvedConflicts)
                 {
                     conflict.ResolvedConflict.LowerId.EscapePositions = Array.Empty<int>();

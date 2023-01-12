@@ -242,7 +242,7 @@ namespace Raven.Server.Documents.Handlers
                 countersToRemove.Clear();
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new ExecuteCounterBatchCommandDto
                 {
@@ -583,7 +583,7 @@ namespace Raven.Server.Documents.Handlers
                 _result.Counters.ErroredCount += ErrorCount;
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new SmugglerCounterBatchCommandDto
                 {

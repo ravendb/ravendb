@@ -27,7 +27,7 @@ public abstract class MergedTransactionCommand<TOperationContext, TTransaction> 
         return ExecuteCmd(context);
     }
 
-    public abstract IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(JsonOperationContext context);
+    public abstract IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(TOperationContext context);
 
     [JsonIgnore]
     public readonly TaskCompletionSource<object> TaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);

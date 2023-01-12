@@ -248,7 +248,8 @@ namespace Raven.Server.Documents.Handlers
             return ExecuteDirectly(context);
         }
 
-        public override IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+        public override IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(TOperationContext context)
+        {
             return null;
         }
 
@@ -275,7 +276,7 @@ namespace Raven.Server.Documents.Handlers
             return ExecuteDirectly(context);
         }
 
-        public override IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(TransactionOperationContext<TTransaction> context)
+        public override IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(TOperationContext context)
         {
             return null;
         }

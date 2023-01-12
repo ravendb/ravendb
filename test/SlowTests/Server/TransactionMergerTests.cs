@@ -179,7 +179,7 @@ from TestObjs as o where o.Prop = null update
         {
             protected override long ExecuteCmd(DocumentsOperationContext context) => throw new TestException();
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context) =>
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context) =>
                 throw new NotImplementedException();
         }
 

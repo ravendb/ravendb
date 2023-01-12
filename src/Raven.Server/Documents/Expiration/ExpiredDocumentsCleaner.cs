@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Expiration
                 return DeletionCount;
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
 
                 var keyValuePairs = new KeyValuePair<Slice, List<(Slice LowerId, string Id)>>[_expired.Count];

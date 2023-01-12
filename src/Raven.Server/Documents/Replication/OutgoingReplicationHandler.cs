@@ -41,6 +41,7 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Raven.Server.Documents.TransactionMerger;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -966,7 +967,7 @@ namespace Raven.Server.Documents.Replication
                 return result.IsValid ? 1 : 0;
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new UpdateSiblingCurrentEtagDto
                 {

@@ -1062,7 +1062,7 @@ namespace Raven.Server.Documents.Replication
                 return operationsCount;
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new MergedUpdateDatabaseChangeVectorCommandDto
                 {
@@ -1639,7 +1639,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 var replicatedAttachmentStreams = _replicationInfo.ReplicatedAttachmentStreams?
                     .Select(kv => KeyValuePair.Create(kv.Key.ToString(), kv.Value.Stream))

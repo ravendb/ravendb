@@ -24,6 +24,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -777,7 +778,7 @@ namespace Raven.Server.Documents.Handlers
                 return Database.DocumentsStorage.ExtractCollectionName(context, conflicts[0].Collection);
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new ClusterTransactionMergedCommandDto
                 {
@@ -821,7 +822,7 @@ namespace Raven.Server.Documents.Handlers
                 return sb.ToString();
             }
 
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
                 return new MergedBatchCommandDto
                 {

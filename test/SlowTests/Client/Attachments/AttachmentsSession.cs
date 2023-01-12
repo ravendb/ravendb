@@ -596,7 +596,7 @@ namespace SlowTests.Client.Attachments
         private class ThrowCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             protected override long ExecuteCmd(DocumentsOperationContext context) => throw new Exception();
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
                 => throw new NotImplementedException();
             
         }
