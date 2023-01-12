@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,13 +28,13 @@ namespace SlowTests.Issues
         {
             var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
 
-            var notLeaderNodes = nodes.Where(s => s.ServerStore.NodeTag != leader.ServerStore.NodeTag).ToList();
+            var followers = nodes.Where(s => s.ServerStore.NodeTag != leader.ServerStore.NodeTag).ToList();
 
             var hubDatabaseName = GetDatabaseName();
             var sinkDatabaseName = GetDatabaseName();
 
-            var hubMentorNode = notLeaderNodes[0];
-            var sinkMentorNode = notLeaderNodes[1];
+            var hubMentorNode = followers[0];
+            var sinkMentorNode = followers[1];
             using var hubStore = GetDocumentStore(new Options
             {
                 Server = hubMentorNode,
@@ -41,6 +42,11 @@ namespace SlowTests.Issues
                 ModifyDatabaseName = (name) => hubDatabaseName,
                 ClientCertificate = certificates.ServerCertificate.Value,
                 AdminCertificate = certificates.ServerCertificate.Value,
+                ModifyDatabaseRecord = r =>
+                {
+                    r.Topology = new DatabaseTopology();
+                    r.Topology.Members.Add(hubMentorNode.ServerStore.NodeTag);
+                } // database is created on a random node (chosen in 'AssignNodesToDatabase' method), so we force it to be created on the hubMentorNode
             });
 
             using var sinkStore = GetDocumentStore(new Options
