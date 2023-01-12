@@ -505,7 +505,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 bool compressionSupport = false;
                 var version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion;
-                if (version >= TcpConnectionHeaderMessage.TcpConnectionsWithCompression)
+                if (version >= TcpConnectionHeaderMessage.HeartbeatsWithTcpCompression)
                     compressionSupport = true;
 
                 var parameters = new AsyncTcpNegotiateParameters
