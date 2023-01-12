@@ -84,7 +84,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int SubscriptionTimeSeriesIncludes = 51_000;
         public static readonly int TestConnectionBaseLine = 50;
 
-        public static readonly int ClusterTcpVersion = ClusterWithMultiTree;
+        public static readonly int ClusterTcpVersion = TcpConnectionsWithCompression;
         public static readonly int HeartbeatsTcpVersion = Heartbeats42000;
         public static readonly int ReplicationTcpVersion = ReplicationWithDeduplicatedAttachments;
         public static readonly int SubscriptionTcpVersion = TcpConnectionsWithCompression; 
@@ -298,6 +298,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Cluster] = new List<int>
                 {
+                    TcpConnectionsWithCompression,
                     ClusterWithMultiTree,
                     ClusterBaseLine,
                 },
@@ -461,6 +462,14 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Cluster] = new Dictionary<int, SupportedFeatures>
                 {
+                    [TcpConnectionsWithCompression] = new SupportedFeatures(TcpConnectionsWithCompression)
+                    {
+                        DataCompression = true,
+                        Cluster = new SupportedFeatures.ClusterFeatures
+                        {
+                            MultiTree = true
+                        }
+                    },
                     [ClusterWithMultiTree] = new SupportedFeatures(ClusterWithMultiTree)
                     {
                         Cluster = new SupportedFeatures.ClusterFeatures

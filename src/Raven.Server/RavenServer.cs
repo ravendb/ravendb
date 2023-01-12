@@ -2627,7 +2627,8 @@ namespace Raven.Server
             return supportedFeatures.DataCompression &&
                    header.LicensedFeatures?.DataCompression == true &&
                    (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication ||
-                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription);
+                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription ||
+                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster);
         }
 
         private static void ThrowDatabaseShutdown(DocumentDatabase database)
