@@ -46,7 +46,7 @@ internal static class CoraxQueryBuilder
         public readonly Dictionary<string, CoraxHighlightingTermIndex> HighlightingTerms;
         public readonly int Take;
         public readonly List<string> BuildSteps;
-        public readonly MemoizationMatchProviderRef<AllEntriesMatch> AllEntries;
+        public readonly MemoizationMatchProvider<AllEntriesMatch> AllEntries;
         public readonly QueryMetadata Metadata;
         public readonly bool HasDynamics;
         public readonly Lazy<List<string>> DynamicFields;
@@ -68,7 +68,7 @@ internal static class CoraxQueryBuilder
             HighlightingTerms = highlightingTerms;
             Take = take;
             BuildSteps = buildSteps;
-            AllEntries = new MemoizationMatchProviderRef<AllEntriesMatch>(IndexSearcher.Memoize(IndexSearcher.AllEntries()));
+            AllEntries = IndexSearcher.Memoize(IndexSearcher.AllEntries());
             Metadata = query.Metadata;
             HasDynamics = index.Definition.HasDynamicFields;
             DynamicFields = HasDynamics
@@ -507,7 +507,7 @@ internal static class CoraxQueryBuilder
         return null;
     }
 
-    private static bool TryMergeTwoNodesForAnd<TScoreFunction>(IndexSearcher indexSearcher, MemoizationMatchProviderRef<AllEntriesMatch> allEntries, ref IQueryMatch lhs,
+    private static bool TryMergeTwoNodesForAnd<TScoreFunction>(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, ref IQueryMatch lhs,
         ref IQueryMatch rhs, out CoraxBooleanQueryBase merged, TScoreFunction scoreFunction, bool requiredMaterialization = false)
         where TScoreFunction : IQueryScoreFunction
     {

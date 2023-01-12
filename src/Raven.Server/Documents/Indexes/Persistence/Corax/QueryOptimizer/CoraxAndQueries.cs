@@ -14,7 +14,7 @@ public class CoraxAndQueries : CoraxBooleanQueryBase
 {
     private readonly List<CoraxBooleanItem> _queryStack;
 
-    public CoraxAndQueries(IndexSearcher indexSearcher, MemoizationMatchProviderRef<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right,
+    public CoraxAndQueries(IndexSearcher indexSearcher, MemoizationMatchProvider<AllEntriesMatch> allEntries, CoraxBooleanItem left, CoraxBooleanItem right,
         IQueryScoreFunction scoreFunction) : base(indexSearcher, scoreFunction)
     {
         if (CoraxBooleanItem.CanBeMergedForAnd(left, right) == false)
