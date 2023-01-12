@@ -31,6 +31,8 @@ namespace Raven.Server.Documents.Queries
         private readonly DocumentsOperationContext _context;
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly IncludeRevisionsCommand _includeRevisionsCommand;
+        private readonly IncludeTimeSeriesCommand _includeTimeSeriesCommand;
+        private readonly IncludeCountersCommand _includeCountersCommand;
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
         private readonly Reference<int> _totalResults, _scannedResults;
         private readonly Reference<long> _skippedResults;
@@ -42,7 +44,7 @@ namespace Raven.Server.Documents.Queries
 
         public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection,
             IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
-            IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults,
+            IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeTimeSeriesCommand includeTimeSeriesCommand, IncludeCountersCommand includeCountersCommand, Reference<int> totalResults,
             Reference<int> scannedResults, Reference<long> skippedResults, CancellationToken token)
         {
             _database = database;
@@ -57,6 +59,8 @@ namespace Raven.Server.Documents.Queries
             _includeDocumentsCommand = includeDocumentsCommand;
             _includeRevisionsCommand = includeRevisionsCommand;
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
+            _includeTimeSeriesCommand = includeTimeSeriesCommand;
+            _includeCountersCommand = includeCountersCommand;
             _totalResults = totalResults;
             _token = token;
             _scannedResults = scannedResults;
@@ -72,7 +76,7 @@ namespace Raven.Server.Documents.Queries
         public IEnumerator<Document> GetEnumerator()
         {
             return new Enumerator(_database, _documents, SearchEngineType.None, _fieldsToFetch, _collection, _isAllDocsCollection, _query,
-                _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _totalResults, _scannedResults, 
+                _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _includeTimeSeriesCommand, _includeCountersCommand, _totalResults, _scannedResults, 
                 StartAfterId, AlreadySeenIdsCount, Fields, _skippedResults, _token);
         }
 
@@ -150,7 +154,7 @@ namespace Raven.Server.Documents.Queries
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
                 IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
-                IncludeRevisionsCommand includeRevisionsCommand,IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults, 
+                IncludeRevisionsCommand includeRevisionsCommand,IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeTimeSeriesCommand includeTimeSeriesCommand, IncludeCountersCommand includeCountersCommand, Reference<int> totalResults, 
                 Reference<int> scannedResults, string startAfterId, Reference<long> alreadySeenIdsCount, DocumentFields fields, Reference<long> skippedResults, CancellationToken token)
             {
                 _documents = documents;
@@ -173,7 +177,7 @@ namespace Raven.Server.Documents.Queries
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
 
-                _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
+                _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, includeTimeSeriesCommand, includeCountersCommand);
 
                 (_ids, _startsWith) = ExtractIdsFromQuery(query, context);
                 

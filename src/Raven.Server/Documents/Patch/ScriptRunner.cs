@@ -206,6 +206,8 @@ namespace Raven.Server.Documents.Patch
             public HashSet<string> IncludeRevisionsChangeVectors;
             public DateTime? IncludeRevisionByDateTimeBefore;
             public HashSet<string> CompareExchangeValueIncludes;
+            public HashSet<string> TimeSeriesValueIncludes;
+            public HashSet<string> CountersValueIncludes;
             private HashSet<string> _documentIds;
             private CancellationToken _token;
 
@@ -273,6 +275,8 @@ namespace Raven.Server.Documents.Patch
                 includesObject.FastAddProperty("document", includeDocumentFunc, false, false, false);
                 includesObject.FastAddProperty("cmpxchg", new ClrFunctionInstance(ScriptEngine, "cmpxchg", IncludeCompareExchangeValue), false, false, false);
                 includesObject.FastAddProperty("revisions", new ClrFunctionInstance(ScriptEngine, "revisions", IncludeRevisions), false, false, false);
+                includesObject.FastAddProperty("timeseries", new ClrFunctionInstance(ScriptEngine, "timeseries", IncludeTimeSeriesValue), false, false, false);
+                includesObject.FastAddProperty("counters", new ClrFunctionInstance(ScriptEngine, "counters", CountersValue), false, false, false);
                 ScriptEngine.SetValue("includes", includesObject);
 
                 // includes - backward compatibility
@@ -893,6 +897,102 @@ namespace Raven.Server.Documents.Patch
                 CompareExchangeValueIncludes.Add(key);
 
                 return self;
+            }
+
+            private JsValue IncludeTimeSeriesValue(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 2)
+                    throw new InvalidOperationException("includes.timeseries(doc, name) must be called with two arguments");
+
+                if (args[1].IsNull() || args[1].IsUndefined())
+                    return self;
+
+                if (args[1].IsArray())// recursive call ourselves
+                {
+                    var array = args[1].AsArray();
+                    foreach (var pair in array.GetOwnPropertiesWithoutLength())
+                    {
+                        args[1] = pair.Value.Value;
+                        if (args[1].IsString())
+                            IncludeTimeSeriesValue(self, args);
+                    }
+                    return self;
+                }
+
+                if (args[1].IsString() == false)
+                    throw new InvalidOperationException("includes.timeseries(doc, name) must be called with an string or string array argument");
+
+                var key = args[1].AsString();
+
+                if (TimeSeriesValueIncludes == null)
+                    TimeSeriesValueIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                TimeSeriesValueIncludes.Add(key);
+
+                return self;
+            }
+
+            private JsValue CountersValue(JsValue self, JsValue[] args)
+            {
+
+                if (args.Length == 2)
+                {
+                    if (args[1].IsNull() || args[1].IsUndefined())
+                        return self;
+
+                    if (args[1].IsArray()) // recursive call ourselves
+                    {
+                        var array = args[1].AsArray();
+                        foreach (var pair in array.GetOwnPropertiesWithoutLength())
+                        {
+                            args[1] = pair.Value.Value;
+                            if (args[1].IsString())
+                                CountersValue(self, args);
+                        }
+
+                        return self;
+                    }
+
+                    if (args[1].IsString() == false)
+                        throw new InvalidOperationException("includes.counters(doc, name) must be called with an string or string array argument");
+
+                    var key = args[1].AsString();
+
+                    if (CountersValueIncludes == null)
+                        CountersValueIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    CountersValueIncludes.Add(key);
+
+                    return self;
+                } 
+                
+                if (args.Length == 1)
+                {
+
+                    string key;
+                    if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
+                         key = doc.DocumentId;
+                    else
+                    {
+                        throw new InvalidOperationException("includes.counters(doc) must be called with a doc reference");
+                    }
+
+                    if (CountersValueIncludes == null)
+                        CountersValueIncludes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                  
+                    var myCounters = _database.DocumentsStorage.CountersStorage.GetCountersForDocument(_docsCtx, key);
+
+                    foreach (var counter in myCounters)
+                    { 
+                        CountersValueIncludes.Add(counter);  
+                    }
+
+                    
+                    return self;
+                }
+
+                throw new InvalidOperationException("includes.counters must be called with one or two arguments");
             }
 
             public override string ToString()
@@ -2020,6 +2120,8 @@ namespace Raven.Server.Documents.Patch
                 Includes?.Clear();
                 IncludeRevisionsChangeVectors?.Clear();
                 IncludeRevisionByDateTimeBefore = null;
+                TimeSeriesValueIncludes?.Clear();
+                CountersValueIncludes?.Clear();
                 CompareExchangeValueIncludes?.Clear();
                 DocumentCountersToUpdate?.Clear();
                 DocumentTimeSeriesToUpdate?.Clear();
@@ -2101,6 +2203,8 @@ namespace Raven.Server.Documents.Patch
 
                 _run.Includes?.Clear();
                 _run.CompareExchangeValueIncludes?.Clear();
+                _run.TimeSeriesValueIncludes?.Clear();
+                _run.CountersValueIncludes?.Clear();
 
                 _run.OriginalDocumentId = null;
                 _run.RefreshOriginalDocument = false;

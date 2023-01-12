@@ -1008,6 +1008,223 @@ namespace Raven.Client.Util
             }
         }
 
+        public class IncludeSupport : JavascriptConversionExtension
+        {
+            public readonly string _alias;
+            public IncludeSupport(string inputAlias)
+            {
+                _alias = inputAlias;
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                if (methodCallExpression?.Method.Name != nameof(RavenQuery.Include))
+                    return;
+
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
+                    return;
+
+                if (methodCallExpression.Arguments.Count != 1)
+                    return;
+
+                context.PreventDefault();
+                
+                var writer = context.GetWriter();
+
+                //if not a lambda expression then
+                if (!methodCallExpression.Arguments[0].Type.BaseType.Name.Contains("LambdaExpression"))
+                {
+                    using (writer.Operation(methodCallExpression))
+                    {
+                        var arg = methodCallExpression.Arguments[0];
+
+                        if (arg is ConstantExpression { Value: string target1})
+                        {
+                            writer.Write("includes.document(");
+                            writer.Write(target1);
+                            writer.Write(")");
+                            return;
+                        }
+                        throw new NotSupportedException("You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path)");
+                    }
+                }
+
+                //if got here then it's lambda expression then call alias and 
+                using (writer.Operation(methodCallExpression))
+                {
+                    var arg = methodCallExpression.Arguments[0];
+
+                    if (arg is UnaryExpression { Operand: LambdaExpression { Body: BinaryExpression { Left: MethodCallExpression mce } } })
+                    {
+                        var objReplace = (MemberExpression)mce.Object;
+                        var replaceExprassion = Expression.Parameter(objReplace.Expression.Type, _alias);
+                        var objReplace1 = objReplace.Update(replaceExprassion);
+                        var curmce = mce.Update(objReplace1, mce.Arguments);
+                        writer.Write("includes.document(");
+                        context.Visitor.Visit(curmce);
+                        writer.Write(")");
+                        return;
+                    }
+
+                    if (arg is UnaryExpression { Operand: LambdaExpression arg2 })
+                    {
+                        var targetExpression = (MemberExpression)arg2.Body;
+                        var replaceExprassion = Expression.Parameter(targetExpression.Expression.Type, _alias);
+                        targetExpression = targetExpression.Update(replaceExprassion);
+
+                        writer.Write("includes.document(");
+                        context.Visitor.Visit(targetExpression);
+                        writer.Write(")");
+                        return;
+                    }
+                    throw new NotSupportedException("You can't use the include that way try: let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path)");
+                }
+            }
+        }
+
+        public class IncludeTimeSeriesSupport : JavascriptConversionExtension
+        {
+            public static readonly IncludeTimeSeriesSupport Instance = new IncludeTimeSeriesSupport();
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                if (methodCallExpression?.Method.Name != nameof(RavenQuery.IncludeTimeSeries))
+                    return;
+
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
+                    return;
+                if (methodCallExpression.Arguments.Count != 2)
+                    return;
+
+                context.PreventDefault();
+
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    int argNum = methodCallExpression.Arguments.Count;
+                    writer.Write("includes.timeseries(");
+                    for (var i = 0; i < argNum; i++)
+                    {
+                        context.Visitor.Visit(methodCallExpression.Arguments[i]);
+                        if (i < argNum - 1)
+                            writer.Write(",");
+                    }
+                    writer.Write(")");
+                }
+            }
+        }
+
+        public class IncludeCounterSupport : JavascriptConversionExtension
+        {
+            public static readonly IncludeCounterSupport Instance = new IncludeCounterSupport();
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                if (methodCallExpression?.Method.Name != nameof(RavenQuery.IncludeCounter))
+                    return;
+
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
+                    return;
+                
+                if (methodCallExpression.Arguments.Count != 2)
+                    return;
+                
+
+                context.PreventDefault();
+
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    int argNum = methodCallExpression.Arguments.Count;
+                    writer.Write("includes.counters(");
+                    for (var i = 0; i < argNum; i++)
+                    {
+                        context.Visitor.Visit(methodCallExpression.Arguments[i]);
+                        if (i < argNum - 1)
+                            writer.Write(",");
+                    }
+                    writer.Write(")");
+                }
+            }
+        }
+
+        public class IncludeCountersSupport : JavascriptConversionExtension
+        {
+            public static readonly IncludeCountersSupport Instance = new IncludeCountersSupport();
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                if (methodCallExpression?.Method.Name != nameof(RavenQuery.IncludeCounters))
+                    return;
+
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
+                    return;
+
+                if (methodCallExpression.Arguments.Count != 2)
+                    return;
+
+                    context.PreventDefault();
+
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    int argNum = methodCallExpression.Arguments.Count;
+                    writer.Write("includes.counters(");
+                    for (var i = 0; i < argNum; i++)
+                    {
+                        context.Visitor.Visit(methodCallExpression.Arguments[i]);
+                        if (i < argNum - 1)
+                            writer.Write(",");
+                    }
+                    writer.Write(")");
+                }
+            }
+        }
+
+        public class IncludeAllCountersSupport : JavascriptConversionExtension
+        {
+            public static readonly IncludeAllCountersSupport Instance = new IncludeAllCountersSupport();
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                var methodCallExpression = context.Node as MethodCallExpression;
+
+                if (methodCallExpression?.Method.Name != nameof(RavenQuery.IncludeAllCounters))
+                    return;
+
+                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery))
+                    return;
+                if (methodCallExpression.Arguments.Count != 1)
+                {
+                    return;
+                }
+
+                context.PreventDefault();
+
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    int argNum = methodCallExpression.Arguments.Count;
+                    writer.Write("includes.counters(");
+                    for (var i = 0; i < argNum; i++)
+                    {
+                        context.Visitor.Visit(methodCallExpression.Arguments[i]);
+                        if (i < argNum - 1)
+                            writer.Write(",");
+                    }
+                    writer.Write(")");
+                }
+            }
+        }
+
         public class MathSupport : JavascriptConversionExtension
         {
             public static readonly MathSupport Instance = new MathSupport();

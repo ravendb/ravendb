@@ -40,6 +40,23 @@ namespace Raven.Server.Documents.Includes
             _countersBySourcePath = countersBySourcePath.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray());
         }
 
+        //AddRange
+        public void AddRange(HashSet<string> countersNames)
+        {
+            if (countersNames == null || countersNames.Count == 0)
+                return;
+
+            var counterNamesArray = countersNames.ToArray();
+            if (_countersBySourcePath.Count < 1)
+            {
+                _countersBySourcePath.Add(string.Empty, counterNamesArray);
+            }
+            else
+            {
+                _countersBySourcePath[string.Empty].Union(counterNamesArray);
+            }
+        }
+
         public void Fill(Document document)
         {
             if (document == null)
@@ -61,7 +78,7 @@ namespace Raven.Server.Documents.Includes
 
                 var countersToGet = kvp.Value.ToArray();
                 CountersToGetByDocId[docId] = countersToGet;
-
+                
                 var details = CountersHandler.GetInternal(_database, _context, countersToGet, docId, false);
                 Results.Add(docId, details.Counters);
             }

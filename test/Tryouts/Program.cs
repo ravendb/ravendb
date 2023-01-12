@@ -20,8 +20,7 @@ namespace Tryouts
         {
             XunitLogging.RedirectStreams = false;
         }
-
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
             Console.WriteLine(Process.GetCurrentProcess().Id);
             for (int i = 0; i < 10_000; i++)
@@ -30,9 +29,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new AttachmentsReplication(testOutputHelper))
+                    using (var test = new RavenDB_14541(testOutputHelper))
                     {
-                        await test.ConflictOfAttachmentAndDocument3StoresDifferentLastModifiedOrder_RevisionsDisabled_MissingAttachmentLoop();
+                        test.SessionQueryIncludeTimeSeriesUsingRavenQuery();
                     }
                 }
                 catch (Exception e)

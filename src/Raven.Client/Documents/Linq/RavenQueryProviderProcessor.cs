@@ -2759,6 +2759,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void SelectMemberAccess(Expression body)
         {
+            if (_declareBuilder != null)
+            {
+                AddReturnStatementToOutputFunction(body);
+                return;
+            }
+
             var memberExpression = ((MemberExpression)body);
 
             var selectPath = GetSelectPath(memberExpression);
@@ -2979,6 +2985,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
+        private static readonly Regex IsDiscard = new Regex(@"^_+$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private void HandleLoad(Expression expression, JavascriptConversionExtensions.LoadSupport loadSupport, string name, string js, StringBuilder wrapper)
         {
@@ -3129,10 +3136,39 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
 
+            switch (js)
+            {
+                case string s when s.StartsWith("includes.document("):
+                    HandleInclude(name, s, "let _ = RavenQuery.Include<T>(Expression<Func<T, string>> path)");
+                    break;
+                case string s when s.StartsWith("includes.timeseries("):
+                    HandleInclude(name, s, "let _ = RavenQuery.IncludeTimeSeries(T documentInstance, string timeSeriesName)");
+                    break;
+                case string s when s.StartsWith("includes.counters("):
+                    HandleInclude(name, s, "let _ = RavenQuery.includeCounters(T documentInstance, string CounterName)");
+                    break;
+                default: 
+                    _declareBuilder ??= new StringBuilder();
+                    _declareBuilder.Append('\t')
+                    .Append("var ").Append(name)
+                    .Append(" = ").Append(js).Append(';')
+                    .Append(Environment.NewLine);
+                    break;
+            }
+        }
+
+        void HandleInclude(string name, string js, string message)
+        {
+            if (!IsDiscard.IsMatch(name))
+                throw new NotSupportedException($"You can't use the include that way try: {message}");
+            AppendIncludeFunctionBody(js);
+        }
+
+        private void AppendIncludeFunctionBody(string js)
+        {
             _declareBuilder ??= new StringBuilder();
             _declareBuilder.Append('\t')
-                .Append("var ").Append(name)
-                .Append(" = ").Append(js).Append(';')
+                .Append(js).Append(';')
                 .Append(Environment.NewLine);
         }
 
@@ -3232,7 +3268,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
 
                     AddJsProjection(name, field.Expression, sb, index != 0);
-
                 }
                 sb.Append(" }");
             }
@@ -3244,7 +3279,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 
                 sb.Append(script);
             }
-
             return sb.ToString();
         }
 
@@ -3277,6 +3311,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 new JavascriptConversionExtensions.DictionarySupport(),
                 JavascriptConversionExtensions.LinqMethodsSupport.Instance,
                 loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
+                new JavascriptConversionExtensions.IncludeSupport(FromAlias),
+                JavascriptConversionExtensions.IncludeTimeSeriesSupport.Instance,
+                JavascriptConversionExtensions.IncludeCounterSupport.Instance,
+                JavascriptConversionExtensions.IncludeCountersSupport.Instance,
+                JavascriptConversionExtensions.IncludeAllCountersSupport.Instance,
                 JavascriptConversionExtensions.MetadataSupport.Instance,
                 JavascriptConversionExtensions.CompareExchangeSupport.Instance,
                 JavascriptConversionExtensions.CounterSupport.Instance,

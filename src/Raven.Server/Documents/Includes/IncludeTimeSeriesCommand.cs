@@ -2,8 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Amqp.Framing;
+using JetBrains.Annotations;
 using Raven.Client;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -13,7 +17,7 @@ namespace Raven.Server.Documents.Includes
     public class IncludeTimeSeriesCommand
     {
         private readonly DocumentsOperationContext _context;
-        private readonly Dictionary<string, HashSet<AbstractTimeSeriesRange>> _timeSeriesRangesBySourcePath;
+        private Dictionary<string, HashSet<AbstractTimeSeriesRange>> _timeSeriesRangesBySourcePath;
         private readonly Dictionary<string, Dictionary<string, (long Count, DateTime Start, DateTime End)>> _timeSeriesStatsPerDocumentId;
 
         public Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> Results { get; }
@@ -21,10 +25,40 @@ namespace Raven.Server.Documents.Includes
         public IncludeTimeSeriesCommand(DocumentsOperationContext context, Dictionary<string, HashSet<AbstractTimeSeriesRange>> timeSeriesRangesBySourcePath)
         {
             _context = context;
-            _timeSeriesRangesBySourcePath = timeSeriesRangesBySourcePath;
+
+            _timeSeriesRangesBySourcePath = timeSeriesRangesBySourcePath ?? new Dictionary<string, HashSet<AbstractTimeSeriesRange>>();
 
             _timeSeriesStatsPerDocumentId = new Dictionary<string, Dictionary<string, (long Count, DateTime Start, DateTime End)>>(StringComparer.OrdinalIgnoreCase);
             Results = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        public void AddRange(HashSet<string> timeSeriesNames)
+        {
+            if (timeSeriesNames == null)
+                return;
+
+            DateTime Start = DateTime.MinValue;
+            DateTime End = DateTime.MaxValue;
+
+           var hs = new HashSet<AbstractTimeSeriesRange>();
+
+           foreach (var timeSeriesName in timeSeriesNames)
+            { 
+                var target = new TimeSeriesRange();
+                target.From = Start;
+                target.To = End;
+                target.Name = timeSeriesName; 
+                hs.Add(target);  
+            }
+
+           if (_timeSeriesRangesBySourcePath.Count < 1)
+           {
+               _timeSeriesRangesBySourcePath.Add(String.Empty, hs);
+           }
+           else
+           {
+               _timeSeriesRangesBySourcePath[String.Empty].Union(hs);
+           }
         }
 
         public void Fill(Document document)

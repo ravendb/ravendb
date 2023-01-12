@@ -1359,6 +1359,7 @@ namespace Raven.Server.Documents.Queries.Parser
             };
         }
 
+
         private TimeSeriesFunction ParseTimeSeriesBody(string name)
         {
             _insideTimeSeriesBody = true;

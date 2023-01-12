@@ -50,6 +50,8 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly IncludeRevisionsCommand _includeRevisionsCommand;
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
+        private readonly IncludeTimeSeriesCommand _includeTimeSeriesCommand;
+        private readonly IncludeCountersCommand _includeCountersCommand;
         private readonly BlittableJsonTraverser _blittableTraverser;
 
         private Dictionary<string, Document> _loadedDocuments;
@@ -77,7 +79,7 @@ namespace Raven.Server.Documents.Queries.Results
         protected QueryResultRetrieverBase(
             DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage,
             JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand,
-            IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
+            IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand, IncludeTimeSeriesCommand includeTimeSeriesCommand, IncludeCountersCommand includeCountersCommand)
         {
             _database = database;
             _query = query;
@@ -85,6 +87,8 @@ namespace Raven.Server.Documents.Queries.Results
             _includeDocumentsCommand = includeDocumentsCommand;
             _includeRevisionsCommand = includeRevisionsCommand;
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
+            _includeTimeSeriesCommand = includeTimeSeriesCommand;
+            _includeCountersCommand = includeCountersCommand;
             SearchEngineType = searchEngineType;
 
             ValidateFieldsToFetch(fieldsToFetch);
@@ -1138,6 +1142,9 @@ namespace Raven.Server.Documents.Queries.Results
                 _includeDocumentsCommand?.AddRange(run.Includes, documentId);
                 _includeRevisionsCommand?.AddRange(run.IncludeRevisionsChangeVectors);
                 _includeRevisionsCommand?.AddRevisionByDateTimeBefore(run.IncludeRevisionByDateTimeBefore, documentId);
+                _includeTimeSeriesCommand?.AddRange(run.TimeSeriesValueIncludes);
+                _includeCountersCommand?.AddRange(run.CountersValueIncludes);
+
                 _includeCompareExchangeValuesCommand?.AddRange(run.CompareExchangeValueIncludes);
 
 

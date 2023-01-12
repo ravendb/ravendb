@@ -3242,7 +3242,7 @@ namespace Raven.Server.Documents.Indexes
                                         query.Metadata.TimeSeriesIncludes.TimeSeries);
                                 }
 
-                                var retriever = GetQueryResultRetriever(query, queryScope, queryContext.Documents, SearchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
+                                var retriever = GetQueryResultRetriever(query, queryScope, queryContext.Documents, SearchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, includeTimeSeriesCommand, includeCountersCommand);
 
                                 IEnumerable<IndexReadOperationBase.QueryResult> documents;
 
@@ -4200,7 +4200,7 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract IQueryResultRetriever GetQueryResultRetriever(
             IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch,
-            IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand);
+            IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand, IncludeTimeSeriesCommand includeTimeSeriesCommand, IncludeCountersCommand includeCountersCommand);
 
         public abstract void SaveLastState();
 

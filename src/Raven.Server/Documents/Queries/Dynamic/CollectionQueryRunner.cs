@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
@@ -137,7 +138,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var fieldsToFetch = new FieldsToFetch(query, null, IndexType.None);
                 var includeDocumentsCommand  = new IncludeDocumentsCommand(Database.DocumentsStorage, context.Documents, query.Metadata.Includes, fieldsToFetch.IsProjection);
                 var includeRevisionsCommand  = new IncludeRevisionsCommand(Database, context.Documents, query.Metadata.RevisionIncludes);
-                
+                var includeTimeSeriesCommand = new IncludeTimeSeriesCommand(context.Documents, new Dictionary<string, HashSet<AbstractTimeSeriesRange>>());
+                var includeCountersCommand = new IncludeCountersCommand(Database, context.Documents, new Dictionary<string, HashSet<string>>());
+
                 var includeCompareExchangeValuesCommand = IncludeCompareExchangeValuesCommand.ExternalScope(context, query.Metadata.CompareExchangeValueIncludes);
 
                 var totalResults = new Reference<int>();
@@ -149,7 +152,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, fieldsToFetch, collection, query, queryScope, context.Documents,
                         includeDocumentsCommand, includeRevisionsCommand: includeRevisionsCommand,
-                        includeCompareExchangeValuesCommand: includeCompareExchangeValuesCommand, totalResults: totalResults, scannedResults, skippedResults, token);
+                        includeCompareExchangeValuesCommand: includeCompareExchangeValuesCommand, includeTimeSeriesCommand, includeCountersCommand,totalResults: totalResults, scannedResults, skippedResults, token);
 
                     enumerator = documents.GetEnumerator();
                 }
@@ -161,7 +164,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             query.Start = state.Start;
                             query.PageSize = state.Take;
                             var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, SearchEngineType.None, fieldsToFetch, collection, query, queryScope,
-                                context.Documents, includeDocumentsCommand, includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults, scannedResults,
+                                context.Documents, includeDocumentsCommand, includeRevisionsCommand, includeCompareExchangeValuesCommand, includeTimeSeriesCommand, includeCountersCommand, totalResults, scannedResults,
                                 skippedResults, token);
 
                             return documents;
@@ -173,8 +176,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         });
                 }
 
-                IncludeCountersCommand includeCountersCommand = null;
-                IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
+                    //includeCountersCommand = null;
+                    //includeTimeSeriesCommand = null;
                 
                 if (query.Metadata.RevisionIncludes != null)
                 {
