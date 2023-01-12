@@ -48,6 +48,63 @@ namespace Raven.Server.Documents.Patch
             _scriptEngine = engine;
         }
 
+        internal JsValue Count(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1 || (args[0].AsObject() is not BlittableObjectInstance doc)) 
+            {
+                throw new InvalidOperationException("count(doc) must be called with a single entity argument");
+            }
+            
+            doc.TryGetValue(Constants.Documents.Indexing.Fields.CountFieldName, out var countValue);
+            
+            return countValue;
+        }
+        
+        internal JsValue Key(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1 || (args[0].AsObject() is not BlittableObjectInstance doc)) 
+            {
+                throw new InvalidOperationException("key(doc) must be called with a single entity argument");
+            }
+            
+            var groupByFields = doc.Projection._query.Metadata.GroupBy;
+
+            if (groupByFields.Length == 1)
+            {
+                doc.TryGetValue(groupByFields[0].Name.Value, out var keyValue);
+
+                return keyValue;
+            }
+
+            else
+            {
+                var res = new DynamicJsonValue();
+
+                foreach (var field in groupByFields)
+                {
+                    if (doc.Blittable.TryGetMember(field.Name.Value, out var keyValue))
+                        res.Properties.Add((field.Name.Value, keyValue));
+                }
+
+                var jsonFromCtx = Context.ReadObject(res, null);
+                JsValue resJs = TranslateToJs(_scriptEngine, Context, jsonFromCtx);
+
+                return resJs;
+            }
+        }
+        
+        internal JsValue Sum(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 2 || (args[0].AsObject() is not BlittableObjectInstance doc) || (args[1].AsString() is not string fieldName)) 
+            {
+                throw new InvalidOperationException("sum(doc, field) must be called with a two arguments - entity and fieldname");
+            }
+            
+            doc.TryGetValue(fieldName, out var sumValue);
+
+            return sumValue;
+        }        
+
         internal JsValue GetMetadata(JsValue self, JsValue[] args)
         {
             if (args.Length != 1 && args.Length != 2 || //length == 2 takes into account Query Arguments that can be added to args

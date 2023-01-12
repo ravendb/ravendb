@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         public readonly bool MustExtractOrThrow;
 
-        private readonly IndexQueryServerSide _query;
+        internal readonly IndexQueryServerSide _query;
 
         public ProjectionOptions(IndexQueryServerSide query)
         {

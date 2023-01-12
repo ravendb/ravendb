@@ -241,6 +241,10 @@ function execute(doc, args){
 
         public List<SpatialShapeBase> SpatialShapes;
 
+        public bool? CountInJs;
+
+        public string SumInJs;
+        
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName, parameters));
