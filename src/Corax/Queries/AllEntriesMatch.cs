@@ -17,10 +17,11 @@ namespace Corax.Queries
         private readonly Transaction _tx;
         private readonly long _count;
         private Container.AllPagesIterator _entriesPagesIt;
+        private bool _itInitialized;
         private int _offset;
         private int _itemsLeftOnCurrentPage;
         private Page _currentPage;
-        private long _entriesContainerId;
+        private readonly long _entriesContainerId;
 
         public unsafe AllEntriesMatch(IndexSearcher searcher, Transaction tx)
         {
@@ -28,6 +29,7 @@ namespace Corax.Queries
             _count = searcher.NumberOfEntries;
             if (_count == 0)
             {
+                _itInitialized = true;
                 Unsafe.SkipInit(out _currentPage);
                 Unsafe.SkipInit(out _offset);
                 Unsafe.SkipInit(out _entriesContainerId);
@@ -38,7 +40,8 @@ namespace Corax.Queries
             }
             
             _entriesContainerId = tx.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
-            _entriesPagesIt = Container.GetAllPagesSet(tx.LowLevelTransaction, _entriesContainerId);
+            _itInitialized = false;
+            _entriesPagesIt = default;
             _offset = 0;
             _itemsLeftOnCurrentPage = 0;
             _currentPage = new Page(null);
@@ -52,6 +55,12 @@ namespace Corax.Queries
         {
             if (_count == 0)
                 return 0;
+
+            if (_itInitialized == false)
+            {
+                _entriesPagesIt = Container.GetAllPagesSet(_tx.LowLevelTransaction, _entriesContainerId);
+                _itInitialized = true;
+            }
             
             var results = 0;
             while (true)
