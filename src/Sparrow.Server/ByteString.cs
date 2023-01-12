@@ -869,55 +869,26 @@ namespace Sparrow.Server
             if (force == false && segments.Count < MinNumberOfSegmentsToDefragment)
                 return;
 
-            var orderedSegments = segments
-                .OrderBy(x => (long)x.Start)
-                .ToList();
-
-            var newSegments = new List<SegmentInformation>();
-
-            SegmentInformation currentSegment = null;
-            int currentSegmentSize = 0;
-            byte* nextSegmentStart = null;
-            for (var i = 0; i < orderedSegments.Count; i++)
+            segments.Sort((x, y) => ((long)x.Start).CompareTo((long)y.Start));
+            
+            byte* currentStart = segments[0].Start, currentEnd = segments[0].End;
+            var currentIdx = 0;
+            
+            for (int i = 1; i < segments.Count; i++)
             {
-                if (currentSegment == null)
+                if (currentEnd == segments[i].Start)
                 {
-                    currentSegment = orderedSegments[i];
-                    currentSegmentSize = currentSegment.Size;
-                    nextSegmentStart = currentSegment.End;
-                    continue;
+                    currentEnd = segments[i].End;
                 }
-
-                var segment = orderedSegments[i];
-
-                if (segment == null)
-                    continue;
-
-                Debug.Assert(segment.Size == segment.SizeLeft, $"{segment.Size} == {segment.SizeLeft}");
-
-                if (segment.Start == nextSegmentStart)
+                else
                 {
-                    nextSegmentStart = segment.End;
-                    currentSegmentSize += segment.Size;
-
-                    orderedSegments[i] = null;
-
-                    continue;
+                    segments[currentIdx++] = new SegmentInformation(currentStart, currentEnd, canDispose: false);
+                    currentStart = segments[0].Start;
+                    currentEnd = segments[0].End;
                 }
-
-                var newSegment = new SegmentInformation(currentSegment.Start, currentSegment.Start + currentSegmentSize, canDispose: false);
-                newSegments.Add(newSegment);
-
-                currentSegment = segment;
-                currentSegmentSize = segment.Size;
-                nextSegmentStart = segment.End;
             }
-
-            if (currentSegment != null)
-                newSegments.Add(new SegmentInformation(currentSegment.Start, currentSegment.Start + currentSegmentSize, canDispose: false));
-
-            _internalReadyToUseMemorySegments.Clear();
-            _internalReadyToUseMemorySegments.AddRange(newSegments);
+            segments[currentIdx++] = new SegmentInformation(currentStart, currentEnd, canDispose: false);
+            segments.RemoveRange(currentIdx, segments.Count - currentIdx);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
