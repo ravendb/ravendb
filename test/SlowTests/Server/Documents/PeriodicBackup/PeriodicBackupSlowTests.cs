@@ -2730,8 +2730,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // Let's delay the backup task to 1 hour
                 var delayDuration = TimeSpan.FromHours(1);
-                var sw = new Stopwatch();
-                sw.Start();
+                var sw = Stopwatch.StartNew();
                 await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, delayDuration));
 
                 // There should be no OnGoingBackup operation in the OngoingTaskBackup
@@ -2805,8 +2804,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // Let's delay the backup task to 1 hour
                 var delayDuration = TimeSpan.FromHours(1);
-                var sw = new Stopwatch();
-                sw.Start();
+                var sw = Stopwatch.StartNew();
                 var runningBackupTaskId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
                 await leaderStore.Maintenance.SendAsync(new DelayBackupOperation(runningBackupTaskId, delayDuration));
 
@@ -2864,8 +2862,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 
                 // Let's delay the backup task to 1 hour
                 var delayDuration = TimeSpan.FromHours(1);
-                var sw = new Stopwatch();
-                sw.Start();
+                var sw = Stopwatch.StartNew();
                 var onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                 Assert.NotNull(onGoingTaskInfo);
                 var runningBackupTaskId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
@@ -2950,8 +2947,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // Let's delay the backup task to 1 hour
                 var delayDuration = TimeSpan.FromHours(1);
-                var sw = new Stopwatch();
-                sw.Start();
+                var sw = Stopwatch.StartNew();
                 var onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                 Assert.NotNull(onGoingTaskInfo);
                 var runningBackupTaskId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
@@ -3025,8 +3021,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                 Assert.NotNull(onGoingTaskInfo);
                 var delayDuration = TimeSpan.FromHours(1);
-                var sw = new Stopwatch();
-                sw.Start();
+                var sw = Stopwatch.StartNew();
                 var runningBackupTaskId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
                 await leaderStore.Maintenance.SendAsync(new DelayBackupOperation(runningBackupTaskId, delayDuration));
 
