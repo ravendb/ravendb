@@ -1275,7 +1275,8 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 throw new ArgumentException($"Unable to parse timeseries from/to values. Got: {valueAsStr}{Environment.NewLine}" +
                                             $"The supported time formats are:{Environment.NewLine}" +
                                             $"{string.Join(Environment.NewLine, SupportedDateTimeFormats.OrderBy(f => f.Length))}");
-            return DateTime.SpecifyKind(date, DateTimeKind.Utc);
+
+            return new DateTime(date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second, date.Millisecond, DateTimeKind.Utc);
         }
 
         private static readonly string[] SupportedDateTimeFormats =
