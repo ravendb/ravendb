@@ -25,6 +25,23 @@ namespace Raven.Server.Documents.Queries
             {
                 switch (id.Name)
                 {
+                    case "count":
+                        _queryMetadata.CountInJs = true;
+                        break;
+                    case "sum":
+                        _queryMetadata.SumInJs = null;
+                        
+                        if (callExpression.Arguments.Count == 2)
+                        {
+                            var fieldNameNode = callExpression.Arguments.AsNodes()[1];
+
+                            if (fieldNameNode is Literal fieldNameLiteral)
+                            {
+                                _queryMetadata.SumInJs = fieldNameLiteral.StringValue;
+                            }
+                        }
+                        
+                        break;
                     case "load":
                     case "include":
                     case "loadPath":

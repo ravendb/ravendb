@@ -358,6 +358,23 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
 
+            if (query.Metadata.CountInJs.HasValue)
+            {
+                if (mapFields.TryGetValue(Constants.Documents.Indexing.Fields.CountFieldName, out var countField) == false)
+                {
+                    mapFields.Add(Constants.Documents.Indexing.Fields.CountFieldName, DynamicQueryMappingItem.Create(QueryFieldName.Count, AggregationOperation.Count));
+                }
+            }
+
+            if (query.Metadata.SumInJs is not null)
+            {
+                if (mapFields.TryGetValue(query.Metadata.SumInJs, out var sumField) == false)
+                {
+                    var queryFieldName = new QueryFieldName(query.Metadata.SumInJs, false);
+                    mapFields.Add(query.Metadata.SumInJs, DynamicQueryMappingItem.Create(queryFieldName, AggregationOperation.Sum));
+                }
+            }
+
             var result = new Dictionary<string, DynamicQueryMappingItem>(groupByFields.Length, StringComparer.Ordinal);
 
             for (int i = 0; i < groupByFields.Length; i++)

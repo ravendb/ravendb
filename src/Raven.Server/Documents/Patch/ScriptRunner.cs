@@ -248,6 +248,9 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue(GetMetadataMethod, new ClrFunctionInstance(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
                 ScriptEngine.SetValue("metadataFor", new ClrFunctionInstance(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
                 ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
+                ScriptEngine.SetValue("count", new ClrFunctionInstance(ScriptEngine, "count", JavaScriptUtils.Count));
+                ScriptEngine.SetValue("key", new ClrFunctionInstance(ScriptEngine, "key", JavaScriptUtils.Key));
+                ScriptEngine.SetValue("sum", new ClrFunctionInstance(ScriptEngine, "sum", JavaScriptUtils.Sum));
 
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, "output", OutputDebug));
 

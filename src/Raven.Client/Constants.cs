@@ -267,6 +267,8 @@ namespace Raven.Client
 
                     public const string CountFieldName = "Count";
 
+                    public const string SumFieldName = "Sum";
+
 #if FEATURE_CUSTOM_SORTING
                     public const string CustomSortFieldName = "__customSort";
 #endif
