@@ -10,7 +10,9 @@ interface NodeSetProps {
 export function NodeSet(props: NodeSetProps) {
     const { children, className, color } = props;
 
-    return <div className={classNames("node-set rounded-pill", "outline-" + color, className)}>{children}</div>;
+    const colorClass = color ? "bg-faded-" + color : "bg-faded-secondary";
+
+    return <div className={classNames("node-set", colorClass, className)}>{children}</div>;
 }
 
 interface NodeSetItemProps {
@@ -24,9 +26,11 @@ interface NodeSetItemProps {
 export function NodeSetLabel(props: NodeSetItemProps) {
     const { children, icon, color, ...rest } = props;
 
+    const colorClass = color ? "text-" + color : undefined;
+
     return (
         <div className="node-set-label" {...rest}>
-            {icon && <i className={classNames("icon-" + icon, "text-" + color)} />}
+            {icon && <i className={classNames("icon-" + icon, colorClass)} />}
             <strong className="node-set-label-name">{children}</strong>
         </div>
     );
@@ -34,10 +38,11 @@ export function NodeSetLabel(props: NodeSetItemProps) {
 
 export function NodeSetItem(props: NodeSetItemProps) {
     const { children, icon, color, ...rest } = props;
+    const colorClass = color ? "text-" + color : undefined;
 
     return (
         <div className="node-set-item" {...rest}>
-            {icon && <i className={classNames("icon-" + icon, "text-" + color)} />}
+            {icon && <i className={classNames("icon-" + icon, colorClass)} />}
             <strong className="node-set-item-name">{children}</strong>
         </div>
     );

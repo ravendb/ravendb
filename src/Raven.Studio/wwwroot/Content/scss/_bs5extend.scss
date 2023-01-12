@@ -123,7 +123,7 @@ a.link {
     
 }
 
-// OUTLINES AND SETS
+// OUTLINE
 
 [class*=" outline-"],
 [class^="outline-"] {
@@ -141,10 +141,14 @@ a.link {
     
 }
 
+// NODE SETS
 
 .node-set {
     display: inline-flex;    
     flex-wrap: wrap;
+    padding: $gutter-xxs $gutter-xs;
+    border-left: 4px solid;
+    border-radius: $border-radius;
     
     .node-set-label {
         margin-right: $gutter-xs;
@@ -155,22 +159,19 @@ a.link {
         }
 
         .node-set-label-name {
-            font-weight: normal;
-            color: $text-muted;
+            font-weight: 600;            
         }
     }
 
     .node-set-item {   
         margin: 0 $gutter-xxs;    
 
-        i {
-            opacity: .8;
-            margin-right: -.3em;
+        i {            
+            margin-right: .2em;
             display: inline-block;
         }
 
-        .node-set-item-name {
-            text-shadow: 0 0 5px $panel-bg-1;            
+        .node-set-item-name {                    
             position: relative;
             font-weight: 800;
             color: $text-emphasis-var;
