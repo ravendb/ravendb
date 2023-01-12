@@ -3674,11 +3674,9 @@ namespace Raven.Server.ServerWide
         private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionAsyncForCluster(string url, TcpConnectionInfo info, Stream stream, JsonOperationContext ctx, string tag)
         {
             bool compressionSupport = false;
-#if NETCOREAPP3_1_OR_GREATER
             var version = TcpConnectionHeaderMessage.ClusterTcpVersion;
-            if (version >= TcpConnectionHeaderMessage.TcpConnectionsWithCompression)
+            if (version >= TcpConnectionHeaderMessage.ClusterWithTcpCompression)
                 compressionSupport = true;
-#endif
 
             var parameters = new AsyncTcpNegotiateParameters
             {
@@ -3692,7 +3690,7 @@ namespace Raven.Server.ServerWide
                 DestinationServerId = info.ServerId,
                 LicensedFeatures = new LicensedFeatures
                 {
-                    DataCompression = compressionSupport && _parent.ServerStore.Configuration.Server.DisableTcpCompression == false
+                    DataCompression = compressionSupport && _parent.ServerStore.LicenseManager.LicenseStatus.HasTcpDataCompression && _parent.ServerStore.Configuration.Server.DisableTcpCompression == false
                 }
             };
 

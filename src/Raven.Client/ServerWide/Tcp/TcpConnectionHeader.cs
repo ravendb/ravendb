@@ -66,11 +66,11 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int DropBaseLine = -2;
         public static readonly int ClusterBaseLine = 10;
         public static readonly int ClusterWithMultiTree = 52_000;
-        public static readonly int ClusterWithTcpCompression = 53_000;
+        public static readonly int ClusterWithTcpCompression = 54_000;
         public static readonly int HeartbeatsBaseLine = 20;
         public static readonly int Heartbeats41200 = 41_200;
         public static readonly int Heartbeats42000 = 42_000;
-        public static readonly int HeartbeatsWithTcpCompression = 53_000;
+        public static readonly int HeartbeatsWithTcpCompression = 54_000;
         public static readonly int ReplicationBaseLine = 31;
         public static readonly int ReplicationAttachmentMissing = 40_300;
         public static readonly int ReplicationAttachmentMissingVersion41 = 41_300;
@@ -300,7 +300,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Cluster] = new List<int>
                 {
-                    TcpConnectionsWithCompression,
+                    ClusterWithTcpCompression,
                     ClusterWithMultiTree,
                     ClusterBaseLine,
                 },
@@ -309,7 +309,7 @@ namespace Raven.Client.ServerWide.Tcp
                     HeartbeatsWithTcpCompression,
                     Heartbeats42000,
                     Heartbeats41200,
-                    HeartbeatsBaseLine,
+                    HeartbeatsBaseLine
                 },
                 [OperationTypes.TestConnection] = new List<int>
                 {
@@ -465,7 +465,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Cluster] = new Dictionary<int, SupportedFeatures>
                 {
-                    [TcpConnectionsWithCompression] = new SupportedFeatures(TcpConnectionsWithCompression)
+                    [ClusterWithTcpCompression] = new SupportedFeatures(ClusterWithTcpCompression)
                     {
                         DataCompression = true,
                         Cluster = new SupportedFeatures.ClusterFeatures
