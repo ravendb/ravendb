@@ -1096,10 +1096,14 @@ namespace RachisTests.DatabaseCluster
                 });
                 newUrl = Servers[1].WebUrl;
                 // ensure that at this point we still can't talk to node
-                await Task.Delay(fromSeconds); // wait for the observer to update the status
-                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                // wait for the observer to update the status
+                var rehabs = await WaitForValueAsync(async () =>
+                {
+                    dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                    return dbToplogy.Rehabs.Count;
+                }, 1, interval: 500);
                 
-                Assert.True(1 == dbToplogy.Rehabs.Count, $"topology: {dbToplogy}");
+                Assert.True(1 == rehabs, $"topology: {dbToplogy}");
                 Assert.Equal(groupSize - 1, dbToplogy.Members.Count);
             }
 

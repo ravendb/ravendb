@@ -499,7 +499,10 @@ namespace Raven.Server.ServerWide
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
                         if (result != null)
                             leader?.SetStateOf(index, result);
-
+                        break;
+                        
+                    case nameof(DelayBackupCommand):
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
                         break;
 
                     case nameof(AddOrUpdateCompareExchangeCommand):
@@ -595,7 +598,7 @@ namespace Raven.Server.ServerWide
                         var parameters = UpdateValue<ToggleServerWideTaskStateCommand.Parameters>(context, type, cmd, index, skipNotifyValueChanged: true);
                         ToggleServerWideTaskState(cmd, parameters, context, type, index);
                         break;
-
+                        
                     case nameof(PutCertificateWithSamePinningHashCommand):
                         PutCertificate(context, type, cmd, index, serverStore);
                         if (cmd.TryGet(nameof(PutCertificateWithSamePinningHashCommand.Name), out string thumbprint))
@@ -1452,7 +1455,7 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(type, index, exception, updateCommand);
-                NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null);
+                NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, updateCommand?.GetState());
             }
         }
 
@@ -4300,7 +4303,7 @@ namespace Raven.Server.ServerWide
             // we don't mind indexForValueChanges for ServerWideExternalReplication
             ApplyDatabaseRecordUpdates(toUpdate, type, serverWideExternalReplication.TaskId, index, items, context);
         }
-
+        
         private static unsafe HashSet<string> GetAllSeverWideExternalReplicationNames(ClusterOperationContext context)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);

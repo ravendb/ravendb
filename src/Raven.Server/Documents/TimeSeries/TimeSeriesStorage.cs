@@ -2388,7 +2388,7 @@ namespace Raven.Server.Documents.TimeSeries
         public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, long etag, long take) =>
             GetTimeSeries(context, etag, long.MaxValue, take);
 
-        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeries(DocumentsOperationContext context, long fromEtag, long toEtag, long take = long.MaxValue)
+        private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeries(DocumentsOperationContext context, long fromEtag, long toEtag, long take = long.MaxValue)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 

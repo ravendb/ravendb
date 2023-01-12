@@ -69,6 +69,17 @@ namespace Raven.Client.Documents.Operations.Replication
                 {
                     throw new InvalidOperationException("Your server is unsecured and therefore you can't define pull replication with a certificate.");
                 }
+
+                if (WithFiltering)
+                {
+                    throw new InvalidOperationException($"Server must be secured in order to use filtering in pull replication {Name}.");
+                }
+
+                if (Mode.HasFlag(PullReplicationMode.SinkToHub))
+                {
+                    throw new InvalidOperationException(
+                        $"Server must be secured in order to use {nameof(Mode)} {nameof(PullReplicationMode.SinkToHub)} in pull replication {Name}");
+                }
             }
         }
 

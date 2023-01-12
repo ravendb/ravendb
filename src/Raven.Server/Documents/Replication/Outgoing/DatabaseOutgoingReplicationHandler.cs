@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public event Action<DatabaseOutgoingReplicationHandler> DocumentsSend;
 
         protected DatabaseOutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo)
-        : base(connectionInfo, parent._server, database.Name, node, database.DocumentsStorage.ContextPool, database.DatabaseShutdown)
+        : base(connectionInfo, parent._server, database.Name, database.NotificationCenter, node, database.DocumentsStorage.ContextPool, database.DatabaseShutdown)
         {
             _parent = parent;
             _database = database;

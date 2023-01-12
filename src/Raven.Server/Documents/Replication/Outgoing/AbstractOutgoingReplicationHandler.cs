@@ -22,7 +22,9 @@ using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Tcp.Sync;
@@ -46,6 +48,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         private readonly ServerStore _server;
         private readonly DateTime _startedAt = DateTime.UtcNow;
         private readonly string _databaseName;
+        private readonly AbstractDatabaseNotificationCenter _notificationCenter;
         private OutgoingReplicationStatsScope _statsInstance;
         private string _outgoingReplicationThreadName;
         internal readonly ReplicationDocumentSenderBase.ReplicationStats _stats = new ReplicationDocumentSenderBase.ReplicationStats();
@@ -89,12 +92,13 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         public virtual string FromToString => $"from {_databaseName} at {_server.NodeTag} to {Destination.FromString()}";
 
-        protected AbstractOutgoingReplicationHandler(TcpConnectionInfo connectionInfo, ServerStore server, string databaseName, ReplicationNode node,
+        protected AbstractOutgoingReplicationHandler(TcpConnectionInfo connectionInfo, ServerStore server, string databaseName, AbstractDatabaseNotificationCenter notificationCenter, ReplicationNode node,
             TContextPool contextPool, CancellationToken token)
         {
             _connectionInfo = connectionInfo;
             _server = server;
             _databaseName = databaseName;
+            _notificationCenter = notificationCenter;
             _contextPool = contextPool;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
             _connectionDisposed = new AsyncManualResetEvent(token);
@@ -401,8 +405,11 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     }
 
                     if (++MissingAttachmentsRetries > 1)
-                        RaiseAlertAndThrowMissingAttachmentException($"Failed to send batch successfully to {Destination.FromString()}. " +
-                                                                     $"Destination reported missing attachments {MissingAttachmentsRetries} times.");
+                    {
+                        var msg = $"Failed to send batch successfully to {Destination.FromString()}. " +
+                                  $"Destination reported missing attachments {MissingAttachmentsRetries} times.";
+                        RaiseAlertAndThrowMissingAttachmentException(msg, replicationBatchReply.Exception);
+                    }
 
                     break;
 
@@ -415,7 +422,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return replicationBatchReply;
         }
 
-        private void RaiseAlertAndThrowMissingAttachmentException(string msg)
+        private void RaiseAlertAndThrowMissingAttachmentException(string msg, string exceptionDetails)
         {
             if (Logger.IsInfoEnabled)
             {
@@ -423,14 +430,15 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     $"Received reply for replication batch from {Destination.FromString()}. Error string received = {msg}");
             }
 
-            Server.NotificationCenter.Add(AlertRaised.Create(
+            _notificationCenter.Add(AlertRaised.Create(
                 _databaseName,
                 "Replication delay due to a missing attachments loop",
-                msg,
+                msg + $"{Environment.NewLine}Please try to delete the missing attachment from '{_databaseName}' (see additional information regarding the document and attachment below)",
                 AlertType.Replication,
-                NotificationSeverity.Error));
+                NotificationSeverity.Error,
+                details: new ExceptionDetails { Exception = exceptionDetails}));
 
-            throw new MissingAttachmentException(msg);
+            throw new MissingAttachmentException($"{msg}.{Environment.NewLine}{exceptionDetails}");
         }
 
         protected virtual DynamicJsonValue GetInitialHandshakeRequest()

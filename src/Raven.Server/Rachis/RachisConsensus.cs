@@ -2094,34 +2094,48 @@ namespace Raven.Server.Rachis
 
         public string HardResetToNewCluster(string nodeTag = "A")
         {
-            using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-            using (var tx = ctx.OpenWriteTransaction())
+            var topologyId = Guid.NewGuid().ToString();
+            bool committed = false;
+            try
             {
-                var topologyId = Guid.NewGuid().ToString();
-                var topology = new ClusterTopology(
-                    topologyId,
-                    new Dictionary<string, string>
-                    {
-                        [nodeTag] = Url
-                    },
-                    new Dictionary<string, string>(),
-                    new Dictionary<string, string>(),
-                    _tag,
-                    GetLastEntryIndex(ctx) + 1
-                );
+                using (ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+                using (var tx = ctx.OpenWriteTransaction())
+                {
 
-                UpdateNodeTag(ctx, nodeTag);
+                    var topology = new ClusterTopology(
+                        topologyId,
+                        new Dictionary<string, string>
+                        {
+                            [nodeTag] = Url
+                        },
+                        new Dictionary<string, string>(),
+                        new Dictionary<string, string>(),
+                        _tag,
+                        GetLastEntryIndex(ctx) + 1
+                    );
 
-                SetTopology(this, ctx, topology);
+                    UpdateNodeTag(ctx, nodeTag);
 
-                SetSnapshotRequest(ctx, false);
+                    SetTopology(this, ctx, topology);
 
-                SwitchToSingleLeader(ctx);
+                    SetSnapshotRequest(ctx, false);
 
-                tx.Commit();
+                    SwitchToSingleLeader(ctx);
 
-                return topologyId;
+                    tx.Commit();
+
+                    if(ctx.Transaction.InnerTransaction.LowLevelTransaction.Committed)
+                        committed = true;
+                }
             }
+            catch(ConcurrencyException) when(committed)
+            {
+                // Thrown in tx OnDispose (which is set in SwitchToSingleLeader)
+                // Happens when old Leader.Run->SwitchToCandidateState->SwitchToSingleLeader runs
+                // And then HardResetToNewCluster->SwitchToSingleLeader runs in parallel.
+                // In the second call of the SwitchToSingleLeader the 'leader.Run()' throws because it's term isn't updated.
+            }
+            return topologyId;
         }
 
         public void HardResetToPassive(string topologyId = null)

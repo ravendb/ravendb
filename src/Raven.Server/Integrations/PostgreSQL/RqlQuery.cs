@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO.Pipelines;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -80,7 +81,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         protected virtual async Task<ICollection<PgColumn>> GenerateSchema()
         {
-            Document sample;
+            List<Document> samples;
 
             if (_result == null || _result?.Count == 0)
             {
@@ -95,67 +96,92 @@ namespace Raven.Server.Integrations.PostgreSQL
                 if (results == null || results.Count == 0)
                     return Array.Empty<PgColumn>();
 
-                sample = results[0];
+                samples = results;
             }
             else
             {
-                sample = _result[0];
+                samples = _result;
             }
 
             var resultsFormat = GetDefaultResultsFormat();
 
-            if (sample.Id != null)
+            if (samples[0].Id != null)
                 Columns[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = new PgColumn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, (short)Columns.Count, PgText.Default, resultsFormat);
 
             BlittableJsonReaderObject.PropertyDetails prop = default;
-
-            // Go over sample's columns
-            var properties = sample.Data.GetPropertyNames();
-            for (var i = 0; i < properties.Length; i++)
+            
+            // If there's a null value in a particular column of the record, don't write null type to the schema.
+            // Instead, iterate over results trying to find a record with the value filled in this column.
+            // Keep 'unchecked type' columns names in the list below. 
+            var uncheckedTypePropertiesNames = samples[0].Data.GetPropertyNames().ToList();
+            
+            // Skip metadata() column, so it will be added later to json() column
+            uncheckedTypePropertiesNames.Remove(Constants.Documents.Metadata.Key);
+            
+            // Fulfill the 'Columns' to prevent losing the order later.
+            // Assign them null type (PgJson.Default) at the start.
+            foreach (var property in uncheckedTypePropertiesNames.ToArray())
+                Columns.TryAdd(property, new PgColumn(property, (short)Columns.Count, PgJson.Default, resultsFormat));
+            
+            // Go through results - we'll try to find all properties types.
+            for (int sampleIndex = 0; sampleIndex < samples.Count && sampleIndex < 1000; sampleIndex++)
             {
-                // Using GetPropertyIndex to get the properties in the right order
-                var propIndex = sample.Data.GetPropertyIndex(properties[i]);
-                sample.Data.GetPropertyByIndex(propIndex, ref prop);
-
-                // Skip this column, will be added later to json() column
-                if (prop.Name == Constants.Documents.Metadata.Key)
-                    continue;
-
-                PgType pgType = (prop.Token & BlittableJsonReaderBase.TypesMask) switch
+                Document sample = samples[sampleIndex];
+                
+                // Iterate over the columns which type hasn't been figured out yet
+                var uncheckedTypePropertiesNamesCopy = uncheckedTypePropertiesNames.ToArray();
+                foreach (var propertyName in uncheckedTypePropertiesNamesCopy)
                 {
-                    BlittableJsonToken.CompressedString => PgText.Default,
-                    BlittableJsonToken.String => PgText.Default,
-                    BlittableJsonToken.Boolean => PgBool.Default,
-                    BlittableJsonToken.EmbeddedBlittable => PgJson.Default,
-                    BlittableJsonToken.Integer => PgInt8.Default,
-                    BlittableJsonToken.LazyNumber => PgFloat8.Default,
-                    BlittableJsonToken.Null => PgJson.Default,
-                    BlittableJsonToken.StartArray => PgJson.Default,
-                    BlittableJsonToken.StartObject => PgJson.Default,
-                    _ => throw new NotSupportedException()
-                };
-
-                var processedString = (prop.Token & BlittableJsonReaderBase.TypesMask) switch
-                {
-                    BlittableJsonToken.CompressedString => (string)(LazyCompressedStringValue)prop.Value,
-                    BlittableJsonToken.String => (LazyStringValue)prop.Value,
-                    _ => null
-                };
-
-                if (processedString != null 
-                    && TypeConverter.TryConvertStringValue(processedString, out var output))
-                {
-                    pgType = output switch
+                    // Using GetPropertyIndex to get the properties in the right order
+                    var propIndex = sample.Data.GetPropertyIndex(propertyName);
+                    sample.Data.GetPropertyByIndex(propIndex, ref prop);
+                    
+                    if (prop.Value == null)
+                        continue;  // nothing to do here.
+                
+                    var bjt = prop.Token & BlittableJsonReaderBase.TypesMask;
+                    PgType pgType = bjt switch
                     {
-                        DateTime dt => (dt.Kind == DateTimeKind.Utc) ? PgTimestampTz.Default : PgTimestamp.Default,
-                        DateTimeOffset => PgTimestampTz.Default,
-                        TimeSpan => PgInterval.Default,
-                        _ => pgType
+                        BlittableJsonToken.CompressedString => PgText.Default,
+                        BlittableJsonToken.String => PgText.Default,
+                        BlittableJsonToken.Boolean => PgBool.Default,
+                        BlittableJsonToken.EmbeddedBlittable => PgJson.Default,
+                        BlittableJsonToken.Integer => PgInt8.Default,
+                        BlittableJsonToken.LazyNumber => PgFloat8.Default,
+                        BlittableJsonToken.Null => PgJson.Default, // it should never hit that case by design
+                        BlittableJsonToken.StartArray => PgJson.Default,
+                        BlittableJsonToken.StartObject => PgJson.Default,
+                        _ => throw new NotSupportedException()
                     };
+
+                    var processedString = (prop.Token & BlittableJsonReaderBase.TypesMask) switch
+                    {
+                        BlittableJsonToken.CompressedString => (string)(LazyCompressedStringValue)prop.Value,
+                        BlittableJsonToken.String => (LazyStringValue)prop.Value,
+                        _ => null
+                    };
+
+                    if (processedString != null
+                        && TypeConverter.TryConvertStringValue(processedString, out var output))
+                    {
+                        pgType = output switch
+                        {
+                            DateTime dt => (dt.Kind == DateTimeKind.Utc) ? PgTimestampTz.Default : PgTimestamp.Default,
+                            DateTimeOffset => PgTimestampTz.Default,
+                            TimeSpan => PgInterval.Default,
+                            _ => pgType
+                        };
+                    }
+
+                    uncheckedTypePropertiesNames.Remove(propertyName);
+                    Columns[propertyName] = new PgColumn(propertyName, Columns[propertyName].ColumnIndex, pgType, resultsFormat);
                 }
 
-                Columns.TryAdd(prop.Name, new PgColumn(prop.Name, (short)Columns.Count, pgType, resultsFormat));
+                // If we're finished, break
+                if (uncheckedTypePropertiesNames.Count == 0)
+                    break;
             }
+
 
             if (Columns.TryGetValue(Constants.Documents.Querying.Fields.PowerBIJsonFieldName, out var jsonColumn))
             {

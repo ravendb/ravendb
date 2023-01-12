@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -16,7 +18,9 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
@@ -30,6 +34,7 @@ namespace Raven.Server.Documents.PeriodicBackup
     public class PeriodicBackupRunner : ITombstoneAware, IDisposable
     {
         private readonly Logger _logger;
+        private readonly Logger _auditLog;
 
         private readonly DocumentDatabase _database;
         private readonly ServerStore _serverStore;
@@ -56,6 +61,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _database = database;
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<PeriodicBackupRunner>(_database.Name);
+            _auditLog = LoggingSource.AuditLog.GetLogger(_database.Name, "Audit");
             _cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
             _tempBackupPath = BackupUtils.GetBackupTempPath(_database.Configuration, "PeriodicBackupTemp");
 
@@ -319,6 +325,68 @@ namespace Raven.Server.Documents.PeriodicBackup
             return CreateBackupTask(periodicBackup, isFullBackup, SystemTime.UtcNow, operationId);
         }
 
+        public async Task DelayAsync(long taskId, TimeSpan delay, X509Certificate2 clientCert, CancellationToken token)
+        {
+            foreach (var periodicBackup in _periodicBackups)
+            {
+                var runningTask = periodicBackup.Value.RunningTask;
+                if (runningTask == null || runningTask.Id != taskId)
+                    continue;
+
+                var delayUntil = DateTime.UtcNow.AddTicks(delay.Ticks);
+
+                var command = new DelayBackupCommand(_database.Name, RaftIdGenerator.NewId())
+                {
+                    TaskId = periodicBackup.Key,
+                    DelayUntil = delayUntil
+                };
+
+                try
+                {
+                    (long index, _) = await _database.ServerStore.SendToLeaderAsync(command);
+                    await _database.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        var msg =
+                            $"Fail to delay backup task with task id '{taskId}' cluster-wide, the task was delayed until '{delayUntil}' UTC only on the current node.";
+                        
+                        _logger.Operations(msg, e);
+                    }
+                }
+
+                if (_auditLog.IsInfoEnabled)
+                {
+                    var msg = $"Backup task with task id '{taskId}' was delayed until '{delayUntil}' UTC";
+
+                    if (clientCert != null)
+                        msg += $" by {clientCert.Subject} ({clientCert.Thumbprint})";
+
+                    _auditLog.Info(msg);
+                }
+
+                periodicBackup.Value.BackupStatus.DelayUntil = delayUntil;
+
+                _forTestingPurposes?.OnBackupTaskRunHoldBackupExecution?.SetResult(null);
+                await _database.Operations.KillOperationAsync(taskId, token);
+                
+                try
+                {
+                    await runningTask.Task; // wait for the running task to complete
+                }
+                catch
+                {
+                    // task has ended, nothing we can do here
+                }
+                
+                return;
+            }
+
+            throw new InvalidOperationException($"Fail to delay backup task with task id '{taskId}', the operation with that number isn't registered");
+        }
+
         public DateTime? GetWakeDatabaseTimeUtc(string databaseName)
         {
             if (_periodicBackups.Count == 0)
@@ -512,8 +580,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                     tcs.SetResult(backupResult);
                 }
             }
-            catch (OperationCanceledException oce)
+            catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
             {
+                if (_periodicBackups.TryGetValue(periodicBackup.BackupStatus.TaskId, out PeriodicBackup inMemoryBackupStatus))
+                    runningBackupStatus.DelayUntil = inMemoryBackupStatus.BackupStatus.DelayUntil;
+
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations($"Canceled the backup thread: '{periodicBackup.Configuration.Name}'", oce);
 
@@ -644,9 +715,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_periodicBackups.TryGetValue(taskId, out PeriodicBackup periodicBackup))
                 inMemoryBackupStatus = periodicBackup.BackupStatus;
 
+            if (_forTestingPurposes != null && _forTestingPurposes.BackupStatusFromMemoryOnly)
+                return inMemoryBackupStatus;
+            
             return GetBackupStatus(taskId, inMemoryBackupStatus);
         }
-
+        
         private PeriodicBackupStatus GetBackupStatus(long taskId, PeriodicBackupStatus inMemoryBackupStatus)
         {
             var backupStatus = GetBackupStatusFromCluster(_serverStore, _database.Name, taskId);
@@ -985,8 +1059,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                           $"full backup frequency: {configuration.FullBackupFrequency}, " +
                           $"incremental backup frequency: {configuration.IncrementalBackupFrequency}";
             if (string.IsNullOrWhiteSpace(configuration.Name) == false)
-                    message += $", backup name: {configuration.Name}";
-            
+                message += $", backup name: {configuration.Name}";
+
             _database.NotificationCenter.Add(AlertRaised.Create(
                 _database.Name,
                 "Couldn't schedule next backup, this shouldn't happen",
@@ -1078,6 +1152,24 @@ namespace Raven.Server.Documents.PeriodicBackup
                 .ToList();
         }
 
+        public void HandleDatabaseValueChanged(string type, object changeState)
+        {
+            if (type != nameof(DelayBackupCommand))
+                return;
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var state = (DelayBackupCommand.DelayBackupCommandState)changeState;
+                if (_periodicBackups.TryGetValue(state.TaskId, out var periodicBackup) == false)
+                    throw new InvalidOperationException($"Backup task id: {state.TaskId} doesn't exist");
+
+                periodicBackup.BackupStatus ??= new PeriodicBackupStatus();
+                periodicBackup.BackupStatus.DelayUntil = state.DelayUntil;
+                ScheduleNextBackup(periodicBackup, state.DelayUntil.Subtract(DateTime.UtcNow), lockTaken: false);
+            }
+        }
+
         internal TestingStuff _forTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
@@ -1097,6 +1189,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             internal bool SimulateActiveByCurrentNode_UpdateConfigurations;
             internal bool SimulateDisableNodeStatus_UpdateConfigurations;
             internal bool SimulateFailedBackup;
+            internal bool BackupStatusFromMemoryOnly;
 
             internal TaskCompletionSource<object> OnBackupTaskRunHoldBackupExecution;
 

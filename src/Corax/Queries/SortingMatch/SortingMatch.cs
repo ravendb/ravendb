@@ -1,12 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
+using Sparrow.Server.Utils;
 using static Corax.Queries.SortingMatch;
 
 namespace Corax.Queries
@@ -17,7 +20,7 @@ namespace Corax.Queries
         where TComparer : struct, IMatchComparer
     {
         private readonly IndexSearcher _searcher;
-        private readonly IQueryMatch _inner;        
+        private IQueryMatch _inner;        
         private readonly TComparer _comparer;
         private readonly int _take;
         private readonly bool _isScoreComparer;
@@ -126,7 +129,7 @@ namespace Corax.Queries
 
 
         [SkipLocalsInit]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static int FillScore(ref SortingMatch<TInner, TComparer> match, Span<long> matches)
         {
             // Important: If you are going to request a massive take like 20K you need to pass at least a 20K size buffer to work with.
@@ -261,9 +264,10 @@ namespace Corax.Queries
             int totalMatches = match._inner.Fill(matches);
             if (totalMatches == 0)
                 return 0;
-            
+
             int matchesArraySize = sizeof(long) * matches.Length;
             int itemArraySize = 2 * Unsafe.SizeOf<MatchComparer<TComparer, TOut>.Item>() * matches.Length;
+
             using var _ = match._searcher.Allocator.Allocate(itemArraySize + matchesArraySize, out var bufferHolder);
 
             var itemKeys = MemoryMarshal.Cast<byte, MatchComparer<TComparer, TOut>.Item>(bufferHolder.ToSpan().Slice(0, itemArraySize));
@@ -275,7 +279,7 @@ namespace Corax.Queries
             var bKeys = itemKeys.Slice(matches.Length, matches.Length);
             Debug.Assert(bKeys.Length == matches.Length);
 
-            int take = match._take <= 0 ? matches.Length : Math.Min(matches.Length, match._take);
+            int take = match._take <= 0 ? totalMatches : Math.Min(totalMatches, match._take);
 
             match.TotalResults += totalMatches;
 
