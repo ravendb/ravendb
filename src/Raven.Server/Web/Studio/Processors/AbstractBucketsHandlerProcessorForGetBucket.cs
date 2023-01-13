@@ -54,7 +54,7 @@ namespace Raven.Server.Web.Studio.Processors
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var pathBuilder = new StringBuilder(node.Url);
-            pathBuilder.Append($"/databases/{node.Database}/debug/bucket?");
+            pathBuilder.Append($"/databases/{node.Database}/debug/sharding/bucket?");
             pathBuilder.Append($"&bucket={_bucket}");
             
             var request = new HttpRequestMessage {Method = HttpMethod.Get,};

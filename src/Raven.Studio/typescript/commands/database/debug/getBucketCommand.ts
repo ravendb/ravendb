@@ -12,7 +12,7 @@ class getBucketCommand extends commandBase {
         const args = {
             bucket: this.bucket
         }
-        const url = endpoints.databases.buckets.debugBucket + this.urlEncodeArgs(args);
+        const url = endpoints.databases.buckets.debugShardingBucket + this.urlEncodeArgs(args);
         return this.query<Raven.Server.Web.Studio.Processors.BucketInfo>(url, null, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to load bucket", response.responseText, response.statusText));
     }
