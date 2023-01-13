@@ -1505,6 +1505,7 @@ class normalCrudActions implements editDocumentCrudActions {
                         .filter(x => x.CounterName.toLocaleLowerCase().includes(nameFilter));
                 }
                 const mappedResults = result.Counters
+                    .filter(x => x) //RavenDB-19823 - server return nulls in counters -> then ignore it
                     .map(x => normalCrudActions.resultItemToCounterItem(x));
 
                 fetchTask.resolve({
