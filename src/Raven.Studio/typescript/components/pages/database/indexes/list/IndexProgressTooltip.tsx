@@ -1,21 +1,21 @@
-﻿import { IndexingProgress, IndexNodeInfo, IndexNodeInfoDetails, IndexSharedInfo } from "../../../../models/indexes";
+﻿import { IndexingProgress, IndexNodeInfo, IndexNodeInfoDetails, IndexSharedInfo } from "components/models/indexes";
 
 import moment = require("moment");
 
 import React from "react";
-import { PopoverWithHover } from "../../../../common/PopoverWithHover";
+import { PopoverWithHover } from "components/common/PopoverWithHover";
 import classNames from "classnames";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import IndexUtils from "../../../../utils/IndexUtils";
 import genUtils from "common/generalUtils";
-import { withPreventDefault } from "../../../../utils/common";
-import { StatePill, StatePillColor } from "../../../../common/StatePill";
+import { withPreventDefault } from "components/utils/common";
+import { StatePill, StatePillColor } from "components/common/StatePill";
 import {
     LocationSpecificDetails,
     LocationSpecificDetailsItem,
     LocationSpecificDetailsItemsContainer,
-} from "../../../../common/LocationSpecificDetails";
-import { NamedProgress, NamedProgressItem } from "../../../../common/NamedProgress";
+} from "components/common/LocationSpecificDetails";
+import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 
 interface IndexProgressTooltipProps {
     target: string;

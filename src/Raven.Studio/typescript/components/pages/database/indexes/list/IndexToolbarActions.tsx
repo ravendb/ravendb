@@ -1,17 +1,9 @@
 ﻿import React, { useCallback, useState } from "react";
 import { useAppUrls } from "hooks/useAppUrls";
 import classNames from "classnames";
-import { withPreventDefault } from "../../../../utils/common";
+import { withPreventDefault } from "components/utils/common";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
-import {
-    Button,
-    ButtonGroup,
-    DropdownItem,
-    DropdownMenu,
-    DropdownToggle,
-    Spinner,
-    UncontrolledDropdown,
-} from "reactstrap";
+import { Button, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
 
 interface IndexToolbarActionProps {
     selectedIndexes: string[];
