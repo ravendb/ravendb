@@ -47,19 +47,21 @@ namespace Raven.Server.Smuggler.Documents
         private GZipStream _gzipStream;
         private readonly JsonOperationContext _context;
         private readonly ISmugglerSource _source;
+        private readonly CompressionLevel _compressionLevel;
         private AsyncBlittableJsonTextWriter _writer;
         private DatabaseSmugglerOptionsServerSide _options;
         private Func<LazyStringValue, bool> _filterMetadataProperty;
-        public StreamDestination(Stream stream, JsonOperationContext context, ISmugglerSource source)
+        public StreamDestination(Stream stream, JsonOperationContext context, ISmugglerSource source, CompressionLevel compressionLevel = CompressionLevel.Optimal)
         {
             _stream = stream;
             _context = context;
             _source = source;
+            _compressionLevel = compressionLevel;
         }
 
         public virtual ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
-            _gzipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
+            _gzipStream = new GZipStream(_stream, _compressionLevel, leaveOpen: true);
             _writer = new AsyncBlittableJsonTextWriter(_context, _gzipStream);
             _options = options;
 
