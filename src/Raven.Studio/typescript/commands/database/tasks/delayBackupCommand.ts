@@ -4,8 +4,17 @@ import endpoints = require("endpoints");
 
 
 class delayBackupCommand extends commandBase {
-    constructor(private db: database, private taskId: number, private duration: string) {
+    private db: database;
+
+    private readonly taskId: number;
+
+    private readonly duration: string;
+
+    constructor(db: database, taskId: number, duration: string) {
         super();
+        this.duration = duration;
+        this.taskId = taskId;
+        this.db = db;
     }
  
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Backups.StartBackupOperationResult> {
