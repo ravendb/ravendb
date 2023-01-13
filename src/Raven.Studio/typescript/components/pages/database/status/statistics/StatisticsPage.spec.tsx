@@ -36,11 +36,12 @@ describe("StatisticsPage", function () {
     it("can render stats w/o details", async () => {
         const { databasesService } = mockServices;
 
-        databasesService.withEssentialStats();
+        const stats = databasesService.withEssentialStats();
 
         const { screen } = render();
 
         expect(await screen.findByText(selectors.documentsCount)).toBeInTheDocument();
+        expect(await screen.findByText(stats.CountOfIndexes)).toBeInTheDocument();
     });
 
     it("can render stats w/ details", async () => {

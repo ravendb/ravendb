@@ -5,10 +5,14 @@ interface LazyLoadProps {
     active?: boolean;
 }
 
-export function LazyLoad(props: LazyLoadProps) {
+export function LazyLoad(props: LazyLoadProps): JSX.Element {
     const { children, active } = props;
 
-    return <>{active ? <div className="lazy-load">{children}</div> : <>{children}</>}</>;
+    if (active) {
+        return <div className="lazy-load">{children}</div>;
+    }
+
+    return <React.Fragment>{children}</React.Fragment>;
 }
 
 LazyLoad.defaultProps = {

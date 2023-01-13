@@ -1,13 +1,13 @@
 ﻿import database from "models/resources/database";
 import React, { useCallback } from "react";
-import { useServices } from "hooks/useServices";
 import { EssentialDatabaseStatsComponent } from "./EssentialDatabaseStatsComponent";
 import { useAppUrls } from "hooks/useAppUrls";
 import { DetailedDatabaseStats } from "./DetailedDatabaseStats";
 import { IndexesDatabaseStats } from "./IndexesDatabaseStats";
-import { Button, Col, Row } from "reactstrap";
+import { Button, Col, Row, Spinner } from "reactstrap";
 import useBoolean from "hooks/useBoolean";
-import { useAsync } from "react-async-hook";
+import classNames from "classnames";
+import { useStatisticsController } from "components/pages/database/status/statistics/useStatisticsController";
 
 interface StatisticsPageProps {
     database: database;
@@ -15,29 +15,31 @@ interface StatisticsPageProps {
 
 export function StatisticsPage(props: StatisticsPageProps) {
     const { database } = props;
-    const { databasesService } = useServices();
 
-    const fetchEssentialStats = useCallback(
-        async (database: database) => databasesService.getEssentialStats(database),
-        [databasesService]
-    );
+    const {
+        essentialStats,
+        essentialStatsError,
+        perNodeDbStats,
+        perNodeIndexStats,
+        refresh,
+        detailsVisible,
+        toggleDetailsVisible,
+    } = useStatisticsController(database);
 
-    const { loading, error, result: essentialStats, execute } = useAsync(fetchEssentialStats, [database]);
-    const { value: dbDetailsVisible, toggle: toggleDbDetailsVisible } = useBoolean(false);
+    const { value: spinnerRefresh, setValue: setSpinnerRefresh } = useBoolean(false);
 
-    const reloadStats = () => execute(database);
+    const reloadStats = async () => {
+        setSpinnerRefresh(true);
+        try {
+            await refresh();
+        } finally {
+            setSpinnerRefresh(false);
+        }
+    };
+
     const rawJsonUrl = useAppUrls().appUrl.forEssentialStatsRawData(database);
 
-    if (loading) {
-        return (
-            <div>
-                <i className="btn-spinner margin-right" />
-                <span>Loading...</span>
-            </div>
-        );
-    }
-
-    if (error) {
+    if (essentialStatsError) {
         return (
             <div>
                 Error loading data...
@@ -64,24 +66,31 @@ export function StatisticsPage(props: StatisticsPageProps) {
                     </h2>
                 </Col>
                 <Col sm="auto">
-                    <Button color="primary" onClick={toggleDbDetailsVisible} title="Click to load detailed statistics">
-                        <span>{dbDetailsVisible ? "Hide" : "Show"} details</span>
+                    <Button color="primary" onClick={toggleDetailsVisible} title="Click to load detailed statistics">
+                        <i className={classNames(detailsVisible ? "icon-collapse-vertical" : "icon-expand-vertical")} />
+                        <span>{detailsVisible ? "Hide" : "Show"} details</span>
                     </Button>
                     <Button
                         color="primary"
                         onClick={reloadStats}
+                        disabled={spinnerRefresh}
                         className="margin-left-xs"
                         title="Click to refresh stats"
                     >
-                        <i className="icon-refresh"></i>
+                        {spinnerRefresh ? <Spinner size="sm" /> : <i className="icon-refresh"></i>}
                         <span>Refresh</span>
                     </Button>
                 </Col>
             </Row>
+            
             <EssentialDatabaseStatsComponent stats={essentialStats} />
 
-            {dbDetailsVisible && <DetailedDatabaseStats key="db-stats" database={database} />}
-            {dbDetailsVisible && <IndexesDatabaseStats key="index-stats" database={database} />}
+            {detailsVisible && (
+                <DetailedDatabaseStats key="db-stats" database={database} perNodeStats={perNodeDbStats} />
+            )}
+            {detailsVisible && (
+                <IndexesDatabaseStats key="index-stats" perNodeStats={perNodeIndexStats} database={database} />
+            )}
         </div>
     );
 }
