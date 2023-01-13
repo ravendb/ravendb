@@ -268,6 +268,7 @@ namespace Raven.Client
                 internal const string OrderByFields = "@order-by-fields";
 
                 internal const string ShardNumber = "@shard-number";
+                internal const string SuggestionPopularityFields = "@suggestions-popularity";
             }
 
             public class Collections

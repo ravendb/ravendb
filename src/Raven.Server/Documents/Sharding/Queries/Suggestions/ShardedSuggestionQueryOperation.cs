@@ -1,13 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
+using NuGet.Packaging;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Executors;
@@ -59,7 +64,9 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
             ResultEtag = _combinedResultEtag
         };
 
-        var suggestions = new Dictionary<string, HashSet<string>>();
+        var suggestions = new Dictionary<string, AggregatedSuggestions>();
+
+        var deserializer = DocumentConventions.DefaultForServer.Serialization.DefaultConverter;
 
         foreach (var cmdResult in results.Values)
         {
@@ -83,31 +90,84 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
                     result.RaftCommandIndex = queryRes.RaftCommandIndex;
             }
 
-            foreach (BlittableJsonReaderObject suggestion in cmdResult.Result.Results)
+            foreach (BlittableJsonReaderObject suggestionJson in cmdResult.Result.Results)
             {
-                var suggestionResult = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<SuggestionResult>(suggestion, "suggestion/result"); // TODO arek
+                var suggestionResult = deserializer.FromBlittable<SuggestionResult>(suggestionJson, "suggestion/result");
 
-                if (suggestionResult.Suggestions.Count == 0 )
+                if (suggestionResult.Suggestions.Count == 0)
                     continue;
+                
+                BlittableJsonReaderArray popularityMetadata = null;
 
-                if (suggestions.ContainsKey(suggestionResult.Name) == false)
-                    suggestions[suggestionResult.Name] = new HashSet<string>(suggestionResult.Suggestions);
+                if (suggestionJson.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+                    metadata.TryGet(Constants.Documents.Metadata.SuggestionPopularityFields, out popularityMetadata);
+
+                var fieldName = suggestionResult.Name;
+
+                if (suggestions.TryGetValue(fieldName, out AggregatedSuggestions aggregatedSuggestion) == false)
+                {
+                    aggregatedSuggestion = new AggregatedSuggestions { Suggestions = new HashSet<string>(suggestionResult.Suggestions) };
+                    suggestions[fieldName] = aggregatedSuggestion;
+                }
                 else
                 {
-                    foreach (string s in suggestionResult.Suggestions)
-                    {
-                        suggestions[suggestionResult.Name].Add(s);
-                    }
+                    aggregatedSuggestion = suggestions[fieldName];
                 }
+
+                if (popularityMetadata is { Length: > 0 })
+                    AddPopularity(popularityMetadata, aggregatedSuggestion, suggestionResult);
             }
         }
-
-        result.Results = suggestions.Select(x => new SuggestionResult
+        
+        result.Results = suggestions.Select(x =>
         {
-            Name = x.Key,
-            Suggestions = x.Value.ToList()
+            IEnumerable<string> aggregatedSuggestions;
+
+            if (x.Value.SuggestionsWithPopularity is null)
+                aggregatedSuggestions = x.Value.Suggestions;
+            else
+                aggregatedSuggestions = x.Value.SuggestionsWithPopularity.Values.OrderByDescending(suggestWord => suggestWord).Select(suggestWord => suggestWord.Term).ToArray();
+
+            return new SuggestionResult {Name = x.Key, Suggestions = aggregatedSuggestions.ToList() };
         }).ToList();
 
         return result;
+
+        void AddPopularity(BlittableJsonReaderArray popularityArray, AggregatedSuggestions aggregatedSuggestion, SuggestionResult suggestionResult)
+        {
+            var i = 0;
+
+            aggregatedSuggestion.SuggestionsWithPopularity ??= new Dictionary<string, SuggestWord>();
+
+            foreach (BlittableJsonReaderObject pJson in popularityArray.Cast<BlittableJsonReaderObject>())
+            {
+                var p = deserializer.FromBlittable<SuggestionResultWithPopularity.Popularity>(pJson, "suggestion/popularity");
+
+                aggregatedSuggestion.AddSuggestionPopularity(suggestionResult.Suggestions[i++], p);
+            }
+        }
+    }
+
+    private class AggregatedSuggestions
+    {
+        public HashSet<string> Suggestions { get; set; }
+
+        public Dictionary<string, SuggestWord> SuggestionsWithPopularity { get; set; }
+
+        public void AddSuggestionPopularity(string suggestion, SuggestionResultWithPopularity.Popularity popularity)
+        {
+            var suggestWord = new SuggestWord
+            {
+                Term = suggestion,
+                Freq = popularity.Freq,
+                Score = popularity.Score
+            };
+
+            if (SuggestionsWithPopularity.TryAdd(suggestion, suggestWord) == false)
+            {
+                SuggestionsWithPopularity[suggestion].Freq += popularity.Freq;
+                SuggestionsWithPopularity[suggestion].Score = Math.Max(SuggestionsWithPopularity[suggestion].Score, popularity.Score); // score is calculated based on distance so we get the highest value
+            }
+        }
     }
 }

@@ -1,11 +1,14 @@
-﻿namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions
+﻿using System;
+using Raven.Server.Documents.Patch;
+
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions
 {
     /// <summary>  SuggestWord Class, used in suggestSimilar method in SpellChecker class.
     /// 
     /// </summary>
     /// <author>  Nicolas Maisonneuve
     /// </author>
-    internal sealed class SuggestWord
+    internal sealed class SuggestWord : IComparable
     {
         /// <summary> the score of the word</summary>
         public float Score;
@@ -40,6 +43,14 @@
             }
 
             return 0;
+        }
+
+        public int CompareTo(object obj)
+        {
+            if (obj is SuggestWord sw == false)
+                throw new NotSupportedException($"Cannot compare to: {obj.GetType().FullName}");
+
+            return CompareTo(sw);
         }
     }
 }

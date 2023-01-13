@@ -17,7 +17,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public sealed class LuceneSuggestionIndexReader : SuggestionIndexReaderBase
+    public sealed partial class LuceneSuggestionIndexReader : SuggestionIndexReaderBase
     {
         private readonly IndexSearcher _searcher;
         private readonly IDisposable _releaseSearcher;
@@ -37,19 +37,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var options = field.GetOptions(documentsContext, query.QueryParameters) ?? new SuggestionOptions();
             var terms = field.GetTerms(documentsContext, query.QueryParameters);
 
-            var result = new SuggestionResult
+            var result =  new SuggestionResult
             {
                 Name = field.Alias ?? field.Name
             };
 
-            result.Suggestions.AddRange(terms.Count > 1
-                ? QueryOverMultipleWords(field, terms, options)
-                : QueryOverSingleWord(field, terms[0], options));
+            var suggestions = terms.Count == 1 ? 
+                QueryOverSingleWord(field, terms[0], options) : 
+                QueryOverMultipleWords(field, terms, options);
+
+            foreach (SuggestWord suggestion in suggestions)
+            {
+                result.Suggestions.Add(suggestion.Term);
+
+                if (options.SortMode == SuggestionSortMode.Popularity)
+                    AddPopularity(suggestion, ref result);
+            }
 
             return result;
         }
 
-        private static readonly string[] EmptyArray = new string[0];
+        private static readonly SuggestWord[] EmptyArray = new SuggestWord[0];
 
         /// <summary> Field name for each word in the ngram index.</summary>
         private const string FWord = "word";
@@ -59,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private const float BoostEnd = 1.0f;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string[] QueryOverSingleWord(SuggestionField field, string word, SuggestionOptions options)
+        private SuggestWord[] QueryOverSingleWord(SuggestionField field, string word, SuggestionOptions options)
         {
             // Perform devirtualization of the distance function when supported. 
             switch (options.Distance)
@@ -98,7 +106,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private string[] QueryOverSingleWord<TDistance>(SuggestionField suggestionField, string word, SuggestionOptions options, TDistance sd)
+        private SuggestWord[] QueryOverSingleWord<TDistance>(SuggestionField suggestionField, string word, SuggestionOptions options, TDistance sd)
             where TDistance : IStringDistance
         {
             var min = options.Accuracy ?? SuggestionOptions.DefaultAccuracy;
@@ -116,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             // if the word exists in the real index and we don't care for word frequency, return the word itself
             if (!morePopular && freq > 0)
             {
-                return new[] { word };
+                return new[] { new SuggestWord { Term = word } };
             }
 
             var query = new BooleanQuery();
@@ -207,10 +215,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return EmptyArray;
 
             // convert to array string
-            string[] list = new string[size];
+            SuggestWord[] list = new SuggestWord[size];
             for (int i = size - 1; i >= 0; i--)
             {
-                list[i] = queue.Pop().Term;
+                list[i] = queue.Pop();
             }
 
             return list;
@@ -263,11 +271,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return r;
         }
 
-        private string[] QueryOverMultipleWords(SuggestionField field, List<string> words, SuggestionOptions options)
+        private SuggestWord[] QueryOverMultipleWords(SuggestionField field, List<string> words, SuggestionOptions options)
         {
-            options.SortMode = SuggestionSortMode.None;
-
-            var result = new HashSet<string>();
+            var uniqueSuggestions = new HashSet<string>();
+            var result = new List<SuggestWord>();
 
             var pageSize = options.PageSize;
             foreach (var term in words)
@@ -277,8 +284,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 foreach (var suggestion in QueryOverSingleWord(field, term, options))
                 {
-                    if (result.Add(suggestion) == false)
+                    if (uniqueSuggestions.Add(suggestion.Term) == false)
                         continue;
+
+                    result.Add(suggestion);
 
                     pageSize--;
                     if (pageSize <= 0)
@@ -286,8 +295,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
+            if (options.SortMode == SuggestionSortMode.Popularity)
+                return result.OrderByDescending(x => x).ToArray();
+
             return result.ToArray();
         }
+
+        partial void AddPopularity(SuggestWord suggestion, ref SuggestionResult result);
 
         public override void Dispose()
         {
