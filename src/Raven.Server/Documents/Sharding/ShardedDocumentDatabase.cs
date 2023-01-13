@@ -57,10 +57,14 @@ public class ShardedDocumentDatabase : DocumentDatabase
         ShardedDatabaseId = shardedDatabaseId;
     }
 
+    public ShardingConfiguration ShardingConfiguration;
+
     protected override void OnDatabaseRecordChanged(DatabaseRecord record)
     {
         // this called under lock
         base.OnDatabaseRecordChanged(record);
+
+        ShardingConfiguration = record.Sharding;
 
         if (ServerStore.Sharding.ManualMigration)
             return;

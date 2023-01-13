@@ -182,7 +182,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         var bucket = ShardHelper.GetBucketFor(idPtr, idSize);
 
         var database = tx.Owner as ShardedDocumentDatabase;
-        var prefixedConfiguration = database?.ReadShardingState().Prefixed;
+        var prefixedConfiguration = database?.ShardingConfiguration.Prefixed;
         if (prefixedConfiguration is { Count: > 0 })
         {
             var idAsStr = Encoding.UTF8.GetString(idPtr, idSize);
