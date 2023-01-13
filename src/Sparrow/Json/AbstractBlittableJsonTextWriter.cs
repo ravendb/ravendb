@@ -1,13 +1,34 @@
 ﻿using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Sparrow.Extensions;
 
 namespace Sparrow.Json
 {
-    public abstract unsafe class AbstractBlittableJsonTextWriter
+    public abstract partial class AbstractBlittableJsonTextWriter
+    {
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected virtual async Task<bool> FlushInternalAsync()
+        {
+            if (_stream == null)
+                ThrowStreamClosed();
+            if (_pos == 0)
+                return false;
+            
+            await _stream.WriteAsync(_pinnedBuffer.Memory.Memory.Slice(0, _pos)).ConfigureAwait(false);
+            await _stream.FlushAsync().ConfigureAwait(false);
+            
+            _pos = 0;
+            return true;
+        }
+    }
+
+    public abstract unsafe partial class AbstractBlittableJsonTextWriter
     {
         protected readonly JsonOperationContext _context;
         protected readonly Stream _stream;
