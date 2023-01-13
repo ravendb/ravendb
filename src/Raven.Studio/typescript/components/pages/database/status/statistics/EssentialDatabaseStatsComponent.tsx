@@ -1,11 +1,13 @@
 ﻿import React from "react";
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
-import { UncontrolledTooltip } from "components/common/UncontrolledTooltip";
-import { Card, Col, Row } from "reactstrap";
+import { Card, Col, Row, UncontrolledTooltip } from "reactstrap";
+import { LazyLoad } from "components/common/LazyLoad";
 
 interface EssentialDatabaseStatsComponentProps {
-    stats: EssentialDatabaseStatistics;
+    stats: EssentialDatabaseStatistics | null;
 }
+
+const defaultLoadingText = "1,234,567";
 
 export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsComponentProps) {
     const { stats } = props;
@@ -18,9 +20,17 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                         <div className="name">
                             <i className="icon-documents"></i> <span>Documents Count</span>
                         </div>
-                        <div className="value">
-                            <span>{stats.CountOfDocuments.toLocaleString()}</span>
-                        </div>
+                        <LazyLoad active={!stats}>
+                            <div className="value">
+                                <span>
+                                    {conditionalRender(
+                                        stats,
+                                        (x) => x.CountOfDocuments.toLocaleString(),
+                                        defaultLoadingText
+                                    )}
+                                </span>
+                            </div>
+                        </LazyLoad>
                     </div>
                 </Col>
                 <Col sm="6" lg="4" xl="3">
@@ -29,9 +39,17 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <i className="icon-new-counter"></i>
                             <span>Counters Count</span>
                         </div>
-                        <div className="value">
-                            <span>{stats.CountOfCounterEntries.toLocaleString()}</span>
-                        </div>
+                        <LazyLoad active={!stats}>
+                            <div className="value">
+                                <span>
+                                    {conditionalRender(
+                                        stats,
+                                        (x) => x.CountOfCounterEntries.toLocaleString(),
+                                        defaultLoadingText
+                                    )}
+                                </span>
+                            </div>
+                        </LazyLoad>
                     </div>
                 </Col>
                 <Col sm="6" lg="4" xl="3">
@@ -40,9 +58,17 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <i className="icon-attachment"></i>
                             <span>Attachments Count</span>
                         </div>
-                        <div className="value">
-                            <span>{stats.CountOfAttachments.toLocaleString()}</span>
-                        </div>
+                        <LazyLoad active={!stats}>
+                            <div className="value">
+                                <span>
+                                    {conditionalRender(
+                                        stats,
+                                        (x) => x.CountOfAttachments.toLocaleString(),
+                                        defaultLoadingText
+                                    )}
+                                </span>
+                            </div>
+                        </LazyLoad>
                     </div>
                 </Col>
             </Row>
@@ -53,9 +79,17 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <i className="icon-indexing"></i>
                             <span>Indexes Count</span>
                         </div>
-                        <div className="value">
-                            <span>{stats.CountOfIndexes.toLocaleString()}</span>
-                        </div>
+                        <LazyLoad active={!stats}>
+                            <div className="value">
+                                <span>
+                                    {conditionalRender(
+                                        stats,
+                                        (x) => x.CountOfIndexes.toLocaleString(),
+                                        defaultLoadingText
+                                    )}
+                                </span>
+                            </div>
+                        </LazyLoad>
                     </div>
                 </Col>
                 <Col sm="6" lg="4" xl="3">
@@ -64,9 +98,17 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <i className="icon-revisions"></i>
                             <span>Revisions Count</span>
                         </div>
-                        <div className="value">
-                            <span>{stats.CountOfRevisionDocuments.toLocaleString()}</span>
-                        </div>
+                        <LazyLoad active={!stats}>
+                            <div className="value">
+                                <span>
+                                    {conditionalRender(
+                                        stats,
+                                        (x) => x.CountOfRevisionDocuments.toLocaleString(),
+                                        defaultLoadingText
+                                    )}
+                                </span>
+                            </div>
+                        </LazyLoad>
                     </div>
                 </Col>
                 <Col sm="6" lg="4" xl="3">
@@ -75,9 +117,17 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <i className="icon-conflicts"></i>
                             <span>Conflicts Count</span>
                         </div>
-                        <div className="value">
-                            <span>{stats.CountOfDocumentsConflicts.toLocaleString()}</span>
-                        </div>
+                        <LazyLoad active={!stats}>
+                            <div className="value">
+                                <span>
+                                    {conditionalRender(
+                                        stats,
+                                        (x) => x.CountOfDocumentsConflicts.toLocaleString(),
+                                        defaultLoadingText
+                                    )}
+                                </span>
+                            </div>
+                        </LazyLoad>
                     </div>
                 </Col>
             </Row>
@@ -88,9 +138,17 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                             <i className="icon-zombie"></i>
                             <span>Tombstones Count</span>
                         </div>
-                        <div className="value">
-                            <span>{stats.CountOfTombstones.toLocaleString()}</span>
-                        </div>
+                        <LazyLoad active={!stats}>
+                            <div className="value">
+                                <span>
+                                    {conditionalRender(
+                                        stats,
+                                        (x) => x.CountOfTombstones.toLocaleString(),
+                                        defaultLoadingText
+                                    )}
+                                </span>
+                            </div>
+                        </LazyLoad>
                     </div>
                 </Col>
             </Row>
@@ -122,12 +180,28 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                                 </ul>
                             </UncontrolledTooltip>
                         </div>
-                        <div className="value">
-                            <span>{stats.CountOfTimeSeriesSegments}</span>
-                        </div>
+                        <LazyLoad active={!stats}>
+                            <div className="value">
+                                <span>
+                                    {conditionalRender(stats, (x) => x.CountOfTimeSeriesSegments, defaultLoadingText)}
+                                </span>
+                            </div>
+                        </LazyLoad>
                     </div>
                 </Col>
             </Row>
         </Card>
     );
+}
+
+function conditionalRender(
+    dto: EssentialDatabaseStatistics,
+    accessor: (dto: EssentialDatabaseStatistics) => any,
+    defaultValue: string
+) {
+    if (dto) {
+        return accessor(dto);
+    }
+
+    return defaultValue;
 }

@@ -20,6 +20,7 @@ export const StatisticsTemplate = (args: { db: database; stats?: IndexStats[] })
     const { databasesService, indexesService } = mockServices;
 
     databasesService.withEssentialStats();
+
     databasesService.withDetailedStats();
 
     indexesService.withGetStats(args.stats);

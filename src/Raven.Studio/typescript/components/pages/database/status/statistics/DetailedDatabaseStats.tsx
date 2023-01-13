@@ -1,42 +1,18 @@
-﻿import database from "models/resources/database";
-import { useCallback, useEffect, useState } from "react";
-import { useServices } from "hooks/useServices";
-import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
-import { locationAwareLoadableData } from "components/models/common";
+﻿import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import React from "react";
-import { produce } from "immer";
 import { databaseLocationComparator } from "components/utils/common";
 import genUtils from "common/generalUtils";
 import changeVectorUtils from "common/changeVectorUtils";
-import { UncontrolledTooltip } from "components/common/UncontrolledTooltip";
-import { Card, Table } from "reactstrap";
+import { Card, Table, UncontrolledTooltip } from "reactstrap";
+import { LazyLoad } from "components/common/LazyLoad";
+import { DetailedDatabaseStatsProps } from "components/pages/database/status/statistics/useStatisticsController";
 
-interface DetailedDatabaseStatsProps {
-    database: database;
-}
-
-function initState(db: database): locationAwareLoadableData<DetailedDatabaseStatistics>[] {
-    return db.getLocations().map((location) => {
-        return {
-            data: null,
-            location,
-            error: null,
-            status: "loading",
-        };
-    });
-}
 interface DetailsBlockProps {
     children: (data: DetailedDatabaseStatistics, location: databaseLocationSpecifier) => JSX.Element;
 }
 
 export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
-    const { database } = props;
-
-    const { databasesService } = useServices();
-
-    const [perNodeStats, setPerNodeStats] = useState<locationAwareLoadableData<DetailedDatabaseStatistics>[]>(
-        initState(database)
-    );
+    const { database, perNodeStats } = props;
 
     function DetailsBlock(props: DetailsBlockProps): JSX.Element {
         const { children } = props;
@@ -56,43 +32,19 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
 
                     return (
                         <td key={genUtils.formatLocation(location)}>
-                            {stat.status === "loaded" ? children(stat.data, location) : "loading..."}
+                            {stat.status === "loaded" ? (
+                                children(stat.data, location)
+                            ) : (
+                                <LazyLoad active>
+                                    <div>Loading...</div>
+                                </LazyLoad>
+                            )}
                         </td>
                     );
                 })}
             </>
         );
     }
-
-    const loadDetailedStats = useCallback(() => {
-        const locations = database.getLocations();
-
-        locations.forEach(async (location) => {
-            try {
-                const stats = await databasesService.getDetailedStats(database, location);
-                setPerNodeStats(
-                    produce((draft) => {
-                        const itemToUpdate = draft.find((x) => databaseLocationComparator(x.location, location));
-                        itemToUpdate.error = null;
-                        itemToUpdate.status = "loaded";
-                        itemToUpdate.data = stats;
-                    })
-                );
-            } catch (e) {
-                setPerNodeStats(
-                    produce((draft) => {
-                        const itemToUpdate = draft.find((x) => databaseLocationComparator(x.location, location));
-                        itemToUpdate.error = e;
-                        itemToUpdate.status = "error";
-                    })
-                );
-            }
-        });
-    }, [database, databasesService]);
-
-    useEffect(() => {
-        loadDetailedStats();
-    }, [loadDetailedStats]);
 
     return (
         <section className="mt-6">

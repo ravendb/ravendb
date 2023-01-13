@@ -1,9 +1,7 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useServices } from "hooks/useServices";
+﻿import React, { useMemo } from "react";
 import { locationAwareLoadableData } from "components/models/common";
 import database from "models/resources/database";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
-import { produce } from "immer";
 import { databaseLocationComparator, withPreventDefault } from "components/utils/common";
 import IndexType = Raven.Client.Documents.Indexes.IndexType;
 import genUtils from "common/generalUtils";
@@ -12,20 +10,11 @@ import indexStalenessReasons from "viewmodels/database/indexes/indexStalenessRea
 import app from "durandal/app";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { Card, Table } from "reactstrap";
+import { LazyLoad } from "components/common/LazyLoad";
 
 interface IndexesDatabaseStatsProps {
     database: database;
-}
-
-function initState(db: database): locationAwareLoadableData<IndexStats[]>[] {
-    return db.getLocations().map((location) => {
-        return {
-            data: null,
-            location,
-            error: null,
-            status: "loading",
-        };
-    });
+    perNodeStats: locationAwareLoadableData<IndexStats[]>[];
 }
 
 interface IndexGroupStats {
@@ -138,38 +127,13 @@ interface IndexBlockProps {
 }
 
 export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
-    const { database } = props;
-    const { indexesService } = useServices();
-    const [perNodeStats, setPerNodeStats] = useState<locationAwareLoadableData<IndexStats[]>[]>(initState(database));
+    const { database, perNodeStats } = props;
+
     const indexStats = useMemo(() => mapIndexStats(perNodeStats), [perNodeStats]);
 
     const noData = perNodeStats.some((x) => x.status === "loaded" && x.data.length === 0);
     const sharded = database.isSharded();
     const locations = database.getLocations();
-
-    const loadIndexStats = useCallback(() => {
-        database.getLocations().forEach(async (location) => {
-            try {
-                const stats = await indexesService.getStats(database, location);
-                setPerNodeStats(
-                    produce((draft) => {
-                        const itemToUpdate = draft.find((x) => databaseLocationComparator(x.location, location));
-                        itemToUpdate.error = null;
-                        itemToUpdate.status = "loaded";
-                        itemToUpdate.data = stats;
-                    })
-                );
-            } catch (e) {
-                setPerNodeStats(
-                    produce((draft) => {
-                        const itemToUpdate = draft.find((x) => databaseLocationComparator(x.location, location));
-                        itemToUpdate.error = e;
-                        itemToUpdate.status = "error";
-                    })
-                );
-            }
-        });
-    }, [database, indexesService]);
 
     function DetailsBlock(props: IndexBlockProps): JSX.Element {
         const { children, index, alwaysRenderValue } = props;
@@ -213,7 +177,13 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
                     }
 
                     if (stat.status === "loading" || stat.status === "notLoaded") {
-                        return <td key={key}>loading...</td>;
+                        return (
+                            <td key={key}>
+                                <LazyLoad active>
+                                    <div>Loading...</div>
+                                </LazyLoad>
+                            </td>
+                        );
                     }
 
                     return <td key={key}>{children(locationDetails, location)}</td>;
@@ -221,10 +191,6 @@ export function IndexesDatabaseStats(props: IndexesDatabaseStatsProps) {
             </>
         );
     }
-
-    useEffect(() => {
-        loadIndexStats();
-    }, [loadIndexStats]);
 
     const eventsCollector = useEventsCollector();
 

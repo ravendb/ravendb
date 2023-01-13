@@ -11,8 +11,7 @@ import database = require("models/resources/database");
 import app from "durandal/app";
 import { useAccessManager } from "hooks/useAccessManager";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
-import { UncontrolledTooltip } from "components/common/UncontrolledTooltip";
-import { IndexDistribution, IndexProgress, JoinedIndexProgress } from "./IndexDistribution";
+import { IndexDistribution, JoinedIndexProgress } from "./IndexDistribution";
 import IndexSourceType = Raven.Client.Documents.Indexes.IndexSourceType;
 import {
     RichPanel,
@@ -35,6 +34,7 @@ import {
     Input,
     Spinner,
     UncontrolledDropdown,
+    UncontrolledTooltip,
 } from "reactstrap";
 import assertUnreachable from "../../../../utils/assertUnreachable";
 import useId from "hooks/useId";
