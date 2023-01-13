@@ -17,6 +17,7 @@ import { ShardsGroup } from "components/pages/resources/manageDatabaseGroup/Shar
 import { FlexGrow } from "components/common/FlexGrow";
 import app from "durandal/app";
 import addNewShardToDatabaseGroup from "viewmodels/resources/addNewShardToDatabaseGroup";
+import { StickyHeader } from "components/common/StickyHeader";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -110,8 +111,8 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     const enableDynamicDatabaseDistribution = isOperatorOrAbove() && !dynamicDatabaseDistributionWarning;
 
     return (
-        <div className="content-margin">
-            <div className="sticky-header">
+        <>
+            <StickyHeader>
                 <div className="flex-horizontal">
                     <UncontrolledButtonWithDropdownPanel buttonText="Settings">
                         <>
@@ -141,33 +142,34 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                         </Button>
                     )}
                 </div>
-            </div>
-
-            {db.isSharded() ? (
-                <React.Fragment key="sharded-db">
-                    <OrchestratorsGroup
-                        orchestrators={dbShardedInfo.nodes}
+            </StickyHeader>
+            <div className="content-margin">
+                {db.isSharded() ? (
+                    <React.Fragment key="sharded-db">
+                        <OrchestratorsGroup
+                            orchestrators={dbShardedInfo.nodes}
+                            db={db}
+                            deletionInProgress={dbShardedInfo.deletionInProgress}
+                        />
+                        {db.shards().map((shard) => (
+                            <ShardsGroup
+                                key={shard.name}
+                                nodes={shard.nodes()}
+                                shard={shard}
+                                lockMode={dbShardedInfo.lockMode}
+                            />
+                        ))}
+                    </React.Fragment>
+                ) : (
+                    <NodeGroup
+                        key="non-sharded-db"
+                        nodes={dbShardedInfo.nodes}
                         db={db}
                         deletionInProgress={dbShardedInfo.deletionInProgress}
+                        lockMode={dbShardedInfo.lockMode}
                     />
-                    {db.shards().map((shard) => (
-                        <ShardsGroup
-                            key={shard.name}
-                            nodes={shard.nodes()}
-                            shard={shard}
-                            lockMode={dbShardedInfo.lockMode}
-                        />
-                    ))}
-                </React.Fragment>
-            ) : (
-                <NodeGroup
-                    key="non-sharded-db"
-                    nodes={dbShardedInfo.nodes}
-                    db={db}
-                    deletionInProgress={dbShardedInfo.deletionInProgress}
-                    lockMode={dbShardedInfo.lockMode}
-                />
-            )}
-        </div>
+                )}
+            </div>
+        </>
     );
 }

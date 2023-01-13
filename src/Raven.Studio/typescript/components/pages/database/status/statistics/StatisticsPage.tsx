@@ -8,6 +8,7 @@ import { Button, Col, Row, Spinner } from "reactstrap";
 import useBoolean from "hooks/useBoolean";
 import classNames from "classnames";
 import { useStatisticsController } from "components/pages/database/status/statistics/useStatisticsController";
+import { StickyHeader } from "components/common/StickyHeader";
 
 interface StatisticsPageProps {
     database: database;
@@ -49,48 +50,64 @@ export function StatisticsPage(props: StatisticsPageProps) {
     }
 
     return (
-        <div className="stats content-margin">
-            <Row>
-                <Col>
-                    <h2 className="on-base-background">
-                        General Database Stats
-                        <Button
-                            color="link"
-                            className="margin-left-xs"
-                            target="_blank"
-                            href={rawJsonUrl}
-                            title="Show raw output"
-                        >
-                            <i className="icon-link"></i>
-                        </Button>
-                    </h2>
-                </Col>
-                <Col sm="auto">
-                    <Button color="primary" onClick={toggleDetailsVisible} title="Click to load detailed statistics">
-                        <i className={classNames(detailsVisible ? "icon-collapse-vertical" : "icon-expand-vertical")} />
-                        <span>{detailsVisible ? "Hide" : "Show"} details</span>
-                    </Button>
-                    <Button
-                        color="primary"
-                        onClick={reloadStats}
-                        disabled={spinnerRefresh}
-                        className="margin-left-xs"
-                        title="Click to refresh stats"
-                    >
-                        {spinnerRefresh ? <Spinner size="sm" /> : <i className="icon-refresh"></i>}
-                        <span>Refresh</span>
-                    </Button>
-                </Col>
-            </Row>
-            
-            <EssentialDatabaseStatsComponent stats={essentialStats} />
+        <>
+            <StickyHeader>
+                <Row>
+                    <Col />
 
-            {detailsVisible && (
-                <DetailedDatabaseStats key="db-stats" database={database} perNodeStats={perNodeDbStats} />
-            )}
-            {detailsVisible && (
-                <IndexesDatabaseStats key="index-stats" perNodeStats={perNodeIndexStats} database={database} />
-            )}
-        </div>
+                    <Col sm="auto">
+                        <Button
+                            color="primary"
+                            onClick={toggleDetailsVisible}
+                            title="Click to load detailed statistics"
+                        >
+                            <i
+                                className={classNames(
+                                    detailsVisible ? "icon-collapse-vertical" : "icon-expand-vertical"
+                                )}
+                            />
+                            <span>{detailsVisible ? "Hide" : "Show"} details</span>
+                        </Button>
+                        <Button
+                            color="primary"
+                            onClick={reloadStats}
+                            disabled={spinnerRefresh}
+                            className="margin-left-xs"
+                            title="Click to refresh stats"
+                        >
+                            {spinnerRefresh ? <Spinner size="sm" /> : <i className="icon-refresh"></i>}
+                            <span>Refresh</span>
+                        </Button>
+                    </Col>
+                </Row>
+            </StickyHeader>
+            <div className="stats content-margin">
+                <Row>
+                    <Col>
+                        <h2 className="on-base-background">
+                            General Database Stats
+                            <Button
+                                color="link"
+                                className="margin-left-xs"
+                                target="_blank"
+                                href={rawJsonUrl}
+                                title="Show raw output"
+                            >
+                                <i className="icon-link"></i>
+                            </Button>
+                        </h2>
+                    </Col>
+                </Row>
+
+                <EssentialDatabaseStatsComponent stats={essentialStats} />
+
+                {detailsVisible && (
+                    <DetailedDatabaseStats key="db-stats" database={database} perNodeStats={perNodeDbStats} />
+                )}
+                {detailsVisible && (
+                    <IndexesDatabaseStats key="index-stats" perNodeStats={perNodeIndexStats} database={database} />
+                )}
+            </div>
+        </>
     );
 }
