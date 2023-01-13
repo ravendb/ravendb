@@ -29,6 +29,7 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
+using Raven.Server.Documents.Sharding.Queries.Suggestions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Utils;
@@ -368,6 +369,43 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WriteArray(nameof(result.Suggestions), result.Suggestions);
+
+            if (result is SuggestionResultWithPopularity {SuggestionsPopularity.Count: > 0} suggestionResultWithPopularity)
+            {
+                writer.WriteComma();
+
+                writer.WritePropertyName(Constants.Documents.Metadata.Key);
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(Constants.Documents.Metadata.SuggestionPopularityFields);
+                writer.WriteStartArray();
+
+                var firstPopularity = true;
+
+                foreach (var popularity in suggestionResultWithPopularity.SuggestionsPopularity)
+                {
+                    if (firstPopularity == false)
+                        writer.WriteComma();
+
+                    firstPopularity = false;
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(popularity.Freq));
+                    writer.WriteInteger(popularity.Freq);
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(popularity.Score));
+                    writer.WriteDouble(popularity.Score);
+
+                    writer.WriteEndObject();
+                }
+
+                writer.WriteEndArray();
+                
+                writer.WriteEndObject();
+            }
 
             writer.WriteEndObject();
         }

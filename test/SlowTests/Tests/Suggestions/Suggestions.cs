@@ -236,10 +236,16 @@ namespace SlowTests.Tests.Suggestions
                             .Execute();
 
                     Assert.Equal(5, suggestions["Name"].Suggestions.Count);
-                    Assert.Equal("john", suggestions["Name"].Suggestions[0]);
-                    Assert.Equal("jones", suggestions["Name"].Suggestions[1]);
-                    Assert.Equal("johnson", suggestions["Name"].Suggestions[2]);
-                    Assert.Equal("david", suggestions["Name"].Suggestions[3]);
+
+                    Assert.Contains(suggestions["Name"].Suggestions[0], new[] { "john", "david" }); // 'john' and 'david' have the same score - calculated based on distance
+
+                    if (suggestions["Name"].Suggestions[0] == "john")
+                        Assert.Equal("david", suggestions["Name"].Suggestions[1]);
+                    else
+                        Assert.Equal("john", suggestions["Name"].Suggestions[1]);
+
+                    Assert.Equal("jones", suggestions["Name"].Suggestions[2]);
+                    Assert.Equal("johnson", suggestions["Name"].Suggestions[3]);
                     Assert.Equal("jack", suggestions["Name"].Suggestions[4]);
                 }
             }
