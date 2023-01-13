@@ -2428,17 +2428,17 @@ namespace Raven.Server.Documents.TimeSeries
             return item;
         }
 
-        public TimeSeriesSegmentEntry GetTimeSeries(DocumentsOperationContext context, Slice key)
+        public TimeSeriesSegmentEntry GetTimeSeries(DocumentsOperationContext context, Slice key, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
             if (table.ReadByKey(key, out var reader) == false)
                 return null;
 
-            return CreateTimeSeriesItem(context, ref reader);
+            return CreateTimeSeriesItem(context, ref reader, fields);
         }
 
-        public TimeSeriesSegmentEntry GetTimeSeries(DocumentsOperationContext context, long etag)
+        public TimeSeriesSegmentEntry GetTimeSeries(DocumentsOperationContext context, long etag, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
             var index = TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice];
@@ -2446,13 +2446,13 @@ namespace Raven.Server.Documents.TimeSeries
             if (table.Read(context.Allocator, index, etag, out var tvr) == false)
                 return null;
 
-            return CreateTimeSeriesItem(context, ref tvr);
+            return CreateTimeSeriesItem(context, ref tvr, fields);
         }
 
-        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, long etag, long take) =>
-            GetTimeSeries(context, etag, long.MaxValue, take);
+        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, long etag, long take, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All) =>
+            GetTimeSeries(context, etag, long.MaxValue, take, fields);
 
-        private static IEnumerable<TimeSeriesSegmentEntry> GetTimeSeries(DocumentsOperationContext context, long fromEtag, long toEtag, long take = long.MaxValue)
+        private static IEnumerable<TimeSeriesSegmentEntry> GetTimeSeries(DocumentsOperationContext context, long fromEtag, long toEtag, long take = long.MaxValue, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
@@ -2461,7 +2461,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (take-- <= 0)
                     yield break;
 
-                var item = CreateTimeSeriesItem(context, ref result.Reader);
+                var item = CreateTimeSeriesItem(context, ref result.Reader, fields);
                 if (item.Etag > toEtag)
                     yield break;
 
@@ -2469,10 +2469,10 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long etag, long take) =>
-            GetTimeSeriesFrom(context, collection, etag, long.MaxValue, take);
+        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long etag, long take, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All) =>
+            GetTimeSeriesFrom(context, collection, etag, long.MaxValue, take, fields);
 
-        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag, long take)
+        private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag, long take, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -2488,7 +2488,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (take-- <= 0)
                     yield break;
 
-                var item = CreateTimeSeriesItem(context, ref result.Reader);
+                var item = CreateTimeSeriesItem(context, ref result.Reader, fields);
                 if (item.Etag > toEtag)
                     yield break;
 
@@ -2496,30 +2496,87 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal static TimeSeriesSegmentEntry CreateTimeSeriesItem(JsonOperationContext context, ref TableValueReader reader)
+        internal static TimeSeriesSegmentEntry CreateTimeSeriesItem(JsonOperationContext context, ref TableValueReader reader, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
-            var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
-            var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
-            var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out int segmentSize);
-            var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
-
-            TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, context, out var docId, out var lowerName, out var baseline);
-
-            var luceneKey = ToLuceneKey(context, docId, lowerName, baseline);
-
-            return new TimeSeriesSegmentEntry
+            if (fields.Contain(TimeSeriesSegmentEntryFields.All))
             {
-                Key = new LazyStringValue(null, keyPtr, keySize, context),
-                LuceneKey = luceneKey,
-                DocId = docId,
-                Name = lowerName,
-                ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
-                Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
-                SegmentSize = segmentSize,
-                Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
-                Start = baseline,
-                Etag = Bits.SwapBytes(etag),
-            };
+                var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
+                var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
+                var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out int segmentSize);
+                var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
+
+                TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, context, out var docId, out var lowerName, out var baseline);
+
+                var luceneKey = ToLuceneKey(context, docId, lowerName, baseline);
+
+                return new TimeSeriesSegmentEntry
+                {
+                    Key = new LazyStringValue(null, keyPtr, keySize, context),
+                    LuceneKey = luceneKey,
+                    DocId = docId,
+                    Name = lowerName,
+                    ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
+                    Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
+                    SegmentSize = segmentSize,
+                    Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
+                    Start = baseline,
+                    Etag = Bits.SwapBytes(etag),
+                };
+            }
+
+            return CreateTimeSeriesItemPartial(context, ref reader, fields);
+
+            static TimeSeriesSegmentEntry CreateTimeSeriesItemPartial(JsonOperationContext context, ref TableValueReader reader, TimeSeriesSegmentEntryFields fields)
+            {
+                var result = new TimeSeriesSegmentEntry();
+
+                if (fields.Contain(TimeSeriesSegmentEntryFields.Key))
+                {
+                    var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
+
+                    result.Key = new LazyStringValue(null, keyPtr, keySize, context);
+
+                    if (fields.Contain(TimeSeriesSegmentEntryFields.DocIdNameAndStart))
+                    {
+                        TimeSeriesValuesSegment.ParseTimeSeriesKey(keyPtr, keySize, context, out var docId, out var lowerName, out var baseline);
+
+                        result.DocId = docId;
+                        result.Name = lowerName;
+                        result.Start = baseline;
+
+                        if (fields.Contain(TimeSeriesSegmentEntryFields.LuceneKey))
+                        {
+                            result.LuceneKey = ToLuceneKey(context, docId, lowerName, baseline);
+                        }
+                    }
+                }
+
+                if (result.DocId == null && fields.Contain(TimeSeriesSegmentEntryFields.DocIdNameAndStart))
+                    throw new InvalidOperationException($"Cannot request '{nameof(TimeSeriesSegmentEntryFields.DocIdNameAndStart)}' fields if '{nameof(TimeSeriesSegmentEntryFields.Key)}' field is not requested");
+
+                if (result.LuceneKey == null && fields.Contain(TimeSeriesSegmentEntryFields.LuceneKey))
+                    throw new InvalidOperationException($"Cannot request '{nameof(TimeSeriesSegmentEntryFields.LuceneKey)}' fields if '{nameof(TimeSeriesSegmentEntryFields.DocIdNameAndStart)}' field is not requested");
+
+                if (fields.Contain(TimeSeriesSegmentEntryFields.ChangeVector))
+                {
+                    var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
+                    result.ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize);
+                }
+
+                if (fields.Contain(TimeSeriesSegmentEntryFields.Segment))
+                {
+                    var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out int segmentSize);
+                    result.Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize);
+                    result.SegmentSize = segmentSize;
+                }
+
+                if (fields.Contain(TimeSeriesSegmentEntryFields.Collection))
+                    result.Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader);
+
+                result.Etag = Bits.SwapBytes(*(long*)reader.Read((int)TimeSeriesTable.Etag, out _));
+
+                return result;
+            }
 
             static LazyStringValue ToLuceneKey(JsonOperationContext context, LazyStringValue documentId, LazyStringValue name, DateTime baseline)
             {
