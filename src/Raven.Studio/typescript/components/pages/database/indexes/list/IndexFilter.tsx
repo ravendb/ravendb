@@ -132,11 +132,7 @@ export function IndexFilterDescription(props: IndexFilterDescriptionProps) {
         <div className="on-base-background mt-2">
             {firstPart}
             Status filter:
-            {filter.status.map((x) => (
-                <Badge color="secondary" className="ms-1" pill key={x}>
-                    {IndexUtils.formatStatus(x)}
-                </Badge>
-            ))}
+            {filter.status.map((x) => IndexUtils.formatStatus(x)).join(", ")}
             {filter.searchText ? (
                 <span className="ms-2">
                     Name contains: <em className="text-emphasis">&quot;{filter.searchText}&quot;</em>

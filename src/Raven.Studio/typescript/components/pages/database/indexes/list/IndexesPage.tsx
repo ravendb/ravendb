@@ -39,37 +39,12 @@ import { LoadingView } from "components/common/LoadingView";
 import useBoolean from "hooks/useBoolean";
 import { StickyHeader } from "components/common/StickyHeader";
 import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
+import { ConfirmResetIndex } from "components/pages/database/indexes/list/ConfirmResetIndex";
 
 interface IndexesPageProps {
     database: database;
     stale?: boolean;
     indexName?: string;
-}
-
-async function confirmResetIndex(db: database, index: IndexSharedInfo): Promise<boolean> {
-    return new Promise((done) => {
-        viewHelpers
-            .confirmationMessage(
-                "Reset index?",
-                `You're resetting index: <br><ul><li><strong>${genUtils.escapeHtml(index.name)}</strong></li></ul>
-             <div class="margin-top text-warning bg-warning padding padding-xs flex-horizontal">
-                <div class="flex-start">
-                    <small><i class="icon-warning"></i></small>
-                </div>
-                <div>
-                    <small>Clicking <strong>Reset</strong> will remove all existing indexed data.</small><br>
-                    <small>All items matched by the index definition will be re-indexed.</small>
-                </div>
-             </div>`,
-                {
-                    buttons: ["Cancel", "Reset"],
-                    html: true,
-                }
-            )
-            .done((result) => {
-                done(result.can);
-            });
-    });
 }
 
 interface NoIndexesProps {
@@ -217,6 +192,10 @@ export function IndexesPage(props: IndexesPageProps) {
         indexes: IndexSharedInfo[];
         locations: databaseLocationSpecifier[];
         onConfirm: (locations: databaseLocationSpecifier[]) => void;
+    }>();
+
+    const [resetIndexConfirm, setResetIndexConfirm] = useState<{
+        index: IndexSharedInfo;
     }>();
 
     const { canReadWriteDatabase } = useAccessManager();
@@ -609,26 +588,29 @@ export function IndexesPage(props: IndexesPageProps) {
     };
 
     const resetIndex = async (index: IndexSharedInfo) => {
-        const canReset = await confirmResetIndex(database, index);
-        if (canReset) {
-            eventsCollector.reportEvent("indexes", "reset");
+        setResetIndexConfirm({
+            index,
+        });
+    };
 
-            setResettingIndex(true);
+    const onResetIndexConfirm = async (index: IndexSharedInfo) => {
+        eventsCollector.reportEvent("indexes", "reset");
 
-            try {
-                const locations = database.getLocations();
-                while (locations.length) {
-                    await indexesService.resetIndex(index, database, locations.pop());
-                }
+        setResettingIndex(true);
 
-                messagePublisher.reportSuccess("Index " + index.name + " successfully reset");
-            } finally {
-                // wait a bit and trigger refresh
-                await delay(3_000);
-
-                throttledRefresh.current();
-                setResettingIndex(false);
+        try {
+            const locations = database.getLocations();
+            while (locations.length) {
+                await indexesService.resetIndex(index, database, locations.pop());
             }
+
+            messagePublisher.reportSuccess("Index " + index.name + " successfully reset");
+        } finally {
+            // wait a bit and trigger refresh
+            await delay(3_000);
+
+            throttledRefresh.current();
+            setResettingIndex(false);
         }
     };
 
@@ -824,6 +806,14 @@ export function IndexesPage(props: IndexesPageProps) {
 
             {bulkOperationConfirm && (
                 <BulkIndexOperationConfirm {...bulkOperationConfirm} toggle={() => setBulkOperationConfirm(null)} />
+            )}
+
+            {resetIndexConfirm && (
+                <ConfirmResetIndex
+                    {...resetIndexConfirm}
+                    toggle={() => setResetIndexConfirm(null)}
+                    onConfirm={() => onResetIndexConfirm(resetIndexConfirm.index)}
+                />
             )}
         </>
     );
