@@ -47,6 +47,9 @@ namespace Raven.Server.Documents.TimeSeries
         Segment = 1 << 4,
         Collection = 1 << 5,
 
+        ForIndexing = Key | DocIdNameAndStart | LuceneKey | Segment,
+        ForEtl = Key | DocIdNameAndStart | ChangeVector | Segment,
+        ForSmuggler = Key | DocIdNameAndStart | ChangeVector | Segment | Collection,
         All = Key | DocIdNameAndStart | LuceneKey | ChangeVector | Segment | Collection,
     }
 
