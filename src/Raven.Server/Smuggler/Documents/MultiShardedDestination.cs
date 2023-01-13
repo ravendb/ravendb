@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -81,7 +82,7 @@ namespace Raven.Server.Smuggler.Documents
             var stream = ShardedSmugglerHandlerProcessorForImport.GetOutputStream(holders[shardNumber].OutStream.OutputStream.Result, _options);
             holders[shardNumber].InputStream = stream;
             holders[shardNumber].ContextReturn = _handler.ContextPool.AllocateOperationContext(out JsonOperationContext context);
-            var destination = new StreamDestination(stream, context, _source);
+            var destination = new StreamDestination(stream, context, _source, CompressionLevel.NoCompression);
             holders[shardNumber].DestinationAsyncDisposable = await destination.InitializeAsync(_options, result, buildVersion);
             _destinations[shardNumber] = destination;
         }
@@ -146,8 +147,9 @@ namespace Raven.Server.Smuggler.Documents
 
         private abstract class ShardedActions<T> : INewDocumentActions, INewCompareExchangeActions where T : IAsyncDisposable
         {
-            private readonly JsonOperationContext _context;
-            private readonly IDisposable _rtnCtx;
+            private JsonOperationContext _context;
+            private IDisposable _rtnCtx;
+            private IDisposable _prevRtnCtx;
             private readonly DatabaseSmugglerOptionsServerSide _options;
             protected readonly ShardedDatabaseContext DatabaseContext;
             protected readonly Dictionary<int, T> _actions;
@@ -162,8 +164,21 @@ namespace Raven.Server.Smuggler.Documents
                 _rtnCtx = DatabaseContext.AllocateContext(out _context);
             }
 
-            public JsonOperationContext GetContextForNewCompareExchangeValue() => _context;
-            public JsonOperationContext GetContextForNewDocument() => _context;
+            public JsonOperationContext GetContextForNewCompareExchangeValue() => GetContextForNewDocument();
+            public JsonOperationContext GetContextForNewDocument()
+            {
+                if (_context.AllocatedMemory > 16 * 1024 * 1024)
+                {
+                    var old = _rtnCtx;
+                    using (_prevRtnCtx)
+                    {
+                        _rtnCtx = DatabaseContext.AllocateContext(out _context);
+                    }
+                    _prevRtnCtx = old;
+                }
+
+                return _context;
+            }
 
             public virtual async ValueTask DisposeAsync()
             {
