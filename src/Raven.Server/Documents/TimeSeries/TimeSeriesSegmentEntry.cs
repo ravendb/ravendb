@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.TimeSeries
@@ -32,6 +33,29 @@ namespace Raven.Server.Documents.TimeSeries
             DocId?.Dispose();
             Name?.Dispose();
             Collection?.Dispose();
+        }
+    }
+
+    [Flags]
+    public enum TimeSeriesSegmentEntryFields
+    {
+        Default = 0,
+        Key = 1 << 0,
+        DocIdNameAndStart = 1 << 1,
+        LuceneKey = 1 << 2,
+        ChangeVector = 1 << 3,
+        Segment = 1 << 4,
+        Collection = 1 << 5,
+
+        All = Key | DocIdNameAndStart | LuceneKey | ChangeVector | Segment | Collection,
+    }
+
+    public static class EnumExtensions
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Contain(this TimeSeriesSegmentEntryFields current, TimeSeriesSegmentEntryFields flag)
+        {
+            return (current & flag) == flag;
         }
     }
 }
