@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -16,6 +17,9 @@ public abstract class AbstractNotificationCenter : NotificationsBase
     private readonly Logger _logger;
 
     public readonly NotificationsStorage Storage;
+
+    private readonly TaskCompletionSource<AbstractNotificationCenter> _initializeTaskSource = new TaskCompletionSource<AbstractNotificationCenter>(TaskCreationOptions.RunContinuationsAsynchronously);
+    public Task<AbstractNotificationCenter> InitializeTask => _initializeTaskSource.Task;
 
     protected AbstractNotificationCenter(
         [NotNull] NotificationsStorage storage,
@@ -39,6 +43,8 @@ public abstract class AbstractNotificationCenter : NotificationsBase
         BackgroundWorkers.Add(PostponedNotificationSender);
 
         IsInitialized = true;
+
+        _initializeTaskSource.SetResult(this);
     }
 
     public readonly OutOfMemoryNotifications OutOfMemory;

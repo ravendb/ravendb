@@ -238,7 +238,7 @@ namespace Raven.Server
                     LogTrafficWatch(context, sp?.ElapsedMilliseconds ?? 0, database);
                 }
 
-                if (sp != null && requestHandlerContext.HttpContext.Response.StatusCode != (int)HttpStatusCode.SwitchingProtocols) // exclude web sockets
+                if (sp != null && requestHandlerContext.HttpContext.WebSockets.IsWebSocketRequest == false) // exclude web sockets
                 {
                     var requestDuration = sp.ElapsedMilliseconds;
                     requestHandlerContext.RavenServer?.Metrics.Requests.UpdateDuration(requestDuration);

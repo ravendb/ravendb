@@ -8,12 +8,14 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests
@@ -503,6 +505,38 @@ namespace FastTests
 
                 database.PeriodicBackupRunner._forTestingPurposes ??= new PeriodicBackupRunner.TestingStuff();
                 database.PeriodicBackupRunner._forTestingPurposes.AfterBackupBatchCompleted = () => mre.Set();
+            }
+
+            public async Task FillDatabaseWithRandomDataAsync(int databaseSizeInMb, IAsyncDocumentSession session, int? timeout = default)
+            {
+                var random = new Random();
+                const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                var timeoutTimeSpan = TimeSpan.FromMilliseconds(timeout ?? _reasonableTimeout);
+
+                using (var cts = new CancellationTokenSource(timeoutTimeSpan))
+                {
+                    for (int i = 0; i < databaseSizeInMb; i++)
+                    {
+                        var entry = new User
+                        {
+                            Name = new string(Enumerable.Repeat(chars, 1024 * 1024)
+                                .Select(s => s[random.Next(s.Length)]).ToArray())
+                        };
+                        await session.StoreAsync(entry, cts.Token);
+                    }
+                    await session.SaveChangesAsync(cts.Token);
+                }
+            }
+
+            public async Task FillClusterDatabaseWithRandomDataAsync(int databaseSizeInMb, DocumentStore store, int clusterSize, int? timeout = default)
+            {
+                var timeoutTimeSpan = TimeSpan.FromMilliseconds(timeout ?? _reasonableTimeout);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeoutTimeSpan, replicas: clusterSize - 1);
+                    await FillDatabaseWithRandomDataAsync(databaseSizeInMb, session, (int?)timeoutTimeSpan.TotalMilliseconds);
+                }   
             }
         }
     }

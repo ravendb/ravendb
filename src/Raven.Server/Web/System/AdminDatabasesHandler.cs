@@ -667,6 +667,27 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/admin/backup-task/delay", "POST", AuthorizationStatus.Operator)]
+        public async Task DelayBackupTask()
+        {
+            var id = GetLongQueryString("taskId");
+            var delay = GetTimeSpanQueryString("duration");
+            if (delay <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(delay));
+
+            var databaseName = GetStringQueryString("database");
+            var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
+            if (database == null)
+                DatabaseDoesNotExistException.Throw(databaseName);
+
+            using (var token = CreateOperationToken())
+            {
+                await database.PeriodicBackupRunner.DelayAsync(id, delay.Value, GetCurrentCertificate(), token.Token);
+            }
+            
+            NoContentStatus();
+        }
+
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {

@@ -4,8 +4,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
-using Corax.Utils;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 
 namespace Corax.Queries
 {

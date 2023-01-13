@@ -3,8 +3,8 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Corax.Utils;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using static Voron.Global.Constants;
 
 namespace Corax.Queries

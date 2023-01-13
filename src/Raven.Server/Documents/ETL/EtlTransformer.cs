@@ -83,6 +83,8 @@ namespace Raven.Server.Documents.ETL
             DocumentScript.ScriptEngine.SetValue("getCounters", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getCounters", GetCounters));
 
             DocumentScript.ScriptEngine.SetValue("hasCounter", new ClrFunctionInstance(DocumentScript.ScriptEngine, "hasCounter", HasCounter));
+
+            DocumentScript.ScriptEngine.SetValue("getRevisionsCount", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getRevisionsCount", GetRevisionsCount));
             
             const string hasTimeSeries = Transformation.TimeSeriesTransformation.HasTimeSeries.Name;
             DocumentScript.ScriptEngine.SetValue(hasTimeSeries, new ClrFunctionInstance(DocumentScript.ScriptEngine, hasTimeSeries, HasTimeSeries));
@@ -375,6 +377,16 @@ namespace Raven.Server.Documents.ETL
             }
 
             return false;
+        }
+
+        private JsValue GetRevisionsCount(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 0)
+                ThrowInvalidScriptMethodCall("getRevisionsCount() must be called without any argument");
+            
+            return (Current.Document.Flags & DocumentFlags.HasRevisions) == DocumentFlags.HasRevisions 
+                    ? Database.DocumentsStorage.RevisionsStorage.GetRevisionsCount(Context, Current.DocumentId)
+                    : 0L;
         }
         
         protected abstract string[] LoadToDestinations { get; }

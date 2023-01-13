@@ -43,8 +43,7 @@ public abstract class SubscriptionBatchBase<T>
         public BlittableJsonReaderObject RawResult { get; internal set; }
         public BlittableJsonReaderObject RawMetadata { get; internal set; }
 
-        private IMetadataDictionary _metadata;
-        public IMetadataDictionary Metadata => _metadata ?? (_metadata = new MetadataAsDictionary(RawMetadata));
+        public IMetadataDictionary Metadata { get; internal set; }
     }
 
     public string LastSentChangeVectorInBatch;
@@ -122,6 +121,7 @@ public abstract class SubscriptionBatchBase<T>
                 Id = id,
                 RawResult = curDoc,
                 RawMetadata = metadata,
+                Metadata = new MetadataAsDictionary(metadata),
                 Result = instance,
                 ExceptionMessage = item.Exception,
                 Projection = projection,

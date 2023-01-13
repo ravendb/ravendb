@@ -451,7 +451,8 @@ namespace Voron.Debugging
             if (includeDetails)
             {
                 pageDensities = new();
-                foreach (var pageNum in Container.GetAllPagesSet(_tx, page))
+                var it = Container.GetAllPagesSet(_tx, page);
+                while(it.TryMoveNext(out var pageNum))
                 {
                     Page cur = _tx.GetPage(pageNum);
                     if (cur.IsOverflow)

@@ -144,6 +144,7 @@ namespace Raven.Client.Documents.Subscriptions
                     Id = item.Id,
                     Document = item.RawResult,
                     Metadata = item.RawMetadata,
+                    MetadataInstance = item.Metadata,
                     ChangeVector = item.ChangeVector,
                     Entity = item.Result,
                     IsNewDocument = false

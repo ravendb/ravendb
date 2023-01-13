@@ -14,6 +14,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public string NodeTag { get; set; }
 
+        public DateTime? DelayUntil { get; set; }
+
         public DateTime? LastFullBackup { get; set; }
 
         public DateTime? LastIncrementalBackup { get; set; }
@@ -67,6 +69,7 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(BackupType)] = BackupType;
             json[nameof(IsFull)] = IsFull;
             json[nameof(NodeTag)] = NodeTag;
+            json[nameof(DelayUntil)] = DelayUntil;
             json[nameof(LastFullBackup)] = LastFullBackup;
             json[nameof(LastIncrementalBackup)] = LastIncrementalBackup;
             json[nameof(LastFullBackupInternal)] = LastFullBackupInternal;

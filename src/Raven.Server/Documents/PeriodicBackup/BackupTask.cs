@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
@@ -209,15 +210,16 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 return _backupResult;
             }
-            catch (OperationCanceledException)
-            {
-                operationCanceled = TaskCancelToken.Token.IsCancellationRequested;
-                throw;
-            }
             catch (ObjectDisposedException)
             {
                 // shutting down, probably
                 operationCanceled = true;
+                throw;
+            }
+            catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
+            {
+                operationCanceled = TaskCancelToken.Token.IsCancellationRequested;
+
                 throw;
             }
             catch (Exception e)
@@ -857,7 +859,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _database.NotificationCenter.Dismiss(id);
         }
 
-        public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, BackupResult backupResult)
+        public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, BackupResult backupResult, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             try
             {

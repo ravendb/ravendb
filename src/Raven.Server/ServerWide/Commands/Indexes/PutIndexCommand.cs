@@ -4,7 +4,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Extensions;
 using Raven.Server.Rachis;
-using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
@@ -64,6 +63,17 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(CreatedAt)] = CreatedAt;
             json[nameof(RevisionsToKeep)] = RevisionsToKeep;
             json[nameof(DefaultDeploymentMode)] = DefaultDeploymentMode;
+        }
+
+        public override string AdditionalDebugInformation(Exception exception)
+        {
+            var msg = $"Index name: '{Definition.Name}' for database '{DatabaseName}'";
+            if (exception != null)
+            {
+                msg += $" Exception: {exception}.";
+            }
+
+            return msg;
         }
     }
 }

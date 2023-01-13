@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.1</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>7.0.2</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -151,8 +151,8 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.100.46" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.101.46" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.100.52" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.101.52" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.5.1" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.5.1" />
@@ -166,6 +166,8 @@
     </PackageReference>
     <PackageReference Include="Jint" Version="3.0.0-beta-2044" />
     <PackageReference Include="Google.Api.Gax.Rest" Version="4.2.0" />
+    <PackageReference Include="Jint" Version="3.0.30-ravendb" />
+    <PackageReference Include="Google.Api.Gax.Rest" Version="4.3.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.1.0" />
     <PackageReference Include="Lextm.SharpSnmpLib.Engine" Version="11.3.102" />
     <PackageReference Include="librdkafka.redist" Version="1.9.2" />

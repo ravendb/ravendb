@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public bool MissingAttachmentsInLastBatch { get; set; }
 
         public ShardedOutgoingReplicationHandler(ShardedDatabaseContext.ShardedReplicationContext parent, ShardReplicationNode node, TcpConnectionInfo connectionInfo, string sourceDatabaseId) :
-            base(connectionInfo, parent.Server, parent.Context.DatabaseName, node, parent.Server.ContextPool, parent.Context.DatabaseShutdown)
+            base(connectionInfo, parent.Server, parent.Context.DatabaseName, parent.Context.NotificationCenter, node, parent.Server.ContextPool, parent.Context.DatabaseShutdown)
         {
             _parent = parent;
             _tcpConnectionOptions = new TcpConnectionOptions

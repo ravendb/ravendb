@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.1</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>7.0.2</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Sparrow.Server</AssemblyName>
     <PackageId>Sparrow.Server</PackageId>
@@ -17,6 +17,12 @@
     <Compile Include="..\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Utils\VxSort\bench\**" />
+    <None Remove="Utils\VxSort\codegen\**" />
+    <None Remove="Utils\VxSort\obj\**" />
+    <None Remove="Utils\VxSort\test\**" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'MemGuard'">
@@ -26,6 +32,9 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Validate'">
     <DefineConstants>$(DefineConstants);MEM_GUARD_STACK;VALIDATE</DefineConstants>
     <Optimize>true</Optimize>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>True</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <None Include="Sodium.tt">

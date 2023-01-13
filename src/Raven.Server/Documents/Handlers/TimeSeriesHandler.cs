@@ -294,18 +294,21 @@ namespace Raven.Server.Documents.Handlers
 
                     foreach (var item in items)
                     {
-                        using (var slicer = new TimeSeriesSliceHolder(context, docId, item.Name).WithBaseline(item.Baseline))
+                        using (item)
                         {
-                            if (tss.TryAppendEntireSegmentFromSmuggler(context, slicer.TimeSeriesKeySlice, collectionName, item))
+                            using (var slicer = new TimeSeriesSliceHolder(context, docId, item.Name).WithBaseline(item.Baseline))
                             {
-                                // on import we remove all @time-series from the document, so we need to re-add them
-                                tss.AddTimeSeriesNameToMetadata(context, item.DocId, item.Name, NonPersistentDocumentFlags.FromSmuggler);
-                                continue;
+                                if (tss.TryAppendEntireSegmentFromSmuggler(context, slicer.TimeSeriesKeySlice, collectionName, item))
+                                {
+                                    // on import we remove all @time-series from the document, so we need to re-add them
+                                    tss.AddTimeSeriesNameToMetadata(context, item.DocId, item.Name, NonPersistentDocumentFlags.FromSmuggler);
+                                    continue;
+                                }
                             }
-                        }
 
-                        var values = item.Segment.YieldAllValues(context, context.Allocator, item.Baseline);
-                        tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, AppendOptionsForSmuggler);
+                            var values = item.Segment.YieldAllValues(context, context.Allocator, item.Baseline);
+                            tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, AppendOptionsForSmuggler);
+                        }
                     }
 
                     changes += items.Count;

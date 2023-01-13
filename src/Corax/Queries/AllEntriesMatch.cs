@@ -16,7 +16,7 @@ namespace Corax.Queries
     {
         private readonly Transaction _tx;
         private readonly long _count;
-        private IEnumerator<long> _entriesPagesIt;
+        private Container.AllPagesIterator _entriesPagesIt;
         private int _offset;
         private int _itemsLeftOnCurrentPage;
         private Page _currentPage;
@@ -38,7 +38,7 @@ namespace Corax.Queries
             }
             
             _entriesContainerId = tx.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
-            _entriesPagesIt = Container.GetAllPagesSet(tx.LowLevelTransaction, _entriesContainerId).GetEnumerator();
+            _entriesPagesIt = Container.GetAllPagesSet(tx.LowLevelTransaction, _entriesContainerId);
             _offset = 0;
             _itemsLeftOnCurrentPage = 0;
             _currentPage = new Page(null);
@@ -58,12 +58,12 @@ namespace Corax.Queries
             {
                 if (_currentPage.IsValid == false || _itemsLeftOnCurrentPage == 0)
                 {
-                    if (_entriesPagesIt.MoveNext() == false)
+                    if (_entriesPagesIt.TryMoveNext(out var pageNum) == false)
                     {
                         return results;
                     }
 
-                    _currentPage = _tx.LowLevelTransaction.GetPage(_entriesPagesIt.Current);
+                    _currentPage = _tx.LowLevelTransaction.GetPage(pageNum);
                     _offset = 0;
                 }
 

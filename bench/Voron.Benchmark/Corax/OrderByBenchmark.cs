@@ -28,7 +28,7 @@ namespace Voron.Benchmark.Corax
     //[InliningDiagnoser(logFailuresOnly: true, allowedNamespaces: new[] { "Corax" })]
     public class OrderByBenchmark
     {
-        protected StorageEnvironment Env;
+        public StorageEnvironment Env;
         public virtual bool DeleteBeforeSuite { get; protected set; } = true;
         public virtual bool DeleteAfterSuite { get; protected set; } = true;
         public virtual bool DeleteBeforeEachBenchmark { get; protected set; } = false;

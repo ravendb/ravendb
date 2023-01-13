@@ -80,6 +80,8 @@ namespace Raven.Server.ServerWide.Context
             if (Transaction == null || Transaction.Disposed || Transaction.InnerTransaction.IsWriteTransaction)
                 ThrowReadTransactionMustBeOpen();
 
+            Allocator.DefragmentSegments();
+
             Transaction = CloneReadTransaction(Transaction);
 
             return Transaction;
