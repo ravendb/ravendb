@@ -16,6 +16,15 @@ namespace Sparrow.Json
 
         protected readonly FastStack<BuildingState> _continuationState;
 
+        private static readonly PerCoreContainer<GlobalPoolItem> GlobalCache;
+
+        static AbstractBlittableJsonDocumentBuilder()
+        {
+            GlobalCache = PlatformDetails.Is32Bits 
+                ? new PerCoreContainer<GlobalPoolItem>(4) 
+                : new PerCoreContainer<GlobalPoolItem>();
+        }
+
         protected AbstractBlittableJsonDocumentBuilder()
         {
             if (GlobalCache.TryPull(out _cacheItem) == false)
@@ -45,8 +54,6 @@ namespace Sparrow.Json
                 _positionsCache.Return(ref state.Positions);
             }
         }
-
-        private static readonly PerCoreContainer<GlobalPoolItem> GlobalCache = new PerCoreContainer<GlobalPoolItem>();
 
         protected struct BuildingState
         {
