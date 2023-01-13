@@ -23,7 +23,6 @@ import genUtils from "common/generalUtils";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import { CheckboxTriple } from "components/common/CheckboxTriple";
 import { useEventsCollector } from "hooks/useEventsCollector";
-import bulkIndexOperationConfirm from "viewmodels/database/indexes/bulkIndexOperationConfirm";
 import { useAppUrls } from "hooks/useAppUrls";
 import { useAccessManager } from "hooks/useAccessManager";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
@@ -39,6 +38,7 @@ import { EmptySet } from "components/common/EmptySet";
 import { LoadingView } from "components/common/LoadingView";
 import useBoolean from "hooks/useBoolean";
 import { StickyHeader } from "components/common/StickyHeader";
+import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
 
 interface IndexesPageProps {
     database: database;
@@ -211,6 +211,13 @@ export function IndexesPage(props: IndexesPageProps) {
     const eventsCollector = useEventsCollector();
     const { databaseChangesApi } = useChanges();
     const { value: loadingView, setFalse: viewLoaded } = useBoolean(true);
+
+    const [bulkOperationConfirm, setBulkOperationConfirm] = useState<{
+        type: Parameters<typeof BulkIndexOperationConfirm>[0]["type"];
+        indexes: IndexSharedInfo[];
+        locations: databaseLocationSpecifier[];
+        onConfirm: (locations: databaseLocationSpecifier[]) => void;
+    }>();
 
     const { canReadWriteDatabase } = useAccessManager();
     const [stats, dispatch] = useReducer(indexesStatsReducer, locations, indexesStatsReducerInitializer);
@@ -407,20 +414,14 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const toggleDisableIndexes = useCallback(
         async (enableIndex: boolean, indexes: IndexSharedInfo[]) => {
-            const locations = database.getLocations();
-            const confirmation = enableIndex
-                ? bulkIndexOperationConfirm.forEnable(indexes, locations)
-                : bulkIndexOperationConfirm.forDisable(indexes, locations);
-
-            confirmation.result.done((result) => {
-                if (result.can) {
-                    disableIndexes(enableIndex, indexes, result.locations);
-                }
+            setBulkOperationConfirm({
+                type: enableIndex ? "enable" : "disable",
+                indexes,
+                locations: database.getLocations(),
+                onConfirm: (locations: databaseLocationSpecifier[]) => disableIndexes(enableIndex, indexes, locations),
             });
-
-            app.showBootstrapDialog(confirmation);
         },
-        [database, disableIndexes]
+        [setBulkOperationConfirm, disableIndexes, database]
     );
 
     const enableSelectedIndexes = useCallback(
@@ -464,20 +465,14 @@ export function IndexesPage(props: IndexesPageProps) {
 
     const togglePauseIndexes = useCallback(
         async (resume: boolean, indexes: IndexSharedInfo[]) => {
-            const locations = database.getLocations();
-            const confirmation = resume
-                ? bulkIndexOperationConfirm.forResume(indexes, locations)
-                : bulkIndexOperationConfirm.forPause(indexes, locations);
-
-            confirmation.result.done((result) => {
-                if (result.can) {
-                    pauseIndexes(resume, indexes, result.locations);
-                }
+            setBulkOperationConfirm({
+                type: resume ? "resume" : "pause",
+                indexes,
+                locations: database.getLocations(),
+                onConfirm: (locations: databaseLocationSpecifier[]) => pauseIndexes(resume, indexes, locations),
             });
-
-            app.showBootstrapDialog(confirmation);
         },
-        [database, pauseIndexes]
+        [setBulkOperationConfirm, pauseIndexes, database]
     );
 
     const resumeSelectedIndexes = useCallback(
@@ -826,6 +821,10 @@ export function IndexesPage(props: IndexesPageProps) {
                     })}
                 </div>
             </div>
+
+            {bulkOperationConfirm && (
+                <BulkIndexOperationConfirm {...bulkOperationConfirm} toggle={() => setBulkOperationConfirm(null)} />
+            )}
         </>
     );
 }
