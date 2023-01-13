@@ -870,7 +870,7 @@ namespace Raven.Server.Smuggler.Documents
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchange"))
             using (var builder = new BlittableJsonDocumentBuilder(_context,
-                BlittableJsonDocumentBuilder.UsageMode.ToDisk, "Import/CompareExchange", parser, state))
+                Mode, "Import/CompareExchange", parser, state))
             {
                 await foreach (var reader in ReadArrayAsync())
                 {
@@ -894,7 +894,7 @@ namespace Raven.Server.Smuggler.Documents
                             builder.FinalizeDocument();
                             yield return (new CompareExchangeKey(key), 0, builder.CreateReader());
 
-                            builder.Renew("import/cmpxchg", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            builder.Renew("import/cmpxchg", Mode);
                         }
                     }
                 }
@@ -1292,7 +1292,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    builder.Renew("import/object", Mode);
 
                     context.CachedProperties.NewDocument();
 
@@ -1369,7 +1369,7 @@ namespace Raven.Server.Smuggler.Documents
                             builder = CreateBuilder(context, modifier);
                         }
                     }
-                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    builder.Renew("import/object", Mode);
 
                     _context.CachedProperties.NewDocument();
 
@@ -1446,6 +1446,8 @@ namespace Raven.Server.Smuggler.Documents
             return context.ReadObject(djv, details.Id);
         }
 
+        protected BlittableJsonDocumentBuilder.UsageMode Mode = BlittableJsonDocumentBuilder.UsageMode.ToDisk;
+
         private async IAsyncEnumerable<DocumentItem> ReadDocumentsAsync(List<string> collectionsToOperate, INewDocumentActions actions = null)
         {
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
@@ -1488,7 +1490,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    builder.Renew("import/object", Mode);
 
                     context.CachedProperties.NewDocument();
 
@@ -1546,7 +1548,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (data.Modifications != null)
                     {
-                        data = context.ReadObject(data, modifier.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        data = context.ReadObject(data, modifier.Id, Mode);
                     }
 
                     _result.LegacyLastDocumentEtag = modifier.LegacyEtag;
@@ -1608,7 +1610,7 @@ namespace Raven.Server.Smuggler.Documents
                             builder = CreateBuilder(context);
                         }
                     }
-                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    builder.Renew("import/object", Mode);
 
                     _context.CachedProperties.NewDocument();
 
@@ -1720,7 +1722,7 @@ namespace Raven.Server.Smuggler.Documents
                             builder = CreateBuilder(context);
                         }
                     }
-                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    builder.Renew("import/object", Mode);
 
                     _context.CachedProperties.NewDocument();
 
@@ -1751,7 +1753,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         conflict.Flags = Enum.Parse<DocumentFlags>(flags);
                         if (conflict.Doc != null) // This is null for conflict that was generated from tombstone
-                            conflict.Doc = context.ReadObject(conflict.Doc, conflict.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            conflict.Doc = context.ReadObject(conflict.Doc, conflict.Id, Mode);
                         yield return conflict;
                     }
                     else
@@ -1915,14 +1917,14 @@ namespace Raven.Server.Smuggler.Documents
         private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier)
         {
             return new BlittableJsonDocumentBuilder(context,
-                BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state,
+                Mode, "import/object", _parser, _state,
                 modifier: modifier);
         }
 
         private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context)
         {
             return new BlittableJsonDocumentBuilder(context,
-                BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state);
+                Mode, "import/object", _parser, _state);
         }
 
         private DatabaseItemType GetType(string type)
