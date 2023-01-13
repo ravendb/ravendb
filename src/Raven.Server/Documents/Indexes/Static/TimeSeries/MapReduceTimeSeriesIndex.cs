@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.TimeSeries;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
@@ -107,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         protected override IndexItem GetItemByEtag(QueryOperationContext queryContext, long etag)
         {
-            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeries(queryContext.Documents, etag);
+            var timeSeries = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetTimeSeries(queryContext.Documents, etag, TimeSeriesSegmentEntryFields.ForIndexing);
             if (timeSeries == null)
                 return default;
 

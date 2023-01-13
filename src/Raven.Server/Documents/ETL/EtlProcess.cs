@@ -285,7 +285,7 @@ namespace Raven.Server.Documents.ETL
         {
             if (Transformation.ApplyToAllDocuments)
             {
-                var timeSeries = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, fromEtag, long.MaxValue, TimeSeriesSegmentEntryFields.Key | TimeSeriesSegmentEntryFields.DocIdNameAndStart | TimeSeriesSegmentEntryFields.ChangeVector | TimeSeriesSegmentEntryFields.Segment).GetEnumerator();
+                var timeSeries = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, fromEtag, long.MaxValue, TimeSeriesSegmentEntryFields.ForEtl).GetEnumerator();
                 scope.EnsureDispose(timeSeries);
                 merged.AddEnumerator(ConvertTimeSeriesEnumerator(context, timeSeries, null));
 
@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.ETL
             {
                 foreach (var collection in Transformation.Collections)
                 {
-                    var timeSeries = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, collection, fromEtag, long.MaxValue, TimeSeriesSegmentEntryFields.Key | TimeSeriesSegmentEntryFields.DocIdNameAndStart | TimeSeriesSegmentEntryFields.ChangeVector | TimeSeriesSegmentEntryFields.Segment).GetEnumerator();
+                    var timeSeries = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, collection, fromEtag, long.MaxValue, TimeSeriesSegmentEntryFields.ForEtl).GetEnumerator();
                     scope.EnsureDispose(timeSeries);
                     merged.AddEnumerator(ConvertTimeSeriesEnumerator(context, timeSeries, collection));
 
