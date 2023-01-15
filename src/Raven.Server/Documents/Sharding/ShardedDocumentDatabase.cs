@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Sharding;
 using Raven.Server.Documents.Sharding.Smuggler;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -17,19 +19,20 @@ public class ShardedDocumentDatabase : DocumentDatabase
 {
     public readonly int ShardNumber;
 
-    public readonly string ShardedDatabaseName;
-
     public string ShardedDatabaseId { get; private set; }
 
     public ShardedDocumentsStorage ShardedDocumentsStorage;
 
+    public string ShardedDatabaseName => _shardedDatabaseName ??= ShardHelper.ToDatabaseName(Name);
+
     public ShardedDatabaseContext DatabaseContext => ServerStore.DatabasesLandlord.GetOrAddShardedDatabaseContext(ShardedDatabaseName);
+
+    private string _shardedDatabaseName;
 
     public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         : base(name, configuration, serverStore, addToInitLog)
     {
         ShardNumber = ShardHelper.GetShardNumberFromDatabaseName(name);
-        ShardedDatabaseName = ShardHelper.ToDatabaseName(name);
 
         Smuggler = new ShardedDatabaseSmugglerFactory(this);
     }
@@ -49,6 +52,11 @@ public class ShardedDocumentDatabase : DocumentDatabase
     protected override DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
     {
         return ShardedDocumentsStorage = new ShardedDocumentsStorage(this, addToInitLog);
+    }
+
+    protected override IndexStore CreateIndexStore(ServerStore serverStore)
+    {
+        return new ShardedIndexStore(this, serverStore);
     }
 
     internal override void SetIds(DatabaseTopology topology, string shardedDatabaseId)
