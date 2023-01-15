@@ -4038,7 +4038,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         protected bool Equals(FieldToFetch other)
         {
-            return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) && string.Equals(Alias, other.Alias, StringComparison.Ordinal);
+            return string.Equals(Name, other.Name) && string.Equals(Alias, other.Alias, StringComparison.Ordinal);
         }
 
         public override bool Equals(object obj)
@@ -4056,7 +4056,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             unchecked
             {
-                return ((Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0) * 397) ^ (Alias != null ? StringComparer.Ordinal.GetHashCode(Alias) : 0);
+                return ((Name != null ? StringComparer.Ordinal.GetHashCode(Name) : 0) * 397) ^ (Alias != null ? StringComparer.Ordinal.GetHashCode(Alias) : 0);
             }
         }
     }
