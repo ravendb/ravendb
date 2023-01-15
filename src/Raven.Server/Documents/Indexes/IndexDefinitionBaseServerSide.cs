@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using Jint.Runtime.References;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
