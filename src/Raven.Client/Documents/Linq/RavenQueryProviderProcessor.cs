@@ -2752,6 +2752,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var memberExpression = ((MemberExpression)body);
 
             var selectPath = GetSelectPath(memberExpression);
+            FieldsToFetch.Clear(); // this overwrite any previous projection
             AddToFieldsToFetch(selectPath, selectPath);
 
             if (_insideSelect == 1)
