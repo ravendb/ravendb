@@ -1,6 +1,5 @@
 ﻿using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
-using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Sharding
 {
@@ -16,8 +15,6 @@ namespace Raven.Server.Documents.Indexes.Sharding
             Delete = shardedDocumentDatabase.DatabaseContext.Indexes.Delete;
             Create = shardedDocumentDatabase.DatabaseContext.Indexes.Create;
             HasChanged = shardedDocumentDatabase.DatabaseContext.Indexes.HasChanged;
-
-            Logger = LoggingSource.Instance.GetLogger<IndexStore>(shardedDocumentDatabase.ShardedDatabaseName);
         }
     }
 }

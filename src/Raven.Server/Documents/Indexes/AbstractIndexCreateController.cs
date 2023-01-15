@@ -98,11 +98,11 @@ public abstract class AbstractIndexCreateController
         if (definition == null)
             throw new ArgumentNullException(nameof(definition));
 
-        var databaseConfiguration = GetDatabaseConfiguration();
         await ValidateStaticIndexAsync(definition);
 
         var databaseName = GetDatabaseName();
         var databaseTime = GetDatabaseTime();
+        var databaseConfiguration = GetDatabaseConfiguration();
 
         var command = new PutIndexCommand(
             definition,

@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes
     {
         public readonly IndexIdentities Identities = new IndexIdentities();
 
-        public Logger Logger;
+        public readonly Logger Logger;
 
         public AbstractIndexLockModeController LockMode;
 
@@ -90,6 +90,8 @@ namespace Raven.Server.Documents.Indexes
         {
             _documentDatabase = documentDatabase;
 
+            Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
+
             var stoppedConcurrentIndexBatches = _documentDatabase.Configuration.Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory;
             StoppedConcurrentIndexBatches = new SemaphoreSlim(stoppedConcurrentIndexBatches);
         }
@@ -104,8 +106,6 @@ namespace Raven.Server.Documents.Indexes
             Delete = new DatabaseIndexDeleteController(documentDatabase);
             Create = new DatabaseIndexCreateController(documentDatabase);
             HasChanged = new DatabaseIndexHasChangedController(documentDatabase);
-
-            Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
         }
 
         public int HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex, bool startIndexes = true)
