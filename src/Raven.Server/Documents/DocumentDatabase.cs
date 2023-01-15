@@ -64,7 +64,6 @@ using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
 using Constants = Raven.Client.Constants;
-using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 
@@ -146,7 +145,7 @@ namespace Raven.Server.Documents
                 TombstoneCleaner = new TombstoneCleaner(this);
                 DocumentsStorage = CreateDocumentsStorage(addToInitLog);
                 CompareExchangeStorage = new CompareExchangeStorage(this);
-                IndexStore = new IndexStore(this, serverStore);
+                IndexStore = CreateIndexStore(serverStore);
                 QueryRunner = new QueryRunner(this);
                 EtlLoader = new EtlLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
@@ -178,6 +177,11 @@ namespace Raven.Server.Documents
         protected virtual DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
         {
             return new DocumentsStorage(this, addToInitLog);
+        }
+
+        protected virtual IndexStore CreateIndexStore(ServerStore serverStore)
+        {
+            return new IndexStore(this, serverStore);
         }
 
         protected virtual byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, Name);
