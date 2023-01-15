@@ -46,7 +46,7 @@ public abstract class AbstractIndexCreateController
 
     protected abstract ValueTask WaitForIndexNotificationAsync(long index, TimeSpan? timeout = null);
 
-    public virtual async ValueTask ValidateStaticIndexAsync(IndexDefinition definition)
+    protected virtual async ValueTask ValidateStaticIndexAsync(IndexDefinition definition)
     {
         if (IndexStore.IsValidIndexName(definition.Name, true, out var errorMessage) == false)
         {
@@ -85,16 +85,24 @@ public abstract class AbstractIndexCreateController
         }
     }
 
+    protected virtual void ValidateAutoIndex(IndexDefinitionBaseServerSide definition)
+    {
+        if (IndexStore.IsValidIndexName(definition.Name, false, out var errorMessage) == false)
+        {
+            throw new ArgumentException(errorMessage);
+        }
+    }
+
     public async ValueTask<long> CreateIndexAsync(IndexDefinition definition, string raftRequestId, string source = null)
     {
         if (definition == null)
             throw new ArgumentNullException(nameof(definition));
 
+        var databaseConfiguration = GetDatabaseConfiguration();
         await ValidateStaticIndexAsync(definition);
 
         var databaseName = GetDatabaseName();
         var databaseTime = GetDatabaseTime();
-        var databaseConfiguration = GetDatabaseConfiguration();
 
         var command = new PutIndexCommand(
             definition,
@@ -136,11 +144,11 @@ public abstract class AbstractIndexCreateController
         if (definition is MapIndexDefinition mapIndexDefinition)
             return await CreateIndexAsync(mapIndexDefinition.IndexDefinition, raftRequestId);
 
-        ValidateAutoIndex(definition);
-
         var configuration = GetDatabaseConfiguration();
 
         definition.DeploymentMode = configuration.Indexing.AutoIndexDeploymentMode;
+
+        ValidateAutoIndex(definition);
 
         var name = ShardHelper.ToDatabaseName(GetDatabaseName());
 
@@ -176,14 +184,6 @@ public abstract class AbstractIndexCreateController
     public IndexBatchScope CreateIndexBatch()
     {
         return new IndexBatchScope(this, ServerStore, ServerStore.LicenseManager.GetNumberOfUtilizedCores());
-    }
-
-    private static void ValidateAutoIndex(IndexDefinitionBaseServerSide definition)
-    {
-        if (IndexStore.IsValidIndexName(definition.Name, false, out var errorMessage) == false)
-        {
-            throw new ArgumentException(errorMessage);
-        }
     }
 
     private void ValidateAnalyzers(IndexDefinition definition)
@@ -282,7 +282,7 @@ public abstract class AbstractIndexCreateController
                 return;
             }
 
-            ValidateAutoIndex(definition);
+            _controller.ValidateAutoIndex(definition);
 
             var autoDefinition = (AutoIndexDefinitionBaseServerSide)definition;
             var indexType = PutAutoIndexCommand.GetAutoIndexType(autoDefinition);

@@ -65,11 +65,23 @@ public class ShardedIndexCreateController : AbstractIndexCreateController
         await _context.Cluster.WaitForExecutionOnAllNodesAsync(index);
     }
 
-    public override async ValueTask ValidateStaticIndexAsync(IndexDefinition definition)
+    protected override async ValueTask ValidateStaticIndexAsync(IndexDefinition definition)
     {
+        if (definition.DeploymentMode is IndexDeploymentMode.Rolling || 
+            definition.DeploymentMode.HasValue == false && _context.Configuration.Indexing.StaticIndexDeploymentMode == IndexDeploymentMode.Rolling)
+            throw new NotSupportedInShardingException("Rolling index deployment for a sharded database is currently not supported");
+
         await base.ValidateStaticIndexAsync(definition);
 
         if (string.IsNullOrEmpty(definition.OutputReduceToCollection) == false)
             throw new NotSupportedInShardingException("Index with output reduce to collection is not supported in sharding.");
+    }
+
+    protected override void ValidateAutoIndex(IndexDefinitionBaseServerSide definition)
+    {
+        if (definition.DeploymentMode == IndexDeploymentMode.Rolling)
+            throw new NotSupportedInShardingException("Rolling index deployment for a sharded database is currently not supported");
+
+        base.ValidateAutoIndex(definition);
     }
 }

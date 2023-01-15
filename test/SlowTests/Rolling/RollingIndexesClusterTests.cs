@@ -967,7 +967,6 @@ namespace SlowTests.Rolling
 
         private async Task VerifyHistory((List<RavenServer> Nodes, RavenServer Leader) cluster, DocumentStore store)
         {
-
             await AssertWaitForValueAsync(() =>
             {
                 using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
