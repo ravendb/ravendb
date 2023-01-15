@@ -1276,6 +1276,9 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                                             $"The supported time formats are:{Environment.NewLine}" +
                                             $"{string.Join(Environment.NewLine, SupportedDateTimeFormats.OrderBy(f => f.Length))}");
 
+            if (date == DateTime.MaxValue || date == DateTime.MinValue)
+                return DateTime.SpecifyKind(date, DateTimeKind.Utc);
+
             return new DateTime(date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second, date.Millisecond, DateTimeKind.Utc);
         }
 
