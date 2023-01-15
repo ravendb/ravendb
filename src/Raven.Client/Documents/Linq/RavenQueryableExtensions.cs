@@ -147,7 +147,7 @@ namespace Raven.Client.Documents.Linq
             var provider = (IRavenQueryProvider)source.Provider;
             var documentQuery = provider.ToAsyncDocumentQuery<TSource>(source.Expression);
 
-            var list = await documentQuery.ToListAsync();
+            var list = await documentQuery.ToListAsync().ConfigureAwait(false);
             foreach (var item in list)
             {
                 yield return item;
