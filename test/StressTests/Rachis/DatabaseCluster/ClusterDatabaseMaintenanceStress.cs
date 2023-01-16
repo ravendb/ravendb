@@ -83,7 +83,7 @@ namespace StressTests.Rachis.DatabaseCluster
 
                 val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 0);
                 Assert.Equal(0, val);
-                val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 2);
+                val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), clusterSize);
                 Assert.Equal(clusterSize, val);
             }
         }
@@ -149,7 +149,7 @@ namespace StressTests.Rachis.DatabaseCluster
 
                 val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 0);
                 Assert.Equal(0, val);
-                val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 2);
+                val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), clusterSize);
                 Assert.Equal(clusterSize, val);
 
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
