@@ -181,7 +181,7 @@
                         </div>
                         <div class="row" data-bind="collapse: outputReduceToCollection()">
                             <div class="col-lg-5">
-                                <div class="toggle margin-top margin-top-sm margin-left margin-left-lg">
+                                <div class="toggle margin-top margin-top-sm margin-left">
                                     <input id="togglePatternForReferences" type="checkbox" 
                                            data-bind="checked: createReferencesToResultsCollection, requiredAccess: 'DatabaseReadWrite', requiredAccessOptions: { strategy: 'disable' }" />
                                     <label class="control-label"><strong>Create References to Results Collection </strong>
@@ -278,7 +278,7 @@
                         </div>
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="configure">
-                        <div class="row margin-left margin-bottom margin-bottom-lg">
+                        <div class="row margin-left margin-bottom">
                             <button type="button" data-bind="click: addConfigurationOption, requiredAccess: 'DatabaseReadWrite'" class="btn btn-info margin-left">
                                 <i class="icon-plus"></i>
                                 <span>Add customized indexing configuration</span>
@@ -288,7 +288,7 @@
                         <div class="row">
                             <div class="col-lg-8">
                                 <div class="form-group">
-                                    <div class="flex-grow margin-left margin-left-lg">
+                                    <div class="flex-grow margin-left">
                                         <input class="form-control" data-bind="textInput: $root.constructor.searchEngineConfigurationLabel" disabled />
                                     </div>
                                 </div>
@@ -310,7 +310,7 @@
                             <div class="row">
                                 <div class="col-lg-8" data-bind="validationElement: key">
                                     <div class="form-group">
-                                        <div data-bind="validationElement: key" class="flex-grow margin-left margin-left-lg">
+                                        <div data-bind="validationElement: key" class="flex-grow margin-left">
                                             <input class="form-control" placeholder="Indexing Configuration Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }" />
                                             <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
                                                 <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
@@ -334,7 +334,7 @@
                         </div>
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="additionalAssemblies">
-                        <div class="row margin-left margin-bottom margin-bottom-lg">
+                        <div class="row margin-left margin-bottom">
                             <button type="button" data-bind="click: addAssembly, requiredAccess: 'DatabaseReadWrite'" class="btn btn-info margin-left">
                                 <i class="icon-plus"></i> <span>Add Assembly</span>
                             </button>
@@ -879,7 +879,7 @@
                         </div>
                     </div>
                     <div>
-                        <h3 class="margin-left margin-topmargin-bottom">Index Definition Preview</h3>
+                        <h3 class="margin-left margin-top margin-bottom">Index Definition Preview</h3>
                     </div>
                 </div>
                 <div id="definition-preview" data-bind="attr: { class: previewItem() && previewItemNodes().length === 0 ? 'no-rolling-info' : 'has-rolling-info' }">
@@ -887,8 +887,8 @@
                 </div>
                 <div data-bind="if: previewItem">
                     <div class="flex-horizontal">
-                        <h3 class="margin-top-lg">Created by:</h3>
-                        <h4 class="margin-top-lg margin-left" data-bind="text: previewItem().Source"></h4>
+                        <h3 class="margin-top">Created by:</h3>
+                        <h4 class="margin-top margin-left" data-bind="text: previewItem().Source"></h4>
                     </div>
                     <div data-bind="if: previewItemNodes().length">
                         <div>

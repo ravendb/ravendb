@@ -507,7 +507,7 @@ class databaseSettings extends shardViewModelBase {
             this.viewMode("editMode");
             this.setupEditMode(false);
         } else {
-            const text = `<div class="margin-top">Modify the database settings only if you know what you are doing.</div>`;
+            const text = `<div class="margin-top-xs">Modify the database settings only if you know what you are doing.</div>`;
             this.confirmationMessage("Are you an expert?", text, { html: true, buttons: ["Cancel", "OK"] })
                 .done(() => {
                     this.editModeHasBeenEntered = true;

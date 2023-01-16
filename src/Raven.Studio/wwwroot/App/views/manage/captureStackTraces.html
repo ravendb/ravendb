@@ -3,7 +3,7 @@
         <div>
             Capture Stack Traces for:
 
-            <div class="btn-group">
+            <div class="btn-group margin-left-xs">
                 <button class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     <span data-bind="text: clusterWide() ? 'entire cluster' : 'current server only'"></span>
                     <span class="caret"></span>
@@ -19,7 +19,7 @@
                 <span>Capture</span>
             </div>
             
-            <button class="btn btn-default margin-left margin-left-lg" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current stack traces to a file">
+            <button class="btn btn-default margin-left" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current stack traces to a file">
                 <i class="icon-export"></i><span>Export</span>
             </button>
 

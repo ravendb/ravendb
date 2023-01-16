@@ -40,7 +40,7 @@
                                 <input id="importDocuments" type="checkbox" data-bind="checked: includeDocuments" />
                                 <label for="importDocuments">Include Documents</label>
                             </div>
-                            <div class="margin-left margin-left-lg">
+                            <div class="margin-left">
                                 <div class="toggle">
                                     <input id="importAttachments" type="checkbox"
                                            data-bind="checked: includeAttachments" />
@@ -97,7 +97,7 @@
                                 <input id="importIndexes" type="checkbox" data-bind="checked: includeIndexes" />
                                 <label for="importIndexes">Include Indexes</label>
                             </div>
-                            <div class="margin-left margin-left-lg">
+                            <div class="margin-left">
                                 <div class="toggle">
                                     <input id="importAnalyzers" type="checkbox" data-bind="checked: removeAnalyzers" />
                                     <label for="importAnalyzers">Remove Analyzers</label>
@@ -147,7 +147,7 @@
                     </div>
                 </div>
             </div>
-            <div class="margin-left margin-left-lg" data-bind="collapse: model.encryptedInput">
+            <div class="margin-left" data-bind="collapse: model.encryptedInput">
                 <div class="row">
                     <div class="col-lg-6">
                         <div class="form-group" data-bind="validationElement: model.encryptionKey">
@@ -163,7 +163,7 @@
             <div data-bind="collapse: showAdvancedOptions, with: model">
                 <hr />
                 <h3>Advanced</h3>
-                <div class="margin-left margin-left-lg">
+                <div class="margin-left">
                     <div class="margin-bottom">
                         <div class="toggle">
                             <input id="useTransformScript" type="checkbox" data-bind="checked: $root.showTransformScript" />

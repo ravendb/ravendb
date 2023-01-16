@@ -3,11 +3,11 @@
         <input type="checkbox" data-bind="checked: customizeDatabaseRecordTypes, attr: { id: 'customizeDatabaseRecordTypes_' + instanceCounter }">
         <label data-bind="attr: { for: 'customizeDatabaseRecordTypes_' + instanceCounter }" class="margin-right margin-right-sm">Customize Configuration and Ongoing Tasks</label>
     </div>
-    <div class="margin-left margin-left-lg js-customize-record" data-bind="collapse: customizeDatabaseRecordTypes">
+    <div class="margin-left js-customize-record" data-bind="collapse: customizeDatabaseRecordTypes">
         <div class="row">
             <div class="col-lg-3">
                 <div>Ongoing tasks</div>
-                <div class="margin-left margin-left-lg">
+                <div class="margin-left">
                     <div class="toggle">
                         <input type="checkbox" data-bind="checked: includePeriodicBackups, attr: { id: 'includePeriodicBackups_' + instanceCounter }">
                         <label data-bind="attr: { for: 'includePeriodicBackups_' + instanceCounter }" class="margin-right margin-right-sm">Periodic Backups</label>
@@ -56,7 +56,7 @@
             </div>
             <div class="col-lg-3">
                 <div>Other</div>
-                <div class="margin-left margin-left-lg">
+                <div class="margin-left">
                     <div class="toggle">
                         <input type="checkbox" data-bind="checked: includeSettings, attr: { id: 'includeSettings_' + instanceCounter }">
                         <label data-bind="attr: { for: 'includeSettings_' + instanceCounter }" class="margin-right margin-right-sm">Settings</label>
@@ -99,7 +99,7 @@
                     </div>
                 </div>
                 <div class="margin-top margin-top-xs">Connection Strings</div>
-                <div class="margin-left margin-left-lg">
+                <div class="margin-left">
                     <div class="toggle">
                         <input type="checkbox" data-bind="checked: includeRavenConnectionStrings, attr: { id: 'includeRavenConnectionStrings_' + instanceCounter }">
                         <label data-bind="attr: { for: 'includeRavenConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">RavenDB Connection Strings</label>

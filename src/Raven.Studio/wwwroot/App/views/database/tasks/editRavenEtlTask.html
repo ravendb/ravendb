@@ -178,7 +178,7 @@
                     </div>
                 </div>
                 <div class="flex-header">
-                    <div class="flex-row margin-top margin-top-lg">
+                    <div class="flex-row margin-top">
                         <h3>Transform Scripts</h3>
                         <button type="button" id="addNewScript" data-bind="click: addNewTransformation, disable: editedRavenEtl().showEditTransformationArea" class="btn btn-info pull-right">
                             <i class="icon-plus"></i><span>Add Transformation Script</span>
@@ -224,7 +224,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="panel-addon margin-top-lg" data-bind="visible: $root.usingHttps">
+                <div class="panel-addon" data-bind="visible: $root.usingHttps">
                     <div data-bind="compose: $root.certificateUploadInfoForOngoingTasks"></div>
                 </div>
             </form>
@@ -292,7 +292,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="toggle margin-top margin-top-lg" data-bind="visible: !isNew() && !$root.enableTestArea()">
+                        <div class="toggle margin-top" data-bind="visible: !isNew() && !$root.enableTestArea()">
                             <input id="reset" type="checkbox" data-bind="checked: resetScript">
                             <label for="reset">Apply script to documents from beginning of time (Reset)</label>
                         </div>
