@@ -1940,6 +1940,7 @@ namespace Raven.Server.Documents.Patch
 
                 try
                 {
+                    JavaScriptUtils.CurrentlyProcessedObject = _args[0];
                     var call = ScriptEngine.GetValue(method).TryCast<ICallable>();
                     var result = call.Call(Undefined.Instance, _args);
                     return new ScriptRunnerResult(this, result);
@@ -1957,6 +1958,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 finally
                 {
+                    JavaScriptUtils.CurrentlyProcessedObject = null;
                     _refResolver.ExplodeArgsOn(null, null);
                     _scope = null;
                     _loadScope = null;

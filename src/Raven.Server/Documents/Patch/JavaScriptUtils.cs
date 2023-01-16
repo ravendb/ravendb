@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Esprima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
+using Jint.Native.Function;
 using Jint.Native.Global;
 using Jint.Native.Object;
 using Jint.Runtime;
@@ -39,6 +41,7 @@ namespace Raven.Server.Documents.Patch
         private readonly List<IDisposable> _disposables = new List<IDisposable>();
         private readonly Engine _scriptEngine;
         private static readonly Dictionary<object,object> EmptyMetadataDummy = new Dictionary<object, object>();
+        internal JsValue CurrentlyProcessedObject;
 
         public bool ReadOnly;
 
@@ -50,9 +53,9 @@ namespace Raven.Server.Documents.Patch
 
         internal JsValue Count(JsValue self, JsValue[] args)
         {
-            if (args.Length != 1 || (args[0].AsObject() is not BlittableObjectInstance doc)) 
+            if (args.Length != 0 || (CurrentlyProcessedObject is not BlittableObjectInstance doc)) 
             {
-                throw new InvalidOperationException("count(doc) must be called with a single entity argument");
+                throw new InvalidOperationException("count() must be called without arguments");
             }
             
             doc.TryGetValue(Constants.Documents.Indexing.Fields.CountFieldName, out var countValue);
@@ -62,9 +65,9 @@ namespace Raven.Server.Documents.Patch
         
         internal JsValue Key(JsValue self, JsValue[] args)
         {
-            if (args.Length != 1 || (args[0].AsObject() is not BlittableObjectInstance doc)) 
+            if (args.Length != 0 || (CurrentlyProcessedObject is not BlittableObjectInstance doc)) 
             {
-                throw new InvalidOperationException("key(doc) must be called with a single entity argument");
+                throw new InvalidOperationException("key() must be called without arguments");
             }
             
             var groupByFields = doc.Projection._query.Metadata.GroupBy;
@@ -95,14 +98,24 @@ namespace Raven.Server.Documents.Patch
         
         internal JsValue Sum(JsValue self, JsValue[] args)
         {
-            if (args.Length != 2 || (args[0].AsObject() is not BlittableObjectInstance doc) || (args[1].AsString() is not string fieldName)) 
+            if (args.Length != 1 || CurrentlyProcessedObject is not BlittableObjectInstance doc)
             {
-                throw new InvalidOperationException("sum(doc, field) must be called with a two arguments - entity and fieldname");
+                throw new InvalidOperationException("sum(field) must be called with a single argument");
             }
-            
-            doc.TryGetValue(fieldName, out var sumValue);
 
-            return sumValue;
+            if (args[0] is ScriptFunctionInstance sfi)
+            {
+                if (sfi.FunctionDeclaration.ChildNodes[1] is StaticMemberExpression sme)
+                {
+                    if (sme.Property is Identifier identifier)
+                    {
+                        doc.TryGetValue(identifier.Name, out var sumValue);
+                        
+                        return sumValue;
+                    }
+                }
+            }
+            return null;
         }        
 
         internal JsValue GetMetadata(JsValue self, JsValue[] args)
@@ -473,6 +486,7 @@ namespace Raven.Server.Documents.Patch
         {
             foreach (var disposable in _disposables)
                 disposable.Dispose();
+            CurrentlyProcessedObject = null;
             _disposables.Clear();
             _context = null;
         }
