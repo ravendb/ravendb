@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.Replication
 
             public override bool ShouldPulseTransaction()
             {
-                if (NumberOfItemsSent == 0)
+                if (NumberOfItemsSent == 0) // when we start to collect items to send (NumberOfItemsSent>0), we don't want to pulse transaction to prevent those items from being deleted before we send them in the batch.
                 {
                     return base.ShouldPulseTransaction();
                 }
