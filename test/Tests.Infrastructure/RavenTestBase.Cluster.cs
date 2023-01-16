@@ -46,32 +46,24 @@ public partial class RavenTestBase
             await _parent.Server.ServerStore.Cluster.WaitForIndexNotification(updateIndex, TimeSpan.FromSeconds(10));
         }
 
-        public async Task<long> WaitForRaftCommandToBeAppendedInClusterAsync(List<RavenServer> nodes, string commandType, long timeout = 15_000, long interval = 100)
+        public async Task<long> WaitForRaftCommandToBeAppendedInClusterAsync(List<RavenServer> nodes, string commandType, int timeout = 15_000, int interval = 100)
         {
-            var sw = Stopwatch.StartNew();
             long index = -1;
-            while (sw.ElapsedMilliseconds < timeout)
+            var tasks = new List<Task<bool>>();
+            foreach (var server in nodes)
             {
-                foreach (var server in nodes)
+                var t = WaitForValueAsync(async () =>
                 {
-                    try
-                    {
-                        var lastIndex = LastRaftIndexForCommand(server, commandType);
-                        index = lastIndex;
-                    }
-                    catch (TrueException)
-                    {
-                        index = -1;
-                        break;
-                    }
-                }
+                    var commandFound = TryGetLastRaftIndexForCommand(server, commandType, out index);
+                    return commandFound && index > 0;
+                }, true, timeout: timeout, interval: interval);
+                tasks.Add(t);
+            }
 
-                if (index != -1)
-                {
-                    return index;
-                }
-
-                await Task.Delay(TimeSpan.FromMilliseconds(interval));
+            foreach (var t in tasks)
+            {
+                if (await t == false)
+                    return -1;
             }
 
             return index;
@@ -90,8 +82,14 @@ public partial class RavenTestBase
 
         public long LastRaftIndexForCommand(RavenServer server, string commandType)
         {
-            var updateIndex = 0L;
-            var commandFound = false;
+            var commandFound = TryGetLastRaftIndexForCommand(server, commandType, out var updateIndex);
+            Assert.True(commandFound, $"{commandType} wasn't found in the log.");
+            return updateIndex;
+        }
+
+        public bool TryGetLastRaftIndexForCommand(RavenServer server, string commandType, out long updateIndex)
+        {
+            updateIndex = 0L;
             using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -100,14 +98,13 @@ public partial class RavenTestBase
                     var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
                     if (type == commandType)
                     {
-                        commandFound = true;
-                        Assert.True(long.TryParse(entry[nameof(RachisLogHistory.LogHistoryColumn.Index)].ToString(), out updateIndex));
+                        updateIndex = long.Parse(entry[nameof(RachisLogHistory.LogHistoryColumn.Index)].ToString());
+                        return true;
                     }
                 }
             }
 
-            Assert.True(commandFound, $"{commandType} wasn't found in the log.");
-            return updateIndex;
+            return false;
         }
 
         public IEnumerable<DynamicJsonValue> GetRaftCommands(RavenServer server, string commandType = null)
