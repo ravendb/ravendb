@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class compactDatabaseCommand extends commandBase {
 
-    constructor(private databaseName: string, private compactDocuments: boolean, private indexesToCompact: Array<string>) {
+    constructor(private databaseName: string, private compactDocuments: boolean, private indexesToCompact: Array<string>, private skipOptimizeIndexes = false) {
         super();
     }
 
@@ -12,7 +12,7 @@ class compactDatabaseCommand extends commandBase {
             DatabaseName: this.databaseName,
             Documents: this.compactDocuments,
             Indexes: this.indexesToCompact,
-            SkipOptimizeIndexes: false
+            SkipOptimizeIndexes: this.skipOptimizeIndexes
         };
 
         const url = endpoints.global.adminDatabases.adminCompact;

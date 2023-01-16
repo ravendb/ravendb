@@ -17,6 +17,12 @@
                         <input id="allIndexes" type="checkbox" data-bind="checked: compactAllIndexes" />
                         <label for="allIndexes">Compact all indexes</label><small data-bind="text: numberOfIndexesFormatted"></small>
                     </div>
+                    <div class="margin-left margin-left-lg">
+                        <div class="toggle" title="Uncheck to skip optimization of Lucene indexes">
+                            <input id="skipOptimizeIndexes" type="checkbox" data-bind="checked: skipOptimizeIndexes" />
+                            <label for="skipOptimizeIndexes">Skip optimize indexes</label>
+                        </div>
+                    </div>
                     <div class="text-center text-muted" data-bind="visible: !allIndexes().length">
                         <i class="icon-empty-set"></i><small>No Indexes available</small>
                     </div>
