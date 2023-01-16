@@ -19,6 +19,9 @@ namespace SlowTests.Issues
 {
     public abstract class RavenDB_13972 : RavenTestBase
     {
+
+        private const int _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = PulsedEnumerationState<object>.DefaultNumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded;
+
         protected RavenDB_13972(ITestOutputHelper output) : base(output)
         {
         }
@@ -271,7 +274,7 @@ namespace SlowTests.Issues
 
         protected static void CanStreamCollectionQueryWithPulsatingReadTransaction_ActualTest(int numberOfUsers, DocumentStore store)
         {
-            var uniqueUserNames = PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10;
+            var uniqueUserNames = _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10;
 
             using (var bulk = store.BulkInsert())
             {
@@ -326,7 +329,7 @@ namespace SlowTests.Issues
             using (var session = store.OpenSession())
             {
                 var skip = 100;
-                var take = PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10;
+                var take = _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10;
 
                 var query = session.Query<User>().Skip(skip).Take(take);
 

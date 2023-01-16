@@ -6,7 +6,9 @@ namespace Raven.Server.Utils.Enumerators
 {
     public abstract class PulsedEnumerationState<T>
     {
-        internal const int NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = 1024;
+        public const int DefaultNumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = 1024;
+
+        protected int NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = 1024;
 
         protected readonly DocumentsOperationContext Context;
         protected Size PulseLimit { get; private set; }

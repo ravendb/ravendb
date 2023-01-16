@@ -9,16 +9,18 @@ namespace SlowTests.Issues
 {
     public class RavenDB_13972_encrypted : RavenDB_13972
     {
+        private const int _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = PulsedEnumerationState<object>.DefaultNumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded;
+
         public RavenDB_13972_encrypted(ITestOutputHelper output) : base(output)
         {
         }
 
         [Theory]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2)]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 0, 2)]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 3)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2, 2, 0, 3)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2, 2, 4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 0, 2)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 3)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2, 2, 0, 3)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2, 2, 4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
         public async Task CanExportWithPulsatingReadTransaction(int numberOfUsers, int numberOfCountersPerUser, int numberOfRevisionsPerDocument, int numberOfOrders, int deleteUserFactor)
         {
             var file = GetTempFileName();
@@ -52,10 +54,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 0, 2)]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 3)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 0, 3)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 0, 2)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 3)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 0, 3)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
         public void CanStreamDocumentsWithPulsatingReadTransaction(int numberOfUsers, int numberOfOrders, int deleteUserFactor)
         {
             Encryption.EncryptedServer(out var certificates, out string dbName);
@@ -77,9 +79,9 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
-        [InlineData(10 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
+        [InlineData(10 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public void CanStreamQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
             Encryption.EncryptedServer(out var certificates, out string dbName);
@@ -101,8 +103,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public void CanStreamCollectionQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
             Encryption.EncryptedServer(out var certificates, out string dbName);
