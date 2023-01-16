@@ -84,63 +84,48 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
 
         foreach (var (shardNumber, cmdResult) in results)
         {
-            var queryRes = cmdResult.Result;
-            result.TotalResults += queryRes.TotalResults;
-            result.IsStale |= queryRes.IsStale;
-            result.SkippedResults += queryRes.SkippedResults;
-            result.IndexName = queryRes.IndexName;
-            result.IncludedPaths = queryRes.IncludedPaths;
-
-            if (result.IndexTimestamp < queryRes.IndexTimestamp) 
-                result.IndexTimestamp = queryRes.IndexTimestamp;
-
-            if (result.LastQueryTime < queryRes.LastQueryTime) 
-                result.LastQueryTime = queryRes.LastQueryTime;
-
-            if (queryRes.RaftCommandIndex.HasValue)
-            {
-                if (result.RaftCommandIndex == null || queryRes.RaftCommandIndex > result.RaftCommandIndex)
-                    result.RaftCommandIndex = queryRes.RaftCommandIndex;
-            }
+            var queryResult = cmdResult.Result;
+            
+            CombineSingleShardResultProperties(result, queryResult);
 
             // For includes, we send the includes to all shards, then we merge them together. We do explicitly
             // support including from another shard, so we'll need to do that again for missing includes
             // That means also recording the include() call from JS on missing values that we'll need to rerun on
             // other shards
 
-            if (queryRes.Includes is { Count: > 0 })
+            if (queryResult.Includes is { Count: > 0 })
             {
                 result.Includes ??= new List<BlittableJsonReaderObject>();
 
-                HandleDocumentIncludes(queryRes, ref result);
+                HandleDocumentIncludes(queryResult, ref result);
             }
 
-            if (queryRes.RevisionIncludes is {Length: > 0})
+            if (queryResult.RevisionIncludes is {Length: > 0})
             {
                 revisionIncludes ??= new ShardedRevisionIncludes();
 
-                revisionIncludes.AddResults(queryRes.RevisionIncludes, _context);
+                revisionIncludes.AddResults(queryResult.RevisionIncludes, _context);
             }
 
-            if (queryRes.CounterIncludes != null)
+            if (queryResult.CounterIncludes != null)
             {
                 counterIncludes ??= new ShardedCounterIncludes();
 
-                counterIncludes.AddResults(queryRes.CounterIncludes, queryRes.IncludedCounterNames, _context);
+                counterIncludes.AddResults(queryResult.CounterIncludes, queryResult.IncludedCounterNames, _context);
             }
 
-            if (queryRes.TimeSeriesIncludes != null)
+            if (queryResult.TimeSeriesIncludes != null)
             {
                 timeSeriesIncludes ??= new ShardedTimeSeriesIncludes(true);
 
-                timeSeriesIncludes.AddResults(queryRes.TimeSeriesIncludes, _context);
+                timeSeriesIncludes.AddResults(queryResult.TimeSeriesIncludes, _context);
             }
 
-            if (queryRes.CompareExchangeValueIncludes != null)
+            if (queryResult.CompareExchangeValueIncludes != null)
             {
                 compareExchangeValueIncludes ??= new ShardedCompareExchangeValueInclude();
 
-                compareExchangeValueIncludes.AddResults(queryRes.CompareExchangeValueIncludes, _context);
+                compareExchangeValueIncludes.AddResults(queryResult.CompareExchangeValueIncludes, _context);
             }
         }
 
@@ -193,6 +178,27 @@ public class ShardedQueryOperation : IShardedReadOperation<QueryResult, ShardedQ
         result.RegisterSpatialProperties(_query);
 
         return result;
+    }
+
+    internal static void CombineSingleShardResultProperties<TResult, TInclude>(QueryResult<List<TResult>, List<TInclude>> combinedResult, QueryResult singleShardResult)
+    {
+        combinedResult.TotalResults += singleShardResult.TotalResults;
+        combinedResult.IsStale |= singleShardResult.IsStale;
+        combinedResult.SkippedResults += singleShardResult.SkippedResults;
+        combinedResult.IndexName = singleShardResult.IndexName;
+        combinedResult.IncludedPaths = singleShardResult.IncludedPaths;
+
+        if (combinedResult.IndexTimestamp < singleShardResult.IndexTimestamp)
+            combinedResult.IndexTimestamp = singleShardResult.IndexTimestamp;
+
+        if (combinedResult.LastQueryTime < singleShardResult.LastQueryTime)
+            combinedResult.LastQueryTime = singleShardResult.LastQueryTime;
+
+        if (singleShardResult.RaftCommandIndex.HasValue)
+        {
+            if (combinedResult.RaftCommandIndex == null || singleShardResult.RaftCommandIndex > combinedResult.RaftCommandIndex)
+                combinedResult.RaftCommandIndex = singleShardResult.RaftCommandIndex;
+        }
     }
 
     private class RoundRobinComparer : IComparer<BlittableJsonReaderObject>
