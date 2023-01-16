@@ -3,26 +3,26 @@
        <div class="modal-body">
            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
            <div data-bind="if: etlType() === 'Raven'">
-               <h3 class="margin-bottom margin-bottom-lg margin-top">Sample RavenDB ETL Transformation Scripts</h3>
+               <h3 class="margin-bottom margin-top">Sample RavenDB ETL Transformation Scripts</h3>
                <div data-bind="foreach: $data.constructor.ravenEtlSamples">
                    <div class="margin-top" data-bind="text: title"></div>
                    <pre class="margin-bottom copy-area"><a href="#" class="copy-button-hidden" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
                </div>
             </div>
            <div data-bind="if: etlType() === 'Sql'" class="copy-area">
-               <h3 class="margin-bottom margin-bottom-lg margin-top">Sample SQL ETL Transformation Script</h3>
+               <h3 class="margin-bottom margin-top">Sample SQL ETL Transformation Script</h3>
                <div class="margin-bottom">
                    <pre class="copy-area"><a href="#" class="copy-button-hidden" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: sqlEtlSampleHtml"></span></pre>
                </div>
            </div>
            <div data-bind="if: etlType() === 'ElasticSearch'" class="copy-area">
-               <h3 class="margin-bottom margin-bottom-lg margin-top">Sample Elasticsearch ETL Transformation Script</h3>
+               <h3 class="margin-bottom margin-top">Sample Elasticsearch ETL Transformation Script</h3>
                <div class="margin-bottom">
                    <pre class="copy-area"><a href="#" class="copy-button-hidden" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: elasticSearchEtlSampleHtml"></span></pre>
                </div>
            </div>
            <div data-bind="if: etlType() === 'Olap'" class="copy-area">
-               <h3 class="margin-bottom margin-bottom-lg margin-top">Sample OLAP ETL Transformation Scripts</h3>
+               <h3 class="margin-bottom margin-top">Sample OLAP ETL Transformation Scripts</h3>
                <div>Transform with Partitions</div>
                <div class="margin-bottom">
                    <pre class="copy-area"><a href="#" class="copy-button-hidden" title="Copy code sample" data-bind="click: _.partial($root.copySample, 'olapEtlSamplePartition')"><i class="icon-copy"></i></a><span data-bind="html: olapEtlSamplePartitionHtml"></span></pre>
@@ -41,18 +41,18 @@
                </div>
            </div>
            <div data-bind="if: etlType() === 'Kafka'" class="copy-area">
-               <h3 class="margin-bottom margin-bottom-lg margin-top">Sample Kafka ETL Transformation Script</h3>
+               <h3 class="margin-bottom margin-top">Sample Kafka ETL Transformation Script</h3>
                <div class="margin-bottom">
                    <pre class="copy-area"><a href="#" class="copy-button-hidden" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: kafkaEtlSampleHtml"></span></pre>
                </div>
            </div>
            <div data-bind="if: etlType() === 'RabbitMQ'" class="copy-area">
-               <h3 class="margin-bottom margin-bottom-lg margin-top">Sample RabbitMQ ETL Transformation Script</h3>
+               <h3 class="margin-bottom margin-top">Sample RabbitMQ ETL Transformation Script</h3>
                <div>Example</div>
                <div class="margin-bottom">
                    <pre class="copy-area"><a href="#" class="copy-button-hidden" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: rabbitMqEtlSampleHtml"></span></pre>
                </div>
-               <table class="table table-striped table-condensed margin-top-lg">
+               <table class="table table-striped table-condensed">
                    <thead>
                    </thead>
                    <tbody>
@@ -74,10 +74,10 @@
                    <tr>
                        <td>
                            <code>loadToUsers({ Name: 'Bob' }, {<br />
-                               <span class="margin-left-lg">Id: ...,</span><br />
-                               <span class="margin-left-lg">PartitionKey: ...,</span><br />
-                               <span class="margin-left-lg">Source: ...,</span><br />
-                               <span class="margin-left-lg">Type: ...</span><br /> })
+                               <span class="margin-left">Id: ...,</span><br />
+                               <span class="margin-left">PartitionKey: ...,</span><br />
+                               <span class="margin-left">Source: ...,</span><br />
+                               <span class="margin-left">Type: ...</span><br /> })
                            </code>
                        </td>
                        <td>Users</td>
@@ -86,7 +86,7 @@
                    <tr>
                        <td>
                            <code>loadToUsers({ Name: 'Bob' }, 'admin', {<br />
-                               <span class="margin-left-lg">Type: ...,</span><br /> })
+                               <span class="margin-left">Type: ...,</span><br /> })
                            </code>
                        </td>
                        <td>Users</td>

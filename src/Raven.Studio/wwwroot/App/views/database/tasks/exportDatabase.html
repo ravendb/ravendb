@@ -13,7 +13,7 @@
                     </div>
                 </div>
             </div>
-            <div data-bind="with: model" class="margin-top">
+            <div data-bind="with: model">
                 <div class="row">
                     <div class="col-lg-3">
                         <h4>Documents and Extensions:</h4>
@@ -22,7 +22,7 @@
                                 <input id="toggleDocuments" type="checkbox" data-bind="checked: includeDocuments" />
                                 <label for="toggleDocuments">Include Documents</label>
                             </div>
-                            <div class="margin-left margin-left-lg">
+                            <div class="margin-left">
                                 <div class="toggle">
                                     <input id="toggleAttachments" type="checkbox"
                                            data-bind="checked: includeAttachments" />
@@ -61,7 +61,7 @@
                                 <input id="toggleIndexes" type="checkbox" data-bind="checked: includeIndexes" />
                                 <label for="toggleIndexes">Include Indexes</label>
                             </div>
-                            <div class="margin-left margin-left-lg">
+                            <div class="margin-left">
                                 <div class="toggle">
                                     <input id="toggleAnalyzers" type="checkbox" 
                                            data-bind="checked: removeAnalyzers, enable: includeIndexes" />
@@ -107,7 +107,7 @@
                 </div>
                 <div class="row" data-bind="collapse: encryptOutput">
                     <div class="col-sm-12 col-lg-6" data-bind="with: $root.encryptionSection">
-                        <div class="margin-left margin-left-lg">
+                        <div class="margin-left">
                             <div data-bind="compose: $root.setupEncryptionKeyView"></div>
                         </div>
                     </div>
@@ -116,7 +116,7 @@
             <div id="export-advanced" data-bind="collapse: showAdvancedOptions">
                 <hr />
                 <h3>Advanced</h3>
-                <div class="margin-left margin-left-lg">
+                <div class="margin-left">
                     <!-- TODO: see issue 8493 ! -->
                     <!--<div class="toggle">
                         <input id="expiredDocuments" type="checkbox" disabled="disabled" data-bind="checked: model.includeExpiredDocuments">

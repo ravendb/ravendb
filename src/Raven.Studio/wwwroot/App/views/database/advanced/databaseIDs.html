@@ -65,7 +65,7 @@
                         <div class="form-group" data-bind="visible: unusedIDs().length">
                             <label class="control-label">&nbsp;</label>
                             <div class="flex-grow">
-                                <ul class="well collection-list margin-bottom margin-bottom-lg" data-bind="foreach: unusedIDs">
+                                <ul class="well collection-list margin-bottom" data-bind="foreach: unusedIDs">
                                     <li>
                                         <div class="name" data-bind="text: $data"></div>
                                         <a title="Remove this ID from the unused list" href="#" data-bind="click: _.partial($parent.removeFromUnusedList, $data)"><i class="icon-trash"></i></a>

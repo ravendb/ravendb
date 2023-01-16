@@ -23,7 +23,7 @@
                     <span data-bind="if: error">
                         <strong class="text-warning" data-bind="text: error"></strong>
                     </span>
-                    <div data-bind="visible: licenseExpired" class="margin-top-lg"> 
+                    <div data-bind="visible: licenseExpired" class="margin-top"> 
                         Select one of the following options:
                     </div>
                 </div>
@@ -34,7 +34,7 @@
                     <small data-bind="visible: !renewMessage()">Click to renew the current existing license.<br>The license expiration date will be extended.</small>
                     <small class="text-info" data-bind="visible: renewMessage, html: renewMessage"></small>
                     <span data-bind="visible: renewError"><br><small class="text-danger" data-bind="text: renewError"></small></span>
-                    <div class="margin-bottom margin-bottom-lg">
+                    <div class="margin-bottom">
                         <button type="button" class="btn btn-info pull-right" 
                                 data-bind="click: renewLicense, disable: spinners.renewLicense() || spinners.activateLicense() || renewMessage(),
                                            css: { 'btn-spinner': spinners.renewLicense },
@@ -47,7 +47,7 @@
                 <div class="text-left padding padding-sm" id="forceUpdate" data-bind="visible: forceUpdateWhenExpired">
                     <div><strong>Force Update</strong></div>
                     <small>Click to apply the new expiration date that was set for you.</small>
-                    <div class="margin-bottom margin-bottom-lg">
+                    <div class="margin-bottom">
                         <button type="button" class="btn btn-info pull-right" title="Click to apply the new expiration date" 
                                 data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate() || spinners.activateLicense(),
                                            css: { 'btn-spinner': spinners.forceLicenseUpdate }">

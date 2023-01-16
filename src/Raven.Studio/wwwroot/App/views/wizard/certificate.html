@@ -26,7 +26,7 @@
                            data-bind="textInput: certificatePassword" placeholder="Enter certificate password">
                 </div>
             </div>
-            <div class="form-group margin-bottom margin-bottom-lg" data-bind="visible: certificateFileName() && certificateCNs().length !== 0">
+            <div class="form-group margin-bottom" data-bind="visible: certificateFileName() && certificateCNs().length !== 0">
                 <label class="control-label">CN names</label>
                 <div class="flex-grow">
                     <div class="d-flex flex-wrap flex-gap-gutter-xs" data-bind="foreach: certificateCNs">

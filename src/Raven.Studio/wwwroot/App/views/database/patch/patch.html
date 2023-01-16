@@ -168,7 +168,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="loaded" data-bind="if: activeTestTab() === 'loaded'">
+                        <div class="tab-pane fade margin-bottom" id="loaded" data-bind="if: activeTestTab() === 'loaded'">
                             <h2 class="text-center">Loaded Data</h2>
                             <div data-bind="if: actions.loadDocument().length">
                                 <hr>
@@ -223,7 +223,7 @@
                             </div>
                             <div data-bind="if: !loadedCount()"><hr>No data available.</div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="modified" data-bind="if: activeTestTab() === 'modified'">
+                        <div class="tab-pane fade margin-bottom" id="modified" data-bind="if: activeTestTab() === 'modified'">
                             <h2 class="text-center">Modified Data</h2>
                             <div data-bind="if: actions.putDocument().length">
                                 <hr>
@@ -281,7 +281,7 @@
                             </div>
                             <div data-bind="if: !modifiedCount()"><hr>No data available.</div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="deleted" data-bind="if: activeTestTab() === 'deleted'">
+                        <div class="tab-pane fade margin-bottom" id="deleted" data-bind="if: activeTestTab() === 'deleted'">
                             <h2 class="text-center">Deleted Data</h2>
                             <div data-bind="if: actions.deleteDocument().length">
                                 <hr>
@@ -314,7 +314,7 @@
                             </div>
                             <div data-bind="if: !deletedCount()"><hr>No data available.</div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="output" data-bind="if: activeTestTab() === 'output'">
+                        <div class="tab-pane fade margin-bottom" id="output" data-bind="if: activeTestTab() === 'output'">
                             <h2 class="text-center">Output Data</h2>
                             <hr>
                             <ul data-bind="foreach: actions.output">
@@ -393,7 +393,7 @@
 </script>
 
 <script type="text/html" id="settings-template">
-    <div class="padding margin-left">
+    <div class="padding margin-left-sm margin-right-sm">
         <strong><h4>Patching behavior for stale indexes:</h4></strong>
         <div class="radio">
             <input id="allowPatchingStaleIndex" type="radio" data-bind="checked: staleIndexBehavior" name="staleBehavior" value="patchStale">
@@ -402,15 +402,15 @@
         <div class="radio margin-bottom">
             <input id="timeToWaitForNonStale" type="radio" data-bind="checked: staleIndexBehavior" name="staleBehavior" value="timeoutDefined">
             <label for="timeToWaitForNonStale">Define timeout to wait for index to become non-stale</label>
-            <div class="margin-left margin-left-lg" data-bind="collapse: staleIndexBehavior() === 'timeoutDefined'">
+            <div class="margin-left" data-bind="collapse: staleIndexBehavior() === 'timeoutDefined'">
                 <input type="text" class="form-control" data-bind="durationPicker: staleTimeout, durationPickerOptions: { showDays: false, showSeconds: true }" />
             </div>
-            <div class="margin-left margin-left-lg margin-top margin-top-sm" data-bind="visible: staleIndexBehavior() === 'timeoutDefined'">
+            <div class="margin-left margin-top margin-top-sm" data-bind="visible: staleIndexBehavior() === 'timeoutDefined'">
                 <small><i class="icon-warning"></i>  An exception is thrown when timeout has passed</small>
             </div>
         </div>
-        <hr class="margin-right">
-        <div class="margin-left margin-left-sm">
+        <hr>
+        <div>
             <div class="toggle">
                 <input id="disableAutoIndex" type="checkbox" data-bind="checked: disableAutoIndexCreation">
                 <label for="disableAutoIndex">Don't create a new Auto-Index</label>

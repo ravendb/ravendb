@@ -47,7 +47,7 @@
                                 </div>
                             </div>
                             <div data-bind="collapse: humaneDelayDescription">
-                                <div class="form-group margin-bottom margin-bottom-lg">
+                                <div class="form-group margin-bottom">
                                     <label class="control-label">&nbsp;</label>
                                     <div class="bg-info padding padding-sm small flex-horizontal">
                                         <div><i class="icon-info"></i></div>
@@ -148,7 +148,7 @@
                 </div>
                 <div data-bind="if: $root.canDefineCertificates">
                     <div class="flex-horizontal">
-                        <h3 class="margin-top margin-top-lg"
+                        <h3 class="margin-top"
                             data-bind="text: withFiltering() ? 'Filtered Replication Access' : 'Replication Access'">
                         </h3>
                         <div class="margin-top margin-left margin-right margin-right-sm flex-grow" title="Filter the replication access items by Name or Thumbprint" data-bind="visible: $root.allReplicationAccessItems().length">
@@ -261,7 +261,7 @@
                 </div>
             </div>
             <div class="col-xs-12 col-lg-6" data-bind="with: $root.editedReplicationAccessItem">
-                <div class="panel margin-top margin-top-lg">
+                <div class="panel margin-top">
                     <div class="panel-body">
                         <button class="close" data-bind="click: $root.cancelReplicationAccessOperation" aria-hidden="true">
                             <i class="icon-cancel"></i>
@@ -320,9 +320,9 @@
                                 <span class="help-block" data-bind="validationMessage: certificate"></span>
                             </div>
                         </div>
-                        <div data-bind="visible: $parent.withFiltering" class="margin-bottom margin-bottom-lg">
+                        <div data-bind="visible: $parent.withFiltering" class="margin-bottom">
                             <hr>
-                            <div class="margin-bottom margin-bottom-lg">
+                            <div class="margin-bottom">
                                 <h3>Filter Replicated Documents by ID Paths</h3>
                             </div>
                             <div class="form-group" data-bind="validationElement: inputPrefixHubToSink().path">
@@ -393,7 +393,7 @@
                             </div>
                         </div>
                         <hr>
-                        <div class="margin-bottom margin-bottom-lg">
+                        <div class="margin-bottom">
                             <div class="margin-bottom margin-bottom-xs">
                                 <h3>Information for Sink</h3>
                             </div>

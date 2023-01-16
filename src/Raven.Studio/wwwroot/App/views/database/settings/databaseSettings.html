@@ -5,7 +5,7 @@
     </div>
     <!-- /ko -->
     <!-- ko if: !isForbidden() -->
-    <div class="flex-horizontal flex-wrap padding">
+    <div class="flex-horizontal flex-wrap margin-top margin-left margin-bottom"">
         <div class="filter-entries">
             <input class="form-control" placeholder="Filter Keys" data-bind="textInput: filterKeys" />
         </div>
@@ -114,7 +114,7 @@
 </script>
 
 <script type="text/html" id="db-settings-override-template">
-    <div class="form-group no-margin margin-left margin-bottom margin-bottom-sm padding padding-xs no-padding-right flex-vertical">
+    <div class="form-group no-margin margin-bottom margin-bottom-sm no-padding-right flex-vertical">
         <div class="toggle">
             <div title="Customize the database value">
                 <input type="checkbox" data-bind="checked: override, attr: {'id': 'overrideToggle_' + keyName() }" />
@@ -126,8 +126,8 @@
                 <i class="icon-warning"></i><span>This configuration is pending</span>
             </small>
         </div>
-        <div data-bind="collapse: override" class="margin-left margin-left-lg override-options flex-horizontal">
-            <div class="margin-left margin-left-sm margin-right margin-right-lg flex-grow" data-bind="validationElement: customizedDatabaseValue">
+        <div data-bind="collapse: override" class="override-options flex-horizontal">
+            <div class="margin-right margin-right-lg flex-grow" data-bind="validationElement: customizedDatabaseValue">
                 <div data-bind="visible: override, template: { name: 'db-settings-' + getTemplateType() + '-template' }"></div>
             </div>
         </div>

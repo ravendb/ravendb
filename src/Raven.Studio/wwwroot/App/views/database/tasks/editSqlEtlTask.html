@@ -180,7 +180,7 @@
                     </div>
                 </div>
             </form>
-            <div class="flex-horizontal flex-header margin-top margin-top-lg">
+            <div class="flex-horizontal flex-header margin-top">
                 <div class="flex-grow"><h3>SQL Tables</h3></div>
                 <div><button type="button" class="btn btn-info" data-bind="click: addNewSqlTable, disable: showEditSqlTableArea()"><i class="icon-plus"></i><span>Add Table</span></button></div>
             </div>
@@ -348,7 +348,7 @@
                             </ul>
                         </div>
                     </div>
-                    <div class="toggle margin-top margin-top-lg margin-bottom" data-bind="visible: !isNew() && !$root.enableTestArea()">
+                    <div class="toggle margin-top margin-bottom" data-bind="visible: !isNew() && !$root.enableTestArea()">
                         <input id="reset" type="checkbox" data-bind="checked: resetScript">
                         <label for="reset">Apply script to documents from beginning of time (Reset)</label>
                     </div>
