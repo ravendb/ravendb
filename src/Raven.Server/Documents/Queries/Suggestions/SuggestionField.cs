@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.Queries.Suggestions
             IsSuggest = true;
         }
 
+        internal bool HasOptions => _options != null || _optionsAsStringOrParameterName != null;
+
         public List<string> GetTerms(JsonOperationContext context, BlittableJsonReaderObject parameters)
         {
             if (_terms != null)

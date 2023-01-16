@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using NuGet.Packaging;
@@ -10,7 +9,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -42,7 +40,9 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
     }
 
     public string ExpectedEtag { get; }
+
     public HttpRequest HttpRequest { get => _requestHandler.HttpContext.Request; }
+
     RavenCommand<QueryResult> IShardedOperation<QueryResult, ShardedReadResult<SuggestionQueryResult>>.CreateCommandForShard(int shardNumber) => _queryCommands[shardNumber];
 
     public string CombineCommandsEtag(Dictionary<int, ShardExecutionResult<QueryResult>> commands)
@@ -70,43 +70,33 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
 
         foreach (var cmdResult in results.Values)
         {
-            // TODO arek
-            var queryRes = cmdResult.Result;
-            result.TotalResults += queryRes.TotalResults;
-            result.IsStale |= queryRes.IsStale;
-            result.SkippedResults += queryRes.SkippedResults;
-            result.IndexName = queryRes.IndexName;
-            result.IncludedPaths = queryRes.IncludedPaths;
+            var queryResult = cmdResult.Result;
 
-            if (result.IndexTimestamp < queryRes.IndexTimestamp)
-                result.IndexTimestamp = queryRes.IndexTimestamp;
-
-            if (result.LastQueryTime < queryRes.LastQueryTime)
-                result.LastQueryTime = queryRes.LastQueryTime;
-
-            if (queryRes.RaftCommandIndex.HasValue)
-            {
-                if (result.RaftCommandIndex == null || queryRes.RaftCommandIndex > result.RaftCommandIndex)
-                    result.RaftCommandIndex = queryRes.RaftCommandIndex;
-            }
+            ShardedQueryOperation.CombineSingleShardResultProperties(result, queryResult);
 
             foreach (BlittableJsonReaderObject suggestionJson in cmdResult.Result.Results)
             {
                 var suggestionResult = deserializer.FromBlittable<SuggestionResult>(suggestionJson, "suggestion/result");
 
+                var fieldName = suggestionResult.Name;
+
                 if (suggestionResult.Suggestions.Count == 0)
+                {
+                    if (suggestions.ContainsKey(fieldName) == false)
+                        suggestions[fieldName] = new AggregatedSuggestions();
+
                     continue;
-                
+                }
+
                 BlittableJsonReaderArray popularityMetadata = null;
 
                 if (suggestionJson.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                     metadata.TryGet(Constants.Documents.Metadata.SuggestionPopularityFields, out popularityMetadata);
 
-                var fieldName = suggestionResult.Name;
 
                 if (suggestions.TryGetValue(fieldName, out AggregatedSuggestions aggregatedSuggestion) == false)
                 {
-                    aggregatedSuggestion = new AggregatedSuggestions { Suggestions = new HashSet<string>(suggestionResult.Suggestions) };
+                    aggregatedSuggestion = new AggregatedSuggestions();
                     suggestions[fieldName] = aggregatedSuggestion;
                 }
                 else
@@ -114,22 +104,44 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
                     aggregatedSuggestion = suggestions[fieldName];
                 }
 
+                aggregatedSuggestion.Suggestions.AddRange(suggestionResult.Suggestions);
+
                 if (popularityMetadata is { Length: > 0 })
                     AddPopularity(popularityMetadata, aggregatedSuggestion, suggestionResult);
             }
         }
-        
-        result.Results = suggestions.Select(x =>
+
+        var suggestionOptions = _query.Metadata.SelectFields.Where(x => x.IsSuggest)
+                                                                        .Cast<SuggestionField>()
+                                                                        .Where(x => x.HasOptions)
+                                                                        .ToDictionary(x => x.Name.Value, x => x);
+
+        result.Results = new List<SuggestionResult>(suggestions.Count);
+
+        foreach (var suggestion in suggestions)
         {
+            var fieldName = suggestion.Key;
+
             IEnumerable<string> aggregatedSuggestions;
 
-            if (x.Value.SuggestionsWithPopularity is null)
-                aggregatedSuggestions = x.Value.Suggestions;
+            if (suggestion.Value.SuggestionsWithPopularity is null)
+                aggregatedSuggestions = suggestion.Value.Suggestions;
             else
-                aggregatedSuggestions = x.Value.SuggestionsWithPopularity.Values.OrderByDescending(suggestWord => suggestWord).Select(suggestWord => suggestWord.Term).ToArray();
+                aggregatedSuggestions = suggestion.Value.SuggestionsWithPopularity.Values.OrderByDescending(suggestWord => suggestWord).Select(suggestWord => suggestWord.Term).ToArray();
 
-            return new SuggestionResult {Name = x.Key, Suggestions = aggregatedSuggestions.ToList() };
-        }).ToList();
+            var fieldResult = new SuggestionResult { Name = fieldName };
+
+            if (suggestionOptions.TryGetValue(fieldName, out var field) == false)
+                fieldResult.Suggestions = aggregatedSuggestions.ToList();
+            else
+            {
+                var options = field.GetOptions(_context, _query.QueryParameters);
+
+                fieldResult.Suggestions = aggregatedSuggestions.Take(options.PageSize).ToList();
+            }
+
+            result.Results.Add(fieldResult);
+        }
 
         return result;
 
@@ -150,7 +162,7 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
 
     private class AggregatedSuggestions
     {
-        public HashSet<string> Suggestions { get; set; }
+        public HashSet<string> Suggestions { get; } = new();
 
         public Dictionary<string, SuggestWord> SuggestionsWithPopularity { get; set; }
 
