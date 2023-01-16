@@ -10,6 +10,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
@@ -232,10 +233,12 @@ namespace Raven.Server.Documents.Replication
                 _parent = parent;
                 WasInterrupted = false;
                 Next = next;
+                NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = _parent._parent._parent._server.Configuration.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded ?? 1024;
             }
 
             public override void OnMoveNext(ReplicationBatchItem current)
             {
+                ReadCount++;
                 _parent._parent.ForTestingPurposes?.OnDocumentSenderFetchNewItem?.Invoke();
                 _parent._parent.CancellationToken.ThrowIfCancellationRequested();
                 _parent.AssertNoLegacyReplicationViolation(current);
@@ -309,13 +312,7 @@ namespace Raven.Server.Documents.Replication
             {
                 if (NumberOfItemsSent == 0)
                 {
-                    var size = Context.Transaction.InnerTransaction.LowLevelTransaction.GetTotal32BitsMappedSize() +
-                               Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize;
-                
-                    if (size >= PulseLimit)
-                    {
-                        return true;
-                    }
+                    return base.ShouldPulseTransaction();
                 }
 
                 return false;
