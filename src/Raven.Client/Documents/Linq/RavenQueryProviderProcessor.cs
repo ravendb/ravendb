@@ -3620,9 +3620,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             HandleKeywordsIfNeeded(ref field, ref alias);
 
             var identityProperty = DocumentQuery.Conventions.GetIdentityProperty(_ofType ?? _originalQueryType);
-            var identityConverted = DocumentQuery.Conventions.GetConvertedPropertyNameFor(identityProperty);
+            var identityConverted = DocumentQuery.Conventions.GetConvertedPropertyNameFor(identityProperty) ?? identityProperty?.Name;
 
-            if (identityProperty != null && identityConverted == field)
+            if (identityProperty != null && identityConverted  == field)
             {
                 FieldsToFetch.Add(new FieldToFetch(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias));
                 return;
