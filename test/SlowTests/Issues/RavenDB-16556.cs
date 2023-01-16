@@ -19,14 +19,27 @@ public class RavenDB_16556 : RavenTestBase
                                         load o.EmpId as e
                                         select 
                                         {
-                                            Key: key(o),
-                                            Value: sum(o, ""Price"")
+                                            Key: key(),
+                                            Value: sum(""Price"")
                                         }")]
     [InlineData(@"declare function 
                     output(o){
                         return {
-		                    Key: key(o),
-		                    Value: sum(o, ""Price"")
+		                    Key: key(),
+		                    Value: sum(""Price"")
+                        }
+                    }
+
+                from Orders as o
+                group by o.CompId, o.EmpId
+                order by count() as long desc
+                load o.EmpId as e
+                select output(o)")]
+    [InlineData(@"declare function 
+                    output(o){
+                        return {
+		                    Key: key(),
+		                    Value: sum(x => x.Price)
                         }
                     }
 
@@ -94,14 +107,14 @@ public class RavenDB_16556 : RavenTestBase
                                         load o.EmpId as e
                                         select 
                                         {
-                                            Key: key(o),
-                                            Value: count(o)
+                                            Key: key(),
+                                            Value: count()
                                         }")]
     [InlineData(@"declare function 
                     output(o){
                         return {
-		                    Key: key(o),
-		                    Value: count(o)
+		                    Key: key(),
+		                    Value: count()
                         }
                     }
 
@@ -159,14 +172,14 @@ public class RavenDB_16556 : RavenTestBase
                                         load o.EmpId as e
                                         select 
                                         {
-                                            Key: key(o),
-                                            Value: sum(o)
+                                            Key: key(),
+                                            Value: sum()
                                         }")]
     [InlineData(@"declare function 
                     output(o){
                         return {
-		                    Key: key(o),
-		                    Value: sum(o)
+		                    Key: key(),
+		                    Value: sum()
                         }
                     }
 
@@ -177,10 +190,10 @@ public class RavenDB_16556 : RavenTestBase
                 select output(o)")]
     [InlineData(@"declare function 
                     output(o){
-                    var empId = key(o).EmpId;
+                    var empId = key().EmpId;
                         return {
 		                    Key: empId,
-		                    Value: sum(o)
+		                    Value: sum()
                         }
                     }
 
