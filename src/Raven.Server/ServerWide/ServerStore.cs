@@ -114,7 +114,6 @@ namespace Raven.Server.ServerWide
 
         private readonly NotificationsStorage _notificationsStorage;
         private readonly OperationsStorage _operationsStorage;
-        private readonly LuceneCleaner _luceneCleaner;
         public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
 
         private RequestExecutor _clusterRequestExecutor;
@@ -168,8 +167,6 @@ namespace Raven.Server.ServerWide
             ThreadsInfoNotifications = new ThreadsInfoNotifications(ServerShutdown);
 
             _operationsStorage = new OperationsStorage();
-
-            _luceneCleaner = new LuceneCleaner();
 
             Operations = new Operations(null, _operationsStorage, NotificationCenter, null,
                 (PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager

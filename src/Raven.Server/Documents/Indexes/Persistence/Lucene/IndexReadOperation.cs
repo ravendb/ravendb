@@ -62,6 +62,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
+        private static LuceneCleaner _luceneCleaner;
+
+        static IndexReadOperation()
+        {
+            _luceneCleaner = new LuceneCleaner();
+        }
 
         public IndexReadOperation(Index index, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
             : base(index, LoggingSource.Instance.GetLogger<IndexReadOperation>(index._indexStorage.DocumentDatabase.Name))
