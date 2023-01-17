@@ -48,6 +48,7 @@ using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Indexing;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
@@ -92,7 +93,7 @@ namespace Raven.Server.ServerWide
     /// <summary>
     /// Persistent store for server-wide configuration, such as cluster settings, database configuration, etc
     /// </summary>
-    public class ServerStore : IDisposable, ILowMemoryHandler
+    public class ServerStore : IDisposable
     {
         private const string ResourceName = nameof(ServerStore);
 
@@ -113,6 +114,7 @@ namespace Raven.Server.ServerWide
 
         private readonly NotificationsStorage _notificationsStorage;
         private readonly OperationsStorage _operationsStorage;
+        private readonly LuceneCleaner _luceneCleaner;
         public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
 
         private RequestExecutor _clusterRequestExecutor;
@@ -166,6 +168,8 @@ namespace Raven.Server.ServerWide
             ThreadsInfoNotifications = new ThreadsInfoNotifications(ServerShutdown);
 
             _operationsStorage = new OperationsStorage();
+
+            _luceneCleaner = new LuceneCleaner();
 
             Operations = new Operations(null, _operationsStorage, NotificationCenter, null,
                 (PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager
@@ -230,8 +234,6 @@ namespace Raven.Server.ServerWide
                     }
                 }
             });
-
-            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         internal readonly FifoSemaphore ServerWideConcurrentlyRunningIndexesLock;
@@ -3413,15 +3415,6 @@ namespace Raven.Server.ServerWide
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
             internal bool StopIndex;
             internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
-        }
-
-        public void LowMemory(LowMemorySeverity lowMemorySeverity)
-        {
-            FieldCache_Fields.DEFAULT.PurgeAllCaches();
-        }
-
-        public void LowMemoryOver()
-        {
         }
     }
 }
