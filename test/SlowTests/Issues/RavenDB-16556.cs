@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FastTests;
+using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -230,12 +231,14 @@ public class RavenDB_16556 : RavenTestBase
 
             session.SaveChanges();
             
-            Assert.Throws<Raven.Client.Exceptions.RavenException>(() =>
+            RavenException ex = Assert.Throws<RavenException>(() =>
             {
                 var res = session.Advanced
                     .RawQuery<Dto>(query)
                     .WaitForNonStaleResults().ToList();
             });
+            
+            Assert.Contains("sum(field) must be called with a single argument", ex.Message);
         }
     }
 
