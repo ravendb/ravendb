@@ -92,7 +92,7 @@ namespace Raven.Server.ServerWide
     /// <summary>
     /// Persistent store for server-wide configuration, such as cluster settings, database configuration, etc
     /// </summary>
-    public class ServerStore : IDisposable
+    public class ServerStore : IDisposable, ILowMemoryHandler
     {
         private const string ResourceName = nameof(ServerStore);
 
@@ -230,6 +230,8 @@ namespace Raven.Server.ServerWide
                     }
                 }
             });
+
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         internal readonly FifoSemaphore ServerWideConcurrentlyRunningIndexesLock;
@@ -3411,6 +3413,15 @@ namespace Raven.Server.ServerWide
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
             internal bool StopIndex;
             internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
+        }
+
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
+        {
+            FieldCache_Fields.DEFAULT.PurgeAllCaches();
+        }
+
+        public void LowMemoryOver()
+        {
         }
     }
 }
