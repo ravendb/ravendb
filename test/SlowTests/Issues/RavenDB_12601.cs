@@ -150,7 +150,6 @@ namespace SlowTests.Issues
         {
             DoNotReuseServer();
             long trxn1 = -1;
-            long trxn2 = -1;
             using (var store = GetDocumentStore())
             {
                 const string userId = "users/1";
@@ -206,7 +205,7 @@ namespace SlowTests.Issues
                     user.Age++;
                     session.SaveChanges();
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
-                    trxn2 = Cluster.LastRaftIndexForCommand(Server, "ClusterTransactionCommand");
+                    var trxn2 = Cluster.LastRaftIndexForCommand(Server, "ClusterTransactionCommand");
                     Assert.True(trxn2 > trxn1);
                     Assert.True(changeVector.Contains("RAFT:2"), $"{changeVector}.Contains('RAFT:2')");
                     Assert.True(changeVector.Contains($"TRXN:{trxn2}"), $"{changeVector}.Contains('TRXN:{trxn2}')");

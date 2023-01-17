@@ -48,17 +48,19 @@ public partial class RavenTestBase
 
         public async Task<long> WaitForRaftCommandToBeAppendedInClusterAsync(List<RavenServer> nodes, string commandType, int timeout = 15_000, int interval = 100)
         {
-            long index = -1;
+            // Assuming that I have only 1 command of this type (commandType) in the raft log
             var tasks = new List<Task<bool>>();
             foreach (var server in nodes)
             {
-                var t = WaitForValueAsync(async () =>
+                var t = WaitForValueAsync( () =>
                 {
-                    var commandFound = TryGetLastRaftIndexForCommand(server, commandType, out index);
-                    return commandFound && index > 0;
+                    var commandFound = TryGetLastRaftIndexForCommand(server, commandType, out _);
+                    return Task.FromResult(commandFound);
                 }, true, timeout: timeout, interval: interval);
                 tasks.Add(t);
             }
+
+            await Task.WhenAll(tasks);
 
             foreach (var t in tasks)
             {
@@ -66,6 +68,7 @@ public partial class RavenTestBase
                     return -1;
             }
 
+            TryGetLastRaftIndexForCommand(nodes[0], commandType, out var index);
             return index;
         }
 
@@ -99,12 +102,11 @@ public partial class RavenTestBase
                     if (type == commandType)
                     {
                         updateIndex = long.Parse(entry[nameof(RachisLogHistory.LogHistoryColumn.Index)].ToString());
-                        return true;
                     }
                 }
             }
 
-            return false;
+            return updateIndex > 0L;
         }
 
         public IEnumerable<DynamicJsonValue> GetRaftCommands(RavenServer server, string commandType = null)
