@@ -28,11 +28,20 @@ namespace Raven.Server.Documents.TimeSeries
 
         public void Dispose()
         {
-            Key?.Dispose();
-            LuceneKey?.Dispose();
-            DocId?.Dispose();
-            Name?.Dispose();
-            Collection?.Dispose();
+            if (Key != null && Key.IsDisposed == false)
+                Key.Dispose();
+
+            if (LuceneKey != null && LuceneKey.IsDisposed == false)
+                LuceneKey.Dispose();
+
+            if (DocId != null && DocId.IsDisposed == false)
+                DocId.Dispose();
+
+            if (Name != null && Name.IsDisposed == false)
+                Name.Dispose();
+
+            if (Collection != null && Collection.IsDisposed == false)
+                Collection.Dispose();
         }
     }
 
