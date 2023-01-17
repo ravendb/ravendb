@@ -26,8 +26,8 @@ public class RavenDB_16556 : RavenTestBase
     [InlineData(@"declare function 
                     output(o){
                         return {
-		                    Key: key(),
-		                    Value: sum(x => x.Price)
+                            Key: key(),
+                            Value: sum(x => x.Price)
                         }
                     }
 
@@ -39,8 +39,8 @@ public class RavenDB_16556 : RavenTestBase
     [InlineData(@"declare function 
                     output(o){
                         return {
-		                    Key: key(),
-		                    Value: sum(x => x.Price)
+                            Key: key(),
+                            Value: sum(x => x.Price)
                         }
                     }
 
@@ -114,8 +114,8 @@ public class RavenDB_16556 : RavenTestBase
     [InlineData(@"declare function 
                     output(o){
                         return {
-		                    Key: key(),
-		                    Value: count()
+                            Key: key(),
+                            Value: count()
                         }
                     }
 
@@ -179,8 +179,8 @@ public class RavenDB_16556 : RavenTestBase
     [InlineData(@"declare function 
                     output(o){
                         return {
-		                    Key: key(),
-		                    Value: sum()
+                            Key: key(),
+                            Value: sum()
                         }
                     }
 
@@ -193,8 +193,8 @@ public class RavenDB_16556 : RavenTestBase
                     output(o){
                     var empId = key().EmpId;
                         return {
-		                    Key: empId,
-		                    Value: sum()
+                            Key: empId,
+                            Value: sum()
                         }
                     }
 
@@ -255,8 +255,8 @@ public class RavenDB_16556 : RavenTestBase
     [InlineData(@"declare function 
                     output(o){
                         return {
-		                    Key: key(),
-		                    Value: count(x => x.Freight)
+                            Key: key(),
+                            Value: count(x => x.Freight)
                         }
                     }
 
@@ -269,8 +269,8 @@ public class RavenDB_16556 : RavenTestBase
                     output(o){
                     var empId = key().EmpId;
                         return {
-		                    Key: empId,
-		                    Value: count(""Freight"")
+                            Key: empId,
+                            Value: count(""Freight"")
                         }
                     }
 
