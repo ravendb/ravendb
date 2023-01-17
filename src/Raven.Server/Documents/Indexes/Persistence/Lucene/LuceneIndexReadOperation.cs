@@ -670,7 +670,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 var fieldName = field.Name.Value;
                 var sortOptions = SortField.STRING;
-
                 switch (field.OrderingType)
                 {
                     case OrderByFieldType.Custom:
@@ -689,6 +688,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     case OrderByFieldType.Double:
                         sortOptions = SortField.DOUBLE;
                         fieldName += Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
+                        break;
+                    case OrderByFieldType.Implicit:
+                        if (index.Configuration.OrderByTicksAutomaticallyWhenDatesAreInvolved && index.IndexFieldsPersistence.HasTimeValues(fieldName))
+                        {
+                            sortOptions = SortField.LONG;
+                            fieldName += Constants.Documents.Indexing.Fields.TimeFieldSuffix;
+                        }
+
                         break;
                 }
 
