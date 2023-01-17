@@ -10,7 +10,6 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide.Context;
@@ -20,7 +19,6 @@ using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
-using Voron.Impl;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -47,7 +45,7 @@ namespace Raven.Server.Documents.Replication
                 _destinationAcceptablePaths = new AllowedPathsValidator(destinationAcceptablePaths);
             _stream = stream;
             _parent = parent;
-            
+
             _shouldSkipSendingTombstones = _parent.Destination is PullReplicationAsSink sink && sink.Mode == PullReplicationMode.SinkToHub &&
                                            parent._outgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
                                            _parent._database.ForTestingPurposes?.ForceSendTombstones == false;
@@ -205,7 +203,7 @@ namespace Raven.Server.Documents.Replication
 
         private class ReplicationBatchState : PulsedEnumerationState<ReplicationBatchItem>
         {
-            private ReplicationDocumentSender _parent;
+            private readonly ReplicationDocumentSender _parent;
             public bool WasInterrupted { get; private set; }
 
             private long _next;
@@ -220,7 +218,7 @@ namespace Raven.Server.Documents.Replication
 
             public HashSet<Slice> MissingAttachmentBase64Hashes;
             public TimeSpan Delay;
-            public ReplicationBatchItem Item;
+            private ReplicationBatchItem _item;
             public long CurrentNext;
             public long Size;
             public int NumberOfItemsSent;
@@ -228,12 +226,12 @@ namespace Raven.Server.Documents.Replication
             public int? BatchSize;
             public Size? MaxSizeToSend;
 
-            public ReplicationBatchState(DocumentsOperationContext context, Size pulseLimit, ReplicationDocumentSender parent, long next) : base(context, pulseLimit)
+            public ReplicationBatchState(DocumentsOperationContext context, Size pulseLimit, ReplicationDocumentSender parent, long next)
+                : base(context, pulseLimit, parent._parent._parent._server.Configuration.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded ?? DefaultNumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded)
             {
                 _parent = parent;
                 WasInterrupted = false;
                 Next = next;
-                NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = _parent._parent._parent._server.Configuration.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded ?? 1024;
             }
 
             public override void OnMoveNext(ReplicationBatchItem current)
@@ -245,7 +243,7 @@ namespace Raven.Server.Documents.Replication
 
                 if (LastTransactionMarker != current.TransactionMarker)
                 {
-                    Item = current;
+                    _item = current;
                     if (CanContinueBatch() == false)
                     {
                         WasInterrupted = true;
@@ -270,7 +268,7 @@ namespace Raven.Server.Documents.Replication
 
                 if (Delay.Ticks > 0)
                 {
-                    var nextReplication = Item.LastModifiedTicks + Delay.Ticks;
+                    var nextReplication = _item.LastModifiedTicks + Delay.Ticks;
                     if (_parent._parent._database.Time.GetUtcNow().Ticks < nextReplication)
                     {
                         if (Interlocked.CompareExchange(ref _next, nextReplication, CurrentNext) == CurrentNext)
@@ -685,7 +683,7 @@ namespace Raven.Server.Documents.Replication
                         skippedReplicationItemsInfo.Update(item, isArtificial: true);
                         return true;
                     }
-                    
+
                     if (doc.Flags.Contain(DocumentFlags.Revision) || doc.Flags.Contain(DocumentFlags.DeleteRevision))
                     {
                         // we let pass all the conflicted/resolved revisions, since we keep them with their original change vector which might be `AlreadyMerged` at the destination.
