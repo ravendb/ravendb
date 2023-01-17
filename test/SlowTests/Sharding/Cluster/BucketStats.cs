@@ -692,7 +692,7 @@ namespace SlowTests.Sharding.Cluster
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        var tableValuesSize = 0l;
+                        var tableValuesSize = 0L;
                         var schema = db.DocumentsStorage.DocsSchema;
                         var table = new Table(schema, ctx.Transaction.InnerTransaction);
                         foreach (var result in table.SeekForwardFrom(schema.FixedSizeIndexes[Documents.AllDocsEtagsSlice], 0, 0))

@@ -766,6 +766,8 @@ public class PrefixedSharding : RavenTestBase
 
     private class Item
     {
+#pragma warning disable CS0649
         public string Id;
+#pragma warning restore CS0649
     }
 }
