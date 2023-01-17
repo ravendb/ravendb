@@ -634,5 +634,50 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
         public static SubscriptionConnectionsState CreateDummyState(DocumentsStorage storage, SubscriptionState state) => new(storage, state);
+
+        private long _lastNoopAckTicks;
+        private Task _lastNoopAckTask = Task.CompletedTask;
+
+        public Task SendNoopAck()
+        {
+            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
+            {
+                if (IsConcurrent)
+                {
+                    var localLastNoopAckTicks = Interlocked.Read(ref _lastNoopAckTicks);
+                    var nowTicks = DateTime.Now.Ticks;
+                    if ((nowTicks - localLastNoopAckTicks) / TimeSpan.TicksPerMillisecond < SubscriptionConnection.WaitForChangedDocumentsTimeoutInMs)
+                    {
+                        return _lastNoopAckTask;
+                    }
+
+                    var currentLastNoopAckTicks = Interlocked.CompareExchange(ref _lastNoopAckTicks, nowTicks, localLastNoopAckTicks);
+                    if (currentLastNoopAckTicks != localLastNoopAckTicks)
+                        return _lastNoopAckTask;
+
+                    var ackTask = DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                        SubscriptionId,
+                        SubscriptionName,
+                        nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                        SubscriptionConnection.NonExistentBatch, docsToResend: null);
+
+                    Interlocked.Exchange(ref _lastNoopAckTask, ackTask);
+
+                    return ackTask;
+                }
+
+                return DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                    SubscriptionId,
+                    SubscriptionName,
+                    nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                    SubscriptionConnection.NonExistentBatch, docsToResend: null);
+            }
+
+            return DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
+                SubscriptionId,
+                SubscriptionName,
+                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
+        }
     }
 }

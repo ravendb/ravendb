@@ -66,8 +66,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
     public class SubscriptionConnection : IDisposable
     {
-        public const long NonExistentBatch = -1;
-        private const int WaitForChangedDocumentsTimeoutInMs = 3000;
+        public static long NonExistentBatch = -1;
+        internal static int WaitForChangedDocumentsTimeoutInMs = 3000;
         private static readonly StringSegment DataSegment = new StringSegment("Data");
         private static readonly StringSegment IncludesSegment = new StringSegment(nameof(QueryResult.Includes));
         private static readonly StringSegment CounterIncludesSegment = new StringSegment(nameof(QueryResult.CounterIncludes));
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.TcpHandlers
             await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
                 SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
 
-            await SendNoopAck();
+            await SubscriptionConnectionsState.SendNoopAck();
             await WriteJsonAsync(new DynamicJsonValue
             {
                 [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
@@ -799,7 +799,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
 
                 await SendHeartBeat("Waiting for client ACK");
-                await SendNoopAck();
+                await SubscriptionConnectionsState.SendNoopAck();
             }
 
             CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -1132,27 +1132,9 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
 
                 await SendHeartBeat("Waiting for changed documents");
-                await SendNoopAck();
+                await SubscriptionConnectionsState.SendNoopAck();
             } while (CancellationTokenSource.IsCancellationRequested == false);
             return false;
-        }
-
-        private Task SendNoopAck()
-        {
-            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
-            {
-                return TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                    SubscriptionId,
-                    Options.SubscriptionName,
-                    nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                    NonExistentBatch, docsToResend: null);
-            }
-
-            return TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
-                SubscriptionId,
-                Options.SubscriptionName,
-                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
         }
 
         private SubscriptionPatchDocument SetupFilterAndProjectionScript()
