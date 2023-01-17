@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.Replication
             public Size? MaxSizeToSend;
 
             public ReplicationBatchState(DocumentsOperationContext context, Size pulseLimit, ReplicationDocumentSender parent, long next)
-                : base(context, pulseLimit, parent._parent._parent._server.Configuration.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded ?? DefaultNumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded)
+                : base(context, pulseLimit, parent._parent._parent._server.Configuration.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded)
             {
                 _parent = parent;
                 WasInterrupted = false;

@@ -46,6 +46,6 @@ namespace Raven.Server.Config.Categories
         [Description("Maximum number of documents that will require pulsing new transaction, when loading docs before replication.")]
         [DefaultValue(1024)]
         [ConfigurationEntry("Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int? NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded { get; set; }
+        public int NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded { get; set; }
     }
 }
