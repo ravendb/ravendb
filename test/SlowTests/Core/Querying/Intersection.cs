@@ -21,7 +21,7 @@ namespace SlowTests.Core.Querying
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19777 Support Intersect queries in Corax")]
         public void CanPerformIntersectQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
