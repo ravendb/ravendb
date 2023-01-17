@@ -853,15 +853,20 @@ namespace Sparrow.Server
             _wholeSegments.Add(_externalCurrent);
         }
 
-        public void DefragmentSegments()
+        internal int NumberOfReadyToUseMemorySegments => _internalReadyToUseMemorySegments?.Count ?? 0;
+
+        public void DefragmentSegments(bool force = false)
         {
             // small allocators
-            if (_totalAllocated <= DefragmentationSegmentsThresholdInBytes)
+            if (force == false && _totalAllocated <= DefragmentationSegmentsThresholdInBytes)
                 return;
 
             // small fragmentation
             var segments = _internalReadyToUseMemorySegments;
-            if (segments == null || segments.Count < MinNumberOfSegmentsToDefragment)
+            if (segments == null)
+                return;
+
+            if (force == false && segments.Count < MinNumberOfSegmentsToDefragment)
                 return;
 
             var orderedSegments = segments
