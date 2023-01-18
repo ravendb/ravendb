@@ -19,6 +19,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
@@ -73,7 +74,7 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentBag<ReplicationNode> _internalDestinations = new ConcurrentBag<ReplicationNode>();
         private readonly HashSet<ExternalReplicationBase> _externalDestinations = new HashSet<ExternalReplicationBase>();
         private List<ReplicationNode> _destinations = new List<ReplicationNode>();
-        private ClusterTopology _clusterTopology = new ClusterTopology();
+        protected ClusterTopology _clusterTopology = new ClusterTopology();
         private int _numberOfSiblings;
         public ConflictSolver ConflictSolverConfig;
         private readonly CancellationToken _shutdownToken;
@@ -610,41 +611,34 @@ namespace Raven.Server.Documents.Replication
         {
             var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, buffer, incomingPullParams);
 
-            IncomingReplicationHandler newIncoming;
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams, getLatestEtagMessage);
 
-            if (getLatestEtagMessage.ReplicationsType == ReplicationLatestEtagRequest.ReplicationType.Migration)
+            newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
+            newIncoming.AttachmentStreamsReceived += OnAttachmentStreamsReceived;
+
+            return newIncoming;
+        }
+
+        protected virtual IncomingReplicationHandler CreateIncomingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer,
+            PullReplicationParams incomingPullParams, ReplicationLatestEtagRequest getLatestEtagMessage)
+        {
+            if (incomingPullParams == null)
             {
-                newIncoming = new IncomingMigrationReplicationHandler(
-                    tcpConnectionOptions,
-                    getLatestEtagMessage,
-                    this,
-                    buffer,
-                    getLatestEtagMessage.ReplicationsType,
-                    getLatestEtagMessage.MigrationIndex);
-            }
-            else if (incomingPullParams == null)
-            {
-                newIncoming = new IncomingReplicationHandler(
+                return new IncomingReplicationHandler(
                     tcpConnectionOptions,
                     getLatestEtagMessage,
                     this,
                     buffer,
                     getLatestEtagMessage.ReplicationsType);
             }
-            else
-            {
-                newIncoming = new IncomingPullReplicationHandler(
+
+            return new IncomingPullReplicationHandler(
                 tcpConnectionOptions,
                 getLatestEtagMessage,
                 this,
                 buffer,
                 getLatestEtagMessage.ReplicationsType,
                 incomingPullParams);
-            }
-
-            newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
-            newIncoming.AttachmentStreamsReceived += OnAttachmentStreamsReceived;
-            return newIncoming;
         }
 
         internal static readonly TimeSpan MaxInactiveTime = TimeSpan.FromSeconds(60);
@@ -794,10 +788,7 @@ namespace Raven.Server.Documents.Replication
 
             _clusterTopology = GetClusterTopology();
 
-            HandleInternalReplication(newRecord, instancesToDispose);
-            HandleExternalReplication(newRecord, instancesToDispose);
-            HandleHubPullReplication(newRecord, instancesToDispose);
-            HandleMigrationReplication(newRecord, instancesToDispose);
+            HandleReplicationChanges(newRecord, instancesToDispose);
 
             var destinations = new List<ReplicationNode>();
             destinations.AddRange(_internalDestinations);
@@ -808,82 +799,11 @@ namespace Raven.Server.Documents.Replication
             DisposeConnections(instancesToDispose);
         }
 
-        private void HandleMigrationReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
+        protected virtual void HandleReplicationChanges(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
         {
-            if (ShardHelper.TryGetShardNumberAndDatabaseName(newRecord.DatabaseName, out var shardedDatabaseName, out var myShard) == false)
-                return;
-            var toRemove = new List<BucketMigrationReplication>();
-            // remove
-            foreach (var handler in OutgoingHandlers)
-            {
-                if (handler is not OutgoingMigrationReplicationHandler migrationHandler)
-                    continue;
-
-                if (newRecord.Sharding.BucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)
-                {
-                    toRemove.Add(migrationHandler.BucketMigrationNode);
-                    continue;
-                }
-
-                if (migrationHandler.BucketMigrationNode.ForBucketMigration(migration) == false)
-                {
-                    toRemove.Add(migrationHandler.BucketMigrationNode);
-                    continue;
-                }
-
-                var destTopology = GetTopologyForShard(migration.DestinationShard);
-                var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, migration, getLastResponsibleNode: null);
-
-                // can happened if all nodes are in Rehab
-                if (destNode == null)
-                    continue;
-
-                var source = newRecord.Topology.WhoseTaskIsIt(RachisState.Follower, migration, getLastResponsibleNode: null);
-                if (_server.NodeTag != source || migrationHandler.Destination.Url != _clusterTopology.GetUrlFromTag(destNode))
-                {
-                    toRemove.Add(migrationHandler.BucketMigrationNode);
-                    continue;
-                }
-
-                // even if the status is ownership transferred we will keep the connection open to send any left overs if needed
-            }
-
-            DropOutgoingConnections(toRemove, instancesToDispose);
-
-            // add
-            foreach (var migration in newRecord.Sharding.BucketMigrations)
-            {
-                var process = migration.Value;
-
-                if (myShard != process.SourceShard)
-                    continue;
-
-                var node = newRecord.Topology.WhoseTaskIsIt(RachisState.Follower, process, getLastResponsibleNode: null);
-                if (node == _server.NodeTag)
-                {
-                    var current = OutgoingHandlers.OfType<OutgoingMigrationReplicationHandler>().SingleOrDefault(
-                        o => o.BucketMigrationNode.ForBucketMigration(process));
-
-                    if (current == null)
-                    {
-
-                        var destTopology = GetTopologyForShard(process.DestinationShard);
-                        var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, process, getLastResponsibleNode: null);
-
-                        // can happened if all nodes are in Rehab
-                        if (destNode == null)
-                            continue;
-
-                        var migrationDestination = new BucketMigrationReplication(process, destNode)
-                        {
-                            Database = ShardHelper.ToShardName(shardedDatabaseName, process.DestinationShard),
-                            Url = _clusterTopology.GetUrlFromTag(destNode)
-                        };
-
-                        Task.Run(() => AddAndStartOutgoingReplication(migrationDestination));
-                    }
-                }
-            }
+            HandleInternalReplication(newRecord, instancesToDispose);
+            HandleExternalReplication(newRecord, instancesToDispose);
+            HandleHubPullReplication(newRecord, instancesToDispose);
         }
 
         private void HandleHubPullReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
@@ -1347,7 +1267,7 @@ namespace Raven.Server.Documents.Replication
                 _logger.Info("Finished initialization of outgoing replications..");
         }
 
-        private void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove, List<IDisposable> instancesToDispose)
+        protected void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove, List<IDisposable> instancesToDispose)
         {
             var toRemove = connectionsToRemove.ToList();
             foreach (var replication in _reconnectQueue.ToList())

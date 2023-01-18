@@ -123,9 +123,9 @@ public class ChangeVector
         return context.GetChangeVector(version, Order);
     }
 
-    public static ConflictStatus GetConflictStatusForDocument(ChangeVector remote, ChangeVector local) => GetConflictStatusInternal(remote.Version, local.Version);
+    public static ConflictStatus GetConflictStatusForDocument(ChangeVector remote, ChangeVector local) => GetConflictStatusInternal(remote?.Version, local?.Version);
 
-    public static ConflictStatus GetConflictStatusForDatabase(ChangeVector remote, ChangeVector local) => GetConflictStatusInternal(remote.Order, local.Order);
+    public static ConflictStatus GetConflictStatusForDatabase(ChangeVector remote, ChangeVector local) => GetConflictStatusInternal(remote?.Order, local?.Order);
 
     private ChangeVector UpdateInternal(string nodeTag, string dbId, long etag, ChangeVector changeVector, IChangeVectorOperationContext context)
     {
@@ -141,10 +141,10 @@ public class ChangeVector
 
     private static ConflictStatus GetConflictStatusInternal(ChangeVector remote, ChangeVector local)
     {
-        remote.EnsureValid();
-        local.EnsureValid();
+        remote?.EnsureValid();
+        local?.EnsureValid();
 
-        return ChangeVectorUtils.GetConflictStatus(remote.AsString(), local.AsString());
+        return ChangeVectorUtils.GetConflictStatus(remote?.AsString(), local?.AsString());
     }
 
     public static ChangeVector Merge(ChangeVector cv1, ChangeVector cv2, IChangeVectorOperationContext context)

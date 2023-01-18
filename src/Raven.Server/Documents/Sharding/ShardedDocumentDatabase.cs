@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Sharding;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Sharding.Smuggler;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -24,8 +27,6 @@ public class ShardedDocumentDatabase : DocumentDatabase
     public string ShardedDatabaseId { get; private set; }
 
     public ShardedDocumentsStorage ShardedDocumentsStorage;
-
-    public ShardedDatabaseContext DatabaseContext => ServerStore.DatabasesLandlord.GetOrAddShardedDatabaseContext(ShardedDatabaseName);
 
     public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         : base(name, configuration, serverStore, addToInitLog)
@@ -57,6 +58,11 @@ public class ShardedDocumentDatabase : DocumentDatabase
         return new ShardedIndexStore(this, serverStore);
     }
 
+    protected override ReplicationLoader CreateReplicationLoader()
+    {
+        return new ShardReplicationLoader(this, ServerStore);
+    }
+
     internal override void SetIds(DatabaseTopology topology, string shardedDatabaseId)
     {
         base.SetIds(topology, shardedDatabaseId);
@@ -64,6 +70,8 @@ public class ShardedDocumentDatabase : DocumentDatabase
     }
 
     public ShardingConfiguration ShardingConfiguration;
+
+    private ConcurrentDictionary<long, Task> _confirmations = new ConcurrentDictionary<long, Task>();
 
     protected override void OnDatabaseRecordChanged(DatabaseRecord record)
     {
@@ -75,14 +83,56 @@ public class ShardedDocumentDatabase : DocumentDatabase
         if (ServerStore.Sharding.ManualMigration)
             return;
 
-        var finishedMigrations = record.Sharding.BucketMigrations.Where(m => m.Value.Status == MigrationStatus.OwnershipTransferred);
-        foreach (var finishedMigration in finishedMigrations)
+        HandleReshardingChanges();
+    }
+
+    public void HandleReshardingChanges()
+    {
+        foreach (var migration in ShardingConfiguration.BucketMigrations)
         {
-            var migration = finishedMigration.Value;
-            if (migration.SourceShard == ShardNumber && migration.ConfirmedSourceCleanup.Contains(ServerStore.NodeTag) == false)
+            var process = migration.Value;
+
+            Task t = null;
+            if (ShardNumber == process.DestinationShard && process.Status == MigrationStatus.Moved)
             {
+                if (process.ConfirmedDestinations.Contains(ServerStore.NodeTag) == false)
+                {
+                    using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var current = ShardedDocumentsStorage.GetMergedChangeVectorInBucket(context, process.Bucket);
+                        var status = ChangeVector.GetConflictStatusForDocument(context.GetChangeVector(process.LastSourceChangeVector), current);
+                        if (status == ConflictStatus.AlreadyMerged)
+                        {
+                            if (_confirmations.TryGetValue(process.MigrationIndex, out t))
+                            {
+                                if (t.IsCompleted == false)
+                                    continue;
+                            }
+
+                            t = ServerStore.Sharding.DestinationMigrationConfirm(ShardedDatabaseName, process.Bucket, process.MigrationIndex);
+                        }
+                    }
+                }
+            }
+
+            if (process.Status == MigrationStatus.OwnershipTransferred && process.SourceShard == ShardNumber)
+            {
+                if (_confirmations.TryGetValue(process.ConfirmationIndex!.Value, out t))
+                {
+                    if (t.IsCompleted == false)
+                        continue;
+                }
+
                 // cleanup values
-                _ = DeleteBucket(migration.Bucket, migration.MigrationIndex, migration.LastSourceChangeVector);
+                t = DeleteBucket(process.Bucket, process.MigrationIndex, process.LastSourceChangeVector);
+                
+            }
+
+            if (t != null)
+            {
+                _confirmations[process.MigrationIndex] = t;
+                t.ContinueWith(__ => _confirmations.TryRemove(process.MigrationIndex, out _));
             }
         }
     }
@@ -141,26 +191,36 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     public async Task DeleteBucket(int bucket, long migrationIndex, string uptoChangeVector)
     {
-        bool hasMore;
-        do
+        while (true)
         {
             var cmd = new DeleteBucketCommand(this, bucket, uptoChangeVector);
             await TxMerger.Enqueue(cmd);
-            hasMore = cmd.HasMore;
-        } while (hasMore);
 
-        await ServerStore.Sharding.SourceMigrationCleanup(ShardedDatabaseName, bucket, migrationIndex,
-            $"{bucket}@{migrationIndex}-Cleaned-{ServerStore.NodeTag}");
+            switch (cmd.Result)
+            {
+                case DeleteBucketCommand.DeleteBucketResult.Empty:
+                    await ServerStore.Sharding.SourceMigrationCleanup(ShardedDatabaseName, bucket, migrationIndex);
+                    return;
+                case DeleteBucketCommand.DeleteBucketResult.Skipped:
+                    // we skipped some document, because we got writes after migration
+                    return;
+                case DeleteBucketCommand.DeleteBucketResult.FullBatch:
+                    // we probably have more
+                    continue;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
     }
 
     public static ShardedDocumentDatabase CastToShardedDocumentDatabase(DocumentDatabase database) => database as ShardedDocumentDatabase ?? throw new ArgumentException($"Database {database.Name} must be sharded!");
 
-    private class DeleteBucketCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class DeleteBucketCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
         private readonly ShardedDocumentDatabase _database;
         private readonly int _bucket;
         private readonly string _uptoChangeVector;
-        public bool HasMore = true;
+        public DeleteBucketResult Result;
 
         public DeleteBucketCommand(ShardedDocumentDatabase database, int bucket, string uptoChangeVector)
         {
@@ -173,14 +233,20 @@ public class ShardedDocumentDatabase : DocumentDatabase
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Critical, "We need to create here proper tombstones so backup can pick it up RavenDB-19197");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Delete revision/attachments/ etc.. RavenDB-19197");
 
-            var result = _database.ShardedDocumentsStorage.DeleteBucket(context, _bucket, context.GetChangeVector(_uptoChangeVector));
-            HasMore = result > 0;
-            return result;
+            Result = _database.ShardedDocumentsStorage.DeleteBucket(context, _bucket, context.GetChangeVector(_uptoChangeVector));
+            return 1;
         }
 
         public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
         {
             throw new NotImplementedException();
+        }
+
+        public enum DeleteBucketResult
+        {
+            Empty,
+            Skipped,
+            FullBatch
         }
     }
 }

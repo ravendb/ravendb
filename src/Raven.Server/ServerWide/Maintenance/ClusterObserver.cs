@@ -424,28 +424,26 @@ namespace Raven.Server.ServerWide.Maintenance
                 var tag = node.Key;
                 var nodeReport = node.Value;
 
+                if (currentMigration.ConfirmedDestinations.Contains(tag))
+                    continue;
+
                 if (nodeReport.Report.TryGetValue(destination, out var destinationReport))
                 {
+                    var raftId = ShardingStore.GenerateDestinationMigrationConfirmRaftId(currentMigration.Bucket, currentMigration.MigrationIndex, tag);
+                    string lastChangeVector = null;
                     if (destinationReport.ReportPerBucket.TryGetValue(currentMigration.Bucket, out var bucketReport))
                     {
-                        var lastFromSrc = context.GetChangeVector(currentMigration.LastSourceChangeVector);
-                        var currentFromDest = context.GetChangeVector(bucketReport.LastChangeVector);
-                        var status = ChangeVectorUtils.GetConflictStatus(lastFromSrc.Version, currentFromDest.Version);
-                        if (status == ConflictStatus.AlreadyMerged)
-                        {
-                            confirmCommands ??= new List<DestinationMigrationConfirmCommand>();
-                            confirmCommands.Add(new DestinationMigrationConfirmCommand(currentMigration.Bucket,
-                                currentMigration.MigrationIndex, tag, databaseName, $"Confirm-{currentMigration.Bucket}@{currentMigration.MigrationIndex}/{tag}"));
-                            continue;
-                        }
+                        lastChangeVector = bucketReport.LastChangeVector;
                     }
 
-                    if (currentMigration.LastSourceChangeVector == null)
+                    var lastFromSrc = context.GetChangeVector(currentMigration.LastSourceChangeVector);
+                    var currentFromDest = context.GetChangeVector(lastChangeVector);
+                    var status = ChangeVector.GetConflictStatusForDocument(lastFromSrc, currentFromDest);
+                    if (status == ConflictStatus.AlreadyMerged)
                     {
-                        // moving empty bucket
                         confirmCommands ??= new List<DestinationMigrationConfirmCommand>();
                         confirmCommands.Add(new DestinationMigrationConfirmCommand(currentMigration.Bucket,
-                            currentMigration.MigrationIndex, tag, databaseName, $"Confirm-{currentMigration.Bucket}@{currentMigration.MigrationIndex}/{tag}"));
+                            currentMigration.MigrationIndex, tag, databaseName, raftId));
                     }
                 }
             }

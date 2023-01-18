@@ -303,7 +303,7 @@ namespace Raven.Server.Utils
                             if (record.Sharding.BucketRanges[i - 1].ShardNumber == toShard)
                                 return;
 
-                            record.Sharding.BucketRanges.Insert(i + 1, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
+                            record.Sharding.BucketRanges.Insert(i, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
                             return;
                         }
 

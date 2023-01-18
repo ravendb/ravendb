@@ -16,7 +16,6 @@ namespace Raven.Server.Documents.Replication.Senders
         public readonly BucketMigrationReplication Destination;
         public readonly ShardedDocumentDatabase Database;
         public OutgoingMigrationReplicationHandler Parent;
-        private ChangeVector _lastBatchChangeVector;
 
         public MigrationReplicationDocumentSender(Stream stream, OutgoingMigrationReplicationHandler parent, Logger log) : base(stream, parent, log)
         {
@@ -32,14 +31,11 @@ namespace Raven.Server.Documents.Replication.Senders
             var documentsStorage = database.ShardedDocumentsStorage;
 
             var bucket = Destination.Bucket;
-            _lastBatchChangeVector = ctx.GetChangeVector(string.Empty);
 
             foreach (var replicationBatchItem in ReplicationBatchItemsForBucket(documentsStorage, ctx, etag, stats, bucket))
             {
+                Parent.LastSentEtag = replicationBatchItem.Etag;
                 yield return replicationBatchItem;
-                
-                if (_lastBatchChangeVector.IsNullOrEmpty == false)
-                    Parent.LastChangeVectorInBucket = _lastBatchChangeVector;
             }
         }
 
@@ -99,7 +95,6 @@ namespace Raven.Server.Documents.Replication.Senders
                 return true;
             }
 
-            _lastBatchChangeVector = _lastBatchChangeVector.MergeWith(item.ChangeVector, context);
             return false;
         }
     }

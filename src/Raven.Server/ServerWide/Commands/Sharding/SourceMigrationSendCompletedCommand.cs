@@ -32,7 +32,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             if (migration.MigrationIndex != MigrationIndex)
                 throw new InvalidOperationException($"Wrong migration index. Expected: '{MigrationIndex}', Actual: '{migration.MigrationIndex}'");
 
-            if (migration.Status == MigrationStatus.Moved)
+            if (migration.Status >= MigrationStatus.Moved)
             {
                 // we got a write after we already moved
                 migration.LastSourceChangeVector = LastSentChangeVector;
