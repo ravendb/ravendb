@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
 
         protected override IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key)
         {
-            var timeSeries = _timeSeriesStorage.GetTimeSeries(databaseContext, key);
+            var timeSeries = _timeSeriesStorage.GetTimeSeries(databaseContext, key, TimeSeriesSegmentEntryFields.ForIndexing);
             if (timeSeries == null)
                 return null;
 

@@ -78,6 +78,7 @@ namespace FastTests.Issues
                 "Indexing.Lucene.IndexInputType",
                 "Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec",
                 "Indexing.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndexInMb",
+                "Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved",
 
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",

@@ -23,6 +23,9 @@ unsafe partial struct SortingMatch
                 _field = orderMetadata.Field;
                 _fieldType = orderMetadata.FieldType;
 
+                if (orderMetadata.Ascending == false)
+                    throw new ArgumentException($"The metadata for field '{orderMetadata.Field.FieldName}' is not marked as 'Ascending == true' ");
+
                 static int CompareWithLoadSequence(ref AscendingMatchComparer comparer, long x, long y)
                 {
                     var readerX = comparer._searcher.GetEntryReaderFor(x);

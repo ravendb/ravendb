@@ -88,6 +88,7 @@ namespace Raven.Server.Rachis
         }
 
         public override X509Certificate2 ClusterCertificate => _serverStore.Server.Certificate?.Certificate;
+        public override ServerStore ServerStore => _serverStore;
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
@@ -2248,6 +2249,8 @@ namespace Raven.Server.Rachis
         public bool IsEncrypted => _persistentState.Options.Encryption.IsEnabled;
 
         public abstract X509Certificate2 ClusterCertificate { get; }
+
+        public abstract ServerStore ServerStore { get; }
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 

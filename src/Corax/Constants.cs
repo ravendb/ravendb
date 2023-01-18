@@ -104,7 +104,12 @@ namespace Corax
         {
             public const int DefaultBufferForAnalyzers = 4 * Sparrow.Global.Constants.Size.Kilobyte;
         }
-        
+
+        public static class Primitives
+        {
+            internal const int DefaultBufferSize = 4 * Sparrow.Global.Constants.Size.Kilobyte;
+        }
+
         public static class Suggestions
         {
             public const int DefaultNGramSize = 4;

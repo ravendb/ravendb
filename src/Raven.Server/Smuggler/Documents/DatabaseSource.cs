@@ -16,6 +16,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -548,7 +549,7 @@ namespace Raven.Server.Smuggler.Documents
         private static IEnumerable<TimeSeriesItem> GetAllTimeSeriesItems(DocumentsOperationContext context, long startEtag)
         {
             var database = context.DocumentDatabase;
-            foreach (var ts in database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, startEtag, long.MaxValue))
+            foreach (var ts in database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, startEtag, long.MaxValue, TimeSeriesSegmentEntryFields.ForSmuggler))
             {
                 using (ts)
                 {
@@ -578,7 +579,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 state.CurrentCollection = collection;
 
-                foreach (var ts in database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, collection, etag, long.MaxValue))
+                foreach (var ts in database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, collection, etag, long.MaxValue, TimeSeriesSegmentEntryFields.ForSmuggler))
                 {
                     using (ts)
                     {

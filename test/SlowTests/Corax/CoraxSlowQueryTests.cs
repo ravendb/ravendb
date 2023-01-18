@@ -185,7 +185,11 @@ public class CoraxSlowQueryTests : RavenTestBase
         expected = expected.OrderBy(y => y.Age).ThenByDescending(y => y.Height).ToList();
         {
             using var session = store.OpenSession();
-            var result = session.Query<Person>().Where(p => p.Age < 200).OrderBy(y => y.Age).ThenByDescending(y => y.Height).ToList();
+            
+            var result = session.Query<Person>().Where(p => p.Age < 200).OrderBy(y => y.Age)
+                                           .ThenByDescending(y => y.Height)
+                                           .Customize(i => i.WaitForNonStaleResults().NoCaching()).ToList();
+
             Assert.Equal(10_000, result.Count);
             for (int i = 0; i < 10_000; ++i)
             {
@@ -232,9 +236,14 @@ public class CoraxSlowQueryTests : RavenTestBase
             {
                 List<Result> actual = new();
                 for (int i = 0; i < size; i += 70)
-                    actual.AddRange(session.Query<Person>().Where(p => p.Age < 200).OrderBy(y => y.Age).ThenByDescending(y => y.Height)
-                        .Select(z => new Result() {Name = z.Name, Age = z.Age, Height = z.Height}).Skip(i).Take(70).ToList());
-
+                {
+                    var results = session.Query<Person>().Where(p => p.Age < 200).OrderBy(y => y.Age) 
+                                                             .ThenByDescending(y => y.Height)
+                                                             .Skip(i).Take(70)
+                                                             .Select(z => new Result() { Name = z.Name, Age = z.Age, Height = z.Height })
+                                                             .Customize(i => i.WaitForNonStaleResults().NoCaching());
+                    actual.AddRange(results.ToList());
+                }
 
                 var duplicates = actual.GroupBy(x => x.Name).Where(g => g.Count() > 1).Select(i => i.Key).ToList();
                 WaitForUserToContinueTheTest(store);
@@ -280,8 +289,15 @@ public class CoraxSlowQueryTests : RavenTestBase
             {
                 List<int> actual = new();
                 for (int i = 0; i < size; i += 70)
-                    actual.AddRange(session.Query<Person>().Where(p => p.Age < 123)
-                        .Select(z => z.Height).Distinct().Skip(i).Take(70).ToList());
+                {
+                    var query = session.Query<Person>()
+                                                    .Where(p => p.Age < 123)
+                                                    .Select(z => z.Height)
+                                                    .Customize(i => i.WaitForNonStaleResults().NoCaching())
+                                                    .Distinct().Skip(i).Take(70);
+                    actual.AddRange(query.ToList());
+                }
+                   
                 WaitForUserToContinueTheTest(store);
                 Assert.Equal(expected.Count, actual.Count);
                 actual.Sort();
@@ -303,7 +319,9 @@ public class CoraxSlowQueryTests : RavenTestBase
         }
         {
             using var session = store.OpenSession();
-            var result = session.Query<Person>().Where(x => x.Name == "Maciej").SingleOrDefault();
+            var result = session.Query<Person>().Where(x => x.Name == "Maciej")
+                                                      .Customize(i => i.WaitForNonStaleResults().NoCaching())
+                                                      .SingleOrDefault();
             Assert.NotNull(result);
             Assert.Equal(item.Name, result.Name);
         }
@@ -387,6 +405,7 @@ public class CoraxSlowQueryTests : RavenTestBase
             using (var session = documentStore.OpenSession())
             {
                 var suggestionQueryResult = session.Query<User>()
+                    .Customize(i => i.WaitForNonStaleResults().NoCaching())
                     .SuggestUsing(x => x.ByField(y => y.Name, "Mett").WithOptions(new SuggestionOptions
                     {
                         PageSize = 10, Accuracy = 0.25f, Distance = StringDistanceTypes.NGram

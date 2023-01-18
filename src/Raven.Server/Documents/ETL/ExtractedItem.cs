@@ -85,6 +85,7 @@ namespace Raven.Server.Documents.ETL
 
             CounterGroupDocument?.Dispose();
             TimeSeriesDeletedRangeItem?.Dispose();
+            TimeSeriesSegmentEntry?.Dispose();
         }
     }
 }

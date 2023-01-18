@@ -117,7 +117,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IDatabaseRecordActions : IAsyncDisposable
     {
-        ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType);
+        ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerResult result, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType);
     }
 
     public interface ITimeSeriesActions : IAsyncDisposable

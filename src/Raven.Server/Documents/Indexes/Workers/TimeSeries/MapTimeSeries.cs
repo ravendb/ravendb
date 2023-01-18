@@ -27,9 +27,9 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
         private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)
         {
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-                return _timeSeriesStorage.GetTimeSeriesFrom(queryContext.Documents, lastEtag + 1, pageSize);
+                return _timeSeriesStorage.GetTimeSeriesFrom(queryContext.Documents, lastEtag + 1, pageSize, TimeSeriesSegmentEntryFields.ForIndexing);
 
-            return _timeSeriesStorage.GetTimeSeriesFrom(queryContext.Documents, collection, lastEtag + 1, pageSize);
+            return _timeSeriesStorage.GetTimeSeriesFrom(queryContext.Documents, collection, lastEtag + 1, pageSize, TimeSeriesSegmentEntryFields.ForIndexing);
         }
     }
 }

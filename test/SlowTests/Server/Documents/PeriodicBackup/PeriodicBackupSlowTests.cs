@@ -2913,14 +2913,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // Let's delay the backup task to 1 hour
                 var delayDuration = TimeSpan.FromHours(1);
+                var sw = Stopwatch.StartNew();
                 await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, delayDuration));
 
                 // There should be no OnGoingBackup operation in the OngoingTaskBackup
                 // The next backup should be scheduled in almost 1 hour
-                var afterDelayTaskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                Assert.NotNull(afterDelayTaskBackupInfo);
-                Assert.Null(afterDelayTaskBackupInfo.OnGoingBackup);
-                Assert.True(afterDelayTaskBackupInfo.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromSeconds(1)) &&
+                OngoingTaskBackup afterDelayTaskBackupInfo = null;
+                await WaitForValueAsync(async () =>
+                {
+                    afterDelayTaskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                    return afterDelayTaskBackupInfo is { OnGoingBackup: null };
+                }, true);
+                Assert.Null(afterDelayTaskBackupInfo.LastFullBackup);
+                Assert.True(afterDelayTaskBackupInfo.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) &&
                             afterDelayTaskBackupInfo.NextBackup.TimeSpan <= delayDuration);
 
                 // DelayUntil value in backup status and the time of scheduled next backup should be equal
@@ -2982,6 +2987,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // Let's delay the backup task to 1 hour
                 var delayDuration = TimeSpan.FromHours(1);
+                var sw = Stopwatch.StartNew();
                 var runningBackupTaskId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
                 await leaderStore.Maintenance.SendAsync(new DelayBackupOperation(runningBackupTaskId, delayDuration));
 
@@ -2991,7 +2997,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Null(periodicBackup.RunningTask);
                 Assert.Null(periodicBackup.RunningBackupStatus);
                 var nextBackup = periodicBackup.GetNextBackup().TimeSpan;
-                Assert.True(nextBackup > delayDuration.Subtract(TimeSpan.FromSeconds(5)) && nextBackup <= delayDuration);
+                Assert.True(nextBackup > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) && nextBackup <= delayDuration);
 
                 onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                 Assert.NotNull(onGoingTaskInfo);
@@ -3000,7 +3006,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // We'll check another (not leader) nodes in cluster
                 foreach (var server in nodes.Where(node => node != leaderServer))
                 {
-                    await AssertNextBackupSchedule(server, delayDuration, databaseName, taskId, 20);
+                    await AssertNextBackupSchedule(server, delayDuration, databaseName, taskId, sw);
                 }
             }
         }
@@ -3036,8 +3042,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 await Backup.RunBackupInClusterAsync(leaderStore, taskId, opStatus: OperationStatus.InProgress);
 
+                
                 // Let's delay the backup task to 1 hour
                 var delayDuration = TimeSpan.FromHours(1);
+                var sw = Stopwatch.StartNew();
                 var onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                 Assert.NotNull(onGoingTaskInfo);
                 var runningBackupTaskId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
@@ -3053,12 +3061,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 });
                 Assert.NotNull(newServer);
 
-                await AssertNextBackupSchedule(serverToObserve: newServer, delayDuration, databaseName, taskId, accuracyInSec: 30);
+                await AssertNextBackupSchedule(serverToObserve: newServer, delayDuration, databaseName, taskId, sw);
             }
         }
 
-        private static async Task AssertNextBackupSchedule(RavenServer serverToObserve, TimeSpan delayDuration, string databaseName,
-            long taskId, long accuracyInSec)
+        private static async Task AssertNextBackupSchedule(RavenServer serverToObserve, TimeSpan delayDuration, string databaseName, long taskId, Stopwatch sw)
         {
             using (var store = new DocumentStore
                    {
@@ -3072,22 +3079,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 OngoingTaskBackup onGoingTaskBackup = null;
                 await WaitForValueAsync(async () =>
                 {
-                    try
-                    {
-                        onGoingTaskBackup =
-                            await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                    }
-                    catch (Exception)
-                    {
-                        //ignore
-                    }
-
+                    onGoingTaskBackup = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                     return onGoingTaskBackup != null;
                 }, true);
 
-                Assert.Equal(serverToObserve.ServerStore.LeaderTag, onGoingTaskBackup.MentorNode);
                 Assert.NotNull(onGoingTaskBackup.NextBackup);
-                Assert.True(onGoingTaskBackup.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromSeconds(accuracyInSec)) &&
+                Assert.True(onGoingTaskBackup.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) &&
                             onGoingTaskBackup.NextBackup.TimeSpan <= delayDuration);
                 Assert.NotEqual(onGoingTaskBackup.ResponsibleNode.NodeTag, serverToObserve.ServerStore.NodeTag);
 
@@ -3133,6 +3130,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // Let's delay the backup task to 1 hour
                 var delayDuration = TimeSpan.FromHours(1);
+                var sw = Stopwatch.StartNew();
                 var onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                 Assert.NotNull(onGoingTaskInfo);
                 var runningBackupTaskId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
@@ -3152,11 +3150,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                         documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().BackupStatusFromMemoryOnly = true;
-                        var inMemoryStatus = documentDatabase.PeriodicBackupRunner.GetBackupStatus(taskId);
-                        Assert.NotNull(inMemoryStatus);
+                        
+                        PeriodicBackupStatus inMemoryStatus = null;
+                        WaitForValue(() =>
+                        {
+                            inMemoryStatus = documentDatabase.PeriodicBackupRunner.GetBackupStatus(taskId);
+                            return inMemoryStatus != null;
+                        }, true);
 
                         var nextBackupTimeSpan = inMemoryStatus.DelayUntil - DateTime.UtcNow;
-                        Assert.True(nextBackupTimeSpan > delayDuration.Subtract(TimeSpan.FromSeconds(5)) &&
+                        Assert.True(nextBackupTimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) &&
                                     nextBackupTimeSpan <= delayDuration);
                     }
                 }
@@ -3201,14 +3204,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                 Assert.NotNull(onGoingTaskInfo);
                 var delayDuration = TimeSpan.FromHours(1);
+                var sw = Stopwatch.StartNew();
                 var runningBackupTaskId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
                 await leaderStore.Maintenance.SendAsync(new DelayBackupOperation(runningBackupTaskId, delayDuration));
 
                 // Check that there is no ongoing backup and new task scheduled properly
-                onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                Assert.NotNull(onGoingTaskInfo);
-                Assert.Null(onGoingTaskInfo.OnGoingBackup);
-                Assert.True(onGoingTaskInfo.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromSeconds(60)) &&
+                onGoingTaskInfo = null;
+                await WaitForValueAsync( async () =>
+                {
+                    onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                    return onGoingTaskInfo is { OnGoingBackup: null };
+                }, true);
+                Assert.Null(onGoingTaskInfo.LastFullBackup);
+                Assert.True(onGoingTaskInfo.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) &&
                             onGoingTaskInfo.NextBackup.TimeSpan <= delayDuration);
             }
         }

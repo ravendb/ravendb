@@ -40,8 +40,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanGetSameResult(Options options)
         {
             using (var store = GetDocumentStore(options))
