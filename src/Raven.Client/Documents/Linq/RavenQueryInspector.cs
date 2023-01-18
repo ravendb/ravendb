@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Highlighting;
@@ -20,7 +21,7 @@ namespace Raven.Client.Documents.Linq
     /// <summary>
     /// Implements <see cref="IRavenQueryable{T}"/>
     /// </summary>
-    public class RavenQueryInspector<T> : IRavenQueryable<T>, IRavenQueryInspector
+    public class RavenQueryInspector<T> : IRavenQueryable<T>, IRavenQueryInspector, IAsyncEnumerable<T>
     {
         private Expression _expression;
         private IRavenQueryProvider _provider;
@@ -88,6 +89,18 @@ namespace Raven.Client.Documents.Linq
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new CancellationToken())
+        {
+            var execute = GetAsyncDocumentQuery();
+            var list =  await ((IAsyncDocumentQuery<T>)execute)
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+            foreach (var item in list)
+            {
+                yield return item;
+            }
         }
 
         #endregion

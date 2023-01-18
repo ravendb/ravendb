@@ -540,12 +540,12 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        private static RavenQueryInspector<IndexedUser> GetRavenQueryInspector(IDocumentSession session)
+        private static IRavenQueryable<IndexedUser> GetRavenQueryInspector(IDocumentSession session)
         {
             return (RavenQueryInspector<IndexedUser>)session.Query<IndexedUser>();
         }
 
-        private static RavenQueryInspector<IndexedUser> GetRavenQueryInspectorStatic(IDocumentSession session)
+        private static IRavenQueryable<IndexedUser> GetRavenQueryInspectorStatic(IDocumentSession session)
         {
             return (RavenQueryInspector<IndexedUser>)session.Query<IndexedUser>("static");
         }
@@ -723,7 +723,7 @@ namespace SlowTests.Tests.Linq
             {
                 using (var session = store.OpenSession())
                 {
-                    var indexedUsers = GetRavenQueryInspector(session);
+                    var indexedUsers = (IRavenQueryable<IndexedUser>)GetRavenQueryInspector(session);
                     var q = from user in indexedUsers
                             select user;
                     Assert.Equal("from 'IndexedUsers'", q.ToString());
