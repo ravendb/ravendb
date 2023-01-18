@@ -6,23 +6,29 @@ namespace Raven.Server.Utils.Enumerators
 {
     public abstract class PulsedEnumerationState<T>
     {
-        internal const int NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = 1024;
+        public const int DefaultNumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = 1024;
+
+        private readonly int _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded;
 
         protected readonly DocumentsOperationContext Context;
 
         private readonly Size _pulseLimit;
 
-        protected PulsedEnumerationState(DocumentsOperationContext context, Size pulseLimit)
+        protected PulsedEnumerationState(
+            DocumentsOperationContext context,
+            Size pulseLimit,
+            int numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = DefaultNumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded)
         {
             Context = context;
             _pulseLimit = pulseLimit;
+            _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded;
         }
 
         public int ReadCount;
 
         public virtual bool ShouldPulseTransaction()
         {
-            if (ReadCount > 0 && ReadCount % NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded == 0)
+            if (ReadCount > 0 && ReadCount % _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded == 0)
             {
                 var size = Context.Transaction.InnerTransaction.LowLevelTransaction.GetTotal32BitsMappedSize() +
                            Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize;
