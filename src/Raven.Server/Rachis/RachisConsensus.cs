@@ -786,7 +786,7 @@ namespace Raven.Server.Rachis
                 }
             }
             
-            public static unsafe void InsertToLogDirectly(ClusterOperationContext context, RachisConsensus node, long term, long index, CommandBase cmd, RachisEntryFlags flags)
+            public static unsafe void InsertToLogDirectlyForDebug(ClusterOperationContext context, RachisConsensus node, long term, long index, CommandBase cmd, RachisEntryFlags flags)
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
                 var djv = cmd.ToJson(context);
@@ -805,7 +805,7 @@ namespace Raven.Server.Rachis
                 }
             }
             
-            public static unsafe void UpdateStateDirectly(ClusterOperationContext context, RachisConsensus node, long commitIndex, long commitTerm, long lastTruncatedIndex, long lastTruncatedTerm)
+            public static unsafe void UpdateStateDirectlyForDebug(ClusterOperationContext context, RachisConsensus node, long commitIndex, long commitTerm, long lastTruncatedIndex, long lastTruncatedTerm)
             {
                 node.SetLastCommitIndex(context, commitIndex, commitTerm);
                 var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
