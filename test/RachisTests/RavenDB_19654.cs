@@ -1,12 +1,9 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,7 +16,7 @@ public class RavenDB_19654 : RachisConsensusTestBase
     {
     }
 
-    private Dictionary<string, LogInfo> TestData = new Dictionary<string, LogInfo>
+    private readonly Dictionary<string, LogInfo> _testData = new Dictionary<string, LogInfo>
     {
         ["A"] = new LogInfo
         {
@@ -62,12 +59,8 @@ public class RavenDB_19654 : RachisConsensusTestBase
         {
             leader.CurrentLeader?.StepDown(forceElection: false);
 
-            LastCommittedTerm(leader, context, TestData["A"]);
-            LastCommittedTerm(follower, context2, TestData["B"]);
-
-            var basePath = "/home/haludi/work/ravendb/RavenDB-19654/Logs";
-             var currentDir = DateTime.Now.ToString("yyyyMMdd-hhmmss");
-             LoggingSource.Instance.SetupLogMode(LogMode.Information, Path.Combine(basePath, currentDir), TimeSpan.MaxValue, long.MaxValue, false);
+            InsertAndSetLogState(leader, context, _testData["A"]);
+            InsertAndSetLogState(follower, context2, _testData["B"]);
             
             tx2.Commit();
             tx1.Commit();
@@ -83,7 +76,7 @@ public class RavenDB_19654 : RachisConsensusTestBase
         await follower.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
     }
 
-    private static void LastCommittedTerm(RachisConsensus<CountingStateMachine> node, ClusterOperationContext context, LogInfo info)
+    private static void InsertAndSetLogState(RachisConsensus<CountingStateMachine> node, ClusterOperationContext context, LogInfo info)
     {
         node.ClearAppendedEntriesAfter(context, 0);
         var lastCommittedTerm = -1L;
@@ -94,38 +87,33 @@ public class RavenDB_19654 : RachisConsensusTestBase
                 lastCommittedTerm = term;
 
             var cmd = new TestCommand {Name = "test", Value = 1};
-            RachisConsensus.TestingStuff.InsertToLogDirectly(context, node, term, index, cmd, RachisEntryFlags.StateMachineCommand);
+            RachisConsensus.TestingStuff.InsertToLogDirectlyForDebug(context, node, term, index, cmd, RachisEntryFlags.StateMachineCommand);
         }
 
-        RachisConsensus.TestingStuff.UpdateStateDirectly(context, node, info.CommitIndex, lastCommittedTerm, info.LastTruncatedIndex, info.LastTruncatedTerm);
+        RachisConsensus.TestingStuff.UpdateStateDirectlyForDebug(context, node, info.CommitIndex, lastCommittedTerm, info.LastTruncatedIndex, info.LastTruncatedTerm);
     }
 
     private class LogInfo : IEnumerable<(long Term, long Index)>
     {
-        public long CommitIndex;
-        public long LastTruncatedIndex;
-        public long LastTruncatedTerm;
-        public long FirstEntryIndex;
-        public long LastLogEntryIndex;
-
-        public (long Index, long Term)[] Entries;
+        public long CommitIndex { init ; get; }
+        public long LastTruncatedIndex { init ; get; }
+        public long LastTruncatedTerm { init ; get; }
+        public long FirstEntryIndex { init ; get; }
+        public long LastLogEntryIndex { init ; get; }
+        public (long Index, long Term)[] Entries { init ; get; }
         public IEnumerator<(long Term, long Index)> GetEnumerator()
         {
-            var entries = Entries;
-            for (int i = 0; i < entries.Length; i++)
+            for (int i = 0; i < Entries.Length; i++)
             {
-                var firstInTerm = entries[i];
-                var firstInNextTerm = i + 1 < entries.Length ? entries[i + 1].Index - 1 : LastLogEntryIndex;
-                for (long j = firstInTerm.Index; j <= firstInNextTerm; j++)
+                var (firstIndexInTerm, term) = Entries[i];
+                var lastIndexInTerm = i + 1 < Entries.Length ? Entries[i + 1].Index - 1 : LastLogEntryIndex;
+                for (long j = firstIndexInTerm; j <= lastIndexInTerm; j++)
                 {
-                    yield return (firstInTerm.Term, j);
+                    yield return (term, j);
                 }
             }
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
