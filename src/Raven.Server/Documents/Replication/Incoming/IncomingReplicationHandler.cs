@@ -309,6 +309,11 @@ namespace Raven.Server.Documents.Replication.Incoming
                 toDispose.Add(RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, id, out changeVectorSlice));
             }
 
+            protected virtual void SetIsIncomingReplication()
+            {
+                IsIncomingReplication = true;
+            }
+
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var toDispose = new List<IDisposable>();
@@ -317,7 +322,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                 try
                 {
-                    IsIncomingReplication = true;
+                    SetIsIncomingReplication();
 
                     var operationsCount = 0;
 

@@ -44,16 +44,22 @@ namespace Raven.Server.ServerWide
             var cmd = new SourceMigrationSendCompletedCommand(bucket, migrationIndex, lastChangeVector, database, raftId ?? RaftIdGenerator.NewId());
             return _serverStore.SendToLeaderAsync(cmd);
         }
+        
+        public static string GenerateDestinationMigrationConfirmRaftId(int bucket, long migrationIndex, string node) => $"Confirm-{bucket}@{migrationIndex}/{node}";
 
-        public Task<(long Index, object Result)> DestinationMigrationConfirm(string database, int bucket, long migrationIndex, string raftId = null)
+        public Task<(long Index, object Result)> DestinationMigrationConfirm(string database, int bucket, long migrationIndex)
         {
-            var cmd = new DestinationMigrationConfirmCommand(bucket, migrationIndex, _serverStore.NodeTag, database, raftId ?? RaftIdGenerator.NewId());
+            var raftId = GenerateDestinationMigrationConfirmRaftId(bucket, migrationIndex, _serverStore.NodeTag);
+            var cmd = new DestinationMigrationConfirmCommand(bucket, migrationIndex, _serverStore.NodeTag, database, raftId);
             return _serverStore.SendToLeaderAsync(cmd);
         }
 
-        public Task<(long Index, object Result)> SourceMigrationCleanup(string database, int bucket, long migrationIndex, string raftId = null)
+        public static string GenerateSourceMigrationCleanupRaftId(int bucket, long migrationIndex, string node) => $"{bucket}@{migrationIndex}-Cleaned-{node}";
+
+        public Task<(long Index, object Result)> SourceMigrationCleanup(string database, int bucket, long migrationIndex)
         {
-            var cmd = new SourceMigrationCleanupCommand(bucket, migrationIndex, _serverStore.NodeTag, database, raftId ?? RaftIdGenerator.NewId());
+            var raftId = GenerateSourceMigrationCleanupRaftId(bucket, migrationIndex, _serverStore.NodeTag);
+            var cmd = new SourceMigrationCleanupCommand(bucket, migrationIndex, _serverStore.NodeTag, database, raftId);
             return _serverStore.SendToLeaderAsync(cmd);
         }
 

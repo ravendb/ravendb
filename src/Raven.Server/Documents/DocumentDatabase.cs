@@ -330,6 +330,11 @@ namespace Raven.Server.Documents
             CompareExchangeStorage.Initialize(Name);
         }
 
+        protected virtual ReplicationLoader CreateReplicationLoader()
+        {
+            return new ReplicationLoader(this, _serverStore);
+        }
+
         public void Initialize(InitializeOptions options = InitializeOptions.None, DateTime? wakeup = null)
         {
             try
@@ -367,7 +372,7 @@ namespace Raven.Server.Documents
                 InitializeSubscriptionStorage();
                 InitializeCompareExchangeStorage();
 
-                ReplicationLoader = new ReplicationLoader(this, _serverStore);
+                ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
                 _addToInitLog("Initializing IndexStore (async)");

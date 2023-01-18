@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
     {
         private readonly ShardedDocumentDatabase _shardedDatabase;
         public readonly BucketMigrationReplication BucketMigrationNode;
-        public string LastChangeVectorInBucket = null;
+        public long LastSentEtag;
 
         public OutgoingMigrationReplicationHandler(ReplicationLoader parent, ShardedDocumentDatabase database, BucketMigrationReplication node, TcpConnectionInfo connectionInfo) : base(parent, database, node, connectionInfo)
         {
@@ -31,25 +31,18 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             var bucket = current.BucketMigrationNode.Bucket;
             var migrationIndex = current.BucketMigrationNode.MigrationIndex;
-            var lastSentChangeVector = current.LastChangeVectorInBucket;
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
                 "this is only best effort, this will not solve failovers / writting to a different node / writing after this");
-            if (_shardedDatabase.ShardedDocumentsStorage.HaveMoreDocumentsInBucket(bucket, lastSentChangeVector))
+
+            if (_shardedDatabase.ShardedDocumentsStorage.HaveMoreDocumentsInBucketAfter(bucket, current.LastSentEtag, out var merged))
                 return;
 
             if (current.Server.Sharding.ManualMigration)
                 return;
 
-            var task = current.Server.Sharding.SourceMigrationCompleted(_shardedDatabase.ShardedDatabaseName, bucket, migrationIndex, lastSentChangeVector,
-                $"{bucket}@{migrationIndex}/{lastSentChangeVector}");
-
-            task.Wait(_shardedDatabase.DatabaseShutdown);
-
-            var result = task.Result;
-
-            var op = new WaitForIndexNotificationOperation(result.Index);
-            _shardedDatabase.DatabaseContext.AllOrchestratorNodesExecutor.ExecuteParallelForAllAsync(op).Wait(_shardedDatabase.DatabaseShutdown);
+            current.Server.Sharding.SourceMigrationCompleted(_shardedDatabase.ShardedDatabaseName, bucket, migrationIndex, merged,
+                $"{bucket}@{migrationIndex}/{merged}").Wait(_shardedDatabase.DatabaseShutdown);
         }
 
         public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger) => 
