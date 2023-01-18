@@ -142,16 +142,12 @@ namespace Raven.Client.Documents.Linq
         /// <summary>
         /// Implementation of AsAsyncEnumerable
         /// </summary>
-        public static async IAsyncEnumerable<TSource> AsAsyncEnumerable<TSource>(this IRavenQueryable<TSource> source)
+        public static IAsyncEnumerable<TSource> AsAsyncEnumerable<TSource>(this IQueryable<TSource> source)
         {
-            var provider = (IRavenQueryProvider)source.Provider;
-            var documentQuery = provider.ToAsyncDocumentQuery<TSource>(source.Expression);
+            if (source is IAsyncEnumerable<TSource> asyncEnumerable)
+                return asyncEnumerable;
 
-            var list = await documentQuery.ToListAsync().ConfigureAwait(false);
-            foreach (var item in list)
-            {
-                yield return item;
-            }
+            throw new InvalidOperationException($"The source 'IQueryable' doesn't implement 'IAsyncEnumerable<{typeof(TSource)}>'");
         }
     }
 }
