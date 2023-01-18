@@ -9,16 +9,18 @@ namespace SlowTests.Issues
 {
     public class RavenDB_13972_32_bits : RavenDB_13972
     {
+        private const int _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded = PulsedEnumerationState<object>.DefaultNumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded;
+
         public RavenDB_13972_32_bits(ITestOutputHelper output) : base(output)
         {
         }
 
         [Theory]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2)]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 0, 2)]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 3)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2, 2, 0, 3)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2, 2, 4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 0, 2)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 3)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2, 2, 0, 3)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2, 2, 4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
         public async Task CanExportWithPulsatingReadTransaction(int numberOfUsers, int numberOfCountersPerUser, int numberOfRevisionsPerDocument, int numberOfOrders, int deleteUserFactor)
         {
             var file = GetTempFileName();
@@ -54,10 +56,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 0, 2)]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 3)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 0, 3)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 0, 2)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 3)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 0, 3)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
         public void CanStreamDocumentsWithPulsatingReadTransaction(int numberOfUsers, int numberOfOrders, int deleteUserFactor)
         {
             using (var server = GetNewServer(new ServerCreationOptions
@@ -82,8 +84,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public void CanStreamQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
             using (var server = GetNewServer(new ServerCreationOptions
@@ -108,8 +110,8 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(2 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
-        [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
+        [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
+        [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public void CanStreamCollectionQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
             using (var server = GetNewServer(new ServerCreationOptions

@@ -57,6 +57,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
+        private static readonly LuceneCleaner _luceneCleaner;
+
+        static LuceneIndexReadOperation()
+        {
+            _luceneCleaner = new LuceneCleaner();
+        }
 
         public LuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
             : base(index, LoggingSource.Instance.GetLogger<LuceneIndexReadOperation>(index._indexStorage.DocumentDatabase.Name), queryBuilderFactories, query)
@@ -81,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             return Convert.ToInt64(_searcher.IndexReader.NumDocs());
         }
-        
+
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults,
             Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
@@ -118,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             // We are going to get the actual Lucene query evaluator. 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, QueryBuilderFactories);
-            
+
             using (var queryFilter = GetQueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings))
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
             using (var scope = new LuceneIndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
@@ -157,10 +163,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         global::Lucene.Net.Documents.Document document;
                         using (luceneScope?.Start())
                             document = _searcher.Doc(scoreDoc.Doc, _state);
-                        
-                        var retrieverInput = new RetrieverInput(document, scoreDoc, _state);                        
+
+                        var retrieverInput = new RetrieverInput(document, scoreDoc, _state);
                         if (retriever.TryGetKey(ref retrieverInput, out string key) && scope.WillProbablyIncludeInResults(key) == false)
-                        {      
+                        {
                             // If either there is no valid projection or we have already seen this document before, we are skipping. 
                             skippedResults.Value++;
                             continue;
@@ -174,7 +180,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             if (filterResult is FilterResult.LimitReached)
                                 break;
                         }
-                        
+
                         // We are going to return the documents to the caller in a streaming fashion.
                         bool markedAsSkipped = false;
                         var r = retriever.Get(ref retrieverInput, token);
@@ -337,13 +343,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
                 else
                 {
-                    key = document.Id ?? 
+                    key = document.Id ??
                           // map reduce index
-                          luceneDocument.Get(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, _state) ?? 
+                          luceneDocument.Get(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, _state) ??
                           // projection? probably shouldn't happen
                           Guid.NewGuid().ToString();
                 }
-                
+
                 if (results.TryGetValue(fieldName, out var result) == false)
                     results[fieldName] = result = new Dictionary<string, string[]>();
 
@@ -408,7 +414,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var firstSubDocumentQuery = subQueries[0];
 
-            using (var queryFilter =  GetQueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, null))
+            using (var queryFilter = GetQueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, null))
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
             using (var scope = new LuceneIndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -465,7 +471,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         skippedResultsInCurrentLoop++;
                         continue;
                     }
-                    
+
                     var filterResult = queryFilter?.Apply(ref retrieverInput, key);
                     if (filterResult is not null and not FilterResult.Accepted)
                     {
@@ -474,9 +480,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         if (filterResult is FilterResult.LimitReached)
                             break;
                     }
-                    
+
                     var result = retriever.Get(ref retrieverInput, token);
-                    
+
                     if (result.Document != null)
                     {
                         var qr = CreateQueryResult(result.Document);
@@ -492,7 +498,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             var qr = CreateQueryResult(item);
                             if (qr.Result == null)
                                 continue;
-                            
+
                             yield return qr;
                         }
                     }
@@ -543,7 +549,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             var minPageSize = LuceneGetPageSize(_searcher, (long)pageSize + start);
-    
+
             if (sort != null)
             {
                 _searcher.SetDefaultFieldSortScoring(true, false);

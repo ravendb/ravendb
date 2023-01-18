@@ -81,6 +81,21 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task Check_NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded_Configuration_Change()
+        {
+            var settings = new Dictionary<string, string>()
+            {
+                [RavenConfiguration.GetKey(x => x.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded)] = "1234",
+            };
+
+            var (nodes, leader) = await CreateRaftCluster(3,customSettings: settings);
+            foreach (var node in nodes)
+            {
+                Assert.Equal(node.Configuration.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded, 1234);
+            }
+        }
+
         private async Task WaitAndAssertDocReplicationAsync<T>(DocumentStore store, string id, int timeout = 15_000) where T : class
         {
             var result = await WaitForDocumentToReplicateAsync<User>(store, id, timeout);
