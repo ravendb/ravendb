@@ -18,22 +18,20 @@ namespace Raven.Server.Documents.Sharding;
 public class ShardedDocumentDatabase : DocumentDatabase
 {
     public readonly int ShardNumber;
+    
+    public string ShardedDatabaseName;
 
     public string ShardedDatabaseId { get; private set; }
 
     public ShardedDocumentsStorage ShardedDocumentsStorage;
 
-    public string ShardedDatabaseName => _shardedDatabaseName ??= ShardHelper.ToDatabaseName(Name);
-
     public ShardedDatabaseContext DatabaseContext => ServerStore.DatabasesLandlord.GetOrAddShardedDatabaseContext(ShardedDatabaseName);
-
-    private string _shardedDatabaseName;
 
     public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         : base(name, configuration, serverStore, addToInitLog)
     {
         ShardNumber = ShardHelper.GetShardNumberFromDatabaseName(name);
-
+        ShardedDatabaseName = ShardHelper.ToDatabaseName(name);
         Smuggler = new ShardedDatabaseSmugglerFactory(this);
     }
 
