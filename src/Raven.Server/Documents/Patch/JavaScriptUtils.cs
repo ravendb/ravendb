@@ -58,7 +58,14 @@ namespace Raven.Server.Documents.Patch
                 throw new InvalidOperationException("count() must be called without arguments");
             }
             
-            doc.TryGetValue(Constants.Documents.Indexing.Fields.CountFieldName, out var countValue);
+            if (doc.Projection._query.Metadata.IsDynamic == false)
+            {
+                throw new InvalidOperationException("count() can only be used with dynamic index");
+            }
+            
+            var getResult = doc.TryGetValue(Constants.Documents.Indexing.Fields.CountFieldName, out var countValue);
+            
+            Debug.Assert(getResult, $"Expected to get '{Constants.Documents.Indexing.Fields.CountFieldName}' field in map-reduce result: {doc.Blittable}");
             
             return countValue;
         }
@@ -69,12 +76,19 @@ namespace Raven.Server.Documents.Patch
             {
                 throw new InvalidOperationException("key() must be called without arguments");
             }
+
+            if (doc.Projection._query.Metadata.IsDynamic == false)
+            {
+                throw new InvalidOperationException("key() can only be used with dynamic index");
+            }
             
             var groupByFields = doc.Projection._query.Metadata.GroupBy;
 
             if (groupByFields.Length == 1)
             {
-                doc.TryGetValue(groupByFields[0].Name.Value, out var keyValue);
+                var getResult = doc.TryGetValue(groupByFields[0].Name.Value, out var keyValue);
+                
+                Debug.Assert(getResult, $"Expected to get '{groupByFields[0].Name.Value}' field in map-reduce result: {doc.Blittable}");
 
                 return keyValue;
             }
@@ -100,7 +114,12 @@ namespace Raven.Server.Documents.Patch
         {
             if (args.Length != 1 || CurrentlyProcessedObject is not BlittableObjectInstance doc)
             {
-                throw new InvalidOperationException("sum(field) must be called with a single argument");
+                throw new InvalidOperationException("sum(doc => doc.fieldName) must be called with a single arrow function expression argument");
+            }
+            
+            if (doc.Projection._query.Metadata.IsDynamic == false)
+            {
+                throw new InvalidOperationException("sum(doc => doc.fieldName) can only be used with dynamic index");
             }
 
             if (args[0] is ScriptFunctionInstance sfi)
@@ -108,14 +127,17 @@ namespace Raven.Server.Documents.Patch
                 if (sfi.FunctionDeclaration.ChildNodes[1] is StaticMemberExpression sme)
                 {
                     if (sme.Property is Identifier identifier)
-                    {
-                        doc.TryGetValue(identifier.Name, out var sumValue);
+                    { 
+                        var getResult = doc.TryGetValue(identifier.Name, out var sumValue);
+                        
+                        Debug.Assert(getResult, $"Expected to get '{identifier.Name}' field in map-reduce result: {doc.Blittable}");
                         
                         return sumValue;
                     }
                 }
             }
-            return null;
+
+            throw new InvalidOperationException("sum(doc => doc.fieldName) must be called with arrow function expression that points to field you want to aggregate");
         }        
 
         internal JsValue GetMetadata(JsValue self, JsValue[] args)
