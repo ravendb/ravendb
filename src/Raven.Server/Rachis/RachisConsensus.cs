@@ -1057,7 +1057,10 @@ namespace Raven.Server.Rachis
             return leader.PutAsync(cmd, cmd.Timeout ?? OperationTimeout);
         }
 
-        public void SwitchToCandidateStateOnTimeout() => SwitchToCandidateStateAsync("Election timeout").Wait();
+        public void SwitchToCandidateStateOnTimeout()
+        {
+            SwitchToCandidateStateAsync("Election timeout").Wait();
+        }
 
         public async Task SwitchToCandidateStateAsync(string reason, bool forced = false)
         {
@@ -1931,13 +1934,14 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task FoundAboutHigherTermAsync(long term, string reason)
+        public void FoundAboutHigherTerm(long term, string reason)
         {
             if (term <= CurrentTerm)
                 return;
 
             var command = new CastVoteInTermCommand(this, term, reason);
-            await TxMerger.Enqueue(command);
+
+            TxMerger.Enqueue(command).Wait();
         }
 
         public void ValidateTerm(long term)

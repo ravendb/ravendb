@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon.Runtime.Internal.Util;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -57,7 +58,7 @@ namespace Raven.Server.Rachis
             return $"Follower {_engine.Tag} of leader {_connection.Source} in term {_term}";
         }
 
-        private async Task FollowerSteadyStateAsync()
+        private void FollowerSteadyState()
         {
             var entries = new List<RachisEntry>();
             long lastCommit = 0, lastTruncate = 0, lastAcknowledgedIndex = 0;
@@ -156,7 +157,7 @@ namespace Raven.Server.Rachis
                             try
                             {
                                 (bool hasRemovedFromTopology, lastAcknowledgedIndex, lastTruncate, lastCommit) =
-                                    await ApplyLeaderStateToLocalStateAsync(sp, entries, appendEntries);
+                                    ApplyLeaderStateToLocalState(sp, entries, appendEntries);
 
                                 if (hasRemovedFromTopology)
                                 {
@@ -192,7 +193,7 @@ namespace Raven.Server.Rachis
                                 // here we need to wait until the concurrent send pending to leader
                                 // is completed to avoid concurrent writes to the leader
                                 cts.Cancel();
-                                await task;
+                                task.Wait();
                             }
                         }
                     }
@@ -203,7 +204,8 @@ namespace Raven.Server.Rachis
                         {
                             _engine.Log.Info($"{ToString()}: Got a request to become candidate from the leader.");
                         }
-                        await _engine.SwitchToCandidateStateAsync("Was asked to do so by my leader", forced: true);
+
+                        _engine.SwitchToCandidateStateAsync("Was asked to do so by my leader", forced: true);
                         return;
                     }
                     _debugRecorder.Record("Processing entries is completed");
@@ -278,7 +280,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private async Task<(bool HasRemovedFromTopology, long LastAcknowledgedIndex, long LastTruncate, long LastCommit)> ApplyLeaderStateToLocalStateAsync(Stopwatch sp, List<RachisEntry> entries, AppendEntries appendEntries)
+        private (bool HasRemovedFromTopology, long LastAcknowledgedIndex, long LastTruncate, long LastCommit) ApplyLeaderStateToLocalState(Stopwatch sp, List<RachisEntry> entries, AppendEntries appendEntries)
         {
             // we start the tx after we finished reading from the network
             if (_engine.Log.IsInfoEnabled)
@@ -287,7 +289,7 @@ namespace Raven.Server.Rachis
             }
 
             var command = new FollowerApplyCommand(_engine, _term, entries, appendEntries, sp);
-            await _engine.TxMerger.Enqueue(command);
+            _engine.TxMerger.Enqueue(command).Wait();
 
             if (_engine.Log.IsInfoEnabled)
             {
@@ -325,7 +327,7 @@ namespace Raven.Server.Rachis
                 {
                     engine.Log.Info($"The incoming term {logLength.Term} is from a valid leader (From thread: {logLength.SendingThread})");
                 }
-                await engine.FoundAboutHigherTermAsync(logLength.Term, "Setting the term of the new leader");
+                engine.FoundAboutHigherTerm(logLength.Term, "Setting the term of the new leader");
                 engine.Timeout.Defer(connection.Source);
 
                 return (true, logLength);
@@ -1026,7 +1028,8 @@ namespace Raven.Server.Rachis
                             NegotiateWithLeader(context, (LogLengthNegotiation)obj);
                         }
 
-                        FollowerSteadyStateAsync().Wait();
+                        FollowerSteadyState();
+                        // AsyncHelpers.RunSync(() => FollowerSteadyState());
                     }
                     catch (Exception e) when (RachisConsensus.IsExpectedException(e))
                     {

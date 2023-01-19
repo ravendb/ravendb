@@ -6,9 +6,13 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Commercial;
+using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis.Commands;
@@ -35,7 +39,7 @@ namespace Raven.Server.Rachis
     /// </summary>
     public class Leader : IDisposable
     {
-        private TaskCompletionSource<object> _topologyModification;
+        internal TaskCompletionSource<object> _topologyModification;
         private readonly RachisConsensus _engine;
 
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
@@ -666,14 +670,160 @@ namespace Raven.Server.Rachis
             }
         }
 
-        internal class RachisMergedCommand
+        internal class RachisMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
         {
             public CommandBase Command;
             public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
             public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
+            private Leader _leader;
+            private readonly RachisConsensus _engine;
+            private Task<(long, object)> _task;
+
+            public RachisMergedCommand([NotNull] Leader leader, [NotNull] RachisConsensus engine)
+            {
+                _leader = leader ?? throw new ArgumentNullException(nameof(leader));
+                _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+            }
+
+            protected override long ExecuteCmd(ClusterOperationContext context)
+            {
+                const string leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
+                var lostLeadershipException = new NotLeadingException(leaderDisposedMessage);
+
+                try
+                {
+                    _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
+
+                    if (Consumed.Raise() == false)
+                    {
+                        // if the command was aborted due to timeout, we should skip it.
+                        // The command is not appended, so We can and must do so, because the context of the command is no longer valid.
+                    }
+                    else if (_leader._running.IsRaised() == false)
+                    {
+                        Tcs.TrySetException(lostLeadershipException);
+                    }
+                    else if (_engine.LogHistory.HasHistoryLog(context, Command.UniqueRequestId, out var index, out var result, out var exception))
+                    {
+                        // if this command is already committed, we can skip it and notify the caller about it
+                        if (lastCommitted >= index)
+                        {
+                            if (exception != null)
+                            {
+                                Tcs.TrySetException(exception);
+                            }
+                            else
+                            {
+                                if (result != null)
+                                {
+                                    result = GetConvertResult(Command)?.Apply(result) ?? Command.FromRemote(result);
+                                }
+
+                                Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
+                            }
+
+                        }
+                    }
+
+                    _engine.InvokeBeforeAppendToRaftLog(context, Command);
+
+                    var djv = Command.ToJson(context);
+                    var commandJson = context.ReadObject(djv, "raft/command");
+
+                    //*****************
+                    // var commandsToProcess4 = new List<(RachisMergedCommand Command, BlittableJsonReaderObject CommandJson)>();
+                    // commandsToProcess4.Add((commandToProcess, commandJson));
+                    // var command = new LeaderEmptyQueueCommand(_engine, _leader, commandsToProcess4);
+                    // // await _engine.TxMerger.Enqueue(command);
+                    // command.ExecuteCmd2(context);
+                    //*****************
+
+                    InsertCommandToLeaderLog(context, commandJson);
+
+                    context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += (tx) =>
+                    {
+                        if (_task != null)
+                        {
+                            _leader._newEntry.Set();
+                            Tcs.TrySetResult(_task);
+                        }
+                    };
+                }
+                catch (Exception e)
+                {
+                    if (e is AggregateException ae)
+                        e = ae.ExtractSingleInnerException();
+
+                    if (_leader._running.IsRaised() == false)
+                        e = new NotLeadingException(leaderDisposedMessage, e);
+
+                    Tcs.TrySetException(e);
+
+                    _leader._errorOccurred.TrySetException(e);
+                }
+
+                return 1;
+            }
+
+            private void InsertCommandToLeaderLog(ClusterOperationContext context, BlittableJsonReaderObject commandJson)
+            {
+                _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
+
+                if (_engine.LogHistory.HasHistoryLog(context, Command.UniqueRequestId, out var index, out var result, out var exception))
+                {
+                    // if this command is already committed, we can skip it and notify the caller about it
+                    if (lastCommitted >= index)
+                    {
+                        var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        _task = tcs.Task;
+
+                        if (exception != null)
+                        {
+                            tcs.TrySetException(exception);
+                        }
+                        else
+                        {
+                            if (result != null)
+                                result = Leader.GetConvertResult(Command)?.Apply(result) ?? Command.FromRemote(result);
+
+                            tcs.TrySetResult((index, result));
+                        }
+                    }
+                }
+                else
+                {
+                    index = _engine.InsertToLeaderLog(context, _leader.Term, commandJson, RachisEntryFlags.StateMachineCommand);
+                    if (_leader._entries.TryGetValue(index, out var state))
+                    {
+                        _task = state.TaskCompletionSource.Task;
+                    }
+                    else
+                    {
+                        var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        _task = tcs.Task;
+                        state = new Leader.CommandState
+                            // we need to add entry inside write tx lock to avoid
+                            // a situation when command will be applied (and state set)
+                            // before it is added to the entries list
+                            {
+                                CommandIndex = index,
+                                TaskCompletionSource = tcs,
+                                ConvertResult = Leader.GetConvertResult(Command),
+                            };
+                        _leader._entries[index] = state;
+                    }
+                }
+            }
+
+            
+            public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
+            {
+                throw new NotImplementedException();
+            }
         }
 
-        private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
+
+        // private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
 
         private readonly SemaphoreSlim _commandsQueueLocker = new SemaphoreSlim(1, 1);
 
@@ -681,12 +831,14 @@ namespace Raven.Server.Rachis
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
-            var rachisMergedCommand = new RachisMergedCommand
+            var rachisMergedCommand = new RachisMergedCommand(leader: this, engine: _engine)
             {
                 Command = command,
                 Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously)
             };
-            _commandsQueue.Enqueue(rachisMergedCommand);
+
+            // _commandsQueue.Enqueue(rachisMergedCommand);
+            await _engine.TxMerger.Enqueue(rachisMergedCommand);
 
             while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
             {
@@ -698,7 +850,7 @@ namespace Raven.Server.Rachis
                     lockTaken = await _commandsQueueLocker.WaitAsync(0);
                     if (lockTaken)
                     {
-                        await EmptyQueueAsync();
+                        //await EmptyQueueAsync();
                     }
                     else
                     {
@@ -734,7 +886,8 @@ namespace Raven.Server.Rachis
 
             return await inner;
         }
-
+        
+        /*
         private async ValueTask EmptyQueueAsync()
         {
             var maxCommandsToProcessSize = new Size(32, SizeUnit.Megabytes); // TODO [ppekrol] make configurable
@@ -839,6 +992,7 @@ namespace Raven.Server.Rachis
                 }
             }
         }
+        */
 
         internal static ConvertResultAction GetConvertResult(CommandBase cmd)
         {

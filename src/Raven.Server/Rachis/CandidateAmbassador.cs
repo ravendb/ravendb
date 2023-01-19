@@ -224,7 +224,7 @@ namespace Raven.Server.Rachis
                                             _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
                                         }
 
-                                        _engine.FoundAboutHigherTermAsync(rvr.Term, "Higher term found from node " + Tag).Wait();
+                                        _engine.FoundAboutHigherTerm(rvr.Term, "Higher term found from node " + Tag);
                                         _engine.SetNewState(RachisState.Follower, null, rvr.Term, message);
                                         RachisInvalidOperationException.Throw(message);
                                     }
@@ -284,7 +284,7 @@ namespace Raven.Server.Rachis
                                     }
 
                                     // we need to abort the current elections
-                                    _engine.FoundAboutHigherTermAsync(rvr.Term, "Got higher term from node: " + Tag).Wait();
+                                    _engine.FoundAboutHigherTerm(rvr.Term, "Got higher term from node: " + Tag);
                                     _engine.SetNewState(RachisState.Follower, null, rvr.Term, message);
                                     RachisInvalidOperationException.Throw(message);
                                 }

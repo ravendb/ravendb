@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Documents.TransactionMerger.Commands;
@@ -108,6 +110,19 @@ public class LeaderModifyTopologyCommand : MergedTransactionCommand<ClusterOpera
         {
             _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, _leader.Term, nodeTag);
         }
+
+        context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += (tx) =>
+        {
+            var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _leader._entries[Index] = new Leader.CommandState { TaskCompletionSource = tcs, CommandIndex = Index };
+
+#pragma warning disable CS4014
+            tcs.Task.ContinueWith(_ =>
+#pragma warning restore CS4014
+            {
+                Interlocked.Exchange(ref _leader._topologyModification, null)?.TrySetResult(null);
+            });
+        };
 
         return 1;
     }

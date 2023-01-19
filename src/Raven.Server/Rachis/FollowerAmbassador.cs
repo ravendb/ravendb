@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NetTopologySuite.Utilities;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -24,6 +25,7 @@ using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Global;
+using Memory = Sparrow.Memory;
 
 namespace Raven.Server.Rachis
 {
@@ -127,6 +129,9 @@ namespace Raven.Server.Rachis
 
         public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, RemoteConnection connection = null)
         {
+            if (engine.Tag == tag)
+            {
+            }
             _engine = engine;
             _term = leader.Term;
             _leader = leader;
@@ -241,7 +246,7 @@ namespace Raven.Server.Rachis
                             continue;
                         }
 
-                        var matchIndex = InitialNegotiationWithFollowerAsync().Result;
+                        var matchIndex = InitialNegotiationWithFollower();
                         _debugRecorder.Record("start negotiation with follower");
                         UpdateLastMatchFromFollower(matchIndex);
                         SendSnapshot(_connection.Stream);
@@ -819,7 +824,7 @@ namespace Raven.Server.Rachis
             return entry;
         }
 
-        private async Task<long> InitialNegotiationWithFollowerAsync()
+        private long InitialNegotiationWithFollower()
         {
             Interlocked.Exchange(ref _followerMatchIndex, 0);
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -859,7 +864,7 @@ namespace Raven.Server.Rachis
                         // we need to abort the current leadership
                         var msg = $"{ToString()}: found election term {llr.CurrentTerm:#,#;;0} that is higher than ours {_term:#,#;;0}";
                         _engine.SetNewState(RachisState.Follower, null, _term, msg);
-                        await _engine.FoundAboutHigherTermAsync(llr.CurrentTerm, "Append entries response with higher term");
+                        _engine.FoundAboutHigherTerm(llr.CurrentTerm, "Append entries response with higher term");
                         RachisInvalidOperationException.Throw(msg);
                     }
 
