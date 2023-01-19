@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Linq;
 using FastTests;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
@@ -238,7 +240,7 @@ public class RavenDB_16556 : RavenTestBase
                     .WaitForNonStaleResults().ToList();
             });
             
-            Assert.Contains("sum(field) must be called with a single argument", ex.Message);
+            Assert.Contains("sum(doc => doc.fieldName) must be called with a single arrow function expression argument", ex.Message);
         }
     }
     
@@ -315,6 +317,124 @@ public class RavenDB_16556 : RavenTestBase
             });
             
             Assert.Contains("count() must be called without arguments", ex.Message);
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Querying)]
+    [InlineData(@"from Orders as o
+                                        group by o.CompId
+                                        order by count() as long desc
+                                        load o.EmpId as e
+                                        select 
+                                        {
+                                            Value: sum(x)
+                                        }")]
+    public void CheckIfInvalidOperationExceptionIsThrownForIncorrectArgumentInSum(string query)
+    {
+        using var store = GetDocumentStore();
+
+        using (var session = store.OpenSession())
+        {
+            Employee e1 = new() { Name = "Maciej" };
+            Employee e2 = new() { Name = "Michal" };
+
+            Company c1 = new() { Name = "Company1" };
+            Company c2 = new() { Name = "Company2" };
+
+            session.Store(e1);
+            session.Store(e2);
+
+            session.Store(c1);
+            session.Store(c2);
+
+            Order o1 = new() { EmpId = e1.Id, CompId = c1.Id, Price = 21 };
+            Order o2 = new() { EmpId = e2.Id, CompId = c2.Id, Price = 37 };
+            Order o3 = new() { EmpId = e1.Id, CompId = c2.Id, Price = 44 };
+
+            session.Store(o1);
+            session.Store(o2);
+            session.Store(o3);
+
+            session.SaveChanges();
+            
+            RavenException ex = Assert.Throws<RavenException>(() =>
+            {
+                var res = session.Advanced
+                    .RawQuery<Dto>(query)
+                    .WaitForNonStaleResults().ToList();
+            });
+            
+            Assert.Contains("sum(doc => doc.fieldName) must be called with arrow function expression that points to field you want to aggregate", ex.Message);
+        }
+    }
+    
+    [RavenFact(RavenTestCategory.Querying)]
+    public void CheckIfInvalidOperationExceptionIsThrownForUsingKeyInStaticIndexQuery()
+    {
+        using var store = GetDocumentStore();
+
+        using (var session = store.OpenSession())
+        {
+            Employee e1 = new() { Name = "Maciej" };
+            Employee e2 = new() { Name = "Michal" };
+
+            Company c1 = new() { Name = "Company1" };
+            Company c2 = new() { Name = "Company2" };
+
+            session.Store(e1);
+            session.Store(e2);
+
+            session.Store(c1);
+            session.Store(c2);
+
+            Order o1 = new() { EmpId = e1.Id, CompId = c1.Id, Price = 21 };
+            Order o2 = new() { EmpId = e2.Id, CompId = c2.Id, Price = 37 };
+            Order o3 = new() { EmpId = e1.Id, CompId = c2.Id, Price = 44 };
+
+            session.Store(o1);
+            session.Store(o2);
+            session.Store(o3);
+
+            var index = new OrdersByCompany() ;
+            var query = $@"from index ""{index.IndexName}"" as o
+                                        select 
+                                        {{
+                                            Key: key()
+                                        }}";
+            
+            index.Execute(store);
+            
+            Indexes.WaitForIndexing(store);
+
+            session.SaveChanges();
+            
+            RavenException ex = Assert.Throws<RavenException>(() =>
+            {
+                var res = session.Advanced
+                    .RawQuery<Dto>(query)
+                    .WaitForNonStaleResults().ToList();
+            });
+            
+            Assert.Contains("key() can only be used with dynamic index", ex.Message);
+        }
+    }
+
+    private class OrdersByCompany : AbstractIndexCreationTask<Order, OrdersByCompany.ReduceMap>
+    {
+        public class ReduceMap
+        {
+            public string Name { get; set; }
+            public int Sum { get; set; }
+        }
+        public OrdersByCompany()
+        {
+            Map = orders => from order in orders
+                select new ReduceMap() { Name = order.CompId, Sum = 1 };
+            
+            Reduce = results => from result in results
+                group result by result.Name
+                into g
+                select new ReduceMap() { Name = g.Key, Sum = g.Sum(x => x.Sum) };
         }
     }
 
