@@ -42,6 +42,11 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Replication.MaxSizeToSendInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? MaxSizeToSend { get; set; }
+
+        [Description("Maximum number of documents that will require pulsing new transaction, when loading docs before replication.")]
+        [DefaultValue(1024)]
+        [ConfigurationEntry("Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded { get; set; }
         
         [Description("The number of duplicate attachments that should be tracked for de-duplication per outgoing replication connection.")]
         [DefaultValue(16*1024)]

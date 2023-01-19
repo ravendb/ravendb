@@ -16,6 +16,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -128,42 +129,33 @@ namespace Raven.Server.Documents.Replication.Senders
 
                     var skippedReplicationItemsInfo = new SkippedReplicationItemsInfo();
                     long prevLastEtag = _lastEtag;
-                    var replicationState = new ReplicationState
+
+                    var state = new ReplicationBatchState(documentsContext, _parent._database.Configuration.Databases.PulseReadTransactionLimit, this, next)
                     {
                         BatchSize = _parent._database.Configuration.Replication.MaxItemsCount,
                         MaxSizeToSend = _parent._database.Configuration.Replication.MaxSizeToSend,
                         CurrentNext = currentNext,
                         Delay = delay,
-                        Context = documentsContext,
                         LastTransactionMarker = -1,
                         NumberOfItemsSent = 0,
                         Size = 0L,
-                        ScannedItems = 0
                     };
 
                     using (_stats.Storage.Start())
                     {
-                        foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication.CaseInsensitiveCounters))
+                        using var enumerator = new PulsedTransactionEnumerator<ReplicationBatchItem, ReplicationBatchState>(documentsContext, _ =>
+                            GetReplicationItems(documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication.CaseInsensitiveCounters), state);
+
+                        while (enumerator.MoveNext())
                         {
-                            replicationState.ScannedItems++;
-                            _parent.ForTestingPurposes?.OnDocumentSenderFetchNewItem?.Invoke();
-
-                            _parent.CancellationToken.ThrowIfCancellationRequested();
-
-                            AssertNoLegacyReplicationViolation(item);
-
-                            if (replicationState.LastTransactionMarker != item.TransactionMarker)
+                            next = state.Next;
+                            if (state.WasInterrupted)
                             {
-                                replicationState.Item = item;
-
-                                if (CanContinueBatch(replicationState, ref next) == false)
-                                {
-                                    wasInterrupted = true;
-                                    break;
-                                }
-
-                                replicationState.LastTransactionMarker = item.TransactionMarker;
+                                wasInterrupted = true;
+                                break;
                             }
+
+                            var item = enumerator.Current;
 
                             _stats.Storage.RecordInputAttempt();
 
@@ -173,7 +165,7 @@ namespace Raven.Server.Documents.Replication.Senders
                                 item is DocumentReplicationItem docItem &&
                                 docItem.Flags.Contain(DocumentFlags.HasAttachments))
                             {
-                                var missingAttachmentBase64Hashes = replicationState.MissingAttachmentBase64Hashes ??= new HashSet<Slice>(SliceStructComparer.Instance);
+                                var missingAttachmentBase64Hashes = state.MissingAttachmentBase64Hashes ??= new HashSet<Slice>(SliceStructComparer.Instance);
                                 var type = (docItem.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
                                 foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, docItem.Id, docItem.ChangeVector))
                                 {
@@ -189,22 +181,22 @@ namespace Raven.Server.Documents.Replication.Senders
                                     var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
                                     attachment.Stream = stream;
                                     var attachmentItem = AttachmentReplicationItem.From(documentsContext, attachment);
-                                    AddReplicationItemToBatch(documentsContext, attachmentItem, _stats.Storage, replicationState, skippedReplicationItemsInfo);
-                                    replicationState.Size += attachmentItem.Size;
+                                    AddReplicationItemToBatch(documentsContext, attachmentItem, _stats.Storage, state, skippedReplicationItemsInfo);
+                                    state.Size += attachmentItem.Size;
                                 }
                             }
 
                             _lastEtag = item.Etag;
 
-                            if (AddReplicationItemToBatch(documentsContext, item, _stats.Storage, replicationState, skippedReplicationItemsInfo) == false)
+                            if (AddReplicationItemToBatch(documentsContext, item, _stats.Storage, state, skippedReplicationItemsInfo) == false)
                             {
                                 // this item won't be needed anymore
                                 item.Dispose();
                                 continue;
                             }
 
-                            replicationState.Size += item.Size;
-                            replicationState.NumberOfItemsSent++;
+                            state.Size += item.Size;
+                            state.NumberOfItemsSent++;
                         }
                     }
 
@@ -225,7 +217,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         {
                             msg += $"encryption buffer overhead size is {new Size(encryptionSize, SizeUnit.Bytes)}, ";
                         }
-                        msg += $"total size: {new Size(replicationState.Size + encryptionSize, SizeUnit.Bytes)}";
+                        msg += $"total size: {new Size(state.Size + encryptionSize, SizeUnit.Bytes)}";
 
                         Log.Info(msg);
                     }
@@ -254,7 +246,7 @@ namespace Raven.Server.Documents.Replication.Senders
                         {
                             SendDocumentsBatch(documentsContext, _stats.Network);
                             tcpConnectionOptions.LastEtagSent = _lastEtag;
-                            tcpConnectionOptions.RegisterBytesSent(replicationState.Size);
+                            tcpConnectionOptions.RegisterBytesSent(state.Size);
                             if (MissingAttachmentsInLastBatch)
                                 return false;
                         }
@@ -307,70 +299,6 @@ namespace Raven.Server.Documents.Replication.Senders
             {
                 AssertNotIncrementalTimeSeriesForLegacyReplication(item);
             }
-        }
-
-        private bool CanContinueBatch(ReplicationState state, ref long next)
-        {
-            if (MissingAttachmentsInLastBatch)
-            {
-                // we do have missing attachments but we haven't gathered yet any of the missing hashes
-                if (state.MissingAttachmentBase64Hashes == null)
-                    return true;
-
-                // we do have missing attachments but we haven't included all of them in the batch yet
-                if (state.MissingAttachmentBase64Hashes.Count > 0)
-                    return true;
-            }
-
-            if (state.Delay.Ticks > 0)
-            {
-                var nextReplication = state.Item.LastModifiedTicks + state.Delay.Ticks;
-                if (_parent._database.Time.GetUtcNow().Ticks < nextReplication)
-                {
-                    if (Interlocked.CompareExchange(ref next, nextReplication, state.CurrentNext) == state.CurrentNext)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            if (state.ScannedItems == 1)
-            {
-                /*
-                 always scan at least one item.
-                after scanning 1 item we can move to the batch size limit check.
-                We need to check here the "ScannedItems" and not the "NumberOfItemsSent"
-                because there's an option that we will scan a lot of items (documents) but we won't send them.
-                When we load the items from an encrypted database, the memory is locked until the transaction is closed
-                (for preventing the decrypted data from being moved to the "swap-file" by the OS in case of low memory).
-                In that case, if we will check here if the "NumberOfItemsSent" is 0 instead, there's an option 
-                that we will load a lot of "not relevant" items to memory and it will be locked until we'll fill 
-                the batch and it can cause eventually to OOM.
-                 */
-                return true;
-            }
-
-            // We want to limit batch sizes to reasonable limits.
-            var totalSize =
-                state.Size + state.Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
-
-            if (state.MaxSizeToSend.HasValue && totalSize >= state.MaxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
-                state.BatchSize.HasValue && state.NumberOfItemsSent >= state.BatchSize.Value)
-            {
-                return false;
-            }
-
-            var currentCount = _stats.Storage.CurrentStats.InputCount;
-            if (currentCount > 0 && currentCount % 16384 == 0)
-            {
-                // ReSharper disable once PossibleLossOfFraction
-                if ((_parent._parent.MinimalHeartbeatInterval / 2) < _stats.Storage.Duration.TotalMilliseconds)
-                {
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         private void AssertNotTimeSeriesForLegacyReplication(ReplicationBatchItem item)
@@ -519,7 +447,7 @@ namespace Raven.Server.Documents.Replication.Senders
             }
         }
 
-        private bool AddReplicationItemToBatch(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, ReplicationState state, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
+        private bool AddReplicationItemToBatch(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, ReplicationBatchState state, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
             if (ShouldSkip(context, item, stats, skippedReplicationItemsInfo))
                 return false;
@@ -732,19 +660,121 @@ namespace Raven.Server.Documents.Replication.Senders
             public OutgoingReplicationStatsScope TimeSeriesRead;
         }
 
-        private class ReplicationState
+        private class ReplicationBatchState : PulsedEnumerationState<ReplicationBatchItem>
         {
+            private readonly ReplicationDocumentSenderBase _parent;
+            public bool WasInterrupted { get; private set; }
+
+            private long _next;
+            public long Next
+            {
+                get => _next;
+                private set
+                {
+                    _next = value;
+                }
+            }
+
             public HashSet<Slice> MissingAttachmentBase64Hashes;
             public TimeSpan Delay;
-            public ReplicationBatchItem Item;
+            private ReplicationBatchItem _item;
             public long CurrentNext;
             public long Size;
-            public DocumentsOperationContext Context;
             public int NumberOfItemsSent;
             public short LastTransactionMarker;
             public int? BatchSize;
             public Size? MaxSizeToSend;
-            public int ScannedItems;
+
+            public ReplicationBatchState(DocumentsOperationContext context, Size pulseLimit, ReplicationDocumentSenderBase parent, long next)
+                : base(context, pulseLimit, parent._parent._parent._server.Configuration.Replication.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded)
+            {
+                _parent = parent;
+                WasInterrupted = false;
+                Next = next;
+            }
+
+            public override void OnMoveNext(ReplicationBatchItem current)
+            {
+                ReadCount++;
+                _parent._parent.ForTestingPurposes?.OnDocumentSenderFetchNewItem?.Invoke();
+                _parent._parent.CancellationToken.ThrowIfCancellationRequested();
+                _parent.AssertNoLegacyReplicationViolation(current);
+
+                if (LastTransactionMarker != current.TransactionMarker)
+                {
+                    _item = current;
+                    if (CanContinueBatch() == false)
+                    {
+                        WasInterrupted = true;
+                        return;
+                    }
+                    LastTransactionMarker = current.TransactionMarker;
+                }
+            }
+
+            private bool CanContinueBatch()
+            {
+                if (_parent.MissingAttachmentsInLastBatch)
+                {
+                    // we do have missing attachments but we haven't gathered yet any of the missing hashes
+                    if (MissingAttachmentBase64Hashes == null)
+                        return true;
+
+                    // we do have missing attachments but we haven't included all of them in the batch yet
+                    if (MissingAttachmentBase64Hashes.Count > 0)
+                        return true;
+                }
+
+                if (Delay.Ticks > 0)
+                {
+                    var nextReplication = _item.LastModifiedTicks + Delay.Ticks;
+                    if (_parent._parent._database.Time.GetUtcNow().Ticks < nextReplication)
+                    {
+                        if (Interlocked.CompareExchange(ref _next, nextReplication, CurrentNext) == CurrentNext)
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                if (NumberOfItemsSent == 0)
+                {
+                    // always send at least one item
+                    return true;
+                }
+
+                // We want to limit batch sizes to reasonable limits.
+                var totalSize =
+                    Size + Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
+
+                if (MaxSizeToSend.HasValue && totalSize >= MaxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
+                    BatchSize.HasValue && NumberOfItemsSent >= BatchSize.Value)
+                {
+                    return false;
+                }
+
+                var currentCount = _parent._stats.Storage.CurrentStats.InputCount;
+                if (currentCount > 0 && currentCount % 16384 == 0)
+                {
+                    // ReSharper disable once PossibleLossOfFraction
+                    if ((_parent._parent._parent.MinimalHeartbeatInterval / 2) < _parent._stats.Storage.Duration.TotalMilliseconds)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            public override bool ShouldPulseTransaction()
+            {
+                if (NumberOfItemsSent == 0) // when we start to collect items to send (NumberOfItemsSent>0), we don't want to pulse transaction to prevent those items from being deleted before we send them in the batch.
+                {
+                    return base.ShouldPulseTransaction();
+                }
+
+                return false;
+            }
         }
 
         public virtual void Dispose()

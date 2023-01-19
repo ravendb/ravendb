@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Exceptions;
@@ -43,6 +44,8 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
             try
             {
                 Stream responseBodyStream = RequestHandler.ResponseBodyStream();
+                var httpEncodings = HttpContext.Request.Headers.AcceptEncoding;
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
                 {
                     writer.WriteStartObject();
@@ -67,7 +70,7 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
                             writer.WriteComma();
 
                         var request = (BlittableJsonReaderObject)requests[i];
-                        await HandleRequestAsync(request, context, memoryStream, writer, httpContext, host, scheme, resultProperty, statusProperty, headersProperty, trafficWatchStringBuilder);
+                        await HandleRequestAsync(request, context, memoryStream, writer, httpContext, httpEncodings, host, scheme, resultProperty, statusProperty, headersProperty, trafficWatchStringBuilder);
 
                         // flush to the network after every lazy request, to avoid holding too much in memory
                         memoryStream.Position = 0;
@@ -122,12 +125,12 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
         writer.WriteEndObject();
     }
 
-    private async ValueTask HandleRequestAsync(
-        BlittableJsonReaderObject request,
+    private async ValueTask HandleRequestAsync(BlittableJsonReaderObject request,
         JsonOperationContext context,
         MemoryStream responseStream,
         AsyncBlittableJsonTextWriter writer,
         HttpContext httpContext,
+        StringValues httpEncodings,
         HostString host,
         string scheme,
         LazyStringValue resultProperty,
@@ -159,7 +162,7 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
         writer.WritePropertyName(resultProperty);
         await writer.FlushAsync();
 
-        var content = await PrepareHttpContextAsync(request, context, httpContext, method, query, host, scheme, trafficWatchStringBuilder);
+        var content = await PrepareHttpContextAsync(request, context, httpContext, httpEncodings, method, query, host, scheme, trafficWatchStringBuilder);
 
         var bytesWrittenBeforeRequest = responseStream.Length;
         int statusCode;
@@ -211,10 +214,12 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
         trafficWatchStringBuilder?.Append(content).AppendLine();
     }
 
-    private async ValueTask<object> PrepareHttpContextAsync(BlittableJsonReaderObject request, JsonOperationContext context, HttpContext httpContext, string method, string query, HostString host, string scheme, StringBuilder trafficWatchStringBuilder)
+    private async ValueTask<object> PrepareHttpContextAsync(BlittableJsonReaderObject request, JsonOperationContext context, HttpContext httpContext,
+        StringValues httpEncodings, string method, string query, HostString host, string scheme, StringBuilder trafficWatchStringBuilder)
     {
         httpContext.Response.StatusCode = 0;
         httpContext.Request.Headers.Clear();
+        httpContext.Request.Headers.AcceptEncoding = httpEncodings;
         httpContext.Response.Headers.Clear();
         httpContext.Request.Host = host;
         httpContext.Request.Scheme = scheme;

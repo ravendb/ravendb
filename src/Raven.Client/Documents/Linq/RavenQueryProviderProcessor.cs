@@ -4052,7 +4052,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         protected bool Equals(FieldToFetch other)
         {
-            return string.Equals(Name, other.Name, StringComparison.Ordinal) && string.Equals(Alias, other.Alias, StringComparison.Ordinal);
+            return string.Equals(Name, other.Name) && string.Equals(Alias, other.Alias, StringComparison.Ordinal);
         }
 
         public override bool Equals(object obj)

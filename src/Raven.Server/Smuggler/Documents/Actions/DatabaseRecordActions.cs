@@ -44,9 +44,7 @@ public class DatabaseRecordActions : IDatabaseRecordActions
         _log = log;
     }
 
-    public async ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord,
-        SmugglerProgressBase.DatabaseRecordProgress progress,
-        AuthorizationStatus authorizationStatus,
+    public async ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerResult result, AuthorizationStatus authorizationStatus,
         DatabaseRecordItemType databaseRecordItemType)
     {
         var tasks = new List<Task<(long Index, object Result)>>();
@@ -56,30 +54,38 @@ public class DatabaseRecordActions : IDatabaseRecordActions
 
         if (databaseRecord.ConflictSolverConfig != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ConflictSolverConfig))
         {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring conflict solver config from smuggler");
+
             if (_currentDatabaseRecord?.ConflictSolverConfig != null)
             {
                 foreach (var collection in _currentDatabaseRecord.ConflictSolverConfig.ResolveByCollection)
                 {
-                    if (databaseRecord.ConflictSolverConfig.ResolveByCollection.ContainsKey(collection.Key) == false)
+                    if (databaseRecord.ConflictSolverConfig.ResolveByCollection.TryGetValue(collection.Key, out var collectionConfiguration) == false)
                     {
                         databaseRecord.ConflictSolverConfig.ResolveByCollection.Add(collection.Key, collection.Value);
+                    }
+                    else
+                    {
+                        if (collectionConfiguration.Equals(collection.Value) == false)
+                            result.AddWarning($"Conflict solver configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
+                                              "Configuring this conflict solver from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
                     }
                 }
             }
 
-            if (_log.IsInfoEnabled)
-                _log.Info("Configuring conflict solver config from smuggler");
             tasks.Add(_server.SendToLeaderAsync(new ModifyConflictSolverCommand(_name, RaftIdGenerator.DontCareId)
             {
                 Solver = databaseRecord.ConflictSolverConfig
             }));
-            progress.ConflictSolverConfigUpdated = true;
+            result.DatabaseRecord.ConflictSolverConfigUpdated = true;
         }
 
         if (databaseRecord.PeriodicBackups.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.PeriodicBackups))
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring periodic backups configuration from smuggler");
+
             foreach (var backupConfig in databaseRecord.PeriodicBackups)
             {
                 _currentDatabaseRecord?.PeriodicBackups.ForEach(x =>
@@ -94,13 +100,15 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                 backupConfig.Disabled = true;
                 tasks.Add(_server.SendToLeaderAsync(new UpdatePeriodicBackupCommand(backupConfig, _name, RaftIdGenerator.DontCareId)));
             }
-            progress.PeriodicBackupsUpdated = true;
+
+            result.DatabaseRecord.PeriodicBackupsUpdated = true;
         }
 
         if (databaseRecord.SinkPullReplications.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SinkPullReplications))
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring sink pull replication configuration from smuggler");
+
             foreach (var pullReplication in databaseRecord.SinkPullReplications)
             {
                 _currentDatabaseRecord?.SinkPullReplications.ForEach(x =>
@@ -117,13 +125,15 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                     PullReplicationAsSink = pullReplication
                 }));
             }
-            progress.SinkPullReplicationsUpdated = true;
+
+            result.DatabaseRecord.SinkPullReplicationsUpdated = true;
         }
 
         if (databaseRecord.HubPullReplications.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.HubPullReplications))
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring hub pull replication configuration from smuggler");
+
             foreach (var pullReplication in databaseRecord.HubPullReplications)
             {
                 _currentDatabaseRecord?.HubPullReplications.ForEach(x =>
@@ -141,7 +151,8 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                     }
                 ));
             }
-            progress.HubPullReplicationsUpdated = true;
+
+            result.DatabaseRecord.HubPullReplicationsUpdated = true;
         }
 
         if (databaseRecord.Sorters.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Sorters))
@@ -154,7 +165,7 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                 Sorters = databaseRecord.Sorters.Values.ToList()
             }));
 
-            progress.SortersUpdated = true;
+            result.DatabaseRecord.SortersUpdated = true;
         }
 
         if (databaseRecord.Analyzers.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Analyzers))
@@ -167,13 +178,14 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                 Analyzers = databaseRecord.Analyzers.Values.ToList()
             }));
 
-            progress.AnalyzersUpdated = true;
+            result.DatabaseRecord.AnalyzersUpdated = true;
         }
 
         if (databaseRecord.ExternalReplications.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ExternalReplications))
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring external replications configuration from smuggler");
+
             foreach (var replication in databaseRecord.ExternalReplications)
             {
                 _currentDatabaseRecord?.ExternalReplications.ForEach(x =>
@@ -190,24 +202,15 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                     Watcher = replication
                 }));
             }
-            progress.ExternalReplicationsUpdated = true;
-        }
 
-        if (databaseRecord.RavenConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RavenConnectionStrings))
-        {
-            if (_log.IsInfoEnabled)
-                _log.Info("Configuring Raven connection strings configuration from smuggler");
-            foreach (var connectionString in databaseRecord.RavenConnectionStrings)
-            {
-                tasks.Add(_server.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _name, RaftIdGenerator.DontCareId)));
-            }
-            progress.RavenConnectionStringsUpdated = true;
+            result.DatabaseRecord.ExternalReplicationsUpdated = true;
         }
 
         if (databaseRecord.RavenEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RavenEtls))
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring raven etls configuration from smuggler");
+
             foreach (var etl in databaseRecord.RavenEtls)
             {
                 _currentDatabaseRecord?.RavenEtls.ForEach(x =>
@@ -221,24 +224,15 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                 etl.Disabled = true;
                 tasks.Add(_server.SendToLeaderAsync(new AddRavenEtlCommand(etl, _name, RaftIdGenerator.DontCareId)));
             }
-            progress.RavenEtlsUpdated = true;
-        }
 
-        if (databaseRecord.SqlConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SqlConnectionStrings))
-        {
-            if (_log.IsInfoEnabled)
-                _log.Info("Configuring SQL connection strings from smuggler");
-            foreach (var connectionString in databaseRecord.SqlConnectionStrings)
-            {
-                tasks.Add(_server.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _name, RaftIdGenerator.DontCareId)));
-            }
-            progress.SqlConnectionStringsUpdated = true;
+            result.DatabaseRecord.RavenEtlsUpdated = true;
         }
 
         if (databaseRecord.SqlEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SqlEtls))
         {
             if (_log.IsInfoEnabled)
-                _log.Info("Configuring sql etls configuration from smuggler");
+                _log.Info("Configuring SQL ETLs configuration from smuggler");
+
             foreach (var etl in databaseRecord.SqlEtls)
             {
                 _currentDatabaseRecord?.SqlEtls.ForEach(x =>
@@ -252,32 +246,44 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                 etl.Disabled = true;
                 tasks.Add(_server.SendToLeaderAsync(new AddSqlEtlCommand(etl, _name, RaftIdGenerator.DontCareId)));
             }
-            progress.SqlEtlsUpdated = true;
+
+            result.DatabaseRecord.SqlEtlsUpdated = true;
         }
 
         if (databaseRecord.TimeSeries != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.TimeSeries))
         {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring time-series from smuggler");
+
             if (_currentDatabaseRecord?.TimeSeries != null)
             {
                 foreach (var collection in _currentDatabaseRecord.TimeSeries.Collections)
                 {
-                    if (databaseRecord.TimeSeries.Collections.ContainsKey(collection.Key) == false)
+                    if (databaseRecord.TimeSeries.Collections.TryGetValue(collection.Key, out var collectionConfiguration) == false)
                     {
                         databaseRecord.TimeSeries.Collections.Add(collection.Key, collection.Value);
                     }
+                    else
+                    {
+                        if (collectionConfiguration.Equals(collection.Value) == false)
+                            result.AddWarning($"Time-series configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
+                                              "Configuring this time-series from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
+                    }
                 }
             }
-            if (_log.IsInfoEnabled)
-                _log.Info("Configuring time-series from smuggler");
+
             tasks.Add(_server.SendToLeaderAsync(new EditTimeSeriesConfigurationCommand(databaseRecord.TimeSeries, _name, RaftIdGenerator.DontCareId)));
-            progress.TimeSeriesConfigurationUpdated = true;
+            result.DatabaseRecord.TimeSeriesConfigurationUpdated = true;
         }
 
         if (databaseRecord.DocumentsCompression != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.DocumentsCompression))
         {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring documents compression from smuggler");
+
             if (_currentDatabaseRecord?.DocumentsCompression?.Collections?.Length > 0 || _currentDatabaseRecord?.DocumentsCompression?.CompressAllCollections == true)
             {
-                var collectionsToAdd = new List<string>();
+                var collectionsToAdd = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var collection in _currentDatabaseRecord.DocumentsCompression.Collections)
                 {
@@ -294,28 +300,34 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                 }
             }
 
-            if (_log.IsInfoEnabled)
-                _log.Info("Configuring documents compression from smuggler");
             tasks.Add(_server.SendToLeaderAsync(new EditDocumentsCompressionCommand(databaseRecord.DocumentsCompression, _name, RaftIdGenerator.DontCareId)));
-            progress.DocumentsCompressionConfigurationUpdated = true;
+            result.DatabaseRecord.DocumentsCompressionConfigurationUpdated = true;
         }
 
         if (databaseRecord.Revisions != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Revisions))
         {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring revisions from smuggler");
+
             if (_currentDatabaseRecord?.Revisions != null)
             {
                 foreach (var collection in _currentDatabaseRecord.Revisions.Collections)
                 {
-                    if (databaseRecord.Revisions.Collections.ContainsKey(collection.Key) == false)
+                    if (databaseRecord.Revisions.Collections.TryGetValue(collection.Key, out var collectionConfiguration) == false)
                     {
                         databaseRecord.Revisions.Collections.Add(collection.Key, collection.Value);
                     }
+                    else
+                    {
+                        if (collectionConfiguration.Equals(collection.Value) == false)
+                            result.AddWarning($"Revisions configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
+                                              "Configuring this revisions from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
+                    }
                 }
             }
-            if (_log.IsInfoEnabled)
-                _log.Info("Configuring revisions from smuggler");
+
             tasks.Add(_server.SendToLeaderAsync(new EditRevisionsConfigurationCommand(databaseRecord.Revisions, _name, RaftIdGenerator.DontCareId)));
-            progress.RevisionsConfigurationUpdated = true;
+            result.DatabaseRecord.RevisionsConfigurationUpdated = true;
         }
 
         if (databaseRecord.RevisionsForConflicts != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Revisions))
@@ -329,16 +341,44 @@ public class DatabaseRecordActions : IDatabaseRecordActions
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring expiration from smuggler");
+
             tasks.Add(_server.SendToLeaderAsync(new EditExpirationCommand(databaseRecord.Expiration, _name, RaftIdGenerator.DontCareId)));
-            progress.ExpirationConfigurationUpdated = true;
+            result.DatabaseRecord.ExpirationConfigurationUpdated = true;
         }
 
         if (databaseRecord.Refresh != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Expiration))
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring refresh from smuggler");
+
             tasks.Add(_server.SendToLeaderAsync(new EditRefreshCommand(databaseRecord.Refresh, _name, RaftIdGenerator.DontCareId)));
-            progress.RefreshConfigurationUpdated = true;
+            result.DatabaseRecord.RefreshConfigurationUpdated = true;
+        }
+
+        if (databaseRecord.RavenConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RavenConnectionStrings))
+        {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring Raven connection strings configuration from smuggler");
+
+            foreach (var connectionString in databaseRecord.RavenConnectionStrings)
+            {
+                tasks.Add(_server.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _name, RaftIdGenerator.DontCareId)));
+            }
+
+            result.DatabaseRecord.RavenConnectionStringsUpdated = true;
+        }
+
+        if (databaseRecord.SqlConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SqlConnectionStrings))
+        {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring SQL connection strings from smuggler");
+
+            foreach (var connectionString in databaseRecord.SqlConnectionStrings)
+            {
+                tasks.Add(_server.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _name, RaftIdGenerator.DontCareId)));
+            }
+
+            result.DatabaseRecord.SqlConnectionStringsUpdated = true;
         }
 
         if (databaseRecord.Client != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.Client))
@@ -347,7 +387,7 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                 _log.Info("Configuring client configuration from smuggler");
 
             tasks.Add(_server.SendToLeaderAsync(new EditDatabaseClientConfigurationCommand(databaseRecord.Client, _name, RaftIdGenerator.DontCareId)));
-            progress.ClientConfigurationUpdated = true;
+            result.DatabaseRecord.ClientConfigurationUpdated = true;
         }
 
         if (databaseRecord.Integrations?.PostgreSql != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.PostgreSQLIntegration))
@@ -355,7 +395,7 @@ public class DatabaseRecordActions : IDatabaseRecordActions
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring PostgreSQL integration from smuggler");
             tasks.Add(_server.SendToLeaderAsync(new EditPostgreSqlConfigurationCommand(databaseRecord.Integrations.PostgreSql, _name, RaftIdGenerator.DontCareId)));
-            progress.PostreSQLConfigurationUpdated = true;
+            result.DatabaseRecord.PostreSQLConfigurationUpdated = true;
         }
 
         if (databaseRecord.UnusedDatabaseIds != null && databaseRecord.UnusedDatabaseIds.Count > 0)
@@ -365,7 +405,7 @@ public class DatabaseRecordActions : IDatabaseRecordActions
 
             tasks.Add(_server.SendToLeaderAsync(new UpdateUnusedDatabaseIdsCommand(_name, databaseRecord.UnusedDatabaseIds, RaftIdGenerator.DontCareId)));
 
-            progress.UnusedDatabaseIdsUpdated = true;
+            result.DatabaseRecord.UnusedDatabaseIdsUpdated = true;
         }
 
         if (databaseRecordItemType.HasFlag(DatabaseRecordItemType.LockMode))
@@ -375,24 +415,14 @@ public class DatabaseRecordActions : IDatabaseRecordActions
 
             tasks.Add(_server.SendToLeaderAsync(new EditLockModeCommand(_name, databaseRecord.LockMode, RaftIdGenerator.DontCareId)));
 
-            progress.LockModeUpdated = true;
-        }
-
-        if (databaseRecord.OlapConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.OlapConnectionStrings))
-        {
-            if (_log.IsInfoEnabled)
-                _log.Info("Configuring OLAP connection strings from smuggler");
-            foreach (var connectionString in databaseRecord.OlapConnectionStrings)
-            {
-                tasks.Add(_server.SendToLeaderAsync(new PutOlapConnectionStringCommand(connectionString.Value, _name, RaftIdGenerator.DontCareId)));
-            }
-            progress.OlapConnectionStringsUpdated = true;
+            result.DatabaseRecord.LockModeUpdated = true;
         }
 
         if (databaseRecord.OlapEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.OlapEtls))
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring OLAP ETLs configuration from smuggler");
+
             foreach (var etl in databaseRecord.OlapEtls)
             {
                 _currentDatabaseRecord?.OlapEtls.ForEach(x =>
@@ -406,7 +436,21 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                 etl.Disabled = true;
                 tasks.Add(_server.SendToLeaderAsync(new AddOlapEtlCommand(etl, _name, RaftIdGenerator.DontCareId)));
             }
-            progress.OlapEtlsUpdated = true;
+
+            result.DatabaseRecord.OlapEtlsUpdated = true;
+        }
+
+        if (databaseRecord.OlapConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.OlapConnectionStrings))
+        {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring OLAP connection strings from smuggler");
+
+            foreach (var connectionString in databaseRecord.OlapConnectionStrings)
+            {
+                tasks.Add(_server.SendToLeaderAsync(new PutOlapConnectionStringCommand(connectionString.Value, _name, RaftIdGenerator.DontCareId)));
+            }
+
+            result.DatabaseRecord.OlapConnectionStringsUpdated = true;
         }
 
         if (databaseRecord.ElasticSearchConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticSearchConnectionStrings))
@@ -417,7 +461,8 @@ public class DatabaseRecordActions : IDatabaseRecordActions
             {
                 tasks.Add(_server.SendToLeaderAsync(new PutElasticSearchConnectionStringCommand(connectionString.Value, _name, RaftIdGenerator.DontCareId)));
             }
-            progress.ElasticSearchConnectionStringsUpdated = true;
+
+            result.DatabaseRecord.ElasticSearchConnectionStringsUpdated = true;
         }
 
         if (databaseRecord.ElasticSearchEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ElasticSearchEtls))
@@ -437,7 +482,8 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                 etl.Disabled = true;
                 tasks.Add(_server.SendToLeaderAsync(new AddElasticSearchEtlCommand(etl, _name, RaftIdGenerator.DontCareId)));
             }
-            progress.ElasticSearchEtlsUpdated = true;
+
+            result.DatabaseRecord.ElasticSearchEtlsUpdated = true;
         }
 
         if (databaseRecord.QueueConnectionStrings.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.QueueConnectionStrings))
@@ -448,7 +494,8 @@ public class DatabaseRecordActions : IDatabaseRecordActions
             {
                 tasks.Add(_server.SendToLeaderAsync(new PutQueueConnectionStringCommand(connectionString.Value, _name, RaftIdGenerator.DontCareId)));
             }
-            progress.QueueConnectionStringsUpdated = true;
+
+            result.DatabaseRecord.QueueConnectionStringsUpdated = true;
         }
 
         if (databaseRecord.QueueEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.QueueEtls))
@@ -468,7 +515,8 @@ public class DatabaseRecordActions : IDatabaseRecordActions
                 etl.Disabled = true;
                 tasks.Add(_server.SendToLeaderAsync(new AddQueueEtlCommand(etl, _name, RaftIdGenerator.DontCareId)));
             }
-            progress.QueueEtlsUpdated = true;
+
+            result.DatabaseRecord.QueueEtlsUpdated = true;
         }
 
         if (tasks.Count == 0)

@@ -101,7 +101,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using (coraxScope?.Start())
             {
                 var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories,
-                    _fieldMappings, fieldsToFetch, highlightingTerms, (int)take);
+                    _fieldMappings, fieldsToFetch, highlightingTerms, CoraxConstants.IndexSearcher.TakeAll);
+
                 if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary)) is null)
                     yield break;
             }

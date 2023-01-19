@@ -14,8 +14,10 @@ using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
@@ -35,6 +37,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         internal readonly ClusterConfiguration Config;
         private readonly ServerStore _server;
+        internal ServerStore ServerStore => _server;
 
         internal TestingStuff ForTestingPurposes;
 
@@ -482,10 +485,12 @@ namespace Raven.Server.ServerWide.Maintenance
                     connection = result.Stream;
                     supportedFeatures = result.SupportedFeatures;
 
-                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, connection))
+                    if (result.SupportedFeatures.DataCompression)
                     {
-                        await WriteClusterMaintenanceConnectionHeaderAsync(writer);
+                        connection = new ReadWriteCompressedStream(connection);
                     }
+
+                    await WriteClusterMaintenanceConnectionHeaderAsync(connection, ctx);
                 }
 
                 return new ClusterMaintenanceConnection
@@ -498,6 +503,11 @@ namespace Raven.Server.ServerWide.Maintenance
 
             private async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionAsyncForClusterSupervisor(string url, TcpConnectionInfo info, Stream stream, JsonOperationContext context, List<string> _)
             {
+                bool compressionSupport = false;
+                var version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion;
+                if (version >= TcpConnectionHeaderMessage.HeartbeatsWithTcpCompression)
+                    compressionSupport = true;
+
                 var parameters = new AsyncTcpNegotiateParameters
                 {
                     Database = null,
@@ -506,7 +516,11 @@ namespace Raven.Server.ServerWide.Maintenance
                     ReadResponseAndGetVersionCallbackAsync = SupervisorReadResponseAndGetVersionAsync,
                     DestinationUrl = url,
                     DestinationNodeTag = ClusterTag,
-                    DestinationServerId = info.ServerId
+                    DestinationServerId = info.ServerId,
+                    LicensedFeatures = new LicensedFeatures
+                    {
+                        DataCompression = compressionSupport && _parent.ServerStore.LicenseManager.LicenseStatus.HasTcpDataCompression &&_parent.ServerStore.Configuration.Server.DisableTcpCompression == false
+                    }
                 };
                 return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters);
             }
@@ -572,17 +586,16 @@ namespace Raven.Server.ServerWide.Maintenance
                 await writer.FlushAsync();
             }
 
-            private async ValueTask WriteClusterMaintenanceConnectionHeaderAsync(AsyncBlittableJsonTextWriter writer)
+            private async ValueTask WriteClusterMaintenanceConnectionHeaderAsync(Stream stream, JsonOperationContext context)
             {
-                writer.WriteStartObject();
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
                 {
-                    writer.WritePropertyName(nameof(ClusterMaintenanceConnectionHeader.LeaderClusterTag));
-                    writer.WriteString(_parent._leaderClusterTag);
-                    writer.WritePropertyName(nameof(ClusterMaintenanceConnectionHeader.Term));
-                    writer.WriteInteger(_parent._term);
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(ClusterMaintenanceConnectionHeader.LeaderClusterTag)] = _parent._leaderClusterTag,
+                        [nameof(ClusterMaintenanceConnectionHeader.Term)] = _parent._term
+                    });
                 }
-                writer.WriteEndObject();
-                await writer.FlushAsync();
             }
 
             protected bool Equals(ClusterNode other)

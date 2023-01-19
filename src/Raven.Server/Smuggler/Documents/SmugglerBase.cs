@@ -899,7 +899,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 try
                 {
-                    await actions.WriteDatabaseRecordAsync(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
+                    await actions.WriteDatabaseRecordAsync(databaseRecord, result, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
                 }
                 catch (Exception e)
                 {

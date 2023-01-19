@@ -150,14 +150,14 @@ namespace Sparrow.Utils
             return _input.Read(buffer);
         }
 
-        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = new CancellationToken())
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = new CancellationToken())
         {
-            return await _input.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+            return _input.ReadAsync(buffer, cancellationToken);
         }
 
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            return await _input.ReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
+            return _input.ReadAsync(buffer, offset, count, cancellationToken);
         }
 
         public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)

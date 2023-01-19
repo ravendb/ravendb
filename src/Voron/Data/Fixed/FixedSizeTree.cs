@@ -1504,23 +1504,25 @@ namespace Voron.Data.Fixed
             }
         }
 
-        public ByteStringContext.ExternalScope Read(TVal key, out Slice slice)
+        public byte* ReadPtr(TVal key, out int size)
         {
+            byte* ptr;
             switch (Type)
             {
                 case null:
-                    slice = new Slice();
-                    return new ByteStringContext<ByteStringMemoryCache>.ExternalScope();
+                    size = 0;
+                    return null;
 
                 case RootObjectType.EmbeddedFixedSizeTree:
-                    var ptr = _parent.DirectRead(_treeName);
+                    ptr = _parent.DirectRead(_treeName);
                     var header = (FixedSizeTreeHeader.Embedded*)ptr;
                     var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
                     var pos = BinarySearch(dataStart, header->NumberOfEntries, key, _entrySize);
                     if (_lastMatch != 0)
                         goto case null;
-
-                    return Slice.External(_tx.Allocator, dataStart + (pos * _entrySize) + sizeof(long), _valSize, out slice);
+                    
+                    ptr = dataStart + (pos * _entrySize) + sizeof(long);
+                    break;
 
                 case RootObjectType.FixedSizeTree:
                     var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
@@ -1540,11 +1542,27 @@ namespace Voron.Data.Fixed
                     if (_lastMatch != 0)
                         goto case null;
 
-                    return Slice.External(_tx.Allocator, dataStart + (page.LastSearchPosition * _entrySize) + sizeof(long), _valSize, out slice);
+                    ptr = dataStart + (page.LastSearchPosition * _entrySize) + sizeof(long);
+                    break;
 
                 default:
                     throw new ArgumentOutOfRangeException(Type?.ToString());
             }
+
+            size = _valSize;
+            return ptr;
+        }
+
+        public ByteStringContext.ExternalScope Read(TVal key, out Slice slice)
+        {
+            var ptr = ReadPtr(key, out int size);
+            if (ptr == null)
+            {
+                slice = new Slice();
+                return new ByteStringContext<ByteStringMemoryCache>.ExternalScope();
+            }
+
+            return Slice.External(_tx.Allocator, ptr, size, out slice);
         }
 
         public IFixedSizeIterator Iterate()

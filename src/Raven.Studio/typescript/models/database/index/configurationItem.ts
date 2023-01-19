@@ -35,7 +35,8 @@ class configurationItem {
         "Indexing.Lucene.UseCompoundFileInMerging",
         "Indexing.Lucene.IndexInputType",
         "Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec",
-        "Indexing.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndexInMb"
+        "Indexing.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndexInMb",
+        "Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved"
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:
