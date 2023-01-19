@@ -1,10 +1,10 @@
 ﻿import React from "react";
-import { PopoverWithHover } from "../../../../common/PopoverWithHover";
-import { OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "../../../../models/tasks";
-import { NamedProgress, NamedProgressItem } from "../../../../common/NamedProgress";
+import { PopoverWithHover } from "components/common/PopoverWithHover";
+import { OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "components/models/tasks";
+import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 
 interface OngoingTaskEtlProgressTooltipProps {
-    target: string;
+    target: HTMLElement;
     nodeInfo: OngoingEtlTaskNodeInfo;
     task: OngoingTaskInfo;
     showPreview: (transformationName: string) => void;
@@ -15,7 +15,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
 
     if (nodeInfo.status === "error") {
         return (
-            <PopoverWithHover target={target} placement="top" delay={100}>
+            <PopoverWithHover target={target} placement="top">
                 <div className="text-danger flex-horizontal">
                     <div className="flex-start text-warning">
                         <i className="icon-warning"></i>
@@ -34,7 +34,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
     }
 
     return (
-        <PopoverWithHover rounded target={target} placement="top" delay={100}>
+        <PopoverWithHover rounded target={target} placement="top">
             <div className="ongoing-tasks-details-tooltip">
                 {nodeInfo.etlProgress &&
                     nodeInfo.etlProgress.map((transformationScriptProgress) => {

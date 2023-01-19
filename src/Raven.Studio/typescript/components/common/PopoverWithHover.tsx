@@ -1,38 +1,107 @@
-﻿import { useEffect, useRef } from "react";
-import ReactDOM from "react-dom";
-import popoverUtils from "common/popoverUtils";
-import { createRoot, Root } from "react-dom/client";
+﻿import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Popover } from "reactstrap";
+import { PopoverProps } from "reactstrap/types/lib/Popover";
 
-interface PopoverWithHoverProps extends PopoverUtilsOptions {
-    target: string;
+const tooltipContext = {
+    currentTarget: null as HTMLDivElement,
+    closeAction: null as () => void,
+};
+
+interface PopoverWithHoverProps extends PopoverProps {
+    rounded?: boolean;
+    target: HTMLElement;
     children: JSX.Element | JSX.Element[];
+}
+
+function tooltipMutex(target: HTMLDivElement, onClose: () => void) {
+    if (tooltipContext.currentTarget && tooltipContext.currentTarget !== target) {
+        tooltipContext.closeAction();
+    }
+
+    tooltipContext.currentTarget = target;
+    tooltipContext.closeAction = onClose;
 }
 
 export function PopoverWithHover(props: PopoverWithHoverProps) {
     const { target, children, ...rest } = props;
 
-    const textRef = useRef<HTMLDivElement>();
-    const rootRef = useRef<Root>();
+    const div = target as HTMLDivElement;
+    const [open, setOpen] = useState<boolean>(false);
+    const overElement = useRef<boolean>(false);
 
-    useEffect(() => {
-        textRef.current = document.createElement("div");
-        rootRef.current = createRoot(textRef.current);
+    const cancelHandle = useRef<ReturnType<typeof setTimeout>>(null);
+    const showHandle = useRef<ReturnType<typeof setTimeout>>(null);
+
+    const scheduleHide = useCallback(() => {
+        cancelHandle.current = setTimeout(() => {
+            if (!overElement.current) {
+                setOpen(false);
+                if (tooltipContext.currentTarget === div) {
+                    tooltipContext.currentTarget = null;
+                    tooltipContext.closeAction = null;
+                }
+            }
+        }, 300);
+    }, [overElement, div]);
+
+    const maybeCancelHide = useCallback(() => {
+        if (cancelHandle.current) {
+            clearTimeout(cancelHandle.current);
+            cancelHandle.current = null;
+        }
     }, []);
 
-    useEffect(() => {
-        rootRef.current.render(children);
-    }, [children]);
+    const maybeCancelShow = useCallback(() => {
+        if (showHandle.current) {
+            clearTimeout(showHandle.current);
+            showHandle.current = null;
+        }
+    }, []);
+
+    const onPopoverEnter = useCallback(() => {
+        setTimeout(() => {
+            overElement.current = true;
+            maybeCancelHide();
+        }, 0);
+    }, [maybeCancelHide]);
+
+    const onPopoverLeave = useCallback(() => {
+        overElement.current = false;
+        scheduleHide();
+    }, [scheduleHide]);
 
     useEffect(() => {
-        const $target = $("#" + target);
-        popoverUtils.longWithHover($target, {
-            content: () => textRef.current,
-            html: true,
-            sanitize: false,
-            ...rest,
-        } as any);
-        // eslint-disable-next-line
-    }, [target]);
+        const onEnter = () => {
+            overElement.current = true;
+            tooltipMutex(div, () => setOpen(false));
+            showHandle.current = setTimeout(() => {
+                setOpen(true);
+                showHandle.current = null;
+            }, 200);
 
-    return null as JSX.Element;
+            maybeCancelHide();
+        };
+
+        const onLeave = () => {
+            maybeCancelShow();
+            overElement.current = false;
+            scheduleHide();
+        };
+
+        if (div) {
+            div.addEventListener("mouseenter", onEnter);
+            div.addEventListener("mouseleave", onLeave);
+
+            return () => {
+                div.removeEventListener("mouseenter", onEnter);
+                div.removeEventListener("mouseleave", onLeave);
+            };
+        }
+    }, [maybeCancelShow, target, scheduleHide, maybeCancelHide, div]);
+
+    return (
+        <Popover target={target} onMouseEnter={onPopoverEnter} isOpen={open} {...rest}>
+            <div onMouseLeave={onPopoverLeave}>{children}</div>
+        </Popover>
+    );
 }

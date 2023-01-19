@@ -18,7 +18,7 @@ import {
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 
 interface IndexProgressTooltipProps {
-    target: string;
+    target: HTMLElement;
     nodeInfo: IndexNodeInfo;
     index: IndexSharedInfo;
     globalIndexingStatus: IndexRunningStatus;
@@ -30,7 +30,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
 
     if (nodeInfo.status === "error") {
         return (
-            <PopoverWithHover target={target} placement="top" delay={100}>
+            <PopoverWithHover target={target} placement="top">
                 <div className="text-danger flex-horizontal">
                     <div className="flex-start text-warning">
                         <i className="icon-warning"></i>
@@ -49,7 +49,7 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
     }
 
     return (
-        <PopoverWithHover rounded target={target} placement="top" delay={100}>
+        <PopoverWithHover target={target} placement="top">
             <LocationSpecificDetails location={nodeInfo.location}>
                 <LocationSpecificDetailsItemsContainer>
                     <LocationSpecificDetailsItem>
