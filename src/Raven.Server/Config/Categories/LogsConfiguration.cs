@@ -68,6 +68,7 @@ namespace Raven.Server.Config.Categories
         public PathSetting MicrosoftLogsPath { get; set; }
         
         [Description("The path to json configuration file of Microsoft logs")]
+        [ReadOnlyPath]
         [DefaultValue("settings.logs.microsoft.json")]
         [ConfigurationEntry("Logs.Microsoft.ConfigurationPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting MicrosoftLogsConfigurationPath { get; set; }
