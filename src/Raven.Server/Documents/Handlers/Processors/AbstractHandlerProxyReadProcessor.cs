@@ -32,6 +32,8 @@ internal abstract class AbstractHandlerProxyReadProcessor<TResult, TRequestHandl
         else
         {
             var command = CreateCommandForNode(nodeTag);
+            command.SelectedNodeTag = nodeTag;
+
             var proxyCommand = new ProxyCommand<TResult>(command, RequestHandler.HttpContext.Response);
 
             using (var token = RequestHandler.CreateOperationToken())
