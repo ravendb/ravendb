@@ -48,17 +48,17 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly Logger Logger;
 
-        public AbstractIndexLockModeController LockMode;
+        public DatabaseIndexLockModeController LockMode;
 
-        public AbstractIndexPriorityController Priority;
+        public DatabaseIndexPriorityController Priority;
 
-        public AbstractIndexStateController State;
+        public DatabaseIndexStateController State;
 
-        public AbstractIndexDeleteController Delete;
+        public DatabaseIndexDeleteController Delete;
 
-        public AbstractIndexCreateController Create;
+        public DatabaseIndexCreateController Create;
 
-        public AbstractIndexHasChangedController HasChanged;
+        public DatabaseIndexHasChangedController HasChanged;
 
         public SemaphoreSlim StoppedConcurrentIndexBatches { get; }
 
@@ -90,6 +90,11 @@ namespace Raven.Server.Documents.Indexes
         {
             _documentDatabase = documentDatabase;
 
+            LockMode = new DatabaseIndexLockModeController(documentDatabase);
+            Priority = new DatabaseIndexPriorityController(documentDatabase);
+            State = new DatabaseIndexStateController(documentDatabase);
+            Delete = new DatabaseIndexDeleteController(documentDatabase);
+            HasChanged = new DatabaseIndexHasChangedController(documentDatabase);
             Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
 
             var stoppedConcurrentIndexBatches = _documentDatabase.Configuration.Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory;
@@ -99,13 +104,7 @@ namespace Raven.Server.Documents.Indexes
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore) : this(documentDatabase)
         {
             ServerStore = serverStore;
-
-            LockMode = new DatabaseIndexLockModeController(documentDatabase);
-            Priority = new DatabaseIndexPriorityController(documentDatabase);
-            State = new DatabaseIndexStateController(documentDatabase);
-            Delete = new DatabaseIndexDeleteController(documentDatabase);
             Create = new DatabaseIndexCreateController(documentDatabase);
-            HasChanged = new DatabaseIndexHasChangedController(documentDatabase);
         }
 
         public int HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex, bool startIndexes = true)
