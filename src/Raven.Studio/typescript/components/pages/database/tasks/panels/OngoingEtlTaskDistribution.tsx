@@ -1,8 +1,8 @@
 ﻿import React, { useState } from "react";
-import { DistributionItem, DistributionLegend, LocationDistribution } from "../../../../common/LocationDistribution";
+import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import classNames from "classnames";
-import { AnyEtlOngoingTaskInfo, OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "../../../../models/tasks";
-import { ProgressCircle } from "../../../../common/ProgressCircle";
+import { AnyEtlOngoingTaskInfo, OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "components/models/tasks";
+import { ProgressCircle } from "components/common/ProgressCircle";
 import { OngoingEtlTaskProgressTooltip } from "../list/OngoingEtlTaskProgressTooltip";
 
 interface OngoingEtlTaskDistributionProps {
@@ -10,61 +10,71 @@ interface OngoingEtlTaskDistributionProps {
     showPreview: (transformationName: string) => void;
 }
 
+interface ItemWithTooltipProps {
+    nodeInfo: OngoingEtlTaskNodeInfo;
+    sharded: boolean;
+    task: AnyEtlOngoingTaskInfo;
+    showPreview: (transformationName: string) => void;
+}
+
+function ItemWithTooltip(props: ItemWithTooltipProps) {
+    const { nodeInfo, sharded, task, showPreview } = props;
+
+    const shard = (
+        <div className="top shard">
+            {nodeInfo.location.shardNumber != null && (
+                <>
+                    <i className="icon-shard" />
+                    {nodeInfo.location.shardNumber}
+                </>
+            )}
+        </div>
+    );
+
+    const key = taskNodeInfoKey(nodeInfo);
+    const hasError = !!nodeInfo.details?.error;
+    const [node, setNode] = useState<HTMLDivElement>();
+
+    return (
+        <div ref={setNode}>
+            <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "notLoaded"} key={key}>
+                {sharded && shard}
+                <div className={classNames("node", { top: !sharded })}>
+                    {!sharded && <i className="icon-node"></i>}
+
+                    {nodeInfo.location.nodeTag}
+                </div>
+                <div>{nodeInfo.status === "loaded" ? nodeInfo.details.taskConnectionStatus : ""}</div>
+                <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
+                <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
+            </DistributionItem>
+            {node && (
+                <OngoingEtlTaskProgressTooltip
+                    target={node}
+                    nodeInfo={nodeInfo}
+                    task={task}
+                    showPreview={showPreview}
+                />
+            )}
+        </div>
+    );
+}
+
 export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProps) {
     const { task, showPreview } = props;
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
-
-    const [uniqueTaskId] = useState(() => _.uniqueId("task-id"));
 
     const visibleNodes = task.nodesInfo.filter(
         (x) => x.status !== "loaded" || x.details.taskConnectionStatus !== "NotOnThisNode"
     );
 
-    const items = (
-        <>
-            {visibleNodes.map((nodeInfo) => {
-                const shard = (
-                    <div className="top shard">
-                        {nodeInfo.location.shardNumber != null && (
-                            <>
-                                <i className="icon-shard" />
-                                {nodeInfo.location.shardNumber}
-                            </>
-                        )}
-                    </div>
-                );
+    const items = visibleNodes.map((nodeInfo) => {
+        const key = taskNodeInfoKey(nodeInfo);
 
-                const key = taskNodeInfoKey(nodeInfo);
-                const id = uniqueTaskId + key;
-
-                const hasError = !!nodeInfo.details?.error;
-
-                return (
-                    <DistributionItem
-                        loading={nodeInfo.status === "loading" || nodeInfo.status === "notLoaded"}
-                        id={id}
-                        key={key}
-                    >
-                        {sharded && shard}
-                        <div className={classNames("node", { top: !sharded })}>
-                            {!sharded && <i className="icon-node"></i>}
-
-                            {nodeInfo.location.nodeTag}
-                        </div>
-                        <div>{nodeInfo.status === "loaded" ? nodeInfo.details.taskConnectionStatus : ""}</div>
-                        <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
-                        <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
-                        <OngoingEtlTaskProgressTooltip
-                            target={id}
-                            nodeInfo={nodeInfo}
-                            task={task}
-                            showPreview={showPreview}
-                        />
-                    </DistributionItem>
-                );
-            })}
-        </>
-    );
+        return (
+            <ItemWithTooltip key={key} nodeInfo={nodeInfo} sharded={sharded} showPreview={showPreview} task={task} />
+        );
+    });
 
     return (
         <LocationDistribution>

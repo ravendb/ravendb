@@ -1,5 +1,5 @@
 ﻿import { IndexNodeInfo, IndexSharedInfo } from "components/models/indexes";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import classNames from "classnames";
 import { IndexProgressTooltip } from "./IndexProgressTooltip";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
@@ -21,10 +21,74 @@ interface IndexDistributionProps {
     openFaulty: (location: databaseLocationSpecifier) => void;
 }
 
+interface ItemWithTooltipProps {
+    index: IndexSharedInfo;
+    globalIndexingStatus: IndexRunningStatus;
+    showStaleReason: (location: databaseLocationSpecifier) => void;
+    openFaulty: (location: databaseLocationSpecifier) => void;
+    nodeInfo: IndexNodeInfo;
+    sharded: boolean;
+}
+
+function ItemWithTooltip(props: ItemWithTooltipProps) {
+    const { nodeInfo, sharded, openFaulty, showStaleReason, globalIndexingStatus, index } = props;
+    const entriesCount = nodeInfo.details?.faulty ? "n/a" : nodeInfo.details?.entriesCount ?? "";
+
+    const shard = (
+        <div className="top shard">
+            {nodeInfo.location.shardNumber != null && (
+                <>
+                    <i className="icon-shard" />
+                    {nodeInfo.location.shardNumber}
+                </>
+            )}
+        </div>
+    );
+
+    const [node, setNode] = useState<HTMLDivElement>();
+
+    return (
+        <div ref={setNode}>
+            <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "notLoaded"}>
+                {sharded && shard}
+                <div className={classNames("node", { top: !sharded })}>
+                    {!sharded && <i className="icon-node"></i>}
+
+                    {nodeInfo.location.nodeTag}
+                </div>
+                <div className="entries">{entriesCount}</div>
+                <div className="errors">{nodeInfo.details?.errorCount ?? ""}</div>
+
+                <IndexProgress nodeInfo={nodeInfo} />
+
+                {nodeInfo.details?.faulty && (
+                    <div className="text-center">
+                        <Button
+                            color="danger"
+                            className="px-1 py-0 my-1"
+                            size="xs"
+                            onClick={() => openFaulty(nodeInfo.location)}
+                        >
+                            Open faulty index
+                        </Button>
+                    </div>
+                )}
+            </DistributionItem>
+            {node && (
+                <IndexProgressTooltip
+                    target={node}
+                    nodeInfo={nodeInfo}
+                    index={index}
+                    globalIndexingStatus={globalIndexingStatus}
+                    showStaleReason={showStaleReason}
+                />
+            )}
+        </div>
+    );
+}
+
 export function IndexDistribution(props: IndexDistributionProps) {
     const { index, globalIndexingStatus, showStaleReason, openFaulty } = props;
-
-    const [indexId] = useState(() => _.uniqueId("index-id"));
 
     const totalErrors = index.nodesInfo
         .filter((x) => x.status === "loaded")
@@ -36,59 +100,17 @@ export function IndexDistribution(props: IndexDistributionProps) {
     const items = (
         <>
             {index.nodesInfo.map((nodeInfo) => {
-                const shard = (
-                    <div className="top shard">
-                        {nodeInfo.location.shardNumber != null && (
-                            <>
-                                <i className="icon-shard" />
-                                {nodeInfo.location.shardNumber}
-                            </>
-                        )}
-                    </div>
-                );
-
                 const key = indexNodeInfoKey(nodeInfo);
-                const id = indexId + key;
-                const entriesCount = nodeInfo.details?.faulty ? "n/a" : nodeInfo.details?.entriesCount ?? "";
-
                 return (
-                    <DistributionItem
-                        loading={nodeInfo.status === "loading" || nodeInfo.status === "notLoaded"}
-                        id={id}
+                    <ItemWithTooltip
                         key={key}
-                    >
-                        {sharded && shard}
-                        <div className={classNames("node", { top: !sharded })}>
-                            {!sharded && <i className="icon-node"></i>}
-
-                            {nodeInfo.location.nodeTag}
-                        </div>
-                        <div className="entries">{entriesCount}</div>
-                        <div className="errors">{nodeInfo.details?.errorCount ?? ""}</div>
-
-                        <IndexProgress nodeInfo={nodeInfo} />
-
-                        {nodeInfo.details?.faulty && (
-                            <div className="text-center">
-                                <Button
-                                    color="danger"
-                                    className="px-1 py-0 my-1"
-                                    size="xs"
-                                    onClick={() => openFaulty(nodeInfo.location)}
-                                >
-                                    Open faulty index
-                                </Button>
-                            </div>
-                        )}
-
-                        <IndexProgressTooltip
-                            target={id}
-                            nodeInfo={nodeInfo}
-                            index={index}
-                            globalIndexingStatus={globalIndexingStatus}
-                            showStaleReason={showStaleReason}
-                        />
-                    </DistributionItem>
+                        nodeInfo={nodeInfo}
+                        sharded={sharded}
+                        index={index}
+                        globalIndexingStatus={globalIndexingStatus}
+                        showStaleReason={showStaleReason}
+                        openFaulty={openFaulty}
+                    />
                 );
             })}
         </>

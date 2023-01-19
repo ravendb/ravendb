@@ -10,13 +10,9 @@ type operationType = "pause" | "resume" | "enable" | "disable";
 
 interface BulkIndexOperationConfirmProps {
     type: operationType;
-
     indexes: IndexSharedInfo[];
-
     toggle: () => void;
-
     locations: databaseLocationSpecifier[];
-
     onConfirm: (locations: databaseLocationSpecifier[]) => void;
 }
 
