@@ -949,8 +949,8 @@ namespace Raven.Server.Commercial
             X509Certificate2 certificate = null;
             if (_serverStore.Server.Certificate.Certificate != null)
             {
-                certificateNotBefore  = _serverStore.Server.Certificate.Certificate.NotBefore; 
-                certificateNotAfter  = _serverStore.Server.Certificate.Certificate.NotAfter; 
+                certificateNotBefore  = _serverStore.Server.Certificate.Certificate.NotBefore.ToUniversalTime(); 
+                certificateNotAfter  = _serverStore.Server.Certificate.Certificate.NotAfter.ToUniversalTime(); 
                 certificate = _serverStore.Server.Certificate.Certificate;   
             }
             
