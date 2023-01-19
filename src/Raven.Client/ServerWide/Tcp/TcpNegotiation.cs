@@ -73,11 +73,9 @@ namespace Raven.Client.ServerWide.Tcp
                 }
 
                 var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
-
-                return new TcpConnectionHeaderMessage.SupportedFeatures(supportedFeatures)
-                {
-                    DataCompression = dataCompression
-                };
+                var results = new TcpConnectionHeaderMessage.SupportedFeatures(supportedFeatures);
+                results.DataCompression &= dataCompression;
+                return results;
             }
         }
 
