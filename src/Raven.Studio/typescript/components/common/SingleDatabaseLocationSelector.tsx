@@ -1,5 +1,6 @@
 ﻿import React, { useState } from "react";
-import genUtils from "common/generalUtils";
+import { NodeSet, NodeSetItem, NodeSetLabel, NodeSetListCard } from "./NodeSet";
+import { Radio } from "./Radio";
 
 interface SingleDatabaseLocationSelectorProps {
     locations: databaseLocationSpecifier[];
@@ -18,25 +19,24 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
 
     return (
         <div>
-            <ul>
-                {locations.map((l, idx) => {
-                    const selected = selectedLocation === l;
-                    const locationId = uniqId + idx;
-                    return (
-                        <li className="flex-horizontal" key={locationId}>
-                            <div className="radio radio-default">
-                                <input
-                                    type="radio"
-                                    id={locationId}
-                                    checked={selected}
-                                    onChange={() => toggleSelection(l)}
-                                />
-                                <label htmlFor={locationId}>{genUtils.formatLocation(l)}</label>
-                            </div>
-                        </li>
-                    );
-                })}
-            </ul>
+            {locations.map((l, idx) => {
+                const selected = selectedLocation === l;
+                const locationId = uniqId + idx;
+                return (
+                    <div key={locationId}>
+                        <NodeSet color="shard" className="m-1">
+                            <NodeSetLabel color="shard" icon="shard">
+                                Num
+                            </NodeSetLabel>
+                            <NodeSetListCard>
+                                <NodeSetItem icon="node" color="node">
+                                    Tag<Radio toggleSelection={null}></Radio>
+                                </NodeSetItem>
+                            </NodeSetListCard>
+                        </NodeSet>
+                    </div>
+                );
+            })}
         </div>
     );
 }

@@ -1,5 +1,5 @@
 ﻿import { ComponentMeta } from "@storybook/react";
-import { NodeSet, NodeSetLabel, NodeSetItem } from "./NodeSet";
+import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetList } from "./NodeSet";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { HrHeader } from "./HrHeader";
@@ -18,12 +18,14 @@ export function NodeSets() {
                 <NodeSetLabel color="primary" icon="database">
                     Nordwind
                 </NodeSetLabel>
-                <NodeSetItem icon="node" color="node">
-                    A
-                </NodeSetItem>
-                <NodeSetItem icon="node" color="node">
-                    B
-                </NodeSetItem>
+                <NodeSetList>
+                    <NodeSetItem icon="node" color="node">
+                        A
+                    </NodeSetItem>
+                    <NodeSetItem icon="node" color="node">
+                        B
+                    </NodeSetItem>
+                </NodeSetList>
             </NodeSet>
             <HrHeader>Orchestrators</HrHeader>
             <NodeSet color="warning" className="m-1">
