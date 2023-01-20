@@ -27,12 +27,14 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
     private readonly ShardedDatabaseRequestHandler _requestHandler;
     private readonly Dictionary<int, ShardedQueryCommand> _queryCommands;
     private long _combinedResultEtag;
-    private readonly IndexQueryServerSide _query;
+    private readonly Dictionary<string, SuggestionField> _fieldsWithOptions;
+    private readonly BlittableJsonReaderObject _queryParameters;
     private readonly TransactionOperationContext _context;
 
-    public ShardedSuggestionQueryOperation(IndexQueryServerSide query, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
+    public ShardedSuggestionQueryOperation(Dictionary<string, SuggestionField> fieldsWithOptions, BlittableJsonReaderObject queryParameters, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
     {
-        _query = query;
+        _fieldsWithOptions = fieldsWithOptions;
+        _queryParameters = queryParameters;
         _context = context;
         _requestHandler = requestHandler;
         _queryCommands = queryCommands;
@@ -64,7 +66,7 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
             ResultEtag = _combinedResultEtag
         };
 
-        var suggestions = new Dictionary<string, AggregatedSuggestions>();
+        var suggestions = new Dictionary<string, CombinedSuggestions>();
 
         var deserializer = DocumentConventions.DefaultForServer.Serialization.DefaultConverter;
 
@@ -83,38 +85,29 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
                 if (suggestionResult.Suggestions.Count == 0)
                 {
                     if (suggestions.ContainsKey(fieldName) == false)
-                        suggestions[fieldName] = new AggregatedSuggestions();
+                        suggestions[fieldName] = new CombinedSuggestions();
 
                     continue;
                 }
 
-                BlittableJsonReaderArray popularityMetadata = null;
+                BlittableJsonReaderObject popularityMetadata = null;
 
                 if (suggestionJson.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
-                    metadata.TryGet(Constants.Documents.Metadata.SuggestionPopularityFields, out popularityMetadata);
+                    metadata.TryGet(Constants.Documents.Metadata.SuggestionsPopularityFields, out popularityMetadata);
 
 
-                if (suggestions.TryGetValue(fieldName, out AggregatedSuggestions aggregatedSuggestion) == false)
+                if (suggestions.TryGetValue(fieldName, out CombinedSuggestions combinedSuggestions) == false)
                 {
-                    aggregatedSuggestion = new AggregatedSuggestions();
-                    suggestions[fieldName] = aggregatedSuggestion;
-                }
-                else
-                {
-                    aggregatedSuggestion = suggestions[fieldName];
+                    combinedSuggestions = new CombinedSuggestions();
+                    suggestions[fieldName] = combinedSuggestions;
                 }
 
-                aggregatedSuggestion.Suggestions.AddRange(suggestionResult.Suggestions);
+                combinedSuggestions.Suggestions.AddRange(suggestionResult.Suggestions);
 
-                if (popularityMetadata is { Length: > 0 })
-                    AddPopularity(popularityMetadata, aggregatedSuggestion, suggestionResult);
+                if (popularityMetadata is { Count: > 0 })
+                    AddPopularity(popularityMetadata, combinedSuggestions, suggestionResult);
             }
         }
-
-        var suggestionOptions = _query.Metadata.SelectFields.Where(x => x.IsSuggest)
-                                                                        .Cast<SuggestionField>()
-                                                                        .Where(x => x.HasOptions)
-                                                                        .ToDictionary(x => x.Name.Value, x => x);
 
         result.Results = new List<SuggestionResult>(suggestions.Count);
 
@@ -122,51 +115,51 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
         {
             var fieldName = suggestion.Key;
 
-            IEnumerable<string> aggregatedSuggestions;
+            IEnumerable<string> combinedSuggestions;
 
             if (suggestion.Value.SuggestionsWithPopularity is null)
-                aggregatedSuggestions = suggestion.Value.Suggestions;
+                combinedSuggestions = suggestion.Value.Suggestions;
             else
-                aggregatedSuggestions = suggestion.Value.SuggestionsWithPopularity.Values.OrderByDescending(suggestWord => suggestWord).Select(suggestWord => suggestWord.Term).ToArray();
+                combinedSuggestions = suggestion.Value.SuggestionsWithPopularity.Values.OrderByDescending(suggestWord => suggestWord).Select(suggestWord => suggestWord.Term).ToArray();
 
             var fieldResult = new SuggestionResult { Name = fieldName };
 
-            if (suggestionOptions.TryGetValue(fieldName, out var field) == false)
-                fieldResult.Suggestions = aggregatedSuggestions.ToList();
-            else
+            if (_fieldsWithOptions?.TryGetValue(fieldName, out var field) == true)
             {
-                var options = field.GetOptions(_context, _query.QueryParameters);
+                var options = field.GetOptions(_context, _queryParameters);
 
-                fieldResult.Suggestions = aggregatedSuggestions.Take(options.PageSize).ToList();
+                fieldResult.Suggestions = combinedSuggestions.Take(options.PageSize).ToList();
             }
+            else
+                fieldResult.Suggestions = combinedSuggestions.ToList();
 
             result.Results.Add(fieldResult);
         }
 
         return result;
 
-        void AddPopularity(BlittableJsonReaderArray popularityArray, AggregatedSuggestions aggregatedSuggestion, SuggestionResult suggestionResult)
+        void AddPopularity(BlittableJsonReaderObject popularityObject, CombinedSuggestions aggregatedSuggestion, SuggestionResult suggestionResult)
         {
             var i = 0;
 
             aggregatedSuggestion.SuggestionsWithPopularity ??= new Dictionary<string, SuggestWord>();
 
-            foreach (BlittableJsonReaderObject pJson in popularityArray.Cast<BlittableJsonReaderObject>())
-            {
-                var p = deserializer.FromBlittable<SuggestionResultWithPopularity.Popularity>(pJson, "suggestion/popularity");
+            var popularity = deserializer.FromBlittable<SuggestionResultWithPopularity.Popularity>(popularityObject, "suggestion/popularity");
 
+            foreach (var p in popularity.Values)
+            {
                 aggregatedSuggestion.AddSuggestionPopularity(suggestionResult.Suggestions[i++], p);
             }
         }
     }
 
-    private class AggregatedSuggestions
+    private class CombinedSuggestions
     {
         public HashSet<string> Suggestions { get; } = new();
 
         public Dictionary<string, SuggestWord> SuggestionsWithPopularity { get; set; }
 
-        public void AddSuggestionPopularity(string suggestion, SuggestionResultWithPopularity.Popularity popularity)
+        public void AddSuggestionPopularity(string suggestion, SuggestWord popularity)
         {
             var suggestWord = new SuggestWord
             {

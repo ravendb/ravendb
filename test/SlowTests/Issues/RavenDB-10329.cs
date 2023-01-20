@@ -1,7 +1,9 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Facets;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetFacetsOnFieldsWithNamesThatAreReserevedKeywords(Options options)
         {
             using (var store = GetDocumentStore(options))

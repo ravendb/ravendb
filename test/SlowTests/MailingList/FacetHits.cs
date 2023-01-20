@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -46,8 +47,9 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanSearchOnAllProperties()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanSearchOnAllProperties(Options options)
         {
             using (var store = GetDocumentStore())
             {

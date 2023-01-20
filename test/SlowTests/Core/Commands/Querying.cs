@@ -147,7 +147,8 @@ namespace SlowTests.Core.Commands
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Skip = "RavenDB-17966")]
         public void CanGetFacets(Options options)
         {
             using (var store = GetDocumentStore(options))

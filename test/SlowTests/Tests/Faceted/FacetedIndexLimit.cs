@@ -28,7 +28,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformSearchWithTwoDefaultFacets(Options options)
         {
             var facets = new List<Facet> { new Facet { FieldName = "Manufacturer" }, new Facet { FieldName = "Model" } };
@@ -84,7 +84,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedLimitSearch_TermAsc(Options options)
         {
             var facets = new List<Facet>
@@ -140,7 +140,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedLimitSearch_TermDesc(Options options)
         {
             var facets = new List<Facet>
@@ -198,7 +198,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedLimitSearch_HitsAsc(Options options)
         {
             var facets = new List<Facet>
@@ -247,10 +247,6 @@ namespace SlowTests.Tests.Faceted
                         Assert.Equal(inMemoryCount, facet.Count);
                     }
 
-                    if (manufacturer.RemainingHits == 2)
-                    {
-                        WaitForUserToContinueTheTest(store, debug: false);
-                    }
                     Assert.Equal(3, manufacturer.RemainingTermsCount);
                     Assert.Equal(3, manufacturer.RemainingTerms.Count());
                     Assert.Equal(camerasByHits[2], manufacturer.RemainingTerms[0]);
@@ -266,7 +262,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedLimitSearch_HitsDesc(Options options)
         {
             //also specify more results than we have
@@ -306,8 +302,7 @@ namespace SlowTests.Tests.Faceted
 
                     Assert.Equal(5, facetResults["Manufacturer"].Values.Count());
                     Assert.Equal(camerasByHits[0], facetResults["Manufacturer"].Values[0].Range);
-                    if (camerasByHits[1] != facetResults["Manufacturer"].Values[1].Range)
-                        WaitForUserToContinueTheTest(store, debug: false);
+                    
                     Assert.Equal(camerasByHits[1], facetResults["Manufacturer"].Values[1].Range);
                     Assert.Equal(camerasByHits[2], facetResults["Manufacturer"].Values[2].Range);
                     Assert.Equal(camerasByHits[3], facetResults["Manufacturer"].Values[3].Range);
@@ -327,7 +322,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformSearchWithTwoDefaultFacets_LuceneQuery(Options options)
         {
             var facets = new List<Facet> { new Facet { FieldName = "Manufacturer" }, new Facet { FieldName = "Model" } };
@@ -383,7 +378,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedLimitSearch_TermAsc_LuceneQuery(Options options)
         {
             var facets = new List<Facet>
@@ -440,7 +435,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedLimitSearch_TermDesc_LuceneQuery(Options options)
         {
             var facets = new List<Facet>
@@ -498,7 +493,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedLimitSearch_HitsAsc_LuceneQuery(Options options)
         {
             var facets = new List<Facet>
@@ -561,7 +556,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformFacetedLimitSearch_HitsDesc_LuceneQuery(Options options)
         {
             //also specify more results than we have
@@ -601,8 +596,8 @@ namespace SlowTests.Tests.Faceted
 
                     Assert.Equal(5, facetResults["Manufacturer"].Values.Count());
                     Assert.Equal(camerasByHits[0], facetResults["Manufacturer"].Values[0].Range);
-                    if (camerasByHits[1] != facetResults["Manufacturer"].Values[1].Range)
-                        WaitForUserToContinueTheTest(store, debug: false);
+                    
+
                     Assert.Equal(camerasByHits[1], facetResults["Manufacturer"].Values[1].Range);
                     Assert.Equal(camerasByHits[2], facetResults["Manufacturer"].Values[2].Range);
                     Assert.Equal(camerasByHits[3], facetResults["Manufacturer"].Values[3].Range);

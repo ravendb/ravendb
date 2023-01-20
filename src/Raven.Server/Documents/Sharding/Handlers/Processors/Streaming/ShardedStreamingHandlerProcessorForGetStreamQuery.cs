@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
             {
                 var queryProcessor = new ShardedQueryStreamProcessor(context, RequestHandler, query, debug, ignoreLimit, token.Token);
 
-                queryProcessor.Initialize();
+                await queryProcessor.InitializeAsync();
 
                 return await queryProcessor.ExecuteShardedOperations();
             }

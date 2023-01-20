@@ -24,8 +24,11 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
     public abstract List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context,
         Func<string, SpatialField> getSpatialField, CancellationToken token);
 
-    protected static void CompleteFacetCalculationsStage(Dictionary<string, FacetedQueryParser.FacetResult> results)
+    protected static void CompleteFacetCalculationsStage(Dictionary<string, FacetedQueryParser.FacetResult> results, IndexQueryServerSide query)
     {
+        if (query.ReturnRawFacetResults)
+            return;
+
         foreach (var result in results)
         {
             foreach (var value in result.Value.Result.Values)
@@ -114,26 +117,23 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
             if (facetsByName?.TryGetValue(result.Key, out var groups) is null or false || groups == null)
                 continue;
 
-            switch (result.Value.Options.TermSortMode)
-            {
-                case FacetTermSortMode.ValueAsc:
-                    allTerms = new List<string>(groups.OrderBy(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
-                    break;
-                case FacetTermSortMode.ValueDesc:
-                    allTerms = new List<string>(groups.OrderByDescending(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
-                    break;
-                case FacetTermSortMode.CountAsc:
-                    allTerms = new List<string>(groups.OrderBy(x => x.Value.Count).ThenBy(x => x.Key).Select(x => x.Key));
-                    break;
-                case FacetTermSortMode.CountDesc:
-                    allTerms = new List<string>(groups.OrderByDescending(x => x.Value.Count).ThenBy(x => x.Key).Select(x => x.Key));
-                    break;
-                default:
-                    throw new ArgumentException($"Could not understand '{result.Value.Options.TermSortMode}'");
-            }
+            int start;
+            int pageSize;
 
-            var start = result.Value.Options.Start;
-            var pageSize = Math.Min(allTerms.Count, result.Value.Options.PageSize);
+            if (query.ReturnRawFacetResults == false)
+            {
+                allTerms = GetAllTermsSorted(result.Value.Options.TermSortMode, groups, x => x.Value.Count);
+
+                start = result.Value.Options.Start;
+                pageSize = Math.Min(allTerms.Count, result.Value.Options.PageSize);
+            }
+            else
+            {
+                allTerms = new List<string>(groups.Keys);
+
+                start = 0;
+                pageSize = int.MaxValue;
+            }
 
             foreach (var term in allTerms.Skip(start).TakeWhile(term => valuesCount < pageSize))
             {
@@ -169,6 +169,31 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
             if (result.Value.Options.IncludeRemainingTerms)
                 result.Value.Result.RemainingTerms = allTerms.Skip(start + valuesCount).ToList();
         }
+    }
+
+    internal static List<string> GetAllTermsSorted<T>(FacetTermSortMode sortMode, Dictionary<string, T> values, Func<KeyValuePair<string, T>, int> countSelector)
+    {
+        List<string> allTerms;
+
+        switch (sortMode)
+        {
+            case FacetTermSortMode.ValueAsc:
+                allTerms = new List<string>(values.OrderBy(x => x.Key).ThenBy(countSelector).Select(x => x.Key));
+                break;
+            case FacetTermSortMode.ValueDesc:
+                allTerms = new List<string>(values.OrderByDescending(x => x.Key).ThenBy(countSelector).Select(x => x.Key));
+                break;
+            case FacetTermSortMode.CountAsc:
+                allTerms = new List<string>(values.OrderBy(countSelector).ThenBy(x => x.Key).Select(x => x.Key));
+                break;
+            case FacetTermSortMode.CountDesc:
+                allTerms = new List<string>(values.OrderByDescending(countSelector).ThenBy(x => x.Key).Select(x => x.Key));
+                break;
+            default:
+                throw new ArgumentException($"Could not understand '{sortMode}'");
+        }
+
+        return allTerms;
     }
 
     public override void Dispose()

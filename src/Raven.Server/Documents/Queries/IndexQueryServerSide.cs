@@ -41,6 +41,9 @@ namespace Raven.Server.Documents.Queries
         public long? FilterLimit { get; set; }
 
         [JsonDeserializationIgnore]
+        public bool ReturnRawFacetResults;
+
+        [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
 
         [JsonDeserializationIgnore]
@@ -138,7 +141,6 @@ namespace Raven.Server.Documents.Queries
             QueryMetadataCache cache,
             RequestTimeTracker tracker,
             bool addSpatialProperties = false,
-            bool returnMissingIncludeAsNull = false,
             string clientQueryId = null,
             QueryType queryType = QueryType.Select)
         {
@@ -147,7 +149,6 @@ namespace Raven.Server.Documents.Queries
             {
                 result = JsonDeserializationServer.IndexQuery(json);
                 result.ClientQueryId = clientQueryId;
-                result.ReturnMissingIncludeAsNull = returnMissingIncludeAsNull;
 
                 if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
                     result.PageSize = int.MaxValue;

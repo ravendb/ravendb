@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             UpdateFacetResults(results, query, facetsByName);
 
-            CompleteFacetCalculationsStage(results);
+            CompleteFacetCalculationsStage(results, query);
 
             foreach (var readerFacetInfo in returnedReaders)
             {

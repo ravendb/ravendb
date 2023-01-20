@@ -15,11 +15,7 @@ public sealed partial  class LuceneSuggestionIndexReader : SuggestionIndexReader
 
         if (result is SuggestionResultWithPopularity resultWithPopularity)
         {
-            resultWithPopularity.SuggestionsPopularity.Add(new SuggestionResultWithPopularity.Popularity
-            {
-                Freq = suggestion.Freq,
-                Score = suggestion.Score
-            });
+            resultWithPopularity.SuggestionsWithPopularity.Values.Add(suggestion);
         }
         else
         {
@@ -27,9 +23,12 @@ public sealed partial  class LuceneSuggestionIndexReader : SuggestionIndexReader
             {
                 Name = result.Name,
                 Suggestions = result.Suggestions,
-                SuggestionsPopularity = new List<SuggestionResultWithPopularity.Popularity>
+                SuggestionsWithPopularity = new SuggestionResultWithPopularity.Popularity
                 {
-                    new() {Freq = suggestion.Freq, Score = suggestion.Score}
+                    Values = new List<SuggestWord>
+                    {
+                        suggestion
+                    }
                 }
             };
         }

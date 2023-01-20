@@ -98,9 +98,11 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             var timeSeriesKeys = _query.Metadata.TimeSeriesIncludes.TimeSeries.Keys;
         }
 
-        var operation = new ShardedQueryOperation(_query, _context, _requestHandler, _commands, documentsComparer, _existingResultEtag?.ToString());
+        var commands = GetOperationCommands();
 
-        int[] shards = _filteredShardIndexes == null ? _commands.Keys.ToArray() : _commands.Keys.Intersect(_filteredShardIndexes).ToArray();
+        var operation = new ShardedQueryOperation(_query, _context, _requestHandler, commands, documentsComparer, _existingResultEtag?.ToString());
+
+        int[] shards = _filteredShardIndexes == null ? commands.Keys.ToArray() : commands.Keys.Intersect(_filteredShardIndexes).ToArray();
         var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, _token);
 
         if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)

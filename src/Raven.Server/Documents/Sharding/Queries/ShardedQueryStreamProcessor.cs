@@ -46,13 +46,15 @@ namespace Raven.Server.Documents.Sharding.Queries
                 ? new ShardedDocumentsComparer(_query.Metadata, isMapReduce: false)
                 : new ShardedStreamingHandlerProcessorForGetStreamQuery.DocumentBlittableLastModifiedComparer();
 
+            var commands = GetOperationCommands();
+
             var op = new ShardedStreamQueryOperation(_requestHandler.HttpContext, () =>
             {
                 IDisposable returnToContextPool = _requestHandler.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
                 return (ctx, returnToContextPool);
-            }, comparer, _commands, skip: _query.Offset ?? 0, take: _query.Limit ?? int.MaxValue, _token);
+            }, comparer, commands, skip: _query.Offset ?? 0, take: _query.Limit ?? int.MaxValue, _token);
 
-            return _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(_commands.Keys.ToArray(), op, _token);
+            return _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(commands.Keys.ToArray(), op, _token);
         }
 
         protected override PostQueryStreamCommand CreateCommand(BlittableJsonReaderObject query)

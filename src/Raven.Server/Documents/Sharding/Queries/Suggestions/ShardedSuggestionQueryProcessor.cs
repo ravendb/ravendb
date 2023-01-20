@@ -29,9 +29,23 @@ public class ShardedSuggestionQueryProcessor : AbstractShardedQueryProcessor<Sha
 
     public override async Task<SuggestionQueryResult> ExecuteShardedOperations()
     {
-        var operation = new ShardedSuggestionQueryOperation(_query, _context, _requestHandler, _commands, _existingResultEtag?.ToString());
+        var commands = GetOperationCommands();
 
-        var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(_commands.Keys.ToArray(), operation, _token);
+        Dictionary<string, SuggestionField> fieldsWithOptions = null;
+
+        foreach (var field in _query.Metadata.SelectFields)
+        {
+            if (field is SuggestionField {HasOptions: true} suggestionField)
+            {
+                fieldsWithOptions ??= new Dictionary<string, SuggestionField>();
+
+                fieldsWithOptions.Add(suggestionField.Name, suggestionField);
+            }
+        }
+
+        var operation = new ShardedSuggestionQueryOperation(fieldsWithOptions, _query.QueryParameters, _context, _requestHandler, commands, _existingResultEtag?.ToString());
+
+        var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(commands.Keys.ToArray(), operation, _token);
 
         if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
         {

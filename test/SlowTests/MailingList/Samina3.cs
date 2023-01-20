@@ -13,6 +13,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,15 +26,16 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
-        public void Querying_a_sub_collection_in_an_index()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Querying_a_sub_collection_in_an_index(Options options)
         {
             DateTime startDate1 = DateTime.Now;
             DateTime endDate1 = DateTime.Now.AddDays(10);
             DateTime startDate2 = DateTime.Now.AddDays(15);
             DateTime endDate2 = DateTime.Now.AddDays(20);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

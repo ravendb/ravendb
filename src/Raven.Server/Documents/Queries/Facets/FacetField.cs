@@ -27,6 +27,8 @@ namespace Raven.Server.Documents.Queries.Facets
             Ranges = new List<QueryExpression>();
         }
 
+        internal bool HasOptions => _options != null || _optionsAsStringOrParameterName != null;
+
         public FacetOptions GetOptions(JsonOperationContext context, BlittableJsonReaderObject parameters)
         {
             if (_options != null)

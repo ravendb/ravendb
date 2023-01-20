@@ -69,7 +69,7 @@ namespace SlowTests.Tests.Faceted
 
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void FacetShouldUseParameters_WithFacetBaseList(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -113,7 +113,7 @@ namespace SlowTests.Tests.Faceted
 
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void FacetShouldUseParameters_WithTypedRangeFacetList(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -156,7 +156,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void FacetShouldUseParameters_WithIFacetBuilder(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -191,7 +191,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void FacetShouldUseParameters_WithUntypedRangeFacetList(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -235,7 +235,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void FacetSetupDocument_ShouldNotUseParameters(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -310,7 +310,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task TwoDifferentAsyncQueriesThatAreUsingTheSameFacetWithParametersShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -363,7 +363,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueryUsingMultipuleFacetsWithParametersShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -429,7 +429,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void FacetShouldUseParameters_WithNumbers(Options options)
         {
             using (var store = GetDocumentStore(options))
