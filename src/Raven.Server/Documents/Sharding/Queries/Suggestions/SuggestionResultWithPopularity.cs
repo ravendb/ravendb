@@ -1,16 +1,15 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Queries.Suggestions;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
 
 namespace Raven.Server.Documents.Sharding.Queries.Suggestions;
 
-public class SuggestionResultWithPopularity : SuggestionResult
+internal class SuggestionResultWithPopularity : SuggestionResult
 {
-    public List<Popularity> SuggestionsPopularity;
+    public Popularity SuggestionsWithPopularity;
 
-    public class Popularity
+    internal class Popularity
     {
-        public float Score;
-        
-        public int Freq;
+        public List<SuggestWord> Values;
     }
 }

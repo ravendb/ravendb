@@ -6,8 +6,10 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Queries;
+using Raven.Server.Documents.Sharding.Queries.Facets;
 using Raven.Server.Documents.Sharding.Queries.Suggestions;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
@@ -43,11 +45,18 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
         throw new NotSupportedInShardingException("Query debug is not supported");
     }
 
-    protected override ValueTask HandleFacetedQueryAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override async ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Implement facets - RavenDB-18765");
+        var indexName = AbstractQueryRunner.GetIndexName(query);
 
-        throw new NotSupportedInShardingException("Facets are not supported");
+        using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+        {
+            var queryProcessor = new ShardedFacetedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, token.Token);
+
+            await queryProcessor.InitializeAsync();
+
+            return await queryProcessor.ExecuteShardedOperations();
+        }
     }
 
     protected override async ValueTask<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
@@ -58,7 +67,7 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
         {
             var queryProcessor = new ShardedSuggestionQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, token.Token);
 
-            queryProcessor.Initialize();
+            await queryProcessor.InitializeAsync();
 
             return await queryProcessor.ExecuteShardedOperations();
         }
@@ -77,7 +86,7 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
             var queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly: false,
                 token: token.Token);
 
-            queryProcessor.Initialize();
+            await queryProcessor.InitializeAsync();
 
             return await queryProcessor.ExecuteShardedOperations();
         }

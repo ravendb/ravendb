@@ -35,7 +35,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     protected readonly bool _isMapReduceIndex;
     protected readonly bool _isAutoMapReduceQuery;
 
-    protected Dictionary<int, TCommand> _commands;
+    private Dictionary<int, BlittableJsonReaderObject> _queryTemplates;
+    private Dictionary<int, TCommand> _commands;
 
     protected AbstractShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, bool metadataOnly, bool indexEntriesOnly,
         CancellationToken token)
@@ -53,15 +54,17 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     public abstract Task<TCombinedResult> ExecuteShardedOperations();
 
-    public void Initialize()
+    public virtual ValueTask InitializeAsync()
     {
         AssertQueryExecution();
 
         // now we have the index query, we need to process that and decide how to handle this.
         // There are a few different modes to handle:
+        // - For collection queries that specify startsWith by id(), we need to send to all shards
+        // - For collection queries without any where clause, we need to send to all shards
+        // - For indexes, we sent to all shards
+        
         var queryTemplate = _query.ToJson(_context);
-
-        Dictionary<int, BlittableJsonReaderObject> queryTemplates = null;
 
         if (_query.Metadata.IsCollectionQuery && _query.Metadata.DeclaredFunctions is null or { Count: 0})
         {
@@ -72,26 +75,23 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
             if (ids != null)
             {
-                queryTemplates = GenerateLoadByIdQueries(ids);
+                _queryTemplates = GenerateLoadByIdQueries(ids);
             }
         }
 
-        if (queryTemplates == null)
+        if (_queryTemplates == null)
         {
             RewriteQueryIfNeeded(ref queryTemplate);
 
-            queryTemplates = new(_requestHandler.DatabaseContext.ShardCount);
+            _queryTemplates = new(_requestHandler.DatabaseContext.ShardCount);
 
             foreach (var shardNumber in _requestHandler.DatabaseContext.ShardsTopology.Keys)
             {
-                queryTemplates.Add(shardNumber, queryTemplate);
+                _queryTemplates.Add(shardNumber, queryTemplate);
             }
         }
 
-        // For collection queries that specify startsWith by id(), we need to send to all shards
-        // For collection queries without any where clause, we need to send to all shards
-        // For indexes, we sent to all shards
-        _commands = CreateQueryCommands(queryTemplates);
+        return ValueTask.CompletedTask;
     }
 
     private Dictionary<int, TCommand> CreateQueryCommands(Dictionary<int, BlittableJsonReaderObject> preProcessedQueries)
@@ -104,6 +104,11 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
 
         return commands;
+    }
+
+    public Dictionary<int, TCommand> GetOperationCommands()
+    {
+        return _commands ??= CreateQueryCommands(_queryTemplates);
     }
 
     protected abstract TCommand CreateCommand(BlittableJsonReaderObject query);

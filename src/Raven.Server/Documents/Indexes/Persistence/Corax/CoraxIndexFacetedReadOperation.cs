@@ -92,7 +92,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         
         UpdateFacetResults(results, query, facetsByName);
 
-        CompleteFacetCalculationsStage(results);
+        CompleteFacetCalculationsStage(results, query);
         CoraxIndexReadOperation.QueryPool.Return(ids);
         return results.Values
             .Select(x => x.Result)

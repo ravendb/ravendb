@@ -370,19 +370,23 @@ namespace Raven.Server.Json
 
             writer.WriteArray(nameof(result.Suggestions), result.Suggestions);
 
-            if (result is SuggestionResultWithPopularity {SuggestionsPopularity.Count: > 0} suggestionResultWithPopularity)
+            if (result is SuggestionResultWithPopularity {SuggestionsWithPopularity: {Values.Count: > 0} suggestionsPopularity})
             {
                 writer.WriteComma();
 
                 writer.WritePropertyName(Constants.Documents.Metadata.Key);
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(Constants.Documents.Metadata.SuggestionPopularityFields);
+                writer.WritePropertyName(Constants.Documents.Metadata.SuggestionsPopularityFields);
+                
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(suggestionsPopularity.Values));
+
                 writer.WriteStartArray();
 
                 var firstPopularity = true;
 
-                foreach (var popularity in suggestionResultWithPopularity.SuggestionsPopularity)
+                foreach (var popularity in suggestionsPopularity.Values)
                 {
                     if (firstPopularity == false)
                         writer.WriteComma();
@@ -405,6 +409,8 @@ namespace Raven.Server.Json
                 writer.WriteEndArray();
                 
                 writer.WriteEndObject();
+                writer.WriteEndObject();
+
             }
 
             writer.WriteEndObject();

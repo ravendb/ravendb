@@ -8,6 +8,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
@@ -62,32 +63,14 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
         throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
     }
 
-    protected override async ValueTask HandleFacetedQueryAsync(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override async ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
+        long? existingResultEtag, OperationCancelToken token)
     {
-        var result = await RequestHandler.Database.QueryRunner.ExecuteFacetedQuery(query, existingResultEtag, queryContext, token);
-
-        if (result.NotModified)
-        {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-            return;
-        }
-
-        HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
-
-        long numberOfResults;
-        await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, RequestHandler.ResponseBodyStream()))
-        {
-            result.Timings = query.Timings?.ToTimings();
-            numberOfResults = await writer.WriteFacetedQueryResultAsync(queryContext.Documents, result, token.Token);
-        }
-
-        QueryMetadataCache.MaybeAddToCache(query.Metadata, result.IndexName);
-
-        if (RequestHandler.ShouldAddPagingPerformanceHint(numberOfResults))
-            RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"FacetedQuery ({result.IndexName})", $"{query.Metadata.QueryText}\n{query.QueryParameters}", numberOfResults, query.PageSize, result.DurationInMs, -1);
+        return await RequestHandler.Database.QueryRunner.ExecuteFacetedQuery(query, existingResultEtag, queryContext, token);
     }
 
-    protected override async ValueTask<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override async ValueTask<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
+        long? existingResultEtag, OperationCancelToken token)
     {
         return await RequestHandler.Database.QueryRunner.ExecuteSuggestionQuery(query, queryContext, existingResultEtag, token);
     }

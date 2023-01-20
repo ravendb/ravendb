@@ -11,6 +11,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
@@ -35,7 +36,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
     protected abstract ValueTask HandleDebugAsync(IndexQueryServerSide query, TQueryContext queryContext, string debug, long? existingResultEtag, OperationCancelToken token);
 
-    protected abstract ValueTask HandleFacetedQueryAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
+    protected abstract ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
 
     protected abstract ValueTask<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
 
@@ -55,15 +56,18 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                 using (AllocateContextForQueryOperation(out var queryContext, out var context))
                 {
                     var addSpatialProperties = RequestHandler.GetBoolValueQueryString("addSpatialProperties", required: false) ?? false;
-                    var returnMissingIncludeAsNull = RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false;
                     var metadataOnly = RequestHandler.GetBoolValueQueryString("metadataOnly", required: false) ?? false;
                     var shouldReturnServerSideQuery = RequestHandler.GetBoolValueQueryString("includeServerSideQuery", required: false) ?? false;
 
-                    var indexQuery = await GetIndexQueryAsync(context, QueryMethod, tracker, addSpatialProperties, returnMissingIncludeAsNull);
+                    var indexQuery = await GetIndexQueryAsync(context, QueryMethod, tracker, addSpatialProperties);
 
                     indexQuery.Diagnostics = RequestHandler.GetBoolValueQueryString("diagnostics", required: false) ?? false ? new List<string>() : null;
                     indexQuery.AddTimeSeriesNames = RequestHandler.GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
                     indexQuery.DisableAutoIndexCreation = RequestHandler.GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
+
+                    bool isSharded = RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false;
+                    indexQuery.ReturnMissingIncludeAsNull = isSharded;
+                    indexQuery.ReturnRawFacetResults = isSharded;
 
                     var existingResultEtag = RequestHandler.GetLongFromHeaders(Constants.Headers.IfNoneMatch);
 
@@ -82,7 +86,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
                     if (indexQuery.Metadata.HasFacet)
                     {
-                        await HandleFacetedQueryAsync(indexQuery, queryContext, existingResultEtag, token);
+                        await HandleFacetedQueryAsync(indexQuery, queryContext, context, existingResultEtag, token);
                         return;
                     }
 
@@ -204,5 +208,30 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
         if (RequestHandler.ShouldAddPagingPerformanceHint(numberOfResults))
             RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"SuggestQuery ({result.IndexName})", query.Query, numberOfResults, query.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
+    }
+
+    private async ValueTask HandleFacetedQueryAsync(IndexQueryServerSide query, TQueryContext queryContext, TOperationContext operationContext, long? existingResultEtag, OperationCancelToken token)
+    {
+        var result = await GetFacetedQueryResultAsync(query, queryContext, existingResultEtag, token);
+
+        if (result.NotModified)
+        {
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+            return;
+        }
+
+        HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
+
+        long numberOfResults;
+        await using (var writer = new AsyncBlittableJsonTextWriter(operationContext, RequestHandler.ResponseBodyStream()))
+        {
+            result.Timings = query.Timings?.ToTimings();
+            numberOfResults = await writer.WriteFacetedQueryResultAsync(operationContext, result, token.Token);
+        }
+
+        QueryMetadataCache.MaybeAddToCache(query.Metadata, result.IndexName);
+
+        if (RequestHandler.ShouldAddPagingPerformanceHint(numberOfResults))
+            RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"FacetedQuery ({result.IndexName})", $"{query.Metadata.QueryText}\n{query.QueryParameters}", numberOfResults, query.PageSize, result.DurationInMs, -1);
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Facets
 {
@@ -44,7 +45,17 @@ namespace Raven.Server.Documents.Queries.Facets
 
                     var documentJson = context.DocumentDatabase.DocumentsStorage.Get(context, facetField.FacetSetupDocumentId);
                     if (documentJson == null)
-                        throw new DocumentDoesNotExistException(facetField.FacetSetupDocumentId);
+                    {
+                        // it the query comes from the sharding orchestrator then we send it via query parameters
+
+                        if (query.QueryParameters.TryGet(facetField.FacetSetupDocumentId, out BlittableJsonReaderObject doc) == false)
+                            throw new DocumentDoesNotExistException(facetField.FacetSetupDocumentId);
+
+                        documentJson = new Document
+                        {
+                            Data = doc
+                        };
+                    }
 
                     if (facetsEtag.HasValue == false)
                         facetsEtag = documentJson.Etag;

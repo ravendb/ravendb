@@ -21,7 +21,7 @@ namespace SlowTests.SlowTests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
         public void CanPerformFacetedPagingSearchWithNoPageSizeNoMaxResults_HitsDesc(Options options)
         {
             //also specify more results than we have
