@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
         public IndexMerger(Dictionary<string, IndexDefinition> indexDefinitions)
         {
             _indexDefinitions = indexDefinitions
-                .Where(i => i.Value.Type.IsAuto() == false)
+                .Where(i => i.Value.Type.IsAuto() == false && i.Value.Type.IsJavaScript() == false)
                 .ToDictionary(i => i.Key, i=> i.Value);
         }
 
@@ -106,6 +107,11 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 failComments.Add("Cannot merge indexes that have an order by clause");
             }
 
+            if (indexData.IsFanout)
+            {
+                failComments.Add("Cannot merge fanout indexes.");
+            }            
+            
             return failComments;
         }
 
@@ -151,6 +157,8 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             if (current.HasWhere)
                 return false;
 
+            if (current.IsFanout)
+                return false;
             if (current.HasGroup)
                 return false;
             if (current.HasOrder)
@@ -282,6 +290,12 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 TrySetCollectionName(mergeProposal, mergeSuggestion);
 
                 var map = mergeProposal.ProposedForMerge[0].BuildExpression(selectExpressionDict);
+                if (map is null)
+                {
+                    indexMergeResults.Unmergables.Add(mergeProposal.ProposedForMerge[0].IndexName, "No other index to merge.");
+                    continue;
+                } 
+
                 mergeSuggestion.MergedIndex.Maps.Add(SourceCodeBeautifier.FormatIndex(map).Expression);
                 RemoveMatchingIndexes(mergeProposal, selectExpressionDict, mergeSuggestion, indexMergeResults);
 

@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
         public bool IsSuitedForMerge { get; set; }
         public string Comment { get; set; }
 
+        public bool IsFanout { get; set; }
+
         public string Collection { get; set; }
         public InvocationExpressionSyntax InvocationExpression { get; set; }
         public IndexDefinition Index => _index;
