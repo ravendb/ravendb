@@ -3,6 +3,9 @@ import { NodeSet, NodeSetLabel, NodeSetItem } from "./NodeSet";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { HrHeader } from "./HrHeader";
+import { Checkbox } from "./Checkbox";
+import { Card } from "reactstrap";
+import { CheckboxTriple } from "./CheckboxTriple";
 
 export default {
     title: "Bits/NodeSet",
@@ -38,31 +41,48 @@ export function NodeSets() {
                 </NodeSetItem>
             </NodeSet>
             <HrHeader>Shards</HrHeader>
+
             <NodeSet color="shard" className="m-1">
-                <NodeSetLabel color="shard" icon="shard">
-                    #1
-                </NodeSetLabel>
-                <NodeSetItem icon="node" color="node">
-                    A
-                </NodeSetItem>
-                <NodeSetItem icon="node" color="node">
-                    B
-                </NodeSetItem>
+                <div className="p-1">
+                    <NodeSetLabel color="shard" icon="shard">
+                        #1
+                        {/* <CheckboxTriple
+                            onChanged={toggleSelectAll}
+                            state={indexesSelectionState()}
+                            title="Select all or none"
+                        /> */}
+                        <Checkbox color="shard" toggleSelection={null} className="me-1 checkbox-lg" />
+                    </NodeSetLabel>
+                </div>
+                <Card className="p-1 flex-row">
+                    <NodeSetItem icon="node" color="node">
+                        A
+                        <Checkbox color="node" toggleSelection={null} />
+                    </NodeSetItem>
+                    <NodeSetItem icon="node" color="node">
+                        B
+                        <Checkbox color="node" toggleSelection={null} />
+                    </NodeSetItem>
+                </Card>
             </NodeSet>
-            <NodeSet color="shard" className="m-1">
-                <NodeSetLabel color="shard" icon="shard">
-                    #2
-                </NodeSetLabel>
-                <NodeSetItem icon="node" color="node">
-                    A
-                </NodeSetItem>
-                <NodeSetItem icon="node" color="node">
-                    B
-                </NodeSetItem>
-                <NodeSetItem icon="node" color="node">
-                    DEV
-                </NodeSetItem>
-            </NodeSet>
+            <br />
+            <div className="d-flex mt-3">
+                <Checkbox color="shard" toggleSelection={null} />
+                <NodeSet color="shard" className="m-1">
+                    <NodeSetLabel color="shard" icon="shard">
+                        #2
+                    </NodeSetLabel>
+                    <NodeSetItem icon="node" color="node">
+                        A
+                    </NodeSetItem>
+                    <NodeSetItem icon="node" color="node">
+                        B
+                    </NodeSetItem>
+                    <NodeSetItem icon="node" color="node">
+                        DEV
+                    </NodeSetItem>
+                </NodeSet>
+            </div>
             <HrHeader>Nodes</HrHeader>
             <NodeSet color="node" className="m-1">
                 <NodeSetLabel color="node" icon="node">

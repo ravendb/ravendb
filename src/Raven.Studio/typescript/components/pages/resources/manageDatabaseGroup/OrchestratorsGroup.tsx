@@ -15,6 +15,13 @@ import addNewOrchestratorToDatabase from "viewmodels/resources/addNewOrchestator
 import shardedDatabase from "models/resources/shardedDatabase";
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 import viewHelpers from "common/helpers/view/viewHelpers";
+import {
+    RichPanel,
+    RichPanelActions,
+    RichPanelHeader,
+    RichPanelInfo,
+    RichPanelName,
+} from "components/common/RichPanel";
 
 export interface OrchestratorsGroupProps {
     orchestrators: NodeInfo[];
@@ -69,19 +76,34 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
     const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
 
     return (
-        <div>
-            <div className="d-flex mt-5">
-                <span>Orchestrators</span>
-            </div>
-
-            {sortableMode ? (
-                <DndProvider backend={HTML5Backend}>
-                    <ReorderNodes nodes={orchestrators} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
-                </DndProvider>
-            ) : (
-                <React.Fragment>
-                    <div className="d-flex">
-                        <FlexGrow />
+        <RichPanel className="mt-3">
+            <RichPanelHeader className="bg-faded-orchestrator">
+                <RichPanelInfo>
+                    <RichPanelName className="text-orchestrator">
+                        <i className="icon-orchestrator me-2" /> Orchestrators
+                    </RichPanelName>
+                </RichPanelInfo>
+                <RichPanelActions>
+                    {sortableMode ? (
+                        <>
+                            <Button
+                                color="primary"
+                                onClick={() =>
+                                    saveNewOrder(
+                                        newOrder.map((x) => x.tag),
+                                        fixOrder
+                                    )
+                                }
+                            >
+                                <i className="icon-save" />
+                                <span>Save</span>
+                            </Button>
+                            <Button onClick={cancelReorder}>
+                                <i className="icon-cancel" />
+                                <span>Cancel</span>
+                            </Button>
+                        </>
+                    ) : (
                         <Button
                             disabled={orchestrators.length === 1 || !isOperatorOrAbove()}
                             onClick={enableNodesSort}
@@ -89,25 +111,52 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                         >
                             <i className="icon-reorder me-1" /> Reorder orchestrators
                         </Button>
-                        <Button className="me-2" color="primary" disabled={!addNodeEnabled} onClick={addNode}>
-                            <i className="icon-plus me-1" />
-                            Add node
-                        </Button>
+                    )}
+                </RichPanelActions>
+            </RichPanelHeader>
+
+            {sortableMode ? (
+                <DndProvider backend={HTML5Backend}>
+                    <ReorderNodes nodes={orchestrators} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
+                </DndProvider>
+            ) : (
+                <React.Fragment>
+                    <div className="dbgroup">
+                        <div className="dbgroup-image"></div>
+                        <div className="dbgroup-list">
+                            <div className="dbgroup-item item-new">
+                                <div className="dbgroup-node">
+                                    <i className="icon-node-add" />
+                                </div>
+                                <div className="dbgroup-actions">
+                                    <Button
+                                        size="xs"
+                                        color="success"
+                                        outline
+                                        className="rounded-pill"
+                                        disabled={!addNodeEnabled}
+                                        onClick={addNode}
+                                    >
+                                        <i className="icon-plus me-1" />
+                                        Add node
+                                    </Button>
+                                </div>
+                            </div>
+                            {orchestrators.map((node) => (
+                                <OrchestratorInfoComponent
+                                    key={node.tag}
+                                    node={node}
+                                    deleteFromGroup={deleteOrchestratorFromGroup}
+                                />
+                            ))}
+
+                            {deletionInProgress.map((deleting) => (
+                                <DeletionInProgress key={deleting} nodeTag={deleting} />
+                            ))}
+                        </div>
                     </div>
-
-                    {orchestrators.map((node) => (
-                        <OrchestratorInfoComponent
-                            key={node.tag}
-                            node={node}
-                            deleteFromGroup={deleteOrchestratorFromGroup}
-                        />
-                    ))}
-
-                    {deletionInProgress.map((deleting) => (
-                        <DeletionInProgress key={deleting} nodeTag={deleting} />
-                    ))}
                 </React.Fragment>
             )}
-        </div>
+        </RichPanel>
     );
 }

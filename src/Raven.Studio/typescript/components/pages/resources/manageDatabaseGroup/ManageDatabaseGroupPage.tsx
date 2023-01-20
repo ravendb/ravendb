@@ -18,6 +18,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import app from "durandal/app";
 import addNewShardToDatabaseGroup from "viewmodels/resources/addNewShardToDatabaseGroup";
 import { StickyHeader } from "components/common/StickyHeader";
+import { RichPanel, RichPanelHeader, RichPanelInfo, RichPanelName } from "components/common/RichPanel";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -136,8 +137,8 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                     </UncontrolledButtonWithDropdownPanel>
                     <FlexGrow />
                     {db.isSharded() && (
-                        <Button color="primary" onClick={addNewShard}>
-                            <i className="icon-plus me-1" />
+                        <Button color="shard" onClick={addNewShard}>
+                            <i className="icon-shard icon-addon-plus me-1" />
                             Add Shard
                         </Button>
                     )}
@@ -170,6 +171,57 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                     />
                 )}
             </div>
+            {/* <RichPanel className="mt-3">
+                <RichPanelHeader className="bg-faded-orchestrator">
+                    <RichPanelInfo>
+                        <RichPanelName className="text-orchestrator">
+                            <i className="icon-orchestrator me-2" /> Orchestrators
+                        </RichPanelName>
+                    </RichPanelInfo>
+                </RichPanelHeader>
+                <div className="dbgroup">
+                    <div className="dbgroup-image"></div>
+                    <div className="dbgroup-list">
+                        <div className="dbgroup-item item-new">
+                            <div className="dbgroup-node">
+                                <i className="icon-node-add" />
+                            </div>
+                            <div className="dbgroup-actions">
+                                <Button size="xs" color="success" outline className="rounded-pill">
+                                    <i className="icon-plus me-1" />
+                                    Add node
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="dbgroup-item">
+                            <div className="dbgroup-node">
+                                <i className="icon-node text-node" /> <strong>A</strong> Catching Up
+                            </div>
+                            <div className="dbgroup-type">
+                                <i className="icon-dbgroup-member me-1" /> Member
+                            </div>
+                            <div className="dbgroup-actions">
+                                <Button size="xs" color="danger" outline className="rounded-pill">
+                                    <i className="icon-cancel" /> Remove
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="dbgroup-item">
+                            <div className="dbgroup-node">
+                                <i className="icon-node text-node" /> <strong>B</strong> Active
+                            </div>
+                            <div className="dbgroup-type">
+                                <i className="icon-dbgroup-promotable me-1" /> Promotable
+                            </div>
+                            <div className="dbgroup-actions">
+                                <Button size="xs" color="danger" outline className="rounded-pill">
+                                    <i className="icon-cancel" /> Remove
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </RichPanel> */}
         </>
     );
 }

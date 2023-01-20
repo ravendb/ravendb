@@ -1,5 +1,6 @@
 ﻿import React, { useCallback } from "react";
 import {
+    Badge,
     Button,
     DropdownItem,
     DropdownMenu,
@@ -14,19 +15,18 @@ import showDataDialog from "viewmodels/common/showDataDialog";
 import useId from "hooks/useId";
 import classNames from "classnames";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import {
-    RichPanel,
-    RichPanelActions,
-    RichPanelDetailItem,
-    RichPanelDetails,
-    RichPanelHeader,
-    RichPanelInfo,
-    RichPanelName,
-    RichPanelStatus,
-} from "components/common/RichPanel";
 import { useDraggableItem } from "hooks/useDraggableItem";
 import { NodeInfo } from "components/models/databases";
 import appUrl from "common/appUrl";
+import {
+    DatabaseGroup,
+    DatabaseGroupActions,
+    DatabaseGroupError,
+    DatabaseGroupItem,
+    DatabaseGroupList,
+    DatabaseGroupNode,
+    DatabaseGroupType,
+} from "components/common/DatabaseGroup";
 
 interface OrchestratorInfoComponentProps {
     node: NodeInfo;
@@ -43,42 +43,22 @@ export function OrchestratorInfoComponent(props: OrchestratorInfoComponentProps)
     }, [node]);
 
     return (
-        <RichPanel className="flex-row">
-            <RichPanelStatus color={nodeBadgeColor(node)}>{nodeBadgeText(node)}</RichPanelStatus>
-
-            <div className="flex-grow-1">
-                <RichPanelHeader>
-                    <RichPanelInfo>
-                        <RichPanelName title={node.type}>
-                            <i className={classNames(cssIcon(node), "me-1")} />
-                            Node: {node.tag}
-                        </RichPanelName>
-                    </RichPanelInfo>
-                    <RichPanelActions>
-                        <Button type="button" onClick={() => deleteFromGroup(node.tag)}>
-                            <i className="icon-disconnected" />
-                            Delete from group
-                        </Button>
-                    </RichPanelActions>
-                </RichPanelHeader>
-                {lastErrorShort && (
-                    <RichPanelDetails>
-                        <RichPanelDetailItem
-                            label={
-                                <>
-                                    <i className="icon-warning me-1" />
-                                    Error
-                                </>
-                            }
-                        >
-                            <a className="link" onClick={showErrorsDetails}>
-                                {lastErrorShort}
-                            </a>
-                        </RichPanelDetailItem>
-                    </RichPanelDetails>
-                )}
-            </div>
-        </RichPanel>
+        <DatabaseGroupItem>
+            <DatabaseGroupNode>{node.tag}</DatabaseGroupNode>
+            <DatabaseGroupType node={node} />
+            <DatabaseGroupActions>
+                <Button
+                    size="xs"
+                    color="danger"
+                    outline
+                    className="rounded-pill"
+                    onClick={() => deleteFromGroup(node.tag)}
+                >
+                    <i className="icon-cancel" /> Remove
+                </Button>
+            </DatabaseGroupActions>
+            <DatabaseGroupError node={node} />
+        </DatabaseGroupItem>
     );
 }
 
@@ -94,93 +74,64 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
     const deleteLockId = useId("delete-lock");
 
     const canDelete = databaseLockMode === "Unlock";
-    const lastErrorShort = node.lastError ? genUtils.trimMessage(node.lastError) : null;
-
-    const showErrorsDetails = useCallback(() => {
-        app.showBootstrapDialog(new showDataDialog("Error details. Node: " + node.tag, node.lastError, "plain"));
-    }, [node]);
 
     return (
-        <RichPanel className="flex-row">
-            <RichPanelStatus color={nodeBadgeColor(node)}>{nodeBadgeText(node)}</RichPanelStatus>
+        <DatabaseGroupItem>
+            <DatabaseGroupNode>{node.tag}</DatabaseGroupNode>
 
-            <div className="flex-grow-1">
-                <RichPanelHeader>
-                    <RichPanelInfo>
-                        <RichPanelName title={node.type}>
-                            <i className={classNames(cssIcon(node), "me-1")} />
-                            Node: {node.tag}
-                        </RichPanelName>
-                    </RichPanelInfo>
-                    <RichPanelActions>
-                        {node.responsibleNode && (
-                            <div
-                                className="text-center"
-                                title="Database group node that is responsible for caught up of this node"
-                            >
-                                <i className="icon-cluster-node"></i>
-                                <span>{node.responsibleNode}</span>
-                            </div>
-                        )}
-                        {canDelete ? (
-                            <UncontrolledDropdown key="can-delete">
-                                <DropdownToggle color="danger" caret>
-                                    <i className="icon-disconnected" />
-                                    Delete from group
-                                </DropdownToggle>
-                                <DropdownMenu>
-                                    <DropdownItem onClick={() => deleteFromGroup(node.tag, false)}>
-                                        <i className="icon-trash" />
-                                        <span>Soft Delete</span>&nbsp;
-                                        <br />
-                                        <small>stop replication and keep database files on the node</small>
-                                    </DropdownItem>
-                                    <DropdownItem onClick={() => deleteFromGroup(node.tag, true)}>
-                                        <i className="icon-alerts text-danger"></i>{" "}
-                                        <span className="text-danger">Hard Delete</span>
-                                        <br />
-                                        &nbsp;<small>stop replication and remove database files on the node</small>
-                                    </DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
-                        ) : (
-                            <React.Fragment key="cannot-delete">
-                                <UncontrolledDropdown id={deleteLockId}>
-                                    <DropdownToggle color="danger" caret disabled>
-                                        <i
-                                            className={classNames("icon-trash-cutout", {
-                                                "icon-addon-exclamation": databaseLockMode === "PreventDeletesError",
-                                                "icon-addon-cancel": databaseLockMode === "PreventDeletesIgnore",
-                                            })}
-                                        />
-                                        Delete from group
-                                    </DropdownToggle>
-                                </UncontrolledDropdown>
-                                <UncontrolledTooltip target={deleteLockId} placeholder="top" color="danger">
-                                    Database cannot be deleted from node because of the set lock mode
-                                </UncontrolledTooltip>
-                            </React.Fragment>
-                        )}
-                    </RichPanelActions>
-                </RichPanelHeader>
-                {lastErrorShort && (
-                    <RichPanelDetails>
-                        <RichPanelDetailItem
-                            label={
-                                <>
-                                    <i className="icon-warning me-1" />
-                                    Error
-                                </>
-                            }
-                        >
-                            <a className="link" onClick={showErrorsDetails}>
-                                {lastErrorShort}
-                            </a>
-                        </RichPanelDetailItem>
-                    </RichPanelDetails>
+            <DatabaseGroupType node={node} />
+            <DatabaseGroupActions>
+                {node.responsibleNode && (
+                    <div
+                        className="text-center"
+                        title="Database group node that is responsible for caught up of this node"
+                    >
+                        <i className="icon-cluster-node"></i>
+                        <span>{node.responsibleNode}</span>
+                    </div>
                 )}
-            </div>
-        </RichPanel>
+                {canDelete ? (
+                    <UncontrolledDropdown key="can-delete">
+                        <DropdownToggle color="danger" caret outline size="xs" className="rounded-pill">
+                            <i className="icon-disconnected" />
+                            Delete from group
+                        </DropdownToggle>
+                        <DropdownMenu>
+                            <DropdownItem onClick={() => deleteFromGroup(node.tag, false)}>
+                                <i className="icon-stop" />
+                                <span>Soft Delete</span>&nbsp;
+                                <br />
+                                <small>stop replication and keep database files on the node</small>
+                            </DropdownItem>
+                            <DropdownItem onClick={() => deleteFromGroup(node.tag, true)}>
+                                <i className="icon-trash text-danger"></i>{" "}
+                                <span className="text-danger">Hard Delete</span>
+                                <br />
+                                &nbsp;<small>stop replication and remove database files on the node</small>
+                            </DropdownItem>
+                        </DropdownMenu>
+                    </UncontrolledDropdown>
+                ) : (
+                    <React.Fragment key="cannot-delete">
+                        <UncontrolledDropdown id={deleteLockId}>
+                            <DropdownToggle color="danger" caret disabled size="xs" className="rounded-pill">
+                                <i
+                                    className={classNames("icon-trash", {
+                                        "icon-addon-exclamation": databaseLockMode === "PreventDeletesError",
+                                        "icon-addon-cancel": databaseLockMode === "PreventDeletesIgnore",
+                                    })}
+                                />
+                                Delete from group
+                            </DropdownToggle>
+                        </UncontrolledDropdown>
+                        <UncontrolledTooltip target={deleteLockId} placeholder="top" color="danger">
+                            Database cannot be deleted from node because of the set lock mode
+                        </UncontrolledTooltip>
+                    </React.Fragment>
+                )}
+            </DatabaseGroupActions>
+            <DatabaseGroupError node={node} />
+        </DatabaseGroupItem>
     );
 }
 
@@ -197,107 +148,78 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
     const deleteLockId = useId("delete-lock");
 
     const canDelete = databaseLockMode === "Unlock";
-    const lastErrorShort = node.lastError ? genUtils.trimMessage(node.lastError) : null;
-
-    const showErrorsDetails = useCallback(() => {
-        app.showBootstrapDialog(new showDataDialog("Error details. Node: " + node.tag, node.lastError, "plain"));
-    }, [node]);
 
     const documentsUrl = appUrl.forDocuments(null, shardName);
     const debugUrl = appUrl.toExternalUrl(node.nodeUrl, documentsUrl);
 
     return (
-        <RichPanel className="flex-row">
-            <RichPanelStatus color={nodeBadgeColor(node)}>{nodeBadgeText(node)}</RichPanelStatus>
-
-            <div className="flex-grow-1">
-                <RichPanelHeader>
-                    <RichPanelInfo>
-                        <RichPanelName title={node.type}>
-                            <i className={classNames(cssIcon(node), "me-1")} />
-                            Node: {node.tag}
-                        </RichPanelName>
-                    </RichPanelInfo>
-                    <RichPanelActions>
-                        <UncontrolledDropdown key="advanced">
-                            <DropdownToggle caret>
-                                <i className="icon-debug-advanced" />
-                                Advanced
-                            </DropdownToggle>
-                            <DropdownMenu>
-                                <DropdownItem href={debugUrl} target="_blank">
-                                    Debug this shard
-                                </DropdownItem>
-                            </DropdownMenu>
-                        </UncontrolledDropdown>
-                        {node.responsibleNode && (
-                            <div
-                                className="text-center"
-                                title="Database group node that is responsible for caught up of this node"
-                            >
-                                <i className="icon-cluster-node"></i>
-                                <span>{node.responsibleNode}</span>
-                            </div>
-                        )}
-                        {canDelete ? (
-                            <UncontrolledDropdown key="can-delete">
-                                <DropdownToggle color="danger" caret>
-                                    <i className="icon-disconnected" />
-                                    Delete from group
-                                </DropdownToggle>
-                                <DropdownMenu>
-                                    <DropdownItem onClick={() => deleteFromGroup(node.tag, false)}>
-                                        <i className="icon-trash" />
-                                        <span>Soft Delete</span>&nbsp;
-                                        <br />
-                                        <small>stop replication and keep database files on the node</small>
-                                    </DropdownItem>
-                                    <DropdownItem onClick={() => deleteFromGroup(node.tag, true)}>
-                                        <i className="icon-alerts text-danger"></i>{" "}
-                                        <span className="text-danger">Hard Delete</span>
-                                        <br />
-                                        &nbsp;<small>stop replication and remove database files on the node</small>
-                                    </DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
-                        ) : (
-                            <React.Fragment key="cannot-delete">
-                                <UncontrolledDropdown id={deleteLockId}>
-                                    <DropdownToggle color="danger" caret disabled>
-                                        <i
-                                            className={classNames("icon-trash-cutout", {
-                                                "icon-addon-exclamation": databaseLockMode === "PreventDeletesError",
-                                                "icon-addon-cancel": databaseLockMode === "PreventDeletesIgnore",
-                                            })}
-                                        />
-                                        Delete from group
-                                    </DropdownToggle>
-                                </UncontrolledDropdown>
-                                <UncontrolledTooltip target={deleteLockId} placeholder="top" color="danger">
-                                    Database cannot be deleted from node because of the set lock mode
-                                </UncontrolledTooltip>
-                            </React.Fragment>
-                        )}
-                    </RichPanelActions>
-                </RichPanelHeader>
-                {lastErrorShort && (
-                    <RichPanelDetails>
-                        <RichPanelDetailItem
-                            label={
-                                <>
-                                    <i className="icon-warning me-1" />
-                                    Error
-                                </>
-                            }
-                        >
-                            <a className="link" onClick={showErrorsDetails}>
-                                {lastErrorShort}
-                            </a>
-                        </RichPanelDetailItem>
-                    </RichPanelDetails>
+        <DatabaseGroupItem>
+            <DatabaseGroupNode>{node.tag}</DatabaseGroupNode>
+            <DatabaseGroupType node={node} />
+            <DatabaseGroupActions>
+                <UncontrolledDropdown key="advanced">
+                    <DropdownToggle caret outline size="xs" color="secondary" className="rounded-pill">
+                        <i className="icon-debug-advanced" />
+                        Advanced
+                    </DropdownToggle>
+                    <DropdownMenu>
+                        <DropdownItem href={debugUrl} target="_blank">
+                            Debug this shard
+                        </DropdownItem>
+                    </DropdownMenu>
+                </UncontrolledDropdown>
+                {node.responsibleNode && (
+                    <div
+                        className="text-center"
+                        title="Database group node that is responsible for caught up of this node"
+                    >
+                        <i className="icon-cluster-node"></i>
+                        <span>{node.responsibleNode}</span>
+                    </div>
                 )}
-            </div>
-        </RichPanel>
+                {canDelete ? (
+                    <UncontrolledDropdown key="can-delete" className="mt-1">
+                        <DropdownToggle color="danger" caret outline size="xs" className="rounded-pill">
+                            <i className="icon-disconnected" />
+                            Delete from group
+                        </DropdownToggle>
+                        <DropdownMenu>
+                            <DropdownItem onClick={() => deleteFromGroup(node.tag, false)}>
+                                <i className="icon-trash" />
+                                <span>Soft Delete</span>&nbsp;
+                                <br />
+                                <small>stop replication and keep database files on the node</small>
+                            </DropdownItem>
+                            <DropdownItem onClick={() => deleteFromGroup(node.tag, true)}>
+                                <i className="icon-alerts text-danger"></i>{" "}
+                                <span className="text-danger">Hard Delete</span>
+                                <br />
+                                &nbsp;<small>stop replication and remove database files on the node</small>
+                            </DropdownItem>
+                        </DropdownMenu>
+                    </UncontrolledDropdown>
+                ) : (
+                    <React.Fragment key="cannot-delete">
+                        <UncontrolledDropdown id={deleteLockId} className="mt-1">
+                            <DropdownToggle color="danger" caret disabled outline size="xs" className="rounded-pill">
+                                <i
+                                    className={classNames("icon-trash-cutout", {
+                                        "icon-addon-exclamation": databaseLockMode === "PreventDeletesError",
+                                        "icon-addon-cancel": databaseLockMode === "PreventDeletesIgnore",
+                                    })}
+                                />
+                                Delete from group
+                            </DropdownToggle>
+                        </UncontrolledDropdown>
+                        <UncontrolledTooltip target={deleteLockId} placeholder="top" color="danger">
+                            Database cannot be deleted from node because of the set lock mode
+                        </UncontrolledTooltip>
+                    </React.Fragment>
+                )}
+            </DatabaseGroupActions>
+
+            <DatabaseGroupError node={node} />
+        </DatabaseGroupItem>
     );
 }
 
@@ -318,69 +240,22 @@ export function NodeInfoReorderComponent(props: NodeInfoReorderComponentProps) {
 
     return (
         <div ref={(node) => drag(drop(node))} style={{ opacity }}>
-            <RichPanel className="flex-row">
-                <RichPanelStatus color={nodeBadgeColor(node)}>{nodeBadgeText(node)}</RichPanelStatus>
+            <DatabaseGroupItem className="item-reorder">
+                <DatabaseGroupNode>{node.tag}</DatabaseGroupNode>
 
-                <div className="flex-grow-1">
-                    <RichPanelHeader>
-                        <RichPanelInfo>
-                            <RichPanelName title={node.type}>
-                                <i className={classNames(cssIcon(node), "me-1")} />
-                                Node: {node.tag}
-                            </RichPanelName>
-                        </RichPanelInfo>
-
-                        <RichPanelActions>
-                            {node.responsibleNode && (
-                                <div
-                                    className="text-center"
-                                    title="Database group node that is responsible for caught up of this node"
-                                >
-                                    <i className="icon-cluster-node"></i>
-                                    <span>{node.responsibleNode}</span>
-                                </div>
-                            )}
-                        </RichPanelActions>
-                    </RichPanelHeader>
-                </div>
-            </RichPanel>
+                <DatabaseGroupType node={node} />
+                <DatabaseGroupActions>
+                    {node.responsibleNode && (
+                        <div
+                            className="text-center"
+                            title="Database group node that is responsible for caught up of this node"
+                        >
+                            <i className="icon-cluster-node"></i>
+                            <span>{node.responsibleNode}</span>
+                        </div>
+                    )}
+                </DatabaseGroupActions>
+            </DatabaseGroupItem>
         </div>
     );
-}
-
-function nodeBadgeColor(node: NodeInfo) {
-    switch (node.lastStatus) {
-        case "Ok":
-            return "success";
-        case "NotResponding":
-            return "danger";
-        default:
-            return "warning";
-    }
-}
-
-function cssIcon(node: NodeInfo) {
-    const type = node.type;
-
-    switch (type) {
-        case "Member":
-            return "icon-dbgroup-member";
-        case "Promotable":
-            return "icon-dbgroup-promotable";
-        case "Rehab":
-            return "icon-dbgroup-rehab";
-        default:
-            assertUnreachable(type);
-    }
-}
-
-function nodeBadgeText(node: NodeInfo) {
-    switch (node.lastStatus) {
-        case "Ok":
-            return "Active";
-        case "NotResponding":
-            return "Error";
-        default:
-            return "Catching up";
-    }
 }

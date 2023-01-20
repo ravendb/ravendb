@@ -16,6 +16,20 @@ import shard = require("models/resources/shard");
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
 import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabaseGroup";
+import {
+    RichPanel,
+    RichPanelActions,
+    RichPanelHeader,
+    RichPanelInfo,
+    RichPanelName,
+} from "components/common/RichPanel";
+import {
+    DatabaseGroup,
+    DatabaseGroupActions,
+    DatabaseGroupItem,
+    DatabaseGroupList,
+    DatabaseGroupNode,
+} from "components/common/DatabaseGroup";
 
 export interface ShardsGroupProps {
     nodes: NodeInfo[];
@@ -77,20 +91,19 @@ export function ShardsGroup(props: ShardsGroupProps) {
     const existingTags = nodes ? nodes.map((x) => x.tag) : [];
     const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
 
-    return (
-        <div className="mt-5">
-            <div className="d-flex">
-                <span>{shard.shardName}</span>
-            </div>
+    const [fixOrder, setFixOrder] = useState(false);
+    const [newOrder, setNewOrder] = useState<NodeInfo[]>(nodes);
 
-            {sortableMode ? (
-                <DndProvider backend={HTML5Backend}>
-                    <ReorderNodes nodes={nodes} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
-                </DndProvider>
-            ) : (
-                <React.Fragment>
-                    <div className="d-flex">
-                        <FlexGrow />
+    return (
+        <RichPanel className="mt-3">
+            <RichPanelHeader>
+                <RichPanelInfo>
+                    <RichPanelName>
+                        <i className="icon-shard text-shard me-2" /> {shard.shardName}
+                    </RichPanelName>
+                </RichPanelInfo>
+                <RichPanelActions>
+                    {!sortableMode ? (
                         <Button
                             disabled={nodes.length === 1 || !isOperatorOrAbove()}
                             onClick={enableNodesSort}
@@ -98,23 +111,70 @@ export function ShardsGroup(props: ShardsGroupProps) {
                         >
                             <i className="icon-reorder me-1" /> Reorder nodes
                         </Button>
-                        <Button className="me-2" color="primary" disabled={!addNodeEnabled} onClick={addNode}>
-                            <i className="icon-plus me-1" />
-                            Add node
-                        </Button>
-                    </div>
+                    ) : (
+                        <>
+                            <Button
+                                color="primary"
+                                onClick={
+                                    () => console.log(test)
+                                    // saveNewOrder(
+                                    //     newOrder.map((x) => x.tag),
+                                    //     fixOrder
+                                    // )
+                                }
+                            >
+                                <i className="icon-save" />
+                                <span>Save</span>
+                            </Button>
+                            <Button onClick={cancelReorder}>
+                                <i className="icon-cancel" />
+                                <span>Cancel</span>
+                            </Button>
+                        </>
+                    )}
+                </RichPanelActions>
+            </RichPanelHeader>
 
-                    {nodes.map((node) => (
-                        <ShardInfoComponent
-                            key={node.tag}
-                            node={node}
-                            shardName={shard.name}
-                            databaseLockMode={lockMode}
-                            deleteFromGroup={deleteNodeFromGroup}
-                        />
-                    ))}
-                </React.Fragment>
-            )}
-        </div>
+            <DatabaseGroup>
+                <div className="dbgroup-image"></div>
+                <DatabaseGroupList>
+                    {sortableMode ? (
+                        <DndProvider backend={HTML5Backend}>
+                            <ReorderNodes nodes={nodes} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
+                        </DndProvider>
+                    ) : (
+                        <React.Fragment>
+                            <DatabaseGroupItem className="item-new">
+                                <DatabaseGroupNode icon="node-add" />
+
+                                <DatabaseGroupActions>
+                                    <Button
+                                        size="xs"
+                                        color="success"
+                                        outline
+                                        className="rounded-pill"
+                                        disabled={!addNodeEnabled}
+                                        onClick={addNode}
+                                    >
+                                        <i className="icon-plus me-1" />
+                                        Add node
+                                    </Button>
+                                </DatabaseGroupActions>
+                            </DatabaseGroupItem>
+
+                            {nodes.map((node) => (
+                                <ShardInfoComponent
+                                    key={node.tag}
+                                    node={node}
+                                    shardName={shard.name}
+                                    databaseLockMode={lockMode}
+                                    deleteFromGroup={deleteNodeFromGroup}
+                                />
+                            ))}
+                        </React.Fragment>
+                    )}
+                </DatabaseGroupList>
+            </DatabaseGroup>
+        </RichPanel>
     );
 }

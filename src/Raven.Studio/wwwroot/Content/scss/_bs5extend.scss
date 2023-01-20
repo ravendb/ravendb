@@ -218,6 +218,24 @@ $additional-utilities: (
     }
 }
 
+// DASHED NEW ITEM PLACEHOLDER
+.item-new {
+    background-color: transparent !important;
+    border: $border-width dashed $border-color-light;
+}
+
+.item-disabled {
+    filter: contrast(75%) brightness(0.75);
+    mix-blend-mode: luminosity;
+    cursor: progress;
+}
+
+.item-reorder {
+    cursor: move;
+    outline: 1px dashed $border-color;
+    outline-offset: 3px;
+}
+
 // LAZY LOADING
 
 @keyframes loadingAnimation {

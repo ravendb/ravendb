@@ -4,6 +4,13 @@ import classNames from "classnames";
 import { NodeInfoReorderComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { useDrop } from "react-dnd";
 import { NodeInfo } from "components/models/databases";
+import {
+    DatabaseGroup,
+    DatabaseGroupActions,
+    DatabaseGroupItem,
+    DatabaseGroupList,
+    DatabaseGroupNode,
+} from "components/common/DatabaseGroup";
 
 interface ReorderNodesProps {
     cancelReorder: () => void;
@@ -25,7 +32,7 @@ export function ReorderNodes(props: ReorderNodesProps) {
         <div ref={drop}>
             <div>
                 <div>Drag elements to set their order. Click &quot;Save&quot; when finished.</div>
-                <Button
+                {/* <Button
                     color="primary"
                     onClick={() =>
                         saveNewOrder(
@@ -40,7 +47,7 @@ export function ReorderNodes(props: ReorderNodesProps) {
                 <Button onClick={cancelReorder}>
                     <i className="icon-cancel" />
                     <span>Cancel</span>
-                </Button>
+                </Button> */}
             </div>
             <div className="flex-form">
                 <div className="form-group">
@@ -57,15 +64,27 @@ export function ReorderNodes(props: ReorderNodesProps) {
                     </div>
                 </div>
             </div>
-
-            {newOrder.map((node) => (
-                <NodeInfoReorderComponent
-                    key={node.tag}
-                    node={node}
-                    setOrder={setNewOrder}
-                    findCardIndex={findCardIndex}
-                />
-            ))}
+            <DatabaseGroup>
+                <DatabaseGroupList>
+                    <DatabaseGroupItem className="item-new">
+                        <DatabaseGroupNode icon="node-add" color="success" />
+                        <DatabaseGroupActions>
+                            <Button size="xs" color="success" outline className="rounded-pill" disabled={true}>
+                                <i className="icon-plus me-1" />
+                                Add node
+                            </Button>
+                        </DatabaseGroupActions>
+                    </DatabaseGroupItem>
+                    {newOrder.map((node) => (
+                        <NodeInfoReorderComponent
+                            key={node.tag}
+                            node={node}
+                            setOrder={setNewOrder}
+                            findCardIndex={findCardIndex}
+                        />
+                    ))}
+                </DatabaseGroupList>
+            </DatabaseGroup>
         </div>
     );
 }
