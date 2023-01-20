@@ -1,0 +1,58 @@
+﻿@use "sass:math";
+
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.dbgroup {
+    padding: sizes.$gutter-xs;
+    display: flex;
+
+    .dbgroup-image {
+        //width: 100px;
+    }
+
+    .dbgroup-list {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        padding: sizes.$gutter-xs/2;
+
+        .dbgroup-item {
+            min-width: 150px;
+            margin: sizes.$gutter-xs/2;
+            background-color: colors.$panel-bg-2;
+            border-radius: sizes.$gutter-xxs;
+            max-width: 200px;
+            & > div {
+                text-align: center;
+                padding: sizes.$gutter-xs sizes.$gutter-sm;
+                & + div {
+                    border-top: sizes.$border-width solid colors.$border-color-light;
+                }
+            }
+
+            .dbgroup-node,
+            .dbgroup-type,
+            .dbgroup-error {
+                min-height: 45px;
+            }
+
+            .dbgroup-error {
+                border-radius: 0 0 sizes.$gutter-xxs sizes.$gutter-xxs;
+            }
+
+            strong {
+                font-weight: 800;
+                color: colors.$text-emphasis-color;
+            }
+
+            &.item-new {
+                .dbgroup-node {
+                    min-height: 90px;
+                    font-size: 40px;
+                    color: colors.$text-emphasis-color;
+                }
+            }
+        }
+    }
+}

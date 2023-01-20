@@ -20,7 +20,12 @@ typescript/viewmodels
 typescript/widgets
 typings/
 
-wwwroot/
+wwwroot/App
+wwwroot/Content/ace
+wwwroot/Content/img
+wwwroot/Content/rbush
+wwwroot/dist
+wwwroot/icons
 
 # autogen
 typescript/configuration.ts 

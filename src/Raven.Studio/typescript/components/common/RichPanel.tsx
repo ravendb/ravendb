@@ -87,13 +87,14 @@ export function RichPanelActions(props: { children: ReactNode | ReactNode[] }) {
 
 interface RichPanelNameProps {
     children: ReactNode | ReactNode[];
+    className?: string;
     title?: string;
 }
 
 export function RichPanelName(props: RichPanelNameProps) {
-    const { children, ...rest } = props;
+    const { children, className, ...rest } = props;
     return (
-        <h3 className="m-0 me-4 flex-grow-1" {...rest}>
+        <h3 className={classNames("m-0 me-4 flex-grow-1", className)} {...rest}>
             {children}
         </h3>
     );

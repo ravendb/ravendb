@@ -17,6 +17,20 @@ import { NodeInfo } from "components/models/databases";
 import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
+import {
+    RichPanel,
+    RichPanelActions,
+    RichPanelHeader,
+    RichPanelInfo,
+    RichPanelName,
+} from "components/common/RichPanel";
+import {
+    DatabaseGroup,
+    DatabaseGroupActions,
+    DatabaseGroupItem,
+    DatabaseGroupList,
+    DatabaseGroupNode,
+} from "components/common/DatabaseGroup";
 
 export interface NodeGroupProps {
     nodes: NodeInfo[];
@@ -76,19 +90,15 @@ export function NodeGroup(props: NodeGroupProps) {
     const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
 
     return (
-        <div>
-            <div className="d-flex">
-                <span>Database Group</span>
-            </div>
-
-            {sortableMode ? (
-                <DndProvider backend={HTML5Backend}>
-                    <ReorderNodes nodes={nodes} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
-                </DndProvider>
-            ) : (
-                <React.Fragment>
-                    <div className="d-flex">
-                        <FlexGrow />
+        <RichPanel className="mt-3">
+            <RichPanelHeader>
+                <RichPanelInfo>
+                    <RichPanelName>
+                        <i className="icon-dbgroup me-2" /> Database Group
+                    </RichPanelName>
+                </RichPanelInfo>
+                <RichPanelActions>
+                    {!sortableMode && (
                         <Button
                             disabled={nodes.length === 1 || !isOperatorOrAbove()}
                             onClick={enableNodesSort}
@@ -96,26 +106,53 @@ export function NodeGroup(props: NodeGroupProps) {
                         >
                             <i className="icon-reorder me-1" /> Reorder nodes
                         </Button>
-                        <Button className="me-2" color="primary" disabled={!addNodeEnabled} onClick={addNode}>
-                            <i className="icon-plus me-1" />
-                            Add node
-                        </Button>
-                    </div>
+                    )}
+                </RichPanelActions>
+            </RichPanelHeader>
 
-                    {nodes.map((node) => (
-                        <NodeInfoComponent
-                            key={node.tag}
-                            node={node}
-                            databaseLockMode={lockMode}
-                            deleteFromGroup={deleteNodeFromGroup}
-                        />
-                    ))}
+            <DatabaseGroup>
+                <div className="dbgroup-image"></div>
+                <DatabaseGroupList>
+                    {sortableMode ? (
+                        <DndProvider backend={HTML5Backend}>
+                            <ReorderNodes nodes={nodes} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
+                        </DndProvider>
+                    ) : (
+                        <React.Fragment>
+                            <DatabaseGroupItem className="item-new">
+                                <DatabaseGroupNode icon="node-add" color="success" />
 
-                    {deletionInProgress.map((deleting) => (
-                        <DeletionInProgress key={deleting} nodeTag={deleting} />
-                    ))}
-                </React.Fragment>
-            )}
-        </div>
+                                <DatabaseGroupActions>
+                                    <Button
+                                        size="xs"
+                                        color="success"
+                                        outline
+                                        className="rounded-pill"
+                                        disabled={!addNodeEnabled}
+                                        onClick={addNode}
+                                    >
+                                        <i className="icon-plus me-1" />
+                                        Add node
+                                    </Button>
+                                </DatabaseGroupActions>
+                            </DatabaseGroupItem>
+
+                            {nodes.map((node) => (
+                                <NodeInfoComponent
+                                    key={node.tag}
+                                    node={node}
+                                    databaseLockMode={lockMode}
+                                    deleteFromGroup={deleteNodeFromGroup}
+                                />
+                            ))}
+
+                            {deletionInProgress.map((deleting) => (
+                                <DeletionInProgress key={deleting} nodeTag={deleting} />
+                            ))}
+                        </React.Fragment>
+                    )}
+                </DatabaseGroupList>
+            </DatabaseGroup>
+        </RichPanel>
     );
 }
