@@ -1,5 +1,6 @@
 ﻿import React, { useState } from "react";
-import genUtils from "common/generalUtils";
+import { NodeSet, NodeSetLabel, NodeSetItem, NodeSetListCard } from "./NodeSet";
+import { Checkbox } from "./Checkbox";
 
 interface MultipleDatabaseLocationSelectorProps {
     locations: databaseLocationSpecifier[];
@@ -23,26 +24,30 @@ export function MultipleDatabaseLocationSelector(props: MultipleDatabaseLocation
 
     return (
         <div>
-            <ul>
-                {locations.map((l, idx) => {
-                    const selected = selectedLocations.includes(l);
-                    const locationId = uniqId + idx;
-                    return (
-                        <li className="flex-horizontal" key={locationId}>
-                            <div className="checkbox">
-                                <input
-                                    type="checkbox"
-                                    id={locationId}
-                                    className="styled"
-                                    checked={selected}
-                                    onChange={() => toggleSelection(l)}
-                                />
-                                <label htmlFor={locationId}>{genUtils.formatLocation(l)}</label>
-                            </div>
-                        </li>
-                    );
-                })}
-            </ul>
+            {locations.map((l, idx) => {
+                const selected = selectedLocations.includes(l);
+                const locationId = uniqId + idx;
+                return (
+                    <div key={locationId}>
+                        <NodeSet color="shard" className="m-1">
+                            <NodeSetLabel color="shard" icon="shard">
+                                Num
+                                <Checkbox
+                                    selected={selected}
+                                    toggleSelection={() => toggleSelection(l)}
+                                    color="shard"
+                                ></Checkbox>
+                                {/* TODO: clickable labels */}
+                            </NodeSetLabel>
+                            <NodeSetListCard>
+                                <NodeSetItem icon="node" color="node">
+                                    Tag<Checkbox toggleSelection={null}></Checkbox>
+                                </NodeSetItem>
+                            </NodeSetListCard>
+                        </NodeSet>
+                    </div>
+                );
+            })}
         </div>
     );
 }

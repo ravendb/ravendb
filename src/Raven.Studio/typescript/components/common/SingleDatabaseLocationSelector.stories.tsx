@@ -2,10 +2,12 @@ import { ComponentMeta } from "@storybook/react";
 import React, { useState } from "react";
 import { SingleDatabaseLocationSelector } from "./SingleDatabaseLocationSelector";
 import { boundCopy } from "../utils/common";
+import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 
 export default {
     title: "Bits/Database location selector - single",
     component: SingleDatabaseLocationSelector,
+    decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof SingleDatabaseLocationSelector>;
 
 const Template = (args: { locations: databaseLocationSpecifier[] }) => {

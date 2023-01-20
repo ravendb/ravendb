@@ -1,5 +1,6 @@
 ﻿import React, { ReactNode } from "react";
 import classNames from "classnames";
+import { Card } from "reactstrap";
 
 interface NodeSetProps {
     children?: ReactNode | ReactNode[];
@@ -13,6 +14,18 @@ export function NodeSet(props: NodeSetProps) {
     const colorClass = color ? "bg-faded-" + color : "bg-faded-secondary";
 
     return <div className={classNames("node-set", colorClass, className)}>{children}</div>;
+}
+
+export function NodeSetList(props: { children?: ReactNode | ReactNode[] }) {
+    const { children } = props;
+
+    return <div className="node-set-list">{children}</div>;
+}
+
+export function NodeSetListCard(props: { children?: ReactNode | ReactNode[] }) {
+    const { children } = props;
+
+    return <Card className="node-set-list">{children}</Card>;
 }
 
 interface NodeSetItemProps {
@@ -29,7 +42,7 @@ export function NodeSetLabel(props: NodeSetItemProps) {
     const colorClass = color ? "text-" + color : undefined;
 
     return (
-        <div className="node-set-label" {...rest}>
+        <div className="node-set-label align-self-center" {...rest}>
             {icon && <i className={classNames("icon-" + icon, colorClass)} />}
             <strong className="node-set-label-name">{children}</strong>
         </div>

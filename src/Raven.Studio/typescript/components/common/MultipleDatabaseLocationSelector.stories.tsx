@@ -2,10 +2,14 @@ import { ComponentMeta } from "@storybook/react";
 import React, { useState } from "react";
 import { MultipleDatabaseLocationSelector } from "./MultipleDatabaseLocationSelector";
 import { boundCopy } from "../utils/common";
+import { HrHeader } from "./HrHeader";
+import { NodeSet, NodeSetLabel, NodeSetItem } from "./NodeSet";
+import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 
 export default {
     title: "Bits/Database location selector - multiple",
     component: MultipleDatabaseLocationSelector,
+    decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof MultipleDatabaseLocationSelector>;
 
 const Template = (args: { locations: databaseLocationSpecifier[] }) => {
