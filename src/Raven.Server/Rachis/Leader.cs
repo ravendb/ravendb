@@ -675,7 +675,7 @@ namespace Raven.Server.Rachis
             public CommandBase Command;
             public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
             public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
-            private Leader _leader;
+            private readonly Leader _leader;
             private readonly RachisConsensus _engine;
             private Task<(long, object)> _task;
 
@@ -729,14 +729,6 @@ namespace Raven.Server.Rachis
 
                     var djv = Command.ToJson(context);
                     var commandJson = context.ReadObject(djv, "raft/command");
-
-                    //*****************
-                    // var commandsToProcess4 = new List<(RachisMergedCommand Command, BlittableJsonReaderObject CommandJson)>();
-                    // commandsToProcess4.Add((commandToProcess, commandJson));
-                    // var command = new LeaderEmptyQueueCommand(_engine, _leader, commandsToProcess4);
-                    // // await _engine.TxMerger.Enqueue(command);
-                    // command.ExecuteCmd2(context);
-                    //*****************
 
                     InsertCommandToLeaderLog(context, commandJson);
 
@@ -822,9 +814,6 @@ namespace Raven.Server.Rachis
             }
         }
 
-
-        // private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
-
         private readonly SemaphoreSlim _commandsQueueLocker = new SemaphoreSlim(1, 1);
 
         private readonly AsyncManualResetEvent _waitForCommit = new AsyncManualResetEvent();
@@ -837,7 +826,6 @@ namespace Raven.Server.Rachis
                 Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously)
             };
 
-            // _commandsQueue.Enqueue(rachisMergedCommand);
             await _engine.TxMerger.Enqueue(rachisMergedCommand);
 
             while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
@@ -886,113 +874,6 @@ namespace Raven.Server.Rachis
 
             return await inner;
         }
-        
-        /*
-        private async ValueTask EmptyQueueAsync()
-        {
-            var maxCommandsToProcessSize = new Size(32, SizeUnit.Megabytes); // TODO [ppekrol] make configurable
-            var maxCommandsToProcessCount = 128; // TODO [ppekrol] make configurable
-            var maxCommandsToProcessTime = TimeSpan.FromMilliseconds(100); // TODO [ppekrol] make configurable
-
-            var commandsToProcessSize = new Size(0, SizeUnit.Bytes);
-            var commandsToProcess = new List<(RachisMergedCommand Command, BlittableJsonReaderObject CommandJson)>();
-            const string leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
-            var lostLeadershipException = new NotLeadingException(leaderDisposedMessage);
-
-            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            {
-                try
-                {
-                    using (context.OpenReadTransaction())
-                    {
-                        var sw = Stopwatch.StartNew();
-                        var cmdsCount = 0;
-                        _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
-                        while (cmdsCount++ < maxCommandsToProcessCount && _commandsQueue.TryDequeue(out var commandToProcess))
-                        {
-                            if (commandToProcess.Consumed.Raise() == false)
-                            {
-                                // if the command was aborted due to timeout, we should skip it.
-                                // The command is not appended, so We can and must do so, because the context of the command is no longer valid.
-                                continue;
-                            }
-
-                            if (_running.IsRaised() == false)
-                            {
-                                commandToProcess.Tcs.TrySetException(lostLeadershipException);
-                                continue;
-                            }
-
-                            if (_engine.LogHistory.HasHistoryLog(context, commandToProcess.Command.UniqueRequestId, out var index, out var result, out var exception))
-                            {
-                                // if this command is already committed, we can skip it and notify the caller about it
-                                if (lastCommitted >= index)
-                                {
-                                    if (exception != null)
-                                    {
-                                        commandToProcess.Tcs.TrySetException(exception);
-                                    }
-                                    else
-                                    {
-                                        if (result != null)
-                                        {
-                                            result = GetConvertResult(commandToProcess.Command)?.Apply(result) ?? commandToProcess.Command.FromRemote(result);
-                                        }
-
-                                        commandToProcess.Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
-                                    }
-
-                                    continue;
-                                }
-                            }
-
-                            _engine.InvokeBeforeAppendToRaftLog(context, commandToProcess.Command);
-
-                            var djv = commandToProcess.Command.ToJson(context);
-                            var commandJson = context.ReadObject(djv, "raft/command");
-
-                            commandsToProcess.Add((commandToProcess, commandJson));
-                            commandsToProcessSize.Add(commandJson.Size, SizeUnit.Bytes);
-
-                            if (commandsToProcessSize >= maxCommandsToProcessSize)
-                                break;
-
-                            if (sw.Elapsed >= maxCommandsToProcessTime)
-                                break;
-                        }
-                    }
-
-                    var command = new LeaderEmptyQueueCommand(_engine, this, commandsToProcess);
-                    await _engine.TxMerger.Enqueue(command);
-
-                    var tasks = command.Tasks;
-                    if (tasks.Count > 0)
-                        _newEntry.Set();
-
-                    for (int i = 0; i < commandsToProcess.Count; i++)
-                    {
-                        var c = commandsToProcess[i].Command;
-                        var t = tasks[i];
-
-                        c.Tcs.TrySetResult(t);
-                    }
-                }
-                catch (Exception e)
-                {
-                    if (e is AggregateException ae)
-                        e = ae.ExtractSingleInnerException();
-
-                    if (_running.IsRaised() == false)
-                        e = new NotLeadingException(leaderDisposedMessage, e);
-
-                    foreach (var value in commandsToProcess)
-                        value.Command.Tcs.TrySetException(e);
-
-                    _errorOccurred.TrySetException(e);
-                }
-            }
-        }
-        */
 
         internal static ConvertResultAction GetConvertResult(CommandBase cmd)
         {

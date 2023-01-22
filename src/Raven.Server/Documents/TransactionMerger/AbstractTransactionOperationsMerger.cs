@@ -103,44 +103,6 @@ namespace Raven.Server.Documents.TransactionMerger
             _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, ThreadNames.ForTransactionMerging(TransactionMergerThreadName, _parent.Name));
         }
 
-/*        public interface IRecordableCommand
-        {
-            IReplayableCommandDto<MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context) where TTransaction : RavenTransaction;
-        }
-
-        public interface IReplayableCommandDto<out T> where T : MergedTransactionCommand
-        {
-            T ToCommand(DocumentsOperationContext context, DocumentDatabase database);
-        }
-
-        public abstract class MergedTransactionCommand : IRecordableCommand
-        {
-            public bool UpdateAccessTime = true;
-
-            protected abstract long ExecuteCmd(DocumentsOperationContext context);
-
-            internal long ExecuteDirectly(DocumentsOperationContext context)
-            {
-                return ExecuteCmd(context);
-            }
-
-            public virtual long Execute(DocumentsOperationContext context, RecordingState recordingState)
-            {
-                recordingState?.TryRecord(context, this);
-
-                return ExecuteCmd(context);
-            }
-
-            public abstract IReplayableCommandDto<MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context) where TTransaction : RavenTransaction;
-
-            [JsonIgnore]
-            public readonly TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            public Exception Exception;
-
-            public bool RetryOnError = false;
-        }
-*/
         /// <summary>
         /// Enqueue the command to be eventually executed.
         /// </summary>
