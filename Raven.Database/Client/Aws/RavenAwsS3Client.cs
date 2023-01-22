@@ -10,52 +10,109 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-
+using System.Threading.Tasks;
+using Amazon;
+using Amazon.Runtime;
+using Amazon.S3;
+using Amazon.S3.Model;
 using Raven.Abstractions;
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Util;
-using Raven.Client.Extensions;
 
 namespace Raven.Database.Client.Aws
 {
     public class RavenAwsS3Client : RavenAwsClient
     {
+        private AmazonS3Client _client;
+
+        private const long OneKb = 1024;
+        public const long OneMb = OneKb * 1024;
+        private const long OneGb = OneMb * 1024;
+        private const long OneTb = OneGb * 1024;
+        internal long MaxUploadPutObjectInBytes = 256 * OneMb;
+        internal long MinOnePartUploadSizeLimitInBytes = 100 * OneMb;
+        private static readonly long TotalBlocksSizeLimitInBytes = 5 * OneTb;
+
         public RavenAwsS3Client(string awsAccessKey, string awsSecretKey, string awsRegionEndpoint)
             : base(awsAccessKey, awsSecretKey, awsRegionEndpoint)
         {
+            if (string.IsNullOrWhiteSpace(awsRegionEndpoint))
+                throw new ArgumentException("AWS Region Name cannot be null or empty");
+
+            AmazonS3Config config = new AmazonS3Config
+            {
+                RegionEndpoint = RegionEndpoint.GetBySystemName(awsRegionEndpoint)
+            };
+
+            var credentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+            _client = new AmazonS3Client(credentials, config);
         }
 
         public void PutObject(string bucketName, string key, Stream stream, Dictionary<string, string> metadata, int timeoutInSeconds)
         {
-            var url = GetUrl(bucketName) + "/" + key;
+            AsyncHelpers.RunSync(() => PutObjectAsync(bucketName, key, stream, metadata));
+        }
 
-            var now = SystemTime.UtcNow;
+        public async Task PutObjectAsync(string bucketName, string key, Stream stream, Dictionary<string, string> metadata)
+        {
+            var streamLengthInBytes = stream.Length;
+            if (streamLengthInBytes > TotalBlocksSizeLimitInBytes)
+                throw new InvalidOperationException("Can't upload more than 5TB to AWS S3, current upload size: " + streamLengthInBytes);
 
-            var payloadHash = RavenAwsHelper.CalculatePayloadHash(stream);
+            if (streamLengthInBytes > MaxUploadPutObjectInBytes)
+            {
+                var multipartRequest = new InitiateMultipartUploadRequest {Key = key, BucketName = bucketName};
 
-            var content = new StreamContent(stream)
-                          {
-                              Headers =
-                              {
-                                  { "x-amz-date", RavenAwsHelper.ConvertToString(now) },
-                                  { "x-amz-content-sha256", payloadHash }
-                              }
-                          };
+                FillMetadata(multipartRequest.Metadata, metadata);
 
-            foreach (var metadataKey in metadata.Keys)
-                content.Headers.Add("x-amz-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
+                var initiateResponse = await _client.InitiateMultipartUploadAsync(multipartRequest).ConfigureAwait(false);
+                var partNumber = 1;
+                var partEtags = new List<PartETag>();
 
-            var headers = ConvertToHeaders(bucketName, content.Headers);
+                while (stream.Position < streamLengthInBytes)
+                {
+                    var leftToUpload = streamLengthInBytes - stream.Position;
+                    var toUpload = Math.Min(MinOnePartUploadSizeLimitInBytes, leftToUpload);
 
-            var client = GetClient(TimeSpan.FromSeconds(timeoutInSeconds));
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
-            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
+                    var uploadResponse = await _client
+                        .UploadPartAsync(new UploadPartRequest
+                        {
+                            Key = key,
+                            BucketName = bucketName,
+                            InputStream = stream,
+                            PartNumber = partNumber++,
+                            PartSize = toUpload,
+                            UploadId = initiateResponse.UploadId,
+                        }).ConfigureAwait(false);
 
-            var response = AsyncHelpers.RunSync(() => client.PutAsync(url, content));
-            if (response.IsSuccessStatusCode)
+                    partEtags.Add(new PartETag(uploadResponse.PartNumber, uploadResponse.ETag));
+                }
+
+                await _client.CompleteMultipartUploadAsync(
+                    new CompleteMultipartUploadRequest {UploadId = initiateResponse.UploadId, BucketName = bucketName, Key = key, PartETags = partEtags}).ConfigureAwait(false);
+
+                return;
+            }
+
+            var request = new PutObjectRequest
+            {
+                Key = key,
+                BucketName = bucketName,
+                InputStream = stream
+            };
+
+            FillMetadata(request.Metadata, metadata);
+
+            await _client.PutObjectAsync(request).ConfigureAwait(false);
+        }
+
+        private static void FillMetadata(MetadataCollection collection, IDictionary<string, string> metadata)
+        {
+            if (metadata == null)
                 return;
 
-            throw ErrorResponseException.FromResponseMessage(response);
+            foreach (var kvp in metadata)
+                collection[Uri.EscapeDataString(kvp.Key)] = Uri.EscapeDataString(kvp.Value);
         }
 
         public Blob GetObject(string bucketName, string key)
@@ -107,6 +164,14 @@ namespace Raven.Database.Client.Aws
                 return string.Format("{0}.s3.amazonaws.com", bucketName);
 
             return string.Format("{0}.s3-{1}.amazonaws.com", bucketName, AwsRegion);
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            _client?.Dispose();
+            _client = null;
         }
     }
 }

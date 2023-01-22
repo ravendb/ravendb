@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_2181.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -14,6 +14,7 @@ using Raven.Database.Client.Aws;
 using Raven.Database.Client.Azure;
 using Raven.Tests.Common;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
@@ -82,10 +83,14 @@ namespace Raven.Tests.Issues
         [Fact(Skip = "Requires Amazon AWS Credentials")]
         public void PutObject()
         {
-            var bucketName = "ravendb";
             var key = "testKey";
 
-            using (var client = new RavenAwsS3Client("<aws_access_key>", "<aws_secret_key>", "<aws_region_for_bucket>"))
+            const string awsAccessKey = "<aws_access_key>";
+            const string awsSecretKey = "<aws_secret_key>";
+            const string awsRegionForBucket = "<aws_region_for_bucket>";
+            const string bucketName = "<aws_bucket_name>";
+
+            using (var client = new RavenAwsS3Client(awsAccessKey, awsSecretKey, awsRegionForBucket))
             {
                 client.PutObject(bucketName, key, new MemoryStream(Encoding.UTF8.GetBytes("321")), new Dictionary<string, string>
                                                                                                         {
@@ -105,6 +110,100 @@ namespace Raven.Tests.Issues
                 Assert.Equal("value2", @object.Metadata[property2]);
             }
         }
+
+        [Theory(Skip = "Requires Amazon AWS Credentials")]
+        [InlineData(5, false, false)]
+        [InlineData(5, true, false)]
+        [InlineData(11, false, false)]
+        [InlineData(11, true, false)]
+        [InlineData(5, false, true)]
+        [InlineData(5, true,  true)]
+        [InlineData(11, false, true)]
+        [InlineData(11, true, true)]
+        // ReSharper disable once InconsistentNaming
+        public void put_object_multipart(int sizeInMB, bool testBlobKeyAsFolder, bool noAsciiDbName)
+        {
+            PutObjectInternal(sizeInMB, testBlobKeyAsFolder, noAsciiDbName);
+        }
+
+        private void PutObjectInternal(int sizeInMB, bool testBlobKeyAsFolder, bool noAsciiDbName)
+        {
+            var blobs = GenerateBlobNames(1);
+            Assert.Equal(1, blobs.Count);
+            string key = "";
+
+            const string awsAccessKey = "<aws_access_key>";
+            const string awsSecretKey = "<aws_secret_key>";
+            const string awsRegionForBucket = "<aws_region_for_bucket>";
+            const string bucketName = "<aws_bucket_name>";
+
+            using (var client = new RavenAwsS3Client(awsAccessKey, awsSecretKey, awsRegionForBucket))
+            {
+                client.MaxUploadPutObjectInBytes = 10 * RavenAwsS3Client.OneMb;
+                client.MinOnePartUploadSizeLimitInBytes = 7 * RavenAwsS3Client.OneMb;
+
+                var property1 = "property1";
+                var property2 = "property2";
+                var value1 = Guid.NewGuid().ToString();
+                var value2 = Guid.NewGuid().ToString();
+                if (noAsciiDbName)
+                {
+                    string dateStr = DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss-fff");
+                    key = string.Format("{0}.ravendb-żżżרייבן-A-backup/{1}.ravendb-full-backup", dateStr, dateStr);
+                    property1 = "Description-żżרייבן";
+                    value1 = "ravendb-żżżרייבן-A-backup";
+                }
+                else
+                {
+                    key = $"{blobs[0]}";
+                }
+                if (testBlobKeyAsFolder)
+                    key += "/";
+
+
+                var sb = new StringBuilder();
+                for (var i = 0; i < sizeInMB * 1024 * 1024; i++)
+                {
+                    sb.Append("a");
+                }
+
+                using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
+                {
+                    client.PutObject(bucketName, key,
+                        memoryStream,
+                        new Dictionary<string, string> { { property1, value1 }, { property2, value2 } }, 60 * 60);
+                }
+
+                var @object = client.GetObject(bucketName, key);
+                Assert.NotNull(@object);
+
+                using (var reader = new StreamReader(@object.Data))
+                    Assert.Equal(sb.ToString(), reader.ReadToEnd());
+
+                var property1check = @object.Metadata.Keys.Single(x => x.Contains(Uri.EscapeDataString(property1).ToLower()));
+                var property2check = @object.Metadata.Keys.Single(x => x.Contains(property2));
+
+                Assert.Equal(Uri.EscapeDataString(value1), @object.Metadata[property1check]);
+                Assert.Equal(value2, @object.Metadata[property2check]);
+            }
+        }
+
+        private static List<string> GenerateBlobNames(int blobsCount)
+        {
+            var blobNames = new List<string>();
+
+            var prefix = Guid.NewGuid().ToString();
+
+            for (var i = 0; i < blobsCount; i++)
+            {
+                var name = prefix + "/" + i;
+
+                blobNames.Add(name);
+            }
+
+            return blobNames;
+        }
+
 
         [Fact(Skip = "Requires Amazon AWS Credentials")]
         public void UploadArchive()
