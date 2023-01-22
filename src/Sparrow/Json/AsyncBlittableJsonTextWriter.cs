@@ -61,16 +61,16 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public async ValueTask<int> MaybeFlushAsync(CancellationToken token = default)
+        public ValueTask<int> MaybeFlushAsync(CancellationToken token = default)
         {
             var innerStream = _stream as MemoryStream;
             if (innerStream == null)
                 ThrowInvalidTypeException(_stream?.GetType());
             if (innerStream.Length * 2 <= innerStream.Capacity)
-                return 0;
+                return new ValueTask<int>(0);
 
-            await FlushInternalAsync().ConfigureAwait(false); // this is OK, because inner stream is a MemoryStream
-            return await FlushAsync(token).ConfigureAwait(false);
+            FlushInternal(); // this is OK, because inner stream is a MemoryStream
+            return FlushAsync(token);
         }
 
         public async ValueTask<int> FlushAsync(CancellationToken token = default)
@@ -78,7 +78,7 @@ namespace Sparrow.Json
             var innerStream = _stream as MemoryStream;
             if (innerStream == null)
                 ThrowInvalidTypeException(_stream?.GetType());
-            await FlushInternalAsync().ConfigureAwait(false);
+            FlushInternal();
             innerStream.TryGetBuffer(out var bytes);
             var bytesCount = bytes.Count;
             if (bytesCount == 0)
