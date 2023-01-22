@@ -165,6 +165,7 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             public JsonOperationContext GetContextForNewCompareExchangeValue() => GetContextForNewDocument();
+
             public JsonOperationContext GetContextForNewDocument()
             {
                 if (_context.AllocatedMemory > 16 * 1024 * 1024)
@@ -188,6 +189,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _rtnCtx.Dispose();
+                _prevRtnCtx?.Dispose();
             }
 
             public Stream GetTempStream() => StreamDestination.GetTempStream(_options);
