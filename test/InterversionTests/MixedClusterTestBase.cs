@@ -77,7 +77,7 @@ namespace InterversionTests
         }
 
         protected async Task<(RavenServer Leader, List<ProcessNode> Peers, List<RavenServer> LocalPeers)> CreateMixedCluster(
-            string[] peers, int localPeers = 0, IDictionary<string, string> customSettings = null, X509Certificate2 certificate = null)
+            string[] peers, int localPeers = 0, IDictionary<string, string> customSettings = null, X509Certificate2 certificate = null, bool watcherCluster = true)
         {
             var leaderServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
             await leaderServer.ServerStore.EnsureNotPassiveAsync(leaderServer.WebUrl);
@@ -105,7 +105,7 @@ namespace InterversionTests
                 for (int i = 0; i < localPeers; i++)
                 {
                     var peer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
-                    var addCommand = new AddClusterNodeCommand(peer.WebUrl);
+                    var addCommand = new AddClusterNodeCommand(peer.WebUrl, watcher: watcherCluster);
                     await requestExecutor.ExecuteAsync(addCommand, context);
                     Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
                     nodeAdded.Reset();

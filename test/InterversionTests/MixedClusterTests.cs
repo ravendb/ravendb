@@ -860,6 +860,20 @@ namespace InterversionTests
 
         }
 
+        [Fact]
+        public async Task ClusterTcpCompressionTest()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var (leader, peers, local) = await CreateMixedCluster(new [] { "5.4.0", "5.4.0", "5.4.0" }, watcherCluster: true);
+            await UpgradeServerAsync("current", peers[0]);
+            var database = GetDatabaseName();
+            var (disposable, stores) = await GetStores(database, peers);
+            using (disposable)
+            {
+                await CreateDatabase(stores, database, peers.Count);
+            }
+        }
+
         [Fact(Skip = "WIP")]
         public async Task V40Cluster_V41Client_Counters()
         {
