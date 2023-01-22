@@ -1,12 +1,13 @@
 ﻿using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
+using Raven.Server.Documents.Sharding;
 
 namespace Raven.Server.Documents.Indexes.Sharding;
 
 public class ShardedDatabaseIndexCreateController : DatabaseIndexCreateController
 {
-    public ShardedDatabaseIndexCreateController([NotNull] DocumentDatabase database)
+    public ShardedDatabaseIndexCreateController([NotNull] ShardedDocumentDatabase database)
         : base(database)
     {
     }

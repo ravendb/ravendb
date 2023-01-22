@@ -44,36 +44,8 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexStore : IDisposable
     {
-        public readonly IndexIdentities Identities = new IndexIdentities();
-
-        public readonly Logger Logger;
-
-        public DatabaseIndexLockModeController LockMode;
-
-        public DatabaseIndexPriorityController Priority;
-
-        public DatabaseIndexStateController State;
-
-        public DatabaseIndexDeleteController Delete;
-
-        public DatabaseIndexCreateController Create;
-
-        public DatabaseIndexHasChangedController HasChanged;
-
-        public SemaphoreSlim StoppedConcurrentIndexBatches { get; }
-
-        protected ServerStore ServerStore;
-
-        internal Action<(string IndexName, bool DidWork)> IndexBatchCompleted;
-
-        internal static int MaxIndexNameLength = PathLengthLimit -
-                                                 IndexCompiler.IndexNamePrefix.Length -
-                                                 1 - // "."
-                                                 36 - // new Guid()
-                                                 IndexCompiler.IndexExtension.Length -
-                                                 4; // ".dll"
-
         private readonly DocumentDatabase _documentDatabase;
+        private readonly ServerStore _serverStore;
 
         private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _indexLocks = new ConcurrentDictionary<string, SemaphoreSlim>(StringComparer.OrdinalIgnoreCase);
@@ -84,27 +56,50 @@ namespace Raven.Server.Documents.Indexes
 
         private long _lastSurpassedAutoIndexesDatabaseRecordEtag;
 
+        public readonly IndexIdentities Identities = new IndexIdentities();
+
+        public readonly Logger Logger;
+
+        public SemaphoreSlim StoppedConcurrentIndexBatches { get; }
+
+        internal Action<(string IndexName, bool DidWork)> IndexBatchCompleted;
+
         private const int PathLengthLimit = 259; // Roslyn's MetadataWriter.PathLengthLimit = 259
 
-        protected IndexStore(DocumentDatabase documentDatabase)
+        internal static int MaxIndexNameLength = PathLengthLimit -
+                                                 IndexCompiler.IndexNamePrefix.Length -
+                                                 1 - // "."
+                                                 36 - // new Guid()
+                                                 IndexCompiler.IndexExtension.Length -
+                                                 4; // ".dll"
+
+        public readonly DatabaseIndexLockModeController LockMode;
+
+        public readonly DatabaseIndexPriorityController Priority;
+
+        public readonly DatabaseIndexStateController State;
+
+        public readonly DatabaseIndexDeleteController Delete;
+
+        public DatabaseIndexCreateController Create;
+
+        public readonly DatabaseIndexHasChangedController HasChanged;
+
+        public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
+            _serverStore = serverStore;
 
             LockMode = new DatabaseIndexLockModeController(documentDatabase);
             Priority = new DatabaseIndexPriorityController(documentDatabase);
             State = new DatabaseIndexStateController(documentDatabase);
+            Create = new DatabaseIndexCreateController(documentDatabase);
             Delete = new DatabaseIndexDeleteController(documentDatabase);
             HasChanged = new DatabaseIndexHasChangedController(documentDatabase);
             Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
 
             var stoppedConcurrentIndexBatches = _documentDatabase.Configuration.Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory;
             StoppedConcurrentIndexBatches = new SemaphoreSlim(stoppedConcurrentIndexBatches);
-        }
-
-        public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore) : this(documentDatabase)
-        {
-            ServerStore = serverStore;
-            Create = new DatabaseIndexCreateController(documentDatabase);
         }
 
         public int HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex, bool startIndexes = true)
@@ -218,7 +213,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void ExecuteForIndexes(IEnumerable<Index> indexes, Action<Index> action)
         {
-            var numberOfUtilizedCores = ServerStore.LicenseManager.GetNumberOfUtilizedCores();
+            var numberOfUtilizedCores = _serverStore.LicenseManager.GetNumberOfUtilizedCores();
 
             Parallel.ForEach(indexes, new ParallelOptions
             {
@@ -469,9 +464,9 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
-            using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(ctx, _documentDatabase.Name))
+            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(ctx, _documentDatabase.Name))
             {
                 return ShouldSkipThisNode(rawRecord, index, out reason, out replace);
             }
@@ -482,7 +477,7 @@ namespace Raven.Server.Documents.Indexes
             reason = null;
             replace = false;
 
-            if (record.DeletionInProgress.TryGetValue(ServerStore.NodeTag, out var deletion))
+            if (record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out var deletion))
             {
                 if (deletion != DeletionInProgressStatus.No)
                 {
@@ -508,7 +503,7 @@ namespace Raven.Server.Documents.Indexes
 
             // Can happen when we add a node to the database while the rolling index is running --> we skip this node for now.
             // Adding the new node to the deployment will be handled in PutRollingIndexCommand.UpdateDatabaseRecord()
-            if (rollingIndex.ActiveDeployments.TryGetValue(ServerStore.NodeTag, out var nodeDeployment) == false)
+            if (rollingIndex.ActiveDeployments.TryGetValue(_serverStore.NodeTag, out var nodeDeployment) == false)
             {
                 reason = "My node has no active deployment";
                 return true;
@@ -840,11 +835,11 @@ namespace Raven.Server.Documents.Indexes
 
         public bool MaybeFinishRollingDeployment(string index, long? lastRollingDeploymentIndex)
         {
-            var nodeTag = ServerStore.NodeTag;
+            var nodeTag = _serverStore.NodeTag;
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name))
+            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name))
             {
                 var rollingIndexes = rawRecord.RollingIndexes;
 
@@ -872,9 +867,9 @@ namespace Raven.Server.Documents.Indexes
 
         public RollingIndex GetRollingProgress(string name)
         {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var record = ServerStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out _))
+            using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out _))
             {
                 if (record == null)
                     return null;
@@ -915,7 +910,7 @@ namespace Raven.Server.Documents.Indexes
 
             _indexes.Add(index);
 
-            if (ServerStore.ForTestingPurposes?.StopIndex == true)
+            if (_serverStore.ForTestingPurposes?.StopIndex == true)
                 return;
 
             if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
@@ -1142,9 +1137,9 @@ namespace Raven.Server.Documents.Indexes
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            var (newEtag, _) = await ServerStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name, raftRequestId));
+            var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name, raftRequestId));
 
-            await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, ServerStore.Engine.OperationTimeout);
+            await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, _serverStore.Engine.OperationTimeout);
         }
 
         internal void DeleteIndexInternal(Index index, bool raiseNotification = true)
@@ -1763,9 +1758,9 @@ namespace Raven.Server.Documents.Indexes
             }
 
             long etag;
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (ServerStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out etag))
+            using (_serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name, out etag))
             {
             }
 

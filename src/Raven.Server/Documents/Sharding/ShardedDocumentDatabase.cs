@@ -19,7 +19,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
 {
     public readonly int ShardNumber;
     
-    public string ShardedDatabaseName;
+    public readonly string ShardedDatabaseName;
 
     public string ShardedDatabaseId { get; private set; }
 
