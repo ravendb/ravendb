@@ -16,6 +16,7 @@ USER ContainerAdministrator
 
 RUN tar -xf ravendb.zip `
     && del ravendb.zip `
+    && net user ContainerUser /ADD `
     && icacls C:\RavenDB /grant "User Manager\ContainerUser:(OI)(CI)M" /T /Q `
     && icacls C:\RavenDB /setowner "User Manager\ContainerUser" /T /Q `
     # RavenDB-14874 workaround
