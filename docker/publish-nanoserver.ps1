@@ -1,6 +1,7 @@
 param(
     $Repo = "ravendb/ravendb",
     $ArtifactsDir = "..\artifacts",
+    $WinVer = "2022",
     [switch]$DryRun = $False,
     [switch]$RemoveImages = $False)
 
@@ -42,7 +43,7 @@ function PushImages($imageTags) {
 }
 
 $version = GetVersionFromArtifactName
-$tags = GetWindowsImageTags $Repo $version
+$tags = GetWindowsImageTags $Repo $version $WinVer
 PushImages $tags
 
 if ($RemoveImages) {

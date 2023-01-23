@@ -69,11 +69,26 @@ function GetUbuntuImageTags($repo, $version, $arch) {
         
 }
 
-function GetWindowsImageTags($repo, $version) {
-    return @(
-        "$($repo):$($version)-windows",
-        "$($repo):windows-latest",
-        "$($repo):windows-latest-lts",
-        "$($repo):5.4-windows-latest"
-    )
+function GetWindowsImageTags($repo, $version, $winver) {
+    switch ($winver) {
+        "1809" {
+            return @(
+                "$($repo):$($version)-windows",
+                "$($repo):windows-latest",
+                "$($repo):windows-latest-lts",
+                "$($repo):5.4-windows-latest"
+            )
+            break;
+        }
+        "2022" {
+            return @(
+                "$($repo):$($version)-windows-ltsc2022"
+            )
+            break;
+        }
+        Default{
+            throw "Windows Version not supported. There are '2022' and '1809' avaliable."
+        }        
+    }
+
 }
