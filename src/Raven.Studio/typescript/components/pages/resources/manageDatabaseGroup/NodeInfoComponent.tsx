@@ -36,12 +36,6 @@ interface OrchestratorInfoComponentProps {
 export function OrchestratorInfoComponent(props: OrchestratorInfoComponentProps) {
     const { node, deleteFromGroup } = props;
 
-    const lastErrorShort = node.lastError ? genUtils.trimMessage(node.lastError) : null;
-
-    const showErrorsDetails = useCallback(() => {
-        app.showBootstrapDialog(new showDataDialog("Error details. Node: " + node.tag, node.lastError, "plain"));
-    }, [node]);
-
     return (
         <DatabaseGroupItem>
             <DatabaseGroupNode>{node.tag}</DatabaseGroupNode>

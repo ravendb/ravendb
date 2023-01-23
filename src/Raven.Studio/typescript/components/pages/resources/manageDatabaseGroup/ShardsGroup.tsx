@@ -3,7 +3,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { Button } from "reactstrap";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { ReorderNodes } from "components/pages/resources/manageDatabaseGroup/ReorderNodes";
+import { ReorderNodes, ReorderNodesControlls } from "components/pages/resources/manageDatabaseGroup/ReorderNodes";
 import { ShardInfoComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { useAccessManager } from "hooks/useAccessManager";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
@@ -43,6 +43,7 @@ export function ShardsGroup(props: ShardsGroupProps) {
     const { nodes, lockMode, shard } = props;
 
     const [sortableMode, setSortableMode] = useState(false);
+    const [saveReorder, setSaveReorder] = useState(false);
     const { isOperatorOrAbove } = useAccessManager();
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
@@ -54,9 +55,9 @@ export function ShardsGroup(props: ShardsGroupProps) {
         app.showBootstrapDialog(addKeyView);
     }, [shard, nodes]);
 
-    const enableNodesSort = useCallback(() => setSortableMode(true), []);
-
+    const enableReorder = useCallback(() => setSortableMode(true), []);
     const cancelReorder = useCallback(() => setSortableMode(false), []);
+    const finishReorder = useCallback(() => setSaveReorder(true), []);
 
     const saveNewOrder = useCallback(
         async (tagsOrder: string[]) => {
@@ -87,12 +88,9 @@ export function ShardsGroup(props: ShardsGroupProps) {
         },
         [shard, databasesService]
     );
-
+    const canSort = nodes.length === 1 || !isOperatorOrAbove();
     const existingTags = nodes ? nodes.map((x) => x.tag) : [];
     const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
-
-    const [fixOrder, setFixOrder] = useState(false);
-    const [newOrder, setNewOrder] = useState<NodeInfo[]>(nodes);
 
     return (
         <RichPanel className="mt-3">
@@ -103,10 +101,17 @@ export function ShardsGroup(props: ShardsGroupProps) {
                     </RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
-                    {!sortableMode ? (
+                    <ReorderNodesControlls
+                        enableReorder={enableReorder}
+                        canSort={canSort}
+                        sortableMode={sortableMode}
+                        cancelReorder={cancelReorder}
+                        finishReorder={finishReorder}
+                    />
+                    {/* {!sortableMode ? (
                         <Button
-                            disabled={nodes.length === 1 || !isOperatorOrAbove()}
-                            onClick={enableNodesSort}
+                            disabled={}
+                            onClick={enableReorder}
                             className="me-2"
                         >
                             <i className="icon-reorder me-1" /> Reorder nodes
@@ -131,7 +136,7 @@ export function ShardsGroup(props: ShardsGroupProps) {
                                 <span>Cancel</span>
                             </Button>
                         </>
-                    )}
+                    )} */}
                 </RichPanelActions>
             </RichPanelHeader>
 
@@ -140,7 +145,12 @@ export function ShardsGroup(props: ShardsGroupProps) {
                 <DatabaseGroupList>
                     {sortableMode ? (
                         <DndProvider backend={HTML5Backend}>
-                            <ReorderNodes nodes={nodes} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
+                            <ReorderNodes
+                                nodes={nodes}
+                                saveNewOrder={saveNewOrder}
+                                cancelReorder={cancelReorder}
+                                saveReorder={saveReorder}
+                            />
                         </DndProvider>
                     ) : (
                         <React.Fragment>

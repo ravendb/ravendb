@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useState } from "react";
+﻿import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "reactstrap";
 import classNames from "classnames";
 import { NodeInfoReorderComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
@@ -12,14 +12,43 @@ import {
     DatabaseGroupNode,
 } from "components/common/DatabaseGroup";
 
+interface ReorderNodesControllsProps {
+    sortableMode: boolean;
+    canSort: boolean;
+    enableReorder: () => void;
+    cancelReorder: () => void;
+    finishReorder: () => void;
+}
+
+export function ReorderNodesControlls(props: ReorderNodesControllsProps) {
+    const { canSort, sortableMode, enableReorder, cancelReorder, finishReorder } = props;
+    return !sortableMode ? (
+        <Button disabled={canSort} onClick={enableReorder} className="me-2">
+            <i className="icon-reorder me-1" /> Reorder nodes
+        </Button>
+    ) : (
+        <>
+            <Button color="success" onClick={finishReorder}>
+                <i className="icon-save" />
+                <span>Save</span>
+            </Button>
+            <Button onClick={cancelReorder} className="ms-1">
+                <i className="icon-cancel" />
+                <span>Cancel</span>
+            </Button>
+        </>
+    );
+}
+
 interface ReorderNodesProps {
     cancelReorder: () => void;
+    saveReorder: boolean;
     nodes: NodeInfo[];
     saveNewOrder: (order: string[], fixOrder: boolean) => Promise<void>;
 }
 
 export function ReorderNodes(props: ReorderNodesProps) {
-    const { cancelReorder, nodes, saveNewOrder } = props;
+    const { saveReorder, cancelReorder, nodes, saveNewOrder } = props;
 
     const [fixOrder, setFixOrder] = useState(false);
     const [newOrder, setNewOrder] = useState<NodeInfo[]>(nodes);
@@ -28,11 +57,19 @@ export function ReorderNodes(props: ReorderNodesProps) {
 
     const findCardIndex = useCallback((node: NodeInfo) => newOrder.findIndex((x) => x.tag === node.tag), [newOrder]);
 
+    useEffect(() => {
+        console.log(saveReorder, "- Has changed");
+        saveNewOrder(
+            newOrder.map((x) => x.tag),
+            fixOrder
+        );
+    }, [saveReorder === true]);
+
     return (
         <div ref={drop}>
             <div>
                 <div>Drag elements to set their order. Click &quot;Save&quot; when finished.</div>
-                {/* <Button
+                <Button
                     color="primary"
                     onClick={() =>
                         saveNewOrder(
@@ -47,7 +84,7 @@ export function ReorderNodes(props: ReorderNodesProps) {
                 <Button onClick={cancelReorder}>
                     <i className="icon-cancel" />
                     <span>Cancel</span>
-                </Button> */}
+                </Button>
             </div>
             <div className="flex-form">
                 <div className="form-group">
