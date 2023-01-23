@@ -3,7 +3,7 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { Button } from "reactstrap";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { ReorderNodes } from "components/pages/resources/manageDatabaseGroup/ReorderNodes";
+import { ReorderNodes, ReorderNodesControlls } from "components/pages/resources/manageDatabaseGroup/ReorderNodes";
 import { OrchestratorInfoComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { DeletionInProgress } from "components/pages/resources/manageDatabaseGroup/DeletionInProgress";
 import { useAccessManager } from "hooks/useAccessManager";
@@ -31,7 +31,9 @@ export interface OrchestratorsGroupProps {
 
 export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
     const { orchestrators, deletionInProgress, db } = props;
+
     const [sortableMode, setSortableMode] = useState(false);
+    const [saveReorder, setSaveReorder] = useState(false);
     const { isOperatorOrAbove } = useAccessManager();
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
@@ -42,9 +44,9 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
         app.showBootstrapDialog(addKeyView);
     }, [db, orchestrators]);
 
-    const enableNodesSort = useCallback(() => setSortableMode(true), []);
-
+    const enableReorder = useCallback(() => setSortableMode(true), []);
     const cancelReorder = useCallback(() => setSortableMode(false), []);
+    const finishReorder = useCallback(() => setSaveReorder(true), []);
 
     const saveNewOrder = useCallback(
         async (tagsOrder: string[], fixOrder: boolean) => {
@@ -71,7 +73,7 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
         },
         [db, databasesService]
     );
-
+    const canSort = orchestrators.length === 1 || !isOperatorOrAbove();
     const existingTags = orchestrators ? orchestrators.map((x) => x.tag) : [];
     const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
 
@@ -84,7 +86,14 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                     </RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
-                    {sortableMode ? (
+                    <ReorderNodesControlls
+                        enableReorder={enableReorder}
+                        canSort={canSort}
+                        sortableMode={sortableMode}
+                        cancelReorder={cancelReorder}
+                        finishReorder={finishReorder}
+                    />
+                    {/* {sortableMode ? (
                         <>
                             <Button
                                 color="primary"
@@ -106,18 +115,23 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                     ) : (
                         <Button
                             disabled={orchestrators.length === 1 || !isOperatorOrAbove()}
-                            onClick={enableNodesSort}
+                            onClick={enableReorder}
                             className="me-2"
                         >
                             <i className="icon-reorder me-1" /> Reorder orchestrators
                         </Button>
-                    )}
+                    )} */}
                 </RichPanelActions>
             </RichPanelHeader>
 
             {sortableMode ? (
                 <DndProvider backend={HTML5Backend}>
-                    <ReorderNodes nodes={orchestrators} saveNewOrder={saveNewOrder} cancelReorder={cancelReorder} />
+                    <ReorderNodes
+                        nodes={orchestrators}
+                        saveNewOrder={saveNewOrder}
+                        cancelReorder={cancelReorder}
+                        saveReorder={saveReorder}
+                    />
                 </DndProvider>
             ) : (
                 <React.Fragment>
