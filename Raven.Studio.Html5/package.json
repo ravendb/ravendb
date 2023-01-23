@@ -13,5 +13,8 @@
     "gulp-uglify": "^2.0.0",
     "merge-stream": "^1.0.0",
     "run-sequence": "^1.2.2"
+  },
+  "overrides": {
+    "graceful-fs": "^4.2.10"
   }
 }
