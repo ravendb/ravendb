@@ -69,14 +69,15 @@ function GetUbuntuImageTags($repo, $version, $arch) {
         
 }
 
-function GetWindowsImageTags($repo, $version, $winver) {
+function GetWindowsImageTags($repo, $version, $WinVer) {
     switch ($winver) {
         "1809" {
             return @(
                 "$($repo):$($version)-windows",
                 "$($repo):windows-latest",
                 "$($repo):windows-latest-lts",
-                "$($repo):5.4-windows-latest"
+                "$($repo):5.4-windows-latest",
+		"$($repo):$($version)-windows-lts1809"
             )
             break;
         }
