@@ -30,7 +30,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleMaxFacet_LowLevel(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -54,7 +54,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleCountFacet_HighLevel(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -78,7 +78,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleMaxFacet_HighLevel(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -102,7 +102,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleMinFacet_HighLevel(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -125,7 +125,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleSumFacet_HighLevel(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -149,7 +149,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleAverageFacet_HighLevel(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -172,7 +172,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanHandleAverageFacetAsync_HighLevel(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -195,7 +195,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetAggregationQueryString(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -212,7 +212,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetAggregationQueryString_Async(Options options)
         {
             using (var store = GetDocumentStore(options))

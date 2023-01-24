@@ -1,25 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Indexes.Persistence;
-using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using static Corax.Constants;
 
 namespace Raven.Server.Documents.Sharding.Queries.Facets;
 
@@ -29,14 +24,10 @@ public class ShardedFacetedQueryOperation : IShardedReadOperation<QueryResult, F
     private readonly Dictionary<int, ShardedQueryCommand> _queryCommands;
     private long _combinedResultEtag;
     private readonly Dictionary<string, FacetOptions> _facetOptions;
-    private readonly IndexQueryServerSide _query;
-    private readonly TransactionOperationContext _context;
 
-    public ShardedFacetedQueryOperation(Dictionary<string, FacetOptions> facetOptions, IndexQueryServerSide query, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
+    public ShardedFacetedQueryOperation(Dictionary<string, FacetOptions> facetOptions, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
     {
         _facetOptions = facetOptions;
-        _query = query;
-        _context = context;
         _requestHandler = requestHandler;
         _queryCommands = queryCommands;
         ExpectedEtag = expectedEtag;
@@ -106,134 +97,153 @@ public class ShardedFacetedQueryOperation : IShardedReadOperation<QueryResult, F
         private readonly FacetOptions _options;
         private FacetResult _combined;
 
-        private Dictionary<string, FacetValue> _valuesByRanges;
+        private Dictionary<string, FacetValue> _rangeValues;
+        private Dictionary<string, IndexFacetReadOperationBase.FacetValues> _values;
 
         public CombinedFacet(FacetOptions options)
         {
             _options = options;
         }
 
+        private bool IsRangeFacet => _options == null; // options aren't applicable for range facets so are always null
+
         public void Add(FacetResult facetResult)
         {
-            if (_combined == null)
+            _combined ??= new FacetResult
             {
-                _combined = new FacetResult
-                {
-                    Name = facetResult.Name,
-                    RemainingHits = facetResult.RemainingHits,
-                    RemainingTerms = facetResult.RemainingTerms,
-                    RemainingTermsCount = facetResult.RemainingTermsCount,
-                    Values = new List<FacetValue>(facetResult.Values.Count)
-                };
+                Name = facetResult.Name,
+                RemainingHits = facetResult.RemainingHits,
+                RemainingTerms = facetResult.RemainingTerms,
+                RemainingTermsCount = facetResult.RemainingTermsCount
+            };
 
-                _valuesByRanges = new Dictionary<string, FacetValue>(facetResult.Values.Count);
+            if (IsRangeFacet)
+            {
+                _rangeValues ??= new Dictionary<string, FacetValue>(facetResult.Values.Count);
 
-                foreach (FacetValue value in facetResult.Values)
-                {
-                    _valuesByRanges.Add(value.Range, new FacetValue
-                    {
-                        Average = value.Average,
-                        Count = value.Count,
-                        Max = value.Max,
-                        Min = value.Min,
-                        Name = value.Name,
-                        Range = value.Range,
-                        Sum = value.Sum
-                    });
-                }
+                AddRangeFacetResult(facetResult);
             }
             else
             {
-                foreach (FacetValue value in facetResult.Values)
-                {
-                    if (_valuesByRanges.TryGetValue(value.Range, out var existing) == false)
-                    {
-                        existing = new FacetValue
-                        {
-                            Average = value.Average,
-                            Count = value.Count,
-                            Max = value.Max,
-                            Min = value.Min,
-                            Name = value.Name,
-                            Range = value.Range,
-                            Sum = value.Sum
-                        };
+                _values ??= new Dictionary<string, IndexFacetReadOperationBase.FacetValues>(facetResult.Values.Count);
 
-                        _valuesByRanges[value.Range] = existing;
+                AddFacetResult(facetResult);
+            }
+
+            void AddFacetResult(FacetResult result)
+            {
+                foreach (FacetValue value in result.Values)
+                {
+                    if (_values.TryGetValue(value.Range, out var values) == false)
+                    {
+                        _values[value.Range] = values = new IndexFacetReadOperationBase.FacetValues(false);
+                    }
+
+                    var field = string.IsNullOrEmpty(value.Name) == false ? new FacetAggregationField {Name = value.Name} : IndexFacetReadOperationBase.FacetValues.Default;
+
+                    if (values.TryGet(field, out var facetValue) == false)
+                    {
+                        facetValue = CreateFacetValue(value);
+
+                        values.Add(field, facetValue);
                     }
                     else
                     {
-                        existing.Count += value.Count;
-                        existing.Average += value.Average; // we'll convert it to avg value at the end of processing
+                        UpdateFacetValue(ref facetValue, value);
+                    }
 
-                        if (value.Max > existing.Max)
-                            existing.Max = value.Max;
+                    values.Count = facetValue.Count;
+                }
+            }
 
-                        if (value.Min < existing.Min)
-                            existing.Min = value.Min;
+            void AddRangeFacetResult(FacetResult result)
+            {
+                foreach (FacetValue value in result.Values)
+                {
+                    if (_rangeValues.TryGetValue(value.Range, out var rangeFacetValue) == false)
+                    {
+                        rangeFacetValue = CreateFacetValue(value);
 
-                        existing.Sum += value.Sum;
+                        _rangeValues[value.Range] = rangeFacetValue;
+                    }
+                    else
+                    {
+                        UpdateFacetValue(ref rangeFacetValue, value);
                     }
                 }
+            }
+
+            FacetValue CreateFacetValue(FacetValue value)
+            {
+                return new FacetValue
+                {
+                    Average = value.Average,
+                    Count = value.Count,
+                    Max = value.Max,
+                    Min = value.Min,
+                    Name = value.Name,
+                    Range = value.Range,
+                    Sum = value.Sum
+                };
+            }
+
+            void UpdateFacetValue(ref FacetValue facetValue, FacetValue value)
+            {
+                facetValue.Count += value.Count;
+                facetValue.Average += value.Average; // we'll convert it to avg value at the end of processing
+
+                if (value.Max > facetValue.Max)
+                    facetValue.Max = value.Max;
+
+                if (value.Min < facetValue.Min)
+                    facetValue.Min = value.Min;
+
+                facetValue.Sum += value.Sum;
             }
         }
 
         public FacetResult GetResult()
         {
-            if (_options != null)
+            if (IsRangeFacet)
             {
-                var valuesCount = 0;
-                var valuesSumOfCounts = 0;
-                var values = new List<FacetValue>();
-                List<string> allTerms = IndexFacetReadOperationBase.GetAllTermsSorted(_options.TermSortMode, _valuesByRanges, x => x.Value.Count);
-
-                var start = _options.Start;
-                var pageSize = Math.Min(allTerms.Count, _options.PageSize);
-
-                foreach (var term in allTerms.Skip(start).TakeWhile(term => valuesCount < pageSize))
-                {
-                    valuesCount++;
-                    
-                    var facetValues = _valuesByRanges[term];
-
-                    values.Add(facetValues);
-
-                    valuesSumOfCounts += facetValues.Count;
-                }
-
-                var previousHits = allTerms.Take(start).Sum(allTerm =>
-                {
-                    if (_valuesByRanges.TryGetValue(allTerm, out var facetValues) == false || facetValues == null || facetValues.Count == 0)
-                        return 0;
-
-                    return facetValues.Count;
-                });
-
-                _combined.Values = values;
-                _combined.RemainingTermsCount = allTerms.Count - (start + valuesCount);
-                _combined.RemainingHits = _valuesByRanges.Values.Sum(x => x.Count) - (previousHits + valuesSumOfCounts);
-
-                if (_options.IncludeRemainingTerms)
-                    _combined.RemainingTerms = allTerms.Skip(start + valuesCount).ToList();
-            }
-            else
-            {
-                foreach (var item in _valuesByRanges)
+                foreach (var item in _rangeValues)
                 {
                     var value = item.Value;
 
-                    if (value.Average.HasValue)
-                    {
-                        if (value.Count == 0)
-                            value.Average = double.NaN;
-                        else
-                            value.Average /= value.Count;
-                    }
+                    UpdateAverageValue(value);
 
                     _combined.Values.Add(value);
                 }
             }
+            else
+            {
+                List<string> allTerms = IndexFacetReadOperationBase.GetAllTermsSorted(_options.TermSortMode, _values);
+
+                var start = _options.Start;
+                var pageSize = Math.Min(allTerms.Count, _options.PageSize);
+
+                var values = IndexFacetReadOperationBase.GetSortedAndPagedFacetValues(allTerms, start, pageSize, _values, UpdateAverageValue);
+
+                _combined.Values = values.Values;
+                _combined.RemainingTermsCount = values.RemainingTermsCount;
+                _combined.RemainingHits = values.RemainingHits;
+
+                if (_options.IncludeRemainingTerms)
+                    _combined.RemainingTerms = allTerms.Skip(start + values.ValuesCount).ToList();
+            }
+
             return _combined;
+
+            void UpdateAverageValue(FacetValue value)
+            {
+                if (value.Average.HasValue)
+                {
+                    if (value.Count == 0)
+                        value.Average = double.NaN;
+                    else
+                        value.Average /= value.Count;
+                }
+            }
         }
     }
 }

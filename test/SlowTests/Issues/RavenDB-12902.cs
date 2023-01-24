@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task AfterAggregationQueryExecutedShouldBeExecutedOnlyOnce(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -496,7 +496,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetValidStatisticsInAggregationQuery(Options options)
         {
             using (var store = GetDocumentStore(options))

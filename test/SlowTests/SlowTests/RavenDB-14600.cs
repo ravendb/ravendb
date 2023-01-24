@@ -18,7 +18,7 @@ namespace SlowTests.SlowTests
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanIncludeFacetResult(Options options)
         {
             using var store = GetDocumentStore(options);

@@ -202,8 +202,8 @@ public class RavenIntegration : RavenTestBase
 
     private record DoubleItem(double Value);
 
-    [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenTheory(RavenTestCategory.Facets)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
     public void CanCreateFacetsOnDynamicFields(Options options)
     {
         using var store = DatabaseForDynamicIndex(options);

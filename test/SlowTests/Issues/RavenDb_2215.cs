@@ -51,7 +51,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueryReturningMultipleValues(Options options)
         {
 
@@ -100,7 +100,7 @@ namespace SlowTests.Issues
 
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueryReturningMultipleValuesWithDifferentNames(Options options)
         {
             using (var store = GetDocumentStore())
@@ -150,7 +150,7 @@ namespace SlowTests.Issues
 
         }
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueryCantReturnMultipleAggregationValuesWithSameName(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -199,7 +199,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryReturningMultipleValuesOnDifferentArguments(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -239,7 +239,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanQueryReturningMultipleValuesOnDifferentArguments_Legacy(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -281,7 +281,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueryReturningMultipleValuesSameArg(Options options)
         {
             using (var store = GetDocumentStore(options))

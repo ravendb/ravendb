@@ -68,14 +68,15 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
 
                 var facetSetupDocument = FacetSetup.Create(facetField.FacetSetupDocumentId, document);
 
-                foreach (var facet in facetSetupDocument.Facets)
+                foreach (var facet in facetSetupDocument.Facets) // options aren't applicable for range facets
                 {
                     AddFacetOptions(facet.FieldName, facet.Options ?? FacetOptions.Default);
                 }
             }
-            else if (facetField.Ranges == null || facetField.Ranges.Count == 0)
+            else if (facetField.Ranges == null || facetField.Ranges.Count == 0) // options aren't applicable for range facets
             {
-                AddFacetOptions(facetField.Name, facetField.HasOptions ? facetField.GetOptions(_context, _query.QueryParameters) : FacetOptions.Default);
+                if (facetField.Name != null)
+                    AddFacetOptions(facetField.Name, facetField.HasOptions ? facetField.GetOptions(_context, _query.QueryParameters) : FacetOptions.Default);
             }
         }
 
@@ -97,6 +98,7 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
         void AddFacetOptions(string name, FacetOptions options)
         {
             _optionsByFacet ??= new Dictionary<string, FacetOptions>();
+
             _optionsByFacet.Add(name, options);
         }
     }
@@ -105,7 +107,7 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
     {
         var commands = GetOperationCommands();
         
-        var operation = new ShardedFacetedQueryOperation(_optionsByFacet, _query, _context, _requestHandler, commands, _existingResultEtag?.ToString());
+        var operation = new ShardedFacetedQueryOperation(_optionsByFacet, _requestHandler, commands, _existingResultEtag?.ToString());
 
         var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(commands.Keys.ToArray(), operation, _token);
 
