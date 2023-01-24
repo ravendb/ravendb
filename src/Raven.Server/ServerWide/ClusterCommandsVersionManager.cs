@@ -158,6 +158,9 @@ namespace Raven.Server.ServerWide
             [nameof(PutDatabaseStudioConfigurationCommand)] = 54_001,
             [nameof(PutDatabaseSettingsCommand)] = 54_001,
             [nameof(PutDatabaseClientConfigurationCommand)] = 54_001,
+            
+            [nameof(PutIndexHistoryCommand)] = 54_101,
+            [nameof(DeleteIndexHistoryCommand)] = 54_101,
         };
 
         public static bool CanPutCommand(string command)

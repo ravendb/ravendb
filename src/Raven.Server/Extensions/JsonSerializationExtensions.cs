@@ -1,12 +1,33 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Extensions
 {
     public static class JsonSerializationExtensions
     {
+        public static DynamicJsonValue ToJson(this IndexHistoryEntry entry)
+        {
+            var result = new DynamicJsonValue
+            {
+                [nameof(IndexHistoryEntry.Source)] = entry.Source, 
+                [nameof(IndexHistoryEntry.CreatedAt)] = entry.CreatedAt,
+                [nameof(IndexHistoryEntry.Definition)] = entry.Definition.ToJson()
+            };
+            
+            if (entry.RollingDeployment != null)
+            {
+                var rollingObject = new DynamicJsonValue();
+                foreach (var rollingIndexDeployment in entry.RollingDeployment)
+                    rollingObject[rollingIndexDeployment.Key] = rollingIndexDeployment.Value.ToJson();
+                result[nameof(IndexHistoryEntry.RollingDeployment)] = rollingObject;
+            }
+
+            return result;
+        }
+        
         public static DynamicJsonValue ToJson(this IndexDefinition definition)
         {
             var result = new DynamicJsonValue();

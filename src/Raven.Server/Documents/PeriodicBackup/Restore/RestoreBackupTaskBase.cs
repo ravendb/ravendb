@@ -738,6 +738,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.ElasticSearchConnectionStrings = smugglerDatabaseRecord.ElasticSearchConnectionStrings;
                     databaseRecord.QueueEtls = smugglerDatabaseRecord.QueueEtls;
                     databaseRecord.QueueConnectionStrings = smugglerDatabaseRecord.QueueConnectionStrings;
+                    databaseRecord.IndexesHistory = smugglerDatabaseRecord.IndexesHistory;
 
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
