@@ -207,26 +207,11 @@ namespace Raven.Client.ServerWide
             }
 
             Indexes[definition.Name] = definition;
-            List<IndexHistoryEntry> history;
-            if (IndexesHistory == null)
-            {
-                IndexesHistory = new Dictionary<string, List<IndexHistoryEntry>>();
-            }
-
-            if (IndexesHistory.TryGetValue(definition.Name, out history) == false)
-            {
-                history = new List<IndexHistoryEntry>();
-                IndexesHistory.Add(definition.Name, history);
-            }
-
-            history.Insert(0, new IndexHistoryEntry { Definition = definition, CreatedAt = createdAt, Source = source });
-
-            if (history.Count > revisionsToKeep)
-            {
-                history.RemoveRange(revisionsToKeep, history.Count - revisionsToKeep);
-            }
-
-            if (IsRolling(definition.DeploymentMode, globalDeploymentMode))
+            var isRolling = IsRolling(definition.DeploymentMode, globalDeploymentMode);
+            
+            AddIndexHistory(definition, source, revisionsToKeep, createdAt);
+            
+            if (isRolling)
             {
                 definition.ClusterState ??= new ClusterState();
                 definition.ClusterState.LastRollingDeploymentIndex = raftIndex;
@@ -235,6 +220,48 @@ namespace Raven.Client.ServerWide
                     InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
                     definition.DeploymentMode = IndexDeploymentMode.Rolling;
                 }
+            }
+        }
+        
+        public void AddIndexHistory(IndexDefinition definition, string source, int revisionsToKeep, DateTime createdAt, Dictionary<string, RollingIndexDeployment> rollingIndexDeployment = null, bool isFromCommand = false, bool isRolling = false)
+        {
+            IndexesHistory ??= new();
+            List<IndexHistoryEntry> history;
+            if (IndexesHistory.TryGetValue(definition.Name, out history) == false)
+            {
+                history = new List<IndexHistoryEntry>();
+                IndexesHistory.Add(definition.Name, history);
+            }
+            
+            bool isNewIndexHistory = true;
+            if (history.Count > 0)
+            {
+                var lastEntry = history[0];
+                var sameDefinition = definition.Compare(lastEntry.Definition) == IndexDefinitionCompareDifferences.None;
+                var currentIsFromSmuggler = source == "Smuggler";
+                var isCreatedBeforeCurrent = createdAt.CompareTo(lastEntry.CreatedAt) > 0;
+                isNewIndexHistory = isRolling == false && (sameDefinition && currentIsFromSmuggler && isCreatedBeforeCurrent) == false;
+            }
+            
+            if (isNewIndexHistory)
+            {
+                var ihe = new IndexHistoryEntry {Definition = definition, CreatedAt = createdAt, Source = source};
+                if (isFromCommand)
+                    history.Add(ihe);
+                else
+                    history.Insert(0, ihe);
+            }
+            else
+            {
+                var latestVersion = history[0];
+                latestVersion.CreatedAt = createdAt;
+                latestVersion.Source = source;
+                latestVersion.RollingDeployment = rollingIndexDeployment;
+            }
+
+            if (history.Count > revisionsToKeep)
+            {
+                history.RemoveRange(revisionsToKeep, history.Count - revisionsToKeep);
             }
         }
 
@@ -417,12 +444,15 @@ namespace Raven.Client.ServerWide
             return count;
         }
     }
-
+    
     public class IndexHistoryEntry
     {
         public IndexDefinition Definition { get; set; }
+        
         public string Source { get; set; }
+        
         public DateTime CreatedAt { get; set; }
+        
         public Dictionary<string, RollingIndexDeployment> RollingDeployment { get; set; }
     }
 

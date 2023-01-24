@@ -139,7 +139,7 @@ namespace Raven.Server.ServerWide
         public static Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
 
         public static Func<BlittableJsonReaderObject, PostgreSqlConfiguration> PostgreSqlConfiguration = GenerateJsonDeserializationRoutine<PostgreSqlConfiguration>();
-
+        
         public static readonly Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
             [nameof(UnregisterReplicationHubAccessCommand)] = GenerateJsonDeserializationRoutine<UnregisterReplicationHubAccessCommand>(),
@@ -252,7 +252,9 @@ namespace Raven.Server.ServerWide
             [nameof(EditPostgreSqlConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditPostgreSqlConfigurationCommand>(),
             [nameof(PutDatabaseStudioConfigurationCommand)] = GenerateJsonDeserializationRoutine<PutDatabaseStudioConfigurationCommand>(),
             [nameof(PutDatabaseSettingsCommand)] = GenerateJsonDeserializationRoutine<PutDatabaseSettingsCommand>(),
-            [nameof(PutDatabaseClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<PutDatabaseClientConfigurationCommand>()
+            [nameof(PutDatabaseClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<PutDatabaseClientConfigurationCommand>(),
+            [nameof(PutIndexHistoryCommand)] = GenerateJsonDeserializationRoutine<PutIndexHistoryCommand>(),
+            [nameof(DeleteIndexHistoryCommand)] = GenerateJsonDeserializationRoutine<DeleteIndexHistoryCommand>()
         };
     }
 }

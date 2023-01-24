@@ -636,6 +636,37 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
+                if (reader.TryGet(nameof(databaseRecord.IndexesHistory), out BlittableJsonReaderObject indexesHistory) && indexesHistory != null)
+                {
+                    try
+                    {
+                        databaseRecord.IndexesHistory = new();
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < indexesHistory.Count; i++)
+                        {
+                            indexesHistory.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderArray bjra)
+                            {
+                                var list = new List<IndexHistoryEntry>();
+                                foreach (BlittableJsonReaderObject element in bjra)
+                                    list.Add(JsonDeserializationCluster.IndexHistoryEntry(element));
+
+                                databaseRecord.IndexesHistory[propertyDetails.Name] = list;
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        databaseRecord.IndexesHistory = null; // skip when we hit a error.
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the IndexesHistory from smuggler file. Skipping.", e);
+                    }
+                }
+                
             });
 
             return databaseRecord;

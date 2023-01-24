@@ -297,6 +297,8 @@ namespace Raven.Client.Documents.Smuggler
             public bool QueueEtlsUpdated { get; set; }
 
             public bool QueueConnectionStringsUpdated { get; set; }
+            
+            public bool IndexesHistoryUpdated { get; set; }
 
             public override DynamicJsonValue ToJson()
             {
@@ -380,6 +382,9 @@ namespace Raven.Client.Documents.Smuggler
                 if (PostreSQLConfigurationUpdated)
                     json[nameof(PostreSQLConfigurationUpdated)] = PostreSQLConfigurationUpdated;
 
+                if (IndexesHistoryUpdated)
+                    json[nameof(IndexesHistoryUpdated)] = IndexesHistoryUpdated;
+                
                 return json;
             }
 
@@ -464,6 +469,8 @@ namespace Raven.Client.Documents.Smuggler
                 if (PostreSQLConfigurationUpdated)
                     sb.AppendLine("- PostgreSQL Integration");
 
+                if (IndexesHistoryUpdated)
+                    sb.AppendLine("- Indexes History");
 
                 if (sb.Length == 0)
                     return string.Empty;

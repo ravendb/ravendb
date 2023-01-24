@@ -35,6 +35,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -1358,6 +1359,24 @@ namespace Raven.Server.Smuggler.Documents
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new AddQueueEtlCommand(etl, _database.Name, RaftIdGenerator.DontCareId)));
                     }
                     result.DatabaseRecord.QueueEtlsUpdated = true;
+                }
+
+                if (databaseRecord.IndexesHistory.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.IndexesHistory))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring Indexes History configuration from smuggler");
+                    
+                    foreach (var newIndexHistory in databaseRecord.IndexesHistory)
+                    {
+                        if (currentDatabaseRecord.IndexesHistory.ContainsKey(newIndexHistory.Key))
+                        {
+                            tasks.Add(_database.ServerStore.SendToLeaderAsync(new DeleteIndexHistoryCommand(newIndexHistory.Key, _database.Name, RaftIdGenerator.DontCareId)));
+                        }
+
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutIndexHistoryCommand(newIndexHistory.Key, newIndexHistory.Value, _database.Configuration.Indexing.HistoryRevisionsNumber, _database.Name, RaftIdGenerator.DontCareId)));
+                    }
+
+                    result.DatabaseRecord.IndexesHistoryUpdated = true;
                 }
 
                 if (tasks.Count == 0)
