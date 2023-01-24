@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
 
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void DateTime_Facet_Works_As_Expected(Options options)
         {
             using (var documentStore = GetDocumentStore(options))
@@ -120,10 +120,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Nested_DateTime_Facet_Works_As_Expected()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Nested_DateTime_Facet_Works_As_Expected(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
 
                 CreateIndexes(documentStore);
@@ -190,8 +191,9 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void Nested_Enumberables_DateTime_Facet_Works_As_Expected()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void Nested_Enumberables_DateTime_Facet_Works_As_Expected(Options options)
         {
             using (var documentStore = GetDocumentStore())
             {

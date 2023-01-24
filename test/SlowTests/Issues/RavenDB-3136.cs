@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void AggregateByIntegerShouldReturnResultWithValuesAndCountEvenWithLambdaExpression(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -54,7 +54,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void AggregateByIntegerShouldReturnResultWithValuesAndCount(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -84,7 +84,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void AggregateByStringShouldReturnResultWithValuesAndCount(Options options)
         {
             using (var store = GetDocumentStore(options))

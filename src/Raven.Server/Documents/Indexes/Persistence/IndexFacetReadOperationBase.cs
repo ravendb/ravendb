@@ -44,9 +44,9 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
         }
     }
 
-    protected class FacetValues
+    internal class FacetValues
     {
-        private static readonly FacetAggregationField Default = new FacetAggregationField();
+        internal static readonly FacetAggregationField Default = new FacetAggregationField();
 
         private readonly bool _legacy;
         private readonly Dictionary<FacetAggregationField, FacetValue> _values = new Dictionary<FacetAggregationField, FacetValue>();
@@ -80,12 +80,32 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
             _values[field] = new FacetValue {Range = range, Name = string.IsNullOrWhiteSpace(field.DisplayName) ? field.Name : field.DisplayName};
         }
 
+        public void Add(FacetAggregationField field, FacetValue value)
+        {
+            if (_legacy)
+            {
+                if (Any)
+                    return;
+
+                _values[Default] = value;
+                return;
+            }
+
+            Any = true;
+            _values[field] = value;
+        }
+
         public FacetValue Get(FacetAggregationField field)
         {
             if (_legacy)
                 return _values[Default];
 
             return _values[field];
+        }
+
+        public bool TryGet(FacetAggregationField field, out FacetValue result)
+        {
+            return _values.TryGetValue(field, out result);
         }
 
         public IEnumerable<FacetValue> GetAll()
@@ -102,7 +122,7 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
         }
     }
 
-    protected static void UpdateFacetResults(Dictionary<string, FacetedQueryParser.FacetResult> results, IndexQueryServerSide query,
+    internal static void UpdateFacetResults(Dictionary<string, FacetedQueryParser.FacetResult> results, IndexQueryServerSide query,
         Dictionary<string, Dictionary<string, FacetValues>> facetsByName)
     {
         foreach (var result in results)
@@ -110,9 +130,7 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
             if (result.Value.Ranges != null && result.Value.Ranges.Count > 0)
                 continue;
 
-            var valuesCount = 0;
-            var valuesSumOfCounts = 0;
-            var values = new List<FacetValue>();
+           
             List<string> allTerms;
             if (facetsByName?.TryGetValue(result.Key, out var groups) is null or false || groups == null)
                 continue;
@@ -122,7 +140,7 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
 
             if (query.ReturnRawFacetResults == false)
             {
-                allTerms = GetAllTermsSorted(result.Value.Options.TermSortMode, groups, x => x.Value.Count);
+                allTerms = GetAllTermsSorted(result.Value.Options.TermSortMode, groups);
 
                 start = result.Value.Options.Start;
                 pageSize = Math.Min(allTerms.Count, result.Value.Options.PageSize);
@@ -135,59 +153,86 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
                 pageSize = int.MaxValue;
             }
 
-            foreach (var term in allTerms.Skip(start).TakeWhile(term => valuesCount < pageSize))
-            {
-                valuesCount++;
-
-                if (groups.TryGetValue(term, out var facetValues) == false || facetValues == null || facetValues.Any == false)
-                {
-                    values.Add(new FacetValue {Range = term});
-                    continue;
-                }
-
-                values.AddRange(facetValues.GetAll());
-
-                valuesSumOfCounts += facetValues.Count;
-            }
-
-            var previousHits = allTerms.Take(start).Sum(allTerm =>
-            {
-                if (groups.TryGetValue(allTerm, out var facetValues) == false || facetValues == null || facetValues.Any == false)
-                    return 0;
-
-                return facetValues.Count;
-            });
+            var values = GetSortedAndPagedFacetValues(allTerms, start, pageSize, groups);
 
             result.Value.Result = new FacetResult
             {
                 Name = result.Key,
-                Values = values,
-                RemainingTermsCount = allTerms.Count - (start + valuesCount),
-                RemainingHits = groups.Values.Sum(x => x.Count) - (previousHits + valuesSumOfCounts)
+                Values = values.Values,
+                RemainingTermsCount = values.RemainingTermsCount,
+                RemainingHits = values.RemainingHits
             };
 
             if (result.Value.Options.IncludeRemainingTerms)
-                result.Value.Result.RemainingTerms = allTerms.Skip(start + valuesCount).ToList();
+                result.Value.Result.RemainingTerms = allTerms.Skip(start + values.ValuesCount).ToList();
         }
     }
 
-    internal static List<string> GetAllTermsSorted<T>(FacetTermSortMode sortMode, Dictionary<string, T> values, Func<KeyValuePair<string, T>, int> countSelector)
+    internal static (List<FacetValue> Values, int RemainingTermsCount, int RemainingHits, int ValuesCount) GetSortedAndPagedFacetValues(List<string> allTerms, int start, int pageSize,
+        Dictionary<string, FacetValues> groups, Action<FacetValue> onFacetValueAdd = null)
+    {
+        var valuesCount = 0;
+        var valuesSumOfCounts = 0;
+        var values = new List<FacetValue>();
+
+        foreach (var term in allTerms.Skip(start).TakeWhile(term => valuesCount < pageSize))
+        {
+            valuesCount++;
+
+            if (groups.TryGetValue(term, out var facetValues) == false || facetValues == null || facetValues.Any == false)
+            {
+                values.Add(new FacetValue { Range = term });
+                continue;
+            }
+
+            var allValues = facetValues.GetAll();
+
+            if (onFacetValueAdd is null)
+                values.AddRange(allValues);
+            else
+            {
+                foreach (var item in allValues)
+                {
+                    onFacetValueAdd(item);
+
+                    values.Add(item);
+                }
+            }
+
+            valuesSumOfCounts += facetValues.Count;
+        }
+
+        var previousHits = allTerms.Take(start).Sum(allTerm =>
+        {
+            if (groups.TryGetValue(allTerm, out var facetValues) == false || facetValues == null || facetValues.Any == false)
+                return 0;
+
+            return facetValues.Count;
+        });
+
+        var remainingTermsCount = allTerms.Count - (start + valuesCount);
+        var remainingHits = groups.Values.Sum(x => x.Count) - (previousHits + valuesSumOfCounts);
+
+        return (values, remainingTermsCount, remainingHits, valuesCount);
+    }
+
+    internal static List<string> GetAllTermsSorted(FacetTermSortMode sortMode, Dictionary<string, FacetValues> values)
     {
         List<string> allTerms;
 
         switch (sortMode)
         {
             case FacetTermSortMode.ValueAsc:
-                allTerms = new List<string>(values.OrderBy(x => x.Key).ThenBy(countSelector).Select(x => x.Key));
+                allTerms = new List<string>(values.OrderBy(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
                 break;
             case FacetTermSortMode.ValueDesc:
-                allTerms = new List<string>(values.OrderByDescending(x => x.Key).ThenBy(countSelector).Select(x => x.Key));
+                allTerms = new List<string>(values.OrderByDescending(x => x.Key).ThenBy(x => x.Value.Count).Select(x => x.Key));
                 break;
             case FacetTermSortMode.CountAsc:
-                allTerms = new List<string>(values.OrderBy(countSelector).ThenBy(x => x.Key).Select(x => x.Key));
+                allTerms = new List<string>(values.OrderBy(x => x.Value.Count).ThenBy(x => x.Key).Select(x => x.Key));
                 break;
             case FacetTermSortMode.CountDesc:
-                allTerms = new List<string>(values.OrderByDescending(countSelector).ThenBy(x => x.Key).Select(x => x.Key));
+                allTerms = new List<string>(values.OrderByDescending(x => x.Value.Count).ThenBy(x => x.Key).Select(x => x.Key));
                 break;
             default:
                 throw new ArgumentException($"Could not understand '{sortMode}'");

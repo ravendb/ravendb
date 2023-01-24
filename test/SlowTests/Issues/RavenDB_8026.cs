@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void OptionsShouldWork(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                         .OrderByDescending(x => x)
                         .ToList();
 
-                    Assert.Equal(counts, orderedCounts);
+                    Assert.Equal(orderedCounts, counts);
                 }
             }
         }

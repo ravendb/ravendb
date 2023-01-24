@@ -12,8 +12,8 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void SupportForFacetOnAllResults(Options options)
         {
             using (var store = GetDocumentStore(options))

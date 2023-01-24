@@ -71,8 +71,8 @@ namespace SlowTests.Issues
 
         }
 
-        [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task TestGeneratedFacetsTest(Options options)
         {
             using (var store = GetDocumentStore(options))
