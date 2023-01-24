@@ -1276,7 +1276,8 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                                             $"The supported time formats are:{Environment.NewLine}" +
                                             $"{string.Join(Environment.NewLine, SupportedDateTimeFormats.OrderBy(f => f.Length))}");
 
-            return TimeSeriesStorage.EnsureMillisecondsPrecision(date);
+            date = TimeSeriesStorage.EnsureMillisecondsPrecision(date);
+            return DateTime.SpecifyKind(date, DateTimeKind.Utc);
         }
 
         private static readonly string[] SupportedDateTimeFormats =
