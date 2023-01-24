@@ -13,7 +13,7 @@ interface OngoingTaskEtlProgressTooltipProps {
 export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressTooltipProps) {
     const { target, nodeInfo, showPreview } = props;
 
-    if (nodeInfo.status === "error") {
+    if (nodeInfo.status === "failure") {
         return (
             <PopoverWithHover target={target} placement="top">
                 <div className="text-danger flex-horizontal">
@@ -29,7 +29,7 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
         );
     }
 
-    if (nodeInfo.status !== "loaded") {
+    if (nodeInfo.status !== "success") {
         return null;
     }
 

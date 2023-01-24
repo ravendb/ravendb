@@ -597,7 +597,7 @@ function matchesAnyIndexStatus(
      */
 
     const anyMatch = (index: IndexSharedInfo, predicate: (index: IndexNodeInfoDetails) => boolean) =>
-        index.nodesInfo.some((x) => x.status === "loaded" && predicate(x.details));
+        index.nodesInfo.some((x) => x.status === "success" && predicate(x.details));
 
     return (
         (status.includes("Normal") && anyMatch(index, (x) => IndexUtils.isNormalState(x, globalIndexingStatus))) ||

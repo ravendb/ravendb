@@ -70,11 +70,11 @@ interface ManualBackupProps {
 function ManualBackup(props: ManualBackupProps) {
     const { model } = props;
 
-    if (model.status === "error") {
+    if (model.status === "failure") {
         return <div className="bg-danger">Unable to load data: {model.error.responseJSON.Message}</div>;
     }
 
-    if (model.status === "loading" || model.status === "notLoaded") {
+    if (model.status === "loading" || model.status === "idle") {
         return (
             <div className="manual-backup">
                 <Spinner />
@@ -142,7 +142,7 @@ export function BackupsPage(props: BackupsPageProps) {
 
     const { tasksService } = useServices();
     const [manualBackup, setManualBackup] = useState<loadableData<manualBackupListModel>>({
-        status: "notLoaded",
+        status: "idle",
         data: null,
     });
 
@@ -182,13 +182,13 @@ export function BackupsPage(props: BackupsPageProps) {
 
                 setManualBackup({
                     data: manualBackup.Status ? mapManualBackup(manualBackup.Status) : null,
-                    status: "loaded",
+                    status: "success",
                 });
             } catch (e) {
                 setManualBackup({
                     data: null,
                     error: e,
-                    status: "error",
+                    status: "failure",
                 });
             }
         },
@@ -206,7 +206,7 @@ export function BackupsPage(props: BackupsPageProps) {
     const loadMissing = async () => {
         if (tasks.tasks.length > 0) {
             const loadTasks = tasks.tasks[0].nodesInfo.map(async (nodeInfo) => {
-                if (nodeInfo.status === "notLoaded") {
+                if (nodeInfo.status === "idle") {
                     await fetchTasks(nodeInfo.location);
                 }
             });

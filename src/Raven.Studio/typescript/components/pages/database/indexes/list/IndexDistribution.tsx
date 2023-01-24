@@ -49,7 +49,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
 
     return (
         <div ref={setNode}>
-            <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "notLoaded"}>
+            <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}>
                 {sharded && shard}
                 <div className={classNames("node", { top: !sharded })}>
                     {!sharded && <i className="icon-node"></i>}
@@ -91,7 +91,7 @@ export function IndexDistribution(props: IndexDistributionProps) {
     const { index, globalIndexingStatus, showStaleReason, openFaulty } = props;
 
     const totalErrors = index.nodesInfo
-        .filter((x) => x.status === "loaded")
+        .filter((x) => x.status === "success")
         .reduce((prev, current) => prev + current.details.errorCount, 0);
     const estimatedEntries = IndexUtils.estimateEntriesCount(index)?.toLocaleString() ?? "-";
 
@@ -174,7 +174,7 @@ interface JoinedIndexProgressProps {
 export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
     const { index } = props;
 
-    if (index.nodesInfo.some((x) => x.status === "error")) {
+    if (index.nodesInfo.some((x) => x.status === "failure")) {
         return (
             <ProgressCircle inline state="failed" icon="icon-cancel">
                 Load error
@@ -239,7 +239,7 @@ export function JoinedIndexProgress(props: JoinedIndexProgressProps) {
 export function IndexProgress(props: IndexProgressProps) {
     const { nodeInfo } = props;
 
-    if (nodeInfo.status === "error") {
+    if (nodeInfo.status === "failure") {
         return (
             <ProgressCircle state="failed" icon="icon-cancel">
                 Load error

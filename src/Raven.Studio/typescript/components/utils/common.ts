@@ -1,10 +1,44 @@
 ﻿import { MouseEvent, MouseEventHandler } from "react";
 import { Story, StoryFn } from "@storybook/react";
+import { loadableData } from "components/models/common";
 
 export function withPreventDefault(action: (...args: any[]) => void): MouseEventHandler<HTMLElement> {
     return (e: MouseEvent<HTMLElement>) => {
         e.preventDefault();
         action();
+    };
+}
+
+export function createIdleState(): loadableData<any> {
+    return {
+        data: null,
+        status: "idle",
+        error: null,
+    };
+}
+
+export function createSuccessState<T>(data: T): loadableData<T> {
+    return {
+        data,
+        error: null,
+        status: "success",
+    };
+}
+
+export function createLoadingState<T>(previousState?: loadableData<T>): loadableData<T> {
+    return {
+        error: null,
+        data: null,
+        ...previousState,
+        status: "loading",
+    };
+}
+
+export function createFailureState(error: string): loadableData<any> {
+    return {
+        error,
+        data: null,
+        status: "failure",
     };
 }
 

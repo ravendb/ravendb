@@ -103,7 +103,7 @@ function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
 function mapToIndexNodeInfo(stats: IndexStats, location: databaseLocationSpecifier): IndexNodeInfo {
     return {
         location,
-        status: "loaded",
+        status: "success",
         details: {
             errorCount: stats.ErrorsCount,
             entriesCount: stats.EntriesCount,
@@ -119,7 +119,7 @@ function mapToIndexNodeInfo(stats: IndexStats, location: databaseLocationSpecifi
 function initNodesInfo(locations: databaseLocationSpecifier[]): IndexNodeInfo[] {
     return locations.map((location) => ({
         location,
-        status: "notLoaded",
+        status: "idle",
         details: null,
         progress: null,
     }));
@@ -214,7 +214,7 @@ export const indexesStatsReducer: Reducer<IndexesStatsState, IndexesStatsReducer
                         databaseLocationComparator(x.location, incomingLocation)
                     );
 
-                    nodeInfo.status = "error";
+                    nodeInfo.status = "failure";
                     nodeInfo.details = null;
                     nodeInfo.loadError = error;
                 });
