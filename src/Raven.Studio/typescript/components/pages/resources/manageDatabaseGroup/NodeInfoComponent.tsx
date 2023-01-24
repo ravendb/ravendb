@@ -1,6 +1,5 @@
-﻿import React, { useCallback } from "react";
+﻿import React from "react";
 import {
-    Badge,
     Button,
     DropdownItem,
     DropdownMenu,
@@ -8,10 +7,6 @@ import {
     UncontrolledDropdown,
     UncontrolledTooltip,
 } from "reactstrap";
-import genUtils from "common/generalUtils";
-import assertUnreachable from "components/utils/assertUnreachable";
-import app from "durandal/app";
-import showDataDialog from "viewmodels/common/showDataDialog";
 import useId from "hooks/useId";
 import classNames from "classnames";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
@@ -19,11 +14,9 @@ import { useDraggableItem } from "hooks/useDraggableItem";
 import { NodeInfo } from "components/models/databases";
 import appUrl from "common/appUrl";
 import {
-    DatabaseGroup,
     DatabaseGroupActions,
     DatabaseGroupError,
     DatabaseGroupItem,
-    DatabaseGroupList,
     DatabaseGroupNode,
     DatabaseGroupType,
 } from "components/common/DatabaseGroup";
@@ -87,12 +80,12 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
                 {canDelete ? (
                     <UncontrolledDropdown key="can-delete">
                         <DropdownToggle color="danger" caret outline size="xs" className="rounded-pill">
-                            <i className="icon-disconnected" />
+                            <i className="icon-disconnected me-1" />
                             Delete from group
                         </DropdownToggle>
                         <DropdownMenu>
                             <DropdownItem onClick={() => deleteFromGroup(node.tag, false)}>
-                                <i className="icon-stop" />
+                                <i className="icon-disconnected" />
                                 <span>Soft Delete</span>&nbsp;
                                 <br />
                                 <small>stop replication and keep database files on the node</small>
@@ -110,10 +103,14 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
                         <UncontrolledDropdown id={deleteLockId}>
                             <DropdownToggle color="danger" caret disabled size="xs" className="rounded-pill">
                                 <i
-                                    className={classNames("icon-trash", {
-                                        "icon-addon-exclamation": databaseLockMode === "PreventDeletesError",
-                                        "icon-addon-cancel": databaseLockMode === "PreventDeletesIgnore",
-                                    })}
+                                    className={classNames(
+                                        "icon-trash",
+                                        {
+                                            "icon-addon-exclamation": databaseLockMode === "PreventDeletesError",
+                                            "icon-addon-cancel": databaseLockMode === "PreventDeletesIgnore",
+                                        },
+                                        "me-1"
+                                    )}
                                 />
                                 Delete from group
                             </DropdownToggle>
@@ -220,7 +217,7 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
 interface NodeInfoReorderComponentProps {
     node: NodeInfo;
     findCardIndex: (node: NodeInfo) => number;
-    setOrder: (action: (state: NodeInfo[]) => NodeInfo[]) => void;
+    setOrder: (order: React.SetStateAction<NodeInfo[]>) => void;
 }
 
 const tagExtractor = (node: NodeInfo) => node.tag;

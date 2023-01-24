@@ -11,24 +11,38 @@ import {
     DatabaseGroupList,
     DatabaseGroupNode,
 } from "components/common/DatabaseGroup";
+import { BoundsLiteral } from "leaflet";
+import nodeInfo from "models/wizard/nodeInfo";
+import { Radio } from "components/common/Checkbox";
 
 interface ReorderNodesControllsProps {
     sortableMode: boolean;
     canSort: boolean;
     enableReorder: () => void;
     cancelReorder: () => void;
-    finishReorder: () => void;
+    onSave: () => Promise<void>;
 }
 
 export function ReorderNodesControlls(props: ReorderNodesControllsProps) {
-    const { canSort, sortableMode, enableReorder, cancelReorder, finishReorder } = props;
+    const { canSort, sortableMode, enableReorder, cancelReorder, onSave } = props;
+    const [saving, setSaving] = useState(false);
+
+    const onSaveClicked = async () => {
+        setSaving(true);
+        try {
+            await onSave();
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return !sortableMode ? (
         <Button disabled={canSort} onClick={enableReorder} className="me-2">
             <i className="icon-reorder me-1" /> Reorder nodes
         </Button>
     ) : (
         <>
-            <Button color="success" onClick={finishReorder}>
+            <Button color="success" onClick={onSaveClicked}>
                 <i className="icon-save" />
                 <span>Save</span>
             </Button>
@@ -41,77 +55,33 @@ export function ReorderNodesControlls(props: ReorderNodesControllsProps) {
 }
 
 interface ReorderNodesProps {
-    cancelReorder: () => void;
-    saveReorder: boolean;
-    nodes: NodeInfo[];
-    saveNewOrder: (order: string[], fixOrder: boolean) => Promise<void>;
+    nodes: NodeInfo[]; // TODO is this necesarry?
+    fixOrder: boolean;
+    setFixOrder: (fixOrder: React.SetStateAction<boolean>) => void;
+    newOrder: NodeInfo[];
+    setNewOrder: (newOrder: React.SetStateAction<NodeInfo[]>) => void;
 }
 
 export function ReorderNodes(props: ReorderNodesProps) {
-    const { saveReorder, cancelReorder, nodes, saveNewOrder } = props;
-
-    const [fixOrder, setFixOrder] = useState(false);
-    const [newOrder, setNewOrder] = useState<NodeInfo[]>(nodes);
+    const { nodes, fixOrder, setFixOrder, newOrder, setNewOrder } = props;
 
     const [, drop] = useDrop(() => ({ accept: "node" }));
 
     const findCardIndex = useCallback((node: NodeInfo) => newOrder.findIndex((x) => x.tag === node.tag), [newOrder]);
 
-    useEffect(() => {
-        console.log(saveReorder, "- Has changed");
-        saveNewOrder(
-            newOrder.map((x) => x.tag),
-            fixOrder
-        );
-    }, [saveReorder === true]);
-
     return (
         <div ref={drop}>
-            <div>
-                <div>Drag elements to set their order. Click &quot;Save&quot; when finished.</div>
-                <Button
-                    color="primary"
-                    onClick={() =>
-                        saveNewOrder(
-                            newOrder.map((x) => x.tag),
-                            fixOrder
-                        )
-                    }
-                >
-                    <i className="icon-save" />
-                    <span>Save</span>
-                </Button>
-                <Button onClick={cancelReorder}>
-                    <i className="icon-cancel" />
-                    <span>Cancel</span>
-                </Button>
-            </div>
-            <div className="flex-form">
-                <div className="form-group">
-                    <label className="control-label">After failure recovery</label>
-                    <div>
-                        <div className="btn-group">
-                            <Button className={classNames({ active: !fixOrder })} onClick={() => setFixOrder(false)}>
-                                Shuffle nodes order
-                            </Button>
-                            <Button onClick={() => setFixOrder(true)} className={classNames({ active: fixOrder })}>
-                                Try to maintain nodes order
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+            <div className="d-flex px-3">
+                <div className="me-2">After failure recovery:</div>
+                <Radio selected={!fixOrder} toggleSelection={() => setFixOrder(false)} className="me-2">
+                    Shuffle nodes order
+                </Radio>
+                <Radio selected={fixOrder} toggleSelection={() => setFixOrder(true)}>
+                    Try to maintain nodes order
+                </Radio>
             </div>
             <DatabaseGroup>
                 <DatabaseGroupList>
-                    <DatabaseGroupItem className="item-new">
-                        <DatabaseGroupNode icon="node-add" color="success" />
-                        <DatabaseGroupActions>
-                            <Button size="xs" color="success" outline className="rounded-pill" disabled={true}>
-                                <i className="icon-plus me-1" />
-                                Add node
-                            </Button>
-                        </DatabaseGroupActions>
-                    </DatabaseGroupItem>
                     {newOrder.map((node) => (
                         <NodeInfoReorderComponent
                             key={node.tag}

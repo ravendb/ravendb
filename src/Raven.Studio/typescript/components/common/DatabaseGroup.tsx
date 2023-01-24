@@ -128,7 +128,7 @@ export function DatabaseGroupError(props: DatabaseGroupErrorProps) {
     }, [node]);
 
     return lastErrorShort ? (
-        <div className="dbgroup-error bg-faded-danger">
+        <div className="dbgroup-error text-danger">
             <div>
                 <i className="icon-warning me-1" /> Error
             </div>

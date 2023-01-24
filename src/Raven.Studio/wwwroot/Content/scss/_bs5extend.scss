@@ -79,6 +79,7 @@ a.link {
 
         &.form-check-reverse {
             padding-right: $form-check-padding-start * $ratio;
+            padding-left: 0;
 
             .form-check-input {
                 margin-right: $form-check-padding-start * -1 * $ratio;
