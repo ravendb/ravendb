@@ -37,14 +37,14 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
 
     return (
         <div ref={setNode}>
-            <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "notLoaded"} key={key}>
+            <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"} key={key}>
                 {sharded && shard}
                 <div className={classNames("node", { top: !sharded })}>
                     {!sharded && <i className="icon-node"></i>}
 
                     {nodeInfo.location.nodeTag}
                 </div>
-                <div>{nodeInfo.status === "loaded" ? nodeInfo.details.taskConnectionStatus : ""}</div>
+                <div>{nodeInfo.status === "success" ? nodeInfo.details.taskConnectionStatus : ""}</div>
                 <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
                 <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
             </DistributionItem>
@@ -65,7 +65,7 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
 
     const visibleNodes = task.nodesInfo.filter(
-        (x) => x.status !== "loaded" || x.details.taskConnectionStatus !== "NotOnThisNode"
+        (x) => x.status !== "success" || x.details.taskConnectionStatus !== "NotOnThisNode"
     );
 
     const items = visibleNodes.map((nodeInfo) => {

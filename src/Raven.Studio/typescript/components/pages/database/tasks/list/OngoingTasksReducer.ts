@@ -282,7 +282,7 @@ function mapNodeInfo(task: OngoingTask): OngoingTaskNodeInfoDetails {
 function initNodesInfo(locations: databaseLocationSpecifier[]): OngoingTaskNodeInfo[] {
     return locations.map((l) => ({
         location: l,
-        status: "notLoaded",
+        status: "idle",
         details: null,
     }));
 }
@@ -310,7 +310,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
 
                     const newNodeInfo: OngoingTaskNodeInfo = {
                         location: incomingLocation,
-                        status: "loaded",
+                        status: "success",
                         details: mapNodeInfo(incomingTask),
                     };
 
@@ -367,7 +367,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                     const nodeInfo = task.nodesInfo.find((x) =>
                         databaseLocationComparator(x.location, incomingLocation)
                     );
-                    nodeInfo.status = "error";
+                    nodeInfo.status = "failure";
                     nodeInfo.details = {
                         error: error.responseJSON.Message,
                         responsibleNode: null,

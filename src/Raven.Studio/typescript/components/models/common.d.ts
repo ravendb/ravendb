@@ -1,4 +1,4 @@
-﻿export type loadStatus = "notLoaded" | "loading" | "loaded" | "error";
+﻿export type loadStatus = "idle" | "loading" | "success" | "failure";
 
 export interface loadableData<T> {
     data: T;

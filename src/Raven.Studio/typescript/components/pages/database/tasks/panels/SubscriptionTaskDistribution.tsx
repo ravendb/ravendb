@@ -15,7 +15,7 @@ export function SubscriptionTaskDistribution(props: OngoingEtlTaskDistributionPr
     const [uniqueTaskId] = useState(() => _.uniqueId("task-id"));
 
     const visibleNodes = task.nodesInfo.filter(
-        (x) => x.status !== "loaded" || x.details.taskConnectionStatus !== "NotOnThisNode"
+        (x) => x.status !== "success" || x.details.taskConnectionStatus !== "NotOnThisNode"
     );
 
     const items = (
@@ -39,7 +39,7 @@ export function SubscriptionTaskDistribution(props: OngoingEtlTaskDistributionPr
 
                 return (
                     <DistributionItem
-                        loading={nodeInfo.status === "loading" || nodeInfo.status === "notLoaded"}
+                        loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"}
                         id={id}
                         key={key}
                     >
@@ -49,7 +49,7 @@ export function SubscriptionTaskDistribution(props: OngoingEtlTaskDistributionPr
 
                             {nodeInfo.location.nodeTag}
                         </div>
-                        <div>{nodeInfo.status === "loaded" ? nodeInfo.details.taskConnectionStatus : ""}</div>
+                        <div>{nodeInfo.status === "success" ? nodeInfo.details.taskConnectionStatus : ""}</div>
                         <div>{hasError ? <i className="icon-warning text-danger" /> : "-"}</div>
                         <SubscriptionTaskProgress task={task} nodeInfo={nodeInfo} />
                         {/* TODO: <SubscriptionTaskProgressTooltip target={id} nodeInfo={nodeInfo} task={task} />*/}
@@ -92,7 +92,7 @@ interface SubscriptionTaskProgressProps {
 export function SubscriptionTaskProgress(props: SubscriptionTaskProgressProps) {
     const { nodeInfo } = props;
 
-    if (nodeInfo.status === "error") {
+    if (nodeInfo.status === "failure") {
         return <ProgressCircle state="running" icon="icon-warning" />;
     }
 

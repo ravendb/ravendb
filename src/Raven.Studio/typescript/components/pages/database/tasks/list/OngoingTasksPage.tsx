@@ -96,7 +96,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
     const loadMissing = async () => {
         if (tasks.tasks.length > 0) {
             const loadTasks = tasks.tasks[0].nodesInfo.map(async (nodeInfo) => {
-                if (nodeInfo.status === "notLoaded") {
+                if (nodeInfo.status === "idle") {
                     await fetchTasks(nodeInfo.location);
                 }
             });

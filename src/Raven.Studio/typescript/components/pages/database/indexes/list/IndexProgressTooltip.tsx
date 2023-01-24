@@ -28,7 +28,7 @@ interface IndexProgressTooltipProps {
 export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
     const { target, nodeInfo, index, globalIndexingStatus, showStaleReason } = props;
 
-    if (nodeInfo.status === "error") {
+    if (nodeInfo.status === "failure") {
         return (
             <PopoverWithHover target={target} placement="top">
                 <div className="text-danger flex-horizontal">

@@ -2,7 +2,7 @@ import { IndexesPage } from "./IndexesPage";
 import { ComponentMeta, ComponentStory } from "@storybook/react";
 import React from "react";
 import { withBootstrap5, withStorybookContexts } from "../../../../../test/storybookTestUtils";
-import { mockServices } from "../../../../../test/mocks/services/MockServices";
+import { mockServices } from "test/mocks/services/MockServices";
 import accessManager from "common/shell/accessManager";
 import { DatabasesStubs } from "../../../../../test/stubs/DatabasesStubs";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";

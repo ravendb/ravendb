@@ -189,7 +189,7 @@ export default class IndexUtils {
             const shardNumber = info.location.shardNumber;
             shardNumbers.add(shardNumber);
 
-            const canUseValue = info.status === "loaded" && info.details && !info.details.faulty;
+            const canUseValue = info.status === "success" && info.details && !info.details.faulty;
             if (canUseValue) {
                 const currentValue = perShardMax.get(shardNumber) ?? 0;
                 perShardMax.set(shardNumber, Math.max(currentValue, info.details.entriesCount));
