@@ -42,7 +42,10 @@ export function NodeGroup(props: NodeGroupProps) {
     const { nodes, deletionInProgress, db, lockMode } = props;
 
     const [sortableMode, setSortableMode] = useState(false);
-    const [saveReorder, setSaveReorder] = useState(false);
+
+    const [fixOrder, setFixOrder] = useState(false);
+    const [newOrder, setNewOrder] = useState<NodeInfo[]>(nodes.slice());
+
     const { isOperatorOrAbove } = useAccessManager();
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
@@ -57,15 +60,12 @@ export function NodeGroup(props: NodeGroupProps) {
 
     const enableReorder = useCallback(() => setSortableMode(true), []);
     const cancelReorder = useCallback(() => setSortableMode(false), []);
-    const finishReorder = useCallback(() => setSaveReorder(true), []);
-    //const finishReorderComplete = useCallback(() => setSaveReorder(false), []);
 
     const saveNewOrder = useCallback(
         async (tagsOrder: string[], fixOrder: boolean) => {
-            reportEvent("db-group", "save-order");
+            //TODO reportEvent("db-group", "save-order");
             await databasesService.reorderNodesInGroup(db, tagsOrder, fixOrder);
             setSortableMode(false);
-            setSaveReorder(false);
         },
         [databasesService, db, reportEvent]
     );
@@ -91,6 +91,13 @@ export function NodeGroup(props: NodeGroupProps) {
         [db, databasesService]
     );
 
+    const onSave = async () => {
+        await saveNewOrder(
+            newOrder.map((x) => x.tag),
+            fixOrder
+        );
+    };
+
     const existingTags = nodes ? nodes.map((x) => x.tag) : [];
     const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
 
@@ -108,17 +115,8 @@ export function NodeGroup(props: NodeGroupProps) {
                         canSort={canSort}
                         sortableMode={sortableMode}
                         cancelReorder={cancelReorder}
-                        finishReorder={finishReorder}
+                        onSave={onSave}
                     />
-                    {/* {!sortableMode && (
-                        <Button
-                            disabled={nodes.length === 1 || !isOperatorOrAbove()}
-                            onClick={enableReorder}
-                            className="me-2"
-                        >
-                            <i className="icon-reorder me-1" /> Reorder nodes
-                        </Button>
-                    )} */}
                 </RichPanelActions>
             </RichPanelHeader>
 
@@ -129,9 +127,10 @@ export function NodeGroup(props: NodeGroupProps) {
                         <DndProvider backend={HTML5Backend}>
                             <ReorderNodes
                                 nodes={nodes}
-                                saveNewOrder={saveNewOrder}
-                                cancelReorder={cancelReorder}
-                                saveReorder={saveReorder}
+                                fixOrder={fixOrder}
+                                setFixOrder={setFixOrder}
+                                newOrder={newOrder}
+                                setNewOrder={setNewOrder}
                             />
                         </DndProvider>
                     ) : (

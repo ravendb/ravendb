@@ -43,7 +43,10 @@ export function ShardsGroup(props: ShardsGroupProps) {
     const { nodes, lockMode, shard } = props;
 
     const [sortableMode, setSortableMode] = useState(false);
-    const [saveReorder, setSaveReorder] = useState(false);
+
+    const [fixOrder, setFixOrder] = useState(false);
+    const [newOrder, setNewOrder] = useState<NodeInfo[]>(nodes.slice());
+
     const { isOperatorOrAbove } = useAccessManager();
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
@@ -57,16 +60,24 @@ export function ShardsGroup(props: ShardsGroupProps) {
 
     const enableReorder = useCallback(() => setSortableMode(true), []);
     const cancelReorder = useCallback(() => setSortableMode(false), []);
-    const finishReorder = useCallback(() => setSaveReorder(true), []);
 
     const saveNewOrder = useCallback(
-        async (tagsOrder: string[]) => {
-            reportEvent("db-group", "save-order");
-            await databasesService.reorderShardsInGroup(shard, tagsOrder);
+        async (tagsOrder: string[], fixOrder: boolean) => {
+            //TODO reportEvent("db-group", "save-order");
+            await databasesService.reorderNodesInGroup(shard, tagsOrder, fixOrder);
             setSortableMode(false);
         },
         [databasesService, shard, reportEvent]
     );
+
+    // const saveNewOrder = useCallback(
+    //     async (tagsOrder: string[]) => {
+    //         reportEvent("db-group", "save-order");
+    //         await databasesService.reorderShardsInGroup(shard, tagsOrder);
+    //         setSortableMode(false);
+    //     },
+    //     [databasesService, shard, reportEvent]
+    // );
 
     const deleteNodeFromGroup = useCallback(
         (nodeTag: string, hardDelete: boolean) => {
@@ -88,6 +99,14 @@ export function ShardsGroup(props: ShardsGroupProps) {
         },
         [shard, databasesService]
     );
+
+    const onSave = async () => {
+        await saveNewOrder(
+            newOrder.map((x) => x.tag),
+            fixOrder
+        );
+    };
+
     const canSort = nodes.length === 1 || !isOperatorOrAbove();
     const existingTags = nodes ? nodes.map((x) => x.tag) : [];
     const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
@@ -106,37 +125,8 @@ export function ShardsGroup(props: ShardsGroupProps) {
                         canSort={canSort}
                         sortableMode={sortableMode}
                         cancelReorder={cancelReorder}
-                        finishReorder={finishReorder}
+                        onSave={onSave}
                     />
-                    {/* {!sortableMode ? (
-                        <Button
-                            disabled={}
-                            onClick={enableReorder}
-                            className="me-2"
-                        >
-                            <i className="icon-reorder me-1" /> Reorder nodes
-                        </Button>
-                    ) : (
-                        <>
-                            <Button
-                                color="primary"
-                                onClick={
-                                    () => console.log(test)
-                                    // saveNewOrder(
-                                    //     newOrder.map((x) => x.tag),
-                                    //     fixOrder
-                                    // )
-                                }
-                            >
-                                <i className="icon-save" />
-                                <span>Save</span>
-                            </Button>
-                            <Button onClick={cancelReorder}>
-                                <i className="icon-cancel" />
-                                <span>Cancel</span>
-                            </Button>
-                        </>
-                    )} */}
                 </RichPanelActions>
             </RichPanelHeader>
 
@@ -147,9 +137,10 @@ export function ShardsGroup(props: ShardsGroupProps) {
                         <DndProvider backend={HTML5Backend}>
                             <ReorderNodes
                                 nodes={nodes}
-                                saveNewOrder={saveNewOrder}
-                                cancelReorder={cancelReorder}
-                                saveReorder={saveReorder}
+                                fixOrder={fixOrder}
+                                setFixOrder={setFixOrder}
+                                newOrder={newOrder}
+                                setNewOrder={setNewOrder}
                             />
                         </DndProvider>
                     ) : (

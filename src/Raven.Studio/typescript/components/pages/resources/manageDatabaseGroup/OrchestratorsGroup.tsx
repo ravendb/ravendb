@@ -33,7 +33,10 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
     const { orchestrators, deletionInProgress, db } = props;
 
     const [sortableMode, setSortableMode] = useState(false);
-    const [saveReorder, setSaveReorder] = useState(false);
+
+    const [fixOrder, setFixOrder] = useState(false);
+    const [newOrder, setNewOrder] = useState<NodeInfo[]>(orchestrators.slice());
+
     const { isOperatorOrAbove } = useAccessManager();
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
@@ -46,16 +49,23 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
 
     const enableReorder = useCallback(() => setSortableMode(true), []);
     const cancelReorder = useCallback(() => setSortableMode(false), []);
-    const finishReorder = useCallback(() => setSaveReorder(true), []);
 
     const saveNewOrder = useCallback(
         async (tagsOrder: string[], fixOrder: boolean) => {
-            reportEvent("db-group", "save-order");
+            //TODO reportEvent("db-group", "save-order");
             await databasesService.reorderNodesInGroup(db, tagsOrder, fixOrder);
             setSortableMode(false);
         },
         [databasesService, db, reportEvent]
     );
+    // const saveNewOrder = useCallback(
+    //     async (tagsOrder: string[], fixOrder: boolean) => {
+    //         reportEvent("db-group", "save-order");
+    //         await databasesService.reorderNodesInGroup(db, tagsOrder, fixOrder);
+    //         setSortableMode(false);
+    //     },
+    //     [databasesService, db, reportEvent]
+    // );
 
     const deleteOrchestratorFromGroup = useCallback(
         (nodeTag: string) => {
@@ -73,6 +83,14 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
         },
         [db, databasesService]
     );
+
+    const onSave = async () => {
+        await saveNewOrder(
+            newOrder.map((x) => x.tag),
+            fixOrder
+        );
+    };
+
     const canSort = orchestrators.length === 1 || !isOperatorOrAbove();
     const existingTags = orchestrators ? orchestrators.map((x) => x.tag) : [];
     const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
@@ -91,36 +109,8 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                         canSort={canSort}
                         sortableMode={sortableMode}
                         cancelReorder={cancelReorder}
-                        finishReorder={finishReorder}
+                        onSave={onSave}
                     />
-                    {/* {sortableMode ? (
-                        <>
-                            <Button
-                                color="primary"
-                                onClick={() =>
-                                    saveNewOrder(
-                                        newOrder.map((x) => x.tag),
-                                        fixOrder
-                                    )
-                                }
-                            >
-                                <i className="icon-save" />
-                                <span>Save</span>
-                            </Button>
-                            <Button onClick={cancelReorder}>
-                                <i className="icon-cancel" />
-                                <span>Cancel</span>
-                            </Button>
-                        </>
-                    ) : (
-                        <Button
-                            disabled={orchestrators.length === 1 || !isOperatorOrAbove()}
-                            onClick={enableReorder}
-                            className="me-2"
-                        >
-                            <i className="icon-reorder me-1" /> Reorder orchestrators
-                        </Button>
-                    )} */}
                 </RichPanelActions>
             </RichPanelHeader>
 
@@ -128,9 +118,10 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                 <DndProvider backend={HTML5Backend}>
                     <ReorderNodes
                         nodes={orchestrators}
-                        saveNewOrder={saveNewOrder}
-                        cancelReorder={cancelReorder}
-                        saveReorder={saveReorder}
+                        fixOrder={fixOrder}
+                        setFixOrder={setFixOrder}
+                        newOrder={newOrder}
+                        setNewOrder={setNewOrder}
                     />
                 </DndProvider>
             ) : (
