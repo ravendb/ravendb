@@ -58,14 +58,6 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
         },
         [databasesService, db, reportEvent]
     );
-    // const saveNewOrder = useCallback(
-    //     async (tagsOrder: string[], fixOrder: boolean) => {
-    //         reportEvent("db-group", "save-order");
-    //         await databasesService.reorderNodesInGroup(db, tagsOrder, fixOrder);
-    //         setSortableMode(false);
-    //     },
-    //     [databasesService, db, reportEvent]
-    // );
 
     const deleteOrchestratorFromGroup = useCallback(
         (nodeTag: string) => {
