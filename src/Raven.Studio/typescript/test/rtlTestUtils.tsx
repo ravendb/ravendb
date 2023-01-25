@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
     act,
     fireEvent,
@@ -11,11 +11,20 @@ import {
 } from "@testing-library/react";
 import { mockServices } from "./mocks/services/MockServices";
 import { Screen } from "@testing-library/dom/types/screen";
-import { ServiceProvider } from "components/hooks/useServices";
+import { configureMockServices, ServiceProvider } from "components/hooks/useServices";
 import * as byNameQueries from "./byNameQueries";
 import * as byClassNameQueries from "./byClassNameQueries";
 import { ChangesProvider } from "hooks/useChanges";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
+import store, { createStoreConfiguration } from "components/store";
+import { Provider } from "react-redux";
+
+let needsTestMock = true;
+
+if (needsTestMock) {
+    configureMockServices(mockServices.context);
+    needsTestMock = false;
+}
 
 function genericRtlRender(
     providers: () => (props: { children: any }) => JSX.Element,
@@ -61,10 +70,14 @@ async function fillInput(element: HTMLElement, value: string) {
 const AllProviders = () => AllProvidersInner;
 
 function AllProvidersInner({ children }: any) {
+    const [store] = useState(() => createStoreConfiguration());
+
     return (
-        <ServiceProvider services={mockServices.context}>
-            <ChangesProvider changes={mockHooks.useChanges.mock}>{children}</ChangesProvider>
-        </ServiceProvider>
+        <Provider store={store}>
+            <ServiceProvider services={mockServices.context}>
+                <ChangesProvider changes={mockHooks.useChanges.mock}>{children}</ChangesProvider>
+            </ServiceProvider>
+        </Provider>
     );
 }
 
