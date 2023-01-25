@@ -2,7 +2,7 @@
 import { Button } from "reactstrap";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { ReorderNodes, ReorderNodesControlls } from "components/pages/resources/manageDatabaseGroup/ReorderNodes";
+import { ReorderNodes, ReorderNodesControls } from "components/pages/resources/manageDatabaseGroup/ReorderNodes";
 import { OrchestratorInfoComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { DeletionInProgress } from "components/pages/resources/manageDatabaseGroup/DeletionInProgress";
 import { useAccessManager } from "hooks/useAccessManager";
@@ -102,7 +102,7 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                     </RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
-                    <ReorderNodesControlls
+                    <ReorderNodesControls
                         enableReorder={enableReorder}
                         canSort={canSort}
                         sortableMode={sortableMode}
@@ -115,7 +115,6 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
             {sortableMode ? (
                 <DndProvider backend={HTML5Backend}>
                     <ReorderNodes
-                        nodes={orchestrators}
                         fixOrder={fixOrder}
                         setFixOrder={setFixOrder}
                         newOrder={newOrder}
