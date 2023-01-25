@@ -18,7 +18,6 @@ import { FlexGrow } from "components/common/FlexGrow";
 import app from "durandal/app";
 import addNewShardToDatabaseGroup from "viewmodels/resources/addNewShardToDatabaseGroup";
 import { StickyHeader } from "components/common/StickyHeader";
-import { RichPanel, RichPanelHeader, RichPanelInfo, RichPanelName } from "components/common/RichPanel";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -76,20 +75,6 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     const { serverNotifications } = useChanges();
 
     const dbShardedInfo = findByName(db.name);
-
-    /*
-    useEffect(() => {
-        const anyError = anyNodeHasError(clusterTopology);
-        //TODO: test this part!
-        if (sortableMode && anyError) {
-            messagePublisher.reportWarning(
-                "Can't reorder nodes, when at least one node is down or voting is in progress."
-            );
-            setSortableMode(false);
-        }
-    }, [clusterTopology, sortableMode]);
-    
-     */
 
     const settingsUniqueId = useId("settings");
 

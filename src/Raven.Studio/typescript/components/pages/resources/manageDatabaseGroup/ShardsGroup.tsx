@@ -1,5 +1,4 @@
 ﻿import React, { useCallback, useState } from "react";
-import { FlexGrow } from "components/common/FlexGrow";
 import { Button } from "reactstrap";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -70,15 +69,6 @@ export function ShardsGroup(props: ShardsGroupProps) {
         [databasesService, shard, reportEvent]
     );
 
-    // const saveNewOrder = useCallback(
-    //     async (tagsOrder: string[]) => {
-    //         reportEvent("db-group", "save-order");
-    //         await databasesService.reorderShardsInGroup(shard, tagsOrder);
-    //         setSortableMode(false);
-    //     },
-    //     [databasesService, shard, reportEvent]
-    // );
-
     const deleteNodeFromGroup = useCallback(
         (nodeTag: string, hardDelete: boolean) => {
             viewHelpers
@@ -130,21 +120,22 @@ export function ShardsGroup(props: ShardsGroupProps) {
                 </RichPanelActions>
             </RichPanelHeader>
 
-            <DatabaseGroup>
-                <div className="dbgroup-image"></div>
-                <DatabaseGroupList>
-                    {sortableMode ? (
-                        <DndProvider backend={HTML5Backend}>
-                            <ReorderNodes
-                                nodes={nodes}
-                                fixOrder={fixOrder}
-                                setFixOrder={setFixOrder}
-                                newOrder={newOrder}
-                                setNewOrder={setNewOrder}
-                            />
-                        </DndProvider>
-                    ) : (
-                        <React.Fragment>
+            <div className="dbgroup-image"></div>
+
+            {sortableMode ? (
+                <DndProvider backend={HTML5Backend}>
+                    <ReorderNodes
+                        nodes={nodes}
+                        fixOrder={fixOrder}
+                        setFixOrder={setFixOrder}
+                        newOrder={newOrder}
+                        setNewOrder={setNewOrder}
+                    />
+                </DndProvider>
+            ) : (
+                <React.Fragment>
+                    <DatabaseGroup>
+                        <DatabaseGroupList>
                             <DatabaseGroupItem className="item-new">
                                 <DatabaseGroupNode icon="node-add" />
 
@@ -172,10 +163,10 @@ export function ShardsGroup(props: ShardsGroupProps) {
                                     deleteFromGroup={deleteNodeFromGroup}
                                 />
                             ))}
-                        </React.Fragment>
-                    )}
-                </DatabaseGroupList>
-            </DatabaseGroup>
+                        </DatabaseGroupList>
+                    </DatabaseGroup>
+                </React.Fragment>
+            )}
         </RichPanel>
     );
 }

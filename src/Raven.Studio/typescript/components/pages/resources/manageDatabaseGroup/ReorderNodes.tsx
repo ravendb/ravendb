@@ -1,18 +1,9 @@
-﻿import React, { useCallback, useEffect, useState } from "react";
+﻿import React, { useCallback, useState } from "react";
 import { Button } from "reactstrap";
-import classNames from "classnames";
 import { NodeInfoReorderComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { useDrop } from "react-dnd";
 import { NodeInfo } from "components/models/databases";
-import {
-    DatabaseGroup,
-    DatabaseGroupActions,
-    DatabaseGroupItem,
-    DatabaseGroupList,
-    DatabaseGroupNode,
-} from "components/common/DatabaseGroup";
-import { BoundsLiteral } from "leaflet";
-import nodeInfo from "models/wizard/nodeInfo";
+import { DatabaseGroup, DatabaseGroupList } from "components/common/DatabaseGroup";
 import { Radio } from "components/common/Checkbox";
 
 interface ReorderNodesControllsProps {
@@ -44,7 +35,7 @@ export function ReorderNodesControlls(props: ReorderNodesControllsProps) {
         <>
             <Button color="success" onClick={onSaveClicked}>
                 <i className="icon-save" />
-                <span>Save</span>
+                <span>Save reorder</span>
             </Button>
             <Button onClick={cancelReorder} className="ms-1">
                 <i className="icon-cancel" />
@@ -71,7 +62,7 @@ export function ReorderNodes(props: ReorderNodesProps) {
 
     return (
         <div ref={drop}>
-            <div className="d-flex px-3">
+            <div className="d-flex px-3 pt-3">
                 <div className="me-2">After failure recovery:</div>
                 <Radio selected={!fixOrder} toggleSelection={() => setFixOrder(false)} className="me-2">
                     Shuffle nodes order
