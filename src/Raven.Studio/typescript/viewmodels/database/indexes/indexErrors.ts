@@ -146,7 +146,7 @@ class indexErrors extends viewModelBase {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => x.Action === "Map" ? appUrl.forEditDoc(x.Document, this.activeDatabase()) : "", "Document", "20%", {
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => x.Action === "Map" ? appUrl.forEditDoc(x.Document, this.activeDatabase()) : "", "Document/Key", "20%", {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric,
                     headerTitle: "Showing 'document ID' if action is Map, or 'reduce key value' if action is Reduce"
