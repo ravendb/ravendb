@@ -3,7 +3,6 @@
 import "./DatabaseGroup.scss";
 import classNames from "classnames";
 import { NodeInfo } from "components/models/databases";
-//import genUtils, { assertUnreachable } from "common/generalUtils";
 import app from "durandal/app";
 import showDataDialog from "viewmodels/common/showDataDialog";
 import { Badge } from "reactstrap";

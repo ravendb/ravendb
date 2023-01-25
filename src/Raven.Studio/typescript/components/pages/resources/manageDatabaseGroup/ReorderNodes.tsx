@@ -1,12 +1,12 @@
 ﻿import React, { useCallback, useState } from "react";
-import { Button } from "reactstrap";
+import { Button, Spinner } from "reactstrap";
 import { NodeInfoReorderComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
 import { useDrop } from "react-dnd";
 import { NodeInfo } from "components/models/databases";
 import { DatabaseGroup, DatabaseGroupList } from "components/common/DatabaseGroup";
 import { Radio } from "components/common/Checkbox";
 
-interface ReorderNodesControllsProps {
+interface ReorderNodesControlsProps {
     sortableMode: boolean;
     canSort: boolean;
     enableReorder: () => void;
@@ -14,7 +14,7 @@ interface ReorderNodesControllsProps {
     onSave: () => Promise<void>;
 }
 
-export function ReorderNodesControlls(props: ReorderNodesControllsProps) {
+export function ReorderNodesControls(props: ReorderNodesControlsProps) {
     const { canSort, sortableMode, enableReorder, cancelReorder, onSave } = props;
     const [saving, setSaving] = useState(false);
 
@@ -33,8 +33,8 @@ export function ReorderNodesControlls(props: ReorderNodesControllsProps) {
         </Button>
     ) : (
         <>
-            <Button color="success" onClick={onSaveClicked}>
-                <i className="icon-save" />
+            <Button color="success" onClick={onSaveClicked} disabled={saving}>
+                {saving ? <Spinner /> : <i className="icon-save" />}
                 <span>Save reorder</span>
             </Button>
             <Button onClick={cancelReorder} className="ms-1">
@@ -46,7 +46,6 @@ export function ReorderNodesControlls(props: ReorderNodesControllsProps) {
 }
 
 interface ReorderNodesProps {
-    nodes: NodeInfo[]; // TODO is this necesarry?
     fixOrder: boolean;
     setFixOrder: (fixOrder: React.SetStateAction<boolean>) => void;
     newOrder: NodeInfo[];
@@ -54,7 +53,7 @@ interface ReorderNodesProps {
 }
 
 export function ReorderNodes(props: ReorderNodesProps) {
-    const { nodes, fixOrder, setFixOrder, newOrder, setNewOrder } = props;
+    const { fixOrder, setFixOrder, newOrder, setNewOrder } = props;
 
     const [, drop] = useDrop(() => ({ accept: "node" }));
 

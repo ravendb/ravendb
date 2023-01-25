@@ -125,7 +125,6 @@ export function ShardsGroup(props: ShardsGroupProps) {
             {sortableMode ? (
                 <DndProvider backend={HTML5Backend}>
                     <ReorderNodes
-                        nodes={nodes}
                         fixOrder={fixOrder}
                         setFixOrder={setFixOrder}
                         newOrder={newOrder}
