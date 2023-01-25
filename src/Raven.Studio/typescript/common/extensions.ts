@@ -7,6 +7,8 @@ import accessManager = require("common/shell/accessManager");
 import React from "react";
 import ReactDOM from "react-dom";
 import { createRoot, Root } from "react-dom/client";
+import store from "components/store";
+import { Provider } from "react-redux";
 
 class extensions {
     static install() {
@@ -230,9 +232,10 @@ class extensions {
                 if (options && options.component) {
                     // eslint-disable-next-line
                     const root = createRoot(element);
-                    root.render(
-                        React.createElement(options.component, options.props),
-                    );
+                    const inner = React.createElement(options.component, options.props);
+                    // eslint-disable-next-line react/no-children-prop
+                    const wrapper = React.createElement(Provider, { store: store, children: inner });
+                    root.render(wrapper);
                     
                     $(element).data("root", root);
                 }

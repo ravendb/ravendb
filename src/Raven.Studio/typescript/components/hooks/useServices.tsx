@@ -10,11 +10,17 @@ export interface ServicesContextDto {
     tasksService: TasksService;
 }
 
-const servicesContext = createContext<ServicesContextDto>({
+export let services = {
     indexesService: new IndexesService(),
     databasesService: new DatabasesService(),
     tasksService: new TasksService(),
-});
+};
+
+export function configureMockServices(overloads: typeof services) {
+    services = overloads;
+}
+
+const servicesContext = createContext<ServicesContextDto>(services);
 
 export function ServiceProvider(props: { services: ServicesContextDto; children: JSX.Element }) {
     return <servicesContext.Provider value={props.services}>{props.children}</servicesContext.Provider>;

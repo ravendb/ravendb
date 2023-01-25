@@ -1,8 +1,10 @@
 import { mockServices } from "./mocks/services/MockServices";
-import React from "react";
-import { ServiceProvider } from "components/hooks/useServices";
+import React, { useState } from "react";
+import { configureMockServices, ServiceProvider } from "components/hooks/useServices";
 import { ChangesProvider } from "hooks/useChanges";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
+import { createStoreConfiguration } from "components/store";
+import { Provider } from "react-redux";
 
 export function storybookContainerPublicContainer(storyFn: any) {
     return (
@@ -12,6 +14,13 @@ export function storybookContainerPublicContainer(storyFn: any) {
     );
 }
 
+let needsTestMock = true;
+
+if (needsTestMock) {
+    configureMockServices(mockServices.context);
+    needsTestMock = false;
+}
+
 export function forceStoryRerender() {
     return {
         key: new Date().toISOString(),
@@ -19,11 +28,15 @@ export function forceStoryRerender() {
 }
 
 export function withStorybookContexts(storyFn: any) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const [store] = useState(() => createStoreConfiguration());
     return (
         <div style={{ margin: "50px" }}>
-            <ServiceProvider services={mockServices.context}>
-                <ChangesProvider changes={mockHooks.useChanges.mock}>{storyFn()}</ChangesProvider>
-            </ServiceProvider>
+            <Provider store={store}>
+                <ServiceProvider services={mockServices.context}>
+                    <ChangesProvider changes={mockHooks.useChanges.mock}>{storyFn()}</ChangesProvider>
+                </ServiceProvider>
+            </Provider>
         </div>
     );
 }

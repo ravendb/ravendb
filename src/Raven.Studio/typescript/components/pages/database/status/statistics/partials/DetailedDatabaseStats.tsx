@@ -1,39 +1,39 @@
 ﻿import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import React from "react";
-import { databaseLocationComparator } from "components/utils/common";
 import genUtils from "common/generalUtils";
 import changeVectorUtils from "common/changeVectorUtils";
 import { Card, Table, UncontrolledTooltip } from "reactstrap";
 import { LazyLoad } from "components/common/LazyLoad";
-import { DetailedDatabaseStatsProps } from "components/pages/database/status/statistics/useStatisticsController";
+import { useAppSelector } from "components/store";
+import { selectAllDatabaseDetails } from "components/pages/database/status/statistics/logic/statisticsSlice";
 
 interface DetailsBlockProps {
     children: (data: DetailedDatabaseStatistics, location: databaseLocationSpecifier) => JSX.Element;
 }
 
-export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
-    const { database, perNodeStats } = props;
+export function DetailedDatabaseStats() {
+    const perNodeStats = useAppSelector(selectAllDatabaseDetails);
 
     function DetailsBlock(props: DetailsBlockProps): JSX.Element {
         const { children } = props;
 
         return (
             <>
-                {database.getLocations().map((location) => {
-                    const stat = perNodeStats.find((x) => databaseLocationComparator(x.location, location));
+                {perNodeStats.map((perNode) => {
+                    const { location, data: stat, status } = perNode;
 
-                    if (stat.status === "error") {
+                    if (status === "failure") {
                         return (
                             <td key={genUtils.formatLocation(location)} className="text-danger">
-                                <i className="icon-cancel" title={"Load error: " + stat.error.responseJSON.Message} />
+                                <i className="icon-cancel" title="Load error" />
                             </td>
                         );
                     }
 
                     return (
                         <td key={genUtils.formatLocation(location)}>
-                            {stat.status === "loaded" ? (
-                                children(stat.data, location)
+                            {status === "success" || (status === "loading" && stat) ? (
+                                children(stat, location)
                             ) : (
                                 <LazyLoad active>
                                     <div>Loading...</div>
@@ -54,7 +54,7 @@ export function DetailedDatabaseStats(props: DetailedDatabaseStatsProps) {
                     <thead>
                         <tr>
                             <th>&nbsp;</th>
-                            {database.getLocations().map((location) => {
+                            {perNodeStats.map(({ location }) => {
                                 return (
                                     <th key={genUtils.formatLocation(location)}>{genUtils.formatLocation(location)}</th>
                                 );

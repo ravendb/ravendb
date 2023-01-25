@@ -34,7 +34,7 @@ export function createLoadingState<T>(previousState?: loadableData<T>): loadable
     };
 }
 
-export function createFailureState(error: string): loadableData<any> {
+export function createFailureState(error?: string): loadableData<any> {
     return {
         error,
         data: null,
