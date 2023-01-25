@@ -28,6 +28,7 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
+using Voron.Impl;
 using Voron.Impl.Extensions;
 
 namespace Raven.Server.Rachis
@@ -673,12 +674,13 @@ namespace Raven.Server.Rachis
         internal class RachisMergedCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
         {
             public CommandBase Command;
-            public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
-            public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
+
+            public Task<(long, object)> TaskResult { get; private set; }
+
             private readonly Leader _leader;
             private readonly RachisConsensus _engine;
-            private Task<(long, object)> _task;
-
+            private const string _leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
+            
             public RachisMergedCommand([NotNull] Leader leader, [NotNull] RachisConsensus engine)
             {
                 _leader = leader ?? throw new ArgumentNullException(nameof(leader));
@@ -687,30 +689,26 @@ namespace Raven.Server.Rachis
 
             protected override long ExecuteCmd(ClusterOperationContext context)
             {
-                const string leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
-                var lostLeadershipException = new NotLeadingException(leaderDisposedMessage);
+                var lostLeadershipException = new NotLeadingException(_leaderDisposedMessage);
 
                 try
                 {
                     _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
+                    if (_leader._running.IsRaised() == false) // not longer leader
+                    {
+                        // throw lostLeadershipException;
+                        TaskResult = Task.FromException<(long, object)>(lostLeadershipException);
+                        return 1;
+                    }
 
-                    if (Consumed.Raise() == false)
-                    {
-                        // if the command was aborted due to timeout, we should skip it.
-                        // The command is not appended, so We can and must do so, because the context of the command is no longer valid.
-                    }
-                    else if (_leader._running.IsRaised() == false)
-                    {
-                        Tcs.TrySetException(lostLeadershipException);
-                    }
-                    else if (_engine.LogHistory.HasHistoryLog(context, Command.UniqueRequestId, out var index, out var result, out var exception))
+                    if (_engine.LogHistory.HasHistoryLog(context, Command.UniqueRequestId, out var index, out var result, out var exception))
                     {
                         // if this command is already committed, we can skip it and notify the caller about it
                         if (lastCommitted >= index)
                         {
                             if (exception != null)
                             {
-                                Tcs.TrySetException(exception);
+                                TaskResult = Task.FromException<(long, object)>(exception);
                             }
                             else
                             {
@@ -719,27 +717,14 @@ namespace Raven.Server.Rachis
                                     result = GetConvertResult(Command)?.Apply(result) ?? Command.FromRemote(result);
                                 }
 
-                                Tcs.TrySetResult(Task.FromResult<(long, object)>((index, result)));
+                                TaskResult = Task.FromResult<(long, object)>((index, result));
                             }
-
+                            return 1;
                         }
+                        
                     }
 
-                    _engine.InvokeBeforeAppendToRaftLog(context, Command);
-
-                    var djv = Command.ToJson(context);
-                    var commandJson = context.ReadObject(djv, "raft/command");
-
-                    InsertCommandToLeaderLog(context, commandJson);
-
-                    context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += (tx) =>
-                    {
-                        if (_task != null)
-                        {
-                            _leader._newEntry.Set();
-                            Tcs.TrySetResult(_task);
-                        }
-                    };
+                    InsertCommandToLeaderLog(context);
                 }
                 catch (Exception e)
                 {
@@ -747,132 +732,87 @@ namespace Raven.Server.Rachis
                         e = ae.ExtractSingleInnerException();
 
                     if (_leader._running.IsRaised() == false)
-                        e = new NotLeadingException(leaderDisposedMessage, e);
-
-                    Tcs.TrySetException(e);
+                        e = new NotLeadingException(_leaderDisposedMessage, e);
 
                     _leader._errorOccurred.TrySetException(e);
+
+                    throw;
+                    // TaskResult = Task.FromException<(long, object)>(e);
                 }
 
                 return 1;
             }
 
-            private void InsertCommandToLeaderLog(ClusterOperationContext context, BlittableJsonReaderObject commandJson)
+            private void InsertCommandToLeaderLog(ClusterOperationContext context)
             {
-                _engine.GetLastCommitIndex(context, out var lastCommitted, out _);
+                _engine.InvokeBeforeAppendToRaftLog(context, Command);
+                var djv = Command.ToJson(context);
+                var commandJson = context.ReadObject(djv, "raft/command");
 
-                if (_engine.LogHistory.HasHistoryLog(context, Command.UniqueRequestId, out var index, out var result, out var exception))
+                long index = _engine.InsertToLeaderLog(context, _leader.Term, commandJson, RachisEntryFlags.StateMachineCommand);
+                if (_leader._entries.TryGetValue(index, out var state))
                 {
-                    // if this command is already committed, we can skip it and notify the caller about it
-                    if (lastCommitted >= index)
-                    {
-                        var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                        _task = tcs.Task;
-
-                        if (exception != null)
-                        {
-                            tcs.TrySetException(exception);
-                        }
-                        else
-                        {
-                            if (result != null)
-                                result = Leader.GetConvertResult(Command)?.Apply(result) ?? Command.FromRemote(result);
-
-                            tcs.TrySetResult((index, result));
-                        }
-                    }
+                    TaskResult = state.TaskCompletionSource.Task;
                 }
                 else
                 {
-                    index = _engine.InsertToLeaderLog(context, _leader.Term, commandJson, RachisEntryFlags.StateMachineCommand);
-                    if (_leader._entries.TryGetValue(index, out var state))
+                    var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    TaskResult = tcs.Task; //will set only after leader gets consensus on this command and finish with execute 'Command'.
+                    var newState = new Leader.CommandState
                     {
-                        _task = state.TaskCompletionSource.Task;
-                    }
-                    else
-                    {
-                        var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                        _task = tcs.Task;
-                        state = new Leader.CommandState
-                            // we need to add entry inside write tx lock to avoid
-                            // a situation when command will be applied (and state set)
-                            // before it is added to the entries list
-                            {
-                                CommandIndex = index,
-                                TaskCompletionSource = tcs,
-                                ConvertResult = Leader.GetConvertResult(Command),
-                            };
-                        _leader._entries[index] = state;
-                    }
+                        // we need to add entry inside write tx lock to avoid
+                        // a situation when command will be applied (and state set)
+                        // before it is added to the entries list
+
+                        CommandIndex = index,
+                        TaskCompletionSource = tcs,
+                        ConvertResult = Leader.GetConvertResult(Command),
+                    };
+                    _leader._entries[index] = newState;
+                    context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += AfterCommit;
                 }
             }
 
-            
+            private void AfterCommit(LowLevelTransaction tx)
+            {
+                _leader._newEntry.Set();
+            }
+
             public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)
             {
                 throw new NotImplementedException();
             }
         }
 
-        private readonly SemaphoreSlim _commandsQueueLocker = new SemaphoreSlim(1, 1);
-
-        private readonly AsyncManualResetEvent _waitForCommit = new AsyncManualResetEvent();
-
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
             var rachisMergedCommand = new RachisMergedCommand(leader: this, engine: _engine)
             {
                 Command = command,
-                Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously)
             };
 
-            await _engine.TxMerger.Enqueue(rachisMergedCommand);
+            await _engine.TxMerger.Enqueue(rachisMergedCommand); //wait until 'rachisMergedCommand' is executed.
+            // timeout = timeout * 10;
 
-            while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
+            // timeout = TimeSpan.FromMinutes(2);
+
+            var t = rachisMergedCommand.TaskResult;
+            if (await t.WaitWithTimeout(timeout) == false)
             {
-                var lockTaken = false;
-                try
-                {
-                    var waitAsync = _waitForCommit.WaitAsync(timeout);
-
-                    lockTaken = await _commandsQueueLocker.WaitAsync(0);
-                    if (lockTaken)
-                    {
-                        //await EmptyQueueAsync();
-                    }
-                    else
-                    {
-                        if (await waitAsync == false)
-                        {
-                            if (rachisMergedCommand.Consumed.Raise())
-                            {
-                                GetConvertResult(command)?.AboutToTimeout();
-                                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
-                            }
-
-                            // if the command is already dequeued we must let it continue to keep its context valid.
-                            await rachisMergedCommand.Tcs.Task;
-                        }
-                    }
-                }
-                finally
-                {
-                    if (lockTaken)
-                    {
-                        _commandsQueueLocker.Release();
-                        _waitForCommit.SetAndResetAtomically();
-                    }
-                }
+                GetConvertResult(command)?.AboutToTimeout();
+                throw new TimeoutException($"Waited2 for {timeout} but the command {command.RaftCommandIndex} was not applied in this time.");
             }
 
-            var inner = await rachisMergedCommand.Tcs.Task;
+            return t.Result;
+
+            /*var inner = t.Result;
             if (await inner.WaitWithTimeout(timeout) == false)
             {
                 GetConvertResult(command)?.AboutToTimeout();
                 throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
             }
 
-            return await inner;
+            return await inner;*/
         }
 
         internal static ConvertResultAction GetConvertResult(CommandBase cmd)
