@@ -337,7 +337,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                             DisableOngoingTasksIfNeeded(databaseRecord);
 
-                            Raven.Server.Smuggler.Documents.DatabaseSmuggler.EnsureProcessed(result, skipped: false);
+                            Raven.Server.Smuggler.Documents.DatabaseSmuggler.EnsureProcessed(result, skipped: false, indexesSkipped: result.Indexes.Skipped);
 
                             onProgress.Invoke(result.Progress);
                         }
@@ -678,9 +678,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var lastFilePath = GetBackupPath(filesToRestore.Last());
 
             result.AddInfo($"Restoring file {filesToRestore.Count:#,#;;0}/{filesToRestore.Count:#,#;;0}");
+            result.Indexes.Skipped = RestoreFromConfiguration.SkipIndexes;
 
             onProgress.Invoke(result.Progress);
-
             await ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options, isLastFile: true,
                 onIndexAction: indexAndType =>
                 {
