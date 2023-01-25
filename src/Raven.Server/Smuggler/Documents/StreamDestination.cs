@@ -51,6 +51,7 @@ namespace Raven.Server.Smuggler.Documents
         private AsyncBlittableJsonTextWriter _writer;
         private DatabaseSmugglerOptionsServerSide _options;
         private Func<LazyStringValue, bool> _filterMetadataProperty;
+
         public StreamDestination(Stream stream, JsonOperationContext context, ISmugglerSource source, CompressionLevel compressionLevel = CompressionLevel.Optimal)
         {
             _stream = stream;
