@@ -13,7 +13,7 @@ class getDatabaseCommand extends commandBase {
             name: this.dbName
         };
 
-        return this.query<Raven.Client.ServerWide.Operations.DatabaseInfo>(url, args);
+        return this.query<Raven.Client.ServerWide.Operations.DatabaseInfo>(url, args, null, x => x.Databases[0]);
     }
 }
 

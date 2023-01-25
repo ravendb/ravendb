@@ -326,13 +326,6 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 )}
                             </RichPanelName>
 
-                            {db.sharded && (
-                                <Badge color="shard" pill className="me-4">
-                                    <i className="icon-sharding" />
-                                    <span>sharded</span>
-                                </Badge>
-                            )}
-
                             {/* TODO:
 
                             <Button

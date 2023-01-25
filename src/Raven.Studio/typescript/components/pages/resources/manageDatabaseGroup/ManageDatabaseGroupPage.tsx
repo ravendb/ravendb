@@ -7,33 +7,21 @@ import { useServices } from "hooks/useServices";
 import database from "models/resources/database";
 import { useLicenseStatus } from "hooks/useLicenseStatus";
 import LicenseStatus = Raven.Server.Commercial.LicenseStatus;
-import clusterTopology from "models/database/cluster/clusterTopology";
-import { useChanges } from "hooks/useChanges";
 import { useAccessManager } from "hooks/useAccessManager";
-import { NodeGroup } from "components/pages/resources/manageDatabaseGroup/NodeGroup";
+import { NodeGroup } from "components/pages/resources/manageDatabaseGroup/partials/NodeGroup";
 import { useDatabaseManager } from "hooks/useDatabaseManager";
-import { OrchestratorsGroup } from "components/pages/resources/manageDatabaseGroup/OrchestratorsGroup";
-import { ShardsGroup } from "components/pages/resources/manageDatabaseGroup/ShardsGroup";
+import { OrchestratorsGroup } from "components/pages/resources/manageDatabaseGroup/partials/OrchestratorsGroup";
+import { ShardsGroup } from "components/pages/resources/manageDatabaseGroup/partials/ShardsGroup";
 import { FlexGrow } from "components/common/FlexGrow";
 import app from "durandal/app";
 import addNewShardToDatabaseGroup from "viewmodels/resources/addNewShardToDatabaseGroup";
 import { StickyHeader } from "components/common/StickyHeader";
+import { useAsync } from "react-async-hook";
+import { LoadingView } from "components/common/LoadingView";
+import { LoadError } from "components/common/LoadError";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
-}
-
-function anyNodeHasError(topology: clusterTopology) {
-    if (!topology) {
-        return true;
-    }
-    const votingInProgress = topology.currentState() === "Candidate";
-
-    if (votingInProgress) {
-        return true;
-    }
-
-    return topology.nodes().some((x) => !x.connected());
 }
 
 function getDynamicDatabaseDistributionWarning(
@@ -64,17 +52,24 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     const { isOperatorOrAbove } = useAccessManager();
 
-    const { databases, findByName } = useDatabaseManager();
+    const { findByName } = useDatabaseManager();
+
+    const fetchDynamicNodesDistribution = useCallback(async () => {
+        //TODO: waiting for: RavenDB-19876
+        return false;
+    }, [databasesService, db.name]);
 
     const {
         value: dynamicDatabaseDistribution,
         toggle: toggleDynamicDatabaseDistribution,
         setValue: setDynamicDatabaseDistribution,
-    } = useBoolean(false); //tODO: assign default value
+    } = useBoolean(false);
 
-    const { serverNotifications } = useChanges();
+    const { status: dynamicDistributionLoadStatus, reset } = useAsync(fetchDynamicNodesDistribution, null, {
+        onSuccess: (r) => setDynamicDatabaseDistribution(r),
+    });
 
-    const dbShardedInfo = findByName(db.name);
+    const dbSharedInfo = findByName(db.name);
 
     const settingsUniqueId = useId("settings");
 
@@ -91,10 +86,18 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     const dynamicDatabaseDistributionWarning = getDynamicDatabaseDistributionWarning(
         licenseStatus,
-        dbShardedInfo.encrypted,
-        dbShardedInfo.nodes.length
+        dbSharedInfo.encrypted,
+        dbSharedInfo.nodes.length
     );
     const enableDynamicDatabaseDistribution = isOperatorOrAbove() && !dynamicDatabaseDistributionWarning;
+
+    if (dynamicDistributionLoadStatus === "loading") {
+        return <LoadingView />;
+    }
+
+    if (dynamicDistributionLoadStatus === "error") {
+        return <LoadError refresh={reset} />;
+    }
 
     return (
         <>
@@ -133,26 +136,30 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
                 {db.isSharded() ? (
                     <React.Fragment key="sharded-db">
                         <OrchestratorsGroup
-                            orchestrators={dbShardedInfo.nodes}
+                            nodes={dbSharedInfo.nodes}
                             db={db}
-                            deletionInProgress={dbShardedInfo.deletionInProgress}
+                            deletionInProgress={dbSharedInfo.deletionInProgress}
                         />
-                        {db.shards().map((shard) => (
-                            <ShardsGroup
-                                key={shard.name}
-                                nodes={shard.nodes()}
-                                shard={shard}
-                                lockMode={dbShardedInfo.lockMode}
-                            />
-                        ))}
+                        {db.shards().map((shard) => {
+                            //TODO: deletionInProgress - waiting for RavenDB-19876
+                            return (
+                                <ShardsGroup
+                                    key={shard.name}
+                                    nodes={shard.nodes()}
+                                    db={shard}
+                                    deletionInProgress={[]}
+                                    lockMode={dbSharedInfo.lockMode}
+                                />
+                            );
+                        })}
                     </React.Fragment>
                 ) : (
                     <NodeGroup
                         key="non-sharded-db"
-                        nodes={dbShardedInfo.nodes}
+                        nodes={dbSharedInfo.nodes}
                         db={db}
-                        deletionInProgress={dbShardedInfo.deletionInProgress}
-                        lockMode={dbShardedInfo.lockMode}
+                        deletionInProgress={dbSharedInfo.deletionInProgress}
+                        lockMode={dbSharedInfo.lockMode}
                     />
                 )}
             </div>

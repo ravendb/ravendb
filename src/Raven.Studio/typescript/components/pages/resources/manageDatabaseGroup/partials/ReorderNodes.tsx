@@ -1,6 +1,6 @@
 ﻿import React, { useCallback, useState } from "react";
 import { Button, Spinner } from "reactstrap";
-import { NodeInfoReorderComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
+import { NodeInfoReorderComponent } from "components/pages/resources/manageDatabaseGroup/partials/NodeInfoComponent";
 import { useDrop } from "react-dnd";
 import { NodeInfo } from "components/models/databases";
 import { DatabaseGroup, DatabaseGroupList } from "components/common/DatabaseGroup";
@@ -34,7 +34,7 @@ export function ReorderNodesControls(props: ReorderNodesControlsProps) {
     ) : (
         <>
             <Button color="success" onClick={onSaveClicked} disabled={saving}>
-                {saving ? <Spinner /> : <i className="icon-save" />}
+                {saving ? <Spinner size="sm" /> : <i className="icon-save" />}
                 <span>Save reorder</span>
             </Button>
             <Button onClick={cancelReorder} className="ms-1">

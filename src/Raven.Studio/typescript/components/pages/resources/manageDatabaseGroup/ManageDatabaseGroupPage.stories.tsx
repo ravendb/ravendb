@@ -20,7 +20,7 @@ function commonInit() {
 
     const { useClusterTopologyManager } = mockHooks;
     useClusterTopologyManager.with_Single();
-    
+
     licenseModel.licenseStatus({
         HasDynamicNodesDistribution: true,
     } as any);
@@ -43,12 +43,12 @@ export const SingleNode: ComponentStory<typeof ManageDatabaseGroupPage> = () => 
 
 export const NotAllNodesUsed: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     // needed for old inner component (add node dialog)
-    clusterTopologyManager.default.topology(ClusterStubs.clusterTopology()); 
-    
+    clusterTopologyManager.default.topology(ClusterStubs.clusterTopology());
+
     commonInit();
-    
+
     const { useClusterTopologyManager, useDatabaseManager } = mockHooks;
-    
+
     useClusterTopologyManager.with_Cluster();
     useDatabaseManager.with_Single();
 
@@ -80,7 +80,7 @@ export const Sharded: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     commonInit();
 
     const { useDatabaseManager, useClusterTopologyManager } = mockHooks;
-    
+
     useDatabaseManager.with_Sharded();
     useClusterTopologyManager.with_Cluster();
 
@@ -116,7 +116,8 @@ export const ClusterWithFailure: ComponentStory<typeof ManageDatabaseGroupPage> 
     const { useDatabaseManager } = mockHooks;
     useDatabaseManager.with_Cluster((x) => {
         x.nodes[0].lastStatus = "HighDirtyMemory";
-        x.nodes[0].lastError = "This is some node error";
+        x.nodes[0].lastError = "This is some node error, which might be quite long in some cases...";
+        x.nodes[0].responsibleNode = "X";
     });
 
     const db = DatabasesStubs.nonShardedClusterDatabase();

@@ -13,6 +13,8 @@ import toggleDynamicNodeAssignmentCommand from "commands/database/dbGroup/toggle
 import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/reorderNodesInDatabaseGroupCommand");
 import shard from "models/resources/shard";
 import deleteOrchestratorFromNodeCommand from "commands/resources/deleteOrchestratorFromNodeCommand";
+import DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
+import getDatabaseCommand from "commands/resources/getDatabaseCommand";
 
 export default class DatabasesService {
     async setLockMode(db: DatabaseSharedInfo, newLockMode: DatabaseLockMode) {
