@@ -22,6 +22,7 @@ public abstract class IndexOperationBase : IDisposable
 {
     protected readonly string _indexName;
     private const int DefaultBufferSizeForCorax = 4 * 1024;
+    private const int MaxBufferSizeForCorax = 64 * 1024;
 
     protected readonly Logger _logger;
     internal Index _index;
@@ -119,22 +120,24 @@ public abstract class IndexOperationBase : IDisposable
     protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, int pageSize, IndexQueryServerSide query, bool isBoolean = false)
     {
         var numberOfEntries = searcher.NumberOfEntries;
+        if (numberOfEntries == 0)
+            return 16;
         
-        //If we have a binary operation, we need to pass a buffer large enough to hold all the individual results.
-        //We need to do this to get correct results and since we don't know how much results subqueries will have  we must create a buffer big enough to get all items from index
+        // If we have a binary operation, we need to pass a buffer large enough to hold all the individual results.
+        // We need to do this to get correct results and since we don't know how much results subqueries will have  we must create a buffer big enough to get all items from index
         if (query.Metadata.OrderBy is not null || query.Metadata.IsDistinct || isBoolean)
         {
-            if (numberOfEntries > int.MaxValue)
-                return int.MaxValue;
+            if (numberOfEntries > MaxBufferSizeForCorax)
+                return MaxBufferSizeForCorax;
             
-            return (int)numberOfEntries;
+            return DefaultBufferSizeForCorax;
         }
         
-        if (pageSize <= 0 && numberOfEntries < int.MaxValue)
-            return (int)numberOfEntries;
+        if (pageSize <= 0 && numberOfEntries < DefaultBufferSizeForCorax)
+            return DefaultBufferSizeForCorax;
         
-        return numberOfEntries > int.MaxValue 
-            ? int.MaxValue 
+        return numberOfEntries > MaxBufferSizeForCorax
+            ? MaxBufferSizeForCorax
             : DefaultBufferSizeForCorax;
     }
     
