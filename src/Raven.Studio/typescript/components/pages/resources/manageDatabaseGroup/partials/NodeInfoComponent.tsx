@@ -23,11 +23,12 @@ import {
 
 interface OrchestratorInfoComponentProps {
     node: NodeInfo;
+    canDelete: boolean;
     deleteFromGroup: (nodeTag: string) => void;
 }
 
 export function OrchestratorInfoComponent(props: OrchestratorInfoComponentProps) {
-    const { node, deleteFromGroup } = props;
+    const { node, deleteFromGroup, canDelete } = props;
 
     return (
         <DatabaseGroupItem>
@@ -38,6 +39,7 @@ export function OrchestratorInfoComponent(props: OrchestratorInfoComponentProps)
                     size="xs"
                     color="danger"
                     outline
+                    disabled={!canDelete}
                     className="rounded-pill"
                     onClick={() => deleteFromGroup(node.tag)}
                 >
@@ -128,19 +130,19 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
 
 interface ShardInfoComponentProps {
     node: NodeInfo;
-    shardName: string;
+    databaseName: string;
     databaseLockMode: DatabaseLockMode;
     deleteFromGroup: (nodeTag: string, hardDelete: boolean) => void;
 }
 
 export function ShardInfoComponent(props: ShardInfoComponentProps) {
-    const { node, databaseLockMode, deleteFromGroup, shardName } = props;
+    const { node, databaseLockMode, deleteFromGroup, databaseName } = props;
 
     const deleteLockId = useId("delete-lock");
 
     const canDelete = databaseLockMode === "Unlock";
 
-    const documentsUrl = appUrl.forDocuments(null, shardName);
+    const documentsUrl = appUrl.forDocuments(null, databaseName);
     const debugUrl = appUrl.toExternalUrl(node.nodeUrl, documentsUrl);
 
     return (

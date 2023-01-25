@@ -1,18 +1,19 @@
-﻿import React, { useCallback, useState } from "react";
+﻿import React, { useCallback } from "react";
 import { Button } from "reactstrap";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { ReorderNodes, ReorderNodesControls } from "components/pages/resources/manageDatabaseGroup/ReorderNodes";
-import { OrchestratorInfoComponent } from "components/pages/resources/manageDatabaseGroup/NodeInfoComponent";
-import { DeletionInProgress } from "components/pages/resources/manageDatabaseGroup/DeletionInProgress";
-import { useAccessManager } from "hooks/useAccessManager";
+import {
+    ReorderNodes,
+    ReorderNodesControls,
+} from "components/pages/resources/manageDatabaseGroup/partials/ReorderNodes";
+import { OrchestratorInfoComponent } from "components/pages/resources/manageDatabaseGroup/partials/NodeInfoComponent";
+import { DeletionInProgress } from "components/pages/resources/manageDatabaseGroup/partials/DeletionInProgress";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { useServices } from "hooks/useServices";
 import app from "durandal/app";
 import { NodeInfo } from "components/models/databases";
 import addNewOrchestratorToDatabase from "viewmodels/resources/addNewOrchestatorToDatabaseGroup";
 import shardedDatabase from "models/resources/shardedDatabase";
-import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import {
     RichPanel,
@@ -28,41 +29,44 @@ import {
     DatabaseGroupList,
     DatabaseGroupNode,
 } from "components/common/DatabaseGroup";
+import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
 
 export interface OrchestratorsGroupProps {
-    orchestrators: NodeInfo[];
+    nodes: NodeInfo[];
     db: shardedDatabase;
     deletionInProgress: string[];
 }
 
 export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
-    const { orchestrators, deletionInProgress, db } = props;
+    const { nodes, deletionInProgress, db } = props;
 
-    const [sortableMode, setSortableMode] = useState(false);
+    const {
+        fixOrder,
+        setNewOrder,
+        newOrder,
+        setFixOrder,
+        addNodeEnabled,
+        canSort,
+        sortableMode,
+        enableReorder,
+        exitReorder,
+    } = useGroup(nodes);
 
-    const [fixOrder, setFixOrder] = useState(false);
-    const [newOrder, setNewOrder] = useState<NodeInfo[]>(orchestrators.slice());
-
-    const { isOperatorOrAbove } = useAccessManager();
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
-    const { nodeTags: clusterNodeTags } = useClusterTopologyManager();
 
     const addNode = useCallback(() => {
-        const addKeyView = new addNewOrchestratorToDatabase(db.name, orchestrators);
+        const addKeyView = new addNewOrchestratorToDatabase(db.name, nodes);
         app.showBootstrapDialog(addKeyView);
-    }, [db, orchestrators]);
-
-    const enableReorder = useCallback(() => setSortableMode(true), []);
-    const cancelReorder = useCallback(() => setSortableMode(false), []);
+    }, [db, nodes]);
 
     const saveNewOrder = useCallback(
         async (tagsOrder: string[], fixOrder: boolean) => {
-            //TODO reportEvent("db-group", "save-order");
+            reportEvent("db-group", "save-order");
             await databasesService.reorderNodesInGroup(db, tagsOrder, fixOrder);
-            setSortableMode(false);
+            exitReorder();
         },
-        [databasesService, db, reportEvent]
+        [databasesService, db, reportEvent, exitReorder]
     );
 
     const deleteOrchestratorFromGroup = useCallback(
@@ -89,10 +93,6 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
         );
     };
 
-    const canSort = orchestrators.length === 1 || !isOperatorOrAbove();
-    const existingTags = orchestrators ? orchestrators.map((x) => x.tag) : [];
-    const addNodeEnabled = isOperatorOrAbove() && clusterNodeTags.some((x) => !existingTags.includes(x));
-
     return (
         <RichPanel className="mt-3">
             <RichPanelHeader className="bg-faded-orchestrator">
@@ -106,7 +106,7 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                         enableReorder={enableReorder}
                         canSort={canSort}
                         sortableMode={sortableMode}
-                        cancelReorder={cancelReorder}
+                        cancelReorder={exitReorder}
                         onSave={onSave}
                     />
                 </RichPanelActions>
@@ -126,9 +126,7 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                     <DatabaseGroup>
                         <DatabaseGroupList>
                             <DatabaseGroupItem className="item-new">
-                                <DatabaseGroupNode>
-                                    <i className="icon-node-add" />
-                                </DatabaseGroupNode>
+                                <DatabaseGroupNode icon="node-add" color="success" />
                                 <DatabaseGroupActions>
                                     <Button
                                         size="xs"
@@ -143,10 +141,11 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                                     </Button>
                                 </DatabaseGroupActions>
                             </DatabaseGroupItem>
-                            {orchestrators.map((node) => (
+                            {nodes.map((node) => (
                                 <OrchestratorInfoComponent
                                     key={node.tag}
                                     node={node}
+                                    canDelete={nodes.length > 1}
                                     deleteFromGroup={deleteOrchestratorFromGroup}
                                 />
                             ))}

@@ -171,6 +171,16 @@ class shell extends viewModelBase {
         });
         
         this.singleShardName = ko.pureComputed(() => {
+            
+            // just to register subscription and be able to watch db in url
+            router.activeInstruction();
+            
+            const dbInUrl = appUrl.getDatabaseNameFromUrl();
+
+            if (!dbInUrl) {
+                return null;
+            }
+            
             const db = this.activeDatabase();
             if (!db) {
                 return null;

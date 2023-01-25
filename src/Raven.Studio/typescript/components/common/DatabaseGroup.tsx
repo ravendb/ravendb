@@ -131,7 +131,7 @@ export function DatabaseGroupError(props: DatabaseGroupErrorProps) {
             <div>
                 <i className="icon-warning me-1" /> Error
             </div>
-            <a className="link" onClick={showErrorsDetails}>
+            <a className="link" title="Click to see error details" onClick={showErrorsDetails}>
                 {lastErrorShort}
             </a>
         </div>

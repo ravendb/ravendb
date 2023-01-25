@@ -9,6 +9,10 @@ interface ReportedEvent {
 export default class MockEventsCollector implements EventsCollectorProps {
     private readonly _events: ReportedEvent[] = [];
 
+    constructor() {
+        _.bindAll(this, "reportEvent");
+    }
+
     reportEvent(category: string, action: string, label: string = null) {
         this._events.push({
             category,
