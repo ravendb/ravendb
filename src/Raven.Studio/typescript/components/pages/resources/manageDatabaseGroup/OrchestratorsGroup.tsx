@@ -1,5 +1,4 @@
 ﻿import React, { useCallback, useState } from "react";
-import { FlexGrow } from "components/common/FlexGrow";
 import { Button } from "reactstrap";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -22,6 +21,13 @@ import {
     RichPanelInfo,
     RichPanelName,
 } from "components/common/RichPanel";
+import {
+    DatabaseGroup,
+    DatabaseGroupActions,
+    DatabaseGroupItem,
+    DatabaseGroupList,
+    DatabaseGroupNode,
+} from "components/common/DatabaseGroup";
 
 export interface OrchestratorsGroupProps {
     orchestrators: NodeInfo[];
@@ -118,14 +124,13 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                 </DndProvider>
             ) : (
                 <React.Fragment>
-                    <div className="dbgroup">
-                        <div className="dbgroup-image"></div>
-                        <div className="dbgroup-list">
-                            <div className="dbgroup-item item-new">
-                                <div className="dbgroup-node">
+                    <DatabaseGroup>
+                        <DatabaseGroupList>
+                            <DatabaseGroupItem className="item-new">
+                                <DatabaseGroupNode>
                                     <i className="icon-node-add" />
-                                </div>
-                                <div className="dbgroup-actions">
+                                </DatabaseGroupNode>
+                                <DatabaseGroupActions>
                                     <Button
                                         size="xs"
                                         color="success"
@@ -137,8 +142,8 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                                         <i className="icon-plus me-1" />
                                         Add node
                                     </Button>
-                                </div>
-                            </div>
+                                </DatabaseGroupActions>
+                            </DatabaseGroupItem>
                             {orchestrators.map((node) => (
                                 <OrchestratorInfoComponent
                                     key={node.tag}
@@ -150,8 +155,8 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                             {deletionInProgress.map((deleting) => (
                                 <DeletionInProgress key={deleting} nodeTag={deleting} />
                             ))}
-                        </div>
-                    </div>
+                        </DatabaseGroupList>
+                    </DatabaseGroup>
                 </React.Fragment>
             )}
         </RichPanel>

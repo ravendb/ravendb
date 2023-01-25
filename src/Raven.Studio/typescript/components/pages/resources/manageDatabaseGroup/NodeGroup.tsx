@@ -120,21 +120,22 @@ export function NodeGroup(props: NodeGroupProps) {
                 </RichPanelActions>
             </RichPanelHeader>
 
-            <DatabaseGroup>
-                <div className="dbgroup-image"></div>
-                <DatabaseGroupList>
-                    {sortableMode ? (
-                        <DndProvider backend={HTML5Backend}>
-                            <ReorderNodes
-                                nodes={nodes}
-                                fixOrder={fixOrder}
-                                setFixOrder={setFixOrder}
-                                newOrder={newOrder}
-                                setNewOrder={setNewOrder}
-                            />
-                        </DndProvider>
-                    ) : (
-                        <React.Fragment>
+            <div className="dbgroup-image"></div>
+
+            {sortableMode ? (
+                <DndProvider backend={HTML5Backend}>
+                    <ReorderNodes
+                        nodes={nodes}
+                        fixOrder={fixOrder}
+                        setFixOrder={setFixOrder}
+                        newOrder={newOrder}
+                        setNewOrder={setNewOrder}
+                    />
+                </DndProvider>
+            ) : (
+                <React.Fragment>
+                    <DatabaseGroup>
+                        <DatabaseGroupList>
                             <DatabaseGroupItem className="item-new">
                                 <DatabaseGroupNode icon="node-add" color="success" />
                                 <DatabaseGroupActions>
@@ -164,10 +165,10 @@ export function NodeGroup(props: NodeGroupProps) {
                             {deletionInProgress.map((deleting) => (
                                 <DeletionInProgress key={deleting} nodeTag={deleting} />
                             ))}
-                        </React.Fragment>
-                    )}
-                </DatabaseGroupList>
-            </DatabaseGroup>
+                        </DatabaseGroupList>
+                    </DatabaseGroup>
+                </React.Fragment>
+            )}
         </RichPanel>
     );
 }
