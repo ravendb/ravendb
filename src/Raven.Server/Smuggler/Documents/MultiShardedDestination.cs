@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -82,7 +81,7 @@ namespace Raven.Server.Smuggler.Documents
             var stream = ShardedSmugglerHandlerProcessorForImport.GetOutputStream(holders[shardNumber].OutStream.OutputStream.Result, _options);
             holders[shardNumber].InputStream = stream;
             holders[shardNumber].ContextReturn = _handler.ContextPool.AllocateOperationContext(out JsonOperationContext context);
-            var destination = new StreamDestination(stream, context, _source, CompressionLevel.NoCompression);
+            var destination = new StreamDestination(stream, context, _source, compressionLevel: _databaseContext.Configuration.Sharding.CompressionLevel);
             holders[shardNumber].DestinationAsyncDisposable = await destination.InitializeAsync(_options, result, buildVersion);
             _destinations[shardNumber] = destination;
         }

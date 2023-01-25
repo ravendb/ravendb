@@ -18,7 +18,6 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide;
@@ -1496,7 +1495,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     await ReadObjectAsync(builder);
 
-                    var data = builder.CreateReader();
+                    var data = builder.CreateReader(); 
                     builder.Reset();
 
                     if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))

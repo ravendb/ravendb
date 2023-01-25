@@ -71,6 +71,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
+using ShardingConfiguration = Raven.Client.ServerWide.Sharding.ShardingConfiguration;
 
 namespace Raven.Server.ServerWide
 {

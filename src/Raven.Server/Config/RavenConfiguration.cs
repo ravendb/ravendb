@@ -17,7 +17,6 @@ using Microsoft.Extensions.Configuration.Memory;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 #endif
-using Raven.Client.Documents;
 using Raven.Client.Extensions;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Attributes;
@@ -103,6 +102,8 @@ namespace Raven.Server.Config
 
         public TrafficWatchConfiguration TrafficWatch { get; }
 
+        public ShardingConfiguration Sharding { get; set; }
+
         internal string ConfigPath => _customConfigPath
                        ?? Path.Combine(AppContext.BaseDirectory, "settings.json");
 
@@ -153,6 +154,7 @@ namespace Raven.Server.Config
             Migration = new MigrationConfiguration();
             TrafficWatch = new TrafficWatchConfiguration();
             Integrations = new IntegrationsConfiguration();
+            Sharding = new ShardingConfiguration();
         }
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
@@ -214,6 +216,7 @@ namespace Raven.Server.Config
             Migration.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             TrafficWatch.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
             Integrations.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Sharding.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
 
             PostInit();
 

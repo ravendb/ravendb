@@ -24,7 +24,6 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using SlowTests.Server.Documents.PeriodicBackup;
 using SlowTests.Smuggler;
-using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

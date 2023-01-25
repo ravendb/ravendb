@@ -28,6 +28,7 @@ namespace Raven.Server.Config.Categories
         Replication,
         Security,
         Server,
+        Sharding,
         Storage,
         Studio,
         Subscriptions,
