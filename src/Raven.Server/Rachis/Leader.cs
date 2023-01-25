@@ -791,8 +791,8 @@ namespace Raven.Server.Rachis
                 Command = command,
             };
 
-            await _engine.TxMerger.Enqueue(rachisMergedCommand); //wait until 'rachisMergedCommand' is executed.
-            // timeout = timeout * 10;
+            await _engine.TxMerger.Enqueue(rachisMergedCommand); //wait until 'rachisMergedCommand' is executed (until 'rachisMergedCommand.TaskResult' wont be null).
+            timeout = timeout * 2;
 
             // timeout = TimeSpan.FromMinutes(2);
 
@@ -803,16 +803,14 @@ namespace Raven.Server.Rachis
                 throw new TimeoutException($"Waited2 for {timeout} but the command {command.RaftCommandIndex} was not applied in this time.");
             }
 
-            return t.Result;
-
-            /*var inner = t.Result;
-            if (await inner.WaitWithTimeout(timeout) == false)
+            try
             {
-                GetConvertResult(command)?.AboutToTimeout();
-                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+                return t.Result;
             }
-
-            return await inner;*/
+            catch (AggregateException e) when (e.InnerExceptions.Count == 1)
+            {
+                throw e.InnerExceptions[0];
+            }
         }
 
         internal static ConvertResultAction GetConvertResult(CommandBase cmd)
