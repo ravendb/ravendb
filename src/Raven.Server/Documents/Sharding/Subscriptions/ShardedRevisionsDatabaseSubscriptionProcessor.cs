@@ -24,7 +24,7 @@ public class ShardedRevisionsDatabaseSubscriptionProcessor : RevisionsDatabaseSu
 
     protected override SubscriptionFetcher<(Document Previous, Document Current)> CreateFetcher()
     {
-        _sharding = _database.ReadShardingState();
+        _sharding = _database.ShardingConfiguration;
         return base.CreateFetcher();
     }
 

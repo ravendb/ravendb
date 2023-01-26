@@ -28,7 +28,7 @@ namespace Raven.Server.Smuggler.Documents
             Action<IOperationProgress> onProgress = null, CancellationToken token = default) :
             base(database.ShardedDatabaseName, database, source, destination, time, context, options, result, onProgress, token)
         {
-            _sharding = database.ReadShardingState();
+            _sharding = database.ShardingConfiguration;
             _index = ShardHelper.GetShardNumberFromDatabaseName(database.Name);
 
             Initialize();

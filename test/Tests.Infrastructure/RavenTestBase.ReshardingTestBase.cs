@@ -86,6 +86,7 @@ public partial class RavenTestBase
         {
             try
             {
+                servers ??= _parent.GetServers();
                 var bucket = await StartMovingShardForId(store, id, toShard, servers);
                 await WaitForMigrationComplete(store, bucket);
             }

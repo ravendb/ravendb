@@ -16,6 +16,7 @@ namespace Raven.Server.Documents.Sharding.Executors
         public int ShardNumber;
         public T Result;
         public RavenCommand<T> Command;
+        public Task CommandTask;
     }
 };
 
@@ -64,6 +65,10 @@ public abstract class AbstractExecutor : IDisposable
     public Task<TCombinedResult> ExecuteParallelForShardsAsync<TResult, TCombinedResult>(Memory<int> shards,
         IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
         => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(shards, operation, token);
+
+    public Task<TCombinedResult> ExecuteParallelAndIgnoreErrorsForShardsAsync<TResult, TCombinedResult>(Memory<int> shards,
+        IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token = default)
+        => ExecuteForShardsAsync<ParallelExecution, IgnoreFailure, TResult, TCombinedResult>(shards, operation, token);
 
     protected async Task<TCombinedResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(Memory<int> shards,
         IShardedOperation<TResult, TCombinedResult> operation, CancellationToken token)
@@ -114,7 +119,8 @@ public abstract class AbstractExecutor : IDisposable
             {
                 ShardNumber = commands[i].ShardNumber,
                 Command = commands[i].Command,
-                Result = commands[i].Command.Result
+                Result = commands[i].Command.Result,
+                CommandTask = commands[i].Task
             };
         }
         

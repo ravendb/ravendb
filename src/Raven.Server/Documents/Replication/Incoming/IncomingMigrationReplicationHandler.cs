@@ -48,6 +48,13 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
+                switch (item)
+                {
+                    case DocumentReplicationItem doc:
+                        doc.Flags |= DocumentFlags.FromResharding;
+                        break;
+                }
+
                 var order = _database.DocumentsStorage.GetNewChangeVector(context).ChangeVector;
                 var changeVector = context.GetChangeVector(item.ChangeVector);
 

@@ -130,7 +130,9 @@ namespace Raven.Server.Documents
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                ValidateId(lowerId);
+                if (flags.HasFlag(DocumentFlags.FromResharding) == false && 
+                    nonPersistentFlags.HasFlag(NonPersistentDocumentFlags.FromSmuggler) == false)
+                    ValidateId(lowerId);
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
                 var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName), collectionName.GetTableName(CollectionTableType.Documents));
@@ -181,6 +183,7 @@ namespace Raven.Server.Documents
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
                     {
                         flags = flags.Strip(DocumentFlags.FromReplication);
+                        flags = flags.Strip(DocumentFlags.FromResharding);
 
                         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) ||
                             nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate))

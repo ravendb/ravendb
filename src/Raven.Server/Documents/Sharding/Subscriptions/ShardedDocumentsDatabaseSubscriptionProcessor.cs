@@ -28,7 +28,7 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
 
     protected override SubscriptionFetcher<Document> CreateFetcher()
     {
-        _sharding = _database.ReadShardingState();
+        _sharding = _database.ShardingConfiguration;
         return base.CreateFetcher();
     }
 

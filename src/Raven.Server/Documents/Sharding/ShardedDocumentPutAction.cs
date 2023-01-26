@@ -1,5 +1,4 @@
-﻿using System;
-using Raven.Client.Exceptions;
+﻿using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using Voron;
@@ -19,10 +18,10 @@ public class ShardedDocumentPutAction : DocumentPutAction
     protected override void ValidateId(Slice lowerId)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle write documents to the wrong shard");
-        //var bucket = ShardHelper.GetBucketFromSlice(lowerId);
-        // throw if I'm not the owner of the bucket?
-        // throw if bucket moved, I'm the destination but still didn't confirm
-        // OR mark this document for migration
+        var bucket = ShardHelper.GetBucketFor(lowerId);
+        var shard = ShardHelper.GetShardNumberFor(_documentDatabase.ShardingConfiguration, bucket);
+        if (shard != _documentDatabase.ShardNumber)
+            throw new WrongShardException($"document '{lowerId}' was expected to be on shard #{shard}, but got to shard #{_documentDatabase.ShardNumber} (bucket: {bucket})");
     }
 
     protected override unsafe void CalculateSuffixForIdentityPartsSeparator(string id, ref char* idSuffixPtr, ref int idSuffixLength, ref int idLength)
