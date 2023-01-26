@@ -63,6 +63,9 @@ namespace SlowTests.Cluster
                     Server = server
                 }))
                 {
+                    server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow;
+                    var local = server.ServerStore.Observer._lastExpiredCompareExchangeCleanupTimeInTicks = DateTime.UtcNow.Ticks;
+
                     var rnd = new Random(DateTime.Now.Millisecond);
                     var user = new User { Name = new string(Enumerable.Repeat(_chars, 10).Select(s => s[rnd.Next(s.Length)]).ToArray()) };
                     var expiry = DateTime.Now.AddMinutes(2);
@@ -97,8 +100,15 @@ namespace SlowTests.Cluster
 
                     Assert.Equal(0, val);
 
-                    server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow;
-                    server.ServerStore.Observer._lastExpiredCompareExchangeCleanupTimeInTicks = DateTime.UtcNow.Ticks;
+                    var val2 = await WaitForValueAsync(() =>
+                    {
+                        if (local == server.ServerStore.Observer._lastExpiredCompareExchangeCleanupTimeInTicks)
+                            return false;
+
+                        return true;
+                    }, true);
+
+                    Assert.Equal(true, val2);
                 }
             }
         }
