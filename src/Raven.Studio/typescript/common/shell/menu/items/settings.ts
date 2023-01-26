@@ -189,6 +189,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: require('viewmodels/database/advanced/tombstonesState'),
             title: 'Tombstones',
             nav: true,
+            shardingMode: "allShards",
             css: 'icon-revisions-bin',
             dynamicHash: appUrls.tombstonesState,
             requiredAccess: "Operator"
