@@ -1,69 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.AspNetCore.Http;
 using NuGet.Packaging;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Suggestions;
-using Raven.Client.Extensions;
-using Raven.Client.Http;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
-using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
-using Raven.Server.Documents.Sharding.Operations;
+using Raven.Server.Documents.Sharding.Queries.Suggestions;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Sharding.Queries.Suggestions;
+namespace Raven.Server.Documents.Sharding.Operations.Queries;
 
-public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult, SuggestionQueryResult>
+public class ShardedSuggestionQueryOperation : AbstractShardedQueryOperation<SuggestionQueryResult, SuggestionResult, Document>
 {
-    private readonly ShardedDatabaseRequestHandler _requestHandler;
-    private readonly Dictionary<int, ShardedQueryCommand> _queryCommands;
-    private long _combinedResultEtag;
     private readonly Dictionary<string, SuggestionField> _fieldsWithOptions;
     private readonly BlittableJsonReaderObject _queryParameters;
-    private readonly TransactionOperationContext _context;
 
-    public ShardedSuggestionQueryOperation(Dictionary<string, SuggestionField> fieldsWithOptions, BlittableJsonReaderObject queryParameters, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
+    public ShardedSuggestionQueryOperation(Dictionary<string, SuggestionField> fieldsWithOptions, BlittableJsonReaderObject queryParameters,
+        TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
+        : base(queryCommands, context, requestHandler, expectedEtag)
     {
         _fieldsWithOptions = fieldsWithOptions;
         _queryParameters = queryParameters;
-        _context = context;
-        _requestHandler = requestHandler;
-        _queryCommands = queryCommands;
-        ExpectedEtag = expectedEtag;
     }
 
-    public string ExpectedEtag { get; }
-
-    public HttpRequest HttpRequest { get => _requestHandler.HttpContext.Request; }
-
-    RavenCommand<QueryResult> IShardedOperation<QueryResult, ShardedReadResult<SuggestionQueryResult>>.CreateCommandForShard(int shardNumber) => _queryCommands[shardNumber];
-
-    public string CombineCommandsEtag(Dictionary<int, ShardExecutionResult<QueryResult>> commands)
-    {
-        _combinedResultEtag = 0;
-
-        foreach (var cmd in commands.Values)
-        {
-            _combinedResultEtag = Hashing.Combine(_combinedResultEtag, cmd.Result.ResultEtag);
-        }
-
-        return CharExtensions.ToInvariantString(_combinedResultEtag);
-    }
-
-    public SuggestionQueryResult CombineResults(Dictionary<int, ShardExecutionResult<QueryResult>> results)
+    public override SuggestionQueryResult CombineResults(Dictionary<int, ShardExecutionResult<QueryResult>> results)
     {
         var result = new SuggestionQueryResult
         {
-            ResultEtag = _combinedResultEtag
+            ResultEtag = CombinedResultEtag
         };
 
         var suggestions = new Dictionary<string, CombinedSuggestions>();
@@ -74,7 +45,7 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
         {
             var queryResult = cmdResult.Result;
 
-            ShardedQueryOperation.CombineSingleShardResultProperties(result, queryResult);
+            CombineSingleShardResultProperties(result, queryResult);
 
             foreach (BlittableJsonReaderObject suggestionJson in cmdResult.Result.Results)
             {
@@ -126,7 +97,7 @@ public class ShardedSuggestionQueryOperation : IShardedReadOperation<QueryResult
 
             if (_fieldsWithOptions?.TryGetValue(fieldName, out var field) == true)
             {
-                var options = field.GetOptions(_context, _queryParameters);
+                var options = field.GetOptions(Context, _queryParameters);
 
                 fieldResult.Suggestions = combinedSuggestions.Take(options.PageSize).ToList();
             }

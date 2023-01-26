@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -20,6 +19,7 @@ using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Counters;
 using Raven.Server.Documents.Sharding.Operations;
+using Raven.Server.Documents.Sharding.Operations.Queries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -147,21 +147,6 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-17889 Add a test for that");
 
         return result;
-    }
-
-    private async Task HandleMissingDocumentIncludes(HashSet<string> missingIncludes, ShardedQueryResult result)
-    {
-        var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missingIncludes);
-        var missingIncludesOp = new FetchDocumentsFromShardsOperation(_context, _requestHandler, missingIncludeIdsByShard, null, null, counterIncludes: default, null, null, null, _metadataOnly);
-        var missingResult = await _requestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, _token);
-
-        foreach (var (_, missing) in missingResult.Result.Documents)
-        {
-            if (missing == null)
-                continue;
-
-            result.Includes.Add(missing);
-        }
     }
 
     private async Task HandleMissingCounterInclude(HashSet<string> missingCounterIncludes, ShardedQueryResult result)
