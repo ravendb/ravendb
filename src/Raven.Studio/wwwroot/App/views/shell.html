@@ -27,9 +27,12 @@
                         <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().root.name : ''"></span>
                         <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, 
                                          text: $root.activeDatabase() ? $root.activeDatabase().environment(): '',
-                                         attr: { class: 'margin-right label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
+                                         attr: { class: 'margin-right-xs label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
                         <strong data-bind="text: $root.activeDatabase() ? $root.activeDatabase().databaseAccessText() : '',
-                                           attr: { class: 'on-base-background ' + ($root.activeDatabase() ? $root.activeDatabase().databaseAccessColor() : '') } "></strong>
+                                           attr: { class: 'margin-right-xs on-base-background ' + ($root.activeDatabase() ? $root.activeDatabase().databaseAccessColor() : '') } "></strong>
+                        <div data-bind="visible: $root.activeDatabase()?.isSharded(), if: $root.activeDatabase()?.isSharded()" class="label label-info">
+                            <span data-bind="text: $root.activeDatabase().shards().length"></span> shards
+                        </div>
                     </div>
                     <a data-bind="attr: { href: $root.appUrls.databases }" title="View all databases" class="resources-link"><i class="icon-resources"></i></a>
                     <div class="box-container">
