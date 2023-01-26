@@ -52,6 +52,7 @@ namespace SlowTests.Sharding.Backup
         public async Task CanBackupAndRestoreShardedDatabase_InCluster()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
+
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
 
             var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);

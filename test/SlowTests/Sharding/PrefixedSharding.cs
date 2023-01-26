@@ -11,7 +11,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -493,6 +492,18 @@ public class PrefixedSharding : RavenTestBase
                 }
             }
 
+            var bucketStats = new Dictionary<int, List<BucketStats>>();
+            await foreach (var db in Sharding.GetShardsDocumentDatabaseInstancesFor(store))
+            {
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var stats = ShardedDocumentsStorage.GetBucketStatistics(ctx, 0, int.MaxValue).ToList();
+                    Assert.Equal(10, stats.Count);
+                    bucketStats[db.ShardNumber] = stats;
+                }
+            }
+
             var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var config = Backup.CreateBackupConfiguration(backupPath);
@@ -555,6 +566,24 @@ public class PrefixedSharding : RavenTestBase
 
                         var employee = await session.LoadAsync<Employee>($"employees/{i}");
                         Assert.NotNull(employee);
+                    }
+                }
+
+                // assert valid bucket stats
+                await foreach (var db in Sharding.GetShardsDocumentDatabaseInstancesFor(restoredDatabaseName))
+                {
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var stats = ShardedDocumentsStorage.GetBucketStatistics(ctx, 0, int.MaxValue).ToList();
+                        var originalStats = bucketStats[db.ShardNumber];
+
+                        Assert.Equal(originalStats.Count, stats.Count);
+                        for (int i = 0; i < stats.Count; i++)
+                        {
+                            Assert.Equal(originalStats[i].Bucket, stats[i].Bucket);
+                            Assert.Equal(originalStats[i].NumberOfDocuments, stats[i].NumberOfDocuments);
+                        }
                     }
                 }
 
