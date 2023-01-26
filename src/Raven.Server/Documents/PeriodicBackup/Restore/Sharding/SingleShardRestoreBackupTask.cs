@@ -8,6 +8,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -67,6 +68,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
         {
             base.ConfigureSettingsForSmugglerRestore(database, smuggler, filePath, isLastFile);
 
+            smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord =>
+            {
+                if (smugglerDatabaseRecord.Sharding == null)
+                    throw new InvalidDataException($"'{nameof(DatabaseRecord.Sharding)}' is missing in backup file '{filePath}'. Aborting the restore process");
+
+                RestoreSettings.DatabaseRecord.Sharding.BucketRanges = smugglerDatabaseRecord.Sharding.BucketRanges;
+                RestoreSettings.DatabaseRecord.Sharding.Prefixed = smugglerDatabaseRecord.Sharding.Prefixed;
+
+                ShardedDocumentDatabase.CastToShardedDocumentDatabase(database).ShardingConfiguration = smugglerDatabaseRecord.Sharding;
+            };
+
             if (isLastFile == false) 
                 return;
 
@@ -77,16 +89,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             // get the minimum in order to ensure we get the same shard every time we reach here
             if (GetMinShard(RestoreSettings.DatabaseRecord.Sharding) != _shardNumber)
                 smuggler._options.OperateOnTypes &= ~DatabaseItemType.Subscriptions;
-
-            smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord =>
-            {
-                if (smugglerDatabaseRecord.Sharding == null)
-                    throw new InvalidDataException($"'{nameof(DatabaseRecord.Sharding)}' is missing in backup file '{filePath}'. Aborting the restore process");
-
-                RestoreSettings.DatabaseRecord.Sharding.BucketRanges = smugglerDatabaseRecord.Sharding.BucketRanges;
-                RestoreSettings.DatabaseRecord.Sharding.Prefixed = smugglerDatabaseRecord.Sharding.Prefixed;
-            };
-
         }
         
         private int GetMinShard(ShardingConfiguration config)
