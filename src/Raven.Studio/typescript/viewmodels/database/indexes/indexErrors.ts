@@ -148,9 +148,10 @@ class indexErrors extends viewModelBase {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document Id", "20%", {
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => x.Action === "Map" ? appUrl.forEditDoc(x.Document, this.activeDatabase()) : "", "Document/Key", "20%", {
                     sortable: "string",
-                    customComparator: generalUtils.sortAlphaNumeric
+                    customComparator: generalUtils.sortAlphaNumeric,
+                    headerTitle: "Showing 'document ID' if action is Map, or 'reduce key value' if action is Reduce"
                 }),
                 new textColumn<IndexErrorPerDocument>(grid, x => x.LocalTime, "Date", "20%", {
                     sortable: "string"

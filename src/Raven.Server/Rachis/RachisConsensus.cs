@@ -793,6 +793,39 @@ namespace Raven.Server.Rachis
                     throw new TimeoutException("Something is wrong, throwing to avoid hanging");
                 }
             }
+            
+            public static unsafe void InsertToLogDirectlyForDebug(ClusterOperationContext context, RachisConsensus node, long term, long index, CommandBase cmd, RachisEntryFlags flags)
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
+                var djv = cmd.ToJson(context);
+                using (var cmdJson = context.ReadObject(djv, "raft/command"))
+                {
+                    using (table.Allocate(out TableValueBuilder tvb))
+                    {
+                        tvb.Add(Bits.SwapBytes(index));
+                        tvb.Add(term);
+                        tvb.Add(cmdJson.BasePointer, cmdJson.Size);
+                        tvb.Add((int)flags);
+                        table.Insert(tvb);
+                    }
+
+                    node.LogHistory.InsertHistoryLog(context, index, term, cmdJson);
+                }
+            }
+            
+            public static unsafe void UpdateStateDirectlyForDebug(ClusterOperationContext context, RachisConsensus node, long commitIndex, long commitTerm, long lastTruncatedIndex, long lastTruncatedTerm)
+            {
+                node.SetLastCommitIndex(context, commitIndex, commitTerm);
+                var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
+                using (state.DirectAdd(LastTruncatedSlice, sizeof(long) * 2, out byte* ptr))
+                {
+                    var data = (long*)ptr;
+                    data[0] = lastTruncatedIndex;
+                    data[1] = lastTruncatedTerm;
+                }
+
+                node.CurrentTerm = lastTruncatedIndex;
+            }
         }
 
         internal void SetNewStateInTx(ClusterOperationContext context,
