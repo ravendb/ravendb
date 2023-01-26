@@ -602,7 +602,8 @@ namespace Raven.Server.Commercial
                     if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
                     {
                         // ReSharper disable once MethodHasAsyncOverload
-                        Logger.Info("Skipping updating of the license from string or path or from api.ravendb.net because 'Licensing.DisableAutoUpdate' was set to true");
+                        var configurationKey = RavenConfiguration.GetKey(x => x.Licensing.DisableAutoUpdate);
+                        Logger.Info($"Skipping updating of the license from string or path or from api.ravendb.net because '{configurationKey}' was set to true");
                     }
                     return null;
                 }
@@ -616,7 +617,8 @@ namespace Raven.Server.Commercial
                     if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
                     {
                         // ReSharper disable once MethodHasAsyncOverload
-                        Logger.Info("Skipping updating of the license from api.ravendb.net because 'Licensing.DisableAutoUpdateFromApi' was set to true");
+                        var configurationKey = RavenConfiguration.GetKey(x => x.Licensing.DisableAutoUpdateFromApi);
+                        Logger.Info($"Skipping updating of the license from api.ravendb.net because '{configurationKey}' was set to true");
                     }
                     return null;
                 }
