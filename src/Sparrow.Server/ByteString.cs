@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -734,6 +734,11 @@ namespace Sparrow.Server
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 get { return (int)(End - Current); }
             }
+
+            public override string ToString()
+            {
+                return $"{nameof(Start)}: {(long)Start}, {nameof(End)}: {(long)End}, {nameof(Size)}: {Size}";
+            }
         }
 
         // Log₂(MinBlockSizeInBytes)
@@ -883,8 +888,8 @@ namespace Sparrow.Server
                 else
                 {
                     segments[currentIdx++] = new SegmentInformation(currentStart, currentEnd, canDispose: false);
-                    currentStart = segments[0].Start;
-                    currentEnd = segments[0].End;
+                    currentStart = segments[i].Start;
+                    currentEnd = segments[i].End;
                 }
             }
             segments[currentIdx++] = new SegmentInformation(currentStart, currentEnd, canDispose: false);
