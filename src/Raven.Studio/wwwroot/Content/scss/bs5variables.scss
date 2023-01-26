@@ -227,9 +227,9 @@ $gradient: linear-gradient(180deg, rgba($white, 0.15), rgba($white, 0)) !default
 $spacer: $gutter !default;
 $spacer-ratio: 1.618 !default;
 
-$spacer-sm: $spacer / $spacer-ratio;
-$spacer-xs: $spacer-sm / $spacer-ratio;
-$spacer-xxs: $spacer-xs / $spacer-ratio;
+$spacer-sm: math.div($spacer , $spacer-ratio);
+$spacer-xs: math.div($spacer-sm, $spacer-ratio);
+$spacer-xxs: math.div($spacer-xs, $spacer-ratio);
 
 $spacer-md: $spacer * $spacer-ratio;
 $spacer-lg: $spacer-md * $spacer-ratio;
@@ -416,7 +416,7 @@ $font-weight-bolder: bolder !default;
 $font-weight-base: $font-weight-normal !default;
 
 $line-height-base: $gutter-ratio !default;
-$line-height-sm: 1 / $gutter-ratio !default;
+$line-height-sm: math.div(1, $gutter-ratio) !default;
 $line-height-lg: $gutter-ratio * $gutter-ratio !default;
 
 $heading-size-base: 10px;
@@ -441,7 +441,7 @@ $font-sizes: (
 // scss-docs-end font-sizes
 
 // scss-docs-start headings-variables
-$headings-margin-bottom: $spacer / $gutter-ratio !default;
+$headings-margin-bottom: math.div($spacer, $gutter-ratio) !default;
 $headings-font-family: null !default;
 $headings-font-style: null !default;
 $headings-font-weight: 500 !default;
