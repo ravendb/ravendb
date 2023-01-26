@@ -95,7 +95,7 @@ class editDocument extends shardViewModelBase {
 
     isCreatingNewDocument = ko.observable(false);
     
-    documentBelongsToShardedDatabase = ko.observable(false);
+    cloneEnabled: KnockoutComputed<boolean>;
     
     isClone = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
@@ -231,8 +231,6 @@ class editDocument extends shardViewModelBase {
     compositionComplete() {
         super.compositionComplete();
         
-        this.documentBelongsToShardedDatabase(this.db instanceof shard || this.db instanceof shardedDatabase);
-        
         this.docEditor = aceEditorBindingHandler.getEditorBySelection(this.$docEditor);
         this.docEditorRight = aceEditorBindingHandler.getEditorBySelection(this.$docEditorRight);
 
@@ -346,7 +344,23 @@ class editDocument extends shardViewModelBase {
     private initializeObservables(): void {
         
         this.dirtyFlag = new ko.DirtyFlag([this.documentText, this.userSpecifiedId], false, jsonUtil.newLineNormalizingHashFunction);
-          
+
+        this.cloneEnabled = ko.pureComputed(() => {
+            const belongsToShardedDb = this.db instanceof shard || this.db instanceof shardedDatabase;
+
+            if (belongsToShardedDb) {
+                const attachmentsCount = this.crudActionsProvider().attachmentsCount();
+                const countersCount = this.crudActionsProvider().countersCount();
+                const timeSeriesCount = this.crudActionsProvider().timeSeriesCount();
+
+                if (attachmentsCount > 0 || countersCount > 0 || timeSeriesCount > 0) {
+                    return false;
+                }
+            }
+
+            return !this.showHugeDocumentWarning() && !this.isCreatingNewDocument();
+        })
+        
         this.isSaveEnabled = ko.pureComputed(() => {
             const isSaving = this.isSaving();
             const isDirty = this.dirtyFlag().isDirty();
