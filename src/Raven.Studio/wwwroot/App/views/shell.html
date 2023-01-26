@@ -3,8 +3,8 @@
     <aside class="top-alert" data-bind="visible: developerLicense">
         Developer License - Not for Production Use
     </aside>
-    <aside class="top-alert" data-bind="visible: singleShardName">
-        <span>Displayed data is sourced from only a single shard (<span data-bind="text: singleShardName"></span>) <a data-bind="attr: { href: allShardsUrl }">Go to all shards mode</a></span>
+    <aside class="top-alert shard-debug" data-bind="visible: singleShardName">
+        <span>Displayed data is sourced from only a single shard &nbsp;&nbsp; (<i class="icon-shard"></i><strong data-bind="text: singleShardName"></strong> ) &nbsp;&nbsp;<a data-bind="attr: { href: allShardsUrl }"> <i class="icon-sharding"></i> Go to all shards mode</a></span>
     </aside>
     <aside class="top-alert" data-bind="visible: applyColorCustomization">
         !!! Running as Cloud Cluster Admin !!!  <a href="#" data-bind="click: disableColorCustomization">Disable color customization</a>

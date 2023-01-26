@@ -38,17 +38,29 @@ body {
 
     .top-alert {
         grid-area: alert;
-        padding: 1px 7.5px !important;
+        padding: @gutter-xxs @gutter !important;
         display: block;
         width: 100%;
-        font-size: 16px;
-        height: @top-alert-height;
+        font-size: 14px;
+        letter-spacing: .15em;
+        min-height: @top-alert-height;
         text-align: center;
-        line-height: 19px;
         color: @gray-dark;
         font-weight: bold;
         background-color: darken(@brand-warning-light, 10%);
         text-transform: uppercase;
+
+        &.shard-debug {
+            background-color: @color-shard;
+            color: @black;
+            a{ 
+                color: @white;
+                text-decoration: none;
+                &:hover {
+                    text-decoration: underline;
+                }
+            }
+        }
     }
 
     .navbar {
