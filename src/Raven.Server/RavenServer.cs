@@ -2773,7 +2773,7 @@ namespace Raven.Server
 
                 if (chain.Build(cert))
                 {
-                    issuer = knownIssuer.SubjectName.Name;
+                    issuer = knownIssuer.SubjectName.Name + " - " +knownIssuer.Thumbprint;
                     return true;
                 } 
             }
