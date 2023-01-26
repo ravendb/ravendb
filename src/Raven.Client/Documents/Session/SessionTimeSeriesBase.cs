@@ -122,6 +122,11 @@ namespace Raven.Client.Documents.Session
             {
                 Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: null, deletes: new List<TimeSeriesOperation.DeleteOperation> { op }));
             }
+
+            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache))
+            {
+                cache.Remove(Name);
+            }
         }
 
         private static void ThrowDocumentAlreadyDeletedInSession(string documentId, string timeseries)
