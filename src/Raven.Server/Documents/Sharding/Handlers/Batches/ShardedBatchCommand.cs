@@ -28,6 +28,8 @@ public class ShardedBatchCommand : IBatchCommand
     public long LastTombstoneEtag { get; set; }
 
     public bool IsClusterTransaction { get; set; }
+    
+    public HashSet<int> Skip;
 
     internal ShardedBatchCommand(TransactionOperationContext context, ShardedDatabaseContext databaseContext)
     {
@@ -49,6 +51,12 @@ public class ShardedBatchCommand : IBatchCommand
 
             if (cmd.Type == CommandType.BatchPATCH)
             {
+                if (Skip?.Contains(positionInResponse) == true)
+                {
+                    positionInResponse++;
+                    continue;
+                }
+
                 var idsByShard = new Dictionary<int, List<(string Id, string ChangeVector)>>();
                 foreach (var cmdId in cmd.Ids)
                 {
@@ -75,10 +83,15 @@ public class ShardedBatchCommand : IBatchCommand
                     {
                         ShardNumber = kvp.Key,
                         CommandStream = bufferedCommand.ModifyBatchPatchStream(kvp.Value),
-                        PositionInResponse = positionInResponse
+                        PositionInResponse = positionInResponse++
                     };
                 }
 
+                continue;
+            }
+
+            if (Skip?.Contains(positionInResponse) == true)
+            {
                 positionInResponse++;
                 continue;
             }

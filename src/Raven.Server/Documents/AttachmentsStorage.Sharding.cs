@@ -65,7 +65,7 @@ namespace Raven.Server.Documents
             var bucket = ShardHelper.GetBucketFor(attachmentKey.Content.Ptr, sizeOfDocId);
 
             var database = context.Transaction.InnerTransaction.Owner as ShardedDocumentDatabase;
-            var prefixedConfiguration = database?.ReadShardingState().Prefixed;
+            var prefixedConfiguration = database?.ShardingConfiguration.Prefixed;
             if (prefixedConfiguration is { Count: > 0 })
             {
                 var idAsStr = Encoding.UTF8.GetString(attachmentKey.Content.Ptr, sizeOfDocId);

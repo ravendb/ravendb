@@ -34,7 +34,7 @@ namespace Raven.Server.Utils
         {
             using (DocumentIdWorker.GetLower(context, id, out var lowerId))
             {
-                return GetBucketFromSlice(lowerId);
+                return GetBucketFor(lowerId);
             }
         }
 
@@ -52,8 +52,7 @@ namespace Raven.Server.Utils
             return (int)(hash % NumberOfBuckets);
         }
 
-        //do not use this directly, we might mutate the slice buffer here.
-        private static unsafe int GetBucketFromSlice(Slice lowerId)
+        public static unsafe int GetBucketFor(Slice lowerId)
         {
             byte* buffer = lowerId.Content.Ptr;
             int size = lowerId.Size;
@@ -212,6 +211,22 @@ namespace Raven.Server.Utils
             }
 
             return (FindBucketShard(configuration.BucketRanges, bucket), bucket);
+        }
+
+        //do not use this directly, we might mutate the slice buffer here.
+        public static int GetShardNumberFor(ShardingConfiguration configuration, Slice id)
+        {
+            int bucket = GetBucketFor(id);
+            foreach (var setting in configuration.Prefixed)
+            {
+                if (id.ToString().StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    bucket += setting.BucketRangeStart;
+                    break;
+                }
+            }
+
+            return FindBucketShard(configuration.BucketRanges, bucket);
         }
 
         private static int FindBucketShard(List<ShardBucketRange> ranges, int bucket)

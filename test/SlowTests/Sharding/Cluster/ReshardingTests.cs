@@ -81,7 +81,7 @@ namespace SlowTests.Sharding.Cluster
                     await Server.ServerStore.Sharding.SourceMigrationCompleted(store.Database, bucket, result.Index, changeVector, RaftIdGenerator.NewId());
                 }
 
-                result = await Server.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, result.Index, RaftIdGenerator.NewId());
+                result = await Server.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, result.Index);
                 await Server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                 // the document will be written to the new location
@@ -671,7 +671,7 @@ namespace SlowTests.Sharding.Cluster
 
                         Assert.NotNull(replicationItem);
                         Assert.False(replicationItem.Flags.Contain(DocumentFlags.Artificial));
-                        Assert.False(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
+                        Assert.True(replicationItem.Flags.Contain(DocumentFlags.FromResharding));
                     }
                 }
             }

@@ -14,6 +14,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding;
@@ -93,6 +94,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
             var process = migration.Value;
 
             Task t = null;
+            var index = 0L;
             if (ShardNumber == process.DestinationShard && process.Status == MigrationStatus.Moved)
             {
                 if (process.ConfirmedDestinations.Contains(ServerStore.NodeTag) == false)
@@ -104,6 +106,8 @@ public class ShardedDocumentDatabase : DocumentDatabase
                         var status = ChangeVector.GetConflictStatusForDocument(context.GetChangeVector(process.LastSourceChangeVector), current);
                         if (status == ConflictStatus.AlreadyMerged)
                         {
+                            index = process.MigrationIndex;
+
                             if (_confirmations.TryGetValue(process.MigrationIndex, out t))
                             {
                                 if (t.IsCompleted == false)
@@ -116,9 +120,11 @@ public class ShardedDocumentDatabase : DocumentDatabase
                 }
             }
 
-            if (process.Status == MigrationStatus.OwnershipTransferred && process.SourceShard == ShardNumber)
+            if (process.SourceShard == ShardNumber && process.Status == MigrationStatus.OwnershipTransferred)
             {
-                if (_confirmations.TryGetValue(process.ConfirmationIndex!.Value, out t))
+                index = (long)Hashing.XXHash64.CalculateRaw(process.LastSourceChangeVector);
+
+                if (_confirmations.TryGetValue(index, out t))
                 {
                     if (t.IsCompleted == false)
                         continue;
@@ -131,7 +137,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
             if (t != null)
             {
-                _confirmations[process.MigrationIndex] = t;
+                _confirmations[index] = t;
                 t.ContinueWith(__ => _confirmations.TryRemove(process.MigrationIndex, out _));
             }
         }
@@ -198,14 +204,15 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
             switch (cmd.Result)
             {
+                // no documents in the bucket / everything was deleted
                 case DeleteBucketCommand.DeleteBucketResult.Empty:
                     await ServerStore.Sharding.SourceMigrationCleanup(ShardedDatabaseName, bucket, migrationIndex);
                     return;
+                // some documents skipped and left in the bucket
                 case DeleteBucketCommand.DeleteBucketResult.Skipped:
-                    // we skipped some document, because we got writes after migration
                     return;
+                // we have more docs, batch limit reached.
                 case DeleteBucketCommand.DeleteBucketResult.FullBatch:
-                    // we probably have more
                     continue;
                 default:
                     throw new ArgumentOutOfRangeException();

@@ -12,17 +12,19 @@ namespace Raven.Server.Documents.Sharding.Commands;
 
 public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObject>
 {
+    public readonly int ShardNumber;
     private readonly IndexBatchOptions _indexBatchOptions;
     private readonly ReplicationBatchOptions _replicationBatchOptions;
 
     private readonly List<Stream> _commands = new List<Stream>();
-    private readonly List<int> _positionInResponse = new List<int>();
+    public readonly List<int> PositionInResponse = new List<int>();
 
     private List<Stream> _attachmentStreams;
     private HashSet<Stream> _uniqueAttachmentStreams;
 
-    public ShardedSingleNodeBatchCommand(IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions)
+    public ShardedSingleNodeBatchCommand(int shardNumber, IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions)
     {
+        ShardNumber = shardNumber;
         _indexBatchOptions = indexBatchOptions;
         _replicationBatchOptions = replicationBatchOptions;
     }
@@ -30,7 +32,7 @@ public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObj
     public void AddCommand(SingleShardedCommand command)
     {
         _commands.Add(command.CommandStream);
-        _positionInResponse.Add(command.PositionInResponse);
+        PositionInResponse.Add(command.PositionInResponse);
 
         if (command.AttachmentStream != null)
         {
@@ -53,7 +55,7 @@ public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObj
         var count = 0;
         foreach (var o in partialResult.Items)
         {
-            var positionInResult = _positionInResponse[count++];
+            var positionInResult = PositionInResponse[count++];
             if (o is BlittableJsonReaderObject blittable)
             {
                 reply[positionInResult] = blittable.Clone(context);

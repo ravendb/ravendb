@@ -23,7 +23,7 @@ public static class Program
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
 
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 1000; i++)
         {
             Console.WriteLine($"Starting to run {i}");
             try
@@ -32,7 +32,7 @@ public static class Program
                 using (var test = new ReshardingTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
-                    await test.GetDocuments2();
+                    await test.RestoreShardedDatabaseFromIncrementalBackupAfterBucketMigration();
                 }
             }
             catch (Exception e)

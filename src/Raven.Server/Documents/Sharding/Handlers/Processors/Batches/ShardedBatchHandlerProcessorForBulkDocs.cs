@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Sharding.Commands;
@@ -26,20 +27,42 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     {
         var batchBehavior = GetBatchBehavior();
 
-        var shardedBatchCommands = new Dictionary<int, ShardedSingleNodeBatchCommand>(); // TODO sharding : consider cache those
-        foreach (var c in command.GetCommands(batchBehavior))
+        var retries = 5;
+        object[] result = null;
+        while (true)
         {
-            var shardNumber = c.ShardNumber;
-            if (shardedBatchCommands.TryGetValue(shardNumber, out var shardedBatchCommand) == false)
+            try
             {
-                shardedBatchCommand = new ShardedSingleNodeBatchCommand(indexBatchOptions, replicationBatchOptions);
-                shardedBatchCommands.Add(shardNumber, shardedBatchCommand);
-            }
-            shardedBatchCommand.AddCommand(c);
-        }
+                var resultSize = 0;
+                var batchPerShard = new Dictionary<int, ShardedSingleNodeBatchCommand>(); // TODO sharding : consider cache those
+                foreach (var c in command.GetCommands(batchBehavior))
+                {
+                    var shardNumber = c.ShardNumber;
+                    if (batchPerShard.TryGetValue(shardNumber, out var shardedBatchCommand) == false)
+                    {
+                        shardedBatchCommand = new ShardedSingleNodeBatchCommand(shardNumber, indexBatchOptions, replicationBatchOptions);
+                        batchPerShard.Add(shardNumber, shardedBatchCommand);
+                    }
 
-        var op = new SingleNodeShardedBatchOperation(HttpContext, context, shardedBatchCommands, command.ParsedCommands.Count);
-        return await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardedBatchCommands.Keys.ToArray(), op);
+                    shardedBatchCommand.AddCommand(c);
+                    resultSize++;
+                }
+
+                result ??= new object[resultSize];
+                var op = new SingleNodeShardedBatchOperation(HttpContext, context, batchPerShard, command, result);
+
+                var error = await RequestHandler.ShardExecutor.ExecuteParallelAndIgnoreErrorsForShardsAsync(batchPerShard.Keys.ToArray(), op);
+                if (error == null)
+                    return new DynamicJsonArray(result);
+
+                throw error;
+            }
+            catch (WrongShardException) when (retries > 0)
+            {
+                retries--;
+                await Task.Delay(100);
+            }
+        }
     }
 
     protected override ValueTask WaitForIndexesAsync(IndexBatchOptions options, string lastChangeVector, long lastTombstoneEtag,

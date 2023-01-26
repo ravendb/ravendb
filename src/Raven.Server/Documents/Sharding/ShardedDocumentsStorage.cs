@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
@@ -68,13 +69,13 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         CompressedRevisionsSchema = Schemas.Revisions.ShardingCompressedRevisionsSchemaBase;
     }
 
-    public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+    public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag, long skip = 0, long take = long.MaxValue, DocumentFields fields = DocumentFields.All)
     {
         var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
-        foreach (var result in GetItemsByBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], bucket, etag))
+        foreach (var result in GetItemsByBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], bucket, etag, skip, take))
         {
-            yield return TableValueToDocument(context, ref result.Result.Reader);
+            yield return TableValueToDocument(context, ref result.Result.Reader, fields);
         }
     }
 
@@ -351,94 +352,93 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         return merged;
     }
 
-    public bool HaveMoreDocumentsInBucket(int bucket, string current)
+    public bool HaveMoreDocumentsInBucketAfter(int bucket, long after, out string merged)
     {
+        merged = null;
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
         {
-            var last = GetLastChangeVectorInBucket(context, bucket);
-            if (last == null)
-                return false;
+            foreach (var _ in GetDocumentsByBucketFrom(context, bucket, after + 1))
+            {
+                return true;
+            }
 
-            var status = ChangeVector.GetConflictStatusForDatabase(last, context.GetChangeVector(current));
-            if (status == ConflictStatus.AlreadyMerged)
-                return false;
-
-            return true;
+            merged = GetMergedChangeVectorInBucket(context, bucket);
+            return false;
         }
     }
 
-    public IEnumerable<ReplicationBatchItem> GetTombstonesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+    public IEnumerable<ReplicationBatchItem> GetTombstonesByBucketFrom(DocumentsOperationContext context, int bucket, long etag) => 
+        RetrieveTombstonesByBucketFrom(context, bucket, etag).Select(tombstone => TombstoneReplicationItem.From(context, tombstone));
+
+    public IEnumerable<Tombstone> RetrieveTombstonesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
     {
         var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
         foreach (var result in GetItemsByBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, etag))
         {
-            yield return TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Result.Reader));
+            yield return TableValueToTombstone(context, ref result.Result.Reader);
         }
     }
 
     public static IEnumerable<Table.SeekResult> GetItemsByBucket(ByteStringContext allocator, Table table,
-        TableSchema.DynamicKeyIndexDef dynamicIndex, int bucket, long etag)
+        TableSchema.DynamicKeyIndexDef dynamicIndex, int bucket, long etag, long skip = 0, long take = long.MaxValue)
     {
+        if (take <= 0)
+            yield break;
+
         using (GetBucketAndEtagByteString(allocator, bucket, etag, out var buffer))
         using (Slice.External(allocator, buffer, buffer.Length, out var keySlice))
         using (Slice.External(allocator, buffer, buffer.Length - sizeof(long), out var prefix))
         {
-            foreach (var result in table.SeekForwardFromPrefix(dynamicIndex, keySlice, prefix, 0))
+            foreach (var result in table.SeekForwardFromPrefix(dynamicIndex, keySlice, prefix, skip))
             {
                 yield return result;
+                
+                take--;
+                if (take <= 0)
+                    break;
             }
-        }
-    }
-
-    public static bool GetLastItemInBucket(ByteStringContext allocator, Table table,
-        TableSchema.DynamicKeyIndexDef dynamicIndex, int bucket, out TableValueReader reader)
-    {
-        reader = default;
-        using (GetBucketAndEtagByteString(allocator, bucket, etag : long.MaxValue, out var buffer))
-        using (Slice.External(allocator, buffer, buffer.Length, out var keySlice))
-        using (Slice.External(allocator, buffer, buffer.Length - sizeof(long), out var prefix))
-        {
-            var holder = table.SeekOneBackwardFrom(dynamicIndex, prefix, keySlice);
-            if (holder == null)
-                return false;
-
-            reader = holder.Reader;
-            return true;
         }
     }
 
     public const long MaxDocumentsToDeleteInBucket = 1024;
 
-    public long DeleteBucket(DocumentsOperationContext context, int bucket, ChangeVector upTo)
+    public ShardedDocumentDatabase.DeleteBucketCommand.DeleteBucketResult DeleteBucket(DocumentsOperationContext context, int bucket, ChangeVector upTo)
     {
-        long numOfDeletions = 0;
+        long deleted = 0;
 
         MarkTombstonesAsArtificial(context, bucket, upTo);
-
-        foreach (var document in GetDocumentsByBucketFrom(context, bucket, 0))
+        var result = ShardedDocumentDatabase.DeleteBucketCommand.DeleteBucketResult.Empty;
+        
+        var docs = GetDocumentsByBucketFrom(context, bucket, 0, take: MaxDocumentsToDeleteInBucket, fields: DocumentFields.ChangeVector | DocumentFields.Id).ToList();
+        foreach (var document in docs)
         {
-            if (numOfDeletions > MaxDocumentsToDeleteInBucket)
-                break;
-
             var docCv = context.GetChangeVector(document.ChangeVector);
             if (ChangeVectorUtils.GetConflictStatus(docCv, upTo) != ConflictStatus.AlreadyMerged)
+            {
+                result = ShardedDocumentDatabase.DeleteBucketCommand.DeleteBucketResult.Skipped;
                 break;
+            }
 
             // check change vectors of all document extensions
-            if (HasDocumentExtensionWithGreaterChangeVector(context, document.LowerId, upTo)) 
-                break;
+            if (HasDocumentExtensionWithGreaterChangeVector(context, document.Id, upTo))
+            {
+                result = ShardedDocumentDatabase.DeleteBucketCommand.DeleteBucketResult.Skipped;
+                continue;
+            }
             
             Delete(context, document.Id, flags: DocumentFlags.Artificial | DocumentFlags.FromResharding);
 
             // delete revisions for document
             RevisionsStorage.DeleteRevisionsFor(context, document.Id, flags: DocumentFlags.Artificial | DocumentFlags.FromResharding);
-
-            numOfDeletions++;
+            deleted++;
         }
 
-        return numOfDeletions;
+        if (deleted >= MaxDocumentsToDeleteInBucket)
+            return ShardedDocumentDatabase.DeleteBucketCommand.DeleteBucketResult.FullBatch;
+
+        return result;
     }
 
     private void MarkTombstonesAsArtificial(DocumentsOperationContext context, int bucket, ChangeVector upTo)
@@ -446,14 +446,12 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         long lastProcessedEtag = 0;
         bool hasMore = true, collectionNamesUpdated = false;
         var collectionNames = new Dictionary<string, CollectionName>(_collectionsCache, StringComparer.OrdinalIgnoreCase);
-        var readTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
         while (hasMore)
         {
             hasMore = false;
-            foreach (var result in GetItemsByBucket(context.Allocator, readTable, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, etag: lastProcessedEtag))
+            foreach (var tombstone in RetrieveTombstonesByBucketFrom(context, bucket, lastProcessedEtag))
             {
-                var tombstone = TableValueToTombstone(context, ref result.Result.Reader);
                 if (tombstone.Flags.Contain(DocumentFlags.Artificial) && tombstone.Flags.Contain(DocumentFlags.FromResharding))
                     continue;
 
@@ -461,7 +459,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
                 if (ChangeVectorUtils.GetConflictStatus(tombstoneChangeVector, upTo) != ConflictStatus.AlreadyMerged)
                     break;
 
-                var collection = TableValueToId(context, (int)TombstoneTable.Collection, ref result.Result.Reader);
+                var collection = tombstone.Collection;
                 if (collectionNames.TryGetValue(collection, out var collectionName) == false)
                 {
                     collectionNames[collection] = collectionName = new CollectionName(collection);
@@ -496,6 +494,8 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
                 }
 
                 // need to re open the read iterator after we modified the tree
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Aviv, DevelopmentHelper.Severity.Normal, "optimize this, can be expensive to reopen each time");
+
                 lastProcessedEtag = tombstone.Etag;
                 hasMore = true;
                 break;
