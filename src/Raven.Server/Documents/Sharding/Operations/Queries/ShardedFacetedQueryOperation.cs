@@ -1,61 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Extensions;
-using Raven.Client.Http;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
-using Raven.Server.Documents.Sharding.Operations;
-using Sparrow;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Sharding.Queries.Facets;
+namespace Raven.Server.Documents.Sharding.Operations.Queries;
 
-public class ShardedFacetedQueryOperation : IShardedReadOperation<QueryResult, FacetedQueryResult>
+public class ShardedFacetedQueryOperation : AbstractShardedQueryOperation<FacetedQueryResult, FacetResult, Document>
 {
-    private readonly ShardedDatabaseRequestHandler _requestHandler;
-    private readonly Dictionary<int, ShardedQueryCommand> _queryCommands;
-    private long _combinedResultEtag;
     private readonly Dictionary<string, FacetOptions> _facetOptions;
 
-    public ShardedFacetedQueryOperation(Dictionary<string, FacetOptions> facetOptions, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
+    public ShardedFacetedQueryOperation(Dictionary<string, FacetOptions> facetOptions, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler,
+        Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
+        : base(queryCommands, context, requestHandler, expectedEtag)
     {
         _facetOptions = facetOptions;
-        _requestHandler = requestHandler;
-        _queryCommands = queryCommands;
-        ExpectedEtag = expectedEtag;
     }
 
-    public string ExpectedEtag { get; }
-
-    public HttpRequest HttpRequest { get => _requestHandler.HttpContext.Request; }
-
-    RavenCommand<QueryResult> IShardedOperation<QueryResult, ShardedReadResult<FacetedQueryResult>>.CreateCommandForShard(int shardNumber) => _queryCommands[shardNumber];
-
-    public string CombineCommandsEtag(Dictionary<int, ShardExecutionResult<QueryResult>> commands)
-    {
-        _combinedResultEtag = 0;
-
-        foreach (var cmd in commands.Values)
-        {
-            _combinedResultEtag = Hashing.Combine(_combinedResultEtag, cmd.Result.ResultEtag);
-        }
-
-        return CharExtensions.ToInvariantString(_combinedResultEtag);
-    }
-
-    public FacetedQueryResult CombineResults(Dictionary<int, ShardExecutionResult<QueryResult>> results)
+    public override FacetedQueryResult CombineResults(Dictionary<int, ShardExecutionResult<QueryResult>> results)
     {
         var result = new FacetedQueryResult
         {
-            ResultEtag = _combinedResultEtag
+            ResultEtag = CombinedResultEtag
         };
 
         var facets = new Dictionary<string, CombinedFacet>();
@@ -66,7 +40,14 @@ public class ShardedFacetedQueryOperation : IShardedReadOperation<QueryResult, F
         {
             var queryResult = cmdResult.Result;
 
-            ShardedQueryOperation.CombineSingleShardResultProperties(result, queryResult);
+            CombineSingleShardResultProperties(result, queryResult);
+
+            if (queryResult.Includes is { Count: > 0 })
+            {
+                result.Includes ??= new List<Document>();
+
+                HandleDocumentIncludes(queryResult, result);
+            }
 
             foreach (BlittableJsonReaderObject facetJson in cmdResult.Result.Results)
             {
@@ -88,7 +69,7 @@ public class ShardedFacetedQueryOperation : IShardedReadOperation<QueryResult, F
         }
 
         result.Results = facets.Values.Select(x => x.GetResult()).ToList();
-        
+
         return result;
     }
 
@@ -139,7 +120,7 @@ public class ShardedFacetedQueryOperation : IShardedReadOperation<QueryResult, F
                         _values[value.Range] = values = new IndexFacetReadOperationBase.FacetValues(false);
                     }
 
-                    var field = string.IsNullOrEmpty(value.Name) == false ? new FacetAggregationField {Name = value.Name} : IndexFacetReadOperationBase.FacetValues.Default;
+                    var field = string.IsNullOrEmpty(value.Name) == false ? new FacetAggregationField { Name = value.Name } : IndexFacetReadOperationBase.FacetValues.Default;
 
                     if (values.TryGet(field, out var facetValue) == false)
                     {

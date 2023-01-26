@@ -12,7 +12,9 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -304,5 +306,40 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
 
         return queryTemplates;
+    }
+
+    protected async Task HandleMissingDocumentIncludes<T, TIncludes>(HashSet<string> missingIncludes, QueryResult<List<T>, List<TIncludes>> result)
+    {
+        var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missingIncludes);
+        var missingIncludesOp = new FetchDocumentsFromShardsOperation(_context, _requestHandler, missingIncludeIdsByShard, null, null, counterIncludes: default, null, null, null, _metadataOnly);
+        var missingResult = await _requestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, _token);
+
+        var blittableIncludes = result.Includes as List<BlittableJsonReaderObject>;
+        var documentIncludes = result.Includes as List<Document>;
+
+        foreach (var (_, missing) in missingResult.Result.Documents)
+        {
+            if (missing == null)
+                continue;
+
+            if (blittableIncludes != null)
+                blittableIncludes.Add(missing);
+            else if (documentIncludes != null)
+            {
+                if (missing.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+                {
+                    if (metadata.TryGet(Constants.Documents.Metadata.Id, out LazyStringValue id))
+                    {
+                        documentIncludes.Add(new Document
+                        {
+                            Id = id,
+                            Data = missing
+                        });
+                    }
+                }
+            }
+            else
+                throw new NotSupportedException($"Unknown includes type: {result.Includes.GetType().FullName}");
+        }
     }
 }

@@ -4,13 +4,12 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Operations.Queries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 

@@ -11,11 +11,9 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
-using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Handlers;
-using Raven.Server.Documents.Sharding.Operations;
-using Raven.Server.Documents.Sharding.Queries.Suggestions;
+using Raven.Server.Documents.Sharding.Operations.Queries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -107,7 +105,7 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
     {
         var commands = GetOperationCommands();
         
-        var operation = new ShardedFacetedQueryOperation(_optionsByFacet, _requestHandler, commands, _existingResultEtag?.ToString());
+        var operation = new ShardedFacetedQueryOperation(_optionsByFacet, _context, _requestHandler, commands, _existingResultEtag?.ToString());
 
         var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(commands.Keys.ToArray(), operation, _token);
 
@@ -123,6 +121,11 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
             // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
             // so further queries would not throw index does not exist in case of a failover
             await _requestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(result.RaftCommandIndex.Value);
+        }
+
+        if (operation.MissingDocumentIncludes is { Count: > 0 })
+        {
+            await HandleMissingDocumentIncludes(operation.MissingDocumentIncludes, result);
         }
 
         return result;
