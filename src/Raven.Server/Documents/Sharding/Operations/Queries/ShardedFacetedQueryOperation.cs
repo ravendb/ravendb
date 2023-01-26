@@ -77,16 +77,13 @@ public class ShardedFacetedQueryOperation : AbstractShardedQueryOperation<Facete
     {
         private readonly FacetOptions _options;
         private FacetResult _combined;
-
-        private Dictionary<string, FacetValue> _rangeValues;
-        private Dictionary<string, IndexFacetReadOperationBase.FacetValues> _values;
+        
+        private readonly Dictionary<string, IndexFacetReadOperationBase.FacetValues> _values = new();
 
         public CombinedFacet(FacetOptions options)
         {
             _options = options;
         }
-
-        private bool IsRangeFacet => _options == null; // options aren't applicable for range facets so are always null
 
         public void Add(FacetResult facetResult)
         {
@@ -98,80 +95,42 @@ public class ShardedFacetedQueryOperation : AbstractShardedQueryOperation<Facete
                 RemainingTermsCount = facetResult.RemainingTermsCount
             };
 
-            if (IsRangeFacet)
+            foreach (var value in facetResult.Values)
             {
-                _rangeValues ??= new Dictionary<string, FacetValue>(facetResult.Values.Count);
-
-                AddRangeFacetResult(facetResult);
-            }
-            else
-            {
-                _values ??= new Dictionary<string, IndexFacetReadOperationBase.FacetValues>(facetResult.Values.Count);
-
-                AddFacetResult(facetResult);
-            }
-
-            void AddFacetResult(FacetResult result)
-            {
-                foreach (FacetValue value in result.Values)
+                if (_values.TryGetValue(value.Range, out var values) == false)
                 {
-                    if (_values.TryGetValue(value.Range, out var values) == false)
-                    {
-                        _values[value.Range] = values = new IndexFacetReadOperationBase.FacetValues(false);
-                    }
-
-                    var field = string.IsNullOrEmpty(value.Name) == false ? new FacetAggregationField { Name = value.Name } : IndexFacetReadOperationBase.FacetValues.Default;
-
-                    if (values.TryGet(field, out var facetValue) == false)
-                    {
-                        facetValue = CreateFacetValue(value);
-
-                        values.Add(field, facetValue);
-                    }
-                    else
-                    {
-                        UpdateFacetValue(ref facetValue, value);
-                    }
-
-                    values.Count = facetValue.Count;
+                    _values[value.Range] = values = new IndexFacetReadOperationBase.FacetValues(false);
                 }
-            }
 
-            void AddRangeFacetResult(FacetResult result)
-            {
-                foreach (FacetValue value in result.Values)
+                var field = string.IsNullOrEmpty(value.Name) == false ? new FacetAggregationField { Name = value.Name } : IndexFacetReadOperationBase.FacetValues.Default;
+
+                if (values.TryGet(field, out var facetValue) == false)
                 {
-                    if (_rangeValues.TryGetValue(value.Range, out var rangeFacetValue) == false)
+                    facetValue = new FacetValue
                     {
-                        rangeFacetValue = CreateFacetValue(value);
+                        Average = value.Average,
+                        Count = value.Count,
+                        Max = value.Max,
+                        Min = value.Min,
+                        Name = value.Name,
+                        Range = value.Range,
+                        Sum = value.Sum
+                    };
 
-                        _rangeValues[value.Range] = rangeFacetValue;
-                    }
-                    else
-                    {
-                        UpdateFacetValue(ref rangeFacetValue, value);
-                    }
+                    values.Add(field, facetValue);
                 }
+                else
+                    UpdateFacetValue(ref facetValue, value);
+
+                values.Count = facetValue.Count;
             }
 
-            FacetValue CreateFacetValue(FacetValue value)
-            {
-                return new FacetValue
-                {
-                    Average = value.Average,
-                    Count = value.Count,
-                    Max = value.Max,
-                    Min = value.Min,
-                    Name = value.Name,
-                    Range = value.Range,
-                    Sum = value.Sum
-                };
-            }
-
-            void UpdateFacetValue(ref FacetValue facetValue, FacetValue value)
+            static void UpdateFacetValue(ref FacetValue facetValue, FacetValue value)
             {
                 facetValue.Count += value.Count;
-                facetValue.Average += value.Average; // we'll convert it to avg value at the end of processing
+
+                if (value.Average is not null)
+                    facetValue.Average = facetValue.Average is null ? value.Average : facetValue.Average + value.Average; // we'll convert it to avg value at the end of processing
 
                 if (value.Max > facetValue.Max)
                     facetValue.Max = value.Max;
@@ -179,24 +138,14 @@ public class ShardedFacetedQueryOperation : AbstractShardedQueryOperation<Facete
                 if (value.Min < facetValue.Min)
                     facetValue.Min = value.Min;
 
-                facetValue.Sum += value.Sum;
+                if (value.Sum is not null)
+                    facetValue.Sum = facetValue.Sum is null ? value.Sum : facetValue.Sum + value.Sum;
             }
         }
 
         public FacetResult GetResult()
         {
-            if (IsRangeFacet)
-            {
-                foreach (var item in _rangeValues)
-                {
-                    var value = item.Value;
-
-                    UpdateAverageValue(value);
-
-                    _combined.Values.Add(value);
-                }
-            }
-            else
+            if (_options != null)
             {
                 List<string> allTerms = IndexFacetReadOperationBase.GetAllTermsSorted(_options.TermSortMode, _values);
 
@@ -212,18 +161,34 @@ public class ShardedFacetedQueryOperation : AbstractShardedQueryOperation<Facete
                 if (_options.IncludeRemainingTerms)
                     _combined.RemainingTerms = allTerms.Skip(start + values.ValuesCount).ToList();
             }
+            else
+            {
+                var values = new List<FacetValue>();
+
+                foreach (var (_, value) in _values)
+                {
+                    foreach (var facetValue in value.GetAll())
+                    {
+                        UpdateAverageValue(facetValue);
+
+                        values.Add(facetValue);
+                    }
+                }
+
+                _combined.Values = values;
+            }
 
             return _combined;
 
-            void UpdateAverageValue(FacetValue value)
+            static void UpdateAverageValue(FacetValue value)
             {
-                if (value.Average.HasValue)
-                {
-                    if (value.Count == 0)
-                        value.Average = double.NaN;
-                    else
-                        value.Average /= value.Count;
-                }
+                if (value.Average.HasValue == false) 
+                    return;
+
+                if (value.Count == 0)
+                    value.Average = double.NaN;
+                else
+                    value.Average /= value.Count;
             }
         }
     }
