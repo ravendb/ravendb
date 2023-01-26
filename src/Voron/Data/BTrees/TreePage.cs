@@ -32,6 +32,25 @@ namespace Voron.Data.BTrees
             PageSize = pageSize;
         }
 
+        public static void Initialize(byte* ptr, int pageSize)
+        {
+            var pageHeader = (TreePageHeader*)ptr;
+            pageHeader->TreeFlags = TreePageFlags.None;
+            pageHeader->Lower = Constants.Tree.PageHeaderSize;
+            var upper = (ushort)pageSize;
+            if (upper < pageSize)
+            {
+                // we have overflown Upper which is ushort 
+                // it means the page size is 64KB
+                // we have special handling for this in AllocateNewNode
+                Debug.Assert(pageSize == Constants.Compression.MaxPageSize);
+                upper = ushort.MaxValue;
+            }
+
+            pageHeader->Upper = upper;
+        }
+
+
         private TreePageHeader* Header
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -427,7 +446,7 @@ namespace Voron.Data.BTrees
             // when truncating, we copy the values to a tmp page
             // this has the effect of compacting the page data and avoiding
             // internal page fragmentation
-            using (tx.GetTempPage(out var tmp))
+            using (tx.GetTempPage(PageSize, out var tmp))
             {
                 var tmpPtr = tmp.Base;
                 var copy = new TreePage(tmpPtr, PageSize)

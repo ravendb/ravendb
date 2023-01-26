@@ -79,8 +79,8 @@ namespace Voron.Data.Compression
         public DecompressedLeafPage GetPage(LowLevelTransaction tx, int pageSize, DecompressionUsage usage, TreePage original)
         {
             var disposable = GetTemporaryPage(tx, pageSize, out var tempPage);
-
-            return new DecompressedLeafPage(tempPage, Constants.Storage.PageSize, usage, original, disposable);
+            TreePage.Initialize(tempPage, pageSize);
+            return new DecompressedLeafPage(tempPage, pageSize, usage, original, disposable);
         }
 
         public IDisposable GetTemporaryPage(LowLevelTransaction tx, int pageSize, out byte* tmp)
