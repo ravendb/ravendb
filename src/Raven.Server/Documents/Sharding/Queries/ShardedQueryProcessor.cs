@@ -112,12 +112,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
         var result = shardedReadResult.Result;
 
-        if (_isAutoMapReduceQuery && result.RaftCommandIndex.HasValue)
-        {
-            // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
-            // so further queries would not throw index does not exist in case of a failover
-            await _requestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(result.RaftCommandIndex.Value);
-        }
+        await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex);
 
         if (operation.MissingDocumentIncludes is {Count: > 0})
         {

@@ -342,4 +342,14 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 throw new NotSupportedException($"Unknown includes type: {result.Includes.GetType().FullName}");
         }
     }
+
+    protected async Task WaitForRaftIndexIfNeededAsync(long? raftCommandIndex)
+    {
+        if (_isAutoMapReduceQuery && raftCommandIndex.HasValue)
+        {
+            // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
+            // so further queries would not throw index does not exist in case of a failover
+            await _requestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(raftCommandIndex.Value, _token);
+        }
+    }
 }
