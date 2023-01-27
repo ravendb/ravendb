@@ -23,7 +23,7 @@ export function StatsHeader() {
                 <Col sm="auto">
                     <Button
                         color="primary"
-                        onClick={() => dispatch(toggleDetails)}
+                        onClick={() => dispatch(toggleDetails())}
                         title="Click to load detailed statistics"
                     >
                         <i className={classNames(detailsVisible ? "icon-collapse-vertical" : "icon-expand-vertical")} />
