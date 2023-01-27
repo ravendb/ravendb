@@ -22,11 +22,12 @@
             var themeToCss = {
                 "dark": "styles.css",
                 "blue": "styles-blue.css",
-                "light": "styles-light.css"
+                "light": "styles-light.css",
+                "classic": "styles-classic.css"
             };
             
             var savedTheme = localStorage.getItem("raven-theme");
-            var supportedThemes = ["blue", "dark", "light"];
+            var supportedThemes = ["blue", "dark", "light", "classic"];
             var themeToUse = savedTheme && supportedThemes.indexOf(savedTheme) !== -1 
                 ? savedTheme 
                 : "dark";
