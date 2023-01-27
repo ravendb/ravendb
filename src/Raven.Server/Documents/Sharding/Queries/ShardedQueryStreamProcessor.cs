@@ -21,7 +21,8 @@ namespace Raven.Server.Documents.Sharding.Queries
         private readonly string _debug;
         private readonly bool _ignoreLimit;
 
-        public ShardedQueryStreamProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, string debug, bool ignoreLimit, CancellationToken token) : base(context, requestHandler, query, false, false, token)
+        public ShardedQueryStreamProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, string debug,
+            bool ignoreLimit, CancellationToken token) : base(context, requestHandler, query, metadataOnly: false, indexEntriesOnly: false, token)
         {
             _debug = debug;
             _ignoreLimit = ignoreLimit;
