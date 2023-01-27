@@ -25,11 +25,13 @@ class databasesManager {
 
     activeDatabaseTracker = activeDatabaseTracker.default;
     changesContext = changesContext.default;
-
+    
+    onUpdateCallback: () => void = () => {
+        // empty by default
+    };
+    
     private databaseToActivate = ko.observable<string>();
     
-    onUpdateStatsCallbacks = ko.observableArray<() => void>([]);
-
     databases = ko.observableArray<database>([]);
 
     //TODO: make sure all those things are saved with root db name!
@@ -149,10 +151,10 @@ class databasesManager {
             const existingDb = this.getDatabaseByName(dbDto.Name);
             this.updateDatabase(dbDto, existingDb);
         });
-        
-        this.onUpdateStatsCallbacks().forEach(x => x());
-    }
 
+        this.onUpdateCallback();
+    }
+    
     private deleteRemovedDatabases(incomingData: StudioDatabasesResponse) {
         const incomingDatabases = incomingData.Databases;
         
@@ -228,7 +230,7 @@ class databasesManager {
                     .fail((xhr: JQueryXHR) => {
                         if (xhr.status === 404) {
                             this.onDatabaseDeleted(db);
-                            this.onUpdateStatsCallbacks().forEach(x => x());
+                            this.onUpdateCallback();
                         }
                     })
                     .done((info: StudioDatabaseInfo) => {
@@ -259,7 +261,7 @@ class databasesManager {
 
                 const updatedDatabase = this.updateDatabase(rsInfo, this.getDatabaseByName(rsInfo.Name));
 
-                this.onUpdateStatsCallbacks().forEach(x => x());
+                this.onUpdateCallback();
                 
                 const toActivate = this.databaseToActivate();
 

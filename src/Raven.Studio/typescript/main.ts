@@ -49,6 +49,10 @@ dialog.install({});
 const pluginWidget = require("plugins/widget");
 pluginWidget.install({});
 
+const shellSetup = require("components/common/shell/setup");
+
+shellSetup.initRedux();
+
 app.start().then(() => {
     if ("WebSocket" in window) {
         if (window.location.pathname.startsWith("/studio")) {

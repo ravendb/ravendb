@@ -1,7 +1,6 @@
 ﻿import React, { MouseEventHandler, useCallback, useState } from "react";
 import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "../../../models/databases";
 import classNames from "classnames";
-import { useActiveDatabase } from "hooks/useActiveDatabase";
 import { useAppUrls } from "hooks/useAppUrls";
 import deleteDatabaseConfirm from "viewmodels/resources/deleteDatabaseConfirm";
 import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
@@ -34,6 +33,8 @@ import {
 import appUrl from "common/appUrl";
 import { NodeSet, NodeSetItem, NodeSetLabel } from "components/common/NodeSet";
 import assertUnreachable from "components/utils/assertUnreachable";
+import { useAppSelector } from "components/store";
+import { selectActiveDatabase } from "components/common/shell/databasesSlice";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -211,7 +212,7 @@ function iconForNodeType(type: databaseGroupNodeType) {
 
 export function DatabasePanel(props: DatabasePanelProps) {
     const { db, selected, toggleSelection } = props;
-    const { db: activeDatabase } = useActiveDatabase();
+    const activeDatabase = useAppSelector(selectActiveDatabase);
     const { appUrl } = useAppUrls();
     const eventsCollector = useEventsCollector();
     const { databasesService } = useServices();
@@ -277,7 +278,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     return (
         <RichPanel
             className={classNames("flex-row", badgeClass(db), {
-                active: activeDatabase?.name === db.name,
+                active: activeDatabase === db.name,
                 relevant: true,
             })}
             data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), 

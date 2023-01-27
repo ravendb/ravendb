@@ -7,8 +7,8 @@ import { NoDatabases } from "./NoDatabases";
 import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
 import { useChanges } from "hooks/useChanges";
 import { Col, Row } from "reactstrap";
-import { useActiveDatabase } from "hooks/useActiveDatabase";
-import { useDatabaseManager } from "hooks/useDatabaseManager";
+import { useAppSelector } from "components/store";
+import { selectActiveDatabase, selectAllDatabases } from "components/common/shell/databasesSlice";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -26,9 +26,9 @@ function filterDatabases(databases: DatabaseSharedInfo[], criteria: DatabaseFilt
 export function DatabasesPage() {
     //TODO: highlight active database
 
-    const { db: activeDatabase } = useActiveDatabase();
+    const activeDatabase = useAppSelector(selectActiveDatabase);
 
-    const { databases } = useDatabaseManager();
+    const databases = useAppSelector(selectAllDatabases);
 
     const [filter, setFilter] = useState<DatabaseFilterCriteria>(() => ({
         searchText: "",

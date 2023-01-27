@@ -1,5 +1,4 @@
-﻿import useBoolean from "hooks/useBoolean";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { BulkIndexOperationConfirm } from "components/pages/database/indexes/list/BulkIndexOperationConfirm";
 import {
     IndexFilterCriteria,

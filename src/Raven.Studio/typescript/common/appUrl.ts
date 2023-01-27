@@ -3,6 +3,7 @@ import database = require("models/resources/database");
 import activeDatabase = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
+import { DatabaseSharedInfo } from "components/models/databases";
 
 class appUrl {
 
@@ -515,7 +516,7 @@ class appUrl {
         return "#databases/query/index" + indexPart + "?" + databasePart + extraParameters;
     }
 
-    static forDatabaseQuery(db: database): string {
+    static forDatabaseQuery(db: database | DatabaseSharedInfo): string {
         if (db) {
             return appUrl.baseUrl + "/databases/" + db.name;
         }

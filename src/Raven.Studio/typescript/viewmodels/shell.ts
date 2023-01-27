@@ -56,6 +56,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import connectionStatus from "models/resources/connectionStatus";
 import shard from "models/resources/shard";
 import moment from "moment";
+import databasesManager from "common/shell/databasesManager";
 
 class shell extends viewModelBase {
 
@@ -259,7 +260,7 @@ class shell extends viewModelBase {
                 // (connection will be started after executing this method) - it was just scheduled 2 lines above
                 // please notice we don't wait here for connection to be established
                 // since this invocation is sync we can't end up with race condition
-                this.databasesManager.setupGlobalNotifications();
+                databasesManager.default.setupGlobalNotifications();
                 this.clusterManager.setupGlobalNotifications();
                 this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
                 
@@ -463,7 +464,7 @@ class shell extends viewModelBase {
     }
 
     connectToRavenServer() {
-        return this.databasesManager.init();
+        return databasesManager.default.init();
     }
 
     fetchServerBuildVersion(): JQueryPromise<serverBuildVersionDto> {

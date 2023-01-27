@@ -2,60 +2,31 @@
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { MockedValue } from "test/mocks/services/AutoMockService";
 import { createValue } from "../utils";
-
-type ManagerState = {
-    databasesLocal: DatabaseSharedInfo[];
-};
-
-const mockDatabaseManagerState = ko.observable<ManagerState>({
-    databasesLocal: [],
-});
+import { globalDispatch } from "components/storeCompat";
+import { databasesLoaded } from "components/common/shell/databasesSlice";
 
 export class MockDatabaseManager {
-    get state() {
-        return mockDatabaseManagerState;
-    }
-
-    with_Cluster(dto?: MockedValue<DatabaseSharedInfo>) {
+    static with_Cluster(dto?: MockedValue<DatabaseSharedInfo>) {
         const value = this.createValue(dto, DatabasesStubs.nonShardedClusterDatabase().toDto());
-        this.updateState({
-            databasesLocal: [value],
-        });
+
+        globalDispatch(databasesLoaded([value]));
     }
 
-    with_Sharded(dto?: MockedValue<DatabaseSharedInfo>) {
+    static with_Sharded(dto?: MockedValue<DatabaseSharedInfo>) {
         const value = this.createValue(dto, DatabasesStubs.shardedDatabase().toDto());
-        this.updateState({
-            databasesLocal: [value],
-        });
+        globalDispatch(databasesLoaded([value]));
     }
 
-    with_Single(dto?: MockedValue<DatabaseSharedInfo>) {
+    static with_Single(dto?: MockedValue<DatabaseSharedInfo>) {
         const value = this.createValue(dto, DatabasesStubs.nonShardedSingleNodeDatabase().toDto());
-        this.updateState({
-            databasesLocal: [value],
-        });
+        globalDispatch(databasesLoaded([value]));
     }
 
-    withDatabases(dbs: DatabaseSharedInfo[]) {
-        this.updateState({
-            databasesLocal: dbs,
-        });
+    static withDatabases(dbs: DatabaseSharedInfo[]) {
+        globalDispatch(databasesLoaded(dbs));
     }
 
-    private updateState(update: Partial<ManagerState>) {
-        const oldState = mockDatabaseManagerState();
-        mockDatabaseManagerState({
-            ...oldState,
-            ...update,
-        });
-    }
-
-    databases() {
-        return mockDatabaseManagerState().databasesLocal;
-    }
-
-    protected createValue<T>(value: MockedValue<T>, defaultValue: T): T {
+    protected static createValue<T>(value: MockedValue<T>, defaultValue: T): T {
         return createValue(value, defaultValue);
     }
 }

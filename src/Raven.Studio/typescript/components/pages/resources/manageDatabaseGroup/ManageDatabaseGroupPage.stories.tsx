@@ -8,6 +8,7 @@ import licenseModel from "models/auth/licenseModel";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { ClusterStubs } from "test/stubs/ClusterStubs";
+import { MockDatabaseManager } from "test/mocks/hooks/MockDatabaseManager";
 
 export default {
     title: "Pages/Manage Database Group",
@@ -31,8 +32,7 @@ export const SingleNode: ComponentStory<typeof ManageDatabaseGroupPage> = () => 
 
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
-    const { useDatabaseManager } = mockHooks;
-    useDatabaseManager.withDatabases([db.toDto()]);
+    MockDatabaseManager.withDatabases([db.toDto()]);
 
     return (
         <div style={{ height: "100vh", overflow: "auto" }}>
@@ -47,10 +47,10 @@ export const NotAllNodesUsed: ComponentStory<typeof ManageDatabaseGroupPage> = (
 
     commonInit();
 
-    const { useClusterTopologyManager, useDatabaseManager } = mockHooks;
+    const { useClusterTopologyManager } = mockHooks;
 
     useClusterTopologyManager.with_Cluster();
-    useDatabaseManager.with_Single();
+    MockDatabaseManager.with_Single();
 
     const db = DatabasesStubs.nonShardedSingleNodeDatabase();
 
@@ -64,8 +64,7 @@ export const NotAllNodesUsed: ComponentStory<typeof ManageDatabaseGroupPage> = (
 export const Cluster: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     commonInit();
 
-    const { useDatabaseManager } = mockHooks;
-    useDatabaseManager.with_Cluster();
+    MockDatabaseManager.with_Cluster();
 
     const db = DatabasesStubs.nonShardedClusterDatabase();
 
@@ -79,9 +78,9 @@ export const Cluster: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
 export const Sharded: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     commonInit();
 
-    const { useDatabaseManager, useClusterTopologyManager } = mockHooks;
+    const { useClusterTopologyManager } = mockHooks;
 
-    useDatabaseManager.with_Sharded();
+    MockDatabaseManager.with_Sharded();
     useClusterTopologyManager.with_Cluster();
 
     const db = DatabasesStubs.shardedDatabase();
@@ -96,8 +95,7 @@ export const Sharded: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
 export const ClusterWithDeletion: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     commonInit();
 
-    const { useDatabaseManager } = mockHooks;
-    useDatabaseManager.with_Cluster((x) => {
+    MockDatabaseManager.with_Cluster((x) => {
         x.deletionInProgress = ["HARD", "SOFT"];
     });
 
@@ -113,8 +111,7 @@ export const ClusterWithDeletion: ComponentStory<typeof ManageDatabaseGroupPage>
 export const ClusterWithFailure: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     commonInit();
 
-    const { useDatabaseManager } = mockHooks;
-    useDatabaseManager.with_Cluster((x) => {
+    MockDatabaseManager.with_Cluster((x) => {
         x.nodes[0].lastStatus = "HighDirtyMemory";
         x.nodes[0].lastError = "This is some node error, which might be quite long in some cases...";
         x.nodes[0].responsibleNode = "X";
@@ -132,8 +129,7 @@ export const ClusterWithFailure: ComponentStory<typeof ManageDatabaseGroupPage> 
 export const PreventDeleteIgnore: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     commonInit();
 
-    const { useDatabaseManager } = mockHooks;
-    useDatabaseManager.with_Single((x) => {
+    MockDatabaseManager.with_Single((x) => {
         x.lockMode = "PreventDeletesIgnore";
     });
 
@@ -149,8 +145,7 @@ export const PreventDeleteIgnore: ComponentStory<typeof ManageDatabaseGroupPage>
 export const PreventDeleteError: ComponentStory<typeof ManageDatabaseGroupPage> = () => {
     commonInit();
 
-    const { useDatabaseManager } = mockHooks;
-    useDatabaseManager.with_Single((x) => {
+    MockDatabaseManager.with_Single((x) => {
         x.lockMode = "PreventDeletesError";
     });
 

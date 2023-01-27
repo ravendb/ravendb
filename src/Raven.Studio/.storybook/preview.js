@@ -45,7 +45,12 @@ import pluginWidget from "plugins/widget";
 pluginWidget.install({});
 
 
+import { initRedux } from "components/common/shell/setup";
+
 import { ModuleMocker } from 'jest-mock';
+import {useState} from "react";
+import {createStoreConfiguration} from "components/store";
+import {setEffectiveTestStore} from "components/storeCompat";
 window.jest = new ModuleMocker(window);
 
 // mock ace
@@ -53,15 +58,27 @@ window.ace = {
     require: () => ({})
 }
 
+initRedux();
+
+import { Provider } from "react-redux";
+
 
 export const decorators = [
     (Story) => {
         jest.resetAllMocks();
 
+        const [store] = useState(() => {
+            const storeConfiguration = createStoreConfiguration();
+            setEffectiveTestStore(storeConfiguration);
+            return storeConfiguration;
+        });
+        
         return (
-            <div>
-                {Story()}
-            </div>
+            <Provider store={store}>
+                <div>
+                    {Story()}
+                </div>
+            </Provider>
         )
     }
 ]
