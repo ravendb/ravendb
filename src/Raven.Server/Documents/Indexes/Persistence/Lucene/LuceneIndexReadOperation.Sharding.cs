@@ -1,6 +1,7 @@
 ﻿using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Sharding;
@@ -38,6 +39,10 @@ public partial class LuceneIndexReadOperation
                 case OrderByFieldType.Distance:
                     documentWithOrderByFields.AddDoubleOrderByField(d.Distance.Value.Distance);
                     break;
+                case OrderByFieldType.Score:
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "RavenDB-13927 Order by score");
+
+                    throw new NotSupportedInShardingException("Ordering by score is not supported in sharding");
                 default:
                     documentWithOrderByFields.AddStringOrderByField(_searcher.IndexReader.GetStringValueFor(field.OrderByName, doc, _state));
                     break;

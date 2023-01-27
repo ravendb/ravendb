@@ -422,7 +422,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldThrow(Options options)
         {
             using (var store = GetDocumentStore(options))

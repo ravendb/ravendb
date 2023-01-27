@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void FacetWithNullableDateTime(Options options)
         {
             using (var store = GetDocumentStore(options))
