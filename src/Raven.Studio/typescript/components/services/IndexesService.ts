@@ -15,6 +15,7 @@ import togglePauseIndexingCommand from "commands/database/index/togglePauseIndex
 import getIndexesProgressCommand from "commands/database/index/getIndexesProgressCommand";
 import openFaultyIndexCommand from "commands/database/index/openFaultyIndexCommand";
 import forceIndexReplace from "commands/database/index/forceIndexReplace";
+import { DatabaseSharedInfo } from "components/models/databases";
 
 export default class IndexesService {
     async getProgress(db: database, location: databaseLocationSpecifier) {
@@ -29,7 +30,7 @@ export default class IndexesService {
         await new saveIndexPriorityCommand(index.name, priority, db).execute();
     }
 
-    async getStats(db: database, location: databaseLocationSpecifier): Promise<IndexStats[]> {
+    async getStats(db: database | DatabaseSharedInfo, location: databaseLocationSpecifier): Promise<IndexStats[]> {
         return new getIndexesStatsCommand(db, location).execute();
     }
 

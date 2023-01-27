@@ -44,9 +44,7 @@ abstract class viewModelBase {
     downloader = new downloader();
 
     isBusy = ko.observable<boolean>(false);
-
-    protected databasesManager = databasesManager.default;
-
+    
     private keyboardShortcutDomContainers: string[] = [];
     static modelPollingHandle: ReturnType<typeof setTimeout>; // mark as static to fix https://github.com/BlueSpire/Durandal/issues/181
     private notifications: Array<changeSubscription> = [];
@@ -93,7 +91,7 @@ abstract class viewModelBase {
             return task;
         }
         
-        return this.databasesManager.activateBasedOnCurrentUrl(dbNameFromUrl);
+        return databasesManager.default.activateBasedOnCurrentUrl(dbNameFromUrl);
     }
 
     protected canAccessView(dbName?: string): boolean {

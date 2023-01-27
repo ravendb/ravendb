@@ -4,6 +4,7 @@ import messagePublisher = require("common/messagePublisher");
 import appUrl = require("common/appUrl");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import database from "models/resources/database";
+import { DatabaseSharedInfo } from "components/models/databases";
 
 /// Commands encapsulate a read or write operation to the database and support progress notifications and common AJAX related functionality.
 class commandBase {
@@ -24,7 +25,7 @@ class commandBase {
         return longWait ? 60000 : 9000;
     }
 
-    query<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<T> {
+    query<T>(relativeUrl: string, args: any, db?: database | DatabaseSharedInfo, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<T> {
         const ajax = this.ajax<T>(relativeUrl, args, "GET", db, options, timeToAlert, baseUrl);
         if (resultsSelector) {
             const task = $.Deferred<T>();
@@ -89,7 +90,7 @@ class commandBase {
         return this.ajax<T>(relativeUrl, args, "PATCH", db, options);
     }
 
-    protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<T> {
+    protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database | DatabaseSharedInfo, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<T> {
         const requestExecution = protractedCommandsDetector.instance.requestStarted(4000, timeToAlert);
 
         // ContentType:

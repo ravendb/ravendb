@@ -29,7 +29,7 @@ interface IndexBlockProps {
 function IndexStatistics(props: { indexName: string; database: database }) {
     const { indexName, database } = props;
 
-    const index = useAppSelector((state) => selectIndexByName(state, indexName));
+    const index = useAppSelector(selectIndexByName(indexName));
 
     const showErrorCounts = index.details.some((x) => x && x.errorsCount > 0);
     const showMapErrors = index.details.some((x) => x && x.mapErrors > 0);

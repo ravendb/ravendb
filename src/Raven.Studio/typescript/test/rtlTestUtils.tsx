@@ -16,8 +16,9 @@ import * as byNameQueries from "./byNameQueries";
 import * as byClassNameQueries from "./byClassNameQueries";
 import { ChangesProvider } from "hooks/useChanges";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
-import store, { createStoreConfiguration } from "components/store";
+import { createStoreConfiguration } from "components/store";
 import { Provider } from "react-redux";
+import { setEffectiveTestStore } from "components/storeCompat";
 
 let needsTestMock = true;
 
@@ -71,6 +72,8 @@ const AllProviders = () => AllProvidersInner;
 
 function AllProvidersInner({ children }: any) {
     const [store] = useState(() => createStoreConfiguration());
+
+    setEffectiveTestStore(store);
 
     return (
         <Provider store={store}>

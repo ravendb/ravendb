@@ -9,7 +9,6 @@ import { useLicenseStatus } from "hooks/useLicenseStatus";
 import LicenseStatus = Raven.Server.Commercial.LicenseStatus;
 import { useAccessManager } from "hooks/useAccessManager";
 import { NodeGroup } from "components/pages/resources/manageDatabaseGroup/partials/NodeGroup";
-import { useDatabaseManager } from "hooks/useDatabaseManager";
 import { OrchestratorsGroup } from "components/pages/resources/manageDatabaseGroup/partials/OrchestratorsGroup";
 import { ShardsGroup } from "components/pages/resources/manageDatabaseGroup/partials/ShardsGroup";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -19,6 +18,8 @@ import { StickyHeader } from "components/common/StickyHeader";
 import { useAsync } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
+import { selectDatabaseByName } from "components/common/shell/databasesSlice";
+import { useAppSelector } from "components/store";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -52,7 +53,7 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
 
     const { isOperatorOrAbove } = useAccessManager();
 
-    const { findByName } = useDatabaseManager();
+    const dbSharedInfo = useAppSelector(selectDatabaseByName(db.name));
 
     const fetchDynamicNodesDistribution = useCallback(async () => {
         //TODO: waiting for: RavenDB-19876
@@ -68,8 +69,6 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
     const { status: dynamicDistributionLoadStatus, reset } = useAsync(fetchDynamicNodesDistribution, null, {
         onSuccess: (r) => setDynamicDatabaseDistribution(r),
     });
-
-    const dbSharedInfo = findByName(db.name);
 
     const settingsUniqueId = useId("settings");
 
