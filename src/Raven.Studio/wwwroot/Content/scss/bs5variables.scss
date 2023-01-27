@@ -227,7 +227,7 @@ $gradient: linear-gradient(180deg, rgba($white, 0.15), rgba($white, 0)) !default
 $spacer: $gutter !default;
 $spacer-ratio: 1.618 !default;
 
-$spacer-sm: math.div($spacer , $spacer-ratio);
+$spacer-sm: math.div($spacer, $spacer-ratio);
 $spacer-xs: math.div($spacer-sm, $spacer-ratio);
 $spacer-xxs: math.div($spacer-xs, $spacer-ratio);
 
@@ -749,7 +749,7 @@ $form-check-inline-margin-end: 1rem !default;
 // scss-docs-end form-check-variables
 
 // scss-docs-start form-switch-variables
-$form-switch-color: rgba($text-muted-color, .6);
+$form-switch-color: rgba($text-muted-color, 0.6);
 $form-switch-width: $spacer !default;
 $form-switch-padding-start: $form-switch-width + $spacer-sm !default;
 $form-switch-bg-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$form-switch-color}'/></svg>") !default;
@@ -1121,7 +1121,7 @@ $accordion-button-active-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3
 
 // scss-docs-start tooltip-variables
 $tooltip-font-size: $font-size-sm !default;
-$tooltip-max-width: 200px !default;
+$tooltip-max-width: 300px !default;
 $tooltip-color: $text-emphasis-color !default;
 $tooltip-bg: $panel-bg-3 !default;
 $tooltip-border-radius: $border-radius !default;

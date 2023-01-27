@@ -16,8 +16,6 @@
 @import "../../../node_modules/boostrap5/scss/root";
 
 .bs5 {
-    
-
     // Optional Bootstrap components
     @import "../../../node_modules/boostrap5/scss/reboot";
     @import "../../../node_modules/boostrap5/scss/type";
@@ -43,7 +41,6 @@
     @import "../../../node_modules/boostrap5/scss/close";
     @import "../../../node_modules/boostrap5/scss/toasts";
     @import "../../../node_modules/boostrap5/scss/modal";
-    @import "../../../node_modules/boostrap5/scss/tooltip";
     @import "../../../node_modules/boostrap5/scss/popover";
     @import "../../../node_modules/boostrap5/scss/carousel";
     @import "../../../node_modules/boostrap5/scss/spinners";
@@ -59,9 +56,26 @@
     @import "../scss/bs5extend";
 }
 
+@import "../../../node_modules/boostrap5/scss/tooltip";
+
 // Storybook theme testing
 .sb-show-main {
     background-color: $body-bg !important;
+}
+
+//Reduce tooltip ul size, TODO move to different scss when bs3 is removed
+
+.tooltip {
+    ul {
+        margin: $gutter-xs;
+        margin-left: 0;
+        padding-left: $gutter-sm;
+        text-align: left;
+        line-height: 1.1em;
+        li + li {
+            margin-top: $gutter-xxs;
+        }
+    }
 }
 
 // Check $font-size-base not working TODO
@@ -70,11 +84,12 @@ body {
 }
 
 // bs3 row fix - remove when we drop bs3 TODO
-.row, .form-group {
+.row,
+.form-group {
     &::after {
-    content: "";
-    display: block;
-    clear: both;
+        content: "";
+        display: block;
+        clear: both;
     }
 }
 

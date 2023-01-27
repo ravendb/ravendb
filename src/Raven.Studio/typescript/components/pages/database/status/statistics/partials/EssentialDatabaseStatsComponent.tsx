@@ -191,7 +191,7 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                                     <i className="icon-info text-info"></i>
                                 </span>
                                 <UncontrolledTooltip target="js-timeseries-segments">
-                                    <ul className="margin-top margin-right text-left">
+                                    <ul>
                                         <li>
                                             <small>
                                                 <strong>Time series</strong> data is stored within{" "}
@@ -200,7 +200,6 @@ export function EssentialDatabaseStatsComponent(props: EssentialDatabaseStatsCom
                                                 series.
                                             </small>
                                         </li>
-                                        <br />
                                         <li>
                                             <small>
                                                 Segments&apos; maximum size is 2KB. <br /> Segments are added as needed
