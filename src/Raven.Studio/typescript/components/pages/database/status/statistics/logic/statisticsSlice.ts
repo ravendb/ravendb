@@ -5,19 +5,28 @@ import { AppDispatch, AppThunkApi, RootState } from "components/store";
 import { services } from "hooks/useServices";
 import databasesManager from "common/shell/databasesManager";
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
-import { loadableData, locationAwareLoadableData } from "components/models/common";
+import { loadableData, loadStatus, locationAwareLoadableData } from "components/models/common";
 import database from "models/resources/database";
 import IndexStats = Raven.Client.Documents.Indexes.IndexStats;
-import { createFailureState, createIdleState, createSuccessState } from "components/utils/common";
-import { DetailedIndexStats, PerIndexStats } from "components/pages/database/status/statistics/logic/models";
+import {
+    createFailureState,
+    createIdleState,
+    createSuccessState,
+    databaseLocationComparator,
+} from "components/utils/common";
+import { IndexItem, PerLocationIndexStats } from "components/pages/database/status/statistics/logic/models";
+import { WritableDraft } from "immer/dist/types/types-external";
 
-export interface StatisticsState {
+interface StatisticsState {
     databaseName: string;
-    databaseDetails: EntityState<locationAwareLoadableData<DetailedDatabaseStatistics>>;
-    indexDetails: EntityState<locationAwareLoadableData<IndexStats[]>>;
-    detailsVisible: boolean;
     essentialStats: loadableData<EssentialDatabaseStatistics>;
-    refreshing: boolean;
+    databaseDetails: EntityState<locationAwareLoadableData<DetailedDatabaseStatistics>>;
+    indexDetailsLoadStatus: Array<{ location: databaseLocationSpecifier; status: loadStatus }>;
+    indexDetails: EntityState<IndexItem>;
+    ui: {
+        detailsVisible: boolean;
+        refreshing: boolean;
+    };
 }
 
 function selectId(location: databaseLocationSpecifier) {
@@ -28,17 +37,23 @@ const databaseStatsAdapter = createEntityAdapter<locationAwareLoadableData<Detai
     selectId: (x) => selectId(x.location),
 });
 
-const indexStatsAdapter = createEntityAdapter<locationAwareLoadableData<IndexStats[]>>({
-    selectId: (x) => selectId(x.location),
+const indexStatsAdapter = createEntityAdapter<IndexItem>({
+    selectId: (x) => x.sharedInfo.name,
+    sortComparer: (a, b) => (a.sharedInfo.name > b.sharedInfo.name ? 1 : -1),
 });
+
+const indexSelectors = indexStatsAdapter.getSelectors();
 
 const initialState: StatisticsState = {
     databaseName: null,
-    detailsVisible: false,
     databaseDetails: databaseStatsAdapter.getInitialState(),
+    ui: {
+        detailsVisible: false,
+        refreshing: false,
+    },
+    indexDetailsLoadStatus: [],
     indexDetails: indexStatsAdapter.getInitialState(),
     essentialStats: createIdleState(),
-    refreshing: false,
 };
 
 const sliceName = "statistics";
@@ -48,17 +63,14 @@ const databaseNameSelector = (state: RootState) => state.statistics.databaseName
 const databaseSelectors = databaseStatsAdapter.getSelectors<RootState>((state) => state.statistics.databaseDetails);
 export const selectAllDatabaseDetails = databaseSelectors.selectAll;
 
-const indexesSelectors = indexStatsAdapter.getSelectors<RootState>((state) => state.statistics.indexDetails);
+export const selectAllIndexesLoadStatus = (state: RootState) => state.statistics.indexDetailsLoadStatus;
 
-export const fetchEssentialStats = createAsyncThunk(
-    sliceName + "/fetchEssentialStats",
-    async (_, thunkAPI: AppThunkApi) => {
-        const state = thunkAPI.getState();
-        const dbName = databaseNameSelector(state);
-        const db = databasesManager.default.getDatabaseByName(dbName);
-        return services.databasesService.getEssentialStats(db);
-    }
-);
+const fetchEssentialStats = createAsyncThunk(sliceName + "/fetchEssentialStats", async (_, thunkAPI: AppThunkApi) => {
+    const state = thunkAPI.getState();
+    const dbName = databaseNameSelector(state);
+    const db = databasesManager.default.getDatabaseByName(dbName);
+    return services.databasesService.getEssentialStats(db);
+});
 
 export const refresh = () => async (dispatch: AppDispatch, getState: () => RootState) => {
     dispatch(refreshStarted());
@@ -77,21 +89,21 @@ export const refresh = () => async (dispatch: AppDispatch, getState: () => RootS
     }
 };
 
-export const fetchDetailedDatabaseStats = createAsyncThunk(
+const fetchDetailedDatabaseStats = createAsyncThunk(
     sliceName + "/fetchDetailedDatabaseStats",
     async (payload: { db: database; location: databaseLocationSpecifier }): Promise<DetailedDatabaseStatistics> => {
         return await services.databasesService.getDetailedStats(payload.db, payload.location);
     }
 );
 
-export const fetchDetailedIndexStats = createAsyncThunk(
+const fetchDetailedIndexStats = createAsyncThunk(
     sliceName + "/fetchDetailedIndexStats",
     async (payload: { db: database; location: databaseLocationSpecifier }): Promise<IndexStats[]> => {
         return await services.indexesService.getStats(payload.db, payload.location);
     }
 );
 
-export const fetchAllDetailedDatabaseStats = () => async (dispatch: AppDispatch, getState: () => RootState) => {
+const fetchAllDetailedDatabaseStats = () => async (dispatch: AppDispatch, getState: () => RootState) => {
     const state = getState();
     const locations = databaseSelectors.selectAll(state).map((x) => x.location);
 
@@ -101,7 +113,7 @@ export const fetchAllDetailedDatabaseStats = () => async (dispatch: AppDispatch,
     await Promise.all(tasks);
 };
 
-export const fetchAllDetailedIndexStats = () => async (dispatch: AppDispatch, getState: () => RootState) => {
+const fetchAllDetailedIndexStats = () => async (dispatch: AppDispatch, getState: () => RootState) => {
     const state = getState();
 
     const locations = databaseSelectors.selectAll(state).map((x) => x.location);
@@ -123,30 +135,74 @@ export const statisticsSlice = createSlice({
         builder.addCase(fetchEssentialStats.rejected, (state) => {
             state.essentialStats = createFailureState();
         });
-
         builder.addCase(fetchDetailedIndexStats.fulfilled, (state, action) => {
-            indexStatsAdapter.setOne(state.indexDetails, {
-                ...createSuccessState(action.payload),
-                location: action.meta.arg.location,
+            const loadStateIdx = state.indexDetailsLoadStatus.findIndex((x) =>
+                databaseLocationComparator(x.location, action.meta.arg.location)
+            );
+            state.indexDetailsLoadStatus[loadStateIdx].status = "success";
+
+            const incomingNames = new Set(action.payload.map((x) => x.Name));
+            const toDelete = state.indexDetails.ids.filter((x: string) => !incomingNames.has(x));
+            indexStatsAdapter.removeMany(state.indexDetails, toDelete);
+
+            action.payload.forEach((indexStat) => {
+                const existingIndex = state.indexDetails.entities[indexStat.Name];
+
+                let indexToUse: WritableDraft<IndexItem>;
+
+                if (!existingIndex) {
+                    // create entry for new index
+                    const locationsCount = state.indexDetailsLoadStatus.length;
+                    indexToUse = {
+                        sharedInfo: {
+                            type: indexStat.Type,
+                            name: indexStat.Name,
+                            isReduceIndex:
+                                indexStat.Type === "AutoMapReduce" ||
+                                indexStat.Type === "MapReduce" ||
+                                indexStat.Type === "JavaScriptMapReduce",
+                        },
+                        details: new Array(locationsCount).fill(null),
+                    };
+                    indexStatsAdapter.setOne(state.indexDetails, indexToUse);
+                } else {
+                    indexToUse = existingIndex;
+                }
+                const targetToSet = (indexToUse.details[loadStateIdx] ??= {} as PerLocationIndexStats);
+
+                targetToSet.mapAttempts = indexStat.MapAttempts;
+                targetToSet.mapErrors = indexStat.MapErrors;
+                targetToSet.mapSuccesses = indexStat.MapSuccesses;
+                targetToSet.isFaultyIndex = indexStat.Type === "Faulty";
+                targetToSet.errorsCount = indexStat.ErrorsCount;
+                targetToSet.entriesCount = indexStat.EntriesCount;
+                targetToSet.mapReferenceAttempts = indexStat.MapReferenceAttempts;
+                targetToSet.mapReferenceSuccesses = indexStat.MapReferenceSuccesses;
+                targetToSet.mapReferenceErrors = indexStat.MapReferenceErrors;
+                targetToSet.reduceAttempts = indexStat.ReduceAttempts;
+                targetToSet.reduceSuccesses = indexStat.ReduceSuccesses;
+                targetToSet.reduceErrors = indexStat.ReduceErrors;
+                targetToSet.mappedPerSecondRate = indexStat.MappedPerSecondRate;
+                targetToSet.reducedPerSecondRate = indexStat.ReducedPerSecondRate;
+                targetToSet.isStale = indexStat.IsStale;
             });
         });
+
         builder.addCase(fetchDetailedIndexStats.pending, (state, action) => {
-            const id = selectId(action.meta.arg.location);
-            indexStatsAdapter.updateOne(state.indexDetails, {
-                id,
-                changes: {
-                    status: "loading",
-                    error: null,
-                },
-            });
+            const loadState = state.indexDetailsLoadStatus.find((x) =>
+                databaseLocationComparator(x.location, action.meta.arg.location)
+            );
+            if (loadState.status !== "success") {
+                loadState.status = "loading";
+            }
         });
         builder.addCase(fetchDetailedIndexStats.rejected, (state, action) => {
-            indexStatsAdapter.setOne(state.indexDetails, {
-                ...createFailureState(),
-                location: action.meta.arg.location,
-            });
-        });
+            const loadState = state.indexDetailsLoadStatus.find((x) =>
+                databaseLocationComparator(x.location, action.meta.arg.location)
+            );
 
+            loadState.status = "failure";
+        });
         builder.addCase(fetchDetailedDatabaseStats.fulfilled, (state, action) => {
             databaseStatsAdapter.setOne(state.databaseDetails, {
                 ...createSuccessState(action.payload),
@@ -178,7 +234,7 @@ export const statisticsSlice = createSlice({
                 state,
                 action: PayloadAction<{ databaseName: string; locations: databaseLocationSpecifier[] }>
             ) => {
-                state.detailsVisible = false;
+                state.ui.detailsVisible = false;
 
                 if (state.databaseName !== action.payload.databaseName) {
                     state.essentialStats = initialState.essentialStats;
@@ -192,13 +248,13 @@ export const statisticsSlice = createSlice({
                         }))
                     );
 
-                    indexStatsAdapter.setAll(
-                        state.indexDetails,
-                        action.payload.locations.map((location) => ({
-                            location,
-                            ...createIdleState(),
-                        }))
-                    );
+                    state.indexDetailsLoadStatus = action.payload.locations.map((location) => ({
+                        location,
+                        loadError: null,
+                        status: "idle",
+                    }));
+
+                    state.indexDetails = indexStatsAdapter.getInitialState();
                 }
             },
             prepare: (databaseName: string, locations: databaseLocationSpecifier[]) => {
@@ -211,16 +267,16 @@ export const statisticsSlice = createSlice({
             },
         },
         showDetails: (state) => {
-            state.detailsVisible = true;
+            state.ui.detailsVisible = true;
         },
         hideDetails: (state) => {
-            state.detailsVisible = false;
+            state.ui.detailsVisible = false;
         },
         refreshStarted: (state) => {
-            state.refreshing = true;
+            state.ui.refreshing = true;
         },
         refreshFinished: (state) => {
-            state.refreshing = false;
+            state.ui.refreshing = false;
         },
     },
 });
@@ -239,9 +295,9 @@ export const initView = (db: database) => async (dispatch: AppDispatch, getState
     }
 };
 
-export const toggleDetails = async (dispatch: AppDispatch, getState: () => RootState) => {
+export const toggleDetails = () => async (dispatch: AppDispatch, getState: () => RootState) => {
     const state = getState();
-    const visible = state.statistics.detailsVisible;
+    const visible = state.statistics.ui.detailsVisible;
 
     if (visible) {
         dispatch(statisticsSlice.actions.hideDetails());
@@ -262,114 +318,30 @@ const needsDetailsRefresh = createSelector(databaseSelectors.selectAll, (items) 
 );
 
 export const selectEssentialStats = (state: RootState) => state.statistics.essentialStats;
-export const selectDetailsVisible = (state: RootState) => state.statistics.detailsVisible;
+export const selectDetailsVisible = (state: RootState) => state.statistics.ui.detailsVisible;
+export const selectRefreshing = (state: RootState) => state.statistics.ui.refreshing;
 
-export const selectRefreshing = (state: RootState) => state.statistics.refreshing;
-
-export const selectAllIndexDetails = indexesSelectors.selectAll;
-export const selectIndexesGroup = createSelector(selectAllIndexDetails, mapIndexStats);
-
-export function mapIndexStats(data: locationAwareLoadableData<IndexStats[]>[]): DetailedIndexStats {
-    const allFailures = data.every((x) => x.status === "failure");
-    if (allFailures) {
-        return {
-            noData: true,
-            groups: [],
-            globalState: "failure",
-            perLocationStatus: [],
-        };
+export const selectGlobalIndexDetailsStatus = (state: RootState): loadStatus => {
+    const statuses = state.statistics.indexDetailsLoadStatus.map((x) => x.status);
+    if (statuses.every((x) => x === "failure")) {
+        return "failure";
     }
 
-    const atLeastOneSuccess = data.find((x) => x.status === "success"); // it means we have indexes list, so we can show table
-
-    if (!atLeastOneSuccess) {
-        return {
-            noData: false,
-            globalState: "loading",
-            groups: [],
-            perLocationStatus: [],
-        };
+    if (statuses.some((x) => x === "success")) {
+        return "success";
     }
 
-    if (atLeastOneSuccess && atLeastOneSuccess.data.length === 0) {
-        return {
-            noData: true,
-            groups: [],
-            globalState: "success",
-            perLocationStatus: [],
-        };
-    }
+    return "loading";
+};
 
-    // at this point we have al least one NON-EMPTY success -> we can group indexes
+export const selectIndexByName = (state: RootState, indexName: string) =>
+    state.statistics.indexDetails.entities[indexName];
+export const selectMapIndexNames = (state: RootState) => {
+    const indexes = indexSelectors.selectAll(state.statistics.indexDetails);
+    return indexes.filter((x) => !x.sharedInfo.isReduceIndex).map((x) => x.sharedInfo.name);
+};
 
-    const perLocationStatus = data.map((x) => ({
-        location: x.location,
-        status: x.status,
-        data: null as never,
-        error: x.error,
-    }));
-
-    const indexes: PerIndexStats[] = [];
-
-    for (let i = 0; i < data.length; i++) {
-        const datum = data[i];
-        if (datum.status === "success") {
-            for (const indexStats of datum.data) {
-                const existingItem = indexes.find((x) => x.name === indexStats.Name);
-
-                let itemToUpdate: PerIndexStats;
-
-                if (existingItem) {
-                    itemToUpdate = existingItem;
-                } else {
-                    itemToUpdate = {
-                        name: indexStats.Name,
-                        type: indexStats.Type,
-                        details: [...Array(data.length)],
-                        isReduceIndex:
-                            indexStats.Type === "AutoMapReduce" ||
-                            indexStats.Type === "MapReduce" ||
-                            indexStats.Type === "JavaScriptMapReduce",
-                    };
-                    indexes.push(itemToUpdate);
-                }
-
-                itemToUpdate.details[i] = {
-                    mapAttempts: indexStats.MapAttempts,
-                    mapErrors: indexStats.MapErrors,
-                    mapSuccesses: indexStats.MapSuccesses,
-                    isFaultyIndex: indexStats.Type === "Faulty",
-                    errorsCount: indexStats.ErrorsCount,
-                    entriesCount: indexStats.EntriesCount,
-                    mapReferenceAttempts: indexStats.MapReferenceAttempts,
-                    mapReferenceSuccesses: indexStats.MapReferenceSuccesses,
-                    mapReferenceErrors: indexStats.MapReferenceErrors,
-                    reduceAttempts: indexStats.ReduceAttempts,
-                    reduceSuccesses: indexStats.ReduceSuccesses,
-                    reduceErrors: indexStats.ReduceErrors,
-                    mappedPerSecondRate: indexStats.MappedPerSecondRate,
-                    reducedPerSecondRate: indexStats.ReducedPerSecondRate,
-                    isStale: indexStats.IsStale,
-                };
-            }
-        }
-    }
-
-    indexes.sort((a, b) => (a.name > b.name ? 1 : -1));
-
-    const types = Array.from(new Set(indexes.map((x) => x.type)));
-    types.sort();
-
-    const groups = types.map((type) => {
-        return {
-            type,
-            indexes: indexes.filter((i) => i.type === type),
-        };
-    });
-    return {
-        perLocationStatus,
-        groups,
-        noData: false,
-        globalState: "success",
-    };
-}
+export const selectMapReduceIndexNames = (state: RootState) => {
+    const indexes = indexSelectors.selectAll(state.statistics.indexDetails);
+    return indexes.filter((x) => x.sharedInfo.isReduceIndex).map((x) => x.sharedInfo.name);
+};

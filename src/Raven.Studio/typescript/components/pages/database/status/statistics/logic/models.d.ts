@@ -1,21 +1,10 @@
-﻿import { loadStatus, locationAwareLoadableData } from "components/models/common";
+﻿export interface IndexItem {
+    sharedInfo: {
+        name: string;
+        isReduceIndex: boolean;
+        type: Raven.Client.Documents.Indexes.IndexType;
+    };
 
-export interface DetailedIndexStats {
-    perLocationStatus: locationAwareLoadableData<never>[];
-    groups: IndexGroupStats[];
-    globalState: loadStatus;
-    noData: boolean;
-}
-
-export interface IndexGroupStats {
-    type: IndexType;
-    indexes: PerIndexStats[];
-}
-
-export interface PerIndexStats {
-    name: string;
-    type: IndexType;
-    isReduceIndex: boolean;
     details: PerLocationIndexStats[];
 }
 
