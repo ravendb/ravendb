@@ -76,7 +76,7 @@ namespace SlowTests.Bugs.Facets
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void PrestonThinksDateRangeQueryShouldProduceCorrectResultsWhenBuiltWithClient(Options options)
         {
             var cameras = GetCameras(30);

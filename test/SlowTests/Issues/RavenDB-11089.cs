@@ -231,7 +231,7 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformDynamicFacetedSearch_Embedded(RavenTestParameters config)
         {
             var cameras = GetCameras(30);

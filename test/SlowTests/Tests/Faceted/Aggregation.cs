@@ -55,8 +55,8 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
 
-                    var obj = new { Currency = Currency.EUR, Product = "Milk", Total = 1.1, Region = 1 };
-                    var obj2 = new { Currency = Currency.EUR, Product = "Milk", Total = 1, Region = 1 };
+                    var obj = new Order { Currency = Currency.EUR, Product = "Milk", Total = 1.1M, Region = 1 };
+                    var obj2 = new Order { Currency = Currency.EUR, Product = "Milk", Total = 1, Region = 1 };
 
                     session.Store(obj);
                     session.Store(obj2);
@@ -92,8 +92,8 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
 
-                    var obj = new { Currency = Currency.EUR, Product = "Milk", Total = 1.1, Region = 1, Tax = 1 };
-                    var obj2 = new { Currency = Currency.EUR, Product = "Milk", Total = 1, Region = 1, Tax = 1.5 };
+                    var obj = new Order { Currency = Currency.EUR, Product = "Milk", Total = 1.1M, Region = 1, Tax = 1 };
+                    var obj2 = new Order { Currency = Currency.EUR, Product = "Milk", Total = 1, Region = 1, Tax = 1.5f };
 
                     session.Store(obj);
                     session.Store(obj2);
@@ -130,8 +130,8 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
 
-                    var obj = new { Currency = Currency.EUR, Product = "Milk", Quantity = 1.0, Total = 1.1, Region = 1, Tax = 1 };
-                    var obj2 = new { Currency = Currency.EUR, Product = "Milk", Quantity = 2, Total = 1, Region = 1, Tax = 1.5 };
+                    var obj = new Order { Currency = Currency.EUR, Product = "Milk", Quantity = 1, Total = 1.1M, Region = 1, Tax = 1 };
+                    var obj2 = new Order { Currency = Currency.EUR, Product = "Milk", Quantity = 2, Total = 1, Region = 1, Tax = 1.5f };
 
                     session.Store(obj);
                     session.Store(obj2);
@@ -168,8 +168,8 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
 
-                    var obj = new { Currency = Currency.EUR, Product = "Milk", Total = 1.1, Region = 1.0, Tax = 1 };
-                    var obj2 = new { Currency = Currency.EUR, Product = "Milk", Total = 1, Region = 2, Tax = 1.5 };
+                    var obj = new Order { Currency = Currency.EUR, Product = "Milk", Total = 1.1M, Region = 1, Tax = 1 };
+                    var obj2 = new Order { Currency = Currency.EUR, Product = "Milk", Total = 1, Region = 2, Tax = 1.5f };
 
                     session.Store(obj);
                     session.Store(obj2);
