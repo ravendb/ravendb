@@ -4,23 +4,18 @@
 // AVAILABLE: default, blue, light
 $theme: "default" !default;
 
-$brand-ravendb: #b82e73;
-$brand-cloud: #37c4ac !default;
-$brand-hr: #f78831 !default;
-
 // Dark Theme
-
-$white: #f0f4f6;
-$gray-100: #c4ced7;
-$gray-200: #98a7b7;
-$gray-300: #7e8c9e;
-$gray-400: #637085;
-$gray-500: #4f5b6d;
-$gray-600: #3b4654;
-$gray-700: #333d48;
-$gray-800: #2b333b;
-$gray-900: #252b32;
-$black: #22252b;
+$white: #f0f1f6;
+$gray-100: #c3c3cf;
+$gray-200: #acadbf;
+$gray-300: #8f8fa2;
+$gray-400: #727489;
+$gray-500: #595b71;
+$gray-600: #424554;
+$gray-700: #353742;
+$gray-800: #262936;
+$gray-900: #1e1f2b;
+$black: #181826;
 
 $gray-base: $black;
 $gray-base-light: $gray-900;
@@ -51,6 +46,10 @@ $color-5-1: #bf569f;
 $color-5-2: #d85b9a;
 $color-5-3: #ed558c;
 
+$brand-ravendb: #cf1f5d;
+$brand-cloud: #37c4ac !default;
+$brand-hr: #f78831 !default;
+
 $secondary: $gray-600;
 $body-bg: $black;
 $border-color: $gray-300;
@@ -72,7 +71,7 @@ $panel-bg-3: $gray-700;
 
 $well-bg: $body-bg;
 
-$primary: $brand-ravendb;
+$primary: #e166bc;
 $success: $color-3;
 $info: $color-4;
 $warning: $color-2;
@@ -80,7 +79,7 @@ $danger: $color-1;
 $light: $gray-100;
 $dark: $gray-900;
 
-$link-color: #e33572;
+$link-color: $primary;
 
 // Blue Theme
 @if $theme == "blue" {
@@ -96,6 +95,7 @@ $link-color: #e33572;
     $gray-100: #e1e3ef;
     $white: #f4f5fb;
 
+    $primary: #cf1f5d;
     $secondary: $gray-200;
 
     $body-bg: $black;
@@ -117,6 +117,8 @@ $link-color: #e33572;
     $panel-bg-3: $gray-300;
 
     $well-bg: $gray-200;
+
+    $link-color: $primary;
 }
 // Light Theme
 @if $theme == "light" {
@@ -153,7 +155,7 @@ $link-color: #e33572;
     $color-5-2: darken(#d85b9a, 5%);
     $color-5-3: darken(#ed558c, 5%);
 
-    $primary: $brand-ravendb;
+    $primary: #419ca6;
     $secondary: $gray-400;
     $success: $color-3;
     $info: $color-4;
@@ -181,6 +183,83 @@ $link-color: #e33572;
     $panel-bg-3: $white;
 
     $well-bg: $gray-400;
+
+    $link-color: $primary;
+}
+
+// Classic Theme
+@if $theme == "classic" {
+    $white: #f0f4f6;
+    $gray-100: #c4ced7;
+    $gray-200: #98a7b7;
+    $gray-300: #7e8c9e;
+    $gray-400: #637085;
+    $gray-500: #4f5b6d;
+    $gray-600: #3b4654;
+    $gray-700: #333d48;
+    $gray-800: #2b333b;
+    $gray-900: #252b32;
+    $black: #22252b;
+
+    $gray-base: $black;
+    $gray-base-light: $gray-900;
+    $gray-darker: $gray-800;
+    $gray-dark: $gray-600;
+    $gray: $gray-400;
+    $gray-light: $gray-200;
+    $gray-lighter: $white;
+
+    $color-1: #f06582;
+    $color-1-1: #f3766e;
+    $color-1-2: #f38a66;
+    $color-1-3: #eea361;
+    $color-2: #f0b362;
+    $color-2-1: #f0c254;
+    $color-2-2: #edcd51;
+    $color-2-3: #c4d451;
+    $color-3: #7bd85d;
+    $color-3-1: #51d27a;
+    $color-3-2: #37c4ac;
+    $color-3-3: #2fb7d2;
+    $color-4: #2f9ef3;
+    $color-4-1: #5186ee;
+    $color-4-2: #7069ee;
+    $color-4-3: #8361d4;
+    $color-5: #945ab5;
+    $color-5-1: #bf569f;
+    $color-5-2: #d85b9a;
+    $color-5-3: #ed558c;
+
+    $primary: #cf1f5d;
+    $secondary: $gray-600;
+    $body-bg: $black;
+    $border-color: $gray-300;
+    $border-color-light: $gray-600;
+    $border-color-disabled: $gray-600;
+
+    $text-color: $gray-200;
+    $text-muted-color: $gray-300;
+    $text-emphasis-color: $gray-100;
+
+    $base-text-color: $gray-100;
+    $base-text-muted-color: $gray-200;
+    $base-text-emphasis-color: $white;
+
+    $panel-header-bg: $gray-800;
+    $panel-bg-1: $gray-900;
+    $panel-bg-2: $gray-800;
+    $panel-bg-3: $gray-700;
+
+    $well-bg: $body-bg;
+
+    $success: $color-3;
+    $info: $color-4;
+    $warning: $color-2;
+    $danger: $color-1;
+    $light: $gray-100;
+    $dark: $gray-900;
+
+    $link-color: $primary;
 }
 
 $table-bg-scale: 30% !default;

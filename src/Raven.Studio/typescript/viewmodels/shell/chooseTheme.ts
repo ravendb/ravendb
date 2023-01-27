@@ -4,7 +4,7 @@ class chooseTheme extends dialogViewModelBase {
 
     view = require("views/shell/chooseTheme.html");
     
-    static readonly supportedThemes = ["blue", "dark", "light"];
+    static readonly supportedThemes = ["blue", "dark", "light", "classic"];
     static readonly themeLocalStorageKey = "raven-theme";
     static readonly stylesheetPrefix = "styles/";
     
@@ -13,7 +13,8 @@ class chooseTheme extends dialogViewModelBase {
     static readonly themeToStylesheet: dictionary<string> = {
         "dark" : "styles.css",
         "light": "styles-light.css",
-        "blue": "styles-blue.css"
+        "blue": "styles-blue.css",
+        "classic": "styles-classic.css"
     };
     
     currentTheme = ko.observable<string>();
