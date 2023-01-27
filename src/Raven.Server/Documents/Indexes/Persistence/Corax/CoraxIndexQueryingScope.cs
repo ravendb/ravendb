@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 public class CoraxIndexQueryingScope : IndexQueryingScopeBase<UnmanagedSpan>
 {
     private readonly IndexSearcher _searcher;
-    private IndexFieldsMapping _fieldsMapping;
+    private readonly IndexFieldsMapping _fieldsMapping;
 
     public CoraxIndexQueryingScope(IndexType indexType, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, IQueryResultRetriever retriever, IndexSearcher searcher,
         IndexFieldsMapping fieldsMapping)
@@ -102,28 +102,5 @@ public class CoraxIndexQueryingScope : IndexQueryingScopeBase<UnmanagedSpan>
         }
 
         return limit;
-    }
-
-    private unsafe class UnmanagedSpanComparer : IEqualityComparer<UnmanagedSpan>
-    {
-        public static UnmanagedSpanComparer Instance = new();
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Equals(UnmanagedSpan x, UnmanagedSpan y)
-        {
-            if (x.Length != y.Length)
-                return false;
-
-            if (x.Address == y.Address)
-                return true;
-
-            return Memory.CompareInline(x.Address, y.Address, x.Length) == 0;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetHashCode(UnmanagedSpan item)
-        {
-            return (int)Hashing.Marvin32.CalculateInline(item.Address, item.Length);
-        }
     }
 }

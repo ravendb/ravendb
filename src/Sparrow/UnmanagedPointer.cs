@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Sparrow
 {
@@ -48,5 +50,28 @@ namespace Sparrow
 
         public static implicit operator Span<byte>(UnmanagedSpan pointer) => new Span<byte>(pointer.Address, pointer.Length);
         public static implicit operator ReadOnlySpan<byte>(UnmanagedSpan pointer) => new ReadOnlySpan<byte>(pointer.Address, pointer.Length);
+    }
+
+    public unsafe struct UnmanagedSpanComparer : IEqualityComparer<UnmanagedSpan>
+    {
+        public static UnmanagedSpanComparer Instance = new();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Equals(UnmanagedSpan x, UnmanagedSpan y)
+        {
+            if (x.Length != y.Length)
+                return false;
+
+            if (x.Address == y.Address)
+                return true;
+
+            return Memory.CompareInline(x.Address, y.Address, x.Length) == 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int GetHashCode(UnmanagedSpan item)
+        {
+            return (int)Hashing.Marvin32.CalculateInline(item.Address, item.Length);
+        }
     }
 }

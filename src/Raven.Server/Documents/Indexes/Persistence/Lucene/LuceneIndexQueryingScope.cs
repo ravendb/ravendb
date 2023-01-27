@@ -10,7 +10,7 @@ using Raven.Server.Documents.Queries.Results;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene;
 
-public class LuceneIndexQueryingScope : IndexQueryingScopeBase<string>
+public sealed class LuceneIndexQueryingScope : IndexQueryingScopeBase<string>
 {
     private readonly IndexSearcher _searcher;
 
