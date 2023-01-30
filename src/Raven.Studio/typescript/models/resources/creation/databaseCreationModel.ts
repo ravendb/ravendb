@@ -265,9 +265,10 @@ class databaseCreationModel {
             }
         });
         
-        _.bindAll(this, "useRestorePoint", "dataPathHasChanged", "backupDirectoryHasChanged", 
-            "remoteFolderAzureChanged", "remoteFolderAmazonChanged", "remoteFolderGoogleCloudChanged",
-            "dataExporterPathHasChanged", "journalsPathHasChanged");
+        const methods: Array<keyof this & string>  = ["useRestorePoint", "dataPathHasChanged", "backupDirectoryHasChanged",
+            "remoteFolderAzureChanged", "remoteFolderAmazonChanged", "remoteFolderGoogleCloudChanged"];
+        
+        _.bindAll(this, ...methods);
     }
     
     downloadCloudCredentials(link: string) {

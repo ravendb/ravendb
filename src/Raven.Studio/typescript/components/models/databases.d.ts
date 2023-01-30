@@ -16,10 +16,10 @@ export interface DatabaseSharedInfo {
     lockMode: DatabaseLockMode;
     deletionInProgress: string[];
     encrypted: boolean;
+    disabled: boolean;
     nodes: NodeInfo[];
     currentNode: {
         relevant: boolean;
-        disabled: boolean;
         isBeingDeleted: boolean;
     };
 }
