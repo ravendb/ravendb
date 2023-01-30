@@ -14,7 +14,7 @@ namespace Voron.Data.Compression
     {
         public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true)
         {
-            var returnTempPage = tx.GetTempPage(out var tmp);
+            var returnTempPage = tx.GetTempPage(ushort.MaxValue, out var tmp);
 
             var tmpPtr = tmp.Base;
             TreePageHeader* pageHeader = (TreePageHeader*)tmpPtr;

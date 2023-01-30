@@ -1490,13 +1490,12 @@ namespace Voron.Impl
                 return _tx._pagerStates;
             }
         }
-        
-        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetTempPage(out TreePage page) 
-            => GetTempPage(Constants.Storage.PageSize, out page);
 
         public ByteStringContext<ByteStringMemoryCache>.InternalScope GetTempPage(int pageSize, out TreePage page)
         {
             var dispose = Allocator.Allocate(pageSize, out ByteString tmp);
+            // Callers are fine with getting "dirty" data, but will actually make compressing for journal better
+            tmp.Clear();
             TreePage.Initialize(tmp.Ptr, pageSize);
             page = new TreePage(tmp.Ptr, pageSize);
             return dispose;

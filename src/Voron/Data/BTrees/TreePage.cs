@@ -536,7 +536,7 @@ namespace Voron.Data.BTrees
 
         internal void Defrag(LowLevelTransaction tx)
         {
-            using (tx.GetTempPage(out var tempPage))
+            using (tx.GetTempPage(PageSize, out var tempPage))
             {
                 Memory.Copy(tempPage.Base, Base, PageSize);
 
