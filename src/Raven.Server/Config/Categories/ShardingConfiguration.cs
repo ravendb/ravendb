@@ -7,9 +7,9 @@ namespace Raven.Server.Config.Categories
     [ConfigurationCategory(ConfigurationCategoryType.Sharding)]
     public class ShardingConfiguration : ConfigurationCategory
     {
-        [Description("The compression level to use when sending import strems to shards during smuggler import")]
+        [Description("The compression level to use when sending import streams to shards during smuggler import")]
         [DefaultValue(CompressionLevel.NoCompression)]
-        [ConfigurationEntry("Import.CompressionLevel", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Sharding.Import.CompressionLevel", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public CompressionLevel CompressionLevel { get; set; }
     }
 }
