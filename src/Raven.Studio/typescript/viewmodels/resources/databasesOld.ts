@@ -453,13 +453,6 @@ class databases extends viewModelBase {
         this.deleteDatabases([db]);
     }
 
-    deleteSelectedDatabases() {
-        const withoutLock = this.selectedDatabasesWithoutLock();
-        if (withoutLock.length) {
-            this.deleteDatabases(withoutLock);
-        }
-    }
-
     private removeDatabase(dbInfo: databaseInfo) {
         this.databases().sortedDatabases.remove(dbInfo);
         this.selectedDatabases.remove(dbInfo.name);

@@ -1,15 +1,9 @@
-﻿import React, { MouseEventHandler, useCallback, useState } from "react";
+﻿import React, { useState } from "react";
 import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "../../../models/databases";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
-import deleteDatabaseConfirm from "viewmodels/resources/deleteDatabaseConfirm";
-import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
-import app from "durandal/app";
-import { useEventsCollector } from "hooks/useEventsCollector";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import { useServices } from "hooks/useServices";
 import {
-    Badge,
     Button,
     ButtonGroup,
     DropdownItem,
@@ -33,8 +27,13 @@ import {
 import appUrl from "common/appUrl";
 import { NodeSet, NodeSetItem, NodeSetLabel } from "components/common/NodeSet";
 import assertUnreachable from "components/utils/assertUnreachable";
-import { useAppSelector } from "components/store";
-import { selectActiveDatabase } from "components/common/shell/databasesSlice";
+import { useAppDispatch, useAppSelector } from "components/store";
+import {
+    changeDatabasesLockMode,
+    openDeleteDatabasesDialog,
+    selectActiveDatabase,
+} from "components/common/shell/databasesSlice";
+import { useEventsCollector } from "hooks/useEventsCollector";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -85,31 +84,6 @@ function badgeText(db: DatabaseSharedInfo) {
      */
 
     return "Online";
-}
-
-function deleteDatabases(toDelete: DatabaseSharedInfo[]) {
-    const confirmDeleteViewModel = new deleteDatabaseConfirm(toDelete);
-    confirmDeleteViewModel.result.done((confirmResult: deleteDatabaseConfirmResult) => {
-        if (confirmResult.can) {
-            /* TODO:
-                const dbsList = toDelete.map(x => {
-                    //TODO: x.isBeingDeleted(true);
-                    const asDatabase = x.asDatabase();
-
-                    // disconnect here to avoid race condition between database deleted message
-                    // and websocket disconnection
-                    //TODO: changesContext.default.disconnectIfCurrent(asDatabase, "DatabaseDeleted");
-                    return asDatabase;
-                });*/
-
-            new deleteDatabaseCommand(
-                toDelete.map((x) => x.name),
-                !confirmResult.keepFiles
-            ).execute();
-        }
-    });
-
-    app.showBootstrapDialog(confirmDeleteViewModel);
 }
 
 function toExternalUrl(db: DatabaseSharedInfo, url: string) {
@@ -214,8 +188,9 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const { db, selected, toggleSelection } = props;
     const activeDatabase = useAppSelector(selectActiveDatabase);
     const { appUrl } = useAppUrls();
-    const eventsCollector = useEventsCollector();
-    const { databasesService } = useServices();
+    const dispatch = useAppDispatch();
+
+    const { reportEvent } = useEventsCollector();
 
     const [lockChanges, setLockChanges] = useState(false);
 
@@ -225,55 +200,17 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const localManageGroupUrl = appUrl.forManageDatabaseGroup(db.name);
     const manageGroupUrl = db.currentNode.relevant ? localManageGroupUrl : toExternalUrl(db, localManageGroupUrl);
 
-    const deleteDatabase = useCallback(() => deleteDatabases([db]), [db]);
-
-    const updateDatabaseLockMode = useCallback(
-        async (db: DatabaseSharedInfo, lockMode: DatabaseLockMode) => {
-            if (db.lockMode === lockMode) {
-                return;
-            }
-
-            setLockChanges(true);
-            try {
-                await databasesService.setLockMode(db, lockMode);
-            } finally {
-                setLockChanges(false);
-            }
-        },
-        [databasesService]
-    );
-
-    const allowDatabaseDelete: MouseEventHandler<HTMLElement> = useCallback(
-        async (e) => {
-            e.preventDefault();
-
-            eventsCollector.reportEvent("databases", "set-lock-mode", "Unlock");
-            await updateDatabaseLockMode(db, "Unlock");
-        },
-        [db, eventsCollector, updateDatabaseLockMode]
-    );
-
-    const preventDatabaseDelete: MouseEventHandler<HTMLElement> = useCallback(
-        async (e) => {
-            e.preventDefault();
-
-            eventsCollector.reportEvent("databases", "set-lock-mode", "LockedIgnore");
-            await updateDatabaseLockMode(db, "PreventDeletesIgnore");
-        },
-        [db, eventsCollector, updateDatabaseLockMode]
-    );
-
-    const preventDatabaseDeleteWithError: MouseEventHandler<HTMLElement> = useCallback(
-        async (e) => {
-            e.preventDefault();
-
-            eventsCollector.reportEvent("databases", "set-lock-mode", "LockedError");
-            await updateDatabaseLockMode(db, "PreventDeletesError");
-        },
-        [db, eventsCollector, updateDatabaseLockMode]
-    );
-
     const canNavigateToDatabase = !db.currentNode.disabled; //tODO: && !db.currentNode.hasLoadError
+
+    const changeLockMode = async (lockMode: DatabaseLockMode) => {
+        setLockChanges(true);
+        try {
+            reportEvent("databases", "set-lock-mode", lockMode);
+            await dispatch(changeDatabasesLockMode([db], lockMode));
+        } finally {
+            setLockChanges(false);
+        }
+    };
 
     return (
         <RichPanel
@@ -493,7 +430,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             <UncontrolledDropdown>
                                 <ButtonGroup data-bind="visible: $root.accessManager.canDelete">
                                     <Button
-                                        onClick={deleteDatabase}
+                                        onClick={() => openDeleteDatabasesDialog([db])}
                                         title={
                                             db.lockMode === "Unlock"
                                                 ? "Remove database"
@@ -516,17 +453,20 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     <DropdownToggle caret color={db.lockMode === "Unlock" && "danger"}></DropdownToggle>
                                 </ButtonGroup>
                                 <DropdownMenu>
-                                    <DropdownItem onClick={allowDatabaseDelete} title="Allow to delete database">
+                                    <DropdownItem
+                                        onClick={() => changeLockMode("Unlock")}
+                                        title="Allow to delete database"
+                                    >
                                         <i className="icon-trash-cutout icon-addon-check" /> Allow database delete
                                     </DropdownItem>
                                     <DropdownItem
-                                        onClick={preventDatabaseDelete}
+                                        onClick={() => changeLockMode("PreventDeletesIgnore")}
                                         title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database."
                                     >
                                         <i className="icon-trash-cutout icon-addon-cancel" /> Prevent database delete
                                     </DropdownItem>
                                     <DropdownItem
-                                        onClick={preventDatabaseDeleteWithError}
+                                        onClick={() => changeLockMode("PreventDeletesError")}
                                         title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database."
                                     >
                                         <i className="icon-trash-cutout icon-addon-exclamation" /> Prevent database
