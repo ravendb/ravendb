@@ -44,6 +44,9 @@ interface DatabasePanelProps {
 }
 
 function getStatusColor(db: DatabaseSharedInfo) {
+    if (db.disabled) {
+        return "warning";
+    }
     return "success";
 }
 
@@ -70,13 +73,12 @@ function badgeClass(db: DatabaseSharedInfo) {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function badgeText(db: DatabaseSharedInfo) {
+    if (db.disabled) {
+        return "Disabled";
+    }
     /* TODO
         if (this.hasLoadError()) {
                 return "Error";
-            }
-
-            if (this.disabled()) {
-                return "Disabled";
             }
 
             if (this.online()) {
@@ -202,7 +204,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const localManageGroupUrl = appUrl.forManageDatabaseGroup(db.name);
     const manageGroupUrl = db.currentNode.relevant ? localManageGroupUrl : toExternalUrl(db, localManageGroupUrl);
 
-    const canNavigateToDatabase = !db.currentNode.disabled; //tODO: && !db.currentNode.hasLoadError
+    const canNavigateToDatabase = !db.disabled; //tODO: && !db.currentNode.hasLoadError
 
     const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
         if (db.lockMode === lockMode) {
@@ -515,6 +517,8 @@ interface ValidDatabasePropertiesPanelProps {
 
 function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) {
     const { db } = props;
+
+    return null; //TODO: hide for now
 
     return (
         <RichPanelDetails

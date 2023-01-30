@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useMemo, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { DatabasePanel } from "./DatabasePanel";
 import { DatabasesToolbarActions } from "./DatabasesToolbarActions";
 import { DatabasesFilter } from "./DatabasesFilter";
@@ -45,6 +45,14 @@ export function DatabasesPage() {
         return filterDatabases(databases, filter);
     }, [filter, databases]);
 
+    useEffect(() => {
+        const visibleNames = filteredDatabases.map((x) => x.name);
+        const nonVisibleSelection = selectedDatabaseNames.filter((x) => !visibleNames.includes(x));
+        if (nonVisibleSelection.length) {
+            setSelectedDatabaseNames((prev) => prev.filter((x) => !nonVisibleSelection.includes(x)));
+        }
+    }, [selectedDatabaseNames, filteredDatabases]);
+
     const toggleSelectAll = useCallback(() => {
         const selectedCount = selectedDatabaseNames.length;
 
@@ -58,7 +66,7 @@ export function DatabasesPage() {
     const databasesSelectionState = useMemo<checkbox>(() => {
         const selectedCount = selectedDatabaseNames.length;
         const dbsCount = filteredDatabases.length;
-        if (databases && dbsCount === selectedCount) {
+        if (dbsCount > 0 && dbsCount === selectedCount) {
             return "checked";
         }
 
@@ -67,7 +75,7 @@ export function DatabasesPage() {
         }
 
         return "unchecked";
-    }, [filteredDatabases, selectedDatabaseNames, databases]);
+    }, [filteredDatabases, selectedDatabaseNames]);
 
     const toggleSelection = (db: DatabaseSharedInfo) => {
         if (selectedDatabaseNames.includes(db.name)) {

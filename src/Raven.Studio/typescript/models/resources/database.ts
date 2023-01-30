@@ -123,9 +123,9 @@ abstract class database {
             encrypted: this.isEncrypted(),
             sharded: this.isSharded(),
             nodes: this.nodes(),
+            disabled: this.disabled(),
             currentNode: { 
                 relevant: this.relevant(),
-                disabled: this.disabled(),
                 isBeingDeleted: this.isBeingDeleted()
             },
             lockMode: this.lockMode(),
