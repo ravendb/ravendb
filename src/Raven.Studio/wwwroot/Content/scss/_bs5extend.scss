@@ -273,3 +273,20 @@ $loading-animation-duration: 2s;
 }
 
 //Tooltip
+
+// Button Group With Label
+.btn-group-label {
+    border-top: 1px solid $gray-300;
+    margin-top: -5px;
+    padding-top: 4px;
+    position: relative;
+    &:before {
+        content: attr(data-label);
+        position: absolute;
+        top: -14px;
+        color: $gray-300;
+        font-size: 10px;
+        line-height: 10px;
+        text-transform: uppercase;
+    }
+}
