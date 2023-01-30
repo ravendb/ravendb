@@ -148,7 +148,7 @@ namespace Voron.Data.BTrees
 
         private bool TryMergePages(TreePage parentPage, TreePage left, TreePage right)
         {
-            using (_tx.GetTempPage(out var mergedPage))
+            using (_tx.GetTempPage(left.PageSize, out var mergedPage))
             {
                 Memory.Copy(mergedPage.Base, left.Base, left.PageSize);
 

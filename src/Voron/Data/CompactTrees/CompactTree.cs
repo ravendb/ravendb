@@ -1534,7 +1534,7 @@ namespace Voron.Data.CompactTrees
             var oldDictionary = GetEncodingDictionary(state.Header->DictionaryId);
             var newDictionary = GetEncodingDictionary(_state.TreeDictionaryId);                
 
-            using var _ = _llt.GetTempPage(out var tmp);
+            using var _ = _llt.GetTempPage(Constants.Storage.PageSize, out var tmp);
             Memory.Copy(tmp.Base, state.Page.Pointer, Constants.Storage.PageSize);
 
             // TODO: Remove
@@ -1656,7 +1656,7 @@ namespace Voron.Data.CompactTrees
 
         private static void DefragPage(LowLevelTransaction llt, ref CursorState state)
         {                     
-            using (llt.GetTempPage(out var tmpPage))
+            using (llt.GetTempPage(Constants.Storage.PageSize, out var tmpPage))
             {
                 // Ensure we clean up the page.               
                 var tmpPtr = tmpPage.Base;
