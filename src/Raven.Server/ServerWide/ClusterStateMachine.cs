@@ -31,7 +31,6 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
-using Raven.Client.ServerWide.Sharding;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -70,7 +69,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
-using ShardingConfiguration = Raven.Client.ServerWide.Sharding.ShardingConfiguration;
+//using ShardingConfiguration = Raven.Client.ServerWide.Sharding.ShardingConfiguration;
 
 namespace Raven.Server.ServerWide
 {
@@ -3475,7 +3474,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public ShardingConfiguration ReadShardingConfiguration(string database)
+        public Raven.Client.ServerWide.Sharding.ShardingConfiguration ReadShardingConfiguration(string database)
         {
             using (_parent.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -3484,7 +3483,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public ShardingConfiguration ReadShardingConfiguration<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
+        public Raven.Client.ServerWide.Sharding.ShardingConfiguration ReadShardingConfiguration<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
             where TTransaction : RavenTransaction
         {
             using (var raw = ReadRawDatabaseRecord(context, name))
