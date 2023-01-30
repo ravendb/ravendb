@@ -4,12 +4,16 @@ import app from "durandal/app";
 import { withPreventDefault } from "../../../utils/common";
 import { Button } from "reactstrap";
 import { EmptySet } from "components/common/EmptySet";
+import { useAccessManager } from "hooks/useAccessManager";
 
 export function NoDatabases() {
+    const { isOperatorOrAbove } = useAccessManager();
     const newDatabase = useCallback(() => {
         const createDbView = new createDatabase("newDatabase");
         app.showBootstrapDialog(createDbView);
     }, []);
+
+    //TODO: from backup
 
     return (
         <div
@@ -19,13 +23,15 @@ export function NoDatabases() {
             <div className="text-center">
                 <EmptySet>No databases have been created</EmptySet>
 
-                <div data-bind="visible: accessManager.canCreateNewDatabase">
-                    <Button outline color="primary" onClick={withPreventDefault(newDatabase)}>
-                        Create new database
-                    </Button>
-                    <br />
-                    {/* TODO or <a href="#" data-bind="click: newDatabaseFromBackup">create one from backup </a> */}
-                </div>
+                {isOperatorOrAbove() && (
+                    <div>
+                        <Button outline color="primary" onClick={withPreventDefault(newDatabase)}>
+                            Create new database
+                        </Button>
+                        <br />
+                        {/* TODO or <a href="#" data-bind="click: newDatabaseFromBackup">create one from backup </a> */}
+                    </div>
+                )}
             </div>
         </div>
     );

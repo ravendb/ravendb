@@ -28,11 +28,11 @@ export type AppDispatch = typeof store.dispatch;
 export const useAppDispatch: () => AppDispatch = useDispatch;
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
-export type AppAsyncThunk = (
+export type AppAsyncThunk<T = void> = (
     dispatch: AppDispatch,
     getState: () => RootState,
     getServices: () => typeof services
-) => Promise<void>;
+) => Promise<T>;
 
 export type AppThunkApi = BaseThunkAPI<RootState, any, AppDispatch>;
 export default store;

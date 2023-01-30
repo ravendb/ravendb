@@ -8,12 +8,7 @@ import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/data
 import { useChanges } from "hooks/useChanges";
 import { Col, Row } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
-import {
-    openDeleteDatabasesDialog,
-    selectActiveDatabase,
-    selectAllDatabases,
-} from "components/common/shell/databasesSlice";
-import { dispatch } from "d3";
+import { selectActiveDatabase, selectAllDatabases } from "components/common/shell/databasesSlice";
 
 interface DatabasesPageProps {
     activeDatabase?: string;

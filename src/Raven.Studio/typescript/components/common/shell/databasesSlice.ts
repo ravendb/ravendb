@@ -1,12 +1,13 @@
 ﻿import { createEntityAdapter, createSlice, EntityState, PayloadAction } from "@reduxjs/toolkit";
 import { DatabaseSharedInfo } from "components/models/databases";
 import genUtils from "common/generalUtils";
-import { AppAsyncThunk, AppDispatch, RootState } from "components/store";
+import { AppAsyncThunk, RootState } from "components/store";
 import createDatabase from "viewmodels/resources/createDatabase";
 import app from "durandal/app";
 import deleteDatabaseConfirm from "viewmodels/resources/deleteDatabaseConfirm";
-import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
+import disableDatabaseToggleConfirm from "viewmodels/resources/disableDatabaseToggleConfirm";
+import viewHelpers from "common/helpers/view/viewHelpers";
 
 interface DatabasesState {
     databases: EntityState<DatabaseSharedInfo>;
@@ -61,38 +62,47 @@ export const openCreateDatabaseFromRestoreDialog = () => () => {
     app.showBootstrapDialog(createDbView);
 };
 
-export const openDeleteDatabasesDialog =
-    (toDelete: DatabaseSharedInfo[]): AppAsyncThunk =>
-    async (dispatch, getState, getServices) => {
-        const { databasesService } = getServices();
-
+//TODO: report success after database deletion? - what about other actions?
+export const confirmDeleteDatabases =
+    (
+        toDelete: DatabaseSharedInfo[]
+    ): AppAsyncThunk<{ can: boolean; keepFiles?: boolean; databases?: DatabaseSharedInfo[] }> =>
+    async (): Promise<{ can: boolean; keepFiles?: boolean; databases?: DatabaseSharedInfo[] }> => {
         const selectedDatabasesWithoutLock = toDelete.filter((x) => x.lockMode === "Unlock");
         if (selectedDatabasesWithoutLock.length === 0) {
-            return;
+            return {
+                can: false,
+            };
         }
 
         const confirmDeleteViewModel = new deleteDatabaseConfirm(selectedDatabasesWithoutLock);
-        confirmDeleteViewModel.result.done((confirmResult: deleteDatabaseConfirmResult) => {
-            if (confirmResult.can) {
-                /* TODO:
-                const dbsList = toDelete.map(x => {
-                    //TODO: x.isBeingDeleted(true);
-                    const asDatabase = x.asDatabase();
-
-                    // disconnect here to avoid race condition between database deleted message
-                    // and websocket disconnection
-                    //TODO: changesContext.default.disconnectIfCurrent(asDatabase, "DatabaseDeleted");
-                    return asDatabase;
-                });*/
-
-                databasesService.deleteDatabase(
-                    selectedDatabasesWithoutLock.map((x) => x.name),
-                    !confirmResult.keepFiles
-                );
-            }
-        });
-
         app.showBootstrapDialog(confirmDeleteViewModel);
+        const baseResult = await confirmDeleteViewModel.result;
+        return {
+            ...baseResult,
+            databases: selectedDatabasesWithoutLock,
+        };
+    };
+
+export const deleteDatabases =
+    (toDelete: DatabaseSharedInfo[], keepFiles: boolean): AppAsyncThunk<updateDatabaseConfigurationsResult> =>
+    async (dispatch, getState, getServices) => {
+        const { databasesService } = getServices();
+        /* TODO:
+           const dbsList = toDelete.map(x => {
+               //TODO: x.isBeingDeleted(true);
+               const asDatabase = x.asDatabase();
+
+               // disconnect here to avoid race condition between database deleted message
+               // and websocket disconnection
+               //TODO: changesContext.default.disconnectIfCurrent(asDatabase, "DatabaseDeleted");
+               return asDatabase;
+           });*/
+
+        return databasesService.deleteDatabase(
+            toDelete.map((x) => x.name),
+            !keepFiles
+        );
     };
 
 export const changeDatabasesLockMode =
@@ -102,3 +112,44 @@ export const changeDatabasesLockMode =
 
         await databasesService.setLockMode(databases, lockMode);
     };
+
+export const confirmToggleDatabases =
+    (databases: DatabaseSharedInfo[], enable: boolean): AppAsyncThunk<boolean> =>
+    async () => {
+        const confirmation = new disableDatabaseToggleConfirm(databases, !enable);
+        app.showBootstrapDialog(confirmation);
+
+        const result = await confirmation.result;
+        return result.can;
+    };
+
+export const toggleDatabases =
+    (databases: DatabaseSharedInfo[], enable: boolean): AppAsyncThunk =>
+    async (dispatch, getState, getServices) => {
+        const { databasesService } = getServices();
+        // TODO: lazy update UI
+        await databasesService.toggle(databases, enable);
+    };
+
+/* TODO
+    private onDatabaseDisabled(result: disableDatabaseResult) {
+        const dbs = this.databases().sortedDatabases();
+        const matchedDatabase = dbs.find(rs => rs.name === result.Name);
+
+        if (matchedDatabase) {
+            matchedDatabase.disabled(result.Disabled);
+
+            // If Enabling a database (that is selected from the top) than we want it to be Online(Loaded)
+            if (matchedDatabase.isCurrentlyActiveDatabase() && !matchedDatabase.disabled()) {
+                new loadDatabaseCommand(matchedDatabase.asDatabase())
+                    .execute();
+            }
+        }
+    }
+ */
+
+export const confirmSetLockMode = (): AppAsyncThunk<boolean> => async () => {
+    const result = await viewHelpers.confirmationMessage("Are you sure?", `Do you want to change lock mode?`);
+
+    return result.can;
+};

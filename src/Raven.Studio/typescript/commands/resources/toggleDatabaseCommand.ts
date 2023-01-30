@@ -1,15 +1,21 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import { DatabaseSharedInfo } from "components/models/databases";
 
 class toggleDatabaseCommand extends commandBase {
 
-    constructor(private dbs: Array<database>, private disable: boolean) {
+    private readonly dbs: DatabaseSharedInfo[];
+
+    private readonly enable: boolean;
+
+    constructor(dbs: DatabaseSharedInfo[], enable: boolean) {
         super();
+        this.enable = enable;
+        this.dbs = dbs;
     }
 
     get action() {
-        return this.disable ? "disable" : "enable";
+        return this.enable ? "enable" : "disable";
     }
 
     execute(): JQueryPromise<statusDto<disableDatabaseResult>> {
@@ -17,9 +23,9 @@ class toggleDatabaseCommand extends commandBase {
             DatabaseNames: this.dbs.map(x => x.name)
         };
 
-        const url = this.disable ?
-            endpoints.global.adminDatabases.adminDatabasesDisable :
-            endpoints.global.adminDatabases.adminDatabasesEnable;
+        const url = this.enable ?
+            endpoints.global.adminDatabases.adminDatabasesEnable :
+            endpoints.global.adminDatabases.adminDatabasesDisable;
 
         return this.post(url, JSON.stringify(payload))
             .fail((response: JQueryXHR) => this.reportError("Failed to toggle database status", response.responseText, response.statusText));

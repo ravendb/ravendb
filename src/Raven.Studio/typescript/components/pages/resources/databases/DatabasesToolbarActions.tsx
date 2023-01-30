@@ -3,9 +3,13 @@ import { useAccessManager } from "hooks/useAccessManager";
 import { Button, DropdownItem, DropdownMenu, DropdownToggle, Spinner, UncontrolledDropdown } from "reactstrap";
 import {
     changeDatabasesLockMode,
+    confirmDeleteDatabases,
+    confirmSetLockMode,
+    confirmToggleDatabases,
+    deleteDatabases,
     openCreateDatabaseDialog,
     openCreateDatabaseFromRestoreDialog,
-    openDeleteDatabasesDialog,
+    toggleDatabases,
 } from "components/common/shell/databasesSlice";
 import { useAppDispatch } from "components/store";
 import { DatabaseSharedInfo } from "components/models/databases";
@@ -23,69 +27,96 @@ export function DatabasesToolbarActions(props: DatabasesToolbarActionsProps) {
     const { reportEvent } = useEventsCollector();
 
     const [lockChanges, setLockChanges] = useState(false);
+    const [toggleChanges, setToggleChanges] = useState(false);
+    const [deleteChanges, setDeleteChanges] = useState(false);
 
     const dispatch = useAppDispatch();
 
     const canDeleteSelection = selectedDatabases.some((x) => x.lockMode === "Unlock");
     const anythingSelected = selectedDatabases.length > 0;
 
-    //TODO: put delete button into named group
+    const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
+        const dbs = selectedDatabases;
 
-    const changeLockMode = async (lockMode: DatabaseLockMode) => {
-        setLockChanges(true);
-        try {
-            reportEvent("databases", "set-lock-mode", lockMode);
+        reportEvent("databases", "set-lock-mode", lockMode);
 
-            await dispatch(changeDatabasesLockMode(selectedDatabases, lockMode));
-        } finally {
-            setLockChanges(false);
+        const can = await dispatch(confirmSetLockMode());
+
+        if (can) {
+            setLockChanges(true);
+            try {
+                await dispatch(changeDatabasesLockMode(dbs, lockMode));
+            } finally {
+                setLockChanges(false);
+            }
         }
     };
+
+    const onToggleDatabases = async (enable: boolean) => {
+        const dbs = selectedDatabases;
+        const result = await dispatch(confirmToggleDatabases(dbs, enable));
+
+        if (result) {
+            setToggleChanges(true);
+            try {
+                await dispatch(toggleDatabases(dbs, enable));
+            } finally {
+                setToggleChanges(false);
+            }
+        }
+    };
+
+    const onDelete = async () => {
+        const result = await dispatch(confirmDeleteDatabases(selectedDatabases));
+
+        if (result.can) {
+            setDeleteChanges(true);
+            try {
+                await dispatch(deleteDatabases(result.databases, result.keepFiles));
+            } finally {
+                setDeleteChanges(false);
+            }
+        }
+    };
+
+    /* TODO put into named group
+     <div className="btn-group-label"
+                 data-bind="css: { active: selectedDatabases().length }, visible: accessManager.canSetState || accessManager.canDelete"
+                 data-label="Selection" role="group">
+     */
 
     return (
         <div className="actions d-flex justify-content-end">
             <div className="mx-3 d-flex">
                 {isOperatorOrAbove() && (
-                    <Button
-                        color="danger"
-                        onClick={() => dispatch(openDeleteDatabasesDialog(selectedDatabases))}
-                        disabled={!canDeleteSelection}
-                    >
-                        <i className="icon-trash" />
+                    <Button color="danger" onClick={onDelete} disabled={!canDeleteSelection || deleteChanges}>
+                        {deleteChanges ? <Spinner size="sm" /> : <i className="icon-trash" />}
                         <span>Delete</span>
                     </Button>
                 )}
 
-                {/*
-            <div className="btn-group-label"
-                 data-bind="css: { active: selectedDatabases().length }, visible: accessManager.canSetState || accessManager.canDelete"
-                 data-label="Selection" role="group">
-                <div className="btn-group" data-bind="visible: accessManager.canSetState">
-                    <button type="button" className="btn btn-default dropdown-toggle"
+                {isOperatorOrAbove() && (
+                    <UncontrolledDropdown>
+                        <DropdownToggle
+                            caret
+                            disabled={!anythingSelected || toggleChanges}
                             title="Set the status (enabled/disabled) of selected databases"
-                            data-bind="enable: selectedDatabases().length && !spinners.globalToggleDisable(), css: { 'btn-spinner': spinners.globalToggleDisable() }"
-                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i className="icon-play"></i><span>Set state...</span>
-                        <span className="caret"></span>
-                        <span className="sr-only">Toggle Dropdown</span>
-                    </button>
-                    <ul className="dropdown-menu">
-                        <li data-bind="click: enableSelectedDatabases">
-                            <a href="#" title="Enable">
+                        >
+                            {toggleChanges ? <Spinner size="sm" /> : <i className="icon-play" />}
+                            <span>Set state...</span>
+                        </DropdownToggle>
+                        <DropdownMenu>
+                            <DropdownItem title="Enable" onClick={() => onToggleDatabases(true)}>
                                 <i className="icon-unlock"></i>
                                 <span>Enable</span>
-                            </a>
-                        </li>
-                        <li data-bind="click: disableSelectedDatabases">
-                            <a href="#" title="Disable">
+                            </DropdownItem>
+                            <DropdownItem title="Disable" onClick={() => onToggleDatabases(false)}>
                                 <i className="icon-lock"></i>
                                 <span>Disable</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            */}
+                            </DropdownItem>
+                        </DropdownMenu>
+                    </UncontrolledDropdown>
+                )}
 
                 {isOperatorOrAbove() && (
                     <UncontrolledDropdown>
@@ -100,21 +131,21 @@ export function DatabasesToolbarActions(props: DatabasesToolbarActionsProps) {
                         </DropdownToggle>
                         <DropdownMenu>
                             <DropdownItem
-                                onClick={() => changeLockMode("Unlock")}
+                                onClick={() => onChangeLockMode("Unlock")}
                                 title="Allow to delete selected databases"
                             >
                                 <i className="icon-trash-cutout icon-addon-check"></i>
                                 <span>Allow databases delete</span>
                             </DropdownItem>
                             <DropdownItem
-                                onClick={() => changeLockMode("PreventDeletesIgnore")}
+                                onClick={() => onChangeLockMode("PreventDeletesIgnore")}
                                 title="Prevent deletion of selected databases. An error will not be thrown if an app attempts to delete."
                             >
                                 <i className="icon-trash-cutout icon-addon-cancel"></i>
                                 <span>Prevent databases delete</span>
                             </DropdownItem>
                             <DropdownItem
-                                onClick={() => changeLockMode("PreventDeletesError")}
+                                onClick={() => onChangeLockMode("PreventDeletesError")}
                                 title="Prevent deletion of selected databases. An error will be thrown if an app attempts to delete."
                             >
                                 <i className="icon-trash-cutout icon-addon-exclamation"></i>

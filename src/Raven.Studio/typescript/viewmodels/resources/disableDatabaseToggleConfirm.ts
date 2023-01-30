@@ -1,5 +1,6 @@
 import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
 import database = require("models/resources/database");
+import { DatabaseSharedInfo } from "components/models/databases";
 
 class disableDatabaseToggleConfirm extends confirmViewModelBase<confirmDialogResult> {
 
@@ -9,8 +10,14 @@ class disableDatabaseToggleConfirm extends confirmViewModelBase<confirmDialogRes
     deletionText: string;
     confirmDeletionText: string;
 
-    constructor(private databases: Array<database>, private disable: boolean) {
+    private readonly databases: DatabaseSharedInfo[];
+
+    private readonly disable: boolean;
+
+    constructor(databases: DatabaseSharedInfo[], disable: boolean) {
         super(null);
+        this.disable = disable;
+        this.databases = databases;
 
         this.deletionText = disable ? "You're disabling" : "You're enabling";
         this.confirmDeletionText = disable ? "Disable" : "Enable";
