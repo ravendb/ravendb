@@ -224,7 +224,7 @@ interface operationIdDto {
     OperationId: number;
 }
 
-type availableConfigurationSectionId = "restore" | "legacyMigration" | "encryption" | "replication" | "sharding" | "path";
+type availableConfigurationSectionId = "restore" | "encryption" | "replication" | "sharding" | "path";
 
 type restoreSource = "local" | "cloud" | "amazonS3" | "azure" | "googleCloud";
 
@@ -525,11 +525,7 @@ type rqlQueryType = "Select" | "Update";
 type autoCompleteCompleter = (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void;
 type certificateMode = "generate" | "regenerate" | "upload" | "editExisting" | "replace";
 
-type dbCreationMode = "newDatabase" | "restore" | "legacyMigration";
-
-type legacySourceType = "ravendb" | "ravenfs";
-type legacyEncryptionAlgorithms = "DES" | "RC2" | "Rijndael" | "Triple DES";
-
+type dbCreationMode = "newDatabase" | "restore";
 
 interface unifiedCertificateDefinition extends Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition {
     Thumbprints: Array<string>;

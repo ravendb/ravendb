@@ -7,20 +7,11 @@
                     <i class="icon-new-database"></i>
                     <span>New database 
                         <span data-bind="visible: databaseModel.creationMode === 'restore'">from backup (Restore)</span>
-                        <span data-bind="visible: databaseModel.creationMode === 'legacyMigration'"> from legacy (v3.x) data files</span>
                     </span>
                 </h4>
             </div>
             <div class="modal-body">
-                <div class="text-center" data-bind="if: operationNotSupported">
-                    <h2 class="text-warning">Creating database from legacy files is only supported on servers hosted on Microsoft Windows</h2>
-                    <p class="margin-top margin-lg">
-                        You can still import your data using 
-                        <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/GBX6MB/' + $root.clientVersion() }">live import</a> or
-                        using <a data-bind="attr: { href: 'https://ravendb.net/l/CCZXCB/' + $root.clientVersion() }" target="_blank">.ravendump</a> file 
-                    </p>
-                </div>
-                <div class="modal-settings-panel" data-bind="visible: !operationNotSupported">
+                <div class="modal-settings-panel">
                     <div class="modal-settings-panel-main">
                         <div class="form-group" data-bind="validationElement: databaseModel.name, validationOptions: { insertMessages: false }">
                             <h3>NAME<i class="required"></i></h3>
@@ -49,10 +40,6 @@
                         <button type="submit" class="btn btn-success btn-block" data-bind="css: { 'btn-spinner': spinners.create }, disable: spinners.create"><i class="icon-plus"></i><span>Create</span></button>
                     </div>
                     <div class="modal-settings-panel-slideout">
-                        <div>
-                            <div class="legacyMigration" data-bind="template: { name: 'create-db-legacy-migration' }, visible: advancedVisibility.legacyMigration()">
-                            </div>
-                        </div>
                         <div>
                             <div class="restore" data-bind="template: { name: 'create-db-restore' }, visible: advancedVisibility.restore()">
                             </div>
@@ -83,181 +70,6 @@
         </div>
     </form>
 </div>
-
-<script type="text/html" id="create-db-legacy-migration">
-    <div data-bind="with: databaseModel.legacyMigration">
-        <h3>Data Source Configuration</h3>
-        <div class="bg-info margin-bottom">
-            <div class="padding padding-sm flex-horizontal">
-                <div>
-                    <small><i class="icon-info"></i></small>
-                </div>
-                <div>
-                    <small>
-                        This database creation option is designed for importing database from RavenDB v3.x.
-                    </small>
-                </div>
-            </div>
-        </div>
-        <div class="form-group row" data-bind="validationElement: sourceType">
-            <div class="col-md-4">
-                <label class="control-label resource-type-label">
-                    Resource type
-                    <small><i class="icon-info text-info"></i></small>
-                </label>
-            </div>
-            <div class="col-md-8">
-                <button class="btn" data-bind="click: _.partial(sourceType, 'ravendb'), css: { active: sourceType() === 'ravendb' }">RavenDB</button>
-                <button class="btn" data-bind="click: _.partial(sourceType, 'ravenfs'), css: { active: sourceType() === 'ravenfs' }">RavenFS</button>
-            </div>
-        </div>
-        <div class="form-group row" data-bind="validationElement: dataDirectory">
-            <div class="col-md-4">
-                <label class="control-label data-directory-label">
-                    Data Directory
-                    <small><i class="icon-info text-info"></i></small>
-                </label>
-            </div>
-            <div class="col-md-8">
-                <div class="has-feedback dropdown" style="display: block;">
-                    <input id="legacyMigrationDataDirectory" type="text" class="form-control" placeholder="Absolute path to the resource data directory"
-                           data-bind="textInput: dataDirectory, hasFocus: dataDirectoryHasFocus" />
-                    <ul class="dropdown-menu" data-bind="foreach: $parent.legacyMigrationDataDirectoryPathOptions, autoComplete: '#legacyMigrationDataDirectory'">
-                        <li data-bind="click: _.partial($root.databaseModel.legacyMigrationDataDirectoryHasChanged, $data)">
-                            <a href="#" data-bind="text: $data"></a>
-                        </li>
-                    </ul>
-                    <span class="glyphicon glyphicon-ok text-success form-control-feedback"
-                          data-bind="visible: dataDirectory() && dataDirectory.isValid() && !dataDirectory.isValidating()"></span>
-                </div>
-            </div>
-        </div>
-        <div class="form-group row">
-            <div class="col-md-12">
-                <div class="toggle">
-                    <input id="advancedMigrationConfig" type="checkbox" data-bind="checked: showAdvanced">
-                    <label for="advancedMigrationConfig">Advanced source properties</label>
-                </div>
-            </div>
-        </div>
-        <div class="margin-left" data-bind="collapse: showAdvanced">
-            <div class="form-group row">
-                <div class="col-md-4">
-                    <label class="control-label">Journals directory</label>
-                </div>
-                <div class="col-md-8 dropdown" style="display: block">
-                    <input type="text" id="legacySourceJournalsPath" class="form-control" placeholder="Resource journals location (optional)" 
-                           data-bind="textInput: journalsPath, hasFocus: journalsPathHasFocus" />
-                    <ul class="dropdown-menu" data-bind="foreach: $parent.sourceJournalsPathOptions, autoComplete: '#legacySourceJournalsPath'">
-                        <li data-bind="click: _.partial($root.databaseModel.journalsPathHasChanged, $data)">
-                            <a href="#" data-bind="text: $data"></a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <div class="form-group row">
-                <div class="col-md-4">
-                    <label class="control-label">Batch size</label>
-                </div>
-                <div class="col-md-8">
-                    <input type="number" class="form-control" placeholder="Batch size (optional)" data-bind="numericInput: batchSize" />
-                </div>
-            </div>
-            <h3>Source bundles</h3>
-            <div class="margin-left">
-                <div class="form-group row">
-                    <div class="col-md-12">
-                        <div class="toggle">
-                            <input id="isCompressed" type="checkbox" data-bind="checked: isCompressed">
-                            <label for="isCompressed">Compression</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group row">
-                    <div class="col-md-12">
-                        <div class="toggle">
-                            <input id="isEncrypted" type="checkbox" data-bind="checked: isEncrypted">
-                            <label for="isEncrypted">Encryption</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="margin-left" data-bind="collapse: isEncrypted">
-                    <div class="form-group row" data-bind="validationElement: encryptionKey">
-                        <div class="col-md-4">
-                            <label class="control-label">Encryption key</label>
-                        </div>
-                        <div class="col-md-8">
-                            <input type="text" class="form-control" placeholder="Encryption key" data-bind="textInput: encryptionKey" />
-                        </div>
-                    </div>
-                    <div class="form-group row" data-bind="validationElement: encryptionAlgorithm">
-                        <div class="col-md-4">
-                            <label class="control-label">Encryption algorithm</label>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="dropdown btn-block">
-                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                    <span data-bind="text: encryptionAlgorithm() || 'Select encryption algorithm'"></span>
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyEncryptionAlgorithms">
-                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionAlgorithm, $data)"></a></li>
-                                </ul>
-                            </div>
-                            <span class="help-block" data-bind="validationMessage: encryptionAlgorithm"></span>
-                        </div>
-                    </div>
-                    <div class="form-group row" data-bind="validationElement: encryptionKeyBitsSize">
-                        <div class="col-md-4">
-                            <label class="control-label">Encryption key size</label>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="dropdown btn-block">
-                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                    <span data-bind="text: encryptionKeyBitsSize() || 'Select encryption key size'"></span>
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" data-bind="foreach: $root.constructor.legacyKeySizes">
-                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.encryptionKeyBitsSize, $data)"></a></li>
-                                </ul>
-                            </div>
-                            <span class="help-block" data-bind="validationMessage: encryptionKeyBitsSize"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <hr />
-        </div>
-        <div class="form-group row" data-bind="validationElement: dataExporterFullPath">
-            <div class="col-md-4">
-                <label class="control-label data-exporter-label">
-                    Data Exporter
-                    <small><i class="icon-info text-info"></i></small>
-                </label>
-            </div>
-            <div class="col-md-8">
-                <div class="has-feedback dropdown" style="display: block">
-                    <input type="text" class="form-control" id="dataExporterFullPath" data-bind="textInput: dataExporterFullPath, hasFocus: dataExporterFullPathHasFocus" placeholder="Absolute path to Raven.StorageExporter.exe"/>
-                    <span class="glyphicon glyphicon-ok text-success form-control-feedback"
-                          data-bind="visible: dataExporterFullPath() && dataExporterFullPath.isValid() && !dataExporterFullPath.isValidating()"></span>
-                    <ul class="dropdown-menu" role="menu"
-                        data-bind="autoComplete: '#dataExporterFullPath', foreach: $root.allDataExporterAutoCompleteOptions">
-                        <li role="presentation" data-bind="click: $data.isRecent ? _.partial($root.dataExporterAutocomplete.complete, $data.path) : _.partial($root.databaseModel.dataExporterPathHasChanged, $data.path)">
-                            <a role="menuitem" tabindex="-1" href="#">
-                                <!-- ko if: isRecent -->
-                                <strong data-bind="text: path"></strong>
-                                <!-- /ko -->
-                                <!-- ko ifnot: isRecent -->
-                                <span data-bind="text: path"></span>
-                                <!-- /ko -->
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</script>
 
 <script type="text/html" id="create-db-restore">
     <div data-bind="with: databaseModel.restore">
@@ -758,18 +570,18 @@
 <script type="text/html" id="create-db-replication">
     <h3>Replication Configuration</h3>
     <div data-bind="with: databaseModel.replication" class="margin-top-sm">
-        <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackupOrFromOfflineMigration ? '' : '62px' }">
+        <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackup ? '' : '62px' }">
             <div class="input-group" title="Set the number of nodes that will contain the database" 
-                 data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
+                 data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
                 <input class="form-control" type="number" min="1" title="Set the number of nodes that will contain the database" placeholder="Enter number of nodes"
-                       data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration || $root.disableReplicationFactorInput">
-                <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning">
+                       data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackup || $root.disableReplicationFactorInput">
+                <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning">
                     With replication factor set to 1, the data won't be replicated
                 </div>
             </div>
         </div>
-        <div class="flex-horizontal bg-info padding padding-sm" data-bind="visible: $root.databaseModel.isFromBackupOrFromOfflineMigration">
+        <div class="flex-horizontal bg-info padding padding-sm" data-bind="visible: $root.databaseModel.isFromBackup">
             <div class="margin-right margin-right-sm">
                 <small><i class="icon-info"></i></small>
             </div>
@@ -790,7 +602,7 @@
                 Your current license doesn't include the dynamic database distribution feature.
             </div>
         </div>
-        <div data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration">
+        <div data-bind="visible: !$root.databaseModel.isFromBackup">
             <div class="toggle">
                 <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection()">
                 <label for="manual_mode">Set replication nodes manually</label>
@@ -823,12 +635,12 @@
 <script type="text/html" id="create-db-sharding">
     <h3>Sharding Configuration</h3>
     <div data-bind="with: databaseModel.sharding" class="margin-top-sm">
-        <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackupOrFromOfflineMigration ? '' : '62px' }">
+        <div class="form-group" data-bind="style: { 'min-height': $root.databaseModel.isFromBackup ? '' : '62px' }">
             <div class="input-group" title="Set the number of shards for the the database"
-                 data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showNumberOfShardsWarning()) }, validationElement: numberOfShards">
+                 data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackup && $root.showNumberOfShardsWarning()) }, validationElement: numberOfShards">
                 <span class="input-group-addon">Number of Shards</span>
                 <input class="form-control" type="number" min="1" title="Set the number of shards for the database" placeholder="Enter number of shards"
-                       data-bind="numericInput: numberOfShards, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration" />
+                       data-bind="numericInput: numberOfShards, disable: $root.databaseModel.isFromBackup" />
             </div>
         </div>
         <div class="bg-info padding no-margin">

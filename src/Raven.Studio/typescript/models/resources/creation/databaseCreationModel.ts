@@ -5,7 +5,6 @@ import clusterNode = require("models/database/cluster/clusterNode");
 import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
 import validateNameCommand = require("commands/resources/validateNameCommand");
-import validateOfflineMigration = require("commands/resources/validateOfflineMigration");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import licenseModel = require("models/auth/licenseModel");
@@ -19,14 +18,7 @@ class databaseCreationModel {
     static storageExporterPathKeyName = storageKeyProvider.storageKeyFor("storage-exporter-path");
 
     readonly configurationSections: Array<availableConfigurationSection> = [
-        {
-            name: "Data source",
-            id: "legacyMigration",
-            alwaysEnabled: true,
-            disableToggle: ko.observable<boolean>(false),
-            enabled: ko.observable<boolean>(true)
-        },
-        {
+       {
             name: "Backup source",
             id: "restore",
             alwaysEnabled: true,
@@ -73,7 +65,7 @@ class databaseCreationModel {
     name = ko.observable<string>("");
 
     creationMode: dbCreationMode = null;
-    isFromBackupOrFromOfflineMigration: boolean;
+    isFromBackup: boolean;
     canCreateEncryptedDatabases: KnockoutObservable<boolean>;
 
     restore = {
@@ -128,36 +120,6 @@ class databaseCreationModel {
         backupEncryptionKey: this.restore.backupEncryptionKey
     });
     
-    legacyMigration = {
-        showAdvanced: ko.observable<boolean>(false),
-        
-        isEncrypted: ko.observable<boolean>(false),
-        isCompressed: ko.observable<boolean>(false),
-
-        dataDirectory: ko.observable<string>(),
-        dataDirectoryHasFocus: ko.observable<boolean>(false),
-        dataExporterFullPath: ko.observable<string>(),
-        dataExporterFullPathHasFocus: ko.observable<boolean>(false),
-        
-        batchSize: ko.observable<number>(),
-        sourceType: ko.observable<legacySourceType>(),
-        journalsPath: ko.observable<string>(),
-        journalsPathHasFocus: ko.observable<boolean>(false),
-        encryptionKey: ko.observable<string>(),
-        encryptionAlgorithm: ko.observable<string>(),
-        encryptionKeyBitsSize: ko.observable<number>()
-    };
-    
-    legacyMigrationValidationGroup = ko.validatedObservable({
-        dataDirectory: this.legacyMigration.dataDirectory,
-        dataExporterFullPath: this.legacyMigration.dataExporterFullPath,
-        sourceType: this.legacyMigration.sourceType,
-        journalsPath: this.legacyMigration.journalsPath,
-        encryptionKey: this.legacyMigration.encryptionKey,
-        encryptionAlgorithm: this.legacyMigration.encryptionAlgorithm,
-        encryptionKeyBitsSize: this.legacyMigration.encryptionKeyBitsSize
-    });
-    
     replication = {
         replicationFactor: ko.observable<number>(2),
         manualMode: ko.observable<boolean>(false),
@@ -204,7 +166,7 @@ class databaseCreationModel {
     constructor(mode: dbCreationMode, canCreateEncryptedDatabases: KnockoutObservable<boolean>) {
         this.creationMode = mode;
         this.canCreateEncryptedDatabases = canCreateEncryptedDatabases;
-        this.isFromBackupOrFromOfflineMigration = mode !== "newDatabase";
+        this.isFromBackup = mode !== "newDatabase";
 
         this.restoreSourceObject = ko.pureComputed(() => {
             switch (this.restore.source()) {
@@ -215,9 +177,6 @@ class databaseCreationModel {
                 case 'googleCloud': return this.restore.googleCloudCredentials();
             }
         });
-        
-        const legacyMigrationConfig = this.configurationSections.find(x => x.id === "legacyMigration");
-        legacyMigrationConfig.validationGroup = this.legacyMigrationValidationGroup;
         
         const restoreConfig = this.configurationSections.find(x => x.id === "restore");
         restoreConfig.validationGroup = this.restoreValidationGroup;
@@ -306,8 +265,9 @@ class databaseCreationModel {
             }
         });
         
-        _.bindAll(this, "useRestorePoint", "dataPathHasChanged", "backupDirectoryHasChanged", "remoteFolderAzureChanged", "remoteFolderAmazonChanged", "remoteFolderGoogleCloudChanged", 
-            "legacyMigrationDataDirectoryHasChanged", "dataExporterPathHasChanged", "journalsPathHasChanged");
+        _.bindAll(this, "useRestorePoint", "dataPathHasChanged", "backupDirectoryHasChanged", 
+            "remoteFolderAzureChanged", "remoteFolderAmazonChanged", "remoteFolderGoogleCloudChanged",
+            "dataExporterPathHasChanged", "journalsPathHasChanged");
     }
     
     downloadCloudCredentials(link: string) {
@@ -345,27 +305,6 @@ class databaseCreationModel {
         
         // try to continue autocomplete flow
         this.path.dataPathHasFocus(true);
-    }
-
-    dataExporterPathHasChanged(value: string) {
-        this.legacyMigration.dataExporterFullPath(value);
-        
-        //try to continue autocomplete flow
-        this.legacyMigration.dataExporterFullPathHasFocus(true);
-    }
-
-    legacyMigrationDataDirectoryHasChanged(value: string) {
-        this.legacyMigration.dataDirectory(value);
-        
-        //try to continue autocomplete flow
-        this.legacyMigration.dataDirectoryHasFocus(true);
-    }
-    
-    journalsPathHasChanged(value: string) {
-        this.legacyMigration.journalsPath(value);
-        
-        //try to continue autocomplete flow
-        this.legacyMigration.journalsPathHasFocus(true);
     }
     
     fetchRestorePoints() {
@@ -492,9 +431,6 @@ class databaseCreationModel {
         if (this.creationMode === "restore") {
             this.setupRestoreValidation();
         }
-        if (this.creationMode === "legacyMigration") {
-            this.setupLegacyMigrationValidation();
-        }
     }
     
     private setupReplicationValidation(maxReplicationFactor: number) {
@@ -606,73 +542,6 @@ class databaseCreationModel {
         return localStorage.getItem(databaseCreationModel.storageExporterPathKeyName);
     }
     
-    private setupLegacyMigrationValidation() {
-        const migration = this.legacyMigration;
-
-        const checkDataExporterFullPath = (val: string, params: any, callback: (currentValue: string, result: string | boolean) => void) => {
-            validateOfflineMigration.validateMigratorPath(migration.dataExporterFullPath())
-                .execute()
-                .done((response: Raven.Server.Web.Studio.StudioTasksHandler.OfflineMigrationValidation) => {
-                    callback(migration.dataExporterFullPath(), response.IsValid || response.ErrorMessage);
-                });
-        };
-
-        migration.dataExporterFullPath.extend({
-            required: true,
-            validation: {
-                async: true,
-                validator: generalUtils.debounceAndFunnel(checkDataExporterFullPath)
-            }
-        });
-        
-        const savedPath = this.getSavedDataExporterPath();
-        if (savedPath) {
-            migration.dataExporterFullPath(savedPath);
-        }
-        
-        migration.dataExporterFullPath.subscribe(path => {
-            localStorage.setItem(databaseCreationModel.storageExporterPathKeyName, path);
-        });
-        
-        const checkDataDir = (val: string, params: any, callback: (currentValue: string, result: string | boolean) => void) => {
-            validateOfflineMigration.validateDataDir(migration.dataDirectory())
-                .execute()
-                .done((response: Raven.Server.Web.Studio.StudioTasksHandler.OfflineMigrationValidation) => {
-                    callback(migration.dataDirectory(), response.IsValid || response.ErrorMessage);
-                });
-        };
-
-        migration.dataDirectory.extend({
-            required: true,
-            validation: {
-                async: true,
-                validator: generalUtils.debounceAndFunnel(checkDataDir)
-            }
-        });
-
-        migration.sourceType.extend({
-            required: true
-        });
-
-        migration.encryptionKey.extend({
-            required: {
-                onlyIf: () => migration.isEncrypted()
-            }
-        });
-
-        migration.encryptionAlgorithm.extend({
-            required: {
-                onlyIf: () => migration.isEncrypted()
-            }
-        });
-
-        migration.encryptionKeyBitsSize.extend({
-            required: {
-                onlyIf: () => migration.isEncrypted()
-            }
-        });
-    }
-
     private topologyToDto(): Raven.Client.ServerWide.DatabaseTopology {
         const topology = {
             DynamicNodesDistribution: this.replication.dynamicMode()
@@ -770,23 +639,6 @@ class databaseCreationModel {
         } as Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase;
         
         return this.restoreSourceObject().getConfigurationForRestoreDatabase(baseConfiguration, restorePoint.location);
-    }
-    
-    toOfflineMigrationDto(): Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration {
-        const migration = this.legacyMigration;
-        return {
-            DataDirectory: migration.dataDirectory(),
-            DataExporterFullPath: migration.dataExporterFullPath(),
-            BatchSize: migration.batchSize() || null,
-            IsRavenFs: migration.sourceType() === "ravenfs",
-            IsCompressed: migration.isCompressed(),
-            JournalsPath: migration.journalsPath(),
-            DatabaseRecord: this.toDto(),
-            EncryptionKey: migration.isEncrypted() ? migration.encryptionKey() : undefined,
-            EncryptionAlgorithm: migration.isEncrypted() ? migration.encryptionAlgorithm() : undefined,
-            EncryptionKeyBitsSize: migration.isEncrypted() ? migration.encryptionKeyBitsSize() : undefined,
-            OutputFilePath: null
-        } as Raven.Client.ServerWide.Operations.Migration.OfflineMigrationConfiguration;
     }
 }
 

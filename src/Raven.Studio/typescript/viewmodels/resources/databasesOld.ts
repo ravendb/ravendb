@@ -8,12 +8,6 @@ class databases {
         requestedState: ko.observable<filterState>('all')
     };
 
-    selectionState: KnockoutComputed<checkbox>;
-    selectedDatabases = ko.observableArray<string>([]);
-    selectedDatabasesWithoutLock: KnockoutComputed<databaseInfo[]>;
-
-    lockModeCommon: KnockoutComputed<string>;
-    
     databasesByState: KnockoutComputed<Record<databaseState, number>>;
 
     spinners = {
@@ -21,9 +15,6 @@ class databases {
         localLockChanges: ko.observableArray<string>([]),
     };
 
-    private static compactView = ko.observable<boolean>(false);
-    compactView = databases.compactView;
-    
     statsSubscription: changeSubscription;
 
     databaseNameWidth = ko.observable<number>(350);
@@ -33,8 +24,6 @@ class databases {
    
     databaseToCompact: string;
     popupRestoreDialog: boolean;
-    
-    notificationCenter = notificationCenter.instance;
     
     constructor() {
         super();
@@ -48,29 +37,6 @@ class databases {
         filters.searchText.throttle(200).subscribe(() => this.filterDatabases());
         filters.requestedState.subscribe(() => this.filterDatabases());
 
-        this.selectionState = ko.pureComputed<checkbox>(() => {
-            const databases = this.databases().sortedDatabases().filter(x => !x.filteredOut());
-            const selectedCount = this.selectedDatabases().length;
-            if (databases.length && selectedCount === databases.length)
-                return "checked";
-            if (selectedCount > 0)
-                return "some_checked";
-            return "unchecked";
-        });
-
-        this.lockModeCommon = ko.pureComputed(() => {
-            const selectedDatabases = this.getSelectedDatabases();
-            if (selectedDatabases.length === 0)
-                return "None";
-
-            const firstLockMode = selectedDatabases[0].lockMode();
-            for (let i = 1; i < selectedDatabases.length; i++) {
-                if (selectedDatabases[i].lockMode() !== firstLockMode) {
-                    return "Mixed";
-                }
-            }
-            return firstLockMode;
-        });
         
         this.databasesByState = ko.pureComputed(() => {
             const databases = this.databases().sortedDatabases();
@@ -99,11 +65,7 @@ class databases {
             
             return result;
         });
-        
-        this.selectedDatabasesWithoutLock = ko.pureComputed(() => {
-            const selected = this.getSelectedDatabases();
-            return selected.filter(x => x.lockMode() === "Unlock");
-        });
+      
     }
 
 
