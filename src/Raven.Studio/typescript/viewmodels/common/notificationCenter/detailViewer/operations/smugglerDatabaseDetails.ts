@@ -16,7 +16,6 @@ import CountsWithLastEtag = Raven.Client.Documents.Smuggler.SmugglerProgressBase
 import DatabaseRecordProgress = Raven.Client.Documents.Smuggler.SmugglerProgressBase.DatabaseRecordProgress;
 import SmugglerProgressBase = Raven.Client.Documents.Smuggler.SmugglerProgressBase;
 import RestoreProgress = Raven.Client.ServerWide.Operations.RestoreProgress;
-import OfflineMigrationProgress = Raven.Client.Documents.Smuggler.OfflineMigrationProgress;
 import SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
 import OperationChanged = Raven.Server.NotificationCenter.Notifications.OperationChanged;
 import BackupProgress = Raven.Client.Documents.Operations.Backups.BackupProgress;
@@ -219,11 +218,6 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 if (!restoreCounts.Skipped) {
                     result.push(this.mapToExportListItem("Preparing restore", restoreCounts));
                 }
-            }
-            
-            if (this.op.taskType() === "MigrationFromLegacyData") {
-                const migrationCounts = (status as OfflineMigrationProgress).DataExporter;
-                result.push(this.mapToExportListItem(smugglerDatabaseDetails.extractingDataStageName, migrationCounts));
             }
 
             const isDatabaseMigration = this.op.taskType() === "DatabaseMigration";

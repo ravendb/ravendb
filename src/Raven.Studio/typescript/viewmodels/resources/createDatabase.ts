@@ -4,7 +4,6 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import databasesManager = require("common/shell/databasesManager");
 import createDatabaseCommand = require("commands/resources/createDatabaseCommand");
 import restoreDatabaseFromBackupCommand = require("commands/resources/restoreDatabaseFromBackupCommand");
-import migrateLegacyDatabaseFromDatafilesCommand = require("commands/resources/migrateLegacyDatabaseFromDatafilesCommand");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import getDatabaseLocationCommand = require("commands/resources/getDatabaseLocationCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
@@ -18,7 +17,6 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import viewHelpers = require("common/helpers/view/viewHelpers");
-import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import lastUsedAutocomplete = require("common/storage/lastUsedAutocomplete");
 import viewModelBase = require("viewmodels/viewModelBase");
 import studioSettings = require("common/settings/studioSettings");
@@ -31,7 +29,6 @@ class createDatabase extends dialogViewModelBase {
     view = require("views/resources/createDatabase.html");
     
     static readonly legacyKeySizes = [128, 192, 256];
-    static readonly legacyEncryptionAlgorithms: legacyEncryptionAlgorithms[] = ['DES', 'RC2', 'Rijndael', 'Triple DES'];
 
     static readonly defaultSection = "replication";
     
@@ -47,7 +44,6 @@ class createDatabase extends dialogViewModelBase {
     
     encryptionSection: setupEncryptionKey;
     isSecureServer = accessManager.default.secureServer();
-    operationNotSupported: boolean;
     
     protected currentAdvancedSection = ko.observable<availableConfigurationSectionId>();
 
@@ -65,23 +61,16 @@ class createDatabase extends dialogViewModelBase {
     databaseLocationInfoMessage: KnockoutComputed<string>;
 
     recentPathsAutocomplete: lastUsedAutocomplete;
-    dataExporterAutocomplete: lastUsedAutocomplete;
-    
-    dataExporterDirectoryPathOptions = ko.observableArray<string>([]);
     backupFolderPathOptions = ko.observableArray<string>([]);
     sourceJournalsPathOptions = ko.observableArray<string>([]);
     
     pathOptions = ko.observableArray<{ path: string, isRecent: boolean }>([]);
-    allDataExporterAutoCompleteOptions: KnockoutComputed<{ path: string, isRecent: boolean }[]>;
 
-    legacyMigrationDataDirectoryPathOptions = ko.observableArray<string>([]);
-    
     getDatabaseByName(name: string): database {
         return databasesManager.default.getDatabaseByName(name);
     }
 
     advancedVisibility = {
-        legacyMigration: ko.pureComputed(() => this.currentAdvancedSection() === "legacyMigration"), 
         restore: ko.pureComputed(() => this.currentAdvancedSection() === "restore"),
         encryption: ko.pureComputed(() => this.currentAdvancedSection() === "encryption"),
         replication: ko.pureComputed(() => this.currentAdvancedSection() === "replication"),
@@ -92,12 +81,9 @@ class createDatabase extends dialogViewModelBase {
     constructor(mode: dbCreationMode) {
         super();
 
-        this.operationNotSupported = mode === "legacyMigration" && clusterTopologyManager.default.nodeInfo().OsInfo.Type !== "Windows";
-        
         const canCreateEncryptedDatabases = ko.pureComputed(() => this.isSecureServer && licenseModel.licenseStatus() && licenseModel.licenseStatus().HasEncryption);
         this.databaseModel = new databaseCreationModel(mode, canCreateEncryptedDatabases);
         this.recentPathsAutocomplete = new lastUsedAutocomplete("createDatabasePath", this.databaseModel.path.dataPath);
-        this.dataExporterAutocomplete = new lastUsedAutocomplete("dataExporterPath", this.databaseModel.legacyMigration.dataExporterFullPath);
         
         switch (mode) {
             case "newDatabase": 
@@ -105,9 +91,6 @@ class createDatabase extends dialogViewModelBase {
                 break;
             case "restore":
                 this.currentAdvancedSection("restore");
-                break;
-            case "legacyMigration":
-                this.currentAdvancedSection("legacyMigration");
                 break;
         }
         
@@ -138,12 +121,6 @@ class createDatabase extends dialogViewModelBase {
         
         this.updateBackupDirectoryPathOptions();
         this.updatePathOptions(this.databaseModel.path.dataPath());
-        
-        if (this.databaseModel.creationMode === "legacyMigration") {
-            this.updateLegacyMigrationDataDirectoryPathOptions(this.databaseModel.legacyMigration.dataDirectory());
-            this.updateLegacyDataExporterPath(this.databaseModel.legacyMigration.dataExporterFullPath());
-            this.updateSourceJournalsPathOptions(this.databaseModel.legacyMigration.journalsPath());
-        }
 
         return $.when<any>(getTopologyTask, getEncryptionKeyTask, getStudioSettingsTask)
             .done(() => {
@@ -180,7 +157,7 @@ class createDatabase extends dialogViewModelBase {
             this.databaseModel.encryption.confirmation(false);
         });
 
-        if (this.databaseModel.isFromBackupOrFromOfflineMigration) {
+        if (this.databaseModel.isFromBackup) {
             this.databaseModel.replication.replicationFactor(1);
         }
         
@@ -211,7 +188,7 @@ class createDatabase extends dialogViewModelBase {
 
     protected initObservables() {
         this.canUseDynamicOption = ko.pureComputed(() => {
-            const fromBackup = this.databaseModel.isFromBackupOrFromOfflineMigration;
+            const fromBackup = this.databaseModel.isFromBackup;
             const enforceManual = this.enforceManualNodeSelection();
             const replicationFactor = this.databaseModel.replication.replicationFactor();
             return !fromBackup && !enforceManual && replicationFactor !== 1;
@@ -331,16 +308,6 @@ class createDatabase extends dialogViewModelBase {
         this.databaseModel.restoreSourceObject.subscribe(() => {
             this.updateBackupDirectoryPathOptions();
         });
-        
-        this.databaseModel.legacyMigration.dataDirectory.throttle(300).subscribe(newPath => {
-            this.updateLegacyMigrationDataDirectoryPathOptions(newPath);
-        });
-        this.databaseModel.legacyMigration.dataExporterFullPath.throttle(300).subscribe(newPath => {
-           this.updateLegacyDataExporterPath(newPath); 
-        });
-        this.databaseModel.legacyMigration.journalsPath.throttle(300).subscribe(newPath => {
-            this.updateSourceJournalsPathOptions(newPath);
-        });
 
         this.databaseLocationInfoToDisplay = ko.pureComputed(() => {
             const databaseLocationInfo = this.databaseLocationInfo();
@@ -386,22 +353,6 @@ class createDatabase extends dialogViewModelBase {
             }
 
             return `${message} ${replicationFactor} of the ${numberOfClusterNodes} nodes:`;
-        });
-
-        this.allDataExporterAutoCompleteOptions = ko.pureComputed(() => {
-            const result: { path: string, isRecent: boolean }[] = [];
-
-            const autoComplete = this.dataExporterAutocomplete.createCompleter();
-            autoComplete().forEach(p => {
-                result.push({ path: p, isRecent: true });
-            });
-
-            const pathOptions = this.dataExporterDirectoryPathOptions();
-            pathOptions.forEach(p => {
-                result.push({ path: p, isRecent: false });
-            });
-
-            return result;
         });
     }
 
@@ -450,15 +401,6 @@ class createDatabase extends dialogViewModelBase {
             .execute();
     }
     
-    updateLegacyMigrationDataDirectoryPathOptions(path: string) {
-        this.getLocalFolderPaths(path)
-            .done(result => this.legacyMigrationDataDirectoryPathOptions(result.List));
-    }
-    
-    updateLegacyDataExporterPath(path: string) {
-        this.getLocalFolderPaths(path)
-            .done(result => this.dataExporterDirectoryPathOptions(result.List));
-    }
 
     updateSourceJournalsPathOptions(path: string) {
         this.getLocalFolderPaths(path)
@@ -469,15 +411,12 @@ class createDatabase extends dialogViewModelBase {
         const sections = this.databaseModel.configurationSections;
 
         const restoreSection = sections.find(x => x.id === "restore");
-        const legacyMigrationSection = sections.find(x => x.id === "legacyMigration");
         
         switch (this.databaseModel.creationMode) {
             case "newDatabase":
-                return _.without(sections, restoreSection, legacyMigrationSection);
-            case "restore":
-                return _.without(sections, legacyMigrationSection);
-            case "legacyMigration":
                 return _.without(sections, restoreSection);
+            case "restore":
+                return _.without(sections);
         }
     }
     
@@ -505,7 +444,6 @@ class createDatabase extends dialogViewModelBase {
                 this.databaseModel.name.extend({validatable: false});
                 
                 this.recentPathsAutocomplete.recordUsage();
-                this.dataExporterAutocomplete.recordUsage();
 
                 switch (this.databaseModel.creationMode) {
                     case "restore":
@@ -513,9 +451,6 @@ class createDatabase extends dialogViewModelBase {
                         break;
                     case "newDatabase":
                         this.createDatabaseInternal();
-                        break;
-                    case "legacyMigration":
-                        this.createDatabaseFromLegacyDatafiles();
                         break;
                 }
 
@@ -575,21 +510,6 @@ class createDatabase extends dialogViewModelBase {
                         dialog.close(this);
                         this.spinners.create(false);
                     });
-            });
-    }
-
-    private createDatabaseFromLegacyDatafiles(): JQueryPromise<operationIdDto> {
-
-        const restoreDocument = this.databaseModel.toOfflineMigrationDto();
-        return new migrateLegacyDatabaseFromDatafilesCommand(restoreDocument)
-            .execute()
-            .done((operationIdDto: operationIdDto) => {
-                const operationId = operationIdDto.OperationId;
-                notificationCenter.instance.openDetailsForOperationById(null, operationId);
-                dialog.close(this);
-            })
-            .always(() => {
-                this.spinners.create(false);
             });
     }
     
