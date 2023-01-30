@@ -5,6 +5,7 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -153,10 +154,20 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(Transaction tx, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
     {
-        var idPtr = tvr.Read(idIndex, out var size);
-        var etag = *(long*)tvr.Read(etagIndex, out _);
+        if (tx.Owner is not ShardedDocumentDatabase documentDatabase)
+        {
+            slice = default;
+            return default;
+        }
 
-        return GenerateBucketAndEtagSlice(tx, idPtr, size, etag, out slice);
+        using (documentDatabase.DatabaseContext.AllocateContext(out JsonOperationContext context))
+        {
+            var lowerId = TableValueToString(context, idIndex, ref tvr);
+            lowerId = UnwrapLowerIdIfNeeded(context, lowerId);
+            var etag = *(long*)tvr.Read(etagIndex, out _);
+
+            return GenerateBucketAndEtagSlice(tx, lowerId.Buffer, lowerId.Size, etag, out slice);
+        }
     }
 
     internal static ByteStringContext.Scope ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(Transaction tx, int keyIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
