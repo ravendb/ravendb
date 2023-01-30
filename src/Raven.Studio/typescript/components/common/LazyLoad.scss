@@ -1,0 +1,24 @@
+﻿@keyframes loadingAnimation {
+    0% {
+        background-position: 150% 0;
+    }
+
+    100% {
+        background-position: -150% 0;
+    }
+}
+
+$loading-animation-duration: 2s;
+
+.lazy-load > * {
+    color: #00000000 !important;
+    background: linear-gradient(45deg, $panel-bg-2 40%, $panel-bg-3 50%, $panel-bg-2 60%), $panel-bg-2;
+    background-repeat: no-repeat;
+    background-size: 350% 100%;
+    animation: loadingAnimation $loading-animation-duration linear infinite;
+    border-radius: $border-radius;
+
+    & > * {
+        opacity: 0;
+    }
+}

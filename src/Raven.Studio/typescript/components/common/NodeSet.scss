@@ -1,0 +1,35 @@
+﻿.node-set {
+    display: inline-flex;
+    flex-wrap: wrap;
+    padding: $gutter-xxs $gutter-xs;
+    border-left: 4px solid;
+    border-radius: $border-radius;
+
+    .node-set-label {
+        margin-right: $gutter-xs;
+
+        i {
+            transform: scale(1.2);
+            margin-right: 0.2em;
+        }
+
+        .node-set-label-name {
+            font-weight: 600;
+        }
+    }
+
+    .node-set-item {
+        margin: 0 $gutter-xxs;
+
+        i {
+            margin-right: 0.2em;
+            display: inline-block;
+        }
+
+        .node-set-item-name {
+            position: relative;
+            font-weight: 800;
+            color: $text-emphasis-var;
+        }
+    }
+}

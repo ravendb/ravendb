@@ -1,0 +1,8 @@
+﻿.sticky-header {
+    position: sticky;
+    top: 0;
+    padding: $gutter $gutter $gutter-sm;
+    background-color: rgba($body-bg, 0.97);
+    z-index: 1000;
+    backdrop-filter: blur(2px);
+}
