@@ -3,7 +3,7 @@ import createDatabase from "viewmodels/resources/createDatabase";
 import app from "durandal/app";
 import { withPreventDefault } from "../../../utils/common";
 import { Button } from "reactstrap";
-import { EmptySet } from "../../../../components/common/EmptySet";
+import { EmptySet } from "components/common/EmptySet";
 
 export function NoDatabases() {
     const newDatabase = useCallback(() => {

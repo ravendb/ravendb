@@ -6,27 +6,27 @@ import { globalDispatch } from "components/storeCompat";
 import { databasesLoaded } from "components/common/shell/databasesSlice";
 
 export class MockDatabaseManager {
-    static with_Cluster(dto?: MockedValue<DatabaseSharedInfo>) {
+    with_Cluster(dto?: MockedValue<DatabaseSharedInfo>) {
         const value = this.createValue(dto, DatabasesStubs.nonShardedClusterDatabase().toDto());
 
         globalDispatch(databasesLoaded([value]));
     }
 
-    static with_Sharded(dto?: MockedValue<DatabaseSharedInfo>) {
+    with_Sharded(dto?: MockedValue<DatabaseSharedInfo>) {
         const value = this.createValue(dto, DatabasesStubs.shardedDatabase().toDto());
         globalDispatch(databasesLoaded([value]));
     }
 
-    static with_Single(dto?: MockedValue<DatabaseSharedInfo>) {
+    with_Single(dto?: MockedValue<DatabaseSharedInfo>) {
         const value = this.createValue(dto, DatabasesStubs.nonShardedSingleNodeDatabase().toDto());
         globalDispatch(databasesLoaded([value]));
     }
 
-    static withDatabases(dbs: DatabaseSharedInfo[]) {
+    withDatabases(dbs: DatabaseSharedInfo[]) {
         globalDispatch(databasesLoaded(dbs));
     }
 
-    protected static createValue<T>(value: MockedValue<T>, defaultValue: T): T {
+    protected createValue<T>(value: MockedValue<T>, defaultValue: T): T {
         return createValue(value, defaultValue);
     }
 }

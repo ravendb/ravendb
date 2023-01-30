@@ -7,8 +7,13 @@ import { NoDatabases } from "./NoDatabases";
 import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
 import { useChanges } from "hooks/useChanges";
 import { Col, Row } from "reactstrap";
-import { useAppSelector } from "components/store";
-import { selectActiveDatabase, selectAllDatabases } from "components/common/shell/databasesSlice";
+import { useAppDispatch, useAppSelector } from "components/store";
+import {
+    openDeleteDatabasesDialog,
+    selectActiveDatabase,
+    selectAllDatabases,
+} from "components/common/shell/databasesSlice";
+import { dispatch } from "d3";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -27,8 +32,9 @@ export function DatabasesPage() {
     //TODO: highlight active database
 
     const activeDatabase = useAppSelector(selectActiveDatabase);
-
     const databases = useAppSelector(selectAllDatabases);
+
+    const dispatch = useAppDispatch();
 
     const [filter, setFilter] = useState<DatabaseFilterCriteria>(() => ({
         searchText: "",
@@ -36,7 +42,7 @@ export function DatabasesPage() {
 
     const { serverNotifications } = useChanges();
 
-    const [selectedDatabases, setSelectedDatabases] = useState<string[]>([]);
+    const [selectedDatabaseNames, setSelectedDatabaseNames] = useState<string[]>([]);
 
     const filteredDatabases = useMemo(() => {
         //TODO: filter and sort databases
@@ -45,17 +51,17 @@ export function DatabasesPage() {
     }, [filter, databases]);
 
     const toggleSelectAll = useCallback(() => {
-        const selectedCount = selectedDatabases.length;
+        const selectedCount = selectedDatabaseNames.length;
 
         if (selectedCount > 0) {
-            setSelectedDatabases([]);
+            setSelectedDatabaseNames([]);
         } else {
-            setSelectedDatabases(filteredDatabases.map((x) => x.name));
+            setSelectedDatabaseNames(filteredDatabases.map((x) => x.name));
         }
-    }, [selectedDatabases, filteredDatabases]);
+    }, [selectedDatabaseNames, filteredDatabases]);
 
     const databasesSelectionState = useMemo<checkbox>(() => {
-        const selectedCount = selectedDatabases.length;
+        const selectedCount = selectedDatabaseNames.length;
         const dbsCount = filteredDatabases.length;
         if (databases && dbsCount === selectedCount) {
             return "checked";
@@ -66,15 +72,17 @@ export function DatabasesPage() {
         }
 
         return "unchecked";
-    }, [filteredDatabases, selectedDatabases, databases]);
+    }, [filteredDatabases, selectedDatabaseNames, databases]);
 
     const toggleSelection = (db: DatabaseSharedInfo) => {
-        if (selectedDatabases.includes(db.name)) {
-            setSelectedDatabases((s) => s.filter((x) => x !== db.name));
+        if (selectedDatabaseNames.includes(db.name)) {
+            setSelectedDatabaseNames((s) => s.filter((x) => x !== db.name));
         } else {
-            setSelectedDatabases((s) => s.concat(db.name));
+            setSelectedDatabaseNames((s) => s.concat(db.name));
         }
     };
+
+    const selectedDatabases = databases.filter((x) => selectedDatabaseNames.includes(x.name));
 
     return (
         <div className="content-margin">
@@ -88,7 +96,7 @@ export function DatabasesPage() {
                     />
                 </Col>
                 <Col>
-                    <DatabasesToolbarActions />
+                    <DatabasesToolbarActions selectedDatabases={selectedDatabases} />
                 </Col>
             </Row>
             <div className="flex-grow scroll js-scroll-container">
@@ -97,7 +105,7 @@ export function DatabasesPage() {
                     {filteredDatabases.map((db) => (
                         <DatabasePanel
                             key={db.name}
-                            selected={selectedDatabases.includes(db.name)}
+                            selected={selectedDatabaseNames.includes(db.name)}
                             toggleSelection={() => toggleSelection(db)}
                             db={db}
                         />
