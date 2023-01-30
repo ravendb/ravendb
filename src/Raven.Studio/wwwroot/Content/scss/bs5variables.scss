@@ -5,73 +5,7 @@
 // Variables should follow the `$component-state-property-size` formula for
 // consistent naming. Ex: $nav-link-disabled-color and $modal-content-box-shadow-xs.
 
-// Color system
-// scss-docs-end gray-color-variables
 
-// fusv-disable
-// scss-docs-start gray-colors-map
-$grays: (
-    "100": $gray-100,
-    "200": $gray-200,
-    "300": $gray-300,
-    "400": $gray-400,
-    "500": $gray-500,
-    "600": $gray-600,
-    "700": $gray-700,
-    "800": $gray-800,
-    "900": $gray-900,
-) !default;
-// scss-docs-end gray-colors-map
-// fusv-enable
-
-// scss-docs-start color-variables
-$blue: $color-4 !default;
-$indigo: $color-4-2 !default;
-$purple: $color-5 !default;
-$pink: $color-5-2 !default;
-$red: $color-1 !default;
-$orange: $color-1-2 !default;
-$yellow: $color-2 !default;
-$green: $color-3 !default;
-$teal: $color-3-2 !default;
-$cyan: $color-3-1 !default;
-// scss-docs-end color-variables
-
-// scss-docs-start colors-map
-$colors: (
-    "blue": $blue,
-    "indigo": $indigo,
-    "purple": $purple,
-    "pink": $pink,
-    "red": $red,
-    "orange": $orange,
-    "yellow": $yellow,
-    "green": $green,
-    "teal": $teal,
-    "cyan": $cyan,
-    "white": $white,
-    "gray": $gray-600,
-    "gray-dark": $gray-800,
-) !default;
-// scss-docs-end colors-map
-
-// scss-docs-start theme-colors-map
-$theme-colors: (
-    "primary": $primary,
-    "secondary": $secondary,
-    "success": $success,
-    "info": $info,
-    "warning": $warning,
-    "danger": $danger,
-    "light": $light,
-    "dark": $dark,
-    "node": $node-color,
-    "shard": $shard-color,
-    "orchestrator": $orchestrator-color,
-    "progress": $progress-color,
-) !default;
-
-// scss-docs-end theme-colors-map
 
 // The contrast ratio to reach against white, to determine if color changes from "light" to "dark". Acceptable values for WCAG 2.0 are 3, 4.5 and 7.
 // See https://www.w3.org/TR/WCAG20/#visual-audio-contrast-contrast

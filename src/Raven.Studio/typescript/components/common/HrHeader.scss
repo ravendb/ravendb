@@ -1,0 +1,24 @@
+﻿.hr-title {
+    display: flex;
+    align-items: center;
+    margin-bottom: $gutter-sm;
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5 {
+        text-transform: uppercase;
+    }
+
+    hr {
+        flex-grow: 1;
+        margin: 0;
+    }
+}
+@each $key, $value in $theme-colors {
+    .bg-faded-#{$key} {
+        background-color: mix($panel-bg-1, $value, 80%);
+        color: mix($text-emphasis-color, $value, 30%);
+    }
+}
