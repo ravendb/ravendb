@@ -14,10 +14,15 @@ import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/r
 import shard from "models/resources/shard";
 import deleteOrchestratorFromNodeCommand from "commands/resources/deleteOrchestratorFromNodeCommand";
 import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
+import toggleDatabaseCommand from "commands/resources/toggleDatabaseCommand";
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
         return new saveDatabaseLockModeCommand(databases, newLockMode).execute();
+    }
+
+    async toggle(databases: DatabaseSharedInfo[], enable: boolean) {
+        return new toggleDatabaseCommand(databases, enable).execute();
     }
 
     async deleteDatabase(toDelete: string[], hardDelete: boolean) {

@@ -1,26 +1,6 @@
-import app = require("durandal/app");
-import appUrl = require("common/appUrl");
-import viewModelBase = require("viewmodels/viewModelBase");
-import accessManager = require("common/shell/accessManager");
-import createDatabase = require("viewmodels/resources/createDatabase");
-type databaseState = "errored" | "disabled" | "online" | "offline" | "remote";
-type filterState = databaseState | 'local' | 'all';
 
-type OLD_DATABASES_INFO = {
-    sortedDatabases: KnockoutObservableArray<any>;
-    getByName: (name: string) => any;
-    updateDatabase: (a: any) => void;
-}
-
-class databases extends viewModelBase {
-    view = require("views/resources/databases.html")
-    
-    
+class databases {
     /*
-    
-    databases = ko.observable<OLD_DATABASES_INFO>(); //TODO: databasesInfo
-    clusterManager = clusterTopologyManager.default;
-    
     formatBytes = generalUtils.formatBytesToSize;
 
     filters = {
@@ -46,8 +26,6 @@ class databases extends viewModelBase {
     
     statsSubscription: changeSubscription;
 
-    accessManager = accessManager.default.databasesView;
-    
     databaseNameWidth = ko.observable<number>(350);
 
     environmentClass = (source: KnockoutObservable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>) => 
@@ -128,10 +106,6 @@ class databases extends viewModelBase {
         });
     }
 
-    // Override canActivate: we can always load this page, regardless of any system db prompt.
-    canActivate(): any {
-        return true;
-    }
 
     activate(args: any): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         super.activate(args);
@@ -219,12 +193,7 @@ class databases extends viewModelBase {
         $('[data-toggle="more-nodes-tooltip"]').popover('hide');
     }
 
-    private fetchDatabases(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
-        return new getDatabasesCommand()
-            .execute()
-            //TODO: .done(info => this.databases(new databasesInfo(info)));
-    }
-
+  
     private onDatabaseChange(e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {
         switch (e.ChangeType) {
             case "Load":
@@ -306,16 +275,7 @@ class databases extends viewModelBase {
             </div>`;
         };
         
-        $('.databases [data-toggle="more-nodes-tooltip"]').each((idx, element) => {
-            popoverUtils.longWithHover($(element), {
-                content: () => { 
-                    const context = ko.dataFor(element);
-                    return contentProvider(context);
-                },
-                placement: "top",
-                container: "body"
-            });
-        });
+
 
         $('.databases [data-toggle="size-tooltip"]').tooltip({
             container: "body",
@@ -399,10 +359,8 @@ class databases extends viewModelBase {
                 //TODO: return databases.toExternalUrl(dbInfo, link);
             }
         });
-    }*/
-
+    }
     
-    /*
     createAllDocumentsUrlObservableForNode(dbInfo: databaseInfo, node: databaseGroupNode) {
         return ko.pureComputed(() => {
             const currentNodeTag = this.clusterManager.localNodeTag();
@@ -414,10 +372,9 @@ class databases extends viewModelBase {
                 return appUrl.toExternalUrl(node.serverUrl(), link);
             }
         });
-    }*/
+    }
     
 
-    /*
     indexErrorsUrl(dbInfo: databaseInfo): string {
         return appUrl.forIndexErrors(dbInfo);
     }
@@ -442,95 +399,7 @@ class databases extends viewModelBase {
         return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
-    private getSelectedDatabases() {
-        const selected = this.selectedDatabases();
-        return this.databases().sortedDatabases().filter(x => _.includes(selected, x.name));
-    }
     
-
-    /*
-    deleteDatabase(db: databaseInfo) {
-        this.deleteDatabases([db]);
-    }
-
-    private removeDatabase(dbInfo: databaseInfo) {
-        this.databases().sortedDatabases.remove(dbInfo);
-        this.selectedDatabases.remove(dbInfo.name);
-        messagePublisher.reportSuccess(`Database ${dbInfo.name} was successfully deleted`);
-    }
-
-    enableSelectedDatabases() {
-        this.toggleSelectedDatabases(true);
-    }
-
-    disableSelectedDatabases() {
-        this.toggleSelectedDatabases(false);
-    }
-
-    private toggleSelectedDatabases(enableAll: boolean) {
-        const selectedDatabases = this.getSelectedDatabases().map(x => x.asDatabase());
-
-        if (_.every(selectedDatabases, x => x.disabled() !== enableAll)) {
-            return;
-        }
-
-        if (selectedDatabases.length > 0) {
-            const disableDatabaseToggleViewModel = new disableDatabaseToggleConfirm(selectedDatabases, !enableAll);
-
-            disableDatabaseToggleViewModel.result.done(result => {
-                if (result.can) {
-                    this.spinners.globalToggleDisable(true);
-  
-                    new toggleDatabaseCommand(selectedDatabases, !enableAll)
-                        .execute()
-                        .done(disableResult => {
-                            disableResult.Status.forEach(x => this.onDatabaseDisabled(x));
-                        })
-                        .always(() => this.spinners.globalToggleDisable(false));
-                }
-            });
-
-            app.showBootstrapDialog(disableDatabaseToggleViewModel);
-        }
-    }
-
-    toggleDatabase(rsInfo: databaseInfo) {
-        const disable = !rsInfo.disabled();
-
-        const rs = rsInfo.asDatabase();
-        const disableDatabaseToggleViewModel = new disableDatabaseToggleConfirm([rs], disable);
-
-        disableDatabaseToggleViewModel.result.done(result => {
-            if (result.can) {
-                rsInfo.inProgressAction(disable ? "Disabling..." : "Enabling...");
-
-                new toggleDatabaseCommand([rs], disable)
-                    .execute()
-                    .done(disableResult => {
-                        disableResult.Status.forEach(x => this.onDatabaseDisabled(x));
-                    })
-                    .always(() => rsInfo.inProgressAction(null));
-            }
-        });
-
-        app.showBootstrapDialog(disableDatabaseToggleViewModel);
-    }
-
-    private onDatabaseDisabled(result: disableDatabaseResult) {
-        const dbs = this.databases().sortedDatabases();
-        const matchedDatabase = dbs.find(rs => rs.name === result.Name);
-
-        if (matchedDatabase) {
-            matchedDatabase.disabled(result.Disabled);
-
-            // If Enabling a database (that is selected from the top) than we want it to be Online(Loaded)
-            if (matchedDatabase.isCurrentlyActiveDatabase() && !matchedDatabase.disabled()) {
-                new loadDatabaseCommand(matchedDatabase.asDatabase())
-                    .execute();
-            }
-        }
-    }
-
     toggleDisableDatabaseIndexing(db: databaseInfo) {
         const enableIndexing = db.indexingDisabled();
         const message = enableIndexing ? "Enable" : "Disable";
@@ -578,33 +447,6 @@ class databases extends viewModelBase {
             });
     }
 
-    
-    newDatabase() {
-        const createDbView = new createDatabase("newDatabase");
-        app.showBootstrapDialog(createDbView)
-            .done(shardsDefined => {
-                if (shardsDefined) {
-                    // For now, refresh data for this view
-                    // Can't rely on ws - see issue https://issues.hibernatingrhinos.com/issue/RavenDB-16177 // TODO
-                    this.fetchDatabases();
-                    this.databasesManager.refreshDatabases();
-                }
-            });
-    }
-    
-    newDatabaseFromBackup() {
-        eventsCollector.default.reportEvent("databases", "new-from-backup");
-        
-        const createDbView = new createDatabase("restore");
-        app.showBootstrapDialog(createDbView);
-    }
-    
-    newDatabaseFromLegacyDatafiles() {
-        eventsCollector.default.reportEvent("databases", "new-from-legacy");
-        
-        const createDbView = new createDatabase("legacyMigration");
-        app.showBootstrapDialog(createDbView);
-    }
 
     databasePanelClicked(dbInfo: databaseInfo, event: JQueryEventObject) {
         if (generalUtils.canConsumeDelegatedEvent(event)) {
@@ -634,44 +476,6 @@ class databases extends viewModelBase {
         }
 
         this.notificationCenter.showNotifications.toggle();
-    }
-    
-
-    unlockSelectedDatabases() {
-        this.setLockModeSelectedDatabases("Unlock", "allow deletes");
-    }
-
-    lockSelectedDatabases() {
-        this.setLockModeSelectedDatabases("PreventDeletesIgnore", "prevent deletes");
-    }
-
-    lockErrorSelectedDatabases() {
-        this.setLockModeSelectedDatabases("PreventDeletesError", "prevent deletes (with error)");
-    }
-
-    private setLockModeSelectedDatabases(lockMode: Raven.Client.ServerWide.DatabaseLockMode, lockModeStrForTitle: string) {
-        if (this.lockModeCommon() === lockMode)
-            return;
-
-        this.confirmationMessage("Are you sure?", `Do you want to <strong>${generalUtils.escapeHtml(lockModeStrForTitle)}</strong> of selected databases?`, {
-            html: true
-        })
-            .done(can => {
-                if (can) {
-                    eventsCollector.default.reportEvent("databases", "set-lock-mode-selected", lockMode);
-                    
-                    const databases = this.getSelectedDatabases();
-
-                    if (databases.length) {
-                        this.spinners.globalToggleDisable(true);
-
-                        new saveDatabaseLockModeCommand(databases.map(x => x.asDatabase()), lockMode)
-                            .execute()
-                            .done(() => databases.forEach(i => i.lockMode(lockMode)))
-                            .always(() => this.spinners.globalToggleDisable(false));
-                    }
-                }
-            });
     }
 
     isAdminAccessByDbName(dbName: string) {

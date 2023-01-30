@@ -21,7 +21,7 @@ class storageReport extends shardViewModelBase {
 
     view = require("views/database/status/storageReport.html");
     
-    accessManager = accessManager.default.databasesView;
+    canCompactDatabase = accessManager.default.isOperatorOrAbove
 
     static readonly animationLength = 200;
     static readonly maxChildrenToShow = 1000;

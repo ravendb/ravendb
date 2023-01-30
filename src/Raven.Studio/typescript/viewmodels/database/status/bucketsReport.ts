@@ -25,8 +25,6 @@ class bucketsReport extends shardViewModelBase {
 
     view = require("views/database/status/bucketsReport.html");
     
-    accessManager = accessManager.default.databasesView;
-
     static readonly animationLength = 200;
     static readonly maxChildrenToShow = 1000;
     

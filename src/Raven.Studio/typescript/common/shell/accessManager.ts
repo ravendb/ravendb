@@ -182,15 +182,6 @@ class accessManager {
         canRegisterLicense: this.isClusterAdminOrClusterNode
     };
     
-    databasesView = {
-        canCreateNewDatabase: this.isOperatorOrAbove,
-        canSetState: this.isOperatorOrAbove,
-        canDelete: this.isOperatorOrAbove,
-        canDisableEnableDatabase: this.isOperatorOrAbove,
-        canDisableIndexing: this.isOperatorOrAbove,
-        canCompactDatabase: this.isOperatorOrAbove
-    };
-    
     certificatesView = {
         canRenewLetsEncryptCertificate: this.isClusterAdminOrClusterNode,
         canDeleteClusterNodeCertificate: this.isClusterAdminOrClusterNode,

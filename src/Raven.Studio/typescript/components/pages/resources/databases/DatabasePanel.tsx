@@ -30,7 +30,9 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import { useAppDispatch, useAppSelector } from "components/store";
 import {
     changeDatabasesLockMode,
-    openDeleteDatabasesDialog,
+    confirmDeleteDatabases,
+    confirmSetLockMode,
+    deleteDatabases,
     selectActiveDatabase,
 } from "components/common/shell/databasesSlice";
 import { useEventsCollector } from "hooks/useEventsCollector";
@@ -202,13 +204,34 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     const canNavigateToDatabase = !db.currentNode.disabled; //tODO: && !db.currentNode.hasLoadError
 
-    const changeLockMode = async (lockMode: DatabaseLockMode) => {
-        setLockChanges(true);
-        try {
-            reportEvent("databases", "set-lock-mode", lockMode);
-            await dispatch(changeDatabasesLockMode([db], lockMode));
-        } finally {
-            setLockChanges(false);
+    const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
+        if (db.lockMode === lockMode) {
+            return;
+        }
+
+        const dbs = [db];
+
+        reportEvent("databases", "set-lock-mode", lockMode);
+
+        const can = await dispatch(confirmSetLockMode());
+
+        if (can) {
+            setLockChanges(true);
+            try {
+                await dispatch(changeDatabasesLockMode(dbs, lockMode));
+            } finally {
+                setLockChanges(false);
+            }
+        }
+    };
+
+    //TODO: enable / disable
+
+    const onDelete = async () => {
+        const confirmation = await dispatch(confirmDeleteDatabases([db]));
+
+        if (confirmation.can) {
+            await dispatch(deleteDatabases(confirmation.databases, confirmation.keepFiles));
         }
     };
 
@@ -430,7 +453,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                             <UncontrolledDropdown>
                                 <ButtonGroup data-bind="visible: $root.accessManager.canDelete">
                                     <Button
-                                        onClick={() => openDeleteDatabasesDialog([db])}
+                                        onClick={() => onDelete()}
                                         title={
                                             db.lockMode === "Unlock"
                                                 ? "Remove database"
@@ -454,19 +477,19 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 </ButtonGroup>
                                 <DropdownMenu>
                                     <DropdownItem
-                                        onClick={() => changeLockMode("Unlock")}
+                                        onClick={() => onChangeLockMode("Unlock")}
                                         title="Allow to delete database"
                                     >
                                         <i className="icon-trash-cutout icon-addon-check" /> Allow database delete
                                     </DropdownItem>
                                     <DropdownItem
-                                        onClick={() => changeLockMode("PreventDeletesIgnore")}
+                                        onClick={() => onChangeLockMode("PreventDeletesIgnore")}
                                         title="Prevent deletion of database. An error will not be thrown if an app attempts to delete the database."
                                     >
                                         <i className="icon-trash-cutout icon-addon-cancel" /> Prevent database delete
                                     </DropdownItem>
                                     <DropdownItem
-                                        onClick={() => changeLockMode("PreventDeletesError")}
+                                        onClick={() => onChangeLockMode("PreventDeletesError")}
                                         title="Prevent deletion of database. An error will be thrown if an app attempts to delete the database."
                                     >
                                         <i className="icon-trash-cutout icon-addon-exclamation" /> Prevent database
@@ -531,7 +554,6 @@ function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanelProps) 
             */}
 
             <div className="rich-panel-details-right" style={{ display: "none" }}>
-                {" "}
                 {/* TODO */}
                 <RichPanelDetailItem
                     title="Indexing errors. Click to view the Indexing Errors."
