@@ -384,6 +384,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             public bool ShouldIncludeIdentity<TProjection>(ref TProjection hasProjection, UnmanagedSpan identity)
                 where TProjection : struct, IHasProjection
             {
+                if (hasProjection.IsProjection && _alreadySeenDocumentKeysInPreviousPage.Contains(identity))
+                    return false;
+
                 if (hasProjection.IsProjection == false)
                 {
                     if (_alreadySeenDocumentKeysInPreviousPage.Add(identity) == false)
@@ -494,11 +497,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             identityTracker.Initialize(_index, query, _indexSearcher, _fieldMappings, fieldsToFetch, retriever);
 
             var pageSize = query.PageSize;
-            bool isDistinctCount = query.PageSize == 0;
+            bool isDistinctCount = query.PageSize == 0 && typeof(TDistinct) == typeof(HasDistinct);
             if (isDistinctCount)
                 pageSize = int.MaxValue;
 
-            if (isDistinctCount == false && query.Metadata.HasExplanations)
+            if (query.Metadata.HasExplanations)
                 throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
 
             var take = pageSize + query.Start;
@@ -647,21 +650,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return default;
                 }
 
-                if (isDistinctCount == false)
+                return new QueryResult
                 {
-                    if (query.Metadata.HasExplanations)
-                    {
-                        throw new NotImplementedException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
-                    }
-
-                    return new QueryResult
-                    {
-                        Result = document, 
-                        Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, document),
-                    };
-                }
-
-                return default;
+                    Result = document,
+                    Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, document),
+                };
             }
 
             QueryPool.Return(ids);
