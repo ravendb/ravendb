@@ -1,6 +1,7 @@
 ﻿import { ComponentMeta } from "@storybook/react";
 import React from "react";
 import { boundCopy } from "../utils/common";
+import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import {
     LocationSpecificDetails,
     LocationSpecificDetailsItem,
@@ -12,6 +13,7 @@ import { NamedProgress, NamedProgressItem } from "./NamedProgress";
 export default {
     title: "Bits/Location Specific Details",
     component: LocationSpecificDetails,
+    decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof LocationSpecificDetails>;
 
 const Template = (args: { withProgress: boolean; shardedLocation: boolean }) => {

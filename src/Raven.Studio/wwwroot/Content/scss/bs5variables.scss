@@ -1150,10 +1150,10 @@ $form-feedback-tooltip-border-radius: $tooltip-border-radius !default;
 // scss-docs-start popover-variables
 $popover-font-size: $font-size-sm !default;
 $popover-bg: $panel-bg-3 !default;
-$popover-max-width: 276px !default;
+$popover-max-width: 400px !default;
 $popover-border-width: $border-width !default;
 $popover-border-color: $border-color-light !default;
-$popover-border-radius: $border-radius-lg !default;
+$popover-border-radius: $gutter-xs !default;
 $popover-inner-border-radius: subtract($popover-border-radius, $popover-border-width) !default;
 $popover-box-shadow: $box-shadow !default;
 

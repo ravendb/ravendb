@@ -41,7 +41,6 @@
     @import "../../../node_modules/boostrap5/scss/close";
     @import "../../../node_modules/boostrap5/scss/toasts";
     @import "../../../node_modules/boostrap5/scss/modal";
-    @import "../../../node_modules/boostrap5/scss/popover";
     @import "../../../node_modules/boostrap5/scss/carousel";
     @import "../../../node_modules/boostrap5/scss/spinners";
     @import "../../../node_modules/boostrap5/scss/offcanvas";
@@ -55,7 +54,7 @@
 
     @import "../scss/bs5extend";
 }
-
+@import "../../../node_modules/boostrap5/scss/popover";
 @import "../../../node_modules/boostrap5/scss/tooltip";
 
 // Storybook theme testing
@@ -81,6 +80,11 @@
 // Check $font-size-base not working TODO
 body {
     font-size: 14px;
+}
+
+// bs3 popover fix - move to scoped or component after bs3 removal
+.popover-lg {
+    max-width: 560px;
 }
 
 // bs3 row fix - remove when we drop bs3 TODO
