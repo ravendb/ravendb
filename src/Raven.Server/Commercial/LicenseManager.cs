@@ -1658,7 +1658,8 @@ namespace Raven.Server.Commercial
             {
                 if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
                 {
-                    Logger.Info("Skipping checking the license support options because 'Licensing.DisableLicenseSupportMode' is set to true");
+                    var configurationKey = RavenConfiguration.GetKey(x => x.Licensing.DisableLicenseSupportCheck);
+                    Logger.Info($"Skipping checking the license support options because '{configurationKey}' is set to true");
                 }
                 return GetDefaultLicenseSupportInfo();
             }
