@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (document == null)
                 throw new InvalidOperationException($"{nameof(LoadAttachments)} may only be called with a non-null entity as a parameter, but was called with a parameter of type {doc.GetType().FullName}: {doc}");
 
-            return new DynamicArray(CurrentIndexingScope.Current.LoadAttachments(document));
+            return CurrentIndexingScope.Current.LoadAttachments(document);
         }
 
         public dynamic LoadAttachment(dynamic doc, object attachmentName)
