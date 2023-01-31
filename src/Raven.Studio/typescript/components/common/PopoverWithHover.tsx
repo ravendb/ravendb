@@ -100,7 +100,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
     }, [maybeCancelShow, target, scheduleHide, maybeCancelHide, div]);
 
     return (
-        <Popover target={target} onMouseEnter={onPopoverEnter} isOpen={open} {...rest}>
+        <Popover target={target} popperClassName="bs5" onMouseEnter={onPopoverEnter} isOpen={open} {...rest}>
             <div onMouseLeave={onPopoverLeave}>{children}</div>
         </Popover>
     );
