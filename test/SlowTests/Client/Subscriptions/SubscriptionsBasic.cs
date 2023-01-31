@@ -1206,7 +1206,8 @@ namespace SlowTests.Client.Subscriptions
                     mreAck1.Set();
                     return Task.CompletedTask;
                 };
-                var t1 = subsWorker1.Run(_ => { }).ContinueWith(res =>
+                var t1 = subsWorker1.Run(_ => { });
+                _ = t1.ContinueWith(res =>
                 {
                     finishedWorkersCde.Signal();
                 });
@@ -1228,7 +1229,8 @@ namespace SlowTests.Client.Subscriptions
                     mreAck2.Set();
                     return Task.CompletedTask;
                 };
-                var t2 = subsWorker2.Run(_ => { }).ContinueWith(res =>
+                var t2 = subsWorker2.Run(_ => { });
+                _ = t2.ContinueWith(res =>
                 {
                     finishedWorkersCde.Signal();
                 });
