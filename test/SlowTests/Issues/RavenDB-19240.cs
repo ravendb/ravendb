@@ -1,10 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using MySqlX.XDevAPI.Relational;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -20,7 +16,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task Test()
+        public async Task Can_Use_AsAsyncEnumerable()
         {
             using (var store = GetDocumentStore())
             {

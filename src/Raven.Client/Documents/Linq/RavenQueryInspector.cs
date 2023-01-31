@@ -93,8 +93,8 @@ namespace Raven.Client.Documents.Linq
 
         public async IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new CancellationToken())
         {
-            var execute = GetAsyncDocumentQuery();
-            var list =  await ((IAsyncDocumentQuery<T>)execute)
+            var asyncDocumentQuery = GetAsyncDocumentQuery();
+            var list =  await asyncDocumentQuery
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
 
             foreach (var item in list)
