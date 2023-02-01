@@ -46,44 +46,52 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         // We prepare for the next entry.
         ref var entryWriter = ref GetEntriesWriter();
 
-        if (boostedValue != null)
-            documentBoost = boostedValue.Boost;
-        
-        foreach (var property in accessor.GetPropertiesInOrder(documentToProcess))
+        try
         {
-            var value = property.Value;
+            if (boostedValue != null)
+                documentBoost = boostedValue.Boost;
 
-            if(_fields.TryGetValue(property.Key, out var field)== false)
-                throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
+            foreach (var property in accessor.GetPropertiesInOrder(documentToProcess))
+            {
+                var value = property.Value;
+
+                if (_fields.TryGetValue(property.Key, out var field) == false)
+                    throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
+
+                if (storedValue is not null)
+                {
+                    //Notice: we are always saving values inside Corax index. This method is explicitly for MapReduce because we have to have JSON as the last item.
+                    var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
+
+                    if (returnType == TypeConverter.BlittableSupportedReturnType.Ignored)
+                        continue;
+
+                    storedValue[property.Key] = blittableValue;
+                }
+
+                InsertRegularField(field, value, indexContext, ref entryWriter, scope);
+            }
 
             if (storedValue is not null)
             {
-                //Notice: we are always saving values inside Corax index. This method is explicitly for MapReduce because we have to have JSON as the last item.
-                var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
-
-                if (returnType == TypeConverter.BlittableSupportedReturnType.Ignored)
-                    continue;
-
-                storedValue[property.Key] = blittableValue;
+                var bjo = indexContext.ReadObject(storedValue, "corax field as json");
+                scope.Write(string.Empty, knownFields.Count - 1, bjo, ref entryWriter);
             }
 
-            InsertRegularField(field, value, indexContext, ref entryWriter, scope);
-        }
+            if (entryWriter.IsEmpty() == true)
+            {
+                output = default;
+                return default;
+            }
 
-        if (storedValue is not null)
-        {
-            var bjo = indexContext.ReadObject(storedValue, "corax field as json");
-            scope.Write(string.Empty, knownFields.Count - 1, bjo, ref entryWriter);
+            id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
+            scope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
+            return entryWriter.Finish(out output);
         }
-
-        if (entryWriter.IsEmpty() == true)
+        catch
         {
-            output = default;
-            return default;
-        }            
-        
-        id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
-        scope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
-        return entryWriter.Finish(out output);
+            ResetEntriesWriter();
+            throw;
+        }
     }
 }
