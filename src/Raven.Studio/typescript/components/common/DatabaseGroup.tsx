@@ -98,12 +98,23 @@ export function DatabaseGroupType(props: DatabaseGroupTypeProps) {
 
     return (
         <div className="dbgroup-type">
-            <div title={node.type}>
+            <div title={node.type} className="mb-1">
                 <i className={classNames(cssIcon(node), "me-1")} /> {node.type}
             </div>
-            <Badge color={nodeBadgeColor(node)} className="ms-1">
-                {nodeBadgeText(node)}
-            </Badge>
+            <div>
+                <Badge color={nodeBadgeColor(node)} className="ms-1">
+                    {nodeBadgeText(node)}
+                    {node.responsibleNode && (
+                        <span
+                            className="ms-1"
+                            title="Database group node that is responsible for caught up of this node"
+                        >
+                            <i className="icon-node"></i>
+                            <strong className="text-reset"> {node.responsibleNode}</strong>
+                        </span>
+                    )}
+                </Badge>
+            </div>
             {children}
         </div>
     );
@@ -127,13 +138,18 @@ export function DatabaseGroupError(props: DatabaseGroupErrorProps) {
     }, [node]);
 
     return lastErrorShort ? (
-        <div className="dbgroup-error text-danger">
-            <div>
+        <div className="dbgroup-error position-relative">
+            <div className="text-danger">
                 <i className="icon-warning me-1" /> Error
             </div>
-            <a className="link" title="Click to see error details" onClick={showErrorsDetails}>
+
+            <small>
                 {lastErrorShort}
-            </a>
+                <a className="link stretched-link ms-2" title="Click to see error details" onClick={showErrorsDetails}>
+                    Error Details <i className="icon-info" />
+                </a>
+            </small>
+            <div></div>
         </div>
     ) : null;
 }

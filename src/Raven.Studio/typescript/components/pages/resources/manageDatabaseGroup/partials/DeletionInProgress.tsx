@@ -5,7 +5,7 @@ import { Spinner } from "reactstrap";
 export function DeletionInProgress(props: { nodeTag: string }) {
     const { nodeTag } = props;
     return (
-        <DatabaseGroupItem className="item-disabled">
+        <DatabaseGroupItem className="item-busy">
             <DatabaseGroupNode>{nodeTag}</DatabaseGroupNode>
             <DatabaseGroupActions>
                 <div className="pulse text-progress" title="Deletion in progress">

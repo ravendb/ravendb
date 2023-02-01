@@ -70,15 +70,6 @@ export function NodeInfoComponent(props: NodeInfoComponentProps) {
 
             <DatabaseGroupType node={node} />
             <DatabaseGroupActions>
-                {node.responsibleNode && (
-                    <div
-                        className="text-center"
-                        title="Database group node that is responsible for caught up of this node"
-                    >
-                        <i className="icon-cluster-node"></i>
-                        <span>{node.responsibleNode}</span>
-                    </div>
-                )}
                 {canDelete ? (
                     <UncontrolledDropdown key="can-delete">
                         <DropdownToggle color="danger" caret outline size="xs" className="rounded-pill">
@@ -161,15 +152,6 @@ export function ShardInfoComponent(props: ShardInfoComponentProps) {
                         </DropdownItem>
                     </DropdownMenu>
                 </UncontrolledDropdown>
-                {node.responsibleNode && (
-                    <div
-                        className="text-center"
-                        title="Database group node that is responsible for caught up of this node"
-                    >
-                        <i className="icon-cluster-node"></i>
-                        <span>{node.responsibleNode}</span>
-                    </div>
-                )}
                 {canDelete ? (
                     <UncontrolledDropdown key="can-delete" className="mt-1">
                         <DropdownToggle color="danger" caret outline size="xs" className="rounded-pill">
@@ -237,17 +219,6 @@ export function NodeInfoReorderComponent(props: NodeInfoReorderComponentProps) {
                 <DatabaseGroupNode>{node.tag}</DatabaseGroupNode>
 
                 <DatabaseGroupType node={node} />
-                <DatabaseGroupActions>
-                    {node.responsibleNode && (
-                        <div
-                            className="text-center"
-                            title="Database group node that is responsible for caught up of this node"
-                        >
-                            <i className="icon-cluster-node"></i>
-                            <span>{node.responsibleNode}</span>
-                        </div>
-                    )}
-                </DatabaseGroupActions>
             </DatabaseGroupItem>
         </div>
     );
