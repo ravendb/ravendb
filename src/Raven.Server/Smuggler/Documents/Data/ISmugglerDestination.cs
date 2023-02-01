@@ -65,10 +65,13 @@ namespace Raven.Server.Smuggler.Documents.Data
         JsonOperationContext GetContextForNewCompareExchangeValue();
     }
 
-    public interface INewDocumentActions
+    public interface INewItemActions
     {
         DocumentsOperationContext GetContextForNewDocument();
-
+    }
+    
+    public interface INewDocumentActions : INewItemActions
+    {
         Stream GetTempStream();
     }
 
@@ -115,10 +118,12 @@ namespace Raven.Server.Smuggler.Documents.Data
         ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerResult result, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType);
     }
 
-    public interface ITimeSeriesActions : IAsyncDisposable, INewDocumentActions
+    public interface ITimeSeriesActions : IAsyncDisposable, INewItemActions
     {
         ValueTask WriteTimeSeriesAsync(TimeSeriesItem ts);
         
         void RegisterForDisposal(IDisposable data);
+
+        void RegisterForReturnToTheContext(AllocatedMemoryData data);
     }
 }

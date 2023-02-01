@@ -1180,11 +1180,13 @@ namespace Raven.Server.Documents.Handlers
 
             public DocumentsOperationContext Context => _context;
             
-            private IDisposable _resetContext;
+            private IDisposable _releaseContext;
             
             private bool _isDisposed;
             
             private readonly List<IDisposable> _toDispose;
+            
+            private readonly List<AllocatedMemoryData> _toReturn;
 
             public string LastChangeVector;
 
@@ -1193,7 +1195,8 @@ namespace Raven.Server.Documents.Handlers
                 _database = database;
                 _dictionary = new Dictionary<string, List<TimeSeriesItem>>();
                 _toDispose = new();
-                _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+                _toReturn = new();
+                _releaseContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -1253,6 +1256,11 @@ namespace Raven.Server.Documents.Handlers
             {
                 _toDispose.Add(disposable);
             }
+            
+            public void AddToReturn(AllocatedMemoryData allocatedMemoryData)
+            {
+                _toReturn.Add(allocatedMemoryData);
+            }
 
             public void Dispose()
             {
@@ -1266,10 +1274,13 @@ namespace Raven.Server.Documents.Handlers
                     disposable.Dispose();
                 }
                 _toDispose.Clear();
-
-
-                _resetContext?.Dispose();
-                _resetContext = null;
+                
+                foreach (var returnable in _toReturn)
+                    _context.ReturnMemory(returnable);
+                _toReturn.Clear();
+                
+                _releaseContext?.Dispose();
+                _releaseContext = null;
             }
         }
 
