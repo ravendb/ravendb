@@ -1048,15 +1048,15 @@ namespace Raven.Server.Smuggler.Documents
                 throw new NotSupportedException($"{nameof(RegisterForDisposal)} is never used in {nameof(StreamTimeSeriesActions)}. Shouldn't happen.");
             }
 
+            public void RegisterForReturnToTheContext(AllocatedMemoryData data)
+            {
+                throw new NotSupportedException($"{nameof(RegisterForReturnToTheContext)} is never used in {nameof(StreamTimeSeriesActions)}. Shouldn't happen.");
+            }
+
             public DocumentsOperationContext GetContextForNewDocument()
             {
                 _context.CachedProperties.NewDocument();
                 return _context;
-            }
-
-            public Stream GetTempStream()
-            {
-                throw new NotSupportedException($"{nameof(GetTempStream)} is never used in {nameof(StreamTimeSeriesActions)}. Shouldn't happen.");
             }
         }
 

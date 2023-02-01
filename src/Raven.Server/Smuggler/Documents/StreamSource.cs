@@ -773,7 +773,7 @@ namespace Raven.Server.Smuggler.Documents
                     continue;
                 }
 
-                var segment = await ReadSegmentAsync(size);
+                var segment = await ReadSegmentAsync(action, size);
                 action.RegisterForDisposal(reader);
                 
                 yield return new TimeSeriesItem
@@ -800,9 +800,10 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private async Task<TimeSeriesValuesSegment> ReadSegmentAsync(int segmentSize)
+        private async Task<TimeSeriesValuesSegment> ReadSegmentAsync(ITimeSeriesActions action, int segmentSize)
         {
-            var mem = _context.GetMemory(segmentSize);
+            var mem = action.GetContextForNewDocument().GetMemory(segmentSize);
+            action.RegisterForReturnToTheContext(mem);
             var offset = 0;
 
             var size = segmentSize;
@@ -1237,7 +1238,7 @@ namespace Raven.Server.Smuggler.Documents
             return count;
         }
 
-        private async IAsyncEnumerable<BlittableJsonReaderObject> ReadArrayAsync(INewDocumentActions actions = null)
+        private async IAsyncEnumerable<BlittableJsonReaderObject> ReadArrayAsync(INewItemActions actions = null)
         {
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
