@@ -15,6 +15,9 @@ namespace Sparrow.Json
 {
     public sealed unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
+        private static readonly object BoxedTrue = true;
+        private static readonly object BoxedFalse = false;
+
         private AllocatedMemoryData _allocatedMemory;
         private UnmanagedWriteBuffer _buffer;
         private byte* _metadataPtr;
@@ -994,7 +997,7 @@ namespace Sparrow.Json
 
                 case BlittableJsonToken.Boolean:
                     isBlittableJsonReader = false;
-                    return ReadNumber(_mem + position, 1) == 1;
+                    return ReadNumber(_mem + position, 1) == 1 ? BoxedTrue : BoxedFalse;
 
                 case BlittableJsonToken.Null:
                     isBlittableJsonReader = false;
