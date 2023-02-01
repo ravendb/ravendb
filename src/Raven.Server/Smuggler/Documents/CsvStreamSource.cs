@@ -429,7 +429,7 @@ namespace Raven.Server.Smuggler.Documents
             return AsyncEnumerable.Empty<(string Hub, ReplicationHubAccess Access)>();
         }
 
-        public IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(List<string> collectionsToExport)
+        public IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(ITimeSeriesActions action, List<string> collectionsToExport)
         {
             return AsyncEnumerable.Empty<TimeSeriesItem>();
         }

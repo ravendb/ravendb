@@ -1164,7 +1164,7 @@ namespace Raven.Server.Smuggler.Documents
             await using (var actions = _destination.TimeSeries())
             {
                 var isFullBackup = _source.GetSourceType() == SmugglerSourceType.FullExport;
-                await foreach (var ts in _source.GetTimeSeriesAsync(_options.Collections))
+                await foreach (var ts in _source.GetTimeSeriesAsync(actions, _options.Collections))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.TimeSeries.ReadCount += ts.Segment.NumberOfEntries;

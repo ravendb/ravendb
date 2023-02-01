@@ -1170,11 +1170,21 @@ namespace Raven.Server.Documents.Handlers
             FromSmuggler = true
         };
 
-        internal class SmugglerTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class SmugglerTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             private readonly DocumentDatabase _database;
 
             private readonly Dictionary<string, List<TimeSeriesItem>> _dictionary;
+            
+            private readonly DocumentsOperationContext _context;
+
+            public DocumentsOperationContext Context => _context;
+            
+            private IDisposable _resetContext;
+            
+            private bool _isDisposed;
+            
+            private readonly List<IDisposable> _toDispose;
 
             public string LastChangeVector;
 
@@ -1182,6 +1192,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 _database = database;
                 _dictionary = new Dictionary<string, List<TimeSeriesItem>>();
+                _toDispose = new();
+                _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -1235,6 +1247,29 @@ namespace Raven.Server.Documents.Handlers
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
             {
                 throw new System.NotImplementedException();
+            }
+
+            public void AddToDisposal(IDisposable disposable)
+            {
+                _toDispose.Add(disposable);
+            }
+
+            public void Dispose()
+            {
+                if (_isDisposed)
+                    return;
+
+                _isDisposed = true;
+                
+                foreach (var disposable in _toDispose)
+                {
+                    disposable.Dispose();
+                }
+                _toDispose.Clear();
+
+
+                _resetContext?.Dispose();
+                _resetContext = null;
             }
         }
 

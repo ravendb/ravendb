@@ -115,8 +115,10 @@ namespace Raven.Server.Smuggler.Documents.Data
         ValueTask WriteDatabaseRecordAsync(DatabaseRecord databaseRecord, SmugglerResult result, AuthorizationStatus authorizationStatus, DatabaseRecordItemType databaseRecordItemType);
     }
 
-    public interface ITimeSeriesActions : IAsyncDisposable
+    public interface ITimeSeriesActions : IAsyncDisposable, INewDocumentActions
     {
         ValueTask WriteTimeSeriesAsync(TimeSeriesItem ts);
+        
+        void RegisterForDisposal(IDisposable data);
     }
 }
