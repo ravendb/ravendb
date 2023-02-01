@@ -3,6 +3,8 @@ import { Input, Label } from "reactstrap";
 import useId from "hooks/useId";
 import classNames from "classnames";
 
+import "./Checkbox.scss";
+
 interface CheckboxProps {
     selected: boolean;
     toggleSelection: () => void;

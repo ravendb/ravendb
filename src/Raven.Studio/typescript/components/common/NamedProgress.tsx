@@ -1,8 +1,8 @@
 ﻿import React from "react";
 import { ReactNode } from "react";
+import classNames from "classnames";
 
 import "./NamedProgress.scss";
-import classNames from "classnames";
 
 export function NamedProgress(props: { name: string | ReactNode; children: ReactNode | ReactNode[] }) {
     const { name, children } = props;

@@ -2,10 +2,9 @@
 @import "../../../node_modules/boostrap5/scss/functions";
 
 // Default variable overrides
-@import "../scss/colors";
-@import "../scss/sizes";
+// @import "../scss/colors";
+// @import "../scss/sizes";
 
-@import "../scss/custom-properties";
 @import "../scss/bs5variables";
 
 // Required
@@ -47,12 +46,7 @@
     //Custom components and mods
     @import "../../../typescript/components/common/Background.scss";
     @import "../../../typescript/components/common/Buttons.scss";
-    @import "../../../typescript/components/common/Checkbox.scss";
-    @import "../../../typescript/components/common/HrHeader.scss";
     @import "../../../typescript/components/common/Icon.scss";
-    @import "../../../typescript/components/common/LazyLoad.scss";
-    @import "../../../typescript/components/common/NodeSet.scss";
-    @import "../../../typescript/components/common/StickyHeader.scss";
     @import "../../../typescript/components/common/Type.scss";
     // Helpers
     @import "../../../node_modules/boostrap5/scss/helpers";

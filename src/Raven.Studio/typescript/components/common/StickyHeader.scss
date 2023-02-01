@@ -1,8 +1,10 @@
-﻿.sticky-header {
+﻿@use "Content/scss/bs5variables";
+
+.sticky-header {
     position: sticky;
     top: 0;
-    padding: $gutter $gutter $gutter-sm;
-    background-color: rgba($body-bg, 0.97);
+    padding: bs5variables.$gutter bs5variables.$gutter bs5variables.$gutter-sm;
+    background-color: rgba(bs5variables.$body-bg, 0.97);
     z-index: 1000;
     backdrop-filter: blur(2px);
 }

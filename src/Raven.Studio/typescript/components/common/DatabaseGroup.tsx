@@ -1,6 +1,5 @@
 ﻿import React, { HTMLAttributes, ReactNode, useCallback } from "react";
 
-import "./DatabaseGroup.scss";
 import classNames from "classnames";
 import { NodeInfo } from "components/models/databases";
 import app from "durandal/app";
@@ -8,6 +7,8 @@ import showDataDialog from "viewmodels/common/showDataDialog";
 import { Badge } from "reactstrap";
 import genUtils from "common/generalUtils";
 import assertUnreachable from "components/utils/assertUnreachable";
+
+import "./DatabaseGroup.scss";
 
 interface DatabaseGroupProps extends HTMLAttributes<HTMLDivElement> {
     children?: ReactNode | ReactNode[];

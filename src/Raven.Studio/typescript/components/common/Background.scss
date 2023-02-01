@@ -17,3 +17,10 @@
 @each $key, $utility in $additional-utilities {
     @include generate-utility($utility, null);
 }
+
+@each $key, $value in $theme-colors {
+    .bg-faded-#{$key} {
+        background-color: mix($panel-bg-1, $value, 80%);
+        color: mix($text-emphasis-color, $value, 30%);
+    }
+}

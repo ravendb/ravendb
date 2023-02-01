@@ -1,12 +1,14 @@
-﻿.node-set {
+﻿@use "Content/scss/bs5variables";
+
+.node-set {
     display: inline-flex;
     flex-wrap: wrap;
-    padding: $gutter-xxs $gutter-xs;
+    padding: bs5variables.$gutter-xxs bs5variables.$gutter-xs;
     border-left: 4px solid;
-    border-radius: $border-radius;
+    border-radius: bs5variables.$border-radius;
 
     .node-set-label {
-        margin-right: $gutter-xs;
+        margin-right: bs5variables.$gutter-xs;
 
         i {
             transform: scale(1.2);
@@ -19,7 +21,7 @@
     }
 
     .node-set-item {
-        margin: 0 $gutter-xxs;
+        margin: 0 bs5variables.$gutter-xxs;
 
         i {
             margin-right: 0.2em;
@@ -29,7 +31,7 @@
         .node-set-item-name {
             position: relative;
             font-weight: 800;
-            color: $text-emphasis-var;
+            color: bs5variables.$text-emphasis-var;
         }
     }
 }

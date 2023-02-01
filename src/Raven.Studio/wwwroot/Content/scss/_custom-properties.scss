@@ -7,15 +7,3 @@
 $text-color-var: var(--text-color);
 $text-muted-var: var(--text-muted);
 $text-emphasis-var: var(--text-emphasis);
-
-.modal-content,
-.panel,
-.dropdown-menu,
-.card,
-.popup {
-    --text-color: #{$text-color};
-    --text-muted: #{$text-muted-color};
-    --text-emphasis: #{$text-emphasis-color};
-
-    color: var(--text-color);
-}

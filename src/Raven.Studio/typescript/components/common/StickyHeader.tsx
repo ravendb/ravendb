@@ -1,5 +1,7 @@
 ﻿import React, { ReactNode } from "react";
 
+import "./StickyHeader.scss";
+
 interface StickyHeaderProps {
     children: ReactNode | ReactNode[];
 }

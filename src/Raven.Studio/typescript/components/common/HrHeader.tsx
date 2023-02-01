@@ -2,6 +2,8 @@
 import classNames from "classnames";
 import { Badge } from "reactstrap";
 
+import "./HrHeader.scss";
+
 interface HrHeaderProps {
     children?: ReactNode | ReactNode[];
     right?: ReactNode | ReactNode[];
