@@ -113,6 +113,13 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         return ref _indexEntryWriter;
     }
 
+    protected void ResetEntriesWriter()
+    {
+        if (_indexEntryWriterInitialized)
+            _indexEntryWriter.Dispose();
+        _indexEntryWriterInitialized = false;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IndexFieldsMapping GetKnownFieldsForWriter()
     {
@@ -299,8 +306,11 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                     return;
                 }
 
-                if (field.Indexing is not FieldIndexing.No) 
+                if (field.Indexing is not FieldIndexing.No)
+                {
                     AssertOrAdjustIndexingOptionForComplexObject(field);
+                    return;
+                }
 
                 var jsonScope = Scope.CreateJson(json, indexContext);
                 scope.Write(path, fieldId, jsonScope, ref entryWriter);
@@ -354,10 +364,13 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         if (_index.GetIndexDefinition().Fields.TryGetValue(field.Name, out var fieldFromDefinition) &&
             fieldFromDefinition.Indexing != FieldIndexing.No)
         {
+            // We need to disable the complex object handling after we check and then throw. 
+            DisableIndexingForComplexObject(field);
             ThrowIndexingComplexObjectNotSupported(field, _index.Type);
         }
 
         DisableIndexingForComplexObject(field);
+
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
