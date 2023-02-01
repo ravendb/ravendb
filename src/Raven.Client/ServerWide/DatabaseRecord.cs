@@ -222,8 +222,8 @@ namespace Raven.Client.ServerWide
                 }
             }
         }
-        
-        public void AddIndexHistory(IndexDefinition definition, string source, int revisionsToKeep, DateTime createdAt, Dictionary<string, RollingIndexDeployment> rollingIndexDeployment = null, bool isFromCommand = false, bool isRolling = false)
+
+        internal void AddIndexHistory(IndexDefinition definition, string source, int revisionsToKeep, DateTime createdAt, Dictionary<string, RollingIndexDeployment> rollingIndexDeployment = null, bool isFromCommand = false, bool isRolling = false)
         {
             IndexesHistory ??= new();
             List<IndexHistoryEntry> history;
