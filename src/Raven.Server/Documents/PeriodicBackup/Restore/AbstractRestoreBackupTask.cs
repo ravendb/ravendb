@@ -50,6 +50,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected string DatabaseName => RestoreConfiguration.DatabaseName;
         protected static readonly Logger Logger = LoggingSource.Instance.GetLogger<AbstractRestoreBackupTask>("Server");
         protected bool DatabaseValidation = true;
+        protected bool DeleteDatabaseOnFailure = true;
         protected InitializeOptions Options = InitializeOptions.SkipLoadingDatabaseRecord;
 
         private bool _restoringToDefaultDataDirectory;
@@ -603,32 +604,36 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 details: new ExceptionDetails(e));
             ServerStore.NotificationCenter.Add(alert);
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            if (DeleteDatabaseOnFailure)
             {
-                bool databaseExists;
-                using (context.OpenReadTransaction())
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    databaseExists = ServerStore.Cluster.DatabaseExists(context, RestoreConfiguration.DatabaseName);
-                }
-
-                if (databaseExists == false)
-                {
-                    // delete any files that we already created during the restore
-                    IOExtensions.DeleteDirectory(RestoreConfiguration.DataDirectory);
-                }
-                else
-                {
-                    try
+                    bool databaseExists;
+                    using (context.OpenReadTransaction())
                     {
-                        var deleteResult = await ServerStore.DeleteDatabaseAsync(RestoreConfiguration.DatabaseName, true, new[] { ServerStore.NodeTag },
-                            RaftIdGenerator.DontCareId);
-                        await ServerStore.Cluster.WaitForIndexNotification(deleteResult.Index, TimeSpan.FromSeconds(60));
+                        databaseExists = ServerStore.Cluster.DatabaseExists(context, RestoreConfiguration.DatabaseName);
                     }
-                    catch (TimeoutException te)
+
+                    if (databaseExists == false)
                     {
-                        Result.AddError($"Failed to delete the database {DatabaseName} after a failed restore. " +
-                                        $"In order to restart the restore process this database needs to be deleted manually. Exception: {te}.");
-                        onProgress.Invoke(Result.Progress);
+                        // delete any files that we already created during the restore
+                        IOExtensions.DeleteDirectory(RestoreConfiguration.DataDirectory);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            // delete entire sharded database from all nodes
+                            var deleteResult = await ServerStore.DeleteDatabaseAsync(RestoreConfiguration.DatabaseName, true, fromNodes: null,
+                                RaftIdGenerator.DontCareId);
+                            await ServerStore.Cluster.WaitForIndexNotification(deleteResult.Index, TimeSpan.FromSeconds(60));
+                        }
+                        catch (TimeoutException te)
+                        {
+                            Result.AddError($"Failed to delete the database {DatabaseName} after a failed restore. " +
+                                            $"In order to restart the restore process this database needs to be deleted manually. Exception: {te}.");
+                            onProgress.Invoke(Result.Progress);
+                        }
                     }
                 }
             }
