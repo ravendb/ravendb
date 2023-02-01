@@ -17,6 +17,7 @@ import { NodeInfo } from "components/models/databases";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
 import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabaseGroup";
+import classNames from "classnames";
 import {
     RichPanel,
     RichPanelActions,
@@ -132,14 +133,18 @@ export function NodeGroup(props: NodeGroupProps) {
                 <React.Fragment>
                     <DatabaseGroup>
                         <DatabaseGroupList>
-                            <DatabaseGroupItem className="item-new">
+                            <DatabaseGroupItem
+                                className={classNames("item-new", "position-relative", {
+                                    "item-disabled": !addNodeEnabled,
+                                })}
+                            >
                                 <DatabaseGroupNode icon="node-add" color="success" />
                                 <DatabaseGroupActions>
                                     <Button
                                         size="xs"
                                         color="success"
                                         outline
-                                        className="rounded-pill"
+                                        className="rounded-pill stretched-link"
                                         disabled={!addNodeEnabled}
                                         onClick={addNode}
                                     >

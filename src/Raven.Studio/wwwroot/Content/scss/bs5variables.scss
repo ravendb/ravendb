@@ -581,7 +581,7 @@ $input-btn-padding-y-lg: 0.5rem !default;
 $input-btn-padding-x-lg: 1rem !default;
 $input-btn-font-size-lg: $font-size-lg !default;
 
-$input-btn-padding-y-xs: $gutter-xxs !default;
+$input-btn-padding-y-xs: math.div($gutter-xxs, 2) !default;
 $input-btn-padding-x-xs: $gutter-xs !default;
 $input-btn-font-size-xs: $font-size-xs !default;
 

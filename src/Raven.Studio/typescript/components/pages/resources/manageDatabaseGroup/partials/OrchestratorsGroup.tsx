@@ -15,6 +15,7 @@ import { NodeInfo } from "components/models/databases";
 import addNewOrchestratorToDatabase from "viewmodels/resources/addNewOrchestatorToDatabaseGroup";
 import shardedDatabase from "models/resources/shardedDatabase";
 import viewHelpers from "common/helpers/view/viewHelpers";
+import classNames from "classnames";
 import {
     RichPanel,
     RichPanelActions,
@@ -125,14 +126,18 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                 <React.Fragment>
                     <DatabaseGroup>
                         <DatabaseGroupList>
-                            <DatabaseGroupItem className="item-new">
+                            <DatabaseGroupItem
+                                className={classNames("item-new", "position-relative", {
+                                    "item-disabled": !addNodeEnabled,
+                                })}
+                            >
                                 <DatabaseGroupNode icon="node-add" color="success" />
                                 <DatabaseGroupActions>
                                     <Button
                                         size="xs"
                                         color="success"
                                         outline
-                                        className="rounded-pill"
+                                        className="rounded-pill stretched-link"
                                         disabled={!addNodeEnabled}
                                         onClick={addNode}
                                     >
