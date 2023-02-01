@@ -1,8 +1,9 @@
 ﻿import React, { HTMLAttributes, ReactNode } from "react";
 
-import "./LocationDistribution.scss";
 import classNames from "classnames";
 import { LazyLoad } from "./LazyLoad";
+
+import "./LocationDistribution.scss";
 
 interface DistributionItemProps extends HTMLAttributes<HTMLDivElement> {
     loading?: boolean;

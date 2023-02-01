@@ -1,7 +1,9 @@
-﻿.hr-title {
+﻿@use "Content/scss/sizes";
+
+.hr-title {
     display: flex;
     align-items: center;
-    margin-bottom: $gutter-sm;
+    margin-bottom: sizes.$gutter-sm;
 
     h1,
     h2,
@@ -14,11 +16,5 @@
     hr {
         flex-grow: 1;
         margin: 0;
-    }
-}
-@each $key, $value in $theme-colors {
-    .bg-faded-#{$key} {
-        background-color: mix($panel-bg-1, $value, 80%);
-        color: mix($text-emphasis-color, $value, 30%);
     }
 }

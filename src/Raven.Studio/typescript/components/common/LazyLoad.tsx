@@ -1,5 +1,7 @@
 ﻿import React, { ReactNode } from "react";
 
+import "./LazyLoad.scss";
+
 interface LazyLoadProps {
     children?: ReactNode | ReactNode[];
     active?: boolean;

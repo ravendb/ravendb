@@ -2,6 +2,8 @@
 import classNames from "classnames";
 import { Card } from "reactstrap";
 
+import "./NodeSet.scss";
+
 interface NodeSetProps {
     children?: ReactNode | ReactNode[];
     className?: string;

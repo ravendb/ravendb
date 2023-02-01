@@ -1,11 +1,12 @@
 @use "sass:math";
-
+@import "../../../node_modules/boostrap5/scss/functions";
+@import "../scss/colors";
+@import "../scss/sizes";
+@import "../scss/custom-properties";
 // Variables
 //
 // Variables should follow the `$component-state-property-size` formula for
 // consistent naming. Ex: $nav-link-disabled-color and $modal-content-box-shadow-xs.
-
-
 
 // The contrast ratio to reach against white, to determine if color changes from "light" to "dark". Acceptable values for WCAG 2.0 are 3, 4.5 and 7.
 // See https://www.w3.org/TR/WCAG20/#visual-audio-contrast-contrast
