@@ -62,7 +62,7 @@ export default class IndexUtils {
             case "AutoMap":
             case "JavaScriptMap":
             case "Map":
-                return "icon-map"; //TODO: create such icon!
+                return "icon-map";
             //TODO: handle other types
             default:
                 return "";
