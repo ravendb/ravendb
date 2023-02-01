@@ -388,7 +388,7 @@ namespace Raven.Client.Documents.Changes
     internal class TrafficWatchHttpChange : TrafficWatchChangeBase
     {
         public override TrafficWatchType TrafficWatchType => TrafficWatchType.Http;
-        public int RequestId { get; set; }
+        public long RequestId { get; set; }
         public string HttpMethod { get; set; }
         public long ElapsedMilliseconds { get; set; }
         public int ResponseStatusCode { get; set; }
