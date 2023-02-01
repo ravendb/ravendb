@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
@@ -25,6 +24,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore.Sharding
             IRestoreSource restoreSource, OperationCancelToken operationCancelToken) : base(serverStore, restoreConfiguration, restoreSource, filesToRestore, operationCancelToken)
         {
             DatabaseValidation = false;
+            DeleteDatabaseOnFailure = false; // orchestrator will handle that
+
             _shardNumber = ShardHelper.GetShardNumberFromDatabaseName(DatabaseName);
         }
 

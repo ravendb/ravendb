@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
@@ -1034,6 +1035,64 @@ namespace SlowTests.Sharding.Backup
 
                     Assert.Equal(1, compareExchangeTombsReadCount);
                     Assert.Equal(10, docsReadCount);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+        public async Task OnFailureToRestore_ShouldDeleteEntireShardedDatabaseFromAllNodes()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+
+            var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 1, orchestratorReplicationFactor: 3);
+            using (var store = Sharding.GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new User(), $"users/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var waitHandles = await Sharding.Backup.WaitForBackupsToComplete(cluster.Nodes, store.Database);
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(cluster.Nodes, store, config);
+
+                Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
+
+                var dirs = Directory.GetDirectories(backupPath);
+                Assert.Equal(3, dirs.Length);
+
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(dirs, sharding);
+
+                // delete backup file of shard 1 in order to cause restore failure on one of the shards
+                var shard1BackupDir = settings.Shards[1].FolderName;
+                var backupFile = Directory.GetFiles(shard1BackupDir).Single();
+                File.Delete(backupFile);
+
+                var restoredDatabaseName = $"restored_database-{Guid.NewGuid()}";
+                var restoreConfiguration = new RestoreBackupConfiguration
+                {
+                    DatabaseName = restoredDatabaseName,
+                    ShardRestoreSettings = settings
+                };
+
+                Assert.Throws<RavenException>(() =>
+                    Backup.RestoreDatabase(store, restoreConfiguration, timeout: TimeSpan.FromSeconds(60)));
+
+                await foreach (var database in Sharding.GetShardsDocumentDatabaseInstancesFor(store.Database, cluster.Nodes))
+                {
+                    using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var databaseExists = database.ServerStore.Cluster.DatabaseExists(context, restoredDatabaseName);
+                        Assert.False(databaseExists);
+                    }
                 }
             }
         }
