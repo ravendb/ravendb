@@ -986,8 +986,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private class StreamTimeSeriesActions : StreamActionsBase, ITimeSeriesActions
         {
+            private readonly DocumentsOperationContext _context;
+
             public StreamTimeSeriesActions(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName) : base(writer, propertyName)
             {
+                _context = context;
             }
 
             public async ValueTask WriteTimeSeriesAsync(TimeSeriesItem item)
@@ -1038,6 +1041,22 @@ namespace Raven.Server.Smuggler.Documents
 
                     await Writer.MaybeFlushAsync();
                 }
+            }
+
+            public void RegisterForDisposal(IDisposable data)
+            {
+                throw new NotSupportedException($"{nameof(RegisterForDisposal)} is never used in {nameof(StreamTimeSeriesActions)}. Shouldn't happen.");
+            }
+
+            public DocumentsOperationContext GetContextForNewDocument()
+            {
+                _context.CachedProperties.NewDocument();
+                return _context;
+            }
+
+            public Stream GetTempStream()
+            {
+                throw new NotSupportedException($"{nameof(GetTempStream)} is never used in {nameof(StreamTimeSeriesActions)}. Shouldn't happen.");
             }
         }
 

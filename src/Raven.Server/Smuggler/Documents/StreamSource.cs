@@ -742,50 +742,49 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
         
-        public async IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(List<string> collectionsToOperate)
+        public async IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(ITimeSeriesActions action, List<string> collectionsToOperate)
         {
             var collectionsHashSet = new HashSet<string>(collectionsToOperate, StringComparer.OrdinalIgnoreCase);
 
-            await foreach (var reader in ReadArrayAsync())
+            await foreach (var reader in ReadArrayAsync(action))
             {
-                using (reader)
-                {
-                    if (reader.TryGet(Constants.Documents.Blob.Size, out int size) == false)
+                if (reader.TryGet(Constants.Documents.Blob.Size, out int size) == false)
                         throw new InvalidOperationException($"Trying to read time series entry without size specified: doc: {reader}");
 
-                    if (reader.TryGet(Constants.Documents.Blob.Document, out BlittableJsonReaderObject blobMetadata) == false ||
-                        blobMetadata.TryGet(nameof(TimeSeriesItem.Collection), out LazyStringValue collection) == false)
-                    {
-                        await SkipEntryAsync(reader, size, skipDueToReadError: true);
-                        continue;
-                    }
-
-                    if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(collection) == false)
-                    {
-                        await SkipEntryAsync(reader, size, skipDueToReadError: false);
-                        continue;
-                    }
-
-                    if (blobMetadata.TryGet(nameof(TimeSeriesItem.DocId), out LazyStringValue docId) == false ||
-                        blobMetadata.TryGet(nameof(TimeSeriesItem.Name), out string name) == false ||
-                        blobMetadata.TryGet(nameof(TimeSeriesItem.ChangeVector), out string cv) == false ||
-                        blobMetadata.TryGet(nameof(TimeSeriesItem.Baseline), out DateTime baseline) == false)
-                    {
-                        await SkipEntryAsync(reader, size, skipDueToReadError: true);
-                        continue;
-                    }
-
-                    var segment = await ReadSegmentAsync(size);
-                    yield return new TimeSeriesItem
-                    {
-                        DocId = docId.Clone(_context),
-                        Name = name,
-                        Baseline = baseline,
-                        Collection = collection.Clone(_context),
-                        ChangeVector = cv,
-                        Segment = segment
-                    };
+                if (reader.TryGet(Constants.Documents.Blob.Document, out BlittableJsonReaderObject blobMetadata) == false ||
+                    blobMetadata.TryGet(nameof(TimeSeriesItem.Collection), out LazyStringValue collection) == false)
+                {
+                    await SkipEntryAsync(reader, size, skipDueToReadError: true);
+                    continue;
                 }
+
+                if (collectionsHashSet.Count > 0 && collectionsHashSet.Contains(collection) == false)
+                {
+                    await SkipEntryAsync(reader, size, skipDueToReadError: false);
+                    continue;
+                }
+
+                if (blobMetadata.TryGet(nameof(TimeSeriesItem.DocId), out LazyStringValue docId) == false ||
+                    blobMetadata.TryGet(nameof(TimeSeriesItem.Name), out string name) == false ||
+                    blobMetadata.TryGet(nameof(TimeSeriesItem.ChangeVector), out string cv) == false ||
+                    blobMetadata.TryGet(nameof(TimeSeriesItem.Baseline), out DateTime baseline) == false)
+                {
+                    await SkipEntryAsync(reader, size, skipDueToReadError: true);
+                    continue;
+                }
+
+                var segment = await ReadSegmentAsync(size);
+                action.RegisterForDisposal(reader);
+                
+                yield return new TimeSeriesItem
+                {
+                    DocId = docId,
+                    Name = name,
+                    Baseline = baseline,
+                    Collection = collection,
+                    ChangeVector = cv,
+                    Segment = segment
+                };
             }
             
             async Task SkipEntryAsync(BlittableJsonReaderObject reader, int size, bool skipDueToReadError)
@@ -795,6 +794,8 @@ namespace Raven.Server.Smuggler.Documents
                     _result.TimeSeries.ErroredCount++;
                     _result.AddWarning($"Could not read time series entry. {reader}");
                 }
+                
+                reader.Dispose();
                 await SkipAsync(size);
             }
         }

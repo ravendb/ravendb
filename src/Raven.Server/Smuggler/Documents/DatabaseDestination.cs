@@ -2274,6 +2274,11 @@ namespace Raven.Server.Smuggler.Documents
                 await HandleBatchOfTimeSeriesIfNecessaryAsync();
             }
 
+            public void RegisterForDisposal(IDisposable data)
+            {
+                _cmd.AddToDisposal(data);
+            }
+
             private async ValueTask HandleBatchOfTimeSeriesIfNecessaryAsync()
             {
                 if (_segmentsSize < _maxBatchSize)
@@ -2311,6 +2316,17 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _cmd = null;
+            }
+
+            public DocumentsOperationContext GetContextForNewDocument()
+            {
+                _cmd.Context.CachedProperties.NewDocument();
+                return _cmd.Context;
+            }
+
+            public Stream GetTempStream()
+            {
+                throw new NotSupportedException("GetTempStream is never used in CounterActions. Shouldn't happen");
             }
         }
     }
