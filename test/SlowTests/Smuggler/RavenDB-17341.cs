@@ -1,11 +1,9 @@
 using System;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
