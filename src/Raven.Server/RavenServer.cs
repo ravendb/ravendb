@@ -93,7 +93,6 @@ namespace Raven.Server
         private IWebHost _redirectingWebHost;
 
         private readonly Logger _tcpLogger;
-        public MicrosoftLoggingProvider MicrosoftLogger;
         private readonly ExternalCertificateValidator _externalCertificateValidator;
         internal readonly JsonContextPool _tcpContextPool;
 
@@ -212,7 +211,7 @@ namespace Raven.Server
                 }
 
                 var webHostBuilder = new WebHostBuilder()
-                    .ConfigureMicrosoftLogging(ref MicrosoftLogger, Configuration.Logs, ServerStore.NotificationCenter)
+                    .ConfigureMicrosoftLogging(Configuration.Logs, ServerStore.NotificationCenter)
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
                     .UseUrls(Configuration.Core.ServerUrls)
@@ -360,6 +359,8 @@ namespace Raven.Server
             }
         }
 
+        public T GetService<T>() => _webHost.Services.GetService<T>();
+        
         private void UpdateCertificateExpirationAlert()
         {
             var remainingDays = (Certificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
