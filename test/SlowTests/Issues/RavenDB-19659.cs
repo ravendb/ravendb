@@ -54,8 +54,8 @@ namespace SlowTests.Issues
                     {RavenConfiguration.GetKey(x => x.Core.ServerUrls), result0.Url}
                 };
 
-                var hiLoKeyGenerator1 = new DefaultAsyncHiLoIdGenerator("users", store1, store1.Database, store1.Conventions.IdentityPartsSeparator);
-                var hiLoKeyGenerator2 = new DefaultAsyncHiLoIdGenerator("users", store2, store2.Database, store2.Conventions.IdentityPartsSeparator);
+                var hiLoKeyGenerator1 = new AsyncHiLoIdGenerator("users", store1, store1.Database, store1.Conventions.IdentityPartsSeparator);
+                var hiLoKeyGenerator2 = new AsyncHiLoIdGenerator("users", store2, store2.Database, store2.Conventions.IdentityPartsSeparator);
 
                 var uniqueIds = new HashSet<string>();
                 for (var i = 0; i < 32; i++)

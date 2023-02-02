@@ -40,10 +40,9 @@ namespace Raven.Client.Documents.Identity
             _range = new RangeValue(1, 0, null);
         }
 
-        [Obsolete("Will be removed in next major version of the product. Use the GetDocumentIdFromId(NextId) overload.")]
-        protected virtual string GetDocumentIdFromId(long nextId)
+        protected virtual string GetDocumentIdFromId(NextId result)
         {
-            return $"{Prefix}{nextId}-{ServerTag}";
+            return $"{Prefix}{result.Id}-{result.ServerTag}";
         }
 
         protected RangeValue Range
@@ -60,11 +59,6 @@ namespace Raven.Client.Documents.Identity
             public long Current;
             public string ServerTag;
 
-            [Obsolete("Will be removed in next major version of the product. Use RangeValue(min, max, serverTag) instead.")]
-            public RangeValue(long min, long max) : this(min, max, null)
-            {
-            }
-
             public RangeValue(long min, long max, string serverTag)
             {
                 Min = min;
@@ -76,9 +70,6 @@ namespace Raven.Client.Documents.Identity
 
         private Lazy<Task> _nextRangeTask = new Lazy<Task>(() => Task.CompletedTask);
 
-        [Obsolete("Will be removed in next major version of the product. Use field Range.ServerTag instead.")]
-        protected string ServerTag;
-
         /// <summary>
         /// Generates the document ID.
         /// </summary>
@@ -87,9 +78,8 @@ namespace Raven.Client.Documents.Identity
         public virtual async Task<string> GenerateDocumentIdAsync(object entity)
         {
             var result = await GetNextIdAsync().ConfigureAwait(false);
-#pragma warning disable CS0618
-            return GetDocumentIdFromId(result.Id);
-#pragma warning restore CS0618
+            _forTestingPurposes?.BeforeGeneratingDocumentId?.Invoke();
+            return GetDocumentIdFromId(result);
         }
 
         public async Task<NextId> GetNextIdAsync()
@@ -143,13 +133,6 @@ namespace Raven.Client.Documents.Identity
             }
         }
 
-        [Obsolete("Will be removed in next major version of the product. Use GetNextIdAsync instead")]
-        public async Task<long> NextIdAsync()
-        {
-            var result = await GetNextIdAsync().ConfigureAwait(false);
-            return result.Id;
-        }
-
         private async Task GetNextRangeAsync()
         {
             var hiloCommand = new NextHiLoCommand(_tag, _lastBatchSize, _lastRangeDate, _identityPartsSeparator, Range.Max);
@@ -162,9 +145,6 @@ namespace Raven.Client.Documents.Identity
             }
 
             Prefix = hiloCommand.Result.Prefix;
-#pragma warning disable CS0618
-            ServerTag = hiloCommand.Result.ServerTag;
-#pragma warning restore CS0618
             _lastRangeDate = hiloCommand.Result.LastRangeAt;
             _lastBatchSize = hiloCommand.Result.LastSize;
             Range = new RangeValue(hiloCommand.Result.Low, hiloCommand.Result.High, hiloCommand.Result.ServerTag);
@@ -187,6 +167,21 @@ namespace Raven.Client.Documents.Identity
             public long Id;
 
             public string ServerTag;
+        }
+
+        internal TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action BeforeGeneratingDocumentId;
         }
     }
 }
