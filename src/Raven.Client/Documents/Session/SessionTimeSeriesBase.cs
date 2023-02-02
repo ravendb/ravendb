@@ -130,21 +130,38 @@ namespace Raven.Client.Documents.Session
         {
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache))
             {
-                if (from == null || from == DateTime.MinValue && to == null || to == DateTime.MaxValue)
+                if (from == null && to == null)
                 {
                     cache.Remove(Name);
                 }
                 else if (cache.TryGetValue(Name, out var ranges) && ranges.Count > 0)
                 {
-                    var toDelete = new List<int>();
-                    for (var i = 0; i < ranges.Count; i++)
+                    var rangesToDelete = new List<TimeSeriesRangeResult>();
+                    foreach (var range in ranges)
                     {
-                        if (ranges[i].From <= from && ranges[i].To >= to)
-                            toDelete.Add(i);
+                        if (from == null) // to != null
+                        {
+                            if (range.From > to)
+                                continue;
+
+                            rangesToDelete.Add(range);
+                            continue;
+                        }
+                        if (to == null) // from != null
+                        {
+                            if (range.To < from)
+                                continue;
+
+                            rangesToDelete.Add(range);
+                            continue;
+                        }
+
+                        if (range.From <= from && range.To >= to)
+                            rangesToDelete.Add(range);
                     }
 
-                    foreach (var index in toDelete)
-                        ranges.RemoveAt(index);
+                    foreach (var range in rangesToDelete)
+                        ranges.Remove(range);
                 }
             }
         }

@@ -71,6 +71,78 @@ public class RavenDB_19545 : RavenTestBase
                 session.SaveChanges();
 
                 var entries2 = session.TimeSeriesFor(docId, timeSeriesName).Get();
+                Assert.Equal(6, entries2.Length);
+            }
+        }
+    }
+
+    [Fact]
+    public void RemovingTimeSeriesEntryShouldAffectCache3()
+    {
+        const string docId = "user/1";
+        const string timeSeriesName = "HeartRates";
+        const string tag = "watches/fitbit";
+        var baseline = DateTime.UtcNow;
+
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User { Name = "Lev" }, docId);
+
+                var tsf = session.TimeSeriesFor(docId, timeSeriesName);
+                for (int i = 1; i <= 10; i++)
+                {
+                    tsf.Append(baseline.AddDays(i), i, tag);
+                    session.SaveChanges();
+                }
+
+                var entries = session.TimeSeriesFor(docId, timeSeriesName).Get(baseline.AddDays(9), baseline.AddDays(11));
+                Assert.Equal(1, entries.Length);
+
+                entries = session.TimeSeriesFor(docId, timeSeriesName).Get(null, baseline.AddDays(8));
+                Assert.Equal(8, entries.Length);
+
+                session.TimeSeriesFor(docId, timeSeriesName).Delete(null, baseline.AddDays(7));
+                session.SaveChanges();
+
+                var entries2 = session.TimeSeriesFor(docId, timeSeriesName).Get();
+                Assert.Equal(3, entries2.Length);
+            }
+        }
+    }
+
+    [Fact]
+    public void RemovingTimeSeriesEntryShouldAffectCache4()
+    {
+        const string docId = "user/1";
+        const string timeSeriesName = "HeartRates";
+        const string tag = "watches/fitbit";
+        var baseline = DateTime.UtcNow;
+
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User { Name = "Lev" }, docId);
+
+                var tsf = session.TimeSeriesFor(docId, timeSeriesName);
+                for (int i = 1; i <= 10; i++)
+                {
+                    tsf.Append(baseline.AddDays(i), i, tag);
+                    session.SaveChanges();
+                }
+
+                var entries = session.TimeSeriesFor(docId, timeSeriesName).Get(baseline.AddDays(9), baseline.AddDays(11));
+                Assert.Equal(1, entries.Length);
+
+                entries = session.TimeSeriesFor(docId, timeSeriesName).Get(baseline.AddDays(1));
+                Assert.Equal(9, entries.Length);
+
+                session.TimeSeriesFor(docId, timeSeriesName).Delete(baseline.AddDays(6), null);
+                session.SaveChanges();
+
+                var entries2 = session.TimeSeriesFor(docId, timeSeriesName).Get();
                 Assert.Equal(5, entries2.Length);
             }
         }
