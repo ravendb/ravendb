@@ -77,6 +77,8 @@ namespace Raven.Server.ServerWide.Context
 
         protected abstract TTransaction CloneReadTransaction(TTransaction previous);
 
+        public override long AllocatedMemory => _arenaAllocator.Allocated + Allocator._totalAllocated;
+
         public bool HasTransaction => Transaction != null && Transaction.Disposed == false;
 
         public short TransactionMarkerOffset;

@@ -33,7 +33,7 @@ namespace Sparrow.Json
         private readonly int _initialSize;
         private readonly int _longLivedSize;
         private readonly int _maxNumberOfAllocatedStringValues;
-        private readonly ArenaMemoryAllocator _arenaAllocator;
+        protected readonly ArenaMemoryAllocator _arenaAllocator;
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
 
@@ -84,7 +84,7 @@ namespace Sparrow.Json
 
         public int Generation => _generation;
 
-        public long AllocatedMemory => _arenaAllocator.TotalUsed;
+        public virtual long AllocatedMemory => _arenaAllocator.Allocated;
 
         protected readonly SharedMultipleUseFlag LowMemoryFlag;
 
