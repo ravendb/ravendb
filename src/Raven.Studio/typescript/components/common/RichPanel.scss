@@ -39,8 +39,8 @@
     writing-mode: vertical-rl;
     transform: rotate(180.1deg);
     text-transform: uppercase;
-    letter-spacing: 0.07em;
-    font-size: 8px;
+    letter-spacing: 0.1em;
+    border-radius: 0 sizes.$gutter-xxs sizes.$gutter-xxs 0 !important;
 }
 
 .rich-panel-details {

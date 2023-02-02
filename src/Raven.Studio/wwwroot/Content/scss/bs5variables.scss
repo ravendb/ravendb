@@ -1132,7 +1132,7 @@ $toast-header-border-color: rgba($border-color, 0.05) !default;
 
 // scss-docs-start badge-variables
 $badge-font-size: 0.75em !default;
-$badge-font-weight: $font-weight-bold !default;
+$badge-font-weight: $font-weight-bolder !default;
 $badge-color: $text-emphasis-color !default;
 $badge-padding-y: 0.35em !default;
 $badge-padding-x: 1em !default;
@@ -1323,6 +1323,10 @@ $spinner-animation-speed: 0.75s !default;
 $spinner-width-sm: 1rem !default;
 $spinner-height-sm: $spinner-width-sm !default;
 $spinner-border-width-sm: 0.2em !default;
+
+$spinner-width-xs: 0.7rem !default;
+$spinner-height-xs: $spinner-width-xs !default;
+$spinner-border-width-xs: 0.2em !default;
 // scss-docs-end spinner-variables
 
 // Close
