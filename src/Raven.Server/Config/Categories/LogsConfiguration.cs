@@ -12,13 +12,6 @@ namespace Raven.Server.Config.Categories
     [ConfigurationCategory(ConfigurationCategoryType.Logs)]
     public class LogsConfiguration : ConfigurationCategory
     {
-        public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type,
-            string resourceName)
-        {
-            base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
-            MicrosoftLogsPath ??= Path.Combine("MicrosoftLogs");
-        }
-
         [DefaultValue("Logs")]
         [ConfigurationEntry("Logs.Path", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting Path { get; set; }
@@ -62,40 +55,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Logs.Microsoft.Disable", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableMicrosoftLogs { get; set; }
         
-        [Description("The path to the folder where Microsoft log will be written")]
-        [DefaultValue(DefaultValueSetInConstructor)]
-        [ConfigurationEntry("Logs.Microsoft.Path", ConfigurationEntryScope.ServerWideOnly)]
-        public PathSetting MicrosoftLogsPath { get; set; }
-        
         [Description("The path to json configuration file of Microsoft logs")]
         [DefaultValue("settings.logs.microsoft.json")]
         [ConfigurationEntry("Logs.Microsoft.ConfigurationPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting MicrosoftLogsConfigurationPath { get; set; }
-        
-        [DefaultValue(null)]
-        [MinValue(16)]
-        [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Logs.Microsoft.MaxFileSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
-        public Size? MicrosoftLogsMaxFileSize { get; set; }
-
-        [Description("How far back we should retain Microsoft log entries in hours")]
-        [DefaultValue(null)]
-        [MinValue(24)]
-        [TimeUnit(TimeUnit.Hours)]
-        [ConfigurationEntry("Logs.Microsoft.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting? MicrosoftLogsRetentionTime { get; set; }
-
-        [Description("The maximum size of the Microsoft log after which the old files will be deleted")]
-        [DefaultValue(null)]
-        [MinValue(256)]
-        [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Logs.Microsoft.RetentionSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
-        public Size? MicrosoftLogsRetentionSize { get; set; }
-
-        [Description("Will determine whether to compress the Microsoft log files")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Logs.Microsoft.Compress", ConfigurationEntryScope.ServerWideOnly)]
-        public bool? MicrosoftLogsCompress { get; set; }
+   
         #endregion
         
     }

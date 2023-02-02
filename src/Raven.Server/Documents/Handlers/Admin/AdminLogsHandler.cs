@@ -3,7 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.Operations.Logs;
-using Raven.Server.Indexing;
+using Raven.Server.Utils.MicrosoftLogging;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -155,7 +155,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var djv = new DynamicJsonValue();
-                foreach (var (name, minLogLevel) in Server.MicrosoftLogger.GetLoggers())
+                var provider = Server.GetService<MicrosoftLoggingProvider>();
+                foreach (var (name, minLogLevel) in provider.GetLoggers())
                 {
                     djv[name] = minLogLevel;
                 }
@@ -171,7 +172,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var djv = new DynamicJsonValue();
-                foreach (var (category, logLevel) in Server.MicrosoftLogger.GetConfiguration())
+                var provider = Server.GetService<MicrosoftLoggingProvider>();
+                foreach (var (category, logLevel) in provider.Configuration)
                 {
                     djv[category] = logLevel;
                 }
@@ -186,8 +188,28 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 bool reset = GetBoolValueQueryString("reset", required: false) ?? false;
-                await Server.MicrosoftLogger.ReadAndApplyConfigurationAsync(RequestBodyStream(), context, reset);
+                var provider = Server.GetService<MicrosoftLoggingProvider>();
+                await provider.Configuration.ReadConfigurationAsync(RequestBodyStream(), context, reset);
+                provider.ApplyConfiguration();
             }
+
+            NoContentStatus();
+        }
+        
+        [RavenAction("/admin/logs/microsoft/enable", "POST", AuthorizationStatus.Operator)]
+        public async Task EnableMicrosoftLog()
+        {
+            var provider = Server.GetService<MicrosoftLoggingProvider>();
+            provider.ApplyConfiguration();
+
+            NoContentStatus();
+        }
+        
+        [RavenAction("/admin/logs/microsoft/disable", "POST", AuthorizationStatus.Operator)]
+        public async Task DisableMicrosoftLog()
+        {
+            var provider = Server.GetService<MicrosoftLoggingProvider>();
+            provider.DisableLogging();
 
             NoContentStatus();
         }

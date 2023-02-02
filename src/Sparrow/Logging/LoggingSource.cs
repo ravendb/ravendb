@@ -536,11 +536,14 @@ namespace Sparrow.Logging
                 state.ForwardingStream.Destination = new MemoryStream();
             }
 
-            foreach (var kvp in _listeners)
+            if (_listeners.IsEmpty == false)
             {
-                if (kvp.Value.Filter.Forward(ref entry))
+                foreach (var kvp in _listeners)
                 {
-                    item.WebSocketsList.Add(kvp.Key);
+                    if (kvp.Value.Filter.Forward(ref entry))
+                    {
+                        item.WebSocketsList.Add(kvp.Key);
+                    }
                 }
             }
 
