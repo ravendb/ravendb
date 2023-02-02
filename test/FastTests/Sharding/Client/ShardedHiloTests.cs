@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Identity;
 using Raven.Tests.Core.Utils.Entities;
@@ -70,7 +71,7 @@ namespace FastTests.Sharding.Client
 
                 var ids = new HashSet<long>
                 {
-                    await hiLoKeyGenerator.NextIdAsync()
+                    (await hiLoKeyGenerator.GetNextIdAsync()).Id
                 };
 
                 using (var session = store.OpenSession())
@@ -82,7 +83,7 @@ namespace FastTests.Sharding.Client
 
                 for (int i = 0; i < 128; i++)
                 {
-                    var nextId = await hiLoKeyGenerator.NextIdAsync();
+                    var nextId = (await hiLoKeyGenerator.GetNextIdAsync()).Id;
                     Assert.True(ids.Add(nextId), "Failed at " + i);
                 }
 

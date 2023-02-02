@@ -1,7 +1,5 @@
-﻿using System;
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -44,10 +42,9 @@ namespace SlowTests.Issues
                     {
                     }
 
-                    [Obsolete("Will be removed in next major version of the product. Use the GetDocumentIdFromId(NextId) overload.")]
-                    protected override string GetDocumentIdFromId(long nextId)
+                    protected override string GetDocumentIdFromId(NextId nextId)
                     {
-                        return $"{Prefix}{nextId}";
+                        return $"{Prefix}{nextId.Id}";
                     }
                 }
             }
