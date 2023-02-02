@@ -1,9 +1,9 @@
 <div data-bind="compose: { model: browserAlert }"></div>
 <div class="on-base-background">
-    <h2 class="margin-bottom margin-top-sm">
+    <h2 class="margin-bottom-xs margin-top-xs">
         <strong class="margin-right">1.</strong> Welcome
     </h2>
-    <p class="margin-top margin-bottom">
+    <p class="margin-top-xs margin-bottom">
         This Setup Wizard will assist you with setting up your RavenDB server.<br />
         First, select whether to set up a new cluster from scratch or continue the setup using an existing Setup Package.
     </p>
@@ -59,17 +59,17 @@
         </div>
     </div>
 </div>
-<div class="navigation padding-md flex-horizontal">
+<div class="navigation margin-top margin-bottom flex-horizontal">
     <div class="flex-separator"></div>
-    <button class="btn btn-primary btn-lg" data-bind="click: goToNextView">
+    <button class="btn btn-primary" data-bind="click: goToNextView">
         <span>Next</span> <i class="icon-arrow-right"></i>
     </button>
 </div>
 <div class="bg-info padding flex-horizontal">
-    <div>
+    <div class="margin-right-xs">
         <i class="icon-info icon-lg"></i>
     </div>
-    <div>
+    <div class="margin-left-xs">
         <strong>To disable this wizard</strong> and setup the server manually:
         <ul>
             <li>Open the settings.json file located in your RavenDB installation directory</li>

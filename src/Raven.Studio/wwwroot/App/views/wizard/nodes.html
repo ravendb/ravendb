@@ -1,7 +1,7 @@
-<h2 class="margin-bottom margin-top-sm"><strong class="margin-right" data-bind="text: currentStep + '.'"></strong>Node Addresses (Secure Mode)</h2>
+<h2 class="margin-bottom-xs margin-top-xs"><strong class="margin-right" data-bind="text: currentStep + '.'"></strong>Node Addresses (Secure Mode)</h2>
 <div class="setup-nodes">
     <form class="flex-form" data-bind="submit: save">
-        <div class="margin-bottom">
+        <div class="margin-bottom-xs">
             Please enter the server settings - IP addresses and ports.<br/>
             If you are building a cluster this is the place to add nodes and configure them.
         </div>
@@ -247,12 +247,12 @@
                 <div class="help-block" data-bind="validationMessage: confirmation"></div>
             </div>
         </div>
-        <div class="navigation padding-md flex-horizontal">
-            <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back">
+        <div class="navigation margin-top margin-bottom flex-horizontal">
+            <button type="button" class="btn btn-default" data-bind="click: $root.back">
                 <i class="icon-arrow-left"></i><span>Back</span>
             </button>
             <div class="flex-separator"></div>
-            <button type="submit" class="btn btn-primary btn-lg">
+            <button type="submit" class="btn btn-primary">
                 <span>Finish</span> <i class="icon-arrow-right"></i>
             </button>
         </div>
