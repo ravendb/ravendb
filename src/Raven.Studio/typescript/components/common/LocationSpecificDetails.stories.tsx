@@ -9,9 +9,11 @@ import {
 } from "./LocationSpecificDetails";
 import { StatePill } from "./StatePill";
 import { NamedProgress, NamedProgressItem } from "./NamedProgress";
+import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 
 export default {
     title: "Bits/Location Specific Details",
+    decorators: [withStorybookContexts, withBootstrap5],
     component: LocationSpecificDetails,
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof LocationSpecificDetails>;

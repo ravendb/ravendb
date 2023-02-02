@@ -9,7 +9,7 @@ import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import IndexUtils from "../../../../utils/IndexUtils";
 import genUtils from "common/generalUtils";
 import { withPreventDefault } from "components/utils/common";
-import { StatePill, StatePillColor } from "components/common/StatePill";
+import { StatePill } from "components/common/StatePill";
 import {
     LocationSpecificDetails,
     LocationSpecificDetailsItem,
@@ -99,7 +99,7 @@ function pillColor(
     index: IndexSharedInfo,
     details: IndexNodeInfoDetails,
     globalIndexingStatus: IndexRunningStatus
-): StatePillColor {
+): string {
     if (details.faulty) {
         return "danger";
     }

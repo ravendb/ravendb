@@ -114,8 +114,8 @@ function DatabaseTopology(props: DatabaseTopologyProps) {
         const shardedDb = db as ShardedDatabaseSharedInfo;
         return (
             <div className="px-3 py-2">
-                <NodeSet color="warning" className="m-1">
-                    <NodeSetLabel color="warning" icon="orchestrator">
+                <NodeSet color="orchestrator" className="m-1">
+                    <NodeSetLabel color="orchestrator" icon="orchestrator">
                         Orchestrators
                     </NodeSetLabel>
                     {db.nodes.map((node) => (
@@ -153,10 +153,8 @@ function DatabaseTopology(props: DatabaseTopologyProps) {
     } else {
         return (
             <div className="px-3 py-2">
-                <NodeSet color="warning" className="m-1">
-                    <NodeSetLabel color="primary" icon="database">
-                        Nodes
-                    </NodeSetLabel>
+                <NodeSet className="m-1">
+                    <NodeSetLabel icon="database">Nodes</NodeSetLabel>
                     {db.nodes.map((node) => {
                         return (
                             <NodeSetItem
@@ -264,12 +262,19 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 {canNavigateToDatabase ? (
                                     <a
                                         href={documentsUrl}
-                                        className={classNames({ "link-disabled": db.currentNode.isBeingDeleted })}
+                                        className={classNames(
+                                            { "link-disabled": db.currentNode.isBeingDeleted },
+                                            { "link-shard": db.sharded }
+                                        )}
                                         target={db.currentNode.relevant ? undefined : "_blank"}
                                         title={db.name}
                                     >
                                         <i
-                                            className={db.currentNode.relevant ? "icon-database-home" : "icon-database"}
+                                            className={classNames(
+                                                { "icon-database": !db.sharded },
+                                                { "icon-sharding": db.sharded },
+                                                { "icon-addon-home": db.currentNode.relevant }
+                                            )}
                                         ></i>
                                         <span>{db.name}</span>
                                     </a>
@@ -279,7 +284,9 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                             <small>
                                                 <i
                                                     className={
-                                                        db.currentNode.relevant ? "icon-database-home" : "icon-database"
+                                                        db.currentNode.relevant
+                                                            ? "icon-database icon-addon-home"
+                                                            : "icon-database"
                                                     }
                                                 ></i>
                                             </small>
@@ -361,7 +368,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 className="me-1"
                                 disabled={!canNavigateToDatabase || db.currentNode.isBeingDeleted}
                             >
-                                <i className="icon-manage-dbgroup me-2" />
+                                <i className="icon-dbgroup icon-addon-settings me-2" />
                                 Manage group
                             </Button>
 
