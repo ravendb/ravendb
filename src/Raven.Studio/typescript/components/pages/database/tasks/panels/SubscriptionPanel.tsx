@@ -40,19 +40,10 @@ function Details(props: SubscriptionPanelProps) {
 
     return (
         <RichPanelDetails>
-            <RichPanelDetailItem>
-                Last Batch Ack Time:
-                <div className="value">{lastBatchAckTime}</div>
-            </RichPanelDetailItem>
-            <RichPanelDetailItem>
-                Last Client Connection Time:
-                <div className="value">{lastClientConnectionTime}</div>
-            </RichPanelDetailItem>
-            <RichPanelDetailItem>
-                Change vector for next batch:
-                <div className="value">
-                    <i className="icon-info text-info"></i>
-                </div>
+            <RichPanelDetailItem label="Last Batch Ack Time">{lastBatchAckTime}</RichPanelDetailItem>
+            <RichPanelDetailItem label="Last Client Connection Time">{lastClientConnectionTime}</RichPanelDetailItem>
+            <RichPanelDetailItem label="Change vector for next batch">
+                <i className="icon-info text-info"></i>
             </RichPanelDetailItem>
         </RichPanelDetails>
     );

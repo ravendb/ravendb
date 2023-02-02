@@ -39,27 +39,22 @@ function Details(props: RavenEtlPanelProps & { canEdit: boolean }) {
                 connectionStringsUrl={connectionStringsUrl}
             />
             {connectionStringDefined && (
-                <RichPanelDetailItem>
-                    Destination Database:
-                    <div className="value">{data.shared.destinationDatabase}</div>
+                <RichPanelDetailItem label="Destination Database">
+                    {data.shared.destinationDatabase}
                 </RichPanelDetailItem>
             )}
-            <RichPanelDetailItem>
-                Actual Destination URL:
-                <div className="value">
-                    {data.shared.destinationUrl ? (
-                        <a href={data.shared.destinationUrl} target="_blank">
-                            {data.shared.destinationUrl}
-                        </a>
-                    ) : (
-                        <div>N/A</div>
-                    )}
-                </div>
+            <RichPanelDetailItem label="Actual Destination URL">
+                {data.shared.destinationUrl ? (
+                    <a href={data.shared.destinationUrl} target="_blank">
+                        {data.shared.destinationUrl}
+                    </a>
+                ) : (
+                    <div>N/A</div>
+                )}
             </RichPanelDetailItem>
             {data.shared.topologyDiscoveryUrls?.length > 0 && (
-                <RichPanelDetailItem>
-                    Topology Discovery URLs:
-                    <div className="value">{data.shared.topologyDiscoveryUrls.join(", ")}</div>
+                <RichPanelDetailItem label="Topology Discovery URLs">
+                    {data.shared.topologyDiscoveryUrls.join(", ")}
                 </RichPanelDetailItem>
             )}
             <EmptyScriptsWarning task={data} />

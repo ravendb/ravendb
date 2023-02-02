@@ -37,23 +37,14 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
     return (
         <div>
             <RichPanelDetails>
-                {delayHumane && (
-                    <RichPanelDetailItem>
-                        Replication Delay Time:
-                        <div className="value">{delayHumane}</div>
-                    </RichPanelDetailItem>
-                )}
-                <RichPanelDetailItem>
-                    Replication Mode:
-                    <div className="value">{data.shared.taskMode}</div>
-                </RichPanelDetailItem>
-                <RichPanelDetailItem>
-                    Has Filtering:
-                    <div className="value">{data.shared.hasFiltering ? "True" : "False"}</div>
+                {delayHumane && <RichPanelDetailItem label="Replication Delay Time">{delayHumane}</RichPanelDetailItem>}
+                <RichPanelDetailItem label="Replication Mode">{data.shared.taskMode}</RichPanelDetailItem>
+                <RichPanelDetailItem label="Has Filtering">
+                    {data.shared.hasFiltering ? "True" : "False"}
                 </RichPanelDetailItem>
             </RichPanelDetails>
             {connectedSinks.length > 0 && (
-                <div className="margin">
+                <div className="my-1 mx-3">
                     {connectedSinks.map((sink) => (
                         <ReplicationHubConnectedSinkPanel
                             key={sink.shared.taskId + sink.shared.taskName}

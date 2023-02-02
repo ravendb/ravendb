@@ -294,7 +294,7 @@ export function OngoingTasksPage(props: OngoingTasksPageProps) {
                     {kafkaEtls.length > 0 && (
                         <div key="kafka-etls">
                             <HrHeader className="kafka-etl" count={kafkaEtls.length}>
-                                <i className="icon-kafka-etl" />
+                                <i className="icon-kafka-etl me-1" />
                                 KAFKA ETL
                             </HrHeader>
 

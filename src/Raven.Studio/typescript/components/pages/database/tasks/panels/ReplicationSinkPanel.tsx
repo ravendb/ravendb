@@ -30,10 +30,7 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
 
     return (
         <RichPanelDetails>
-            <RichPanelDetailItem>
-                Hub Name:
-                <div className="value">{data.shared.hubName}</div>
-            </RichPanelDetailItem>
+            <RichPanelDetailItem label="Hub Name">{data.shared.hubName}</RichPanelDetailItem>
             <ConnectionStringItem
                 connectionStringDefined={!!data.shared.destinationDatabase}
                 canEdit={canEdit}
@@ -41,20 +38,13 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
                 connectionStringsUrl={connectionStringsUrl}
             />
             {connectionStringDefined && (
-                <RichPanelDetailItem>
-                    Hub Database:
-                    <div className="value">{data.shared.destinationDatabase}</div>
-                </RichPanelDetailItem>
+                <RichPanelDetailItem label="Hub Database">{data.shared.destinationDatabase}</RichPanelDetailItem>
             )}
-            <RichPanelDetailItem>
-                Actual Hub URL:
-                <div className="value">{data.shared.destinationUrl ?? "N/A"}</div>
-            </RichPanelDetailItem>
+            <RichPanelDetailItem label="Actual Hub URL">{data.shared.destinationUrl ?? "N/A"}</RichPanelDetailItem>
 
             {data.shared.topologyDiscoveryUrls.map((url) => (
-                <RichPanelDetailItem key={url}>
-                    Topology Discovery URL:
-                    <div className="value">{url}</div>
+                <RichPanelDetailItem label="Topology Discovery URL" key={url}>
+                    {url}
                 </RichPanelDetailItem>
             ))}
         </RichPanelDetails>

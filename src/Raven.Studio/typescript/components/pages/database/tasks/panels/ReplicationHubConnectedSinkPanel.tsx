@@ -30,22 +30,13 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
                 </RichPanelActions>
             </RichPanelHeader>
             <RichPanelDetails>
-                <RichPanelDetailItem>
-                    Task Name
-                    <div className="value">{data.shared.taskName}</div>
-                </RichPanelDetailItem>
-                <RichPanelDetailItem>
-                    Sink Database:
-                    <div className="value">{data.shared.destinationDatabase}</div>
-                </RichPanelDetailItem>
+                <RichPanelDetailItem label="Task Name">{data.shared.taskName}</RichPanelDetailItem>
+                <RichPanelDetailItem label="Sink Database">{data.shared.destinationDatabase}</RichPanelDetailItem>
                 {data.shared.destinationUrl && (
-                    <RichPanelDetailItem>
-                        Actual Sink URL:
-                        <div className="value">
-                            <a href={data.shared.destinationUrl} target="_blank">
-                                {data.shared.destinationUrl}
-                            </a>
-                        </div>
+                    <RichPanelDetailItem label="Actual Sink URL">
+                        <a href={data.shared.destinationUrl} target="_blank">
+                            {data.shared.destinationUrl}
+                        </a>
                     </RichPanelDetailItem>
                 )}
             </RichPanelDetails>

@@ -32,9 +32,8 @@ function Details(props: OlapEtlPanelProps & { canEdit: boolean }) {
     return (
         <RichPanelDetails>
             {data.shared.destinations.map((dst) => (
-                <RichPanelDetailItem key={dst}>
-                    Destination:
-                    <div className="value">{dst}</div>
+                <RichPanelDetailItem label="Destination" key={dst}>
+                    {dst}
                 </RichPanelDetailItem>
             ))}
             <ConnectionStringItem

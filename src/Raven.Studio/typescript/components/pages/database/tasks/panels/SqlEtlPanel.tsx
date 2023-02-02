@@ -34,11 +34,8 @@ function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
     return (
         <RichPanelDetails>
             {connectionStringDefined && (
-                <RichPanelDetailItem>
-                    Destination:
-                    <div className="value" title="Destination <database>@<server>">
-                        {(data.shared.destinationDatabase ?? "") + "@" + (data.shared.destinationServer ?? "")}
-                    </div>
+                <RichPanelDetailItem label="Destination" title="Destination <database>@<server>">
+                    {(data.shared.destinationDatabase ?? "") + "@" + (data.shared.destinationServer ?? "")}
                 </RichPanelDetailItem>
             )}
             <ConnectionStringItem
