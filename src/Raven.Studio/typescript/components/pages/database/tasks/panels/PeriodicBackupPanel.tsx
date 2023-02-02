@@ -31,6 +31,7 @@ import app from "durandal/app";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
 import { FlexGrow } from "../../../../../components/common/FlexGrow";
+import { Badge } from "reactstrap";
 
 type PeriodicBackupPanelProps = BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> & { forceReload: () => void };
 
@@ -159,60 +160,44 @@ function Details(props: PeriodicBackupPanelProps & { canEdit: boolean }) {
         app.showBootstrapDialog(backupNowViewModel);
     };
 
+    const backupTypeLabel = formatBackupType(data.shared.backupType, true);
+
     return (
         <RichPanelDetails>
-            <RichPanelDetailItem>
-                Destinations:
-                <div className="value">{backupDestinationsHumanized}</div>
+            <RichPanelDetailItem label="Destinations">{backupDestinationsHumanized}</RichPanelDetailItem>
+            <RichPanelDetailItem label="Last executed on node">
+                {data.shared.lastExecutingNodeTag || "N/A"}
             </RichPanelDetailItem>
-            <RichPanelDetailItem>
-                Last executed on node:
-                <div className="value">{data.shared.lastExecutingNodeTag || "N/A"}</div>
-            </RichPanelDetailItem>
-            <RichPanelDetailItem>
-                Last {formatBackupType(data.shared.backupType, true)}
-                <div className="value">{lastFullBackupHumanized}</div>
-            </RichPanelDetailItem>
+            <RichPanelDetailItem label={"Last " + backupTypeLabel}>{lastFullBackupHumanized}</RichPanelDetailItem>
             {lastIncrementalBackupHumanized && (
-                <RichPanelDetailItem>
-                    Last Incremental Backup:
-                    <div className="value">{lastIncrementalBackupHumanized}</div>
+                <RichPanelDetailItem label="Last Incremental Backup">
+                    {lastIncrementalBackupHumanized}
                 </RichPanelDetailItem>
             )}
-            <RichPanelDetailItem>
-                Next Estimated Backup:
-                <div className="value">{nextBackupHumanized}</div>
-            </RichPanelDetailItem>
-            {onGoingBackupHumanized && (
-                <RichPanelDetailItem>
-                    Backup Started:
-                    <div className="value">{onGoingBackupHumanized}</div>
-                </RichPanelDetailItem>
-            )}
-            <RichPanelDetailItem>
-                Retention Policy:
-                <div className="value">{retentionPolicyHumanized}</div>
-            </RichPanelDetailItem>
-
-            <RichPanelDetailItem>
+            <RichPanelDetailItem label="Next Estimated Backup">
+                {nextBackupHumanized}
                 {backupNowVisible && (
-                    <button
+                    <Badge
                         type="button"
                         onClick={onBackupNow}
-                        className={classNames("btn backup-now", {
-                            "btn-default": !neverBackedUp,
-                            "btn-info": backupNowInProgress,
-                            "btn-spinner": backupNowInProgress,
-                            "btn-warning": !backupNowInProgress && neverBackedUp,
+                        className={classNames("ms-1 rounded-pill backup-now", {
+                            "bg-secondary": !neverBackedUp,
+                            "bg-info": backupNowInProgress,
+                            "bg-progress": backupNowInProgress,
+                            "bg-warning": !backupNowInProgress && neverBackedUp,
                         })}
                         disabled={!!backupNowBlockReason}
                         title={backupNowBlockReason ?? "Click to trigger the backup task now"}
                     >
                         <i className="icon-backups"></i>
                         <span>{backupNowInProgress ? "Show backup progress" : "Backup now"}</span>
-                    </button>
+                    </Badge>
                 )}
             </RichPanelDetailItem>
+            {onGoingBackupHumanized && (
+                <RichPanelDetailItem label="Backup Started">{onGoingBackupHumanized}</RichPanelDetailItem>
+            )}
+            <RichPanelDetailItem label="Retention Policy">{retentionPolicyHumanized}</RichPanelDetailItem>
         </RichPanelDetails>
     );
 }

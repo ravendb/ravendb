@@ -39,9 +39,8 @@ function Details(props: ElasticSearchEtlPanelProps & { canEdit: boolean }) {
                 connectionStringsUrl={connectionStringsUrl}
             />
             {data.shared.nodesUrls.map((nodeUrl) => (
-                <RichPanelDetailItem key={nodeUrl}>
-                    Node URL:
-                    <div className="value">{nodeUrl}</div>
+                <RichPanelDetailItem label="Node URL" key={nodeUrl}>
+                    {nodeUrl}
                 </RichPanelDetailItem>
             ))}
             <EmptyScriptsWarning task={data} />

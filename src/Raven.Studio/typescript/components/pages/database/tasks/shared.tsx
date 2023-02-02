@@ -219,28 +219,22 @@ export function ConnectionStringItem(props: {
 
     if (connectionStringDefined) {
         return (
-            <RichPanelDetailItem>
-                Connection String:
-                <div className="value">
-                    {canEdit ? (
-                        <a title="Connection string name" target="_blank" href={connectionStringsUrl}>
-                            {connectionStringName}
-                        </a>
-                    ) : (
-                        <div>{connectionStringName}</div>
-                    )}
-                </div>
+            <RichPanelDetailItem label="Connection String">
+                {canEdit ? (
+                    <a title="Connection string name" target="_blank" href={connectionStringsUrl}>
+                        {connectionStringName}
+                    </a>
+                ) : (
+                    <div>{connectionStringName}</div>
+                )}
             </RichPanelDetailItem>
         );
     }
 
     return (
-        <RichPanelDetailItem>
-            Connection String:
-            <div className="value text-danger">
-                <i className="icon-danger text-danger"></i>
-                This connection string is not defined.
-            </div>
+        <RichPanelDetailItem label="Connection String">
+            <i className="icon-danger text-danger"></i>
+            <span className="text-danger">This connection string is not defined.</span>
         </RichPanelDetailItem>
     );
 }

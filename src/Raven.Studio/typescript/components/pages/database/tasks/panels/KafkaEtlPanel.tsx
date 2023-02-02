@@ -31,10 +31,7 @@ function Details(props: KafkaEtlPanelProps & { canEdit: boolean }) {
     const connectionStringsUrl = appUrl.forConnectionStrings(db, "Kafka", data.shared.connectionStringName);
     return (
         <RichPanelDetails>
-            <RichPanelDetailItem>
-                Bootstrap Servers:
-                <div className="value">{data.shared.url}</div>
-            </RichPanelDetailItem>
+            <RichPanelDetailItem label="Bootstrap Servers">{data.shared.url}</RichPanelDetailItem>
             <ConnectionStringItem
                 connectionStringDefined
                 canEdit={canEdit}
