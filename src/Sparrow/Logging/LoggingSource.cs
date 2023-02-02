@@ -512,7 +512,8 @@ namespace Sparrow.Logging
                 Generation = _generation
             };
         }
-        public void Log(ref LogEntry entry, TaskCompletionSource<object> tcs = null)
+        public void Log<T>(ref T entry, TaskCompletionSource<object> tcs = null)
+            where T : ILogEntry
         {
             var state = _localState.Value;
             if (state.Generation != _generation)
@@ -554,7 +555,8 @@ namespace Sparrow.Logging
             _hasEntries.Set();
         }
 
-        private void WriteEntryToWriter(StreamWriter writer, ref LogEntry entry)
+        private void WriteEntryToWriter<T>(StreamWriter writer, ref T entry)
+            where T : ILogEntry
         {
             if (_currentThreadId == null)
             {
@@ -580,7 +582,7 @@ namespace Sparrow.Logging
             writer.Write(", ");
             writer.Write(entry.Logger);
             writer.Write(", ");
-            writer.Write(entry.Message);
+            entry.WriteMessage(writer);
 
             if (entry.Exception != null)
             {
@@ -1010,7 +1012,7 @@ namespace Sparrow.Logging
         }
 
 
-        private class ForwardingStream : Stream
+        public class ForwardingStream : Stream
         {
             public MemoryStream Destination;
             public override bool CanRead { get; } = false;

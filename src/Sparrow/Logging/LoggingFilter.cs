@@ -107,7 +107,8 @@ namespace Sparrow.Logging
             return false;
         }
 
-        private string GetField(LogEntryFields field, ref LogEntry entry)
+        private string GetField<T>(LogEntryFields field, ref T entry)
+            where T : ILogEntry
         {
             switch (field)
             {
@@ -126,7 +127,8 @@ namespace Sparrow.Logging
             }
         }
 
-        public bool Forward(ref LogEntry entry)
+        public bool Forward<T>(ref T entry)
+            where T : ILogEntry
         {
             foreach (var rule in _rules)
             {

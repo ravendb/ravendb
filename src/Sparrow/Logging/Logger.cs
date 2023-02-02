@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
@@ -56,7 +57,32 @@ namespace Sparrow.Logging
             _logEntry.Type = LogMode.Information;
             _parent.Log(ref _logEntry);
         }
+        public void InfoDirectlyToStream<T>(Action<MemoryStream, T> messageFactory, T item1, Exception ex = null)
+        {
+            var entry = new LogEntryWithMessageFactory<T>
+            {
+                At = GetLogDate(),
+                Exception = ex,
+                Logger = _logger,
+                MessageFactory = messageFactory,
+                Source = _source,
+                Type = LogMode.Information,
+                Args = item1
+            };
+            _parent.Log(ref entry);
+        }
+        
+        internal void Info<T>(ref T logEntry)
+            where T : ILogEntry
+        {
+            logEntry.At = GetLogDate();
+            logEntry.Logger = _logger;
+            logEntry.Source = _source;
+            logEntry.Type = LogMode.Information;
 
+            _parent.Log(ref logEntry);
+        }
+        
         public Task InfoWithWait(string msg, Exception ex = null)
         {
             _logEntry.At = GetLogDate();
