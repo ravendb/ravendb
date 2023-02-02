@@ -1,4 +1,4 @@
-<h2 class="margin-bottom margin-top-sm"><strong class="margin-right">4.</strong>Choose Domain</h2>
+<h2 class="margin-bottom-xs margin-top-xs"><strong class="margin-right">4.</strong>Choose Domain</h2>
 <div>
     <form class="form-horizontal flex-form" role="form" data-bind="with: model.domain, submit: save">
         <div class="panel padding-md">
@@ -87,12 +87,12 @@
                 </div>
             </div>
         </div>
-        <div class="navigation padding-md flex-horizontal">
-            <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back">
+        <div class="navigation margin-top margin-bottom flex-horizontal">
+            <button type="button" class="btn btn-default" data-bind="click: $root.back">
                 <i class="icon-arrow-left"></i><span>Back</span>
             </button>
             <div class="flex-separator"></div>
-            <button type="submit" class="btn btn-primary btn-lg" data-bind="css: { 'btn-spinner': $root.spinners.save() }, disable: $root.spinners.save">
+            <button type="submit" class="btn btn-primary" data-bind="css: { 'btn-spinner': $root.spinners.save() }, disable: $root.spinners.save">
                 <span>Next</span> <i class="icon-arrow-right"></i>
             </button>
         </div>

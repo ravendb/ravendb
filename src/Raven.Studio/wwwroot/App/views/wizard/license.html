@@ -1,4 +1,4 @@
-<h2 class="margin-bottom margin-top-sm"><strong class="margin-right">3.</strong>Enter License Key</h2>
+<h2 class="margin-bottom-xs margin-top-xs"><strong class="margin-right">3.</strong>Enter License Key</h2>
 <form class="flex-form" data-bind="with: model.license, submit: save">
     <div class="row flex-row">
         <div class="col-sm-8">
@@ -28,20 +28,20 @@
                     <i class="icon-license icon-xl"></i>
                 </div>
                 <div class="text-center">
-                    <p class="lead margin-bottom">No license?</p>
+                    <p class="lead margin-bottom-sm">No license?</p>
                     <p class="small margin-bottom margin-lg">We have multiple license options available for you, including a FREE license suitable for production use.</p>
                 </div>
                 <div class="flex-separator"></div>
                 <div class="flex-center">
-                    <a class="btn btn-info btn-lg" target="_blank" data-bind="attr: { 'href': $root.licenseUrl }">Get license</a>
+                    <a class="btn btn-info" target="_blank" data-bind="attr: { 'href': $root.licenseUrl }">Get license</a>
                 </div>
             </div>
         </div>
     </div>
-    <div class="navigation padding-md flex-horizontal">
-        <a href="#security" class="btn btn-lg btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
+    <div class="navigation margin-top margin-bottom flex-horizontal">
+        <a href="#security" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
         <div class="flex-separator"></div>
-        <button type="submit" class="btn btn-lg btn-primary" data-bind="css: { 'btn-spinner': $root.spinners.next }, disable: $root.spinners.next">
+        <button type="submit" class="btn btn-primary" data-bind="css: { 'btn-spinner': $root.spinners.next }, disable: $root.spinners.next">
             <span>Next</span> <i class="icon-arrow-right"></i>
         </button>
     </div>

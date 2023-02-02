@@ -1,8 +1,8 @@
 <div class="on-base-background">
-    <h2 class="margin-bottom margin-top-sm">
+    <h2 class="margin-bottom-xs margin-top-xs">
         <strong class="margin-right">2.</strong> Security Level
     </h2>
-    <p class="margin-top margin-bottom">
+    <p class="margin-top-xs margin-bottom">
         Select the security option that best addresses your needs.
     </p>
 </div>
@@ -84,28 +84,24 @@
     </div>
 </div>
 <div class="panel padding margin-top">
-    <div class="row">
-        <div class="col-sm-7">
-            <div class="toggle margin-left-lg">
-                <input id="zipOnly" class="styled" type="checkbox" data-bind="checked: model.onlyCreateZipFile">
-                <label for="zipOnly">
-                    Use this Setup Wizard only to create a package for external setup
-                </label>
-            </div>
-        </div>
+    <div class="toggle margin-left margin-right">
+        <input id="zipOnly" class="styled" type="checkbox" data-bind="checked: model.onlyCreateZipFile">
+        <label for="zipOnly">
+            Use this Setup Wizard only to create a package for external setup
+        </label>
     </div>
-    <div class="text-info bg-info padding padding-sm margin-left-lg margin-top-sm">
+    <div class="text-info bg-info padding padding-sm margin-top-sm margin-bottom-sm margin-left margin-right">
         <i class="icon-info margin-right-xs"></i>
         <span data-bind="text: model.setupPackageText"></span>
     </div>
 </div>
 
 <div class="bg-experimental padding flex-horizontal margin-top-sm">
-    <div class="margin-right">
+    <div class="margin-right-xs">
         <i class="icon-experimental icon-lg"></i>
     </div>
-    <div class="margin-left">
-        <div class="checkbox">
+    <div class="margin-left-xs">
+        <div class="checkbox checkbox-primary">
             <input id="features" type="checkbox" data-bind="checked: model.useExperimentalFeatures">
             <label for="features">Enable the following experimental features:</label>
         </div>
@@ -115,12 +111,12 @@
         </ul>
     </div>
 </div>
-<div class="navigation padding-md flex-horizontal">
-    <button type="button" class="btn btn-default btn-lg" data-bind="click: back">
+<div class="navigation margin-top margin-bottom flex-horizontal">
+    <button type="button" class="btn btn-default" data-bind="click: back">
         <i class="icon-arrow-left"></i><span>Back</span>
     </button>
     <div class="flex-separator"></div>
-    <button class="btn btn-primary btn-lg" data-bind="click: goToNextView">
+    <button class="btn btn-primary" data-bind="click: goToNextView">
         <span>Next</span> <i class="icon-arrow-right"></i>
     </button>
 </div>

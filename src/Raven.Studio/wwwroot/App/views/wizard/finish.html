@@ -1,4 +1,4 @@
-<h2 class="margin-bottom margin-top-sm">
+<h2 class="margin-bottom-xs margin-top-xs">
     <strong class="margin-right" data-bind="text: currentStep + '.'"></strong>
     <span data-bind="visible: spinners.finishing">Finishing up <i class="global-spinner spinner-sm"></i></span>
     <span data-bind="visible: !spinners.finishing() && !completedWithSuccess()" class="text-danger">Configuration failed</span>
@@ -20,16 +20,16 @@
 <div class="readme" data-bind="visible: readme">
     <pre data-bind="text: readme"></pre>
 </div>
-<div class="navigation padding padding-lg flex-horizontal">
-    <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back, disable: spinners.restart, visible: !spinners.finishing() && !completedWithSuccess()">
+<div class="navigation margin-top margin-bottom flex-horizontal">
+    <button type="button" class="btn btn-default" data-bind="click: $root.back, disable: spinners.restart, visible: !spinners.finishing() && !completedWithSuccess()">
         <i class="icon-arrow-left"></i><span>Back</span>
     </button>
     <div class="flex-separator"></div>
-    <button class="btn btn-primary btn-lg" data-bind="click: startConfiguration, visible: !spinners.finishing() && !completedWithSuccess()">
+    <button class="btn btn-primary" data-bind="click: startConfiguration, visible: !spinners.finishing() && !completedWithSuccess()">
         <i class="icon-refresh"></i>
         <span>Try again</span>
     </button>
-    <button class="btn btn-primary btn-lg" data-bind="click: restart, css: { 'btn-spinner': spinners.restart }, disable: spinners.restart,
+    <button class="btn btn-primary" data-bind="click: restart, css: { 'btn-spinner': spinners.restart }, disable: spinners.restart,
             visible: canRestart() && !model.onlyCreateZipFile()">
         <i class="icon-refresh"></i>
         <span>Restart server</span>
