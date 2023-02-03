@@ -166,7 +166,7 @@ namespace FastTests.Voron
             return Tuple.Create(item1, item2);
         }
 
-        private void ForceConstantCompressionAcceleration(StorageEnvironmentOptions options)
+        protected void ForceConstantCompressionAcceleration(StorageEnvironmentOptions options)
         {
             options.ForTestingPurposesOnly().WriteToJournalCompressionAcceleration = 1;
         }
