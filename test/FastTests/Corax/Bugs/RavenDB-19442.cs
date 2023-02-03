@@ -1,15 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using Raven.Client.Documents.Indexes;
-using Tests.Infrastructure;
-using System;
-using System.Linq;
-using FastTests;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -54,7 +44,6 @@ namespace FastTests.Corax.Bugs
 
             new ComplexIndex().Execute(store);
             Indexes.WaitForIndexing(store);
-            //WaitForUserToContinueTheTest(store);
 
             using (var session = store.OpenSession())
             {
