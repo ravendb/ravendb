@@ -76,7 +76,7 @@ public class ArenaMemoryAllocatorTests : NoDisposalNeeded
 
             for (var i = 0; i < 3; i++)
             {
-                memoryUsedBefore = context.AllocatedMemory;
+                memoryUsedBefore = context.UsedMemory;
 
                 BuildDocument(() =>
                 {
@@ -85,7 +85,7 @@ public class ArenaMemoryAllocatorTests : NoDisposalNeeded
                 });
             }
 
-            Assert.Equal(memoryUsedBefore + fragmentationSize, context.AllocatedMemory);
+            Assert.Equal(memoryUsedBefore + fragmentationSize, context.UsedMemory);
 
             void BuildDocument(Action beforeBuilderDispose = null)
             {
