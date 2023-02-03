@@ -86,6 +86,8 @@ namespace Sparrow.Json
 
         public virtual long AllocatedMemory => _arenaAllocator.Allocated;
 
+        public virtual long UsedMemory => _arenaAllocator.TotalUsed;
+
         protected readonly SharedMultipleUseFlag LowMemoryFlag;
 
         public static JsonOperationContext ShortTermSingleUse()
