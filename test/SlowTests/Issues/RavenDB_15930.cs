@@ -19,6 +19,8 @@ namespace SlowTests.Issues
             options.MaxLogFileSize = 8 * 1024 * 1024; // 8mb
             options.ManualFlushing = manualFlushing;
 
+            ForceConstantCompressionAcceleration(options);
+
             return options;
         }
 
