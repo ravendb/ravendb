@@ -197,21 +197,23 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
         
         [RavenAction("/admin/logs/microsoft/enable", "POST", AuthorizationStatus.Operator)]
-        public async Task EnableMicrosoftLog()
+        public Task EnableMicrosoftLog()
         {
             var provider = Server.GetService<MicrosoftLoggingProvider>();
             provider.ApplyConfiguration();
 
             NoContentStatus();
+            return Task.CompletedTask;
         }
         
         [RavenAction("/admin/logs/microsoft/disable", "POST", AuthorizationStatus.Operator)]
-        public async Task DisableMicrosoftLog()
+        public Task DisableMicrosoftLog()
         {
             var provider = Server.GetService<MicrosoftLoggingProvider>();
             provider.DisableLogging();
 
             NoContentStatus();
+            return Task.CompletedTask;
         }
     }
 }
