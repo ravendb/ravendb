@@ -79,6 +79,8 @@ namespace Raven.Server.ServerWide.Context
 
         public override long AllocatedMemory => _arenaAllocator.Allocated + Allocator._totalAllocated;
 
+        public override long UsedMemory => _arenaAllocator.TotalUsed + Allocator._currentlyAllocated;
+
         public bool HasTransaction => Transaction != null && Transaction.Disposed == false;
 
         public short TransactionMarkerOffset;
