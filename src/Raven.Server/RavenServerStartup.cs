@@ -44,7 +44,7 @@ namespace Raven.Server
     {
         private RequestRouter _router;
         private RavenServer _server;
-        private int _requestId;
+        private long _requestId;
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("Server");
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
