@@ -23,8 +23,12 @@ namespace InterversionTests
 {
     public class SmugglerTests : InterversionTestBase
     {
-        const string Server42Version = "4.2.102-nightly-20200415-0501";
+        const string Server42Version = "4.2.124-nightly-20230112-0944";
         readonly TimeSpan _operationTimeout = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromMinutes(1);
+        private readonly DatabaseItemType _operateOnTypes42 = ~(DatabaseItemType.TimeSeries| DatabaseItemType.ReplicationHubCertificates);
+        private readonly DatabaseRecordItemType _operateOnRecordTypes42 = ~(DatabaseRecordItemType.TimeSeries | DatabaseRecordItemType.DocumentsCompression |
+                                                                   DatabaseRecordItemType.OlapConnectionStrings | DatabaseRecordItemType.OlapEtls |
+                                                                   DatabaseRecordItemType.Analyzers | DatabaseRecordItemType.LockMode);
         
         public enum ExcludeOn
         {
@@ -61,7 +65,8 @@ namespace InterversionTests
 
             //Export
             var exportOptions = new DatabaseSmugglerExportOptions();
-            exportOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
+            exportOptions.OperateOnTypes &= _operateOnTypes42;
+            exportOptions.OperateOnDatabaseRecordTypes &= _operateOnRecordTypes42;
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await store42.Smuggler.ExportAsync(exportOptions, file);
@@ -192,7 +197,8 @@ namespace InterversionTests
             
             //Export
             var exportOptions = new DatabaseSmugglerExportOptions();
-            exportOptions.OperateOnTypes &= ~DatabaseItemType.TimeSeries;
+            exportOptions.OperateOnTypes &= _operateOnTypes42;
+            exportOptions.OperateOnDatabaseRecordTypes &= _operateOnRecordTypes42;
             if (excludeOn == ExcludeOn.Export)
                 exportOptions.OperateOnTypes &= ~(DatabaseItemType.Attachments | DatabaseItemType.RevisionDocuments | DatabaseItemType.CounterGroups);
             var exportOperation = await exportStore42.Smuggler.ExportAsync(exportOptions, file);
@@ -301,7 +307,7 @@ namespace InterversionTests
                 await session.SaveChangesAsync();
             }
 
-            var operation = await Migrate(storeCurrent, store42, DatabaseItemType.TimeSeries);
+            var operation = await Migrate(storeCurrent, store42, _operateOnTypes42);
             await operation.WaitForCompletionAsync(_operationTimeout);
 
             var fromStat = await storeCurrent.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -324,9 +330,12 @@ namespace InterversionTests
         private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType exclude = DatabaseItemType.None)
         {
             using var client = new HttpClient();
-            var url = $"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}";
+            var url = new Uri($"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}");
             var rawVersionRespond = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
             var versionRespond = JsonConvert.DeserializeObject<BuildInfo>(rawVersionRespond);
+            var operateOnTypes = DatabaseSmugglerOptions.DefaultOperateOnTypes;
+            if (exclude != DatabaseItemType.None)
+                operateOnTypes &= exclude;
 
             var configuration = new SingleDatabaseMigrationConfiguration
             {
@@ -335,7 +344,7 @@ namespace InterversionTests
                 BuildMajorVersion = versionRespond.MajorVersion,
                 MigrationSettings = new DatabaseMigrationSettings
                 {
-                    DatabaseName = @from.Database, OperateOnTypes = DatabaseSmugglerOptions.DefaultOperateOnTypes & ~exclude
+                    DatabaseName = @from.Database, OperateOnTypes = operateOnTypes
                 }
             };
 

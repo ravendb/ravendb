@@ -5,6 +5,7 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
+using xRetry;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -62,7 +63,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public void AdditionalAssemblies_NuGet()
         {
             using (var store = GetDocumentStore())
@@ -83,7 +84,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public void AdditionalAssemblies_NuGet_InvalidName()
         {
             using (var store = GetDocumentStore())
@@ -106,7 +107,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public void AdditionalAssemblies_NuGet_InvalidSource()
         {
             using (var store = GetDocumentStore())
@@ -129,7 +130,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RetryFact(delayBetweenRetriesMs: 1000)]
         public void AdditionalAssemblies_NuGet_Live()
         {
             using (var store = GetDocumentStore())
