@@ -43,3 +43,7 @@ $font-size-xs: math.round($font-size-base * 0.7) !default;
 
 $border-width: 1px;
 $btn-border-width: 2px;
+
+$global-easing: cubic-bezier(0, 0.5, 0.5, 1);
+$global-easing-in-out: cubic-bezier(0.6, 0, 0.6, 1);
+$global-easing-out: cubic-bezier(0.5, 0, 1, 0.5);

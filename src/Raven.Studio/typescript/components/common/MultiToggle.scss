@@ -1,0 +1,291 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+//RADIO TOGGLE STYLES
+
+@use "sass:math";
+
+$toggle-label-fontsize: 0.75em !default;
+
+$toggle-baseheight: 35px !default;
+$toggle-bg: colors.$well-bg !default;
+$toggle-color: colors.$text-color !default;
+$toggle-hover-color: colors.$text-emphasis-color !default;
+$toggle-icon-size: 21px !default;
+$toggle-width-scale: 2.1 !default;
+
+$toggle-knob-highlight-color: colors.$text-emphasis-color !default;
+$toggle-knob-muted-color: colors.$text-muted-color !default;
+
+$toggle-knob-bg: colors.$primary !default;
+$toggle-knob-scale: 0.8 !default;
+
+$toggle-knob-hover-bg: colors.$primary !default;
+$toggle-knob-hover-scale: 0.9 !default;
+
+.radio-toggle {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    color: $toggle-knob-muted-color;
+    font-weight: bolder;
+
+    .toggle-knob {
+        align-self: center;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        cursor: pointer;
+        flex-shrink: 0;
+        order: 2;
+
+        background: $toggle-bg;
+        border-radius: $toggle-baseheight;
+        height: $toggle-baseheight;
+        width: $toggle-baseheight * $toggle-width-scale;
+
+        i {
+            position: relative;
+            z-index: 1;
+            height: $toggle-baseheight;
+            width: $toggle-baseheight;
+            font-size: $toggle-icon-size;
+            text-align: center;
+            transition: color 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        &::after {
+            content: "";
+            position: absolute;
+            background-color: $toggle-knob-bg;
+            width: $toggle-baseheight;
+            height: $toggle-baseheight;
+            border-radius: $toggle-baseheight;
+            transform: scale($toggle-knob-scale);
+            left: 0;
+            transition: 0.2s all sizes.$global-easing-in-out;
+        }
+    }
+
+    label {
+        height: $toggle-baseheight;
+        line-height: $toggle-baseheight;
+        flex-basis: 50%;
+        flex-grow: 1;
+        color: $toggle-knob-muted-color;
+        cursor: pointer;
+        text-transform: uppercase;
+        font-size: $toggle-label-fontsize;
+        letter-spacing: 0.13em;
+        display: block;
+        margin: 0;
+
+        &:hover {
+            color: $toggle-hover-color;
+        }
+
+        &:first-of-type {
+            order: 0;
+            text-align: right;
+            padding-right: sizes.$gutter-sm;
+        }
+
+        &:last-of-type {
+            order: 3;
+            text-align: left;
+            padding-left: sizes.$gutter-sm;
+        }
+    }
+
+    input {
+        position: absolute;
+        opacity: 0;
+        height: $toggle-baseheight;
+        width: $toggle-baseheight * $toggle-width-scale;
+        padding: 0;
+        z-index: 2;
+        margin: 0;
+        display: block;
+        left: 50%;
+        transform: translateX(-50%);
+        cursor: pointer;
+
+        //hover on toggle input
+        &:hover ~ .toggle-knob::after {
+            transform: scale($toggle-knob-hover-scale);
+            background-color: $toggle-knob-hover-bg;
+        }
+
+        &:checked {
+            z-index: 1; // move the active input to bottom
+            pointer-events: none;
+
+            & + label {
+                color: $toggle-knob-highlight-color;
+            }
+        }
+
+        &:first-of-type {
+            //First radio is active
+            &:checked {
+                & ~ .toggle-knob {
+                    i {
+                        &:first-of-type {
+                            color: $toggle-knob-highlight-color;
+                        }
+                        &:last-of-type {
+                            color: $toggle-knob-muted-color;
+                        }
+                    }
+                }
+            }
+        }
+
+        &:last-of-type {
+            //Second radio is active
+            &:checked {
+                & ~ .toggle-knob {
+                    i {
+                        &:first-of-type {
+                            color: $toggle-knob-muted-color;
+                        }
+                        &:last-of-type {
+                            color: $toggle-knob-highlight-color;
+                        }
+                    }
+
+                    &:after {
+                        left: 100% - math.div(100%, $toggle-width-scale);
+                    }
+                }
+            }
+        }
+    }
+}
+
+//RADIO MULTI TOGGLE STYLES
+
+$multi-toggle-label-fontsize: $toggle-label-fontsize !default;
+
+$multi-toggle-baseheight: $toggle-baseheight !default;
+
+$multi-toggle-border-radius: $toggle-baseheight !default;
+$multi-toggle-bg: $toggle-bg !default;
+$multi-toggle-color: $toggle-color !default;
+$multi-toggle-hover-color: $toggle-hover-color !default;
+
+$multi-toggle-knob-highlight-color: $toggle-knob-highlight-color !default;
+$multi-toggle-knob-muted-color: $toggle-knob-muted-color !default;
+
+$multi-toggle-knob-bg: $toggle-knob-bg !default;
+$multi-toggle-knob-muted-bg: colors.$panel-header-bg !default;
+$multi-toggle-knob-scale: $toggle-knob-scale !default;
+
+$multi-toggle-knob-hover-bg: $toggle-knob-hover-bg !default;
+
+.multi-toggle {
+    background: $multi-toggle-bg;
+    border-radius: $multi-toggle-border-radius;
+    display: inline-flex;
+    height: $multi-toggle-baseheight;
+    color: $multi-toggle-knob-muted-color;
+    //padding: sizes.$gutter-xxs * 0.5;
+    font-weight: 800;
+
+    .multi-toggle-item {
+        display: flex;
+        position: relative;
+        & + .multi-toggle-item {
+            margin-left: sizes.$gutter-xxs * -0.5;
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            color: $multi-toggle-knob-muted-color;
+
+            font-size: $multi-toggle-label-fontsize;
+            letter-spacing: 0.07em;
+            line-height: 1.1em;
+            padding: 0 sizes.$gutter-xs;
+            position: relative;
+            transition: all 0.6s sizes.$global-easing;
+            margin: sizes.$gutter-xxs * 0.5;
+
+            span {
+                position: relative;
+                z-index: 1;
+            }
+
+            &::after {
+                content: "";
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                border-radius: $multi-toggle-border-radius;
+                background-color: $multi-toggle-knob-bg;
+                top: 0;
+                left: 0;
+                z-index: 0;
+                opacity: 0;
+                transform: scale($multi-toggle-knob-scale);
+                transition: all 0.1s sizes.$global-easing;
+            }
+        }
+
+        input[type="radio"],
+        input[type="checkbox"] {
+            opacity: 0;
+            position: absolute;
+            cursor: pointer;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+
+            &:hover + label {
+                color: $multi-toggle-hover-color !important;
+
+                &:after {
+                    opacity: 1;
+                    background-color: $multi-toggle-knob-hover-bg !important;
+                    transform: scale(1);
+                }
+            }
+
+            &:checked {
+                & + label {
+                    color: $multi-toggle-knob-highlight-color !important;
+
+                    &:after {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                }
+            }
+        }
+
+        input[type="checkbox"] {
+            &:hover + label::after {
+                background-color: rgba($multi-toggle-knob-hover-bg, 0.75) !important;
+            }
+            &:checked {
+                & + label {
+                    &:after {
+                        background-color: rgba($multi-toggle-knob-hover-bg, 1) !important;
+                    }
+                }
+            }
+        }
+    }
+    &:hover .multi-toggle-item input[type="radio"] + label {
+        color: $multi-toggle-color;
+
+        &::after {
+            background-color: $multi-toggle-knob-muted-bg;
+        }
+    }
+}
