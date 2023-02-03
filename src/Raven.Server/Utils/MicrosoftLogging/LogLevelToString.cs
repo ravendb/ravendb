@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Raven.Server.Utils.MicrosoftLogging;
 
-public static class LogLeveToString
+public static class LogLevelToString
 {
     private const string Trace          = nameof(LogLevel.Trace);
     private const string Debug          = nameof(LogLevel.Debug);
