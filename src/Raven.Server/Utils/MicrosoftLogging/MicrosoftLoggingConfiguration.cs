@@ -68,7 +68,11 @@ public class MicrosoftLoggingConfiguration : IEnumerable<(string Category, LogLe
         catch (Exception e)
         {
             if (e is FileNotFoundException)
-                return ;
+            {
+                //If the code run on server startup the notification center is not initialized 
+                _ = _notificationCenter.InitializeTask.ContinueWith(task => task.Result.Dismiss(_notificationId));
+                return;
+            }
 
             var msg = $"Failed to open microsoft configuration file. FilePath:\"{configurationPath}\"";
             var alert = CreateAlert(msg, e);
