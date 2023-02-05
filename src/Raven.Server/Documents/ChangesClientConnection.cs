@@ -812,6 +812,7 @@ namespace Raven.Server.Documents
             return new DynamicJsonValue
             {
                 ["Id"] = Id,
+                ["PendingMessagesCount"] = _sendQueue.Count,
                 ["State"] = _webSocket.State.ToString(),
                 ["CloseStatus"] = _webSocket.CloseStatus,
                 ["CloseStatusDescription"] = _webSocket.CloseStatusDescription,
