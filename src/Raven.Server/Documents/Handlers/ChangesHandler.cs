@@ -73,16 +73,23 @@ namespace Raven.Server.Documents.Handlers
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
+
+                var connectionValues = Database.Changes.Connections.Values;
+
+                writer.WritePropertyName("NumberOfConnections");
+                writer.WriteInteger(connectionValues.Count);
+                writer.WriteComma();
+
                 writer.WritePropertyName("Connections");
 
                 writer.WriteStartArray();
                 var first = true;
-                foreach (var connection in Database.Changes.Connections)
+                foreach (var connectionValue in connectionValues)
                 {
                     if (first == false)
                         writer.WriteComma();
                     first = false;
-                    context.Write(writer, connection.Value.GetDebugInfo());
+                    context.Write(writer, connectionValue.GetDebugInfo());
                 }
                 writer.WriteEndArray();
 
