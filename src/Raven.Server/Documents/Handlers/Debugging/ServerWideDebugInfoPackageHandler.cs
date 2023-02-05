@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
@@ -108,8 +109,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             var timeoutInSecPerNode = GetIntValueQueryString("timeoutInSecPerNode", false) ?? 60;
             var clusterOperationToken = CreateOperationToken();
+            var type = GetStringValuesQueryString("type", false);
+            var databases = GetStringValuesQueryString("databases", required: false);
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
-            
+
             await ServerStore.Operations.AddOperation(null, "Created debug package for all cluster nodes", Operations.Operations.OperationType.DebugPackage, async _ =>
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
@@ -121,7 +124,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             try
                             {
-                                await WriteDebugInfoPackageForNodeAsync(jsonOperationContext, archive, tag, url, clusterOperationToken, timeoutInSecPerNode);
+                                await WriteDebugInfoPackageForNodeAsync(jsonOperationContext, archive, tag, url, clusterOperationToken, timeoutInSecPerNode, databases, type);
                             }
                             catch (Exception e)
                             {
@@ -138,7 +141,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }, operationId, token: clusterOperationToken);
         }
 
-        private async Task WriteDebugInfoPackageForNodeAsync(JsonOperationContext context, ZipArchive archive, string tag, string url, OperationCancelToken clusterOperationToken, int timeoutInSecPerNode)
+        private async Task WriteDebugInfoPackageForNodeAsync(JsonOperationContext context, ZipArchive archive, string tag, string url, OperationCancelToken clusterOperationToken, int timeoutInSecPerNode, StringValues databases, string type)
         {
             //note : theoretically GetDebugInfoFromNodeAsync() can throw, error handling is done at the level of WriteDebugInfoPackageForNodeAsync() calls
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
@@ -146,7 +149,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var nextOperationId = new GetNextServerOperationIdCommand();
                 await requestExecutor.ExecuteAsync(nextOperationId, context);
 
-                await using (var responseStream = await GetDebugInfoFromNodeAsync(context, requestExecutor, nextOperationId.Result, clusterOperationToken, timeoutInSecPerNode))
+                await using (var responseStream = await GetDebugInfoFromNodeAsync(context, requestExecutor, nextOperationId.Result, clusterOperationToken, timeoutInSecPerNode, databases, type))
                 {
                     var entry = archive.CreateEntry($"Node - [{tag}].zip");
                     entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
@@ -167,6 +170,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             HttpContext.Response.Headers["Content-Type"] = "application/zip";
 
+            var debugInfoType = GetDebugInfoType();
+            var databases = GetStringValuesQueryString("databases", required: false);
             var operationId = GetLongQueryString("operationId", false) ?? ServerStore.Operations.GetNextOperationId();
             var token = CreateOperationToken();
 
@@ -181,9 +186,24 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             var localEndpointClient = new LocalEndpointClient(Server);
 
-                            await WriteServerInfo(archive, context, localEndpointClient, token.Token);
-                            await WriteForAllLocalDatabases(archive, context, localEndpointClient, token.Token);
-                            await WriteLogFile(archive, token.Token);
+                            switch (debugInfoType)
+                            {
+                                case DebugInfoNeeded.Default:
+                                    await WriteServerInfo(archive, context, localEndpointClient, token.Token);
+                                    await WriteForAllLocalDatabases(archive, context, localEndpointClient, databases, token: token.Token);
+                                    await WriteLogFile(archive, token.Token);
+                                    break;
+
+                                case DebugInfoNeeded.OnlyServerWide:
+                                    await WriteServerInfo(archive, context, localEndpointClient, token.Token);
+                                    await WriteLogFile(archive, token.Token);
+                                    break;
+
+                                case DebugInfoNeeded.NoServerWide:
+                                    await WriteForAllLocalDatabases(archive, context, localEndpointClient, databases, token: token.Token);
+                                    break;
+                            }
+
                         }
                         catch (Exception e)
                         {
@@ -199,6 +219,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }, operationId, token: token);
         }
 
+        private DebugInfoNeeded GetDebugInfoType()
+        {
+            DebugInfoNeeded debugInfoType;
+            var type = GetStringValuesQueryString("type", false).FirstOrDefault();
+
+            if (string.IsNullOrEmpty(type))
+                return DebugInfoNeeded.Default;
+
+            if (Enum.TryParse(type, out debugInfoType) == false)
+                throw new ArgumentException($"Query string '{type}' was not recognized as valid type");
+
+            return debugInfoType;
+        }
+
         private static async Task WriteLogFile(ZipArchive archive, CancellationToken token)
         {
             var prefix = $"{_serverWidePrefix}/{DateTime.UtcNow:yyyy-MM-dd H-mm-ss}.log";
@@ -212,7 +246,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     token.ThrowIfCancellationRequested();
 
                     LoggingSource.Instance.AttachPipeSink(entryStream);
-                    
+
                     await Task.Delay(15000, token);
                 }
                 catch (Exception e)
@@ -227,9 +261,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext context, RequestExecutor requestExecutor, long operationId, OperationCancelToken token, int timeoutInSec)
+        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext context, RequestExecutor requestExecutor, long operationId, OperationCancelToken token, int timeoutInSec, StringValues databases, string type)
         {
-            var rawStreamCommand = new GetRawStreamResultCommand($"/admin/debug/info-package?operationId={operationId}");
+            string databasesAsString = string.IsNullOrEmpty(databases) ? string.Empty : "&databases=" + string.Join("&databases=", databases);
+            var rawStreamCommand = new GetRawStreamResultCommand($"/admin/debug/info-package?operationId={operationId}{databasesAsString}&type={type}");
             var requestExecutionTask = requestExecutor.ExecuteAsync(rawStreamCommand, context);
 
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token.Token))
@@ -269,12 +304,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task WriteForAllLocalDatabases(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, CancellationToken token)
+        private async Task WriteForAllLocalDatabases(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, StringValues databases, CancellationToken token)
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                foreach (var databaseName in ServerStore.Cluster.GetDatabaseNames(context))
+                foreach (var databaseName in GetDatabases())
                 {
                     using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
                     {
@@ -291,6 +326,18 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         await WriteDatabaseInfo(archive, jsonOperationContext, localEndpointClient, databaseName, token);
                     }
+                }
+
+                HashSet<string> GetDatabases()
+                {
+                    var allDatabases = ServerStore.Cluster.GetDatabaseNames(context);
+
+                    if (string.IsNullOrEmpty(databases) == false && databases.Any())
+                    {
+                        return allDatabases.Intersect(databases).ToHashSet();
+                    }
+
+                    return allDatabases.ToHashSet();
                 }
             }
         }
@@ -322,7 +369,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         private async Task WriteForServerOrDatabase(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, RouteInformation.RouteType routeType, string path, string databaseName, Dictionary<string, Microsoft.Extensions.Primitives.StringValues> endpointParameters = null, CancellationToken token = default)
         {
             var debugInfoDict = new Dictionary<string, TimeSpan>();
-            
+
             var routes = DebugInfoPackageUtils.GetAuthorizedRoutes(Server, HttpContext, databaseName).Where(x => x.TypeOfRoute == routeType);
 
             var id = Guid.NewGuid();
@@ -451,6 +498,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string FromUrl { get; set; }
 
             public List<string> DatabaseNames { get; set; }
+        }
+
+        public enum DebugInfoNeeded
+        {
+            OnlyServerWide,
+            NoServerWide,
+            Default
         }
     }
 }
