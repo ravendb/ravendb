@@ -67,7 +67,7 @@ namespace SlowTests.Issues
             }
         }
 
-        public class Doc
+        private class Doc
         {
             public string Id { get; set; }
             public int NumVal { get; set; }
