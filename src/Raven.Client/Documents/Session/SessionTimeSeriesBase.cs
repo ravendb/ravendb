@@ -128,41 +128,21 @@ namespace Raven.Client.Documents.Session
 
         private void RemoveFromCacheIfNeeded(DateTime? from = null, DateTime? to = null)
         {
-            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache))
+            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
+                return;
+
+            if (from == null && to == null)
             {
-                if (from == null && to == null)
-                {
-                    cache.Remove(Name);
-                }
-                else if (cache.TryGetValue(Name, out var ranges) && ranges.Count > 0)
-                {
-                    var rangesToDelete = new List<TimeSeriesRangeResult>();
-                    foreach (var range in ranges)
-                    {
-                        if (from == null) // to != null
-                        {
-                            if (range.From > to)
-                                continue;
+                cache.Remove(Name);
+                return;
+            }
 
-                            rangesToDelete.Add(range);
-                            continue;
-                        }
-                        if (to == null) // from != null
-                        {
-                            if (range.To < from)
-                                continue;
+            if (cache.TryGetValue(Name, out var ranges) && ranges.Count > 0)
+            {
+                from ??= DateTime.MinValue;
+                to ??= DateTime.MaxValue;
 
-                            rangesToDelete.Add(range);
-                            continue;
-                        }
-
-                        if (range.From <= from && range.To >= to)
-                            rangesToDelete.Add(range);
-                    }
-
-                    foreach (var range in rangesToDelete)
-                        ranges.Remove(range);
-                }
+                ranges.RemoveAll(range => range.From <= from && range.To >= to);
             }
         }
 
