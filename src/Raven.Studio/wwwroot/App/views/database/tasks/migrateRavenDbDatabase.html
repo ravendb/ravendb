@@ -193,7 +193,13 @@
                                 </div>
                                 <div class="margin-left margin-left-lg">
                                     <div class="toggle">
-                                        <input id="migrate_remove_analyzers" type="checkbox" data-bind="checked: removeAnalyzers" />
+                                        <input id="toggleIndexHistory" type="checkbox"
+                                               data-bind="checked: databaseModel.includeIndexHistory, enable: includeIndexes" />
+                                        <label for="toggleIndexHistory">Include Index History</label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="migrate_remove_analyzers" type="checkbox"
+                                               data-bind="checked: removeAnalyzers, enable: includeIndexes" />
                                         <label for="migrate_remove_analyzers">Remove Analyzers</label>
                                     </div>
                                 </div>
