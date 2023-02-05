@@ -4,6 +4,7 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
+using Sparrow.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -38,14 +39,19 @@ namespace FastTests.Server
                     var threadsInfo = threadsUsage.Calculate();
                     var threadNames = threadsInfo.List.Select(ti => ti.Name).OrderBy(n => n).ToArray();
 
+                    ThreadNames.FullThreadNames.TryGetValue(index1._indexingThread.ManagedThreadId, out var index1FullName);
+                    ThreadNames.FullThreadNames.TryGetValue(index2._indexingThread.ManagedThreadId, out var index2FullName);
+                    ThreadNames.FullThreadNames.TryGetValue(index3._indexingThread.ManagedThreadId, out var index3FullName);
+
                     RavenTestHelper.AssertAll(() => string.Join('\n', threadNames.Select(s => $"\"{s}\"")),
-                        () => AssertContains(index1._indexingThread.Name),
-                        () => AssertContains(index2._indexingThread.Name),
-                        () => AssertContains(index3._indexingThread.Name));
+                        () => AssertContains(index1FullName),
+                        () => AssertContains(index2FullName),
+                        () => AssertContains(index3FullName));
 
                     break;
                     void AssertContains(string threadName) => Assert.True(threadNames.Contains(threadName), $"Not found : {threadName}");
                 }
+
                 catch
                 {
                     if(i >= 5)
