@@ -13,6 +13,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents
 {
@@ -574,7 +575,26 @@ namespace Raven.Server.Documents
                             break;
 
                         ms.TryGetBuffer(out ArraySegment<byte> bytes);
-                        await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken);
+
+                        var sendTask = _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken);
+                        var waitTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(15), _disposeToken);
+
+                        if (Task.WaitAny(sendTask, waitTask) == 1)
+                        {
+                            if (_disposeToken.IsCancellationRequested)
+                                break;
+
+                            try
+                            {
+                                _cts.Cancel();
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                // the connection was already closed
+                            }
+
+                            throw new TimeoutException("Waited for 15 seconds to send a message to the client but was unsuccessful, will let the client reconnect again");
+                        }
                     }
                 }
             }
