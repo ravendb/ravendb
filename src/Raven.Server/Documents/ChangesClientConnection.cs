@@ -911,5 +911,10 @@ namespace Raven.Server.Documents
                 };
             }
         }
+
+        public void ClearSendQueue()
+        {
+            _sendQueue.Clear();
+        }
     }
 }

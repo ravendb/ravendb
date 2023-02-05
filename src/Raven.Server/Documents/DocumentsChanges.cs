@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents
 {
-    public class DocumentsChanges
+    public class DocumentsChanges : ILowMemoryHandler
     {
         public readonly ConcurrentDictionary<long, ChangesClientConnection> Connections = new ConcurrentDictionary<long, ChangesClientConnection>();
 
@@ -20,6 +22,11 @@ namespace Raven.Server.Documents
         public event Action<OperationStatusChange> OnOperationStatusChange;
 
         public event Action<TopologyChange> OnTopologyChange;
+
+        public DocumentsChanges()
+        {
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+        }
 
         public void RaiseNotifications(TopologyChange topologyChange)
         {
@@ -89,6 +96,21 @@ namespace Raven.Server.Documents
         {
             if (Connections.TryRemove(id, out ChangesClientConnection connection))
                 connection.Dispose();
+        }
+
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
+        {
+            if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
+                return;
+
+            foreach (KeyValuePair<long, ChangesClientConnection> keyValue in Connections)
+            {
+                keyValue.Value.ClearSendQueue();
+            }
+        }
+
+        public void LowMemoryOver()
+        {
         }
     }
 }
