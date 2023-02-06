@@ -407,5 +407,10 @@ namespace Sparrow.Json
             DocumentNumber++;
             PropertiesDiscovered = 0;
         }
+
+        public bool NeedClearPropertiesCache()
+        {
+            return PropertiesDiscovered > CachedPropertiesSize;
+        }
     }
 }
