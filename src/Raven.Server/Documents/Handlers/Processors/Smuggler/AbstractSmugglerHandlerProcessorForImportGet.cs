@@ -79,8 +79,4 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportGet<TRequestHan
 
         return HttpContext.Request.Body;
     }
-
-    public async void test()
-    {
-    }
 }
