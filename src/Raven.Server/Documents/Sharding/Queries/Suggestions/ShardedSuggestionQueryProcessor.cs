@@ -1,10 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Commands.Querying;
@@ -17,15 +15,11 @@ namespace Raven.Server.Documents.Sharding.Queries.Suggestions;
 
 public class ShardedSuggestionQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryCommand, QueryResult, SuggestionQueryResult>
 {
-    private readonly long? _existingResultEtag;
 
-    private readonly string _raftUniqueRequestId;
 
     public ShardedSuggestionQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query,
-        long? existingResultEtag, CancellationToken token) : base(context, requestHandler, query, metadataOnly: false,  indexEntriesOnly: false, token)
+        long? existingResultEtag, CancellationToken token) : base(context, requestHandler, query, metadataOnly: false,  indexEntriesOnly: false, existingResultEtag, token)
     {
-        _existingResultEtag = existingResultEtag;
-        _raftUniqueRequestId = _requestHandler.GetRaftRequestIdFromQuery() ?? RaftIdGenerator.NewId();
     }
 
     public override async Task<SuggestionQueryResult> ExecuteShardedOperations()
@@ -34,7 +28,7 @@ public class ShardedSuggestionQueryProcessor : AbstractShardedQueryProcessor<Sha
 
         Dictionary<string, SuggestionField> fieldsWithOptions = null;
 
-        foreach (var field in _query.Metadata.SelectFields)
+        foreach (var field in Query.Metadata.SelectFields)
         {
             if (field is SuggestionField {HasOptions: true} suggestionField)
             {
@@ -44,9 +38,11 @@ public class ShardedSuggestionQueryProcessor : AbstractShardedQueryProcessor<Sha
             }
         }
 
-        var operation = new ShardedSuggestionQueryOperation(fieldsWithOptions, _query.QueryParameters, _context, _requestHandler, commands, _existingResultEtag?.ToString());
+        var operation = new ShardedSuggestionQueryOperation(fieldsWithOptions, Query.QueryParameters, Context, RequestHandler, commands, ExistingResultEtag?.ToString());
 
-        var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(commands.Keys.ToArray(), operation, _token);
+        var shards = GetShardNumbers(commands);
+
+        var shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
 
         if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
         {
@@ -60,9 +56,5 @@ public class ShardedSuggestionQueryProcessor : AbstractShardedQueryProcessor<Sha
         return result;
     }
 
-    protected override ShardedQueryCommand CreateCommand(BlittableJsonReaderObject query)
-    {
-        return new ShardedQueryCommand(_context.ReadObject(query, "query"), _query, _metadataOnly, _indexEntriesOnly, _query.Metadata.IndexName,
-            canReadFromCache: _existingResultEtag != null, raftUniqueRequestId: _raftUniqueRequestId);
-    }
+    protected override ShardedQueryCommand CreateCommand(BlittableJsonReaderObject query) => CreateShardedQueryCommand(query);
 }

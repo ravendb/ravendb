@@ -10,9 +10,10 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Sharding;
+using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
@@ -27,34 +28,75 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 {
     const string LimitToken = "__raven_limit";
 
-    protected readonly TransactionOperationContext _context;
-    protected readonly ShardedDatabaseRequestHandler _requestHandler;
-    protected readonly IndexQueryServerSide _query;
-    protected readonly bool _metadataOnly;
-    protected readonly bool _indexEntriesOnly;
-    protected readonly CancellationToken _token;
-
-    protected readonly bool _isMapReduceIndex;
-    protected readonly bool _isAutoMapReduceQuery;
-
     private Dictionary<int, BlittableJsonReaderObject> _queryTemplates;
     private Dictionary<int, TCommand> _commands;
+    private readonly bool _metadataOnly;
+    private readonly bool _indexEntriesOnly;
+    private readonly string _raftUniqueRequestId;
+    private readonly HashSet<int> _filteredShardIndexes;
+
+    protected readonly TransactionOperationContext Context;
+    protected readonly ShardedDatabaseRequestHandler RequestHandler;
+    protected readonly IndexQueryServerSide Query;
+    protected readonly CancellationToken Token;
+    protected readonly bool IsMapReduceIndex;
+    protected readonly bool IsAutoMapReduceQuery;
+    protected readonly long? ExistingResultEtag;
 
     protected AbstractShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, bool metadataOnly, bool indexEntriesOnly,
-        CancellationToken token)
+        long? existingResultEtag, CancellationToken token)
     {
-        _requestHandler = requestHandler;
-        _query = query;
+        RequestHandler = requestHandler;
+        Query = query;
         _metadataOnly = metadataOnly;
         _indexEntriesOnly = indexEntriesOnly;
-        _token = token;
-        _context = context;
+        Token = token;
+        Context = context;
+        ExistingResultEtag = existingResultEtag;
 
-        _isMapReduceIndex = _query.Metadata.IndexName != null && (_requestHandler.DatabaseContext.Indexes.GetIndex(_query.Metadata.IndexName)?.Type.IsMapReduce() ?? false);
-        _isAutoMapReduceQuery = _query.Metadata.IsDynamic && _query.Metadata.IsGroupBy;
+        IsMapReduceIndex = Query.Metadata.IndexName != null && (RequestHandler.DatabaseContext.Indexes.GetIndex(Query.Metadata.IndexName)?.Type.IsMapReduce() ?? false);
+        IsAutoMapReduceQuery = Query.Metadata.IsDynamic && Query.Metadata.IsGroupBy;
+
+        _raftUniqueRequestId = RequestHandler.GetRaftRequestIdFromQuery() ?? RaftIdGenerator.NewId();
+
+        if (Query.QueryParameters != null && Query.QueryParameters.TryGetMember(Constants.Documents.Querying.Sharding.ShardContextParameterName, out object filter))
+        {
+            // User can define a query parameter ("__shardContext") which is an id or an array
+            // that contains the ids whose shards the query should be limited to.
+            // Advanced: Optimization if user wants to run a query and knows what shards it is on. Such as:
+            // from Orders where State = $state and User = $user where all the orders are on the same share as the user
+
+            _filteredShardIndexes = new HashSet<int>();
+            switch (filter)
+            {
+                case LazyStringValue id:
+                    _filteredShardIndexes.Add(RequestHandler.DatabaseContext.GetShardNumberFor(context, id));
+                    break;
+                case BlittableJsonReaderArray arr:
+                {
+                    for (int i = 0; i < arr.Length; i++)
+                    {
+                        var it = arr.GetStringByIndex(i);
+                        _filteredShardIndexes.Add(RequestHandler.DatabaseContext.GetShardNumberFor(context, it));
+                    }
+                    break;
+                }
+                default:
+                    throw new NotSupportedException($"Unknown type of a shard context query parameter: {filter.GetType().Name}");
+            }
+        }
+        else
+        {
+            _filteredShardIndexes = null;
+        }
     }
 
     public abstract Task<TCombinedResult> ExecuteShardedOperations();
+
+    protected int[] GetShardNumbers(Dictionary<int, TCommand> commands)
+    {
+        return _filteredShardIndexes == null ? commands.Keys.ToArray() : commands.Keys.Intersect(_filteredShardIndexes).ToArray();
+    }
 
     public virtual ValueTask InitializeAsync()
     {
@@ -66,14 +108,14 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         // - For collection queries without any where clause, we need to send to all shards
         // - For indexes, we sent to all shards
         
-        var queryTemplate = _query.ToJson(_context);
+        var queryTemplate = Query.ToJson(Context);
 
-        if (_query.Metadata.IsCollectionQuery && _query.Metadata.DeclaredFunctions is null or { Count: 0})
+        if (Query.Metadata.IsCollectionQuery && Query.Metadata.DeclaredFunctions is null or { Count: 0})
         {
             // * For collection queries that specify ids, we can turn that into a set of loads that 
             //   will hit the known servers
 
-            (List<Slice> ids, string _) = _query.ExtractIdsFromQuery(_requestHandler.ServerStore, _context.Allocator, _requestHandler.DatabaseContext.DatabaseName);
+            (List<Slice> ids, string _) = Query.ExtractIdsFromQuery(RequestHandler.ServerStore, Context.Allocator, RequestHandler.DatabaseContext.DatabaseName);
 
             if (ids != null)
             {
@@ -85,9 +127,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         {
             RewriteQueryIfNeeded(ref queryTemplate);
 
-            _queryTemplates = new(_requestHandler.DatabaseContext.ShardCount);
+            _queryTemplates = new(RequestHandler.DatabaseContext.ShardCount);
 
-            foreach (var shardNumber in _requestHandler.DatabaseContext.ShardsTopology.Keys)
+            foreach (var shardNumber in RequestHandler.DatabaseContext.ShardsTopology.Keys)
             {
                 _queryTemplates.Add(shardNumber, queryTemplate);
             }
@@ -115,6 +157,12 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     protected abstract TCommand CreateCommand(BlittableJsonReaderObject query);
 
+    protected ShardedQueryCommand CreateShardedQueryCommand(BlittableJsonReaderObject query)
+    {
+        return new ShardedQueryCommand(Context.ReadObject(query, "query"), Query, _metadataOnly, _indexEntriesOnly, Query.Metadata.IndexName,
+            canReadFromCache: ExistingResultEtag != null, _raftUniqueRequestId);
+    }
+
     protected virtual void AssertQueryExecution()
     {
         AssertUsingCustomSorters();
@@ -122,10 +170,10 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     private void AssertUsingCustomSorters()
     {
-        if (_query.Metadata.OrderBy == null)
+        if (Query.Metadata.OrderBy == null)
             return;
 
-        foreach (var field in _query.Metadata.OrderBy)
+        foreach (var field in Query.Metadata.OrderBy)
         {
             if (field.OrderingType == OrderByFieldType.Custom)
                 throw new NotSupportedInShardingException("Custom sorting is not supported in sharding as of yet");
@@ -134,17 +182,17 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     private void RewriteQueryIfNeeded(ref BlittableJsonReaderObject queryTemplate)
     {
-        var rewriteForPaging = _query.Offset is > 0;
+        var rewriteForPaging = Query.Offset is > 0;
         var rewriteForProjection = true;
 
-        var query = _query.Metadata.Query;
+        var query = Query.Metadata.Query;
         if (query.Select?.Count > 0 == false &&
             query.SelectFunctionBody.FunctionText == null)
         {
             rewriteForProjection = false;
         }
 
-        if (_query.Metadata.IndexName == null || _isMapReduceIndex == false)
+        if (Query.Metadata.IndexName == null || IsMapReduceIndex == false)
         {
             rewriteForProjection = false;
         }
@@ -152,7 +200,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         if (rewriteForPaging == false && rewriteForProjection == false)
             return;
 
-        var clone = _query.Metadata.Query.ShallowCopy();
+        var clone = Query.Metadata.Query.ShallowCopy();
 
         DynamicJsonValue modifications = new(queryTemplate);
 
@@ -176,7 +224,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
             }
 
-            var limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * (long)_requestHandler.DatabaseContext.ShardCount;
+            var limit = ((Query.Limit ?? 0) + (Query.Offset ?? 0)) * (long)RequestHandler.DatabaseContext.ShardCount;
 
             if (limit > int.MaxValue) // overflow
                 limit = int.MaxValue;
@@ -208,48 +256,48 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         queryTemplate.Modifications = modifications;
 
-        queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
+        queryTemplate = Context.ReadObject(queryTemplate, "modified-query");
     }
 
     private Dictionary<int, BlittableJsonReaderObject> GenerateLoadByIdQueries(IEnumerable<Slice> ids)
     {
         const string listParameterName = "p0";
 
-        var documentQuery = new DocumentQuery<dynamic>(null, null, _query.Metadata.CollectionName, isGroupBy: false, fromAlias: _query.Metadata.Query.From.Alias?.ToString());
+        var documentQuery = new DocumentQuery<dynamic>(null, null, Query.Metadata.CollectionName, isGroupBy: false, fromAlias: Query.Metadata.Query.From.Alias?.ToString());
         documentQuery.WhereIn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, Enumerable.Empty<object>());
         
         IncludeBuilder includeBuilder = null;
 
-        if (_query.Metadata.Includes is { Length: > 0 })
+        if (Query.Metadata.Includes is { Length: > 0 })
         {
             includeBuilder = new IncludeBuilder
             {
-                DocumentsToInclude = new HashSet<string>(_query.Metadata.Includes)
+                DocumentsToInclude = new HashSet<string>(Query.Metadata.Includes)
             };
         }
 
-        if (_query.Metadata.RevisionIncludes != null)
+        if (Query.Metadata.RevisionIncludes != null)
         {
             includeBuilder ??= new IncludeBuilder();
 
-            includeBuilder.RevisionsToIncludeByChangeVector = _query.Metadata.RevisionIncludes.RevisionsChangeVectorsPaths;
-            includeBuilder.RevisionsToIncludeByDateTime = _query.Metadata.RevisionIncludes.RevisionsBeforeDateTime;
+            includeBuilder.RevisionsToIncludeByChangeVector = Query.Metadata.RevisionIncludes.RevisionsChangeVectorsPaths;
+            includeBuilder.RevisionsToIncludeByDateTime = Query.Metadata.RevisionIncludes.RevisionsBeforeDateTime;
         }
 
-        if (_query.Metadata.TimeSeriesIncludes != null)
+        if (Query.Metadata.TimeSeriesIncludes != null)
         {
             includeBuilder ??= new IncludeBuilder();
 
-            includeBuilder.TimeSeriesToIncludeBySourceAlias = _query.Metadata.TimeSeriesIncludes.TimeSeries;
+            includeBuilder.TimeSeriesToIncludeBySourceAlias = Query.Metadata.TimeSeriesIncludes.TimeSeries;
         }
 
-        if (_query.Metadata.CounterIncludes != null)
+        if (Query.Metadata.CounterIncludes != null)
         {
             includeBuilder ??= new IncludeBuilder();
 
             includeBuilder.CountersToIncludeBySourcePath = new Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var counterIncludes in _query.Metadata.CounterIncludes.Counters)
+            foreach (var counterIncludes in Query.Metadata.CounterIncludes.Counters)
             {
                 var name = counterIncludes.Key;
 
@@ -268,18 +316,18 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         var queryText = documentQuery.ToString();
 
-        if (_query.Metadata.Query.Select is { Count: > 0 })
+        if (Query.Metadata.Query.Select is { Count: > 0 })
         {
-            var selectStartPosition = _query.Metadata.QueryText.IndexOf("select", StringComparison.OrdinalIgnoreCase);
+            var selectStartPosition = Query.Metadata.QueryText.IndexOf("select", StringComparison.OrdinalIgnoreCase);
 
-            var selectClause = _query.Metadata.QueryText.Substring(selectStartPosition);
+            var selectClause = Query.Metadata.QueryText.Substring(selectStartPosition);
 
             queryText += $" {selectClause}";
         }
         
         Dictionary<int, BlittableJsonReaderObject> queryTemplates = new();
 
-        var shards = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, ids);
+        var shards = ShardLocator.GetDocumentIdsByShards(Context, RequestHandler.DatabaseContext, ids);
 
         foreach ((int shardId, ShardLocator.IdsByShard<Slice> documentIds) in shards)
         {
@@ -294,7 +342,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 [nameof(IndexQuery.Query)] = queryText
             };
 
-            queryTemplates[shardId] = _context.ReadObject(q, "query");
+            queryTemplates[shardId] = Context.ReadObject(q, "query");
 
             IEnumerable<string> GetIds()
             {
@@ -310,9 +358,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     protected async Task HandleMissingDocumentIncludes<T, TIncludes>(HashSet<string> missingIncludes, QueryResult<List<T>, List<TIncludes>> result)
     {
-        var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missingIncludes);
-        var missingIncludesOp = new FetchDocumentsFromShardsOperation(_context, _requestHandler, missingIncludeIdsByShard, null, null, counterIncludes: default, null, null, null, _metadataOnly);
-        var missingResult = await _requestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, _token);
+        var missingIncludeIdsByShard = ShardLocator.GetDocumentIdsByShards(Context, RequestHandler.DatabaseContext, missingIncludes);
+        var missingIncludesOp = new FetchDocumentsFromShardsOperation(Context, RequestHandler, missingIncludeIdsByShard, null, null, counterIncludes: default, null, null, null, _metadataOnly);
+        var missingResult = await RequestHandler.DatabaseContext.ShardExecutor.ExecuteParallelForShardsAsync(missingIncludeIdsByShard.Keys.ToArray(), missingIncludesOp, Token);
 
         var blittableIncludes = result.Includes as List<BlittableJsonReaderObject>;
         var documentIncludes = result.Includes as List<Document>;
@@ -345,11 +393,11 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
     protected async Task WaitForRaftIndexIfNeededAsync(long? raftCommandIndex)
     {
-        if (_isAutoMapReduceQuery && raftCommandIndex.HasValue)
+        if (IsAutoMapReduceQuery && raftCommandIndex.HasValue)
         {
             // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
             // so further queries would not throw index does not exist in case of a failover
-            await _requestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(raftCommandIndex.Value, _token);
+            await RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(raftCommandIndex.Value, Token);
         }
     }
 }

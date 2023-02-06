@@ -12,6 +12,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Client.Documents.Session.Querying.Sharding;
 
 namespace Raven.Client.Documents.Session
 {
@@ -184,5 +185,10 @@ namespace Raven.Client.Documents.Session
         ISuggestionDocumentQuery<T> SuggestUsing(SuggestionBase suggestion);
 
         ISuggestionDocumentQuery<T> SuggestUsing(Action<ISuggestionBuilder<T>> builder);
+
+        /// <summary>
+        /// It adds additional shard context to a query so it will be executed only on the relevant shards
+        /// </summary>
+        IDocumentQuery<T> ShardContext(Action<IShardedQueryContextBuilder> builder);
     }
 }

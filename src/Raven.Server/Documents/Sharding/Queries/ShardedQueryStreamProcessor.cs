@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding.Queries
         private readonly bool _ignoreLimit;
 
         public ShardedQueryStreamProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, string debug,
-            bool ignoreLimit, CancellationToken token) : base(context, requestHandler, query, metadataOnly: false, indexEntriesOnly: false, token)
+            bool ignoreLimit, CancellationToken token) : base(context, requestHandler, query, metadataOnly: false, indexEntriesOnly: false, existingResultEtag: null, token)
         {
             _debug = debug;
             _ignoreLimit = ignoreLimit;
@@ -32,10 +32,10 @@ namespace Raven.Server.Documents.Sharding.Queries
         {
             base.AssertQueryExecution();
 
-            if (_isAutoMapReduceQuery || _isMapReduceIndex)
+            if (IsAutoMapReduceQuery || IsMapReduceIndex)
                 throw new NotSupportedInShardingException("MapReduce is not supported in sharded streaming queries");
 
-            if (_query.Metadata.HasIncludeOrLoad)
+            if (Query.Metadata.HasIncludeOrLoad)
                 throw new NotSupportedInShardingException("Includes and Loads are not supported in sharded streaming queries");
         }
 
@@ -43,19 +43,21 @@ namespace Raven.Server.Documents.Sharding.Queries
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
 
-            IComparer<BlittableJsonReaderObject> comparer = _query.Metadata.OrderBy?.Length > 0
-                ? new ShardedDocumentsComparer(_query.Metadata, isMapReduce: false)
+            IComparer<BlittableJsonReaderObject> comparer = Query.Metadata.OrderBy?.Length > 0
+                ? new ShardedDocumentsComparer(Query.Metadata, isMapReduce: false)
                 : new ShardedStreamingHandlerProcessorForGetStreamQuery.DocumentBlittableLastModifiedComparer();
 
             var commands = GetOperationCommands();
 
-            var op = new ShardedStreamQueryOperation(_requestHandler.HttpContext, () =>
+            var op = new ShardedStreamQueryOperation(RequestHandler.HttpContext, () =>
             {
-                IDisposable returnToContextPool = _requestHandler.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
+                IDisposable returnToContextPool = RequestHandler.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
                 return (ctx, returnToContextPool);
-            }, comparer, commands, skip: _query.Offset ?? 0, take: _query.Limit ?? int.MaxValue, _token);
+            }, comparer, commands, skip: Query.Offset ?? 0, take: Query.Limit ?? int.MaxValue, Token);
 
-            return _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(commands.Keys.ToArray(), op, _token);
+            var shards = GetShardNumbers(commands);
+
+            return RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, op, Token);
         }
 
         protected override PostQueryStreamCommand CreateCommand(BlittableJsonReaderObject query)

@@ -8,6 +8,7 @@ using System;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Documents.Session.Querying.Sharding;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -85,5 +86,10 @@ namespace Raven.Client.Documents.Session
         IDocumentQueryCustomization WaitForNonStaleResults(TimeSpan? waitTimeout = null);
 
         IDocumentQueryCustomization Projection(ProjectionBehavior projectionBehavior);
+
+        /// <summary>
+        /// It adds additional shard context to a query so it will be executed only on the relevant shards
+        /// </summary>
+        IDocumentQueryCustomization ShardContext(Action<IShardedQueryContextBuilder> builder);
     }
 }

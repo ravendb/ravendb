@@ -381,6 +381,15 @@ namespace Raven.Client
                 {
                     internal const string PowerBIJsonFieldName = "json()";
                 }
+
+                public class Sharding
+                {
+                    private Sharding()
+                    {
+                    }
+
+                    public const string ShardContextParameterName = "__shardContext";
+                }
             }
 
             public class Encryption
