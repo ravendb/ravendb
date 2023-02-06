@@ -647,7 +647,7 @@ namespace Raven.Server.Web
             }
         }
 
-        protected async Task<bool> IsOperatorAsync()
+        public async Task<bool> IsOperatorAsync()
         {
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var status = feature?.Status;

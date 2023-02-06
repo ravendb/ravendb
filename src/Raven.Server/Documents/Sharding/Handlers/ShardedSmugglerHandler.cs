@@ -1,14 +1,23 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.IO;
+using System.IO.Compression;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Raven.Client.Exceptions.Security;
 using Raven.Server.Documents.Handlers.Processors.Smuggler;
 using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Smuggler;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Data;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedSmugglerHandler : ShardedDatabaseRequestHandler
     {
+        private static readonly HttpClient HttpClient = new HttpClient();
         [RavenShardedAction("/databases/*/smuggler/validate-options", "POST")]
         public async Task ValidateOptions()
         {
@@ -42,7 +51,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/admin/smuggler/import", "GET")]
         public async Task GetImport()
         {
-            using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support Admin Smuggler operations."))
+            using (var processor = new ShardedSmugglerHandlerProcessorForImportGet(this))
                 await processor.ExecuteAsync();
         }
 
