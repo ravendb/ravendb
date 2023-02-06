@@ -60,3 +60,12 @@
         margin-left: 1px;
     }
 }
+
+.small-label {
+    font-size: 0.7rem;
+    color: $text-muted-var;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1.1em;
+    font-weight: 700;
+}
