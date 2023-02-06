@@ -114,17 +114,19 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
                 await using (var ms = new MemoryStream())
-                using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                 {
-                    foreach (var (tag, url) in topology.AllNodes)
+                    using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
-                        try
+                        foreach (var (tag, url) in topology.AllNodes)
                         {
-                            await WriteDebugInfoPackageForNodeAsync(jsonOperationContext, archive, tag, url, clusterOperationToken, timeoutInSecPerNode);
-                        }
-                        catch (Exception e)
-                        {
-                            await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, $"Node - [{ServerStore.NodeTag}]");
+                            try
+                            {
+                                await WriteDebugInfoPackageForNodeAsync(jsonOperationContext, archive, tag, url, clusterOperationToken, timeoutInSecPerNode);
+                            }
+                            catch (Exception e)
+                            {
+                                await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, $"Node - [{ServerStore.NodeTag}]");
+                            }
                         }
                     }
 
