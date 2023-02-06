@@ -1,15 +1,20 @@
 ﻿import React, { ReactNode } from "react";
 
 import "./MultiToggle.scss";
+import useId from "hooks/useId";
 import classNames from "classnames";
 
-interface MultiToggleProps {
-    children?: ReactNode | ReactNode[];
+export interface InputItem {
+    label: string;
+    value: string;
+}
+
+interface ToggleProps {
     className?: string;
 }
 
-export function RadioToggle(props: MultiToggleProps) {
-    const { children, className } = props;
+export function RadioToggle(props: ToggleProps) {
+    const { className } = props;
     return (
         <div className={classNames("radio-toggle", className)}>
             <input type="radio" id="radio-toggle-left-1" name="time-estimation" value="hourly" checked />
@@ -24,67 +29,35 @@ export function RadioToggle(props: MultiToggleProps) {
     );
 }
 
-export function RadioMultiToggle(props: MultiToggleProps) {
-    const { children, className } = props;
-
-    return (
-        <div className={classNames("multi-toggle", className)}>
-            <div className="multi-toggle-item">
-                <input id="1 hour" type="radio" name="timeSpan" value="1 hour" />
-                <label htmlFor="1 hour">
-                    <span>1 Hour</span>
-                </label>
-            </div>
-            <div className="multi-toggle-item">
-                <input id="6 hours" type="radio" name="timeSpan" value="6 hours" />
-                <label htmlFor="6 hours">
-                    <span>6 Hours</span>
-                </label>
-            </div>
-            <div className="multi-toggle-item">
-                <input id="12 hours" type="radio" name="timeSpan" value="12 hours" />
-                <label htmlFor="12 hours">
-                    <span>12 Hours</span>
-                </label>
-            </div>
-            <div className="multi-toggle-item">
-                <input id="1 day" type="radio" name="timeSpan" value="1 day" />
-                <label htmlFor="1 day">
-                    <span>1 Day</span>
-                </label>
-            </div>
-        </div>
-    );
+interface MultiToggleProps {
+    inputList: InputItem[];
+    className?: string;
+    radio?: boolean;
+    label?: string;
 }
 
-export function CheckboxMultiToggle(props: MultiToggleProps) {
-    const { children, className } = props;
+export function MultiToggle(props: MultiToggleProps) {
+    const { inputList, className, radio, label } = props;
+
+    const uniqueId = useId("multi-toggle");
 
     return (
         <div className={classNames("multi-toggle", className)}>
-            <div className="multi-toggle-item">
-                <input id="1hour" type="checkbox" name="timeSpan" value="1 hour" />
-                <label htmlFor="1hour">
-                    <span>Active</span>
-                </label>
-            </div>
-            <div className="multi-toggle-item">
-                <input id="6hours" type="checkbox" name="timeSpan" value="6 hours" />
-                <label htmlFor="6hours">
-                    <span>Paused</span>
-                </label>
-            </div>
-            <div className="multi-toggle-item">
-                <input id="12hours" type="checkbox" name="timeSpan" value="12 hours" />
-                <label htmlFor="12hours">
-                    <span>Error</span>
-                </label>
-            </div>
-            <div className="multi-toggle-item">
-                <input id="1day" type="checkbox" name="timeSpan" value="1 day" />
-                <label htmlFor="1day">
-                    <span>Stale</span>
-                </label>
+            {label && <div className="small-label ms-1 mb-1">{label}</div>}
+            <div className="multi-toggle-list">
+                {inputList.map((inputItem) => (
+                    <div className="multi-toggle-item">
+                        <input
+                            id={uniqueId + inputItem.value}
+                            type={radio ? "radio" : "checkbox"}
+                            name={uniqueId}
+                            value={inputItem.value}
+                        />
+                        <label htmlFor={uniqueId + inputItem.value}>
+                            <span>{inputItem.label}</span>
+                        </label>
+                    </div>
+                ))}
             </div>
         </div>
     );
