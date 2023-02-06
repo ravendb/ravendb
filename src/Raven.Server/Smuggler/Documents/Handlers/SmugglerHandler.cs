@@ -63,29 +63,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetImport()
         {
-            if (HttpContext.Request.Query.ContainsKey("file") == false &&
-                HttpContext.Request.Query.ContainsKey("url") == false)
-            {
-                throw new ArgumentException("'file' or 'url' are mandatory when using GET /smuggler/import");
-            }
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext);
-
-                await using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
-                using (var token = CreateOperationToken())
-                using (var source = new StreamSource(stream, context, Database.Name))
-                {
-                    var destination = Database.Smuggler.CreateDestination();
-
-                    var smuggler = Database.Smuggler.Create(source, destination, context, options, token: token.Token);
-
-                    var result = await smuggler.ExecuteAsync();
-
-                    await SmugglerHandlerProcessorForImport.WriteSmugglerResultAsync(context, result, ResponseBodyStream());
-                }
-            }
+            using (var processor = new SmugglerHandlerProcessorForImportGet(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/smuggler/import-s3-dir", "GET", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
@@ -611,40 +590,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 return await smuggler.ExecuteAsync();
             }
-        }
-
-        private async Task<Stream> GetImportStream()
-        {
-            var file = GetStringQueryString("file", required: false);
-            if (string.IsNullOrEmpty(file) == false)
-            {
-                if (await IsOperatorAsync() == false)
-                    throw new AuthorizationException("The use of the 'file' query string parameters is limited operators and above");
-                return File.OpenRead(file);
-            }
-
-            var url = GetStringQueryString("url", required: false);
-            if (string.IsNullOrEmpty(url) == false)
-            {
-                if (await IsOperatorAsync() == false)
-                    throw new AuthorizationException("The use of the 'url' query string parameters is limited operators and above");
-
-                if (HttpContext.Request.Method == "POST")
-                {
-                    var msg = await HttpClient.PostAsync(url, new StreamContent(HttpContext.Request.Body)
-                    {
-                        Headers =
-                        {
-                            ContentType =  new System.Net.Http.Headers.MediaTypeHeaderValue(HttpContext.Request.ContentType)
-                        }
-                    });
-                    return await msg.Content.ReadAsStreamAsync();
-                }
-
-                return await HttpClient.GetStreamAsync(url);
-            }
-
-            return HttpContext.Request.Body;
         }
     }
 }
