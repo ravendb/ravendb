@@ -32,78 +32,36 @@ namespace Raven.Server.Documents.Sharding.Queries;
 /// </summary>
 public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryCommand, QueryResult, ShardedQueryResult>
 {
-    private readonly long? _existingResultEtag;
-
-    private readonly string _raftUniqueRequestId;
-    private readonly HashSet<int> _filteredShardIndexes;
-
-    // User should also be able to define a query parameter ("__shardContext") which is an array
-    // that contains the ids whose shards the query should be limited to. Advanced: Optimization if user
-    // want to run a query and knows what shards it is on. Such as:
-    // from Orders where State = $state and User = $user where all the orders are on the same share as the user
-
     public ShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, long? existingResultEtag, bool metadataOnly, bool indexEntriesOnly,
-        CancellationToken token) : base(context, requestHandler, query, metadataOnly, indexEntriesOnly, token)
+        CancellationToken token) : base(context, requestHandler, query, metadataOnly, indexEntriesOnly, existingResultEtag, token)
     {
-        _existingResultEtag = existingResultEtag;
-        _raftUniqueRequestId = _requestHandler.GetRaftRequestIdFromQuery() ?? RaftIdGenerator.NewId();
-
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19084 Add an option to select the shards for query in the client");
-        
-        if (_query.QueryParameters != null && _query.QueryParameters.TryGetMember("__shardContext", out object filter))
-        {
-            _filteredShardIndexes = new HashSet<int>();
-            switch (filter)
-            {
-                case LazyStringValue id:
-                    _filteredShardIndexes.Add(_requestHandler.DatabaseContext.GetShardNumberFor(context, id));
-                    break;
-                case BlittableJsonReaderArray arr:
-                {
-                    for (int i = 0; i < arr.Length; i++)
-                    {
-                        var it = arr.GetStringByIndex(i);
-                        _filteredShardIndexes.Add(_requestHandler.DatabaseContext.GetShardNumberFor(context, it));
-                    }
-                    break;
-                }
-            }
-        }
-        else
-        {
-            _filteredShardIndexes = null;
-        }
     }
 
-    protected override ShardedQueryCommand CreateCommand(BlittableJsonReaderObject query)
-    {
-        return new ShardedQueryCommand(_context.ReadObject(query, "query"), _query, _metadataOnly, _indexEntriesOnly, _query.Metadata.IndexName,
-            canReadFromCache: _existingResultEtag != null, raftUniqueRequestId: _raftUniqueRequestId);
-    }
+    protected override ShardedQueryCommand CreateCommand(BlittableJsonReaderObject query) => CreateShardedQueryCommand(query);
 
     public override async Task<ShardedQueryResult> ExecuteShardedOperations()
     {
         ShardedDocumentsComparer documentsComparer = null;
 
-        if (_query.Metadata.OrderBy?.Length > 0 && (_isMapReduceIndex || _isAutoMapReduceQuery) == false)
+        if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery) == false)
         {
             // sorting only if:
             // 1. we have fields to sort
             // 2. it isn't a map-reduce index/query (the sorting will be done after the re-reduce)
-            documentsComparer = new ShardedDocumentsComparer(_query.Metadata, _isMapReduceIndex || _isAutoMapReduceQuery);
+            documentsComparer = new ShardedDocumentsComparer(Query.Metadata, IsMapReduceIndex || IsAutoMapReduceQuery);
         }
 
-        if (_query.Metadata.TimeSeriesIncludes != null)
+        if (Query.Metadata.TimeSeriesIncludes != null)
         {
-            var timeSeriesKeys = _query.Metadata.TimeSeriesIncludes.TimeSeries.Keys;
+            var timeSeriesKeys = Query.Metadata.TimeSeriesIncludes.TimeSeries.Keys;
         }
 
         var commands = GetOperationCommands();
 
-        var operation = new ShardedQueryOperation(_query, _context, _requestHandler, commands, documentsComparer, _existingResultEtag?.ToString());
+        var operation = new ShardedQueryOperation(Query, Context, RequestHandler, commands, documentsComparer, ExistingResultEtag?.ToString());
 
-        int[] shards = _filteredShardIndexes == null ? commands.Keys.ToArray() : commands.Keys.Intersect(_filteredShardIndexes).ToArray();
-        var shardedReadResult = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, _token);
+        int[] shards = GetShardNumbers(commands);
+        var shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
 
         if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
         {
@@ -182,7 +140,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
         var commandsPerShard = new Dictionary<int, CounterBatchOperation.CounterBatchCommand>();
 
-        var shardsToPositions = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missingCounterIncludes);
+        var shardsToPositions = ShardLocator.GetDocumentIdsByShards(Context, RequestHandler.DatabaseContext, missingCounterIncludes);
         foreach (var (shardNumber, idsByShard) in shardsToPositions)
         {
             var countersBatchForShard = new CounterBatch()
@@ -199,22 +157,22 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             commandsPerShard[shardNumber] = new CounterBatchOperation.CounterBatchCommand(countersBatchForShard);
         }
 
-        var counterIncludes = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
-            new ShardedCounterBatchOperation(_requestHandler.HttpContext, commandsPerShard), _token);
+        var counterIncludes = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
+            new ShardedCounterBatchOperation(RequestHandler.HttpContext, commandsPerShard), Token);
 
         foreach (var counterInclude in counterIncludes.Counters)
         {
             if (counterInclude == null)
                 continue;
 
-            ((ShardedCounterIncludes)result.GetCounterIncludes()).AddMissingCounter(counterInclude.DocumentId, _context.ReadObject(counterInclude.ToJson(), counterInclude.DocumentId));
+            ((ShardedCounterIncludes)result.GetCounterIncludes()).AddMissingCounter(counterInclude.DocumentId, Context.ReadObject(counterInclude.ToJson(), counterInclude.DocumentId));
         }
     }
     private async Task HandleMissingTimeSeriesIncludes(Dictionary<string, List<TimeSeriesRange>> missingTimeSeriesIncludes, ShardedQueryResult result)
     {
         var commandsPerShard = new Dictionary<int, GetMultipleTimeSeriesRangesCommand>();
 
-        var shardsToPositions = ShardLocator.GetDocumentIdsByShards(_context, _requestHandler.DatabaseContext, missingTimeSeriesIncludes.Keys);
+        var shardsToPositions = ShardLocator.GetDocumentIdsByShards(Context, RequestHandler.DatabaseContext, missingTimeSeriesIncludes.Keys);
 
         foreach (var (shardNumber, idsByShard) in shardsToPositions)
         {
@@ -228,31 +186,31 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             commandsPerShard[shardNumber] = new GetMultipleTimeSeriesRangesCommand(rangesForShard);
         }
 
-        var timeSeriesIncludes = await _requestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
-            new ShardedTimeSeriesOperation(_requestHandler.HttpContext, commandsPerShard), _token);
+        var timeSeriesIncludes = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToPositions.Keys.ToArray(),
+            new ShardedTimeSeriesOperation(RequestHandler.HttpContext, commandsPerShard), Token);
 
         foreach (var tsInclude in timeSeriesIncludes.Results)
         {
             if (tsInclude == null)
                 continue;
 
-            ((ShardedTimeSeriesIncludes)result.GetTimeSeriesIncludes()).AddMissingTimeSeries(tsInclude.Id, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(tsInclude.Values, _context));
+            ((ShardedTimeSeriesIncludes)result.GetTimeSeriesIncludes()).AddMissingTimeSeries(tsInclude.Id, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(tsInclude.Values, Context));
         }
 
     }
 
     private void ApplyPaging(ref ShardedQueryResult result)
     {
-        if (_query.Offset is > 0 && result.Results.Count > _query.Offset)
+        if (Query.Offset is > 0 && result.Results.Count > Query.Offset)
         {
-            var count = Math.Min(_query.Offset ?? 0, int.MaxValue);
+            var count = Math.Min(Query.Offset ?? 0, int.MaxValue);
             result.Results.RemoveRange(0, (int)count);
         }
 
-        if (_query.Limit is > 0 && result.Results.Count > _query.Limit)
+        if (Query.Limit is > 0 && result.Results.Count > Query.Limit)
         {
-            var index = Math.Min(_query.Limit.Value, int.MaxValue);
-            var count = result.Results.Count - _query.Limit.Value;
+            var index = Math.Min(Query.Limit.Value, int.MaxValue);
+            var count = result.Results.Count - Query.Limit.Value;
             if (count > int.MaxValue)
                 count = int.MaxValue; //todo: Grisha: take a look
             result.Results.RemoveRange((int)index, (int)count);
@@ -261,29 +219,29 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
     private void ReduceResults(ref ShardedQueryResult result)
     {
-        if (_isMapReduceIndex || _isAutoMapReduceQuery)
+        if (IsMapReduceIndex || IsAutoMapReduceQuery)
         {
-            var merger = new ShardedMapReduceQueryResultsMerger(result.Results, _requestHandler.DatabaseContext.Indexes, result.IndexName, _isAutoMapReduceQuery, _context);
+            var merger = new ShardedMapReduceQueryResultsMerger(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context);
             result.Results = merger.Merge();
 
-            if (_query.Metadata.OrderBy?.Length > 0 && (_isMapReduceIndex || _isAutoMapReduceQuery))
+            if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery))
             {
                 // apply ordering after the re-reduce of a map-reduce index
-                result.Results.Sort(new ShardedDocumentsComparer(_query.Metadata, isMapReduce: true));
+                result.Results.Sort(new ShardedDocumentsComparer(Query.Metadata, isMapReduce: true));
             }
         }
     }
 
     private void ProjectAfterMapReduce(ref ShardedQueryResult result)
     {
-        if (_isMapReduceIndex == false && _isAutoMapReduceQuery == false
-            || (_query.Metadata.Query.Select == null || _query.Metadata.Query.Select.Count == 0)
-            && _query.Metadata.Query.SelectFunctionBody.FunctionText == null)
+        if (IsMapReduceIndex == false && IsAutoMapReduceQuery == false
+            || (Query.Metadata.Query.Select == null || Query.Metadata.Query.Select.Count == 0)
+            && Query.Metadata.Query.SelectFunctionBody.FunctionText == null)
             return;
 
-        var fieldsToFetch = new FieldsToFetch(_query, null);
-        var retriever = new ShardedMapReduceResultRetriever(_requestHandler.DatabaseContext.Indexes.ScriptRunnerCache, _query, null, SearchEngineType.Lucene, fieldsToFetch, null, _context, false, null, null, null,
-            _requestHandler.DatabaseContext.IdentityPartsSeparator);
+        var fieldsToFetch = new FieldsToFetch(Query, null);
+        var retriever = new ShardedMapReduceResultRetriever(RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache, Query, null, SearchEngineType.Lucene, fieldsToFetch, null, Context, false, null, null, null,
+            RequestHandler.DatabaseContext.IdentityPartsSeparator);
 
         var currentResults = result.Results;
         result.Results = new List<BlittableJsonReaderObject>();
@@ -294,7 +252,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             (Document document, List<Document> documents) = retriever.GetProjectionFromDocument(new Document
             {
                 Data = data
-            }, ref retrieverInput, fieldsToFetch, _context, CancellationToken.None);
+            }, ref retrieverInput, fieldsToFetch, Context, CancellationToken.None);
             
             var results = result.Results;
 
@@ -312,7 +270,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
             void AddDocument(BlittableJsonReaderObject documentData)
             {
-                var doc = _context.ReadObject(documentData, "modified-map-reduce-result");
+                var doc = Context.ReadObject(documentData, "modified-map-reduce-result");
                 results.Add(doc);
             }
         }

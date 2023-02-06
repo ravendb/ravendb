@@ -2,6 +2,7 @@ using System;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Documents.Session.Querying.Sharding;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -102,6 +103,12 @@ namespace Raven.Client.Documents.Session
         IDocumentQueryCustomization IDocumentQueryCustomization.Projection(ProjectionBehavior projectionBehavior)
         {
             Projection(projectionBehavior);
+            return this;
+        }
+
+        IDocumentQueryCustomization IDocumentQueryCustomization.ShardContext(Action<IShardedQueryContextBuilder> builder)
+        {
+            ShardContext(builder);
             return this;
         }
     }
