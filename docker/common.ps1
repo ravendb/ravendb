@@ -73,17 +73,19 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
     switch ($winver) {
         "1809" {
             return @(
-                "$($repo):$($version)-windows",
-                "$($repo):windows-latest",
-                "$($repo):windows-latest-lts",
-                "$($repo):5.4-windows-latest",
-		"$($repo):$($version)-windows-lts1809"
+                "$($repo):$($version)-windows-1809",
+                "$($repo):windows-1809-latest",
+                "$($repo):windows-1809-latest-lts",
+                "$($repo):5.4-windows-1809-latest"
             )
             break;
         }
         "2022" {
-            return @(
-                "$($repo):$($version)-windows-ltsc2022"
+             return @(
+                "$($repo):$($version)-windows-ltsc2022",
+                "$($repo):windows-ltsc2022-latest",
+                "$($repo):windows-ltsc2022-latest-lts",
+                "$($repo):5.4-windows-ltsc2022-latest"
             )
             break;
         }
