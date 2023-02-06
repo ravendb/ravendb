@@ -76,8 +76,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            if (_supportsAtomicWrites == null ||
-                node.SupportsAtomicClusterWrites != _supportsAtomicWrites)
+            if (_supportsAtomicWrites == null)
             {
                 _supportsAtomicWrites = node.SupportsAtomicClusterWrites;
                 for (var i = 0; i < _commands.Count; i++)

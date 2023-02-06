@@ -385,7 +385,11 @@ namespace Raven.Client.Documents.Session
                 // add current range from cache to the merged list.
                 // in order to avoid duplication, skip first item in range if needed
 
-                mergedValues.AddRange(ranges[i].Entries.Skip(mergedValues.Count == 0 ? 0 : 1));
+                bool shouldSkip = false;
+                if (mergedValues.Count > 0)
+                    shouldSkip = ranges[i].Entries[0].Timestamp == mergedValues[mergedValues.Count - 1].Timestamp;
+
+                mergedValues.AddRange(ranges[i].Entries.Skip(shouldSkip == false ? 0 : 1));
             }
 
             if (currentResultIndex < resultFromServer.Count)
