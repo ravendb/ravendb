@@ -798,6 +798,9 @@ namespace Raven.Client.Util
 
             public static bool IsCollection(Type type)
             {
+                if (type.IsArray)
+                    return true;
+                
                 if (type.GetGenericArguments().Length == 0)
                     return type == typeof(Enumerable);
 

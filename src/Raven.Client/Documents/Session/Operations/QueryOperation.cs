@@ -274,7 +274,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             var wrapperType = new
             {
-                Result = Activator.CreateInstance<T>()
+                Result = default(T) 
             }.GetType();
 
             return (wrapperType, wrapperType.GetProperty(DummyPropertyName));
