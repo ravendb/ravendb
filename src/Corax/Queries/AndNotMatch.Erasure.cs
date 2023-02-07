@@ -35,9 +35,9 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(Span<long> matches, Span<float> scores)
+        public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
-            _inner.Score(matches, scores);
+            _inner.Score(matches, scores, boostFactor);
         }
 
         public QueryInspectionNode Inspect()
@@ -49,13 +49,13 @@ namespace Corax.Queries
         {
             public readonly delegate*<ref AndNotMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref AndNotMatch, Span<long>, int, int> AndWithFunc;
-            public readonly delegate*<ref AndNotMatch, Span<long>, Span<float>, void> ScoreFunc;
+            public readonly delegate*<ref AndNotMatch, Span<long>, Span<float>, float, void> ScoreFunc;
             public readonly delegate*<ref AndNotMatch, long> CountFunc;
 
             public FunctionTable(
                 delegate*<ref AndNotMatch, Span<long>, int> fillFunc,
                 delegate*<ref AndNotMatch, Span<long>, int, int> andWithFunc,
-                delegate*<ref AndNotMatch, Span<long>, Span<float>, void> scoreFunc,
+                delegate*<ref AndNotMatch, Span<long>, Span<float>, float, void> scoreFunc,
                 delegate*<ref AndNotMatch, long> countFunc)
             {
                 FillFunc = fillFunc;
@@ -103,11 +103,11 @@ namespace Corax.Queries
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                static void ScoreFunc(ref AndNotMatch match, Span<long> matches, Span<float> scores)
+                static void ScoreFunc(ref AndNotMatch match, Span<long> matches, Span<float> scores, float boostFactor)
                 {
                     if (match._inner is AndNotMatch<TInner, TOuter> inner)
                     {
-                        inner.Score(matches, scores);
+                        inner.Score(matches, scores, boostFactor);
                         match._inner = inner;
                     }
                 }

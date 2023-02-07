@@ -10,25 +10,22 @@ namespace Corax;
 public partial class IndexSearcher
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch BetweenQuery<TValue, TScoreFunction>(FieldMetadata field, TValue low, TValue high,
-        TScoreFunction scoreFunction = default, UnaryMatchOperation leftSide = UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation rightSide = UnaryMatchOperation.LessThanOrEqual, bool isNegated = false)
-        where TScoreFunction : IQueryScoreFunction
-    {
+    public MultiTermMatch BetweenQuery<TValue>(FieldMetadata field, TValue low, TValue high, UnaryMatchOperation leftSide = UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation rightSide = UnaryMatchOperation.LessThanOrEqual, bool isNegated = false) {
         if (typeof(TValue) == typeof(long))
         {
             return (leftSide, rightSide) switch
             {
                 // (x, y)
-                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<TScoreFunction, Range.Exclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, isNegated),
 
                 //<x, y)
-                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<TScoreFunction, Range.Inclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, isNegated),
 
                 //<x, y>
-                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<TScoreFunction, Range.Inclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, isNegated),
 
                 //(x, y>
-                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<TScoreFunction, Range.Exclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, isNegated),
                 _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
             };
         }
@@ -38,16 +35,16 @@ public partial class IndexSearcher
             return (leftSide, rightSide) switch
             {
                 // (x, y)
-                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<TScoreFunction, Range.Exclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, isNegated),
 
                 //<x, y)
-                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<TScoreFunction, Range.Inclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, isNegated),
 
                 //<x, y>
-                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<TScoreFunction, Range.Inclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, isNegated),
 
                 //(x, y>
-                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<TScoreFunction, Range.Exclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, isNegated),
                 _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
 
             };
@@ -61,20 +58,20 @@ public partial class IndexSearcher
             return (leftSide, rightSide) switch
             {
                 // (x, y)
-                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<TScoreFunction, Range.Exclusive, Range.Exclusive>(field,
-                    leftValue, rightValue, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field,
+                    leftValue, rightValue, isNegated),
 
                 //<x, y)
-                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<TScoreFunction, Range.Inclusive, Range.Exclusive>(field,
-                    leftValue, rightValue, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field,
+                    leftValue, rightValue, isNegated),
 
                 //<x, y>
-                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<TScoreFunction, Range.Inclusive, Range.Inclusive>(
-                    field, leftValue, rightValue, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThanOrEqual, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(
+                    field, leftValue, rightValue, isNegated),
 
                 //(x, y>
-                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<TScoreFunction, Range.Exclusive, Range.Inclusive>(field,
-                    leftValue, rightValue, scoreFunction, isNegated),
+                (UnaryMatchOperation.GreaterThan, UnaryMatchOperation.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field,
+                    leftValue, rightValue, isNegated),
 
                 _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
             };
@@ -84,24 +81,20 @@ public partial class IndexSearcher
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch GreaterThanQuery<TValue, TScoreFunction>(FieldMetadata field, TValue value, TScoreFunction scoreFunction = default, bool isNegated = false,
-        int fieldId = Constants.IndexSearcher.NonAnalyzer)
-        where TScoreFunction : IQueryScoreFunction
+    public MultiTermMatch GreaterThanQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false)
     {
-        return GreatBuilder<Range.Exclusive, Range.Inclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated);
+        return GreatBuilder<Range.Exclusive, Range.Inclusive, TValue>(field, value, isNegated);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch GreatThanOrEqualsQuery<TValue, TScoreFunction>(FieldMetadata field, TValue value, TScoreFunction scoreFunction = default, bool isNegated = false)
-        where TScoreFunction : IQueryScoreFunction
+    public MultiTermMatch GreatThanOrEqualsQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false)
+
     {
-        return GreatBuilder<Range.Inclusive, Range.Inclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated);
+        return GreatBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, isNegated);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private MultiTermMatch GreatBuilder<TLeftRange, TRightRange, TValue, TScoreFunction>(FieldMetadata field, TValue value, TScoreFunction scoreFunction = default,
-        bool isNegated = false)
-        where TScoreFunction : IQueryScoreFunction
+    private MultiTermMatch GreatBuilder<TLeftRange, TRightRange, TValue>(FieldMetadata field, TValue value, bool isNegated = false)
         where TLeftRange : struct, Range.Marker
         where TRightRange : struct, Range.Marker
     {
@@ -109,54 +102,50 @@ public partial class IndexSearcher
         if (typeof(TValue) == typeof(long))
         {
             
-            return RangeBuilder<TScoreFunction, TLeftRange, TRightRange>(field, (long)(object)value, long.MaxValue, scoreFunction,
-                isNegated);
+            return RangeBuilder<TLeftRange, TRightRange>(field, (long)(object)value, long.MaxValue, isNegated);
         }
 
         if (typeof(TValue) == typeof(double))
-            return RangeBuilder<TScoreFunction, TLeftRange, TRightRange>(field, (double)(object)value, double.MaxValue, scoreFunction,
-                isNegated);
+            return RangeBuilder<TLeftRange, TRightRange>(field, (double)(object)value, double.MaxValue, isNegated);
         if (typeof(TValue) == typeof(string))
         {
             var sliceValue = EncodeAndApplyAnalyzer(field, (string)(object)value);
-            return RangeBuilder<TScoreFunction, TLeftRange, TRightRange>(field, sliceValue, Slices.AfterAllKeys, scoreFunction, isNegated);
+            return RangeBuilder<TLeftRange, TRightRange>(field, sliceValue, Slices.AfterAllKeys,  isNegated);
         }
 
         throw new ArgumentException("Range queries are supporting strings, longs or doubles only");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch LessThanOrEqualsQuery<TValue, TScoreFunction>(FieldMetadata field, TValue value, TScoreFunction scoreFunction = default, bool isNegated = false) where TScoreFunction : IQueryScoreFunction 
-        => LessBuilder<Range.Inclusive, Range.Inclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated);
+    public MultiTermMatch LessThanOrEqualsQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false)
+        => LessBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, isNegated);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch LessThanQuery<TValue, TScoreFunction>(FieldMetadata field, TValue value, TScoreFunction scoreFunction = default, bool isNegated = false) where TScoreFunction : IQueryScoreFunction
-        => LessBuilder<Range.Inclusive, Range.Exclusive, TValue, TScoreFunction>(field, value, scoreFunction, isNegated);
+    public MultiTermMatch LessThanQuery<TValue>(FieldMetadata field, TValue value, bool isNegated = false)
+        => LessBuilder<Range.Inclusive, Range.Exclusive, TValue>(field, value, isNegated);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private MultiTermMatch LessBuilder<TLeftRange, TRightRange, TValue, TScoreFunction>(FieldMetadata field, TValue value, TScoreFunction scoreFunction = default,
+    private MultiTermMatch LessBuilder<TLeftRange, TRightRange, TValue>(FieldMetadata field, TValue value,
         bool isNegated = false)
-        where TScoreFunction : IQueryScoreFunction
         where TLeftRange : struct, Range.Marker
         where TRightRange : struct, Range.Marker
     {
         if (typeof(TValue) == typeof(long))
-            return RangeBuilder<TScoreFunction, TLeftRange, TRightRange>(field, long.MinValue, (long)(object)value, scoreFunction, isNegated);
+            return RangeBuilder<TLeftRange, TRightRange>(field, long.MinValue, (long)(object)value, isNegated);
 
         if (typeof(TValue) == typeof(double))
-            return RangeBuilder<TScoreFunction, TLeftRange, TRightRange>(field, double.MinValue, (double)(object)value, scoreFunction, isNegated);
+            return RangeBuilder<TLeftRange, TRightRange>(field, double.MinValue, (double)(object)value, isNegated);
         
         if (typeof(TValue) == typeof(string))
         {
             var sliceValue = EncodeAndApplyAnalyzer(field, (string)(object)value);
-            return RangeBuilder<TScoreFunction, TLeftRange, TRightRange>(field, Slices.BeforeAllKeys, sliceValue, scoreFunction, isNegated);
+            return RangeBuilder<TLeftRange, TRightRange>(field, Slices.BeforeAllKeys, sliceValue, isNegated);
         }
 
         throw new ArgumentException("Range queries are supporting strings, longs or doubles only");
     }
     
-    private MultiTermMatch RangeBuilder<TScoreFunction, TLow, THigh>(FieldMetadata field, Slice low, Slice high, TScoreFunction scoreFunction, bool isNegated)
-        where TScoreFunction : IQueryScoreFunction
+    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, Slice low, Slice high, bool isNegated)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
@@ -167,8 +156,7 @@ public partial class IndexSearcher
         return MultiTermMatch.Create(new MultiTermMatch<TermRangeProvider<TLow, THigh>>(field, _transaction.Allocator, new TermRangeProvider<TLow, THigh>(this, terms, field, low, high)));
     }
 
-    private MultiTermMatch RangeBuilder<TScoreFunction, TLow, THigh>(FieldMetadata field, Slice fieldLong, long low, long high, TScoreFunction scoreFunction, bool isNegated)
-        where TScoreFunction : IQueryScoreFunction
+    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, Slice fieldLong, long low, long high, bool isNegated)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
@@ -181,8 +169,7 @@ public partial class IndexSearcher
         return MultiTermMatch.Create(new MultiTermMatch<TermNumericRangeProvider<TLow, THigh, long>>(field, _transaction.Allocator, new TermNumericRangeProvider<TLow, THigh, long>(this, set, terms, field, low, high)));
     }
 
-    private MultiTermMatch RangeBuilder<TScoreFunction, TLow, THigh>(FieldMetadata field, double low, double high, TScoreFunction scoreFunction, bool isNegated)
-        where TScoreFunction : IQueryScoreFunction
+    private MultiTermMatch RangeBuilder<TLow, THigh>(FieldMetadata field, double low, double high, bool isNegated)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {

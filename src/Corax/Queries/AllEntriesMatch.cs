@@ -93,8 +93,11 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(Span<long> matches, Span<float> scores)
+        public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
+            //todo perf:
+            foreach (ref var score in scores)
+                score *= boostFactor;
         }
 
         public QueryInspectionNode Inspect()

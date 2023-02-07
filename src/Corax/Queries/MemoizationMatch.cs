@@ -56,9 +56,9 @@ namespace Corax.Queries
             return MergeHelper.And(buffer, buffer.Slice(0, matches), memoizedMatches);
         }
 
-        public void Score(Span<long> matches, Span<float> scores)
+        public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
-            _inner.Score(matches, scores);
+            _inner.Score(matches, scores, boostFactor);
         }
         string DebugView => Inspect().ToString();
 

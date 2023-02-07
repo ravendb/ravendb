@@ -8,10 +8,10 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using Corax.Utils;
+using Sparrow.Compression;
 using Sparrow.Server;
 using Sparrow.Server.Binary;
 using Voron.Data.Containers;
-using Voron.Data.Sets;
 
 namespace Corax.Queries
 {
@@ -20,7 +20,7 @@ namespace Corax.Queries
     {
         private readonly delegate*<ref TermMatch, Span<long>, int> _fillFunc;
         private readonly delegate*<ref TermMatch, Span<long>, int, int> _andWithFunc;
-        private readonly delegate*<ref TermMatch, Span<long>, Span<float>, void> _scoreFunc;
+        private readonly delegate*<ref TermMatch, Span<long>, Span<float>, float, void> _scoreFunc;
         private readonly delegate*<ref TermMatch, QueryInspectionNode> _inspectFunc;
 
         private readonly long _totalResults;
@@ -49,7 +49,7 @@ namespace Corax.Queries
             long totalResults,
             delegate*<ref TermMatch, Span<long>, int> fillFunc,
             delegate*<ref TermMatch, Span<long>, int, int> andWithFunc,
-            delegate*<ref TermMatch, Span<long>, Span<float>, void> scoreFunc = null,
+            delegate*<ref TermMatch, Span<long>, Span<float>, float, void> scoreFunc = null,
             delegate*<ref TermMatch, QueryInspectionNode> inspectFunc = null)
         {
             _totalResults = totalResults;
@@ -519,9 +519,9 @@ namespace Corax.Queries
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static void ScoreFunc(ref TermMatch term, Span<long> matches, Span<float> scores)
+            static void ScoreFunc(ref TermMatch term, Span<long> matches, Span<float> scores, float boostFactor)
             {
-                term._bm25.Score(matches, scores);
+                term._bm25.Score(matches, scores, boostFactor);
             }
 
             static QueryInspectionNode InspectFunc(ref TermMatch term)
@@ -617,9 +617,9 @@ namespace Corax.Queries
                 return matchedIdx;
             }
 
-            static void ScoreFunc(ref TermMatch term, Span<long> matches, Span<float> scores)
+            static void ScoreFunc(ref TermMatch term, Span<long> matches, Span<float> scores, float boostFactor)
             {
-                term._bm25.Score(matches, scores);
+                term._bm25.Score(matches, scores, boostFactor);
             }
 
             static QueryInspectionNode InspectFunc(ref TermMatch term)
@@ -653,7 +653,7 @@ namespace Corax.Queries
 
                 var it = term._set;
 
-                it.MaybeSeek(buffer[0] - 1);
+                it.Seek(buffer[0] - 1);
                 if (it.MoveNext() == false)
                     goto Fail;
 
@@ -708,7 +708,7 @@ namespace Corax.Queries
 
                 Debug.Assert(Vector256<long>.Count == 4);
 
-                term._set.MaybeSeek(buffer[0] - 1);
+                term._set.Seek(buffer[0] - 1);
 
                 // PERF: The AND operation can be performed in place, because we end up writing the same value that we already read. 
                 fixed (long* inputStartPtr = buffer)
@@ -866,9 +866,9 @@ namespace Corax.Queries
                     });
             }
 
-            static void ScoreFunc(ref TermMatch term, Span<long> matches, Span<float> scores)
+            static void ScoreFunc(ref TermMatch term, Span<long> matches, Span<float> scores, float boostFactor)
             {
-                term._bm25.Score(matches, scores);
+                term._bm25.Score(matches, scores, boostFactor);
             }
             
             if (Avx2.IsSupported == false)
@@ -885,7 +885,7 @@ namespace Corax.Queries
                 _indexSearcher = indexSearcher, 
                 _set = postingList.Iterate(), 
                 _current = long.MinValue,
-                _bm25 = new Bm25(indexSearcher, set.State.NumberOfEntries, ctx, (int)set.State.NumberOfEntries),
+                _bm25 = new Bm25(indexSearcher, postingList.State.NumberOfEntries, ctx, (int)postingList.State.NumberOfEntries),
             };
         }
 
@@ -904,12 +904,14 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(Span<long> matches, Span<float> scores)
+        public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
             if (_scoreFunc == null)
+            {
                 return; // We ignore. Nothing to do here. 
+            }
 
-            _scoreFunc(ref this, matches, scores);
+            _scoreFunc(ref this, matches, scores, boostFactor);
         }
 
         public QueryInspectionNode Inspect()

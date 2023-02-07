@@ -7,19 +7,17 @@ namespace Corax;
 
 public partial class IndexSearcher
 {
-    private MultiTermMatch MultiTermMatchBuilder<TScoreFunction, TTermProvider>(FieldMetadata field, Slice term, TScoreFunction scoreFunction, bool isNegated)
-        where TScoreFunction : IQueryScoreFunction
+    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(FieldMetadata field, Slice term,  bool isNegated)
         where TTermProvider : ITermProvider
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-        return MultiTermMatchBuilderBase<TScoreFunction, TTermProvider>(field, terms, term, scoreFunction, isNegated);
+        return MultiTermMatchBuilderBase<TTermProvider>(field, terms, term, isNegated);
     }
 
-    private MultiTermMatch MultiTermMatchBuilder<TScoreFunction, TTermProvider>(FieldMetadata field, string term, TScoreFunction scoreFunction, bool isNegated)
-        where TScoreFunction : IQueryScoreFunction
+    private MultiTermMatch MultiTermMatchBuilder<TTermProvider>(FieldMetadata field, string term,  bool isNegated)
         where TTermProvider : ITermProvider
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
@@ -27,12 +25,10 @@ public partial class IndexSearcher
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
         var slicedTerm = EncodeAndApplyAnalyzer(field, term);
-        return MultiTermMatchBuilderBase<TScoreFunction, TTermProvider>(field, terms, slicedTerm, scoreFunction, isNegated);
+        return MultiTermMatchBuilderBase<TTermProvider>(field, terms, slicedTerm, isNegated);
     }
 
-    private MultiTermMatch MultiTermMatchBuilderBase<TScoreFunction, TTermProvider>(FieldMetadata field, CompactTree termTree, Slice term, TScoreFunction scoreFunction,
-        bool isNegated)
-        where TScoreFunction : IQueryScoreFunction
+    private MultiTermMatch MultiTermMatchBuilderBase<TTermProvider>(FieldMetadata field, CompactTree termTree, Slice term, bool isNegated)
         where TTermProvider : ITermProvider
     {
         if (typeof(TTermProvider) == typeof(StartWithTermProvider))
@@ -73,8 +69,7 @@ public partial class IndexSearcher
 
         if (typeof(TTermProvider) == typeof(ExistsTermProvider))
         {
-            if (typeof(TScoreFunction) == typeof(NullScoreFunction))
-                return MultiTermMatch.Create(new MultiTermMatch<ExistsTermProvider>(field, _transaction.Allocator, new ExistsTermProvider(this, termTree, field)));
+            return MultiTermMatch.Create(new MultiTermMatch<ExistsTermProvider>(field, _transaction.Allocator, new ExistsTermProvider(this, termTree, field)));
         }
 
         return MultiTermMatch.CreateEmpty(_transaction.Allocator);

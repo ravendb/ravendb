@@ -51,7 +51,7 @@ namespace Corax.Queries
                 _current = QueryMatch.Invalid;
             _isFirst = true;
             
-            _isBoosting = field.CalculateScoring;
+            _isBoosting = field.Ranking;
             if (_isBoosting)
             {
                 _handler = _context.Allocate(64 * sizeof(Bm25), out var bufferOutput);
@@ -199,7 +199,7 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(Span<long> matches, Span<float> scores)
+        public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
             if (_isBoosting == false)
                 return;
@@ -211,7 +211,7 @@ namespace Corax.Queries
 
             while (begin != end)
             {
-                begin->Score(matches, scores);
+                begin->Score(matches, scores, boostFactor);
                 begin->Dispose();
                 begin += 1;
             }

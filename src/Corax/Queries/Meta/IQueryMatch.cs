@@ -58,7 +58,7 @@ namespace Corax.Queries
 
         // Guarantees: The output of this for unscored sequences should be a no-op.
         // Requirements: The upmost call 
-        void Score(Span<long> matches, Span<float> scores);
+        void Score(Span<long> matches, Span<float> scores, float boostFactor);
 
         QueryInspectionNode Inspect();
 

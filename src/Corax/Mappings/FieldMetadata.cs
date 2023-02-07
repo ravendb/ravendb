@@ -11,15 +11,15 @@ public readonly struct FieldMetadata
     public readonly int FieldId;
     public readonly FieldIndexingMode Mode;
     public readonly Analyzer Analyzer;
-    public readonly bool CalculateScoring;
+    public readonly bool Ranking;
 
-    private FieldMetadata(Slice fieldName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool calculateScoring = false)
+    private FieldMetadata(Slice fieldName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool ranking = false)
     {
         FieldName = fieldName;
         FieldId = fieldId;
         Mode = mode;
         Analyzer = analyzer;
-        CalculateScoring = calculateScoring;
+        Ranking = ranking;
     }
 
     public FieldMetadata GetNumericFieldMetadata<T>(ByteStringContext allocator)
@@ -43,13 +43,13 @@ public readonly struct FieldMetadata
         return FieldId == other.FieldId && SliceComparer.CompareInline(FieldName, other.FieldName) == 0;
     }
 
-    public static FieldMetadata Build(ByteStringContext allocator, string fieldName, int fieldId, FieldIndexingMode mode, Analyzer analyzer)
+    public static FieldMetadata Build(ByteStringContext allocator, string fieldName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false)
     {
         Slice.From(allocator, fieldName, ByteStringType.Immutable, out var fieldNameAsSlice);
-        return new(fieldNameAsSlice, fieldId, mode, analyzer);
+        return new(fieldNameAsSlice, fieldId, mode, analyzer, hasBoost);
     }
 
-    public static FieldMetadata Build(Slice fieldName, int fieldId, FieldIndexingMode mode, Analyzer analyzer) => new(fieldName, fieldId, mode, analyzer);
+    public static FieldMetadata Build(Slice fieldName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false) => new(fieldName, fieldId, mode, analyzer, ranking: hasBoost);
 
     public FieldMetadata ChangeAnalyzer(FieldIndexingMode mode, Analyzer analyzer = null)
     {
@@ -58,7 +58,7 @@ public readonly struct FieldMetadata
 
     public FieldMetadata ChangeScoringMode(bool scoring)
     {
-        if (CalculateScoring == scoring) return this;
+        if (Ranking == scoring) return this;
         
         return new FieldMetadata(FieldName, FieldId, Mode, Analyzer, scoring);
 

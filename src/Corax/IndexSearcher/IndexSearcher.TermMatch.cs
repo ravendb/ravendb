@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Utils;
 using Sparrow.Compression;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -17,9 +18,9 @@ public partial class IndexSearcher
     /// <summary>
     ///  Test API, should not be used anywhere else
     /// </summary>
-    public TermMatch TermQuery(string field, string term) => TermQuery(FieldMetadataBuilder(field), term);
-    public TermMatch TermQuery(string field, Slice term) => TermQuery(FieldMetadataBuilder(field), term);
-    public TermMatch TermQuery(Slice field, Slice term) => TermQuery(FieldMetadata.Build(field, default, default, default), term);
+    public TermMatch TermQuery(string field, string term, bool ranking = false) => TermQuery(FieldMetadataBuilder(field, ranking: ranking), term);
+    public TermMatch TermQuery(string field, Slice term, bool ranking = false) => TermQuery(FieldMetadataBuilder(field, ranking: ranking), term);
+    public TermMatch TermQuery(Slice field, Slice term, bool ranking = false) => TermQuery(FieldMetadata.Build(field, default, default, default, hasBoost: ranking), term);
 
     
     public TermMatch TermQuery(FieldMetadata field, string term, CompactTree termsTree = null)
@@ -78,26 +79,26 @@ public partial class IndexSearcher
         TermMatch matches;
         if ((containerId & (long)TermIdMask.Set) != 0)
         {
-            var setId = containerId & Constants.StorageMask.ContainerType;
+            var setId = FrequencyUtils.GetContainerId(containerId);// & Constants.StorageMask.ContainerType);
             var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
 
             ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             var set = new PostingList(_transaction.LowLevelTransaction, Slices.Empty, setState);
-            matches = field.CalculateScoring 
+            matches = field.Ranking 
                 ? TermMatch.YieldSetWithFreq(this, Allocator, set, IsAccelerated) 
                 : TermMatch.YieldSetNoFreq(this, Allocator, set, IsAccelerated);
         }
         else if ((containerId & (long)TermIdMask.Small) != 0)
         {
-            var smallSetId = containerId & Constants.StorageMask.ContainerType;
+            var smallSetId = FrequencyUtils.GetContainerId(containerId);// & Constants.StorageMask.ContainerType);
             var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
-            matches = field.CalculateScoring ? 
+            matches = field.Ranking ? 
                 TermMatch.YieldSmallWithFreq(this, Allocator, small) : 
                 TermMatch.YieldSmallNoFreq(this, Allocator, small);
         }
         else
         {
-            matches = field.CalculateScoring 
+            matches = field.Ranking 
                 ? TermMatch.YieldOnceWithFreq(this, Allocator, containerId)
                 : TermMatch.YieldOnceNoFreq(this, Allocator, containerId);
         }
@@ -134,7 +135,7 @@ public partial class IndexSearcher
 
         if ((value & (long)TermIdMask.Set) != 0)
         {
-            var setId = value & Constants.StorageMask.ContainerType;
+            var setId = FrequencyUtils.GetContainerId(value);
             var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
             ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             return setState.NumberOfEntries;
@@ -142,7 +143,7 @@ public partial class IndexSearcher
         
         if ((value & (long)TermIdMask.Small) != 0)
         {
-            var smallSetId = value & Constants.StorageMask.ContainerType;
+            var smallSetId = FrequencyUtils.GetContainerId(value);
             var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
             var itemsCount = ZigZagEncoding.Decode<int>(small.ToSpan(), out var len);
 

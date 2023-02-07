@@ -372,7 +372,7 @@ namespace Corax.Queries
                 {
                     // Initializing the scores and retrieve them.
                     scores.Fill(1);
-                    match._inner.Score(matches, scores);
+                    match._inner.Score(matches, scores, 1f);
                 }
 
                 var searcher = match._searcher;
@@ -659,7 +659,7 @@ namespace Corax.Queries
             return 1;         
         }
 
-        public void Score(Span<long> matches, Span<float> scores) 
+        public void Score(Span<long> matches, Span<float> scores, float boostFactor) 
         {
             throw new NotSupportedException($"Scoring is not supported by {nameof(SortingMultiMatch)}");
         }
