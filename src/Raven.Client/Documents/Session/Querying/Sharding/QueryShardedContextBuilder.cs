@@ -3,18 +3,18 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Session.Querying.Sharding;
 
-internal class ShardedQueryContextBuilder : IShardedQueryContextBuilder
+internal class QueryShardedContextBuilder : IQueryShardedContextBuilder
 {
     public HashSet<string> DocumentIds { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public IShardedQueryContextBuilder ByDocumentId(string id)
+    public IQueryShardedContextBuilder ByDocumentId(string id)
     {
         DocumentIds.Add(id);
 
         return this;
     }
 
-    public IShardedQueryContextBuilder ByDocumentIds(ICollection<string> ids)
+    public IQueryShardedContextBuilder ByDocumentIds(IEnumerable<string> ids)
     {
         foreach (string id in ids)
         {

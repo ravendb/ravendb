@@ -388,7 +388,7 @@ namespace Raven.Client
                     {
                     }
 
-                    public const string ShardContextParameterName = "__shardContext";
+                    internal const string ShardContextParameterName = "__shardContext";
                 }
             }
 
