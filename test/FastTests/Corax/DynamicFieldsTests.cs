@@ -101,7 +101,7 @@ public unsafe class DynamicFieldsTests : StorageTest
         using (var searcher = new IndexSearcher(Env, knownFields))
         {
             Span<long> ids = new long[16];
-            var entries = searcher.GreaterThanQuery(searcher.FieldMetadataBuilder("Age_1"), 5L, new NullScoreFunction());
+            var entries = searcher.GreaterThanQuery(searcher.FieldMetadataBuilder("Age_1"), 5L);
             Assert.Equal(1, entries.Fill(ids));
         }
         

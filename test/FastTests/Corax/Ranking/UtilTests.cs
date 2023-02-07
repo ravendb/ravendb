@@ -5,6 +5,7 @@ using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Extensions;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;

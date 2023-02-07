@@ -1148,7 +1148,7 @@ namespace FastTests.Corax
             }
 
             {
-                var match = searcher.ContainsQuery(contentMetadata, "er", true);
+                var match = searcher.ContainsQuery(contentMetadata, "er");
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
                 Assert.Equal("entry/3", searcher.GetIdentityFor(ids[0]));
@@ -1205,7 +1205,7 @@ namespace FastTests.Corax
             }
 
             {
-                var match = searcher.EndsWithQuery(contentMetadata, "ing", default(ConstantScoreFunction));
+                var match = searcher.EndsWithQuery(contentMetadata, "ing");
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
             }

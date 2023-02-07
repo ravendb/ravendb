@@ -33,7 +33,7 @@ namespace FastTests.Corax
             IndexEntries();
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
-            var match1 = searcher.GreaterThanQuery<long, NullScoreFunction>(_longItemFieldMetadata, 3, default);
+            var match1 = searcher.GreaterThanQuery<long>(_longItemFieldMetadata, 3);
             var expectedList = GetExpectedResult(3);
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -85,7 +85,7 @@ namespace FastTests.Corax
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
 
-            var match1 = searcher.LessThanQuery<long, NullScoreFunction>(_longItemFieldMetadata, 0, default);
+            var match1 = searcher.LessThanQuery<long>(_longItemFieldMetadata, 0);
             var ids = new long[16];
             int read = match1.Fill(ids);
             Assert.Equal(0, read);
@@ -101,7 +101,7 @@ namespace FastTests.Corax
             Slice.From(ctx, "991", out var low);
             Slice.From(ctx, "995", out var high);
 
-            var match1 = searcher.BetweenQuery(_longItemFieldMetadata, low.ToString(), high.ToString(), default(NullScoreFunction));
+            var match1 = searcher.BetweenQuery(_longItemFieldMetadata, low.ToString(), high.ToString());
             var expectedList = _entries.Where(x => x.LongValue is >= 991 and <= 995).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -119,7 +119,7 @@ namespace FastTests.Corax
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
 
-            var match1 = searcher.BetweenQuery(_longItemFieldMetadata, 95L, 212L, default(NullScoreFunction));
+            var match1 = searcher.BetweenQuery(_longItemFieldMetadata, 95L, 212L);
             var expectedList = _entries.Where(x => x.LongValue is >= 95 and <= 212).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -138,7 +138,7 @@ namespace FastTests.Corax
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
 
-            var match1 = searcher.BetweenQuery(_longItemFieldMetadata, 95.2, 213.2, default(NullScoreFunction));
+            var match1 = searcher.BetweenQuery(_longItemFieldMetadata, 95.2, 213.2);
             var expectedList = _entries.Where(x => (double)x.LongValue is >= 95.2 and <= 213.2).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);

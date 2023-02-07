@@ -135,7 +135,7 @@ namespace SlowTests.Core.Indexing
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void BasicLoadDocuments(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -203,9 +203,9 @@ namespace SlowTests.Core.Indexing
                         .OfType<User>()
                         .ToList();
                     var address = session.Load<Address>("addresses/1-A");
-                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(0, users.Count);
-
+                    
+                    Indexes.WaitForIndexing(store);
                     users = session.Query<Users_ByCity.Result, Users_ByCity>()
                         .Where(x => x.City == "Barcelona")
                         .OfType<User>()
@@ -246,6 +246,7 @@ namespace SlowTests.Core.Indexing
 
                 Indexes.WaitForIndexing(store);
 
+          //      WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var users = session.Query<Users_ByCity.Result, Users_ByCity>()

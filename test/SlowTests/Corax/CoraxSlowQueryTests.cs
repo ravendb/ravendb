@@ -353,7 +353,7 @@ public class CoraxSlowQueryTests : RavenTestBase
             var rawQuery = new StringBuilder();
             rawQuery.Append("from Results where boost(Age == 0, 0)");
             for (int i = 1; i < terms; ++i)
-                rawQuery.Append($" or boost(Age == {i},{i})");
+                rawQuery.Append($" or boost(Age == '{i}',{i})");
             rawQuery.Append(" order by score()");
 
             Assertion(rawQuery.ToString());

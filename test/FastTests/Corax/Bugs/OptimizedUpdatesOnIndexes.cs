@@ -3,6 +3,7 @@ using System.Text;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -46,7 +47,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
             var ids = new long[16];
             var read = termQuery.Fill(ids);
             Assert.Equal(1, read);
-            Assert.Equal(oldId, ids[0]);
+            Assert.Equal(FrequencyUtils.Decode(oldId).EntryId, ids[0]);
         }
 
         long newId;
@@ -77,7 +78,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
             ids = new long[16];
             read = termQuery.Fill(ids);
             Assert.Equal(1, read);
-            Assert.Equal(oldId, ids[0]);
+            Assert.Equal(FrequencyUtils.Decode(oldId).EntryId, ids[0]);
         }
 
     }
