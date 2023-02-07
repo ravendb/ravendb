@@ -1,4 +1,5 @@
-﻿using Esprima.Ast;
+﻿using System.Linq;
+using Esprima.Ast;
 using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Queries
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents.Queries
                         {
                             if (callExpression.Arguments[0] is ArrowFunctionExpression afe)
                             {
-                                if (afe.ChildNodes[1] is StaticMemberExpression sme)
+                                if (afe.ChildNodes.ToArray()[1] is StaticMemberExpression sme)
                                 {
                                     if (sme.Property is Identifier identifier)
                                     {

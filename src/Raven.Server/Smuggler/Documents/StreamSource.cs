@@ -835,7 +835,8 @@ namespace Raven.Server.Smuggler.Documents
                     Baseline = baseline,
                     Collection = collection,
                     ChangeVector = cv,
-                    Segment = segment
+                    Segment = segment,
+                    SegmentSize = size
                 };
             }
             

@@ -312,18 +312,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _isMap = index.Type.IsMap();
             }
 
-            public int RegisterDuplicates<TProjection>(ref TProjection hasProjection, int currentIdx, ReadOnlySpan<long> ids, CancellationToken token)
+            public long RegisterDuplicates<TProjection>(ref TProjection hasProjection, long currentIdx, ReadOnlySpan<long> ids, CancellationToken token)
                 where TProjection : struct, IHasProjection
             {
                 // From now on, we know we will try to skip duplicates.
-                int limit = 0;
+                long limit = 0;
                 
                 // If query start is effectively bigger than the one we are starting on. 
                 if (_query.Start > currentIdx)
                 {
                     // If the query start before the current read ids, then we have to divide the ids in those
                     // that need to be processed for discarding and those that don't. 
-                    int nextLimit = currentIdx + ids.Length;
+                    long nextLimit = currentIdx + ids.Length;
                     if (_query.Start < currentIdx + ids.Length)
                         limit = _query.Start - currentIdx;
                     else
@@ -332,7 +332,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 // else we left it behind, so we are going to continue going for 0. 
                 else return 0;
 
-                var distinctIds = ids.Slice(0, limit);
+                var distinctIds = ids.Slice(0, (int)limit);
 
                 if (_isMap && hasProjection.IsProjection == false)
                 {
@@ -551,7 +551,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     break;
 
                 // If we are going to skip, we've better do it knowing how many we have passed. 
-                int i = identityTracker.RegisterDuplicates<THasProjection>(ref hasProjections, totalResults.Value, ids.AsSpan(0, read), token);
+                long i = identityTracker.RegisterDuplicates<THasProjection>(ref hasProjections, totalResults.Value, ids.AsSpan(0, read), token);
 
                 totalResults.Value += read;
 

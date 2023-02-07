@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Patch
 
             if (args[0] is ScriptFunctionInstance sfi)
             {
-                if (sfi.FunctionDeclaration.ChildNodes[1] is StaticMemberExpression sme)
+                if (sfi.FunctionDeclaration.ChildNodes.ToArray()[1] is StaticMemberExpression sme)
                 {
                     if (sme.Property is Identifier identifier)
                     { 

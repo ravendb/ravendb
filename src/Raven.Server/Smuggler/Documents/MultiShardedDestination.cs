@@ -307,12 +307,12 @@ namespace Raven.Server.Smuggler.Documents
 
             public void RegisterForDisposal(IDisposable data)
             {
-                throw new NotImplementedException();
+                // TODO fix this after handling this properly in 5.4
             }
 
             public void RegisterForReturnToTheContext(AllocatedMemoryData data)
             {
-                throw new NotImplementedException();
+                // TODO fix this after handling this properly in 5.4
             }
         }
 

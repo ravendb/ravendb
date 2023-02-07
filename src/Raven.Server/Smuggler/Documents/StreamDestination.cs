@@ -335,6 +335,13 @@ namespace Raven.Server.Smuggler.Documents
                     WriteIndexesHistory(databaseRecord.IndexesHistory);
                 }
                 
+                if (databaseRecord.IsSharded)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.Sharding));
+                    WriteShardingConfiguration(databaseRecord.Sharding);
+                }
+
                 switch (authorizationStatus)
                 {
                     case AuthorizationStatus.DatabaseAdmin:
@@ -453,17 +460,9 @@ namespace Raven.Server.Smuggler.Documents
 
                             _writer.WriteEndObject();
                         }
-
-                        if (databaseRecord.IsSharded)
-                        {
-                            _writer.WriteComma();
-                            _writer.WritePropertyName(nameof(databaseRecord.Sharding));
-                            WriteShardingConfiguration(databaseRecord.Sharding);
-                        }
-
                         break;
                 }
-
+                
                 await _writer.MaybeFlushAsync();
             }
 
