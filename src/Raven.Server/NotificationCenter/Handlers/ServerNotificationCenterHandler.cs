@@ -5,10 +5,12 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Util;
 using Raven.Server.Dashboard;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Routing;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
 
 namespace Raven.Server.NotificationCenter.Handlers
@@ -47,8 +49,10 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                     // update the connection with the current cluster topology
                     writer.AfterTrackActionsRegistration = ServerStore.NotifyAboutClusterTopologyAndConnectivityChanges;
-
                     await writer.WriteNotifications(isValidFor);
+
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
                 }
             }
         }
@@ -72,6 +76,9 @@ namespace Raven.Server.NotificationCenter.Handlers
             else
                 ServerStore.NotificationCenter.Dismiss(id);
 
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext("DismissCommand", TrafficWatchChangeType.ClusterCommands);
+
             return NoContent();
         }
 
@@ -91,6 +98,9 @@ namespace Raven.Server.NotificationCenter.Handlers
 
             var until = timeInSec == 0 ? DateTime.MaxValue : SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec));
             ServerStore.NotificationCenter.Postpone(id, until);
+
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext("PostponeCommand", TrafficWatchChangeType.ClusterCommands);
 
             return NoContent();
         }

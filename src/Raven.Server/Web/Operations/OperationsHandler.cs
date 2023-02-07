@@ -29,6 +29,10 @@ namespace Raven.Server.Web.Operations
                     writer.WritePropertyName(nameof(GetNextOperationIdCommand.NodeTag));
                     writer.WriteString(Server.ServerStore.NodeTag);
                     writer.WriteEndObject();
+
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
+
                 }
             }
         }
@@ -70,6 +74,9 @@ namespace Raven.Server.Web.Operations
                     writer.WriteStartObject();
                     writer.WriteArray(context, "Results", operations, (w, c, operation) => c.Write(w, operation.ToJson()));
                     writer.WriteEndObject();
+
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
                 }
             }
         }
@@ -95,6 +102,7 @@ namespace Raven.Server.Web.Operations
                     // writes Patch response
                     if (TrafficWatchManager.HasRegisteredClients)
                         AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
+
                 }
             }
         }

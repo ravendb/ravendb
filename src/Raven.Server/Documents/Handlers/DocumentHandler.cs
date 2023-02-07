@@ -100,6 +100,9 @@ namespace Raven.Server.Documents.Handlers
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, documentSizeDetails.ToJson());
+                    
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
                 }
             }
         }
@@ -473,6 +476,8 @@ namespace Raven.Server.Documents.Handlers
 
                 var cmd = new DeleteDocumentCommand(id, changeVector, Database);
                 await Database.TxMerger.Enqueue(cmd);
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext(id, TrafficWatchChangeType.Documents);
             }
 
             NoContentStatus();
@@ -516,6 +521,9 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteString(cmd.PutResult.ChangeVector);
 
                         writer.WriteEndObject();
+                       
+                        if (TrafficWatchManager.HasRegisteredClients)
+                            AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
                     }
                 }
             }
@@ -650,6 +658,9 @@ namespace Raven.Server.Documents.Handlers
                     }
 
                     writer.WriteEndObject();
+                    
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
                 }
             }
         }
@@ -685,6 +696,9 @@ namespace Raven.Server.Documents.Handlers
                     var codeGenerator = new JsonClassGenerator(lang);
                     var code = codeGenerator.Execute(document);
                     await writer.WriteAsync(code);
+                  
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Documents);
                 }
             }
         }
