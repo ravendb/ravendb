@@ -46,14 +46,15 @@ public class RankingFunctionTests : StorageTest
         Span<long> ids = stackalloc long[2];
 
         var read = query.Fill(ids);
-        query.Score(ids.Slice(0, read), scores);
+        query.Score(ids.Slice(0, read), scores, 0);
 
         Assert.Equal(1, read);
     }
 
     [Theory]
-    [InlineData(100)]
-    [InlineData(1000)]
+    [InlineData(10)] //small
+    [InlineData(1000)] //posting list
+
     public void CanGenerateRankingForContainers(int size)
     {
         // we've to provide at least two docs into index. If not IDF will be 0. Consequence of that is score equal to 0.
@@ -74,7 +75,7 @@ public class RankingFunctionTests : StorageTest
         Span<long> ids = stackalloc long[10];
 
         var read = query.Fill(ids);
-        query.Score(ids.Slice(0, read), scores);
+        query.Score(ids.Slice(0, read), scores, 0);
 
         int currentId = 0;
         while (read != 0)
@@ -88,12 +89,12 @@ public class RankingFunctionTests : StorageTest
             }
             
             read = query.Fill(ids);
-            query.Score(ids.Slice(0, read), scores);
+            query.Score(ids.Slice(0, read), scores, 0);
         }
     }
 
     [Fact]
-    public void TwoBoostingMatches()
+    public void TwoBoostingMatchesWithOr()
     {
         var list = new List<EntryData>();
         {
@@ -115,13 +116,45 @@ public class RankingFunctionTests : StorageTest
         Span<long> ids = stackalloc long[10];
         
         var read = orMatch.Fill(ids);
-        orMatch.Score(ids.Slice(0, read), scores.Slice(0, read));
+        orMatch.Score(ids.Slice(0, read), scores.Slice(0, read), 0);
         
         Assert.Equal(3, read);
         
         MemoryExtensions.Sort(ids.Slice(0, read), scores.Slice(0, read));
         
         Assert.Equal("id/3", indexSearcher.GetIdentityFor(ids[2]));
+    }
+    
+    [Fact]
+    public void TwoBoostingMatchesWithAnd()
+    {
+        var list = new List<EntryData>();
+        {
+            var idX = 0;
+            list.Add(new EntryData(idX++, "Maciej Kaszebe Kaszebe Kaszebe Kaszebe"));
+            list.Add(new EntryData(idX++, "Maciej"));
+            list.Add(new EntryData(idX++, "Jan"));
+            list.Add(new EntryData(idX++, "Kaszebe Maciej Maciej Maciej"));
+        }
+        
+        IndexEntries(list);
+        using var indexSearcher = new IndexSearcher(Env, _mapping);
+        var q1 = indexSearcher.TermQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "maciej");
+        var q2 = indexSearcher.TermQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "kaszebe");
+
+        var andMatch = indexSearcher.And(q1, q2);
+        Span<float> scores = stackalloc float[10];
+        scores.Fill(0);
+        Span<long> ids = stackalloc long[10];
+        
+        var read = andMatch.Fill(ids);
+        andMatch.Score(ids.Slice(0, read), scores.Slice(0, read), 1f);
+        
+        Assert.Equal(2, read);
+        
+        MemoryExtensions.Sort(ids.Slice(0, read), scores.Slice(0, read));
+        
+       // Assert.Equal("id/3", indexSearcher.GetIdentityFor(ids[2]));
     }
 
 
@@ -146,31 +179,26 @@ public class RankingFunctionTests : StorageTest
         Span<float> scores = stackalloc float[10];
         scores.Fill(0);
         var read = query.Fill(matches);
-        query.Score(matches.Slice(0, read), scores.Slice(0, read));
+        query.Score(matches.Slice(0, read), scores.Slice(0, read), 0);
         Assert.Equal(4, read);
         
         scores.Slice(0,4).Sort(matches.Slice(0, 4));
         var ids = new List<string>();
         for (int i = 0; i < 4; ++i)
             ids.Add(indexSearcher.GetIdentityFor(matches[i]));
-
-        
-
-
-
     }
     
     private void IndexEntries(IEnumerable<EntryData> entries)
     {
         using var indexWriter = new IndexWriter(Env, _mapping);
         using var entry = new IndexEntryWriter(_context, _mapping);
-
+        
         foreach (var dto in entries)
         {
             entry.Write(IdIndex, dto.IdAsSpan, dto.Id, dto.Id);
             entry.Write(ContentIndex, dto.ContentAsSpan);
             using var _ = entry.Finish(out var data);
-            indexWriter.Index($"id/{dto.Id}", data.ToSpan());
+            var entryId = indexWriter.Index($"id/{dto.Id}", data.ToSpan());
         }
 
         indexWriter.Commit();

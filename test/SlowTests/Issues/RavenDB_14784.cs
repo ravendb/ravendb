@@ -539,7 +539,6 @@ return attachments.map(attachment => ({
                 store.Maintenance.Send(new StartIndexingOperation());
 
                 Indexes.WaitForIndexing(store);
-
                 staleness = store.Maintenance.Send(new GetIndexStalenessOperation(index.IndexName));
                 Assert.False(staleness.IsStale);
                 Assert.Equal(0, staleness.StalenessReasons.Count);
