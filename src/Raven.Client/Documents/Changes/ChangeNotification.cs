@@ -444,6 +444,8 @@ namespace Raven.Client.Documents.Changes
         Subscriptions,
         Streams,
         Documents,
-        TimeSeries
+        TimeSeries,
+        Notifications,
+        ClusterCommands
     }
 }
