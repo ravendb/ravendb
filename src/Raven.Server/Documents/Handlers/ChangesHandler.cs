@@ -34,6 +34,11 @@ namespace Raven.Server.Documents.Handlers
                     catch (OperationCanceledException)
                     {
                     }
+                    catch (TimeoutException e)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("Timeout in changes handler", e);
+                    }
                     catch (Exception ex)
                     {
                         if (Logger.IsInfoEnabled)
@@ -113,14 +118,14 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var segments = new[] { segment1, segment2 };
                     int index = 0;
-                    var receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, Database.DatabaseShutdown);
+                    var receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, connection.CancellationToken.Token);
                     var jsonParserState = new JsonParserState();
                     using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                     {
                         connection.SendSupportedFeatures();
 
                         var result = await receiveAsync;
-                        Database.DatabaseShutdown.ThrowIfCancellationRequested();
+                        connection.CancellationToken.Token.ThrowIfCancellationRequested();
 
                         parser.SetBuffer(segments[index], 0, result.Count);
                         index++;
@@ -137,7 +142,7 @@ namespace Raven.Server.Documents.Handlers
                                 while (builder.Read() == false)
                                 {
                                     result = await receiveAsync;
-                                    Database.DatabaseShutdown.ThrowIfCancellationRequested();
+                                    connection.CancellationToken.Token.ThrowIfCancellationRequested();
 
                                     parser.SetBuffer(segments[index], 0, result.Count);
                                     if (++index >= segments.Length)
@@ -184,6 +189,11 @@ namespace Raven.Server.Documents.Handlers
                         && webSocket.State == WebSocketState.CloseReceived)
                     {
                         // ignore
+                    }
+                    else if (ex is OperationCanceledException)
+                    {
+                        await sendTask; // will throw if the task is faulted
+                        throw;
                     }
                     else
                     {
