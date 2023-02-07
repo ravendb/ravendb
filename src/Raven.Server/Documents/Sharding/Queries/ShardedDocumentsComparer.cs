@@ -155,6 +155,12 @@ public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
             return true;
         }
 
+        if (arrayValue is long)
+        {
+            value = Convert.ToDouble(arrayValue);
+            return true;
+        }
+
         ThrowIfNotExpectedType(nameof(LazyNumberValue), arrayValue);
         value = 0;
         return false;

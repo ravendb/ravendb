@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -64,10 +65,11 @@ namespace SlowTests.MailingList.Jabber
             #endregion
         }
 
-        [Fact]
-        public void CanUseTransformResults()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanUseTransformResults(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupTestGameData(store);
                 new GameServers_ConnectedPlayers().Execute(store);

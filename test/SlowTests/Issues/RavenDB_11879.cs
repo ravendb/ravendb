@@ -4,6 +4,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -63,10 +64,11 @@ namespace SlowTests.Issues
             public string Id { get; set; }
         }
 
-        [Fact]
-        public void SortOnlyQueriesShouldWorkForMultiMapIndexes()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void SortOnlyQueriesShouldWorkForMultiMapIndexes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new MultiMap().Execute(store);
 
@@ -132,10 +134,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void SortOnlyQueriesShouldWorkForAutoIndexes()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void SortOnlyQueriesShouldWorkForAutoIndexes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 for (var i = 0; i < 50; i++)
                 {

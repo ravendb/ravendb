@@ -8,6 +8,7 @@ using Amazon.SQS.Model;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
+using Corax.Utils;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -31,7 +32,7 @@ using IndexSearcher = Corax.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
-    public class CoraxIndexReadOperation : IndexReadOperationBase
+    public partial class CoraxIndexReadOperation : IndexReadOperationBase
     {
         // PERF: This is a hack in order to deal with RavenDB-19597. The ArrayPool creates contention under high requests environments.
         // There are 2 ways to avoid this contention, one is to avoid using it altogether and the other one is separating the pools from
@@ -522,11 +523,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             bool isBinary;
 
             QueryTimingsScope coraxScope = queryTimings?.For(nameof(QueryTimingsScope.Names.Corax), start: false);
+            OrderMetadata[] orderByFields;
+
             using (coraxScope?.Start())
             {
                 var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, serverContext: null, documentsContext: null, query, _index, query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, CoraxConstants.IndexSearcher.TakeAll);
 
-                if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary)) is null)
+                if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary, out orderByFields)) is null)
                     yield break;
             }
 
@@ -561,11 +564,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     token.ThrowIfCancellationRequested();
 
                     // If we are going to include no matter what, lets skip everything else.
+                    long indexEntryId = ids[i];
+
                     if (willAlwaysIncludeInResults)
                         goto Include;
 
                     // Ok, we will need to check for duplicates, then we will have to work. 
-                    var rawIdentity = _indexSearcher.GetRawIdentityFor(ids[i]);
+                    var rawIdentity = _indexSearcher.GetRawIdentityFor(indexEntryId);
                     bool includeInResults = identityTracker.ShouldIncludeIdentity(ref hasProjections, rawIdentity);
 
                     // If we have figured out that this document identity has already been seen, we are skipping it.
@@ -579,7 +584,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     // Now we know this is a new candidate document to be return therefore, we are going to be getting the
                     // actual data and apply the rest of the filters. 
                     Include:
-                    var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(ids[i], out var key), key);
+                    var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(indexEntryId, out var key), key);
 
                     var filterResult = queryFilter.Apply(ref retrieverInput, key);
                     if (filterResult is not FilterResult.Accepted)
@@ -595,7 +600,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     var fetchedDocument = retriever.Get(ref retrieverInput, token);
                     if (fetchedDocument.Document != null)
                     {
-                        var qr = GetQueryResult(ref identityTracker, fetchedDocument.Document, ref markedAsSkipped);
+                        var qr = GetQueryResult(ref identityTracker, fetchedDocument.Document);
                         if (qr.Result is null)
                         {
                             docsToLoad++;
@@ -608,7 +613,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         foreach (Document item in fetchedDocument.List)
                         {
-                            var qr = GetQueryResult(ref identityTracker, item, ref markedAsSkipped);
+                            var qr = GetQueryResult(ref identityTracker, item);
                             if (qr.Result is null)
                             {
                                 docsToLoad++;
@@ -617,6 +622,31 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                             yield return qr;
                         }
+                    }
+
+                    QueryResult GetQueryResult(ref IdentityTracker<TDistinct> tracker, Document document)
+                    {
+                        if (tracker.ShouldIncludeDocument(ref hasProjections, document) == false)
+                        {
+                            document?.Dispose();
+
+                            if (markedAsSkipped == false)
+                            {
+                                skippedResults.Value++;
+                                markedAsSkipped = true;
+                            }
+
+                            return default;
+                        }
+
+                        if (ShouldAddOrderByFieldValues(query))
+                            AddOrderByFields(query, indexEntryId, orderByFields, ref document);
+
+                        return new QueryResult
+                        {
+                            Result = document,
+                            Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, document),
+                        };
                     }
                 }
 
@@ -641,30 +671,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 else throw new UnsupportedOperationException($"The type {typeof(TQueryFilter)} is not supported.");
             }
 
-            QueryResult GetQueryResult(ref IdentityTracker<TDistinct> tracker, Document document, ref bool markedAsSkipped)
-            {
-                if (tracker.ShouldIncludeDocument(ref hasProjections, document) == false)
-                {
-                    document?.Dispose();
-
-                    if (markedAsSkipped == false)
-                    {
-                        skippedResults.Value++;
-                        markedAsSkipped = true;
-                    }
-
-                    return default;
-                }
-
-                return new QueryResult
-                {
-                    Result = document,
-                    Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, document),
-                };
-            }
-
             QueryPool.Return(ids);
         }
+
+        partial void AddOrderByFields(IndexQueryServerSide query, long indexEntryId, OrderMetadata[] orderByFields, ref Document d);
 
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
             Reference<long> totalResults, Reference<long> skippedResults,
@@ -1210,7 +1220,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             IQueryMatch queryMatch;
             bool isBinary;
             var builderParameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, null, null, _fieldMappings, null, null, -1, null);
-            if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary)) is null)
+            if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out isBinary, out _)) is null)
                 yield break;
 
             var ids = QueryPool.Rent(CoraxGetPageSize(_indexSearcher, take, query, isBinary));

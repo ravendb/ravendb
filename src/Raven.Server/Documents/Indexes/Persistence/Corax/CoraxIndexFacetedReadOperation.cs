@@ -50,7 +50,7 @@ public class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         Dictionary<string, Dictionary<string, FacetValues>> facetsByRange = new();
 
         var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, query.QueryParameters, _queryBuilderFactories, _fieldMappings, null, null, -1, null);
-        var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out var isBinary);
+        var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out var isBinary, out _);
         var coraxPageSize = CoraxGetPageSize(_indexSearcher, facetQuery.Query.PageSize, query, isBinary);
         var ids = CoraxIndexReadOperation.QueryPool.Rent(coraxPageSize);
 

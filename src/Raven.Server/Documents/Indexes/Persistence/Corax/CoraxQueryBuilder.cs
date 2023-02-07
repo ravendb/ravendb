@@ -91,7 +91,7 @@ internal static class CoraxQueryBuilder
         return source;
     }
 
-    internal static IQueryMatch BuildQuery(Parameters builderParameters, out bool isBinary)
+    internal static IQueryMatch BuildQuery(Parameters builderParameters, out bool isBinary, out OrderMetadata[] sortMetadata)
     {
         using (CultureHelper.EnsureInvariantCulture())
         {
@@ -115,9 +115,11 @@ internal static class CoraxQueryBuilder
 
             if (metadata.Query.OrderBy is not null)
             {
-                var sortMetadata = GetSortMetadata(builderParameters);
+                sortMetadata = GetSortMetadata(builderParameters);
                 coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata);
             }
+            else
+                sortMetadata = null;
 
             // The parser already throws parse exception if there is a syntax error.
             // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
@@ -451,7 +453,7 @@ internal static class CoraxQueryBuilder
     {
         using (CultureHelper.EnsureInvariantCulture())
         {
-            var filterQuery = BuildQuery(builderParameters, out isBinary);
+            var filterQuery = BuildQuery(builderParameters, out isBinary, out _);
             filterQuery = MaterializeWhenNeeded(filterQuery, ref isBinary);
 
             var moreLikeThisQuery = ToMoreLikeThisQuery(builderParameters, whereExpression, out isBinary, out var baseDocument, out var options);

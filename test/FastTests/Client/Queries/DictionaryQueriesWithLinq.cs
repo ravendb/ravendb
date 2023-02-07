@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -34,10 +35,11 @@ public class DictionaryQueriesWithLinq : RavenTestBase
         }
     }
 
-    [Fact]
-    public void QueryCustomDictionaryWithOrderEqualityClause()
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
+    public void QueryCustomDictionaryWithOrderEqualityClause(Options options)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var newSession = store.OpenSession())
             {

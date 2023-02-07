@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -23,7 +25,6 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected IndexReadOperationBase(Index index, Logger logger, QueryBuilderFactories queryBuilderFactories, IndexQueryServerSide query) : base(index, logger)
         {
             QueryBuilderFactories = queryBuilderFactories;
-
 
             if (_logger.IsInfoEnabled && query != null)
             {
@@ -58,7 +59,17 @@ namespace Raven.Server.Documents.Indexes.Persistence
             Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token);
 
         public abstract IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields);
-        
+
+        protected bool ShouldAddOrderByFieldValues(IndexQueryServerSide query)
+        {
+            // * for sharded queries, we'll send the order by fields separately
+            // * for a map-reduce index, it's fields are the ones that are used for sorting
+            if (_index.DocumentDatabase is ShardedDocumentDatabase == false || query.Metadata.OrderBy?.Length > 0 == false || _index.Type.IsMapReduce())
+                return false;
+
+            return true;
+        }
+
         public override void Dispose()
         {
             if (_logger.IsInfoEnabled && _memoryInfo != null && _memoryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)

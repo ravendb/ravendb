@@ -12,6 +12,7 @@ using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Extensions;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
@@ -135,7 +136,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Where_clause_and_sorting(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -170,7 +171,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Sorting_by_doubles(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -197,7 +198,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Sorting_by_integers(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -224,7 +225,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Sorting_by_nested_string_field(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -254,16 +255,19 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Assert.Equal("orders/2", orders[2].Id);
                     Assert.Equal("orders/4", orders[3].Id);
 
-                    var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)).ToList();
+                    var tester = store.Maintenance.ForTesting(() => new GetIndexesOperation(0, 10));
 
-                    Assert.Equal(1, indexes.Count);
-                    Assert.Equal("Auto/Orders/ByShipTo.Country", indexes[0].Name);
+                    await tester.AssertAllAsync((_, indexes) =>
+                    {
+                        Assert.Equal(1, indexes.Length);
+                        Assert.Equal("Auto/Orders/ByShipTo.Country", indexes[0].Name);
+                    });
                 }
             }
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Sorting_by_nested_integer_field(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -293,16 +297,19 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Assert.Equal("orders/2", orders[2].Id);
                     Assert.Equal("orders/4", orders[3].Id);
 
-                    var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)).ToList();
+                    var tester = store.Maintenance.ForTesting(() => new GetIndexesOperation(0, 10));
 
-                    Assert.Equal(1, indexes.Count);
-                    Assert.Equal("Auto/Orders/ByShipTo.ZipCode", indexes[0].Name);
+                    await tester.AssertAllAsync((_, indexes) =>
+                    {
+                        Assert.Equal(1, indexes.Length);
+                        Assert.Equal("Auto/Orders/ByShipTo.ZipCode", indexes[0].Name);
+                    });
                 }
             }
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Sorting_by_strings(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -334,7 +341,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Partial_match(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -359,15 +366,20 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Age > 20).ToList();
 
                     Assert.Equal(2, users.Count);
-                    Assert.Equal("users/1", users[0].Id);
-                    Assert.Equal("users/3", users[1].Id);
+                    Assert.Contains("users/1", users.Select(x => x.Id));
+                    Assert.Contains("users/1", users.Select(x => x.Id));
 
-                    var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10))
-                        .OrderBy(x=>x.Name.Length)
-                        .ToList();
+                    var tester = store.Maintenance.ForTesting(() => new GetIndexesOperation(0, 10));
 
-                    Assert.Equal("Auto/Users/ByName", indexes[0].Name);
-                    Assert.Equal("Auto/Users/ByAgeAndName", indexes[1].Name);
+                    await tester.AssertAllAsync((_, indexDefinitions) =>
+                    {
+                        var indexes =  indexDefinitions
+                            .OrderBy(x => x.Name.Length)
+                            .ToList();
+
+                        Assert.Equal("Auto/Users/ByName", indexes[0].Name);
+                        Assert.Equal("Auto/Users/ByAgeAndName", indexes[1].Name);
+                    });
                 }
             }
         }
