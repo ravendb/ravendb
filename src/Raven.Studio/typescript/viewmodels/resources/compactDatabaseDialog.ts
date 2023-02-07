@@ -21,6 +21,8 @@ class compactDatabaseDialog extends dialogViewModelBase {
     compactDocuments = ko.observable<boolean>(true);
     compactAllIndexes = ko.observable<boolean>();
 
+    skipOptimizeIndexes = ko.observable<boolean>(false);
+
     filterText = ko.observable<string>();
     filteredIndexes: KnockoutComputed<Array<string>>;
 
@@ -92,7 +94,7 @@ class compactDatabaseDialog extends dialogViewModelBase {
     compactDatabase() {
         //TODO: this.database.inProgressAction("Compacting...");
 
-        new compactDatabaseCommand(this.database.name, this.compactDocuments(), this.indexesToCompact())
+        new compactDatabaseCommand(this.database.name, this.compactDocuments(), this.indexesToCompact(), this.skipOptimizeIndexes())
             .execute()
             .done(result => {
                 notificationCenter.instance.monitorOperation(null, result.OperationId)

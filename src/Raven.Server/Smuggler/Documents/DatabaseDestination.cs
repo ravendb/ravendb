@@ -1328,6 +1328,16 @@ namespace Raven.Server.Smuggler.Documents
                 await HandleBatchOfTimeSeriesIfNecessaryAsync();
             }
 
+            public void RegisterForDisposal(IDisposable data)
+            {
+                _cmd.AddToDisposal(data);
+            }
+
+            public void RegisterForReturnToTheContext(AllocatedMemoryData data)
+            {
+                _cmd.AddToReturn(data);
+            }
+            
             private async ValueTask HandleBatchOfTimeSeriesIfNecessaryAsync()
             {
                 if (_segmentsSize < _maxBatchSize)
@@ -1365,6 +1375,12 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _cmd = null;
+            }
+
+            public JsonOperationContext GetContextForNewDocument()
+            {
+                _cmd.Context.CachedProperties.NewDocument();
+                return _cmd.Context;
             }
         }
     }

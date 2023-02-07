@@ -321,6 +321,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 case Nodes.ArrowFunctionExpression:
                     VisitArrowFunctionExpression(expression.As<ArrowFunctionExpression>());
                     break;
+                case Nodes.SpreadElement:
+                    VisitSpreadElement(expression.As<SpreadElement>());
+                    break;
                 default:
                     VisitUnknownNode(expression);
                     break;
@@ -699,6 +702,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitSpreadElement(SpreadElement spreadElement)
         {
+            VisitIdentifier(spreadElement.Argument.As<Identifier>());
         }
 
         public virtual void VisitAssignmentPattern(AssignmentPattern assignmentPattern)

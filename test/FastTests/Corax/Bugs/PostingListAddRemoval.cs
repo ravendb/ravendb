@@ -47,6 +47,69 @@ public class PostingListAddRemoval : StorageTest
         }
     }
 
+    [Fact]
+    public void CanWorkWhenEntryIdIsBiggerThanInt()
+    {
+        var maxSize = 0;
+        List<long> items = ReadNumbersFromResource("Corax.PostingList.AddsBiggerThanInt.txt").ToList();
+        items.Sort();
+        
+        maxSize = items.Count;
+        using (var wtx = Env.WriteTransaction())
+        {
+            var set = wtx.OpenPostingList("test");
+            foreach (long id in  items)
+            {
+                set.Add(id);
+            }   
+            wtx.Commit();
+        }
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            var set = rtx.OpenPostingList("test");
+           
+
+            Assert.Equal(items, set.DumpAllValues());
+            Assert.Equal(items.Count, set.State.NumberOfEntries);
+        }
+
+        var removals = ReadNumbersFromResource("Corax.PostingList.RemBiggerThanInt.txt").ToList();
+        using (var wtx = Env.WriteTransaction())
+        {
+            var set = wtx.OpenPostingList("test");
+            foreach (long id in removals)
+            {
+                set.Remove(id);
+            }                
+            wtx.Commit();
+        }
+
+        var removalSet = new HashSet<long>(removals);
+        items.RemoveAll(l => removalSet.Contains(l));
+        
+        using (var rtx = Env.ReadTransaction())
+        {
+            var set = rtx.OpenPostingList("test");
+            Assert.Equal(items, set.DumpAllValues());
+
+            Assert.Equal(items.Count, set.State.NumberOfEntries);
+        }
+        
+        using (var rtx = Env.ReadTransaction())
+        {
+            var matches = new long[maxSize * 2];
+            var set = rtx.OpenPostingList("test");
+            set.Iterate().Fill(matches, out int read);
+            Assert.Equal(items.Count, read);
+            for (int i = 0; i < items.Count; i++)
+            {
+                Assert.Equal(items[i], matches[i]);
+            }
+        }
+    }
+
+
     [Theory]
     [InlineData(300)]
     [InlineData(5000)]

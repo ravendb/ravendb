@@ -22,10 +22,12 @@ namespace SlowTests
         {
         }
 
-        [Fact]
-        public async Task DisableTcpCompressionIn1ServerOutOf2InCluster()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task DisableTcpCompressionIn1ServerOutOf2InCluster(bool watcherCluster)
         {
-            var (nodes, leader) = await CreateRaftCluster(2);
+            var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: watcherCluster);
 
             // modify configuration
             AdminJsConsoleTests.ExecuteScript(leader, database: null, "server.Configuration.Server.DisableTcpCompression = true;");
@@ -38,6 +40,5 @@ namespace SlowTests
             Assert.NotNull(db0);
             Assert.NotNull(db1);
         }
-
     }
 }

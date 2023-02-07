@@ -159,6 +159,9 @@ namespace Raven.Server.ServerWide
             [nameof(PutDatabaseStudioConfigurationCommand)] = 54_001,
             [nameof(PutDatabaseSettingsCommand)] = 54_001,
             [nameof(PutDatabaseClientConfigurationCommand)] = 54_001,
+            
+            [nameof(PutIndexHistoryCommand)] = 54_002,
+            [nameof(DeleteIndexHistoryCommand)] = 54_002,
 
             [nameof(StartBucketMigrationCommand)] = 60_000,
             [nameof(SourceMigrationSendCompletedCommand)] = 60_000,

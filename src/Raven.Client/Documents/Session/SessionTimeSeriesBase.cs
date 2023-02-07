@@ -122,6 +122,28 @@ namespace Raven.Client.Documents.Session
             {
                 Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: null, deletes: new List<TimeSeriesOperation.DeleteOperation> { op }));
             }
+
+            RemoveFromCacheIfNeeded(from, to);
+        }
+
+        private void RemoveFromCacheIfNeeded(DateTime? from = null, DateTime? to = null)
+        {
+            if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) == false)
+                return;
+
+            if (from == null && to == null)
+            {
+                cache.Remove(Name);
+                return;
+            }
+
+            if (cache.TryGetValue(Name, out var ranges) && ranges.Count > 0)
+            {
+                from ??= DateTime.MinValue;
+                to ??= DateTime.MaxValue;
+
+                ranges.RemoveAll(range => range.From <= from && range.To >= to);
+            }
         }
 
         public void Increment<TValues>(DateTime timestamp, TValues value)

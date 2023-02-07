@@ -520,7 +520,7 @@ namespace Raven.Server.Smuggler.Documents
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
 
-        public async IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(List<string> collectionsToExport)
+        public async IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(ITimeSeriesActions action, List<string> collectionsToExport)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             Debug.Assert(_context != null);

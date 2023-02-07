@@ -27,38 +27,38 @@ namespace SlowTests.MailingList.Apo
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public void LazyWhereAndOrderBy(Options options)
         {
-            using (var store = GetDocumentStore(options))
+            using var store = GetDocumentStore(options);
+            
+            using (var session = store.OpenSession())
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new TestClass() { Id = "testid", Value = "test1", Date = DateTime.UtcNow });
-                    session.Store(new TestClass() { Value = "test2", Date = DateTime.UtcNow });
-                    session.Store(new TestClass() { Value = "test3", Date = DateTime.UtcNow.AddMinutes(1) });
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var hello = new List<TestClass>();
-
-                    // should not throw
-                    session.Query<TestClass>()
-                            .Customize(x => x.WaitForNonStaleResults())
-                            .Where(x => x.Date >= DateTime.UtcNow.AddMinutes(-1))
-                            .OrderByDescending(x => x.Date)
-                            .Lazily(result =>
-                            {
-                                hello = result.ToList();
-                            });
-                }
+                session.Store(new TestClass() { Id = "testid", Value = "test1", Date = DateTime.UtcNow });
+                session.Store(new TestClass() { Value = "test2", Date = DateTime.UtcNow });
+                session.Store(new TestClass() { Value = "test3", Date = DateTime.UtcNow.AddMinutes(1) });
+                session.SaveChanges();
             }
+
+            using (var session = store.OpenSession())
+            {
+                var hello = new List<TestClass>();
+
+                // should not throw
+                session.Query<TestClass>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Date >= DateTime.UtcNow.AddMinutes(-1))
+                        .OrderByDescending(x => x.Date)
+                        .Lazily(result =>
+                        {
+                            hello = result.ToList();
+                        });
+            }
+            
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task LazyQuery_WhenDefineCallBack_ShouldExecuteAsItIsInRegularQuery(Options options)
         {
             var regularQuery = new List<string>();
@@ -107,7 +107,7 @@ namespace SlowTests.MailingList.Apo
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CountLazily_WhenDefineCallBack_ShouldExecuteAsItIsInRegularQuery(Options options)
         {
             var regularQuery = new List<string>();

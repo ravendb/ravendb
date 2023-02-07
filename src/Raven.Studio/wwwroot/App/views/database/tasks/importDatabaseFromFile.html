@@ -99,7 +99,13 @@
                             </div>
                             <div class="margin-left">
                                 <div class="toggle">
-                                    <input id="importAnalyzers" type="checkbox" data-bind="checked: removeAnalyzers" />
+                                    <input id="toggleIndexHistory" type="checkbox"
+                                           data-bind="checked: databaseModel.includeIndexHistory, enable: includeIndexes" />
+                                    <label for="toggleIndexHistory">Include Index History</label>
+                                </div>
+                                <div class="toggle">
+                                    <input id="importAnalyzers" type="checkbox"
+                                           data-bind="checked: removeAnalyzers, enable: includeIndexes" />
                                     <label for="importAnalyzers">Remove Analyzers</label>
                                 </div>
                             </div>

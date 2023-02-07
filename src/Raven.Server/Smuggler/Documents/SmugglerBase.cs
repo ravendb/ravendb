@@ -122,7 +122,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public static void EnsureProcessed(SmugglerResult result, bool skipped = true)
+        public static void EnsureProcessed(SmugglerResult result, bool skipped = true, bool? indexesSkipped = null)
         {
             EnsureStepProcessed(result.DatabaseRecord, skipped);
             EnsureStepProcessed(result.Documents, skipped);
@@ -132,7 +132,7 @@ namespace Raven.Server.Smuggler.Documents
             EnsureStepProcessed(result.Counters, skipped);
             EnsureStepProcessed(result.Tombstones, skipped);
             EnsureStepProcessed(result.Conflicts, skipped);
-            EnsureStepProcessed(result.Indexes, skipped);
+            EnsureStepProcessed(result.Indexes, indexesSkipped ?? skipped);
             EnsureStepProcessed(result.Identities, skipped);
             EnsureStepProcessed(result.CompareExchange, skipped);
             EnsureStepProcessed(result.CompareExchangeTombstones, skipped);
@@ -860,7 +860,7 @@ namespace Raven.Server.Smuggler.Documents
             await using (var actions = _destination.TimeSeries())
             {
                 var isFullBackup = _source.GetSourceType() == SmugglerSourceType.FullExport;
-                await foreach (var ts in _source.GetTimeSeriesAsync(_options.Collections))
+                await foreach (var ts in _source.GetTimeSeriesAsync(actions, _options.Collections))
                 {
                     _token.ThrowIfCancellationRequested();
                     result.TimeSeries.ReadCount += ts.Segment.NumberOfEntries;

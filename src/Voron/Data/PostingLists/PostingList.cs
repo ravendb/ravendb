@@ -392,9 +392,7 @@ namespace Voron.Data.PostingLists
                 ref var state = ref _stk[_pos];
                 state.Page = _llt.ModifyPage(state.Page.PageNumber);
                 var leafPage = new PostingListLeafPage(state.Page);
-
-                _state.NumberOfEntries -= leafPage.Header->NumberOfEntries;
-
+                
                 long firstBaseline = first & int.MinValue;
                 if (state.LeafHeader->Baseline != firstBaseline) // wrong baseline, need new page
                 {
@@ -408,7 +406,9 @@ namespace Voron.Data.PostingLists
                     }
                     leafPage.Header->Baseline = firstBaseline;
                 }
-                
+
+                _state.NumberOfEntries -= leafPage.Header->NumberOfEntries;
+
                 var extras = leafPage.Update(_llt, ref additions, ref removals, limit);
                 _state.NumberOfEntries += leafPage.Header->NumberOfEntries;
 

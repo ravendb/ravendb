@@ -2926,7 +2926,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, true);
                 Assert.Null(afterDelayTaskBackupInfo.LastFullBackup);
                 Assert.True(afterDelayTaskBackupInfo.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) &&
-                            afterDelayTaskBackupInfo.NextBackup.TimeSpan <= delayDuration);
+                            afterDelayTaskBackupInfo.NextBackup.TimeSpan <= delayDuration, 
+                    $"NextBackup in: `{afterDelayTaskBackupInfo.NextBackup.TimeSpan}`, delayDuration with tolerance: `{delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000))}`, " +
+                    $"delayDuration: `{delayDuration}`");
 
                 // DelayUntil value in backup status and the time of scheduled next backup should be equal
                 var backupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
@@ -2997,7 +2999,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Null(periodicBackup.RunningTask);
                 Assert.Null(periodicBackup.RunningBackupStatus);
                 var nextBackup = periodicBackup.GetNextBackup().TimeSpan;
-                Assert.True(nextBackup > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) && nextBackup <= delayDuration);
+                Assert.True(nextBackup > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) && nextBackup <= delayDuration, 
+                    $"NextBackup in: `{nextBackup}`, delayDuration with tolerance: `{delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000))}`, " +
+                    $"delayDuration: `{delayDuration}`");
 
                 onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                 Assert.NotNull(onGoingTaskInfo);
@@ -3041,7 +3045,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = new TaskCompletionSource<object>();
 
                 await Backup.RunBackupInClusterAsync(leaderStore, taskId, opStatus: OperationStatus.InProgress);
-
                 
                 // Let's delay the backup task to 1 hour
                 var delayDuration = TimeSpan.FromHours(1);
@@ -3080,12 +3083,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await WaitForValueAsync(async () =>
                 {
                     onGoingTaskBackup = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                    return onGoingTaskBackup != null;
+                    return onGoingTaskBackup is { OnGoingBackup: null } &&
+                           onGoingTaskBackup.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) &&
+                           onGoingTaskBackup.NextBackup.TimeSpan <= delayDuration;
                 }, true);
-
                 Assert.NotNull(onGoingTaskBackup.NextBackup);
-                Assert.True(onGoingTaskBackup.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) &&
-                            onGoingTaskBackup.NextBackup.TimeSpan <= delayDuration);
                 Assert.NotEqual(onGoingTaskBackup.ResponsibleNode.NodeTag, serverToObserve.ServerStore.NodeTag);
 
                 // DelayUntil value in backup status and the time of scheduled next backup should be equal
@@ -3160,7 +3162,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         var nextBackupTimeSpan = inMemoryStatus.DelayUntil - DateTime.UtcNow;
                         Assert.True(nextBackupTimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) &&
-                                    nextBackupTimeSpan <= delayDuration);
+                                    nextBackupTimeSpan <= delayDuration,
+                            $"NextBackup in: `{nextBackupTimeSpan}`, delayDuration with tolerance: `{delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000))}`, " +
+                            $"delayDuration: `{delayDuration}`");
                     }
                 }
             }
@@ -3217,7 +3221,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, true);
                 Assert.Null(onGoingTaskInfo.LastFullBackup);
                 Assert.True(onGoingTaskInfo.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) &&
-                            onGoingTaskInfo.NextBackup.TimeSpan <= delayDuration);
+                            onGoingTaskInfo.NextBackup.TimeSpan <= delayDuration,
+                    $"NextBackup in: `{onGoingTaskInfo.NextBackup.TimeSpan}`, delayDuration with tolerance: `{delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000))}`, " +
+                    $"delayDuration: `{delayDuration}`");
             }
         }
 

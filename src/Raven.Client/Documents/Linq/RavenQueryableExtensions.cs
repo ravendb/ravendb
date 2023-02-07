@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
+using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Linq
 {
@@ -113,6 +115,7 @@ namespace Raven.Client.Documents.Linq
         {
             return (IRavenQueryable<TSource>)Queryable.Skip(source, count);
         }
+
         public static IRavenQueryable<TSource> Take<TSource>(this IRavenQueryable<TSource> source, int count)
         {
             return (IRavenQueryable<TSource>)Queryable.Take(source, count);
@@ -134,6 +137,17 @@ namespace Raven.Client.Documents.Linq
         {
             throw new InvalidOperationException(
                 "This method isn't meant to be called directly, it just exists as a place holder for the LINQ provider");
+        }
+
+        /// <summary>
+        /// Implementation of AsAsyncEnumerable
+        /// </summary>
+        public static IAsyncEnumerable<TSource> AsAsyncEnumerable<TSource>(this IQueryable<TSource> source)
+        {
+            if (source is IAsyncEnumerable<TSource> asyncEnumerable)
+                return asyncEnumerable;
+
+            throw new InvalidOperationException($"The source 'IQueryable' doesn't implement 'IAsyncEnumerable<{typeof(TSource)}>'");
         }
     }
 }

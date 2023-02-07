@@ -625,5 +625,47 @@ select new
             var merger = new IndexMerger(dictionary);
             return merger.ProposeIndexMergeSuggestions();
         }
+        
+        private void AssertIndexIsNotCorruptingIndexMerger<TIndex>() where TIndex : AbstractIndexCreationTask, new()
+        {
+            using var store = GetDocumentStore();
+            var index = new TIndex();
+            index.Execute(store);
+            var whereIndex = store
+                .Maintenance
+                .Send(new GetIndexOperation(index.IndexName));
+            
+            var dictionary = new Dictionary<string, IndexDefinition>
+            {
+                {index.IndexName, whereIndex},
+            };
+            var merger = new IndexMerger(dictionary);
+            Assert.Equal(0, merger.ProposeIndexMergeSuggestions().Suggestions.Count);
+            Assert.Equal(1, merger.ProposeIndexMergeSuggestions().Unmergables.Count);
+        }
+
+        [Fact]
+        public void IndexDefinitionCanContainWhereInInvocationExpressionSyntax() => AssertIndexIsNotCorruptingIndexMerger<IndexWithWhere>();
+        
+        [Fact]
+        public void IndexDefinitionCanContainLetInInvocationExpressionSyntax() => AssertIndexIsNotCorruptingIndexMerger<IndexWithSyntaxQueryLet>();
+        
+        private class IndexWithWhere : AbstractIndexCreationTask<AutoIndexMockup>
+        {
+            public IndexWithWhere()
+            {
+                Map = mockups => mockups.Where(i => i.Name == "Matt").Select(i => new {Name = i.Name});
+            }
+        }
+        
+        private class IndexWithSyntaxQueryLet : AbstractIndexCreationTask<AutoIndexMockup>
+        {
+            public IndexWithSyntaxQueryLet()
+            {
+                Map = mockups => from moc in mockups
+                    let x = "SuperField"
+                    select new {Name = moc.Name, X = x};
+            }
+        }
     }
 }
