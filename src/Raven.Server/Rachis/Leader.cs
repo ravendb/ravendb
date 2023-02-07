@@ -308,80 +308,90 @@ namespace Raven.Server.Rachis
                 _newEntry.Set(); //This is so the noop would register right away
                 while (_running)
                 {
-                    switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeout))
+                    try
                     {
-                        case 0: // new entry
-                            _newEntry.Reset();
-                            // release any waiting ambassadors to send immediately
-                            TaskExecutor.CompleteAndReplace(ref _newEntriesArrived);
-                            if (_voters.Count == 0)
-                                goto case 1;
-                            break;
-                        case 1: // voter responded
-                            _voterResponded.Reset();
-                            OnVoterConfirmation();
-                            break;
-                        case 2: // promotable updated
-                            _promotableUpdated.Reset();
-                            CheckPromotables();
-                            break;
-                        case WaitHandle.WaitTimeout:
-                            break;
-                        case 3: // shutdown requested
-                            if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
-                            {
-                                _engine.Log.Info($"{ToString()}: shutting down");
-                            }
-                            _running.Lower();
-                            return;
-                        case 4: // an error occurred during EmptyQueue()
-                            _errorOccurred.Task.Wait();
-                            break;
-                    }
-
-                    EnsureThatWeHaveLeadership(VotersMajority);
-                    _engine.ReportLeaderTime(LeaderShipDuration);
-
-                    // don't truncate if we are disposing an old peer
-                    // otherwise he would not receive notification that he was
-                    // kick out of the cluster
-                    if (_previousPeersWereDisposed > 0) // Not Interlocked, because the race here is not interesting.
-                        continue;
-
-                    var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster(out var lastTruncated);
-                    if (lowestIndexInEntireCluster == 0) // one of the nodes might be during the handshake
-                        continue;
-
-                    if (lowestIndexInEntireCluster > lastTruncated)
-                    {
-                        using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                        using (context.OpenWriteTransaction())
+                        switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeout))
                         {
-                            _engine.TruncateLogBefore(context, lowestIndexInEntireCluster);
-                            LowestIndexInEntireCluster = lowestIndexInEntireCluster;
-                            context.Transaction.Commit();
+                            case 0: // new entry
+                                _newEntry.Reset();
+                                // release any waiting ambassadors to send immediately
+                                TaskExecutor.CompleteAndReplace(ref _newEntriesArrived);
+                                if (_voters.Count == 0)
+                                    goto case 1;
+                                break;
+                            case 1: // voter responded
+                                _voterResponded.Reset();
+                                OnVoterConfirmation();
+                                break;
+                            case 2: // promotable updated
+                                _promotableUpdated.Reset();
+                                CheckPromotables();
+                                break;
+                            case WaitHandle.WaitTimeout:
+                                break;
+                            case 3: // shutdown requested
+                                if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
+                                {
+                                    _engine.Log.Info($"{ToString()}: shutting down");
+                                }
+                                _running.Lower();
+                                return;
+                            case 4: // an error occurred during EmptyQueue()
+                                _errorOccurred.Task.Wait();
+                                break;
                         }
+
+                        EnsureThatWeHaveLeadership(VotersMajority);
+                        _engine.ReportLeaderTime(LeaderShipDuration);
+
+                        // don't truncate if we are disposing an old peer
+                        // otherwise he would not receive notification that he was
+                        // kick out of the cluster
+                        if (_previousPeersWereDisposed > 0) // Not Interlocked, because the race here is not interesting.
+                            continue;
+
+                        var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster(out var lastTruncated);
+                        if (lowestIndexInEntireCluster == 0) // one of the nodes might be during the handshake
+                            continue;
+
+                        if (lowestIndexInEntireCluster > lastTruncated)
+                        {
+                            using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                            using (context.OpenWriteTransaction())
+                            {
+                                _engine.TruncateLogBefore(context, lowestIndexInEntireCluster);
+                                LowestIndexInEntireCluster = lowestIndexInEntireCluster;
+                                context.Transaction.Commit();
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ClusterTopology clusterTopology;
+                        using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            clusterTopology = _engine.GetTopology(context);
+                        }
+
+                        if (clusterTopology.Members.Count == 1 && clusterTopology.Members.ContainsKey(_engine.Tag))
+                        {
+                            LogAndNotifyLeaderRunExceptions(ex);
+                            Task.Run(async () =>
+                            {
+                                await Task.Delay(100);
+                                _newEntry.Set();
+                            });
+                            continue;
+                        }
+
+                        throw;
                     }
                 }
             }
             catch (Exception e)
             {
-                const string msg = "Error when running leader behavior";
-
-                if (_engine.Log.IsInfoEnabled)
-                {
-                    _engine.Log.Info(msg, e);
-                }
-
-                if (e is VoronErrorException)
-                {
-                    _engine.Notify(AlertRaised.Create(
-                        null,
-                        msg,
-                        e.Message,
-                        AlertType.ClusterTopologyWarning,
-                        NotificationSeverity.Error, details: new ExceptionDetails(e)));
-                }
+                LogAndNotifyLeaderRunExceptions(e);
 
                 try
                 {
@@ -394,6 +404,26 @@ namespace Raven.Server.Rachis
                         _engine.Log.Operations("After leadership failure, could not setup switch to candidate state", e2);
                     }
                 }
+            }
+        }
+
+        private void LogAndNotifyLeaderRunExceptions(Exception e)
+        {
+            const string msg = "Error when running leader behavior";
+
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info(msg, e);
+            }
+
+            if (e is VoronErrorException)
+            {
+                _engine.Notify(AlertRaised.Create(
+                    null,
+                    msg,
+                    e.Message,
+                    AlertType.ClusterTopologyWarning,
+                    NotificationSeverity.Error, details: new ExceptionDetails(e)));
             }
         }
 
