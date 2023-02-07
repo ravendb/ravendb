@@ -1944,7 +1944,7 @@ namespace FastTests.Corax
             foreach (var entry in list)
             {
                 using var __ = CreateIndexEntry(ref entryWriter, entry, out var data);
-                entry.IndexEntryId = indexWriter.Index(entry.Id, data.ToSpan());
+                entry.IndexEntryId = FrequencyUtils.RemoveFrequency(indexWriter.Index(entry.Id, data.ToSpan()));
             }
             indexWriter.Commit();
             mapping.Dispose();

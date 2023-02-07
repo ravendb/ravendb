@@ -184,9 +184,10 @@ namespace Corax.Queries
             {
                 goto Empty;
             }
-
+            
             var termId = _iterator.CreateReaderForCurrent().ReadLittleEndianInt64();
-            term = _searcher.TermQuery(_field, termId);
+            // Ratio will be always 1 (sizeof(T)/sizeof(T))
+            term = _searcher.TermQuery(_field, termId, 1);
             return true;
 
             Empty:

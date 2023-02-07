@@ -42,7 +42,15 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
 
-    public long NumberOfTermsInIndex => _numberOfTermsInIndex ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfTermsInIndex) ?? 0;
+    public long SumOfLengthsInField(Slice fieldName)
+    {
+        byte[] PostFix = new byte[] {(byte)'_', (byte)'C', (byte)'o', (byte)'u', (byte)'n', (byte)'t'};
+        using var _ = Allocator.Allocate(fieldName.Size + PostFix.Length, out ByteString output);
+        fieldName.Content.CopyTo(output.Ptr);
+        PostFix.CopyTo(new Span<byte>(output.Ptr + fieldName.Size, PostFix.Length));
+        var x = new Slice(SliceOptions.Key, output);
+        return _metadataTree?.ReadInt64(x) ?? 0;
+    }
 
     public ByteStringContext Allocator => _transaction.Allocator;
 
@@ -324,7 +332,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
         var mode = GetFieldIndexingModeForDynamic(fieldNameSlice);
 
-        return FieldMetadata.Build(fieldNameSlice, Constants.IndexWriter.DynamicField, mode, mode switch
+        return FieldMetadata.Build(fieldNameSlice, binding.FieldTermTotalSumField, Constants.IndexWriter.DynamicField, mode, mode switch
         {
             FieldIndexingMode.Search => _fieldMapping.SearchAnalyzer(fieldName),
             FieldIndexingMode.Exact => _fieldMapping.ExactAnalyzer(fieldName),
@@ -342,7 +350,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             return binding.Metadata;
         }
 
-        return FieldMetadata.Build(fieldNameSlice, Constants.IndexWriter.DynamicField, mode, mode switch
+        return FieldMetadata.Build(fieldNameSlice, binding.FieldTermTotalSumField, Constants.IndexWriter.DynamicField, mode, mode switch
         {
             FieldIndexingMode.Search => _fieldMapping.SearchAnalyzer(fieldName),
             FieldIndexingMode.Exact => _fieldMapping.ExactAnalyzer(fieldName),
@@ -358,16 +366,20 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
 
     public FieldMetadata FieldMetadataBuilder(string fieldName, int fieldId = Constants.IndexSearcher.NonAnalyzer, Analyzer analyzer = null,
-        FieldIndexingMode fieldIndexingMode = default, bool ranking = false)
+        FieldIndexingMode fieldIndexingMode = default, bool hasBoost = false)
     {
         Slice.From(Allocator, fieldName, ByteStringType.Immutable, out var fieldNameAsSlice);
-        return FieldMetadata.Build(fieldNameAsSlice, fieldId, fieldIndexingMode, analyzer, ranking);
+        Slice sumName = default;
+        if (hasBoost)
+            Slice.From(Allocator, $"{fieldName}-C", ByteStringType.Immutable, out sumName);
+        
+        return FieldMetadata.Build(fieldNameAsSlice, sumName, fieldId, fieldIndexingMode, analyzer, hasBoost);
     }
 
     public FieldMetadata FieldMetadataBuilder(Slice fieldName, int fieldId = Constants.IndexSearcher.NonAnalyzer, Analyzer analyzer = null,
         FieldIndexingMode fieldIndexingMode = default)
     {
-        return FieldMetadata.Build(fieldName, fieldId, fieldIndexingMode, analyzer);
+        return FieldMetadata.Build(fieldName, default, fieldId, fieldIndexingMode, analyzer);
     }
 
     public void Dispose()

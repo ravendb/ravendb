@@ -67,13 +67,15 @@ namespace Corax
         {
             private readonly ByteStringContext _context;
             private ByteStringContext<ByteStringMemoryCache>.InternalScope _disposableItems;
-            
+
             private long* _start;
             private long* _end;
             private int _additions;
             private int _removals;
             
             private bool _preparationFinished;
+            public int TermSize => _sizeOfTerm;
+            private readonly int _sizeOfTerm;
             
             /// <summary>
             /// We've to encode entries id with frequencies for posting lists.
@@ -106,8 +108,9 @@ namespace Corax
 
             private const int InitialSize = 16;
 
-            public EntriesModifications([NotNull] ByteStringContext context)
+            public EntriesModifications([NotNull] ByteStringContext context, int size)
             {
+                _sizeOfTerm = size;
                 _context = context;
                 //todo: optimize, we can do FREQ part as int, should save us a lot of RAM
                 // [ADDITIONS][REMOVALS][ADDITIONS_TERMS_FREQ][REMOVAL_TERMS_FREQ] 
@@ -333,14 +336,16 @@ namespace Corax
             public readonly Slice Name;
             public readonly Slice NameLong;
             public readonly Slice NameDouble;
+            public readonly Slice NameSum;
             public readonly int Id;
             public readonly FieldIndexingMode FieldIndexingMode;
 
-            public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Analyzer analyzer, FieldIndexingMode fieldIndexingMode, bool hasSuggestions)
+            public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameSum, Analyzer analyzer, FieldIndexingMode fieldIndexingMode, bool hasSuggestions)
             {
                 Name = name;
                 NameLong = nameLong;
                 NameDouble = nameDouble;
+                NameSum = nameSum;
                 Id = id;
                 Analyzer = analyzer;
                 HasSuggestions = hasSuggestions;
@@ -384,7 +389,7 @@ namespace Corax
             for (int i = 0; i < bufferSize; ++i)
             {
                 IndexFieldBinding indexFieldBinding = fieldsMapping.GetByFieldId(i);
-                _knownFieldsTerms[i] = new IndexedField(indexFieldBinding.FieldId, indexFieldBinding.FieldName, indexFieldBinding.FieldNameLong, indexFieldBinding.FieldNameDouble, indexFieldBinding.Analyzer, indexFieldBinding.FieldIndexingMode, indexFieldBinding.HasSuggestions);
+                _knownFieldsTerms[i] = new IndexedField(indexFieldBinding.FieldId, indexFieldBinding.FieldName, indexFieldBinding.FieldNameLong, indexFieldBinding.FieldNameDouble, indexFieldBinding.FieldTermTotalSumField, indexFieldBinding.Analyzer, indexFieldBinding.FieldIndexingMode, indexFieldBinding.HasSuggestions);
             }
         }
         
@@ -733,7 +738,7 @@ namespace Corax
             if (_dynamicFieldsMapping?.TryGetByFieldName(slice, out var binding) is true)
             {
                 
-                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions);
+                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble, binding.FieldTermTotalSumField, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions);
                 
                 if (persistedAnalyzer != null)
                 {
@@ -778,7 +783,8 @@ namespace Corax
             {
                 IndexFieldsMappingBuilder.GetFieldNameForLongs(context, clonedFieldName, out var fieldNameLong);
                 IndexFieldsMappingBuilder.GetFieldNameForDoubles(context, clonedFieldName, out var fieldNameDouble);
-                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, analyzer, mode, false);
+                IndexFieldsMappingBuilder.GetFieldForTotalSum(context, clonedFieldName, out var nameSum);
+                indexedField = new IndexedField(Constants.IndexWriter.DynamicField, clonedFieldName, fieldNameLong, fieldNameDouble, nameSum, analyzer, mode, false);
                 _dynamicFieldsTerms[clonedFieldName] = indexedField;
             }
         }
@@ -964,13 +970,13 @@ namespace Corax
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
                 ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedField.Doubles, dVal, out bool fieldDoublesExist);
                 if (fieldDoublesExist == false)
-                    doublesTerms = new EntriesModifications(_parent.Transaction.Allocator);
+                    doublesTerms = new EntriesModifications(_parent.Transaction.Allocator, sizeof(double));
                 doublesTerms.Addition(_entryId);
 
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
                 ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedField.Longs, lVal, out bool fieldLongExist);
                 if (fieldLongExist == false)
-                    longsTerms = new EntriesModifications(_parent.Transaction.Allocator);
+                    longsTerms = new EntriesModifications(_parent.Transaction.Allocator, sizeof(long));
                 longsTerms.Addition(_entryId);
             }
 
@@ -1019,7 +1025,7 @@ namespace Corax
                 ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(_indexedField.Textual, slice, out var exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(_context);
+                    term = new EntriesModifications(_context, value.Length);
                     scope = null; // We don't want the fieldname (slice) to be returned.
                 }
 
@@ -1191,13 +1197,13 @@ namespace Corax
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
                 ref var doublesTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(indexedField.Doubles, termDouble, out bool fieldDoublesExist);
                 if (fieldDoublesExist == false)
-                    doublesTerms = new EntriesModifications(context);
+                    doublesTerms = new EntriesModifications(context, sizeof(double));
                 doublesTerms.Removal(entryToDelete);
 
                 // We make sure we get a reference because we want the struct to be modified directly from the dictionary.
                 ref var longsTerms = ref CollectionsMarshal.GetValueRefOrAddDefault(indexedField.Longs, termLong, out bool fieldLongExist);
                 if (fieldLongExist == false)
-                    longsTerms = new EntriesModifications(context);
+                    longsTerms = new EntriesModifications(context, sizeof(long));
                 longsTerms.Removal(entryToDelete);
             }
 
@@ -1242,7 +1248,7 @@ namespace Corax
                 ref var term = ref CollectionsMarshal.GetValueRefOrAddDefault(field.Textual, termSlice, out var exists);
                 if (exists == false)
                 {
-                    term = new EntriesModifications(context);
+                    term = new EntriesModifications(context, termValue.Length);
                     scope = null; // We dont want to reclaim the term name
                 }
 
@@ -1456,7 +1462,8 @@ namespace Corax
                         throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {indexedField.Name}! This is a bug.");
 
                     AddNewTerm(ref entries, tmpBuf, out termId);
-
+                    _indexMetadata.Increment(indexedField.NameSum, entries.TermSize);
+                    
                     dumper.WriteAddition(term, termId);
                     fieldTree.Add(scope.Key, termId);
                 }
@@ -1474,6 +1481,8 @@ namespace Corax
                                 dumper.WriteRemoval(term, termId);
                                 throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
                             }
+
+                            _indexMetadata.Increment(indexedField.NameSum, -entries.TermSize);
                             dumper.WriteRemoval(term, ttt);
                             _numberOfTermModifications--;
                             break;
@@ -1748,8 +1757,8 @@ namespace Corax
         private void AddNewTerm(ref EntriesModifications entries, Span<byte> tmpBuf, out long termId)
         {
             var additions = entries.Additions;
+            
             _numberOfTermModifications += 1;
-
             Debug.Assert(entries.TotalAdditions > 0, "entries.TotalAdditions > 0");
             // common for unique values (guid, date, etc)
             if (entries.TotalAdditions == 1)

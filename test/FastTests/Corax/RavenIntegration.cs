@@ -25,8 +25,8 @@ public class RavenIntegration : RavenTestBase
         {
             using var session = store.OpenSession();
             session.Store(new Doc() {Name = "Two", BoostFactor = 1});
-            session.Store(new Doc() {Name = "Three", BoostFactor = 3});
-            session.Store(new Doc() {Name = "Four", BoostFactor = 4});
+            session.Store(new Doc() {Name = "Three", BoostFactor = 100});
+            session.Store(new Doc() {Name = "Four", BoostFactor = 200});
             session.SaveChanges();
         }
 

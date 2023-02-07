@@ -22,6 +22,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
 using Spatial4n.Shapes;
+using Voron;
 using Constants = Raven.Client.Constants;
 using Index = Raven.Server.Documents.Indexes.Index;
 

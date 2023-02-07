@@ -485,7 +485,7 @@ namespace Corax.Queries
                 inspectFunc: &InspectFunc) {_indexSearcher = indexSearcher, _set = postingList.Iterate(), _current = long.MinValue};
         }
 
-        public static TermMatch YieldOnceWithFreq(IndexSearcher indexSearcher, ByteStringContext ctx, long value)
+        public static TermMatch YieldOnceWithFreq(IndexSearcher indexSearcher, ByteStringContext ctx, long value, double termRatioToWholeCollection)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -533,7 +533,7 @@ namespace Corax.Queries
                     });
             }
 
-            Bm25 bm25 = new(indexSearcher, 1, ctx, 1);
+            Bm25 bm25 = new(indexSearcher, 1, ctx, 1, termRatioToWholeCollection);
             bm25.Add(value);
 
             return new TermMatch(indexSearcher, ctx, 1, &FillFunc, &AndWithFunc, scoreFunc: &ScoreFunc, inspectFunc: &InspectFunc)
@@ -542,7 +542,7 @@ namespace Corax.Queries
             };
         }
 
-        public static TermMatch YieldSmallWithFreq(IndexSearcher indexSearcher, ByteStringContext ctx, Container.Item containerItem)
+        public static TermMatch YieldSmallWithFreq(IndexSearcher indexSearcher, ByteStringContext ctx, Container.Item containerItem, double termRatioToWholeCollection)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int FillFunc(ref TermMatch term, Span<long> matches)
@@ -635,7 +635,7 @@ namespace Corax.Queries
             return new TermMatch(indexSearcher, ctx, itemsCount, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc, scoreFunc: &ScoreFunc)
             {
                 _indexSearcher = indexSearcher,
-                _bm25 = new(indexSearcher, itemsCount, ctx, itemsCount),
+                _bm25 = new(indexSearcher, itemsCount, ctx, itemsCount, termRatioToWholeCollection),
                 _container = containerItem,
                 _currentIdx = len,
                 _baselineIdx = len,
@@ -643,7 +643,7 @@ namespace Corax.Queries
             };
         }
         
-        public static TermMatch YieldSetWithFreq(IndexSearcher indexSearcher, ByteStringContext ctx, PostingList postingList, bool useAccelerated = true)
+        public static TermMatch YieldSetWithFreq(IndexSearcher indexSearcher, ByteStringContext ctx, PostingList postingList, double termRatioToWholeCollection, bool useAccelerated = true)
         {
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -885,7 +885,7 @@ namespace Corax.Queries
                 _indexSearcher = indexSearcher, 
                 _set = postingList.Iterate(), 
                 _current = long.MinValue,
-                _bm25 = new Bm25(indexSearcher, postingList.State.NumberOfEntries, ctx, (int)postingList.State.NumberOfEntries),
+                _bm25 = new Bm25(indexSearcher, postingList.State.NumberOfEntries, ctx, (int)postingList.State.NumberOfEntries, termRatioToWholeCollection),
             };
         }
 

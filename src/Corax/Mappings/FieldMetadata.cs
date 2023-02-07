@@ -8,18 +8,19 @@ namespace Corax.Mappings;
 public readonly struct FieldMetadata
 {
     public readonly Slice FieldName;
+    public readonly Slice SumName;
     public readonly int FieldId;
     public readonly FieldIndexingMode Mode;
     public readonly Analyzer Analyzer;
-    public readonly bool Ranking;
+    public readonly bool HasBoost;
 
-    private FieldMetadata(Slice fieldName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool ranking = false)
+    private FieldMetadata(Slice fieldName, Slice sumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false)
     {
         FieldName = fieldName;
         FieldId = fieldId;
         Mode = mode;
         Analyzer = analyzer;
-        Ranking = ranking;
+        HasBoost = hasBoost;
     }
 
     public FieldMetadata GetNumericFieldMetadata<T>(ByteStringContext allocator)
@@ -35,9 +36,10 @@ public readonly struct FieldMetadata
         if (typeof(T) == typeof(double))
             Slice.From(allocator, $"{FieldName}-D", ByteStringType.Immutable, out numericTree);
         
-        return new FieldMetadata(numericTree, FieldId, Mode, Analyzer);
+        
+        return new FieldMetadata(numericTree, default, FieldId, Mode, Analyzer);
     }
-
+    
     public bool Equals(FieldMetadata other)
     {
         return FieldId == other.FieldId && SliceComparer.CompareInline(FieldName, other.FieldName) == 0;
@@ -46,27 +48,31 @@ public readonly struct FieldMetadata
     public static FieldMetadata Build(ByteStringContext allocator, string fieldName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false)
     {
         Slice.From(allocator, fieldName, ByteStringType.Immutable, out var fieldNameAsSlice);
-        return new(fieldNameAsSlice, fieldId, mode, analyzer, hasBoost);
+        Slice sumName = default;
+        if (hasBoost)
+            Slice.From(allocator, $"{fieldName}-C", ByteStringType.Immutable, out sumName);
+
+        return new(fieldNameAsSlice, sumName, fieldId, mode, analyzer, hasBoost);
     }
 
-    public static FieldMetadata Build(Slice fieldName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false) => new(fieldName, fieldId, mode, analyzer, ranking: hasBoost);
+    public static FieldMetadata Build(Slice fieldName, Slice sumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false) => new(fieldName, sumName, fieldId, mode, analyzer, hasBoost: hasBoost);
 
     public FieldMetadata ChangeAnalyzer(FieldIndexingMode mode, Analyzer analyzer = null)
     {
-        return new FieldMetadata(FieldName, FieldId, mode, analyzer ?? Analyzer);
+        return new FieldMetadata(FieldName, SumName, FieldId, mode, analyzer ?? Analyzer, HasBoost);
     }
 
-    public FieldMetadata ChangeScoringMode(bool scoring)
+    public FieldMetadata ChangeScoringMode(bool hasBoost)
     {
-        if (Ranking == scoring) return this;
+        if (HasBoost == hasBoost) return this;
         
-        return new FieldMetadata(FieldName, FieldId, Mode, Analyzer, scoring);
+        return new FieldMetadata(FieldName, SumName, FieldId, Mode, Analyzer, hasBoost);
 
     }
     
     public override string ToString()
     {
-        return $"Field name: '{FieldName}' | Field id: {FieldId} | Indexing mode: {Mode} | Analyzer {Analyzer?.GetType()}";
+        return $"Field name: '{FieldName}' | Field id: {FieldId} | Indexing mode: {Mode} | Analyzer {Analyzer?.GetType()} | Has boost: {HasBoost}";
     }
 }
 

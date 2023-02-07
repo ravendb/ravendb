@@ -9,10 +9,10 @@ namespace Corax.Utils;
 
 public unsafe struct Bm25 : IDisposable
 {
-    public const float BFactor = 0.25f;
+    private const float BFactor = 0.25f;
     public const float Bias = 0.75f;
-    public const float K1 = 2f;
-    public const float LcAvlC = .7f; //todo
+    private const float K1 = 2f;
+    private readonly float _termRatioToWholeCollection;
     
     private readonly ByteStringContext _context;
     private IDisposable _memoryHolder;
@@ -20,9 +20,7 @@ public unsafe struct Bm25 : IDisposable
     private float* _scoreBuffer;
     private int _currentSize;
     private int _currentId;
-
     private readonly float _idf;
-    
     
     public long Count => _currentId;
 
@@ -32,8 +30,9 @@ public unsafe struct Bm25 : IDisposable
 
     //todo:
     // - we've to find a way to properly handle TermMatches bigger than int32.MAX
-    public Bm25(IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int initialSize)
+    public Bm25(IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int initialSize, double termRatioToWholeCollection)
     {
+        _termRatioToWholeCollection = (float)termRatioToWholeCollection;
         _context = context;
         _currentSize = initialSize;
         _memoryHolder = context.Allocate(initialSize * (sizeof(long) + sizeof(float)), out var buffer);
@@ -67,7 +66,7 @@ public unsafe struct Bm25 : IDisposable
             if (idOfInner < 0)
                 continue;
 
-            var weight = frequencies[idOfInner] / ((1 - BFactor) + BFactor * LcAvlC);
+            var weight = frequencies[idOfInner] / ((1 - BFactor) + BFactor * _termRatioToWholeCollection);
             scores[idX] += _idf * weight * boostFactor / (K1 + weight);
         }
     }
