@@ -74,6 +74,12 @@ namespace Corax
             private int _removals;
             
             private bool _preparationFinished;
+            
+            /// <summary>
+            /// We've to encode entries id with frequencies for posting lists.
+            /// </summary>
+            public bool IsPreparationFinished => _preparationFinished;
+            
             private bool _deletedDuplicatesOfNewItems;
 
             private long* _freqStart;
@@ -124,13 +130,13 @@ namespace Corax
                     throw new InvalidOperationException("Tried to Add/Remove but data is already encoded.");
             }
 
-            public void Addition(long entryId)
+            public void Addition(long entryId, long freq = 1)
             {
                 AssertPreparationIsNotFinished();
 
                 if (_additions > 0 && *(_start + _additions - 1) == entryId)
                 {
-                    *(_freqStart + _additions - 1) += 1;
+                    *(_freqStart + _additions - 1) += freq;
                     return;
                 }
 
@@ -419,11 +425,62 @@ namespace Corax
             return Index(idSlice, data);
         }
 
-        public unsafe long Index(string id, Span<byte> data, float documentBoost)
+        public long Index(string id, Span<byte> data, float documentBoost)
         {
             var entryId = Index(id, data);
             AppendDocumentBoost(entryId, documentBoost);
             return entryId;
+        }
+        
+        private unsafe long Index(Slice id, Span<byte> data)
+        {
+            _numberOfModifications++;
+            Span<byte> buf = stackalloc byte[10];
+            var idLen = ZigZagEncoding.Encode(buf, id.Size);
+            int requiredSize = idLen + id.Size + data.Length;
+            // align to 16 bytes boundary to ensure that we have some (small) space for updating in-place entries
+            requiredSize += 16 - (requiredSize % 16);
+            var entryId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, requiredSize, out var space);
+            buf.Slice(0, idLen).CopyTo(space);
+            space = space.Slice(idLen);
+            id.CopyTo(space);
+            space = space.Slice(id.Size);
+            data.CopyTo(space);
+            space = space.Slice(data.Length);
+            space.Clear();// clean any old data that may have already been there
+
+            var context = Transaction.Allocator;
+
+            fixed (byte* newEntryDataPtr = data)
+            {
+                var entryReader = new IndexEntryReader(newEntryDataPtr, data.Length);
+
+                foreach (var binding in _fieldsMapping)
+                {
+                    if (binding.FieldIndexingMode is FieldIndexingMode.No)
+                        continue;
+
+                    var indexer = new TermIndexer(this, context, entryReader.GetFieldReaderFor(binding.FieldId), _knownFieldsTerms[binding.FieldId], entryId);
+                    indexer.InsertToken();
+                }
+
+                var it = new IndexEntryReader.DynamicFieldEnumerator(entryReader);
+                while (it.MoveNext())
+                {
+                    var fieldReader = entryReader.GetFieldReaderFor(it.CurrentFieldName);
+
+                    var indexedField = GetDynamicIndexedField(context, ref it);
+
+                    if (indexedField.FieldIndexingMode is FieldIndexingMode.No)
+                        continue;
+
+
+                    var indexer = new TermIndexer(this, context, fieldReader, indexedField, entryId);
+                    indexer.InsertToken();
+                }
+
+                return FrequencyUtils.Encode(entryId, 1, TermIdMask.Single);
+            }
         }
 
         //Document Boost should add priority to some documents but also should not be the main component of boosting.
@@ -463,30 +520,30 @@ namespace Corax
             return entryId;
         }
         
+       // idInTree - encoded with frequency and container type
         public long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries)
         {
-            if (TryGetEntryTermId(field, key, out var entryId) == false)
+            if (TryGetEntryTermId(field, key, out var idInTree) == false)
             {
                 numberOfEntries++;
                 return Index(id, data);
             }
             // if there is more than a single entry for this key, delete & index from scratch
             // this is checked by calling code, but cheap to do this here as well.
-            if((entryId & (long)TermIdMask.EnsureIsSingleMask) != 0)
+            if((idInTree & (long)TermIdMask.EnsureIsSingleMask) != 0)
             {
-                RecordDeletion(FrequencyUtils.RemoveFrequency(entryId));
+                RecordDeletion(idInTree);
                 numberOfEntries++;
                 return Index(id, data);
             }
-
-            entryId = FrequencyUtils.RemoveFrequency(entryId);
             
             Page lastVisitedPage = default;
-            
+
+            var entryId = FrequencyUtils.RemoveFrequency(idInTree);
             var oldEntryReader = IndexSearcher.GetEntryReaderFor(Transaction, ref lastVisitedPage, entryId, out var rawSize);
             
             if (oldEntryReader.Buffer.SequenceEqual(data))
-                return entryId; // no change, can skip all work here, joy!
+                return idInTree; // no change, can skip all work here, joy!
            
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZagEncoding.Encode(buf, id.Size);
@@ -494,7 +551,7 @@ namespace Corax
             // can't fit in old size, have to remove anyway
             if (rawSize < idLen + id.Size + data.Length)
             {
-                RecordDeletion(entryId);
+                RecordDeletion(idInTree);
                 numberOfEntries++;
                 return Index(id, data);
             }
@@ -519,7 +576,7 @@ namespace Corax
             space = space.Slice(data.Length);
             space.Clear(); // remove any extra data from old value
           
-            return entryId;
+            return idInTree;
         }
 
         private unsafe void UpdateModifiedTermsOnly(ByteStringContext context, ref IndexEntryReader oldEntryReader, Span<byte> newEntryData,
@@ -654,58 +711,7 @@ namespace Corax
                 }
             }
         }
-
-        public unsafe long Index(Slice id, Span<byte> data)
-        {
-            _numberOfModifications++;
-            Span<byte> buf = stackalloc byte[10];
-            var idLen = ZigZagEncoding.Encode(buf, id.Size);
-            int requiredSize = idLen + id.Size + data.Length;
-            // align to 16 bytes boundary to ensure that we have some (small) space for updating in-place entries
-            requiredSize += 16 - (requiredSize % 16);
-            var entryId = Container.Allocate(Transaction.LowLevelTransaction, _entriesContainerId, requiredSize, out var space);
-            buf.Slice(0, idLen).CopyTo(space);
-            space = space.Slice(idLen);
-            id.CopyTo(space);
-            space = space.Slice(id.Size);
-            data.CopyTo(space);
-            space = space.Slice(data.Length);
-            space.Clear();// clean any old data that may have already been there
-
-            var context = Transaction.Allocator;
-
-            fixed (byte* newEntryDataPtr = data)
-            {
-                var entryReader = new IndexEntryReader(newEntryDataPtr, data.Length);
-
-                foreach (var binding in _fieldsMapping)
-                {
-                    if (binding.FieldIndexingMode is FieldIndexingMode.No)
-                        continue;
-
-                    var indexer = new TermIndexer(this, context, entryReader.GetFieldReaderFor(binding.FieldId), _knownFieldsTerms[binding.FieldId], entryId);
-                    indexer.InsertToken();
-                }
-
-                var it = new IndexEntryReader.DynamicFieldEnumerator(entryReader);
-                while (it.MoveNext())
-                {
-                    var fieldReader = entryReader.GetFieldReaderFor(it.CurrentFieldName);
-
-                    var indexedField = GetDynamicIndexedField(context, ref it);
-
-                    if (indexedField.FieldIndexingMode is FieldIndexingMode.No)
-                        continue;
-
-
-                    var indexer = new TermIndexer(this, context, fieldReader, indexedField, entryId);
-                    indexer.InsertToken();
-                }
-
-                return entryId;
-            }
-        }
-
+        
         private IndexedField GetDynamicIndexedField(ByteStringContext context, ref IndexEntryReader.DynamicFieldEnumerator it)
         {
             _dynamicFieldsTerms ??= new(SliceComparer.Instance);
@@ -833,7 +839,12 @@ namespace Corax
         {
             private readonly IndexEntryReader.FieldReader _fieldReader;
             private readonly IndexWriter _parent;
+            
+            /// <summary>
+            /// Should not be encoded!
+            /// </summary>
             private readonly long _entryId;
+            
             private readonly ByteStringContext _context;
             private readonly IndexedField _indexedField;
 
@@ -979,7 +990,7 @@ namespace Corax
                 {
                     analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
                     if (outputSize > _parent._encodingBufferHandler.Length || tokenSize > _parent._tokensBufferHandler.Length)
-                        _parent.UnlikelyGrowBuffer(outputSize, tokenSize);
+                        _parent.UnlikelyGrowAnalyzerBuffer(outputSize, tokenSize);
                 }
 
                 Span<byte> wordsBuffer = _parent._encodingBufferHandler;
@@ -1020,22 +1031,7 @@ namespace Corax
                 scope?.Dispose();
             }
         }
-
-        void ThrowInvalidTokenFoundOnBuffer(IndexedField field, ReadOnlySpan<byte> value, Span<byte> wordsBuffer, Span<Token> tokens,
-            Token token)
-        {
-            throw new InvalidDataException(
-                $"{Environment.NewLine}Got token with: " +
-                $"{Environment.NewLine}\tOFFSET {token.Offset}" +
-                $"{Environment.NewLine}\tLENGTH: {token.Length}." +
-                $"{Environment.NewLine}Total amount of tokens: {tokens.Length}" +
-                $"{Environment.NewLine}Buffer contains '{Encodings.Utf8.GetString(wordsBuffer)}' and total length is {wordsBuffer.Length}" +
-                $"{Environment.NewLine}Buffer from ArrayPool: {Environment.NewLine}\tbyte buffer is {_encodingBufferHandler.Length} {Environment.NewLine}\ttokens buffer is {_tokensBufferHandler.Length}" +
-                $"{Environment.NewLine}Original span contains '{Encodings.Utf8.GetString(value)}' with total length {value.Length}" +
-                $"{Environment.NewLine}Field " +
-                $"{Environment.NewLine}\tid: {field.Id}" +
-                $"{Environment.NewLine}\tname: {field.Name}");
-        }
+        
         private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope CreateNormalizedTerm(ByteStringContext context, ReadOnlySpan<byte> value,
             out Slice slice)
         {
@@ -1221,7 +1217,7 @@ namespace Corax
                 {
                     analyzer.GetOutputBuffersSize(termValue.Length, out int outputSize, out int tokenSize);
                     if (outputSize > _encodingBufferHandler.Length || tokenSize > _tokensBufferHandler.Length)
-                        UnlikelyGrowBuffer(outputSize, tokenSize);
+                        UnlikelyGrowAnalyzerBuffer(outputSize, tokenSize);
                 }
 
                 var tokenSpace = _tokensBufferHandler.AsSpan();
@@ -1270,7 +1266,12 @@ namespace Corax
         public bool TryDeleteEntry(string key, string term)
         {
             using var _ = Slice.From(Transaction.Allocator, term, ByteStringType.Immutable, out var termSlice);
-            return TryDeleteEntry(key, termSlice.AsSpan());
+
+            if (TryGetEntryTermId(key, termSlice.AsSpan(), out long idInTree) == false) 
+                return false;
+
+            RecordDeletion(idInTree);
+            return true;
         }
         
         public bool TryDeleteEntry(string key, string term, out long entriesCountDifference)
@@ -1281,21 +1282,16 @@ namespace Corax
             
             return result;
         }
-
-        public bool TryDeleteEntry(string key, Span<byte> term)
-        {
-            if (TryGetEntryTermId(key, term, out long idInTree) == false) 
-                return false;
-
-            RecordDeletion(idInTree);
-            return true;
-        }
-
+        
+        /// <summary>
+        /// Record term for deletion from Index.
+        /// </summary>
+        /// <param name="idInTree">With frequencies and container type.</param>
         private void RecordDeletion(long idInTree)
         {
             if ((idInTree & (long)TermIdMask.Set) != 0)
             {
-                var id = idInTree & Constants.StorageMask.ContainerType;
+                var id = FrequencyUtils.GetContainerId(idInTree);
                 var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, id);
                 ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
                 
@@ -1303,13 +1299,14 @@ namespace Corax
                 var iterator = set.Iterate();
                 while (iterator.MoveNext())
                 {
+                    // since this is also encoded we've to delete frequency and container type as well
                     _deletedEntries.Add(FrequencyUtils.RemoveFrequency(iterator.Current));
                     _numberOfModifications--;
                 }
             }
             else if ((idInTree & (long)TermIdMask.Small) != 0)
             {
-                var id = idInTree & Constants.StorageMask.ContainerType;
+                var id = FrequencyUtils.GetContainerId(idInTree);
                 var smallSet = Container.Get(Transaction.LowLevelTransaction, id).ToSpan();
                 // combine with existing value
                 var cur = 0L;
@@ -1330,6 +1327,11 @@ namespace Corax
             }
         }
 
+        /// <summary>
+        /// Get TermId (id of container) from FieldTree 
+        /// </summary>
+        /// <param name="idInTree">Has frequency and container type inside idInTree.</param>
+        /// <returns></returns>
         private bool TryGetEntryTermId(string key, Span<byte> term, out long idInTree)
         {
             var fieldsTree = Transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
@@ -1346,23 +1348,6 @@ namespace Corax
 
             var termValue = termSlice.AsReadOnlySpan();
             return fieldTree.TryGetValue(termValue, out idInTree);
-        }
-
-        private void UnlikelyGrowBuffer(int newBufferSize, int newTokenSize)
-        {
-            if (newBufferSize > _encodingBufferHandler.Length)
-            {
-                Analyzer.BufferPool.Return(_encodingBufferHandler);
-                _encodingBufferHandler = null;
-                _encodingBufferHandler = Analyzer.BufferPool.Rent(newBufferSize);
-            }
-
-            if (newTokenSize > _tokensBufferHandler.Length)
-            {
-                Analyzer.TokensPool.Return(_tokensBufferHandler);
-                _tokensBufferHandler = null;
-                _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
-            }
         }
         
         public void Commit()
@@ -1523,8 +1508,9 @@ namespace Corax
 
         private AddEntriesToTermResult AddEntriesToTermResultViaSmallSet(Span<byte> tmpBuf, ref EntriesModifications entries, out long termId, long id)
         {
+            id = FrequencyUtils.GetContainerId(id);
+            
             var llt = Transaction.LowLevelTransaction;
-
             var smallSet = Container.GetMutable(llt, id);
             Debug.Assert(entries.Removals.ToArray().Distinct().Count() == entries.TotalRemovals, $"Removals list is not distinct.");
             int removalIndex = 0;
@@ -1608,7 +1594,7 @@ namespace Corax
             var (existingEntryId, existingFrequency) = FrequencyUtils.Decode(existing);
 
             // single
-            if (entries.TotalAdditions == 1 && entries.Additions[0] == existingFrequency && entries.AdditionsFrequency[0] == existingFrequency && entries.TotalRemovals == 0)
+            if (entries.TotalAdditions == 1 && entries.Additions[0] == existingEntryId && entries.AdditionsFrequency[0] == existingFrequency && entries.TotalRemovals == 0)
             {
                 // Same element to add, nothing to do here.
                 termId = -1;
@@ -1628,7 +1614,7 @@ namespace Corax
             }
             else
             {
-                entries.Addition(existing);
+                entries.Addition(existingEntryId, existingFrequency);
             }
             
             AddNewTerm(ref entries, tmpBuf, out termId);
@@ -1637,6 +1623,7 @@ namespace Corax
 
         private AddEntriesToTermResult AddEntriesToTermResultViaLargeSet(ref EntriesModifications entries, out long termId, long id)
         {
+            id = FrequencyUtils.GetContainerId(id);
             var llt = Transaction.LowLevelTransaction;
             var setSpace = Container.GetMutable(llt, id);
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
@@ -1785,7 +1772,7 @@ namespace Corax
             var containerId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, allocatedSize, out var space);
             encoded.CopyTo(space);
 
-            termId = containerId | (long)TermIdMask.Small;
+            termId = FrequencyUtils.Encode(containerId, 0, TermIdMask.Small);
         }
 
         private unsafe void AddNewTermToSet(ReadOnlySpan<long> additions, out long termId)
@@ -1795,9 +1782,41 @@ namespace Corax
             PostingList.Create(Transaction.LowLevelTransaction, ref postingListState);
 
             PostingList.Update(Transaction.LowLevelTransaction, ref postingListState, additions, ReadOnlySpan<long>.Empty);
-            termId = setId | (long)TermIdMask.Set;
+            termId = FrequencyUtils.Encode(setId, 0, TermIdMask.Set);
         }
 
+        private void UnlikelyGrowAnalyzerBuffer(int newBufferSize, int newTokenSize)
+        {
+            if (newBufferSize > _encodingBufferHandler.Length)
+            {
+                Analyzer.BufferPool.Return(_encodingBufferHandler);
+                _encodingBufferHandler = null;
+                _encodingBufferHandler = Analyzer.BufferPool.Rent(newBufferSize);
+            }
+
+            if (newTokenSize > _tokensBufferHandler.Length)
+            {
+                Analyzer.TokensPool.Return(_tokensBufferHandler);
+                _tokensBufferHandler = null;
+                _tokensBufferHandler = Analyzer.TokensPool.Rent(newTokenSize);
+            }
+        }
+        
+        private void ThrowInvalidTokenFoundOnBuffer(IndexedField field, ReadOnlySpan<byte> value, Span<byte> wordsBuffer, Span<Token> tokens, Token token)
+        {
+            throw new InvalidDataException(
+                $"{Environment.NewLine}Got token with: " +
+                $"{Environment.NewLine}\tOFFSET {token.Offset}" +
+                $"{Environment.NewLine}\tLENGTH: {token.Length}." +
+                $"{Environment.NewLine}Total amount of tokens: {tokens.Length}" +
+                $"{Environment.NewLine}Buffer contains '{Encodings.Utf8.GetString(wordsBuffer)}' and total length is {wordsBuffer.Length}" +
+                $"{Environment.NewLine}Buffer from ArrayPool: {Environment.NewLine}\tbyte buffer is {_encodingBufferHandler.Length} {Environment.NewLine}\ttokens buffer is {_tokensBufferHandler.Length}" +
+                $"{Environment.NewLine}Original span contains '{Encodings.Utf8.GetString(value)}' with total length {value.Length}" +
+                $"{Environment.NewLine}Field " +
+                $"{Environment.NewLine}\tid: {field.Id}" +
+                $"{Environment.NewLine}\tname: {field.Name}");
+        }
+        
         public void Dispose()
         {
             _jsonOperationContext?.Dispose();
