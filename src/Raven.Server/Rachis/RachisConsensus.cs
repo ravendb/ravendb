@@ -1419,8 +1419,7 @@ namespace Raven.Server.Rachis
                     var noopCmd = new DynamicJsonValue
                     {
                         ["Type"] = $"Noop for {Tag} in term {term}", 
-                        ["Command"] = "noop", 
-                        [nameof(CommandBase.UniqueRequestId)] = Guid.NewGuid().ToString()
+                        ["Command"] = "noop"
                     };
                     var cmd = context.ReadObject(noopCmd, "noop-cmd");
 
@@ -1432,6 +1431,8 @@ namespace Raven.Server.Rachis
                         tvb.Add((int)RachisEntryFlags.Noop);
                         table.Update(id, tvb, true);
                     }
+
+                    LogHistory.UpdateHistoryLogPreservingGuidAndStatus(context, index, term, cmd, null, null);
 
                     tx.Commit();
                 }

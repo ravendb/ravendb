@@ -56,8 +56,7 @@ namespace SlowTests.Issues
 
             // Stuck leader on this command
             var testCmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
-            await Assert.ThrowsAsync<UnknownClusterCommandException>(() => leader.ServerStore.SendToLeaderAsync(testCmd));
-
+            _ = leader.ServerStore.SendToLeaderAsync(testCmd);
 
             // Get last raft index from leader
             var testCmdIndex = await Cluster.WaitForRaftCommandToBeAppendedInClusterAsync(nodes, nameof(RachisConsensusTestBase.TestCommandWithRaftId));
