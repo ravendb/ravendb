@@ -349,8 +349,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             handler.Dispose();
             return binding.Metadata;
         }
+        
+        Slice.From(Allocator, $"{fieldName}-C", ByteStringType.Immutable, out var fieldTermTotalSumField);
 
-        return FieldMetadata.Build(fieldNameSlice, binding.FieldTermTotalSumField, Constants.IndexWriter.DynamicField, mode, mode switch
+        return FieldMetadata.Build(fieldNameSlice, fieldTermTotalSumField, Constants.IndexWriter.DynamicField, mode, mode switch
         {
             FieldIndexingMode.Search => _fieldMapping.SearchAnalyzer(fieldName),
             FieldIndexingMode.Exact => _fieldMapping.ExactAnalyzer(fieldName),
