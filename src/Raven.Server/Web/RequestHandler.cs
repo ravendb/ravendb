@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -785,5 +786,15 @@ namespace Raven.Server.Web
         {
             return new OperationCancelToken(cancelAfter, ServerStore.ServerShutdown, HttpContext.RequestAborted);
     }
-}
+        /// <summary>
+        /// puts the given string in TrafficWatch property of HttpContext.Items
+        /// puts the given type in TrafficWatchChangeType property of HttpContext.Items
+        /// </summary>
+        /// <param name="str"></param>
+        /// <param name="type"></param>
+        public void AddStringToHttpContext(string str, TrafficWatchChangeType type)
+        {
+            HttpContext.Items["TrafficWatch"] = (str, type);
+        }
+    }
 }

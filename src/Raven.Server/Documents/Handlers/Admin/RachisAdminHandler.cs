@@ -12,6 +12,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Server.Commercial;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
@@ -27,6 +28,7 @@ using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Server.TrafficWatch;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -74,6 +76,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                                 [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
                                 [nameof(ServerStore.PutRaftCommandResult.Data)] = result,
                             });
+                           
+                            if (TrafficWatchManager.HasRegisteredClients)
+                                AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
                         }
 
                         // now that we know that we properly serialized it
@@ -103,6 +108,9 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var index = GetLongQueryString("index");
             await ServerStore.Cluster.WaitForIndexNotification(index);
+            
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext("WaitForIndexCommand", TrafficWatchChangeType.ClusterCommands);
         }
 
         [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
@@ -121,7 +129,10 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
 
             RedirectToLeader();
-
+            
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext("SuspendObserverCommand", TrafficWatchChangeType.ClusterCommands);
+           
             return Task.CompletedTask;
         }
 
@@ -144,6 +155,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                     };
 
                     context.Write(writer, json);
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
                     return;
                 }
             }
@@ -158,6 +171,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 context.OpenReadTransaction();
                 context.Write(writer, ServerStore.GetLogDetails(context));
+                
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
             }
         }
 
@@ -171,6 +187,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 context.OpenReadTransaction();
                 writer.WriteArray("RachisLogHistory", ServerStore.Engine.LogHistory.GetHistoryLogs(context), context);
                 writer.WriteEndObject();
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
             }
         }
 
@@ -185,6 +203,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
 
                 context.Write(writer, json);
+               
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
             }
         }
 
@@ -249,6 +270,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                     json["Status"] = DynamicJsonValue.Convert(nodesStatues);
 
                     context.Write(writer, json);
+                    
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
                 }
             }
         }
@@ -267,6 +291,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (ServerStore.IsLeader())
                 {
                     context.Write(writer, DynamicJsonValue.Convert(ServerStore.ClusterMaintenanceSupervisor?.GetStats()));
+                    
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
+                    
                     await writer.FlushAsync();
                     return;
                 }
@@ -287,6 +315,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 await ServerStore.EnsureNotPassiveAsync(nodeTag: tag);
             }
             NoContentStatus();
+
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext("BootstrapCommand", TrafficWatchChangeType.ClusterCommands);
         }
 
         [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
@@ -509,6 +540,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
             }
             RedirectToLeader();
+            
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext("AddNodeCommand", TrafficWatchChangeType.ClusterCommands);
         }
 
         private static void AssertCanAddNodeWithTopologyId(ClusterTopology clusterTopology, Client.ServerWide.Commands.NodeInfo nodeInfo, string nodeUrl)
@@ -557,6 +591,9 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
 
             RedirectToLeader();
+           
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext("DeleteNodeCommand", TrafficWatchChangeType.ClusterCommands);
         }
 
         [RavenAction("/admin/license/set-limit", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
@@ -569,6 +606,9 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, maxUtilizedCores, GetRaftRequestIdFromQuery());
             NoContentStatus();
+
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext("SetLimitCommand", TrafficWatchChangeType.ClusterCommands);
         }
 
         [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
@@ -576,12 +616,19 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             Server.ServerStore.Engine.Timeout.ExecuteTimeoutBehavior();
             NoContentStatus();
+
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext("TimeoutCommand", TrafficWatchChangeType.ClusterCommands);
+
             return Task.CompletedTask;
         }
 
         [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
         public Task EnforceReelection()
         {
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext("ReelectCommand", TrafficWatchChangeType.ClusterCommands);  
+
             if (ServerStore.IsLeader())
             {
                 ServerStore.Engine.CurrentLeader.StepDown();
@@ -623,6 +670,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var url = topology.GetUrlFromTag(nodeTag);
                 await ServerStore.Engine.ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Promotable);
                 NoContentStatus();
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext("PromoteWatcherNodeCommand", TrafficWatchChangeType.ClusterCommands);
             }
         }
 
@@ -663,6 +713,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var url = topology.GetUrlFromTag(nodeTag);
                 await ServerStore.Engine.ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.NonVoter);
                 NoContentStatus();
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext("DemoteNodeCommand", TrafficWatchChangeType.ClusterCommands);
             }
         }
 
@@ -702,6 +755,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                     writer.WriteStartObject();
                     writer.WriteArray("Nodes", nodeList);
                     writer.WriteEndObject();
+
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
                 }
             }
         }
