@@ -42,7 +42,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 {
     public class SmugglerHandler : DatabaseRequestHandler
     {
-        private static readonly HttpClient HttpClient = new HttpClient();
+        public static readonly HttpClient HttpClient = new HttpClient();
 
         [RavenAction("/databases/*/smuggler/validate-options", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task ValidateOptions()
