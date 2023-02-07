@@ -17,7 +17,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedSmugglerHandler : ShardedDatabaseRequestHandler
     {
-        private static readonly HttpClient HttpClient = new HttpClient();
         [RavenShardedAction("/databases/*/smuggler/validate-options", "POST")]
         public async Task ValidateOptions()
         {

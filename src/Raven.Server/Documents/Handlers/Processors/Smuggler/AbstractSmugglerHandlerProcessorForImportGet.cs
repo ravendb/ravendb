@@ -47,7 +47,6 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportGet<TRequestHan
 
     private async Task<Stream> GetImportStream()
     {
-        HttpClient httpClient = new HttpClient();
         var file = RequestHandler.GetStringQueryString("file", required: false);
         if (string.IsNullOrEmpty(file) == false)
         {
@@ -59,22 +58,23 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportGet<TRequestHan
         var url = RequestHandler.GetStringQueryString("url", required: false);
         if (string.IsNullOrEmpty(url) == false)
         {
-            if (await RequestHandler.IsOperatorAsync() == false)
-                throw new AuthorizationException("The use of the 'url' query string parameters is limited operators and above");
-
-            if (HttpContext.Request.Method == "POST")
+            using (var httpClient = new HttpClient())
             {
-                var msg = await httpClient.PostAsync(url, new StreamContent(HttpContext.Request.Body)
-                {
-                    Headers =
-                    {
-                        ContentType =  new System.Net.Http.Headers.MediaTypeHeaderValue(HttpContext.Request.ContentType)
-                    }
-                });
-                return await msg.Content.ReadAsStreamAsync();
-            }
+                if (await RequestHandler.IsOperatorAsync() == false)
+                    throw new AuthorizationException("The use of the 'url' query string parameters is limited operators and above");
 
-            return await httpClient.GetStreamAsync(url);
+                if (HttpContext.Request.Method == "POST")
+                {
+                    var msg = await httpClient.PostAsync(url,
+                        new StreamContent(HttpContext.Request.Body)
+                        {
+                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(HttpContext.Request.ContentType) }
+                        });
+                    return await msg.Content.ReadAsStreamAsync();
+                }
+
+                return await httpClient.GetStreamAsync(url);
+            }
         }
 
         return HttpContext.Request.Body;
