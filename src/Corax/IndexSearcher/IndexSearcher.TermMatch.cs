@@ -6,10 +6,12 @@ using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
 using Sparrow.Compression;
+using Sparrow.Server.Debugging;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
+using DebugStuff = Voron.Debugging.DebugStuff;
 
 namespace Corax;
 
@@ -115,7 +117,7 @@ public partial class IndexSearcher
         return matches;
     }
 
-    public long TermAmount(FieldMetadata binding, string term)
+    public long NumberOfDocumentsUnderSpecificTerm(FieldMetadata binding, string term)
     {
         var terms = _fieldsTree?.CompactTreeFor(binding.FieldName);
         if (terms == null)
@@ -128,20 +130,21 @@ public partial class IndexSearcher
             _ => EncodeAndApplyAnalyzer(binding, term)
         };
         
-        return TermAmount(terms, termSlice);
+        return NumberOfDocumentsUnderSpecificTerm(terms, termSlice);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal long TermAmount(CompactTree tree, Slice term)
+    internal long NumberOfDocumentsUnderSpecificTerm(CompactTree tree, Slice term)
     {
-        return TermAmount(tree, term.AsReadOnlySpan());
+        return NumberOfDocumentsUnderSpecificTerm(tree, term.AsReadOnlySpan());
     }
-    
-    internal long TermAmount(CompactTree tree, ReadOnlySpan<byte> term)
+
+    private long NumberOfDocumentsUnderSpecificTerm(CompactTree tree, ReadOnlySpan<byte> term)
     {
         if (tree.TryGetValue(term, out var value) == false)
             return 0;
 
+        
         if ((value & (long)TermIdMask.Set) != 0)
         {
             var setId = FrequencyUtils.GetContainerId(value);

@@ -1591,7 +1591,7 @@ namespace Corax
             var allocatedSize = encoded.Length + 32 - (encoded.Length % 32);
 
             termId = Container.Allocate(llt, _postingListContainerId, allocatedSize, out var space);
-            termId |= (long)TermIdMask.Small;
+            termId = FrequencyUtils.Encode(termId, 0, TermIdMask.Small);
             
             encoded.CopyTo(space);
             return AddEntriesToTermResult.UpdateTermId;
@@ -1671,6 +1671,7 @@ namespace Corax
                 {
                     Debug.Assert(localEntry.TotalRemovals == 0, "entries.TotalRemovals == 0");
                     AddNewTerm(ref localEntry, tmpBuf, out termId);
+                    
                     fieldTree.Add(term, termId);
                     continue;
                 }

@@ -79,7 +79,7 @@ public partial class IndexSearcher
         foreach (var item in allInTerms)
         {
             var itemSlice = EncodeAndApplyAnalyzer(field, item);
-            var amount = TermAmount(terms, itemSlice);
+            var amount = NumberOfDocumentsUnderSpecificTerm(terms, itemSlice);
             if (amount == 0)
             {
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);

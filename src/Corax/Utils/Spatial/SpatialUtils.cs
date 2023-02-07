@@ -132,7 +132,7 @@ public class SpatialUtils
                         //Our termatch
                         using (var _ = Slice.From(allocator, geohashToCheck, out var term))
                         {
-                            var amount = searcher.TermAmount(tree, term);
+                            var amount = searcher.NumberOfDocumentsUnderSpecificTerm(tree, term);
                             if (amount == 0)
                             {
                                 continue;
@@ -150,7 +150,7 @@ public class SpatialUtils
                     case Spatial4n.Shapes.SpatialRelation.Intersects:
                         using (var _ = Slice.From(allocator, geohashToCheck, out var term))
                         {
-                            var amount = searcher.TermAmount(tree, term);
+                            var amount = searcher.NumberOfDocumentsUnderSpecificTerm(tree, term);
                             if (amount == 0)
                             {
                                 continue;
@@ -223,7 +223,7 @@ public class SpatialUtils
                     case Spatial4n.Shapes.SpatialRelation.Intersects:
                         using (var _ = Slice.From(allocator, geohashToCheck, out var term))
                         {
-                            var amount = searcher.TermAmount(tree, term);
+                            var amount = searcher.NumberOfDocumentsUnderSpecificTerm(tree, term);
                             if (amount == 0)
                             {
                                 continue;

@@ -16,6 +16,7 @@ public readonly struct FieldMetadata
 
     private FieldMetadata(Slice fieldName, Slice sumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false)
     {
+        SumName = sumName;
         FieldName = fieldName;
         FieldId = fieldId;
         Mode = mode;
