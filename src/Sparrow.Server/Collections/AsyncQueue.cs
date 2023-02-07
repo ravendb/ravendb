@@ -72,10 +72,5 @@ namespace Sparrow.Server.Collections
                     return Tuple.Create(true, (TValue)result);
             }
         }
-
-        public void Clear()
-        {
-            _inner.Clear();
-        }
     }
 }

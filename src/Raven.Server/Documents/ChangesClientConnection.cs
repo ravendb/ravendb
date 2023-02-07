@@ -8,24 +8,28 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 using Sparrow.Server.Collections;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents
 {
-    public class ChangesClientConnection : IDisposable
+    public class ChangesClientConnection : ILowMemoryHandler, IDisposable
     {
         private static long _counter;
 
         private readonly WebSocket _webSocket;
         private readonly DocumentDatabase _documentDatabase;
         private readonly AsyncQueue<ChangeValue> _sendQueue = new AsyncQueue<ChangeValue>();
+        private readonly MultipleUseFlag _lowMemoryFlag = new();
+        
+        public CancellationTokenSource CancellationToken { get; }
 
-        private readonly CancellationTokenSource _cts;
         private readonly CancellationToken _disposeToken;
 
         private readonly DateTime _startedAt;
@@ -74,8 +78,10 @@ namespace Raven.Server.Documents
             _webSocket = webSocket;
             _documentDatabase = documentDatabase;
             _startedAt = SystemTime.UtcNow;
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(documentDatabase.DatabaseShutdown);
-            _disposeToken = _cts.Token;
+            CancellationToken = CancellationTokenSource.CreateLinkedTokenSource(documentDatabase.DatabaseShutdown);
+            _disposeToken = CancellationToken.Token;
+
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         public long Id = Interlocked.Increment(ref _counter);
@@ -543,6 +549,7 @@ namespace Raven.Server.Documents
                         context.Reset();
                         context.Renew();
 
+                        var messagesCount = 0;
                         await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
                         {
                             sp.Restart();
@@ -561,6 +568,7 @@ namespace Raven.Server.Documents
 
                                 first = false;
                                 context.Write(writer, value);
+                                messagesCount++;
 
                                 await writer.FlushAsync();
 
@@ -577,23 +585,61 @@ namespace Raven.Server.Documents
                         ms.TryGetBuffer(out ArraySegment<byte> bytes);
 
                         var sendTask = _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken);
-                        var waitTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(15), _disposeToken);
+                        var sendSp = Stopwatch.StartNew();
 
-                        if (Task.WaitAny(sendTask, waitTask) == 1)
+                        while (true)
                         {
-                            if (_disposeToken.IsCancellationRequested)
+                            var waitTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(5), _disposeToken);
+
+                            var waitResult = Task.WaitAny(sendTask, waitTask);
+                            if (waitResult == 0)
+                            {
+                                await sendTask;
                                 break;
+                            }
+
+                            var isLowMemory = _lowMemoryFlag.IsRaised();
+                            switch (isLowMemory)
+                            {
+                                case true:
+                                    if (_sendQueue.Count < 16 * 1024)
+                                    {
+                                        // we are in low memory state and the number of messages in the queue is reasonable.
+                                        // continue waiting for the send task to complete.
+                                        continue;
+                                    }
+
+                                    break;
+
+                                case false:
+                                    if (_sendQueue.Count < 128 * 1024)
+                                    {
+                                        // we aren't in low memory state and the number of pending messages is less than 128K.
+                                        // continue waiting for the send task to complete.
+                                        continue;
+                                    }
+                                    break;
+                            }
+
+                            // - we waited for some time for the send task to complete,
+                            // - we are in low memory state and the number of messages waiting in the queue exceeds 16K
+                            // - OR we have 128K messages waiting in the queue.
+                            // - we'll close the WebSocket connection and let the client reconnect again.
 
                             try
                             {
-                                _cts.Cancel();
+                                CancellationToken.Cancel();
                             }
                             catch (ObjectDisposedException)
                             {
-                                // the connection was already closed
+                                // the connection was already disposed
+                                return;
                             }
 
-                            throw new TimeoutException("Waited for 15 seconds to send a message to the client but was unsuccessful, will let the client reconnect again");
+                            throw new TimeoutException($"Waited for {sendSp.Elapsed} to send {messagesCount:#,#;;0} messages to the client but was unsuccessful " +
+                                                       $"(total size: {new Sparrow.Size(ms.Length, SizeUnit.Bytes)}), " +
+                                                       $"low memory state: {isLowMemory} and there are {_sendQueue.Count:#,#;;0} messages waiting in the queue. " +
+                                                       $"Closing the changes WebSocket and letting the client reconnect again.");
                         }
                     }
                 }
@@ -638,13 +684,13 @@ namespace Raven.Server.Documents
         public void Dispose()
         {
             _isDisposed.Raise();
-            _cts.Cancel();
+            CancellationToken.Cancel();
             _sendQueue.Enqueue(new ChangeValue
             {
                 AllowSkip = false,
                 ValueToSend = null
             });
-            _cts.Dispose();
+            CancellationToken.Dispose();
         }
 
         public void Confirm(int commandId)
@@ -912,9 +958,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void ClearSendQueue()
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
-            _sendQueue.Clear();
+            _lowMemoryFlag.Raise();
+        }
+
+        public void LowMemoryOver()
+        {
+            _lowMemoryFlag.Lower();
         }
     }
 }
