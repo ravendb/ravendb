@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Sparrow.Server;
 
 namespace Corax.Queries
@@ -63,7 +61,7 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(Span<long> matches, Span<float> scores)
+        public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
             // Nothing to do if there is no boosting happening at this level. 
             bool innerBoosting = _inner.IsBoosting;
@@ -76,8 +74,8 @@ namespace Corax.Queries
             // If there are two chains we need to combine them.
             if (innerBoosting == true && outerBoosting == true)
             {
-                _inner.Score(matches, scores);
-                _outer.Score(matches, scores);
+                _inner.Score(matches, scores, boostFactor);
+                _outer.Score(matches, scores, boostFactor);
                 return;
             }
 
@@ -87,7 +85,7 @@ namespace Corax.Queries
             {
                 // Inner can still be not boosting. In this case it is, so we delegate
                 // the call into the boosting layer that provides us the information.
-                _inner.Score(matches, scores);
+                _inner.Score(matches, scores, boostFactor);
                 return;
             }
 
@@ -95,7 +93,7 @@ namespace Corax.Queries
             {
                 // Outer can still be not boosting. In this case it is, so we delegate
                 // the call into the boosting layer that provides us the information.
-                _outer.Score(matches, scores);
+                _outer.Score(matches, scores, boostFactor);
             }
         }
 

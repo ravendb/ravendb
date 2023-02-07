@@ -516,13 +516,14 @@ public static class QueryBuilderHelper
         if (fieldName is "score()")
             return FieldMetadata.Build(allocator, fieldName, -1, FieldIndexingMode.Normal, null);
 
-        
-        
-        return GetFieldMetadata(allocator, fieldName, index, indexMapping, queryMapping, hasDynamics, dynamicFields, isForQuery, isSorting: true);
+
+
+        return GetFieldMetadata(allocator, fieldName, index, indexMapping, queryMapping, hasDynamics, dynamicFields, isForQuery: isForQuery, isSorting: true);
     }
 
-    internal static FieldMetadata GetFieldMetadata(ByteStringContext allocator, string fieldName, Index index, IndexFieldsMapping indexMapping, FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
-        bool exact = false, bool isSorting = false, bool handleSearch = false)
+    internal static FieldMetadata GetFieldMetadata(ByteStringContext allocator, string fieldName, Index index, IndexFieldsMapping indexMapping,
+        FieldsToFetch queryMapping, bool hasDynamics, Lazy<List<string>> dynamicFields, bool isForQuery = true,
+        bool exact = false, bool isSorting = false, bool hasBoost = false)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
         FieldMetadata metadata;
@@ -532,8 +533,8 @@ public static class QueryBuilderHelper
         {
             metadata = indexMapping.GetByFieldId(0).Metadata;
             return exact 
-                ? FieldMetadata.Build(metadata.FieldName, 0, FieldIndexingMode.Exact, null) 
-                : metadata;
+                ? metadata.ChangeAnalyzer(FieldIndexingMode.Exact, null).ChangeScoringMode(hasBoost)
+                : metadata.ChangeScoringMode(hasBoost);
         }
         
         if (isForQuery == false)
@@ -553,6 +554,8 @@ public static class QueryBuilderHelper
                     : indexFinding.Metadata.ChangeAnalyzer(FieldIndexingMode.Normal, indexMapping.DefaultAnalyzer); //but when we do a TermMatch we want to have just default analyzer, even on full-text search field
             else
                 metadata = indexFinding.Metadata;
+
+            metadata = metadata.ChangeScoringMode(hasBoost);
         }
         else
         {
@@ -562,7 +565,7 @@ public static class QueryBuilderHelper
             var mode = shouldTurnOffAnalyzersForTime || exact 
                 ? FieldIndexingMode.Exact 
                 : FieldIndexingMode.Normal;
-            metadata = FieldMetadata.Build(allocator, fieldName, Corax.Constants.IndexWriter.DynamicField, mode, indexMapping.DefaultAnalyzer);
+            metadata = FieldMetadata.Build(allocator, fieldName, Corax.Constants.IndexWriter.DynamicField, mode, indexMapping.DefaultAnalyzer, hasBoost: hasBoost);
         }
 
         return metadata;

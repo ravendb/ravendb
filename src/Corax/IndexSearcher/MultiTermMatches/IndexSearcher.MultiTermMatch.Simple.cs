@@ -14,96 +14,43 @@ public partial class IndexSearcher
     public MultiTermMatch StartWithQuery(string field, string startWith, bool isNegated = false) => StartWithQuery(FieldMetadataBuilder(field), EncodeAndApplyAnalyzer(default, startWith));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch StartWithQuery(FieldMetadata field, Slice startWith, bool isNegated = false)
-    {
-        return MultiTermMatchBuilder<NullScoreFunction, StartWithTermProvider>(field, startWith, default, isNegated);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch StartWithQuery(FieldMetadata field, string startWith, bool isNegated = false)
     {
-        return MultiTermMatchBuilder<NullScoreFunction, StartWithTermProvider>(field, startWith, default, isNegated);
+        return MultiTermMatchBuilder<StartWithTermProvider>(field, startWith, isNegated);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch StartWithQuery<TScoreFunction>(FieldMetadata field, string startWith, TScoreFunction scoreFunction, bool isNegated = false)
-        where TScoreFunction : IQueryScoreFunction
+    
+    public MultiTermMatch StartWithQuery(FieldMetadata field, Slice startWith, bool isNegated = false)
     {
-        return MultiTermMatchBuilder<TScoreFunction, StartWithTermProvider>(field, startWith, scoreFunction, isNegated);
+        return MultiTermMatchBuilder<StartWithTermProvider>(field, startWith, isNegated);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch StartWithQuery<TScoreFunction>(FieldMetadata field, Slice startWith, TScoreFunction scoreFunction, bool isNegated = false)
-        where TScoreFunction : IQueryScoreFunction
-    {
-        return MultiTermMatchBuilder<TScoreFunction, StartWithTermProvider>(field, startWith, scoreFunction, isNegated);
-    }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch EndsWithQuery(FieldMetadata field, string endsWith, bool isNegated = false)
     {
-        return MultiTermMatchBuilder<NullScoreFunction, EndsWithTermProvider>(field, endsWith, default, isNegated);
+        return MultiTermMatchBuilder<EndsWithTermProvider>(field, endsWith, isNegated);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch EndsWithQuery<TScoreFunction>(FieldMetadata field, string endsWith, TScoreFunction scoreFunction, bool isNegated = false,
-        int fieldId = Constants.IndexSearcher.NonAnalyzer)
-        where TScoreFunction : IQueryScoreFunction
-    {
-        return MultiTermMatchBuilder<TScoreFunction, EndsWithTermProvider>(field, endsWith, scoreFunction, isNegated);
-    }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch EndsWithQuery(FieldMetadata field, Slice endsWith, bool isNegated = false)
     {
-        return MultiTermMatchBuilder<NullScoreFunction, EndsWithTermProvider>(field, endsWith, default, isNegated);
+        return MultiTermMatchBuilder<EndsWithTermProvider>(field, endsWith, isNegated);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch EndsWithQuery<TScoreFunction>(FieldMetadata field, Slice endsWith, TScoreFunction scoreFunction, bool isNegated = false)
-        where TScoreFunction : IQueryScoreFunction
-    {
-        return MultiTermMatchBuilder<TScoreFunction, EndsWithTermProvider>(field, endsWith, scoreFunction, isNegated);
-    }
-
     
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch ContainsQuery<TScoreFunction>(FieldMetadata field, string containsTerm, TScoreFunction scoreFunction, bool isNegated = false)
-        where TScoreFunction : IQueryScoreFunction
-    {
-        return MultiTermMatchBuilder<TScoreFunction, ContainsTermProvider>(field, containsTerm, scoreFunction, isNegated);
-    }
-
-    public MultiTermMatch ContainsQuery(FieldMetadata field, string containsTerm, bool isNegated = false) => ContainsQuery(field, EncodeAndApplyAnalyzer(field, containsTerm));
+    public MultiTermMatch ContainsQuery(FieldMetadata field, string containsTerm, bool isNegated = false) => ContainsQuery(field, EncodeAndApplyAnalyzer(field, containsTerm), isNegated);
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch ContainsQuery(FieldMetadata field, Slice containsTerm, bool isNegated = false)
     {
-        return MultiTermMatchBuilder<NullScoreFunction, ContainsTermProvider>(field, containsTerm, default, isNegated);
+        return MultiTermMatchBuilder<ContainsTermProvider>(field, containsTerm, isNegated);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch ContainsQuery<TScoreFunction>(FieldMetadata field, Slice containsTerm, TScoreFunction scoreFunction, bool isNegated = false)
-        where TScoreFunction : IQueryScoreFunction
-    {
-        return MultiTermMatchBuilder<TScoreFunction, ContainsTermProvider>(field, containsTerm, scoreFunction, isNegated);
-    }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch ExistsQuery(FieldMetadata field)
     {
-        return ExistsQuery(field, default(NullScoreFunction));
+        return MultiTermMatchBuilder<ExistsTermProvider>(field, default(Slice), false);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public MultiTermMatch ExistsQuery<TScoreFunction>(FieldMetadata field, TScoreFunction scoreFunction)
-        where TScoreFunction : IQueryScoreFunction
-    {
-        return MultiTermMatchBuilder<TScoreFunction, ExistsTermProvider>(field, default(Slice), scoreFunction, false);
-    }
-
-    public MultiTermMatch RegexQuery<TScoreFunction>(FieldMetadata field, TScoreFunction scoreFunction, Regex regex)
-        where TScoreFunction : IQueryScoreFunction
+    public MultiTermMatch RegexQuery(FieldMetadata field, Regex regex)
     {
         var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
         if (terms == null)

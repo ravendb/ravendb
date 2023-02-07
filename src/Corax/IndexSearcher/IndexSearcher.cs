@@ -44,7 +44,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public long NumberOfTermsInIndex => _numberOfTermsInIndex ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfTermsInIndex) ?? 0;
 
-    internal ByteStringContext Allocator => _transaction.Allocator;
+    public ByteStringContext Allocator => _transaction.Allocator;
 
     internal Transaction Transaction => _transaction;
 
@@ -358,10 +358,10 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
 
     public FieldMetadata FieldMetadataBuilder(string fieldName, int fieldId = Constants.IndexSearcher.NonAnalyzer, Analyzer analyzer = null,
-        FieldIndexingMode fieldIndexingMode = default)
+        FieldIndexingMode fieldIndexingMode = default, bool ranking = false)
     {
         Slice.From(Allocator, fieldName, ByteStringType.Immutable, out var fieldNameAsSlice);
-        return FieldMetadata.Build(fieldNameAsSlice, fieldId, fieldIndexingMode, analyzer);
+        return FieldMetadata.Build(fieldNameAsSlice, fieldId, fieldIndexingMode, analyzer, ranking);
     }
 
     public FieldMetadata FieldMetadataBuilder(Slice fieldName, int fieldId = Constants.IndexSearcher.NonAnalyzer, Analyzer analyzer = null,

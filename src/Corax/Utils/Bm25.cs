@@ -4,6 +4,9 @@ using Sparrow.Server;
 
 namespace Corax.Utils;
 
+
+//https://www.researchgate.net/publication/45886647_Integrating_the_Probabilistic_Models_BM25BM25F_into_Lucene
+
 public unsafe struct Bm25 : IDisposable
 {
     public const float BFactor = 0.25f;
@@ -48,7 +51,7 @@ public unsafe struct Bm25 : IDisposable
         return (float)Math.Log(m / d);
     }
 
-    public void Score(Span<long> matches, Span<float> scores)
+    public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
         //todo add some threshold when it is worth to sort :)
         MemoryExtensions.Sort(Matches, Scores);
@@ -65,7 +68,7 @@ public unsafe struct Bm25 : IDisposable
                 continue;
 
             var weight = frequencies[idOfInner] / ((1 - BFactor) + BFactor * LcAvlC);
-            scores[idX] += _idf * weight / (K1 + weight);
+            scores[idX] += _idf * weight * boostFactor / (K1 + weight);
         }
     }
     
@@ -117,6 +120,7 @@ public unsafe struct Bm25 : IDisposable
     public void Dispose()
     {
         _memoryHolder?.Dispose();
+        _memoryHolder = null;
     }
 
     public void Remove()

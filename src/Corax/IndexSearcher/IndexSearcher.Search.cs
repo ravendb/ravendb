@@ -14,13 +14,8 @@ namespace Corax;
 
 public partial class IndexSearcher
 {
-    public IQueryMatch SearchQuery(FieldMetadata field, string searchTerm, Constants.Search.Operator @operator, bool isNegated)
-    {
-        return SearchQuery<NullScoreFunction>(field, searchTerm, default, @operator, isNegated);
-    }
 
-    public IQueryMatch SearchQuery<TScoreFunction>(FieldMetadata field, string searchTerm, TScoreFunction scoreFunction, Constants.Search.Operator @operator, bool isNegated = false, bool manuallyCutWildcards = false)
-        where TScoreFunction : IQueryScoreFunction
+    public IQueryMatch SearchQuery(FieldMetadata field, string searchTerm,  Constants.Search.Operator @operator, bool isNegated = false, bool manuallyCutWildcards = false)
     {
         bool isDynamic = field.FieldId == Constants.IndexWriter.DynamicField;
         ReadOnlySpan<byte> term = Encoding.UTF8.GetBytes(searchTerm).AsSpan();
@@ -115,9 +110,7 @@ public partial class IndexSearcher
             BuildExpression(Allocator, mode, new Slice(encodedString));
         }
 
-        return typeof(TScoreFunction) == typeof(NullScoreFunction)
-            ? match
-            : Boost(match, scoreFunction);
+        return match;
 
         void BuildExpression(ByteStringContext ctx, Constants.Search.SearchMatchOptions mode, Slice encodedString)
         {

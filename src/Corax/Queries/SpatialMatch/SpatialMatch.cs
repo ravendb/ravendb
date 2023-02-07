@@ -167,7 +167,7 @@ public class SpatialMatch : IQueryMatch
         return currentIdx;
     }
 
-    public void Score(Span<long> matches, Span<float> scores)
+    public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
         throw new NotImplementedException();
     }
