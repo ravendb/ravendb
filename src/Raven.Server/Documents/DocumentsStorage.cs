@@ -2007,9 +2007,9 @@ namespace Raven.Server.Documents
         }
 
         // long - Etag, byte - separator char
-        private const int ConflictedTombstoneOverhead = sizeof(long) + sizeof(byte);
+        protected const int ConflictedTombstoneOverhead = sizeof(long) + sizeof(byte);
 
-        protected static LazyStringValue UnwrapLowerIdIfNeeded(JsonOperationContext context, LazyStringValue lowerId)
+        private static LazyStringValue UnwrapLowerIdIfNeeded(JsonOperationContext context, LazyStringValue lowerId)
         {
             if (lowerId.Size < ConflictedTombstoneOverhead + 1)
                 return lowerId;
