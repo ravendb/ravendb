@@ -106,10 +106,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void WillOnlyGetPost2Once()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void WillOnlyGetPost2Once(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Post_ByTag().Execute(store);
                 using (IDocumentSession session = store.OpenSession())

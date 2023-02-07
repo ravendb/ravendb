@@ -135,10 +135,11 @@ namespace FastTests.Sharding.Queries
             }
         }
 
-        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
-        public void Simple_Projection_With_Order_By()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Simple_Projection_With_Order_By(Options options)
         {
-            using (var store = Sharding.GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UserMapIndex());
 
@@ -351,10 +352,11 @@ select project(o)")
             }
         }
 
-        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
-        public void Auto_Map_Reduce_With_Order_By()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Auto_Map_Reduce_With_Order_By(Options options)
         {
-            using (var store = Sharding.GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -408,11 +410,11 @@ select {{
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
-        [InlineData("long")]
-        [InlineData("double")]
-        public void Map_Index_With_Order_By_Multiple_Results(string sortType)
+        [RavenData("long", DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("double", DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Map_Index_With_Order_By_Multiple_Results(Options options, string sortType)
         {
-            using (var store = Sharding.GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new OrderMapIndex());
 
@@ -473,11 +475,11 @@ order by o.Freight as {sortType}
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
-        [InlineData("long")]
-        [InlineData("double")]
-        public void Map_Reduce_Index_With_Order_By_Multiple_Results(string sortType)
+        [RavenData("long", DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("double", DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Map_Reduce_Index_With_Order_By_Multiple_Results(Options options, string sortType)
         {
-            using (var store = Sharding.GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new OrderMapReduceIndex());
 

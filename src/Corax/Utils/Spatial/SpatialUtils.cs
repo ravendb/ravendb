@@ -50,7 +50,7 @@ public class SpatialUtils
 
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    internal static double GetGeoDistance<TComparer>(in (double lat, double lng) fieldCoordinates, in TComparer comparer)
+    public static double GetGeoDistance<TComparer>(in (double lat, double lng) fieldCoordinates, in TComparer comparer)
         where TComparer : ISpatialComparer
     {
         var distance = HaverstineDistanceInInternationalNauticalMiles(comparer.Point.Center.Y, comparer.Point.Center.X, fieldCoordinates.lat, fieldCoordinates.lng);

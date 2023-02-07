@@ -253,7 +253,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                         explanation = GetQueryExplanations(explanationOptions, luceneQuery, _searcher, scoreDoc, d, document);
                                     }
                                 }
-                                AddOrderByFields(query, document, scoreDoc.Doc, ref d);
+
+                                if (ShouldAddOrderByFieldValues(query))
+                                    AddOrderByFields(query, scoreDoc.Doc, ref d);
+                                
                                 // We return the document to the caller. 
                                 return new QueryResult { Result = d, Highlightings = highlightings, Explanation = explanation };
                             }
@@ -370,7 +373,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        partial void AddOrderByFields(IndexQueryServerSide query, global::Lucene.Net.Documents.Document document, int doc, ref Document d);
+        partial void AddOrderByFields(IndexQueryServerSide query, int doc, ref Document d);
 
         private void SetupHighlighter(IndexQueryServerSide query, Query luceneQuery, JsonOperationContext context)
         {
