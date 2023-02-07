@@ -1,18 +1,12 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
-using Raven.Server.ServerWide;
-using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Smuggler.Documents.Handlers;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Processors.Smuggler;
 
@@ -58,23 +52,20 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportGet<TRequestHan
         var url = RequestHandler.GetStringQueryString("url", required: false);
         if (string.IsNullOrEmpty(url) == false)
         {
-            using (var httpClient = new HttpClient())
-            {
-                if (await RequestHandler.IsOperatorAsync() == false)
+            if (await RequestHandler.IsOperatorAsync() == false)
                     throw new AuthorizationException("The use of the 'url' query string parameters is limited operators and above");
 
-                if (HttpContext.Request.Method == "POST")
-                {
-                    var msg = await httpClient.PostAsync(url,
-                        new StreamContent(HttpContext.Request.Body)
-                        {
-                            Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(HttpContext.Request.ContentType) }
-                        });
-                    return await msg.Content.ReadAsStreamAsync();
-                }
-
-                return await httpClient.GetStreamAsync(url);
+            if (HttpContext.Request.Method == "POST")
+            {
+                var msg = await SmugglerHandler.HttpClient.PostAsync(url,
+                    new StreamContent(HttpContext.Request.Body)
+                    {
+                        Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(HttpContext.Request.ContentType) }
+                    });
+                return await msg.Content.ReadAsStreamAsync();
             }
+
+            return await SmugglerHandler.HttpClient.GetStreamAsync(url);
         }
 
         return HttpContext.Request.Body;
