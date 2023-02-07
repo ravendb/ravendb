@@ -4,6 +4,7 @@ using System.Text;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -17,9 +18,9 @@ using static Raven.Server.Documents.Schemas.Conflicts;
 using static Raven.Server.Documents.Schemas.Counters;
 using static Raven.Server.Documents.Schemas.DeletedRanges;
 using static Raven.Server.Documents.Schemas.Documents;
-using static Raven.Server.Documents.Schemas.Tombstones;
 using static Raven.Server.Documents.Schemas.Revisions;
 using static Raven.Server.Documents.Schemas.TimeSeries;
+using static Raven.Server.Documents.Schemas.Tombstones;
 
 namespace Raven.Server.Documents.Sharding;
 
@@ -154,19 +155,30 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(Transaction tx, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
     {
-        if (tx.Owner is not ShardedDocumentDatabase documentDatabase)
-        {
-            slice = default;
-            return default;
-        }
+        var lowerId = tvr.Read(idIndex, out int size);
+        UnwrapLowerIdIfNeeded(tx, ref lowerId, ref size);
+        var etag = *(long*)tvr.Read(etagIndex, out _);
 
-        using (documentDatabase.DatabaseContext.AllocateContext(out JsonOperationContext context))
-        {
-            var lowerId = TableValueToString(context, idIndex, ref tvr);
-            lowerId = UnwrapLowerIdIfNeeded(context, lowerId);
-            var etag = *(long*)tvr.Read(etagIndex, out _);
+        return GenerateBucketAndEtagSlice(tx, lowerId, size, etag, out slice);
+    }
 
-            return GenerateBucketAndEtagSlice(tx, lowerId.Buffer, lowerId.Size, etag, out slice);
+    private static void UnwrapLowerIdIfNeeded(Transaction tx, ref byte* lowerId, ref int size)
+    {
+        if (size < ConflictedTombstoneOverhead + 1)
+            return;
+
+        if (lowerId[size - ConflictedTombstoneOverhead] == SpecialChars.RecordSeparator)
+        {
+            var shardedContext = (ShardedDocumentDatabase)tx.Owner;
+            using (shardedContext.DatabaseContext.AllocateContext(out JsonOperationContext context))
+            {
+                size -= ConflictedTombstoneOverhead;
+                var allocated = context.GetMemory(size + 1); // we need this extra byte to mark that there is no escaping
+                allocated.Address[size] = 0;
+
+                Memory.Copy(allocated.Address, lowerId, size);
+                lowerId = allocated.Address;
+            }
         }
     }
 
