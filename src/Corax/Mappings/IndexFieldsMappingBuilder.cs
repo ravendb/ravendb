@@ -12,6 +12,7 @@ public class IndexFieldsMappingBuilder : IDisposable
     private readonly ByteStringContext _context;
     private const short LongSuffix = 19501; //"-L"
     private const short DoubleSuffix = 17453; //"-D"
+    private const short TermTotalSumField = 17197; //"-C"
     
     private readonly Dictionary<Slice, IndexFieldBinding> _fields;
     private readonly Dictionary<int, IndexFieldBinding> _fieldsById;
@@ -89,7 +90,9 @@ public class IndexFieldsMappingBuilder : IDisposable
             var clonedFieldName = fieldName.Clone(_context);
             GetFieldNameForDoubles(clonedFieldName, out var fieldNameDouble);
             GetFieldNameForLongs(clonedFieldName, out var fieldNameLong);
-            var binding = new IndexFieldBinding(fieldId, clonedFieldName, fieldNameLong, fieldNameDouble, _isForWriter,
+            GetFieldForTotalSum(clonedFieldName, out var fieldForTotalSum);
+
+            var binding = new IndexFieldBinding(fieldId, clonedFieldName, fieldNameLong, fieldNameDouble, fieldForTotalSum, _isForWriter,
                 analyzer, hasSuggestion, fieldIndexingMode, hasSpatial);
             _fields[clonedFieldName] = binding;
             _fieldsById[fieldId] = binding;
@@ -117,11 +120,21 @@ public class IndexFieldsMappingBuilder : IDisposable
         GetFieldNameWithPostfix(_context, fieldName, DoubleSuffix, out fieldNameForDoubles);
     }
     
+    private void GetFieldForTotalSum(Slice fieldName, out Slice fieldForTotalSum)
+    {
+        GetFieldNameWithPostfix(_context, fieldName, TermTotalSumField, out fieldForTotalSum);
+    }
+    
     internal static void GetFieldNameForDoubles(ByteStringContext context, Slice fieldName, out Slice fieldNameForDoubles)
     {
         GetFieldNameWithPostfix(context, fieldName, DoubleSuffix, out fieldNameForDoubles);
     }
 
+    internal static void GetFieldForTotalSum(ByteStringContext context, Slice fieldName, out Slice fieldForTotalSum)
+    {
+        GetFieldNameWithPostfix(context, fieldName, TermTotalSumField, out fieldForTotalSum);
+    }
+    
     private static unsafe void GetFieldNameWithPostfix(ByteStringContext context, Slice fieldName, short postfix, out Slice fieldWithPostfix)
     {
         context.Allocate(fieldName.Size + sizeof(short), out ByteString output);

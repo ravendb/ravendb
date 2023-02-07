@@ -508,7 +508,7 @@ namespace FastTests.Client.Indexing
         }
         
         [RavenTheory(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void OutputReduceToCollectionWithDeletions(Options options)
         {
             using var store = GetDocumentStore(options);

@@ -51,10 +51,10 @@ namespace Corax.Queries
                 _current = QueryMatch.Invalid;
             _isFirst = true;
             
-            _isBoosting = field.Ranking;
+            _isBoosting = field.HasBoost;
             if (_isBoosting)
             {
-                _handler = _context.Allocate(64 * sizeof(Bm25), out var bufferOutput);
+                _handler = _context.Allocate(64 * Unsafe.SizeOf<Bm25>(), out var bufferOutput);
                 _freqsStart = (Bm25*)bufferOutput.Ptr;
                 _freqsSize = 64;
             }

@@ -60,9 +60,9 @@ namespace FastTests.Corax
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
             {
-                var startWithMatch = searcher.StartWithQuery(searcher.FieldMetadataBuilder("Id", ranking: true), "list/1");
+                var startWithMatch = searcher.StartWithQuery(searcher.FieldMetadataBuilder("Id", hasBoost: true), "list/1");
                 var boostedStartWithMatch = searcher.Boost(startWithMatch, 2);
-                var contentMatch = searcher.TermQuery(searcher.FieldMetadataBuilder("Content1", ranking: true), "1");
+                var contentMatch = searcher.TermQuery(searcher.FieldMetadataBuilder("Content1", hasBoost: true), "1");
                 var orMatch = searcher.Or(boostedStartWithMatch, contentMatch);
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
 
@@ -93,7 +93,7 @@ namespace FastTests.Corax
             longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> { Id = $"list/{i}", Content1 = i % mod }).ToList();
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
-            var contentMetadata = searcher.FieldMetadataBuilder("Content1", ranking: true);
+            var contentMetadata = searcher.FieldMetadataBuilder("Content1", hasBoost: true);
             {
                 IQueryMatch match =searcher.Boost(
                     searcher.InQuery(contentMetadata, new() { "1", "2", "3" })
@@ -242,10 +242,10 @@ namespace FastTests.Corax
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
             {
-                var content0Match = searcher.TermQuery("Content1", "0", ranking: true);
+                var content0Match = searcher.TermQuery("Content1", "0", hasBoost: true);
                 var boostedContent0 = searcher.Boost(content0Match, 0);
 
-                var content1Match = searcher.TermQuery("Content1", "1", ranking: true);
+                var content1Match = searcher.TermQuery("Content1", "1", hasBoost: true);
                 var boostedContent1 = searcher.Boost(content1Match, 0);
 
                 var orMatch = searcher.Or(boostedContent0, boostedContent1);
@@ -314,7 +314,7 @@ namespace FastTests.Corax
         
             longList.Sort(CompareAscending);
             using var searcher = new IndexSearcher(Env);
-            var contentMetadata = searcher.FieldMetadataBuilder("Content1", Content1, ranking: true);
+            var contentMetadata = searcher.FieldMetadataBuilder("Content1", Content1, hasBoost: true);
             {
                 var query = searcher.InQuery(contentMetadata, new List<string>() {"0", "1", "2", "3"});
                 var sortedMatch = searcher.OrderByScore(query);
