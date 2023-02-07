@@ -69,8 +69,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             _filteredShardIndexes = new HashSet<int>();
             switch (filter)
             {
-                case LazyStringValue id:
-                    _filteredShardIndexes.Add(RequestHandler.DatabaseContext.GetShardNumberFor(context, id));
+                case LazyStringValue:
+                case LazyCompressedStringValue:
+                    _filteredShardIndexes.Add(RequestHandler.DatabaseContext.GetShardNumberFor(context, filter.ToString()));
                     break;
                 case BlittableJsonReaderArray arr:
                 {
