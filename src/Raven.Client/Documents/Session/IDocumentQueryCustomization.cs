@@ -90,6 +90,6 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// It adds additional shard context to a query so it will be executed only on the relevant shards
         /// </summary>
-        IDocumentQueryCustomization ShardContext(Action<IShardedQueryContextBuilder> builder);
+        IDocumentQueryCustomization ShardContext(Action<IQueryShardedContextBuilder> builder);
     }
 }

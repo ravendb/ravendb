@@ -6,9 +6,9 @@ namespace Raven.Client.Documents.Session;
 
 public abstract partial class AbstractDocumentQuery<T, TSelf>
 {
-    protected void ShardContext(Action<IShardedQueryContextBuilder> builder)
+    protected void ShardContext(Action<IQueryShardedContextBuilder> builder)
     {
-        var builderImpl = new ShardedQueryContextBuilder();
+        var builderImpl = new QueryShardedContextBuilder();
 
         builder.Invoke(builderImpl);
 

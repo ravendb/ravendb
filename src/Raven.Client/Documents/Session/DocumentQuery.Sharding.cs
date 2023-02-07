@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Session;
 
 public partial class DocumentQuery<T>
 {
-    IDocumentQuery<T> IDocumentQuery<T>.ShardContext(Action<IShardedQueryContextBuilder> builder)
+    IDocumentQuery<T> IDocumentQuery<T>.ShardContext(Action<IQueryShardedContextBuilder> builder)
     {
         ShardContext(builder);
         return this;

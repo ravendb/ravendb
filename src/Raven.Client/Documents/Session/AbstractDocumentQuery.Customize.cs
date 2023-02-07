@@ -106,7 +106,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IDocumentQueryCustomization IDocumentQueryCustomization.ShardContext(Action<IShardedQueryContextBuilder> builder)
+        IDocumentQueryCustomization IDocumentQueryCustomization.ShardContext(Action<IQueryShardedContextBuilder> builder)
         {
             ShardContext(builder);
             return this;
