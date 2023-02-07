@@ -117,15 +117,13 @@ public abstract class IndexOperationBase : IDisposable
         return (int)pageSize;
     }
 
-    protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, int pageSize, IndexQueryServerSide query, bool isBoolean = false)
+    protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, int pageSize, IndexQueryServerSide query)
     {
         var numberOfEntries = searcher.NumberOfEntries;
         if (numberOfEntries == 0)
             return 16;
         
-        // If we have a binary operation, we need to pass a buffer large enough to hold all the individual results.
-        // We need to do this to get correct results and since we don't know how much results subqueries will have  we must create a buffer big enough to get all items from index
-        if (query.Metadata.OrderBy is not null || query.Metadata.IsDistinct || isBoolean)
+        if (query.Metadata.OrderBy is not null || query.Metadata.IsDistinct)
         {
             if (numberOfEntries > MaxBufferSizeForCorax)
                 return MaxBufferSizeForCorax;
