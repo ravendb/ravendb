@@ -157,7 +157,7 @@ namespace SlowTests.Issues
                     var e1 = new Employee() { ManId = m1.Id, Salary = 37};
                     session.Store(e1);
 
-                    var o1 = new Order() { EmpId = e1.Id, Price = 44};
+                    var o1 = new Order() { EmpId = e1.Id, Price = 44, Name = "OrderName"};
                     session.Store(o1);
                     
                     session.SaveChanges();
@@ -170,16 +170,11 @@ namespace SlowTests.Issues
 
                     var query = from res in session.Query<DummyIndex.Result>(index.IndexName)
                         let manager = RavenQuery.Load<Manager>(res.ManRef)
-                        select new
-                        {
-                            Name = manager.Name,
-                            Age = manager.Age
-                        };
+                        select manager.Name;
 
                     var result = query.ToList();
-                    
-                    Assert.Equal("CoolName", result[0].Name);
-                    Assert.Equal(21, result[0].Age);
+
+                    Assert.Equal("CoolName", result[0]);
                 }
             }
         }
@@ -206,6 +201,8 @@ namespace SlowTests.Issues
             public string EmpId { get; set; }
             
             public int Price { get; set; }
+            
+            public string Name { get; set; }
         }
 
         private class DummyIndex : AbstractJavaScriptIndexCreationTask
