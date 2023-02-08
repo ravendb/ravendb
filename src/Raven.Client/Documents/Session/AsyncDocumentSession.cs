@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -13,6 +14,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -64,7 +66,28 @@ namespace Raven.Client.Documents.Session
                 var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
                 await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
 
-                RefreshInternal(entity, command, documentInfo);
+                var commandResult = (BlittableJsonReaderObject)command.Result.Results[0];
+                RefreshInternal(entity, commandResult, documentInfo);
+            }
+        }
+
+        public async Task RefreshAsync<T>(T[] entities, CancellationToken token = default(CancellationToken))
+        {
+            DocumentInfo[] documentInfos = new DocumentInfo[entities.Length];
+            for (int i = 0; i < entities.Length; i++)
+            {
+                if (DocumentsByEntity.TryGetValue(entities[i], out documentInfos[i]) == false)
+                    throw new InvalidOperationException("Cannot refresh a transient instance");
+                IncrementRequestCount();
+            }
+            var ids = documentInfos.Select(x => x.Id).ToArray();
+            var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo,token).ConfigureAwait(false);
+
+            for (int i = 0; i < entities.Length; i++)
+            {
+                var commandResult = (BlittableJsonReaderObject)command.Result.Results[i];
+                RefreshInternal(entities[i], commandResult, documentInfos[i]);
             }
         }
 

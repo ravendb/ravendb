@@ -2243,9 +2243,9 @@ more responsive application.
             return true;
         }
 
-        protected void RefreshInternal<T>(T entity, RavenCommand<GetDocumentsResult> cmd, DocumentInfo documentInfo)
+        protected void RefreshInternal<T>(T entity, BlittableJsonReaderObject cmdResult, DocumentInfo documentInfo)
         {
-            var document = (BlittableJsonReaderObject)cmd.Result.Results[0];
+            var document = cmdResult;
             if (document == null)
                 throw new InvalidOperationException("Document '" + documentInfo.Id +
                                                     "' no longer exists and was probably deleted");

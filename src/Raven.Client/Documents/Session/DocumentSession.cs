@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -141,11 +143,12 @@ namespace Raven.Client.Documents.Session
             if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
-
+        
             var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
 
-            RefreshInternal(entity, command, documentInfo);
+            var commandResult = (BlittableJsonReaderObject)command.Result.Results[0];
+            RefreshInternal(entity, commandResult, documentInfo);
         }
 
         /// <summary>
@@ -155,9 +158,21 @@ namespace Raven.Client.Documents.Session
         /// <param name="entities">The entities.</param>
         public void Refresh<T>(T[] entities)
         {
-            foreach (var entity in entities)
+            DocumentInfo[] documentInfos = new DocumentInfo[entities.Length];
+            for (int i = 0; i < entities.Length; i++)
             {
-                Refresh(entity);
+                if (DocumentsByEntity.TryGetValue(entities[i], out documentInfos[i]) == false)
+                    throw new InvalidOperationException("Cannot refresh a transient instance");
+                IncrementRequestCount();
+            }
+
+            var ids = documentInfos.Select(x => x.Id).ToArray();
+            var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
+            RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
+            for (int i = 0; i < entities.Length; i++)
+            {
+               var commandResult = (BlittableJsonReaderObject)command.Result.Results[i];
+                RefreshInternal(entities[i], commandResult, documentInfos[i]);
             }
         }
 
