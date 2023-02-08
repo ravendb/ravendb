@@ -2318,7 +2318,10 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (prevCommand != null)
                 {
-                    await prevCommandTask;
+                    using (prevCommand)
+                    {
+                        await prevCommandTask;
+                    }
                 }
 
                 _cmd = new TimeSeriesHandler.SmugglerTimeSeriesBatchCommand(_database);
@@ -2330,7 +2333,11 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_prevCommand != null)
                 {
-                    await _prevCommandTask;
+                    using (_prevCommand)
+                    {
+                        await _prevCommandTask;
+                    }
+
                     _prevCommand = null;
                 }
 
