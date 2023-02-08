@@ -149,6 +149,19 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
+        /// Refreshes the specified entities from Raven server.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="entities">The entities.</param>
+        public void Refresh<T>(T[] entities)
+        {
+            foreach (var entity in entities)
+            {
+                Refresh(entity);
+            }
+        }
+
+        /// <summary>
         /// Generates the document ID.
         /// </summary>
         /// <param name="entity">The entity.</param>
