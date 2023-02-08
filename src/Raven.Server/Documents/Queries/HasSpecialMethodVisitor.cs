@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Queries
                         {
                             if (callExpression.Arguments[0] is ArrowFunctionExpression afe)
                             {
-                                if (afe.ChildNodes.ToArray()[1] is StaticMemberExpression sme)
+                                if (afe.Body is StaticMemberExpression sme)
                                 {
                                     if (sme.Property is Identifier identifier)
                                     {
