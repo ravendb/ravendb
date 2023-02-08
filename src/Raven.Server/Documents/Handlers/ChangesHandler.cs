@@ -46,6 +46,9 @@ namespace Raven.Server.Documents.Handlers
 
                         try
                         {
+                            if (webSocket.State == WebSocketState.Aborted)
+                                return;
+
                             await using (var ms = new MemoryStream())
                             {
                                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
@@ -61,10 +64,10 @@ namespace Raven.Server.Documents.Handlers
                                 await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
                             }
                         }
-                        catch (Exception)
+                        catch (Exception exception)
                         {
                             if (Logger.IsInfoEnabled)
-                                Logger.Info("Failed to send the error in changes handler to the client", ex);
+                                Logger.Info("Failed to send the error in changes handler to the client", exception);
                         }
                     }
                 }
