@@ -1424,7 +1424,7 @@ namespace Raven.Server.Rachis
                         table.Update(id, tvb, true);
                     }
 
-                    LogHistory.UpdateHistoryLogPreservingGuidAndStatus(context, index, term, cmd, null, null);
+                    LogHistory.UpdateHistoryLogPreservingGuidAndStatus(context, index, term, cmd);
 
                     tx.Commit();
                 }

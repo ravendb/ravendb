@@ -55,8 +55,9 @@ namespace SlowTests.Issues
             using var store = GetDocumentStore(new Options() { Server = leader, ReplicationFactor = 1 });
 
             // Stuck leader on this command
-            var testCmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
-            _ = leader.ServerStore.SendToLeaderAsync(testCmd);
+
+            var testCmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId()); 
+            await Assert.ThrowsAsync<UnknownClusterCommandException>(() => leader.ServerStore.Engine.CurrentLeader.PutAsync(testCmd, TimeSpan.FromSeconds(2)));
 
             // Get last raft index from leader
             var testCmdIndex = await Cluster.WaitForRaftCommandToBeAppendedInClusterAsync(nodes, nameof(RachisConsensusTestBase.TestCommandWithRaftId));
@@ -171,7 +172,7 @@ namespace SlowTests.Issues
 
             // Stuck leader on this command
             var testCmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
-            _ = leader.ServerStore.Engine.CurrentLeader.PutAsync(testCmd, TimeSpan.FromSeconds(2));
+            await Assert.ThrowsAsync<UnknownClusterCommandException>(() => leader.ServerStore.Engine.CurrentLeader.PutAsync(testCmd, TimeSpan.FromSeconds(2)));
 
             // Get last raft index from leader
             var testCmdIndex = await Cluster.WaitForRaftCommandToBeAppendedInClusterAsync(nodes, nameof(RachisConsensusTestBase.TestCommandWithRaftId));
