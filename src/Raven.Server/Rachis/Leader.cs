@@ -1154,6 +1154,14 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public void SetExceptionOf(long index, Exception e)
+        {
+            if (_entries.TryGetValue(index, out CommandState value))
+            {
+                value.TaskCompletionSource.TrySetException(e);
+            }
+        }
+
         public void SetStateOf(long index, object result)
         {
             if (_entries.TryGetValue(index, out CommandState state))

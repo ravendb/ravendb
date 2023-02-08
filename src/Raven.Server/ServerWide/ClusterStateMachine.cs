@@ -614,7 +614,7 @@ namespace Raven.Server.ServerWide
                     _parent.Log.Operations(error, e);
 
                 AddUnrecoverableNotification(error, e);
-                NotifyLeaderAboutError(index, leader, e);
+                NotifyLeaderAboutFatalError(index, leader, e);
                 throw;
             }
             finally
@@ -1314,6 +1314,27 @@ namespace Raven.Server.ServerWide
 
             leader.SetStateOf(index, tcs => { tcs.TrySetException(e); });
         }
+
+        protected void NotifyLeaderAboutFatalError(long index, Leader leader, Exception e)
+        {
+            _rachisLogIndexNotifications.RecordNotification(new RecentLogIndexNotification
+            {
+                Type = "Error",
+                ExecutionTime = TimeSpan.Zero,
+                Index = index,
+                LeaderErrorCount = leader?.ErrorsList.Count,
+                Term = leader?.Term,
+                LeaderShipDuration = leader?.LeaderShipDuration,
+                Exception = e,
+            });
+
+            // ReSharper disable once UseNullPropagation
+            if (leader == null)
+                return;
+
+            leader.SetExceptionOf(index, e);
+        }
+
 
         private static bool ValidatePropertyExistence(BlittableJsonReaderObject cmd, string propertyTypeName, string propertyName, out string errorMessage)
         {
