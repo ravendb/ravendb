@@ -929,19 +929,26 @@ namespace Raven.Server.Rachis
 
                         foreach (var entry in _entries)
                         {
-                            if (entry.Value.OnNotify != null)
+                            if (entry.Key <= _lastCommit)
                             {
-                                try
+                                if (entry.Value.OnNotify != null)
                                 {
-                                    entry.Value.OnNotify(entry.Value.TaskCompletionSource);
+                                    try
+                                    {
+                                        entry.Value.OnNotify(entry.Value.TaskCompletionSource);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        entry.Value.TaskCompletionSource.TrySetException(e);
+                                        continue;
+                                    }
                                 }
-                                catch (Exception e)
+                                else
                                 {
-                                    entry.Value.TaskCompletionSource.TrySetException(e);
-                                    continue;
+                                    entry.Value.TaskCompletionSource.TrySetResult((entry.Value.CommandIndex, entry.Value.Result));
                                 }
                             }
-
+                            
                             if (te == null)
                             {
                                 entry.Value.TaskCompletionSource.TrySetCanceled();
