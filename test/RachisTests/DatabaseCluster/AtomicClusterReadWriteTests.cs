@@ -3,10 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.WebSockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -20,9 +21,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Sparrow.Extensions;
-using Sparrow.Logging;
 using Sparrow.Server;
-using Tests.Infrastructure.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -195,6 +194,8 @@ namespace RachisTests.DatabaseCluster
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var count = 1;
+            List<SmugglerResult> importResults = new();
+
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
             using var documentStore = GetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
 
@@ -243,7 +244,23 @@ namespace RachisTests.DatabaseCluster
                 var backupStatus3 = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 await backupStatus3.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
-                await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
+                var backupDir = Directory.GetDirectories(backupPath).First();
+                var files = Directory.GetFiles(backupDir)
+                    .Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+                
+                Assert.Equal(3, files.Length);
+
+                var options = new DatabaseSmugglerImportOptions();
+                DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
+
+                foreach (var file in files)
+                {
+                    var op = await documentStore.Smuggler.ImportAsync(options, file);
+                    var result = await op.WaitForCompletionAsync();
+                    importResults.Add(result as SmugglerResult);
+                }
             }
 
             // await AssertClusterWaitForNotNull(nodes, documentStore.Database, async s =>
@@ -251,26 +268,48 @@ namespace RachisTests.DatabaseCluster
             //     using var session = s.OpenAsyncSession();
             //     return await session.LoadAsync<TestObj>(notDelete);
             // });
-            
-            //Additional information for investigating RavenDB-17823 
+
+            //Additional information for investigating RavenDB-16884
+            async Task<string> AddDebugInfoToErrorMessage(IDocumentStore store)
             {
-                var waitResults = await ClusterWaitForNotNull(nodes, documentStore.Database, async s =>
+                var sb = new StringBuilder()
+                    .AppendLine("failed on ClusterWaitForNotNull");
+
+                var results = await ClusterWaitFor(nodes, store.Database, async s =>
                 {
                     using var session = s.OpenAsyncSession();
-                    return await session.LoadAsync<TestObj>(notDelete);
+                    return (await session.LoadAsync<TestObj>(notDelete), await session.Query<TestObj>().CountAsync());
                 });
-                var nullCount = waitResults.Count(r => r == null);
-                if (nullCount != 0)
-                {
-                    var results = await ClusterWaitFor(nodes, documentStore.Database, async s =>
-                    {
-                        using var session = s.OpenAsyncSession();
-                        return (await session.LoadAsync<TestObj>(notDelete), await session.Query<TestObj>().CountAsync());
-                    });
 
-                    Assert.True(false, string.Join("\n", results.Select((r => $"is notDelete null:{r.Item1 == null}, actual count {r.Item2}, expected {count}"))));
+                foreach (var tuple in results)
+                {
+                    sb.AppendLine($"is {notDelete} null:{tuple.Item1 == null}, actual count {tuple.Item2}, expected {count + 1}");
                 }
+
+                var compareExchangeItems = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>(""));
+                sb.AppendLine($"CompareExchange count : {compareExchangeItems.Count}");
+
+                sb.AppendLine("import results :");
+                for (int i = 0; i < importResults.Count; i++)
+                {
+                    sb.AppendLine($"file #{i+1}");
+                    var result = importResults[i];
+                    if (result == null)
+                        continue;
+                    sb.AppendLine(JsonConvert.SerializeObject(result));
+                }
+
+                return sb.ToString();
             }
+
+            var waitResults = await ClusterWaitForNotNull(nodes, documentStore.Database, async s =>
+            {
+                using var session = s.OpenAsyncSession();
+                return await session.LoadAsync<TestObj>(notDelete);
+            });
+
+            var nullCount = waitResults.Count(r => r == null);
+            Assert.True(nullCount == 0, await AddDebugInfoToErrorMessage(documentStore));
 
             await AssertWaitForCountAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")), count + 1);
         }
