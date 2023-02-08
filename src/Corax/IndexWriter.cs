@@ -490,6 +490,7 @@ namespace Corax
 
         //Document Boost should add priority to some documents but also should not be the main component of boosting.
         //The natural logarithm slows down our scoring increase for a document so that the ranking calculated at query time is not forgotten.
+        //We've to add entry container id (without frequency etc) here because in 'SortingMatch' we have already decoded ids.
         private unsafe void AppendDocumentBoost(long entryId, float documentBoost, bool isUpdate = false)
         {
             if (documentBoost.AlmostEquals(1f))
@@ -497,7 +498,7 @@ namespace Corax
                 
                 // We don't store `1` but if user update boost value to 1 we've to delete the previous one
                 if (isUpdate)
-                    _documentBoost.Delete(entryId);
+                    _documentBoost.Delete(FrequencyUtils.RemoveFrequency(entryId));
                 
                 return;
             }
@@ -508,14 +509,14 @@ namespace Corax
 
             documentBoost = MathF.Log(documentBoost + 1); // ensure we've positive number
             
-            using var __ = _documentBoost.DirectAdd(entryId, out _, out byte* boostPtr);
+            using var __ = _documentBoost.DirectAdd(FrequencyUtils.RemoveFrequency(entryId), out _, out byte* boostPtr);
             float* floatBoostPtr = (float*)boostPtr;
             *floatBoostPtr = documentBoost;
         }
 
         private unsafe void RemoveDocumentBoost(long entryId)
         {
-            _documentBoost.Delete(entryId);
+            _documentBoost.Delete(FrequencyUtils.RemoveFrequency(entryId));
         }
 
         public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries, float documentBoost)
