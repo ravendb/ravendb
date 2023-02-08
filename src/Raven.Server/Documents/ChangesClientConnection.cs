@@ -585,64 +585,78 @@ namespace Raven.Server.Documents
                         ms.TryGetBuffer(out ArraySegment<byte> bytes);
 
                         var sendTask = _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken);
-                        var sendSp = Stopwatch.StartNew();
-
-                        while (true)
+                        if (sendTask.IsCompleted)
                         {
-                            var waitTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(5), _disposeToken);
-
-                            var waitResult = Task.WaitAny(sendTask, waitTask);
-                            if (waitResult == 0)
-                            {
-                                await sendTask;
-                                break;
-                            }
-
-                            var isLowMemory = _lowMemoryFlag.IsRaised();
-                            switch (isLowMemory)
-                            {
-                                case true:
-                                    if (_sendQueue.Count < 16 * 1024)
-                                    {
-                                        // we are in low memory state and the number of messages in the queue is reasonable.
-                                        // continue waiting for the send task to complete.
-                                        continue;
-                                    }
-
-                                    break;
-
-                                case false:
-                                    if (_sendQueue.Count < 128 * 1024)
-                                    {
-                                        // we aren't in low memory state and the number of pending messages is less than 128K.
-                                        // continue waiting for the send task to complete.
-                                        continue;
-                                    }
-                                    break;
-                            }
-
-                            // - we waited for some time for the send task to complete,
-                            // - we are in low memory state and the number of messages waiting in the queue exceeds 16K
-                            // - OR we have 128K messages waiting in the queue.
-                            // - we'll close the WebSocket connection and let the client reconnect again.
-
-                            try
-                            {
-                                CancellationToken.Cancel();
-                            }
-                            catch (ObjectDisposedException)
-                            {
-                                // the connection was already disposed
-                                return;
-                            }
-
-                            throw new TimeoutException($"Waited for {sendSp.Elapsed} to send {messagesCount:#,#;;0} messages to the client but was unsuccessful " +
-                                                       $"(total size: {new Sparrow.Size(ms.Length, SizeUnit.Bytes)}), " +
-                                                       $"low memory state: {isLowMemory} and there are {_sendQueue.Count:#,#;;0} messages waiting in the queue. " +
-                                                       $"Closing the changes WebSocket and letting the client reconnect again.");
+                            await sendTask;
+                            continue;
                         }
+
+                        if (await WaitForSendTaskAsync(sendTask, messagesCount, ms) == false)
+                            return;
                     }
                 }
+            }
+        }
+
+        private async Task<bool> WaitForSendTaskAsync(Task sendTask, int messagesCount, MemoryStream ms)
+        {
+            var sp = Stopwatch.StartNew();
+
+            while (true)
+            {
+                var waitTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(5), _disposeToken);
+
+                var result = await Task.WhenAny(sendTask, waitTask);
+                if (result == sendTask)
+                {
+                    await sendTask;
+                    return true;
+                }
+
+                var isLowMemory = _lowMemoryFlag.IsRaised();
+                switch (isLowMemory)
+                {
+                    case true:
+                        if (_sendQueue.Count < 16 * 1024)
+                        {
+                            // we are in low memory state and the number of messages in the queue is reasonable.
+                            // continue waiting for the send task to complete.
+                            continue;
+                        }
+
+                        break;
+
+                    case false:
+                        if (_sendQueue.Count < 128 * 1024)
+                        {
+                            // we aren't in low memory state and the number of pending messages is less than 128K.
+                            // continue waiting for the send task to complete.
+                            continue;
+                        }
+
+                        break;
+                }
+
+                // - we waited for some time for the send task to complete,
+                // - we are in low memory state and the number of messages waiting in the queue exceeds 16K
+                // - OR we have 128K messages waiting in the queue.
+                // - we'll close the WebSocket connection and let the client reconnect again.
+
+                try
+                {
+                    CancellationToken.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // the connection was already disposed
+                    return false;
+                }
+
+                throw new TimeoutException($"Waited for {sp.Elapsed} to send {messagesCount:#,#;;0} messages to the client but was unsuccessful " +
+                                           $"(total size: {new Sparrow.Size(ms.Length, SizeUnit.Bytes)}), " +
+                                           $"low memory state: {isLowMemory} and there are {_sendQueue.Count:#,#;;0} messages waiting in the queue. " +
+                                           $"Changes connection from studio: {IsChangesConnectionOriginatedFromStudio}. " +
+                                           $"Closing the changes WebSocket and letting the client reconnect again.");
             }
         }
 
