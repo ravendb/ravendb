@@ -115,8 +115,7 @@ namespace Raven.Server.Documents
         }
 
         /// <summary>
-        /// Enqueue the command to be eventually executed. If the command implements
-        ///  IDisposable, the command will be disposed after it is run and a tx is committed.
+        /// Enqueue the command to be eventually executed.
         /// </summary>
         public async Task Enqueue(MergedTransactionCommand cmd)
         {
