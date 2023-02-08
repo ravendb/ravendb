@@ -304,6 +304,16 @@ namespace Raven.Server.Smuggler.Documents
                 var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, ts.DocId);
                 await _actions[shardNumber].WriteTimeSeriesAsync(ts);
             }
+
+            public void RegisterForDisposal(IDisposable data)
+            {
+                // TODO fix this after handling this properly in 5.4
+            }
+
+            public void RegisterForReturnToTheContext(AllocatedMemoryData data)
+            {
+                // TODO fix this after handling this properly in 5.4
+            }
         }
 
         private class ShardedLegacyActions : ShardedActions<ILegacyActions>, ILegacyActions

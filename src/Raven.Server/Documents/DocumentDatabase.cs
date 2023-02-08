@@ -979,7 +979,20 @@ namespace Raven.Server.Documents
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, "Waiting for cluster transactions executor task to complete");
                 exceptionAggregator.Execute(() =>
                 {
-                    clusterTransactionsTask.Wait();
+                    try
+                    {
+                        clusterTransactionsTask.Wait();
+                    }
+                    catch (AggregateException e)
+                    {
+                        if (e.ExtractSingleInnerException() is TaskCanceledException)
+                        {
+                            // _clusterTransactionsTask might be TaskCanceled in case we dispose right after Initialize
+                            return;
+                        }
+
+                        throw;
+                    }
                 });
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished waiting for cluster transactions executor task to complete");
             }

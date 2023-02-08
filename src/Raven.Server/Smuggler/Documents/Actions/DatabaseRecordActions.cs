@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Routing;
@@ -14,6 +15,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.Smuggler.Documents.Data;
@@ -51,6 +53,8 @@ public class DatabaseRecordActions : IDatabaseRecordActions
 
         if (databaseRecord == null)
             return;
+
+        var configuration =  DatabasesLandlord.CreateDatabaseConfiguration(_server, _name, databaseRecord.Settings);
 
         if (databaseRecord.ConflictSolverConfig != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.ConflictSolverConfig))
         {
@@ -517,6 +521,24 @@ public class DatabaseRecordActions : IDatabaseRecordActions
             }
 
             result.DatabaseRecord.QueueEtlsUpdated = true;
+        }
+
+        if (databaseRecord.IndexesHistory.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.IndexesHistory))
+        {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring Indexes History configuration from smuggler");
+
+            foreach (var newIndexHistory in databaseRecord.IndexesHistory)
+            {
+                if (_currentDatabaseRecord.IndexesHistory.ContainsKey(newIndexHistory.Key))
+                {
+                    tasks.Add(_server.SendToLeaderAsync(new DeleteIndexHistoryCommand(newIndexHistory.Key, _name, RaftIdGenerator.DontCareId)));
+                }
+
+                tasks.Add(_server.SendToLeaderAsync(new PutIndexHistoryCommand(newIndexHistory.Key, newIndexHistory.Value, configuration.Indexing.HistoryRevisionsNumber, _name, RaftIdGenerator.DontCareId)));
+            }
+
+            result.DatabaseRecord.IndexesHistoryUpdated = true;
         }
 
         if (tasks.Count == 0)

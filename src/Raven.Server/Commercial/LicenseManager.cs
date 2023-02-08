@@ -602,7 +602,8 @@ namespace Raven.Server.Commercial
                     if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
                     {
                         // ReSharper disable once MethodHasAsyncOverload
-                        Logger.Info("Skipping updating of the license from string or path or from api.ravendb.net because 'Licensing.DisableAutoLicenceUpdate' was set to true");
+                        var configurationKey = RavenConfiguration.GetKey(x => x.Licensing.DisableAutoUpdate);
+                        Logger.Info($"Skipping updating of the license from string or path or from api.ravendb.net because '{configurationKey}' was set to true");
                     }
                     return null;
                 }
@@ -616,7 +617,8 @@ namespace Raven.Server.Commercial
                     if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
                     {
                         // ReSharper disable once MethodHasAsyncOverload
-                        Logger.Info("Skipping updating of the license from api.ravendb.net because 'Licensing.DisableAutoUpdateFromApi' was set to true");
+                        var configurationKey = RavenConfiguration.GetKey(x => x.Licensing.DisableAutoUpdateFromApi);
+                        Logger.Info($"Skipping updating of the license from api.ravendb.net because '{configurationKey}' was set to true");
                     }
                     return null;
                 }
@@ -950,9 +952,9 @@ namespace Raven.Server.Commercial
             X509Certificate2 certificate = null;
             if (_serverStore.Server.Certificate.Certificate != null)
             {
-                certificateNotBefore = _serverStore.Server.Certificate.Certificate.NotBefore;
-                certificateNotAfter = _serverStore.Server.Certificate.Certificate.NotAfter;
-                certificate = _serverStore.Server.Certificate.Certificate;
+                certificateNotBefore  = _serverStore.Server.Certificate.Certificate.NotBefore.ToUniversalTime(); 
+                certificateNotAfter  = _serverStore.Server.Certificate.Certificate.NotAfter.ToUniversalTime(); 
+                certificate = _serverStore.Server.Certificate.Certificate;   
             }
 
             var clusterSize = GetClusterSize();
@@ -1754,7 +1756,8 @@ namespace Raven.Server.Commercial
             {
                 if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
                 {
-                    Logger.Info("Skipping checking the license support options because 'Licensing.DisableLicenseSupportMode' is set to true");
+                    var configurationKey = RavenConfiguration.GetKey(x => x.Licensing.DisableLicenseSupportCheck);
+                    Logger.Info($"Skipping checking the license support options because '{configurationKey}' is set to true");
                 }
                 return GetDefaultLicenseSupportInfo();
             }

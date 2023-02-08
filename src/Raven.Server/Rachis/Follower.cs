@@ -1014,11 +1014,11 @@ namespace Raven.Server.Rachis
                     {
                         if (_engine.GetTermFor(context, negotiation.PrevLogIndex) == negotiation.PrevLogTerm)
                         {
-                            minIndex = Math.Min(midpointIndex + 1, maxIndex);
+                            minIndex = Math.Min(negotiation.PrevLogIndex + 1, maxIndex);
                         }
                         else
                         {
-                            maxIndex = Math.Max(midpointIndex - 1, minIndex);
+                            maxIndex = Math.Max(negotiation.PrevLogIndex - 1, minIndex);
                         }
                     }
                 }

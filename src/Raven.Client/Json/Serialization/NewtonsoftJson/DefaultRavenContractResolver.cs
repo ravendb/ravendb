@@ -49,6 +49,9 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
 
             _conventions = (NewtonsoftJsonSerializationConventions)conventions;
 
+            IgnoreSerializableAttribute = true;
+            IgnoreSerializableInterface = true;
+            
             if (MembersSearchFlag == null)
             {
                 return; // use the JSON.Net default, primarily here because it allows user to turn this off if this is a compact issue.

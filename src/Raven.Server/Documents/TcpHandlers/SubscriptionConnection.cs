@@ -380,11 +380,7 @@ namespace Raven.Server.Documents.TcpHandlers
             await SendConfirmAsync(TcpConnection.DocumentDatabase.Time.GetUtcNow());
         }
 
-        public override Task SendNoopAckAsync()
-        {
-            return _subscriptionConnectionsState.AcknowledgeBatchProcessed(nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                NonExistentBatch, docsToResend: null);
-        }
+        public override Task SendNoopAckAsync() => _subscriptionConnectionsState.SendNoopAck();
 
         protected override bool FoundAboutMoreDocs()
         {

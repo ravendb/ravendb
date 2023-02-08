@@ -10,9 +10,10 @@ public class SparrowLoggerWrapper : ILogger<RavenServer>
 
     public LogLevel MinLogLevel { get; set; }
 
-    public SparrowLoggerWrapper(Logger sparrowLogger)
+    public SparrowLoggerWrapper(Logger sparrowLogger, LogLevel logLevel)
     {
         _sparrowLogger = sparrowLogger;
+        MinLogLevel = logLevel;
     }
 
     public IDisposable BeginScope<TState>(TState state) where TState : notnull
@@ -20,7 +21,7 @@ public class SparrowLoggerWrapper : ILogger<RavenServer>
         return NullScope.Instance;
     }
 
-    public bool IsEnabled(LogLevel logLevel) => logLevel >= MinLogLevel;
+    public bool IsEnabled(LogLevel logLevel) => _sparrowLogger.IsOperationsEnabled && logLevel >= MinLogLevel;
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
     {
@@ -28,7 +29,7 @@ public class SparrowLoggerWrapper : ILogger<RavenServer>
             throw new ArgumentNullException(nameof(formatter));
         
         var logLine = formatter(state, null);
-        _sparrowLogger.Operations($"{logLevel}, {logLine}", exception);
+        _sparrowLogger.Operations($"{logLevel.ToStringWithoutBoxing()}, {logLine}", exception);
     }
     
     private sealed class NullScope : IDisposable

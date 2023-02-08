@@ -120,6 +120,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
         public bool QueueConnectionStringsUpdated { get; set; }
 
+        public bool IndexesHistoryUpdated { get; set; }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -201,6 +203,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (PostreSQLConfigurationUpdated)
                 json[nameof(PostreSQLConfigurationUpdated)] = PostreSQLConfigurationUpdated;
+
+            if (IndexesHistoryUpdated)
+                json[nameof(IndexesHistoryUpdated)] = IndexesHistoryUpdated;
 
             return json;
         }
@@ -286,6 +291,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
             if (PostreSQLConfigurationUpdated)
                 sb.AppendLine("- PostgreSQL Integration");
 
+            if (IndexesHistoryUpdated)
+                sb.AppendLine("- Indexes History");
 
             if (sb.Length == 0)
                 return string.Empty;

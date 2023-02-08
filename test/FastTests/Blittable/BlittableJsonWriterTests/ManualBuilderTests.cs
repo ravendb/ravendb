@@ -863,7 +863,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                 for (var i = 0; i < 10; i++)
                 {
-                    var memoryUsedBefore = context.AllocatedMemory;
+                    var memoryUsedBefore = context.UsedMemory;
 
                     BuildDocument(() =>
                     {
@@ -871,7 +871,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         context.GetMemory(fragmentationSize);
                     });
 
-                    Assert.Equal(memoryUsedBefore + fragmentationSize, context.AllocatedMemory);
+                    Assert.Equal(memoryUsedBefore + fragmentationSize, context.UsedMemory);
                 }
 
                 void BuildDocument(Action beforeBuilderDispose = null)

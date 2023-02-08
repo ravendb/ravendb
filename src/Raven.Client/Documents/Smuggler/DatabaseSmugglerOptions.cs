@@ -42,7 +42,8 @@ namespace Raven.Client.Documents.Smuggler
                                                                                   DatabaseRecordItemType.ElasticSearchEtls |
                                                                                   DatabaseRecordItemType.PostgreSQLIntegration |
                                                                                   DatabaseRecordItemType.QueueConnectionStrings |
-                                                                                  DatabaseRecordItemType.QueueEtls;
+                                                                                  DatabaseRecordItemType.QueueEtls |
+                                                                                  DatabaseRecordItemType.IndexesHistory;
 
         internal const DatabaseItemType OperateOnFirstShardOnly = DatabaseItemType.Indexes |
                                                               DatabaseItemType.DatabaseRecord |

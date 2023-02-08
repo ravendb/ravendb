@@ -75,10 +75,17 @@ class importDatabaseModel {
                 this.includeIndexes(true);
             }
         });
+
+        this.databaseModel.includeIndexHistory.subscribe(indexHistory => {
+            if (indexHistory) {
+                this.includeIndexes(true);
+            }
+        });
         
         this.includeIndexes.subscribe(indexes => {
             if (!indexes) {
                 this.removeAnalyzers(false);
+                this.databaseModel.includeIndexHistory(false);
             }
         });
 

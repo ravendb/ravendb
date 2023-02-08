@@ -1315,7 +1315,8 @@ namespace SlowTests.Client.Subscriptions
                 {
                     mreConnect1.Set();
                 };
-                var t1 = subsWorker1.Run(_ => { mre1.Set(); }).ContinueWith(res =>
+                var t1 = subsWorker1.Run(_ => { mre1.Set(); });
+                _ = t1.ContinueWith(res =>
                 {
                     finishedWorkersCde.Signal();
                 });
@@ -1330,7 +1331,8 @@ namespace SlowTests.Client.Subscriptions
                 {
                     mreConnect2.Set();
                 };
-                var t2 = subsWorker2.Run(_ => { mre2.Set(); }).ContinueWith(res =>
+                var t2 = subsWorker2.Run(_ => { mre2.Set(); });
+                _ = t2.ContinueWith(res =>
                 {
                     finishedWorkersCde.Signal();
                 });

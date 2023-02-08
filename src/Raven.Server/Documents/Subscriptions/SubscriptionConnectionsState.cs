@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -191,6 +192,14 @@ namespace Raven.Server.Documents.Subscriptions
             await WaitForIndexNotificationAsync(etag);
         }
 
+        private async Task NoopAcknowledgeSubscription()
+        {
+            var command = GetAcknowledgeSubscriptionBatchCommand(nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                SubscriptionConnectionBase.NonExistentBatch, docsToResend: null);
+                
+            var (etag, _) = await _server.SendToLeaderAsync(command);
+            await WaitForIndexNotificationAsync(etag);
+        }
 
         public async Task<(long Index, object Skipped)> RecordBatchRevisions(List<RevisionRecord> list, string lastRecordedChangeVector)
         {
@@ -251,6 +260,34 @@ namespace Raven.Server.Documents.Subscriptions
                 return new DummySubscriptionConnectionsState(sharded.ShardedDatabaseName, storage, state);
 
             return new DummySubscriptionConnectionsState(storage.DocumentDatabase.Name, storage, state);
+        }
+
+        private long _lastNoopAckTicks;
+        private Task _lastNoopAckTask = Task.CompletedTask;
+
+        public Task SendNoopAck()
+        {
+            if (IsConcurrent)
+            {
+                var localLastNoopAckTicks = Interlocked.Read(ref _lastNoopAckTicks);
+                var nowTicks = DateTime.Now.Ticks;
+                if ((nowTicks - localLastNoopAckTicks) / TimeSpan.TicksPerMillisecond < SubscriptionConnectionBase.WaitForChangedDocumentsTimeoutInMs)
+                {
+                    return _lastNoopAckTask;
+                }
+
+                var currentLastNoopAckTicks = Interlocked.CompareExchange(ref _lastNoopAckTicks, nowTicks, localLastNoopAckTicks);
+                if (currentLastNoopAckTicks != localLastNoopAckTicks)
+                    return _lastNoopAckTask;
+
+                var ackTask = NoopAcknowledgeSubscription();
+
+                Interlocked.Exchange(ref _lastNoopAckTask, ackTask);
+
+                return ackTask;
+            }
+
+            return NoopAcknowledgeSubscription();
         }
     }
 }

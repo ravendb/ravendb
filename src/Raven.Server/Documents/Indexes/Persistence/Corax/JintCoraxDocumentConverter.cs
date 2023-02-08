@@ -45,74 +45,77 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
         documentBoost = null;
         // We prepare for the next entry.
         ref var entryWriter = ref GetEntriesWriter();
-        if (doc is not ObjectInstance documentToProcess)
+
+        try
         {
-            //nothing to index, finish the job
-            id = null;
-            entryWriter.Finish(out output);
-            return default;
-        }
-
-        id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
-        var singleEntryWriterScope = new SingleEntryWriterScope(Allocator);
-
-        if (TryGetBoostedValue(documentToProcess, out var boostedValue, out documentBoost))
-            documentToProcess = boostedValue.AsObject();
-
-        
-        
-        singleEntryWriterScope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
-        var indexingScope = CurrentIndexingScope.Current;
-        foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
-        {
-            var propertyAsString = property.AsString();
-            var field = GetFieldObjectForProcessing(propertyAsString);
-            var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, field, out var iterator);
-            bool shouldSaveAsBlittable;
-            object value;
-            JsValue actualValue;
-
-            if (isDynamicFieldEnumerable)
+            if (doc is not ObjectInstance documentToProcess)
             {
-                var enumerableScope = CreateEnumerableWriterScope();
-                enumerableScope.SetAsDynamic();
-                do
-                {
-                    ProcessObject(iterator.Current, propertyAsString, field, ref entryWriter, enumerableScope, out shouldSaveAsBlittable, out value, out actualValue);
-                    if (shouldSaveAsBlittable)
-                        ProcessAsJson(actualValue, field, ref entryWriter, enumerableScope);
+                //nothing to index, finish the job
+                id = null;
+                entryWriter.Finish(out output);
+                return default;
+            }
 
+            id = key ?? (sourceDocumentId ?? throw new InvalidDataException("Cannot find any identifier of the document."));
+            var singleEntryWriterScope = new SingleEntryWriterScope(Allocator);
+
+            if (TryGetBoostedValue(documentToProcess, out var boostedValue, out documentBoost))
+                documentToProcess = boostedValue.AsObject();
+
+            singleEntryWriterScope.Write(string.Empty, 0, id.AsSpan(), ref entryWriter);
+            var indexingScope = CurrentIndexingScope.Current;
+            foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
+            {
+                var propertyAsString = property.AsString();
+                var field = GetFieldObjectForProcessing(propertyAsString, indexingScope);
+                var isDynamicFieldEnumerable = IsDynamicFieldEnumerable(propertyDescriptor.Value, propertyAsString, field, indexingScope, out var iterator);
+                bool shouldSaveAsBlittable;
+                object value;
+                JsValue actualValue;
+
+                if (isDynamicFieldEnumerable)
+                {
+                    var enumerableScope = CreateEnumerableWriterScope();
+                    enumerableScope.SetAsDynamic();
+                    do
+                    {
+                        ProcessObject(iterator.Current, propertyAsString, field, ref entryWriter, enumerableScope, indexingScope, documentToProcess, out shouldSaveAsBlittable, out value, out actualValue);
+                        if (shouldSaveAsBlittable)
+                            ProcessAsJson(actualValue, field, ref entryWriter, enumerableScope, documentToProcess);
+                        
+                        var disposable = value as IDisposable;
+                        disposable?.Dispose();
+                        
+                    } while (iterator.MoveNext());
+                    
+                    enumerableScope.Finish(field.Name, field.Id, ref entryWriter);
+                }
+                else
+                {
+                    ProcessObject(propertyDescriptor.Value, propertyAsString, field, ref entryWriter, singleEntryWriterScope, indexingScope, documentToProcess, out shouldSaveAsBlittable, out value, out actualValue);
+                    if (shouldSaveAsBlittable)
+                        ProcessAsJson(actualValue, field, ref entryWriter, singleEntryWriterScope, documentToProcess);
                     var disposable = value as IDisposable;
                     disposable?.Dispose();
-                    
-                } while (iterator.MoveNext());
-                
-                enumerableScope.Finish(field.Name, field.Id, ref entryWriter);
+                }
             }
-            else
+            if (_storeValue)
             {
-                ProcessObject(propertyDescriptor.Value, propertyAsString, field, ref entryWriter, singleEntryWriterScope, out shouldSaveAsBlittable, out value, out actualValue);
-                if (shouldSaveAsBlittable)
-                    ProcessAsJson(actualValue, field, ref entryWriter, singleEntryWriterScope);
-                var disposable = value as IDisposable;
-                disposable?.Dispose();
+                //Write __stored_fields at the end of entry...
+                StoreValue(ref entryWriter, singleEntryWriterScope, documentToProcess);
             }
-            
+
+            return entryWriter.Finish(out output);
         }
-
-
-        if (_storeValue)
+        catch
         {
-            //Write __stored_fields at the end of entry...
-            StoreValue(ref entryWriter, singleEntryWriterScope);
+            ResetEntriesWriter();
+            throw;
         }
-
-        return entryWriter.Finish(out output);
-
 
         //Helpers
-        
-        void ProcessAsJson(JsValue actualValue, IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, IWriterScope writerScope)
+
+        void ProcessAsJson(JsValue actualValue, IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, IWriterScope writerScope, ObjectInstance documentToProcess)
         {
             var value = TypeConverter.ToBlittableSupportedType(actualValue, flattenArrays: false, forIndexing: true, engine: documentToProcess.Engine,
                 context: indexContext);
@@ -144,7 +147,10 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             return value.IsObject() && value.IsArray() == false;
         }
         
-        void ProcessObject(JsValue valueToInsert, in string propertyAsString, IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, IWriterScope writerScope, out bool shouldProcessAsBlittable, out object value, out JsValue actualValue)
+        void ProcessObject(JsValue valueToInsert, in string propertyAsString, 
+            IndexField field, ref CoraxLib.IndexEntryWriter entryWriter, 
+            IWriterScope writerScope, CurrentIndexingScope indexingScope, ObjectInstance documentToProcess,
+            out bool shouldProcessAsBlittable, out object value, out JsValue actualValue)
             {
                 value = null;
                 actualValue = valueToInsert;
@@ -225,7 +231,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             }
         
         
-        IndexField GetFieldObjectForProcessing(in string propertyAsString)
+        IndexField GetFieldObjectForProcessing(in string propertyAsString, CurrentIndexingScope indexingScope)
         {
             if (_fields.TryGetValue(propertyAsString, out var field) == false)
             {
@@ -242,7 +248,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
             return field;
         }
         
-        bool IsDynamicFieldEnumerable(JsValue propertyDescriptorValue, string propertyAsString, IndexField field, out IEnumerator<JsValue> iterator)
+        bool IsDynamicFieldEnumerable(JsValue propertyDescriptorValue, string propertyAsString, IndexField field, CurrentIndexingScope indexingScope, out IEnumerator<JsValue> iterator)
         {
             iterator = Enumerable.Empty<JsValue>().GetEnumerator();
 
@@ -259,7 +265,7 @@ public class JintCoraxDocumentConverter : JintCoraxDocumentConverterBase
                    || valueAsObject.HasOwnProperty(SpatialPropertyName);
         }
 
-        void StoreValue(ref CoraxLib.IndexEntryWriter entryWriter, SingleEntryWriterScope scope)
+        void StoreValue(ref CoraxLib.IndexEntryWriter entryWriter, SingleEntryWriterScope scope, ObjectInstance documentToProcess)
         {
             var storedValue = JsBlittableBridge.Translate(indexContext, documentToProcess.Engine, documentToProcess);
             unsafe

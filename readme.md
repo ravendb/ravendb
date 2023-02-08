@@ -131,4 +131,9 @@ dotnet build
 dotnet run
 ```
 
+### SAST Tools
+
+- [PVS-Studio](https://pvs-studio.com/)
+- [Snyk](https://snyk.io/)
+
 ###### Enjoy :)

@@ -476,6 +476,8 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateUnusedDatabaseIdsCommand):
                     case nameof(EditLockModeCommand):
                     case nameof(EditPostgreSqlConfigurationCommand):
+                    case nameof(PutIndexHistoryCommand):    
+                    case nameof(DeleteIndexHistoryCommand):
                     case nameof(StartBucketMigrationCommand):
                     case nameof(SourceMigrationSendCompletedCommand):
                     case nameof(DestinationMigrationConfirmCommand):
@@ -2676,6 +2678,8 @@ namespace Raven.Server.ServerWide
                 case nameof(EditDatabaseClientConfigurationCommand):
                 case nameof(EditLockModeCommand):
                 case nameof(EditPostgreSqlConfigurationCommand):
+                case nameof(PutIndexHistoryCommand):    
+                case nameof(DeleteIndexHistoryCommand):    
                     databaseRecord.EtagForBackup = index;
                     break;
             }

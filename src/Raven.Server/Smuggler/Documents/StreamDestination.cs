@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using NuGet.Protocol;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
@@ -31,11 +32,13 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.System;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -325,6 +328,20 @@ namespace Raven.Server.Smuggler.Documents
                     WriteAnalyzers(databaseRecord.Analyzers);
                 }
 
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.IndexesHistory))
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.IndexesHistory));
+                    WriteIndexesHistory(databaseRecord.IndexesHistory);
+                }
+                
+                if (databaseRecord.IsSharded)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.Sharding));
+                    WriteShardingConfiguration(databaseRecord.Sharding);
+                }
+
                 switch (authorizationStatus)
                 {
                     case AuthorizationStatus.DatabaseAdmin:
@@ -443,17 +460,9 @@ namespace Raven.Server.Smuggler.Documents
 
                             _writer.WriteEndObject();
                         }
-
-                        if (databaseRecord.IsSharded)
-                        {
-                            _writer.WriteComma();
-                            _writer.WritePropertyName(nameof(databaseRecord.Sharding));
-                            WriteShardingConfiguration(databaseRecord.Sharding);
-                        }
-
                         break;
                 }
-
+                
                 await _writer.MaybeFlushAsync();
             }
 
@@ -540,6 +549,68 @@ namespace Raven.Server.Smuggler.Documents
                     _context.Write(_writer, analyzer.Value.ToJson());
                 }
 
+                _writer.WriteEndObject();
+            }
+
+            private void WriteIndexesHistory(Dictionary<string, List<IndexHistoryEntry>> indexesHistory)
+            {
+                if (indexesHistory == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                
+                _writer.WriteStartObject();
+                
+                var first = true;
+                foreach (var historyOfIndex in indexesHistory)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+                    
+                    _writer.WritePropertyName(historyOfIndex.Key);
+                    bool isFirstChangeOfIndex = true;
+                    
+                    _writer.WriteStartArray();
+                    foreach (var changeOfIndex in historyOfIndex.Value)
+                    {
+                        if (isFirstChangeOfIndex == false)
+                            _writer.WriteComma();
+                        isFirstChangeOfIndex = false;
+                        
+                        _writer.WriteStartObject();
+                        
+                        _writer.WritePropertyName(nameof(changeOfIndex.Source));
+                        _writer.WriteString(changeOfIndex.Source);
+                        _writer.WriteComma();
+                        
+                        _writer.WritePropertyName(nameof(changeOfIndex.CreatedAt));
+                        _writer.WriteDateTime(changeOfIndex.CreatedAt, true);
+                        _writer.WriteComma();
+                        
+                        _writer.WritePropertyName(nameof(changeOfIndex.RollingDeployment));
+                        _writer.WriteStartObject();
+                        bool isFirstRolling = true;
+                        foreach (var (rollingName,rollingIndexDeployment) in changeOfIndex?.RollingDeployment)
+                        {
+                            if (isFirstRolling == false)
+                                _writer.WriteComma();
+                            isFirstRolling = false;
+                            _writer.WritePropertyName(rollingName);
+                            _context.Write(_writer, rollingIndexDeployment.ToJson());
+                        }
+                        _writer.WriteEndObject();
+                        _writer.WriteComma();
+                        
+                        _writer.WritePropertyName(nameof(changeOfIndex.Definition));
+                        _context.Write(_writer, changeOfIndex.Definition.ToJson());
+                        
+                        _writer.WriteEndObject();
+                    }
+                    _writer.WriteEndArray();
+                }
+                
                 _writer.WriteEndObject();
             }
 
@@ -1055,8 +1126,11 @@ namespace Raven.Server.Smuggler.Documents
 
         private class StreamTimeSeriesActions : StreamActionsBase, ITimeSeriesActions
         {
+            private readonly JsonOperationContext _context;
+
             public StreamTimeSeriesActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, string propertyName) : base(writer, propertyName)
             {
+                _context = context;
             }
 
             public async ValueTask WriteTimeSeriesAsync(TimeSeriesItem item)
@@ -1107,6 +1181,22 @@ namespace Raven.Server.Smuggler.Documents
 
                     await Writer.MaybeFlushAsync();
                 }
+            }
+
+            public void RegisterForDisposal(IDisposable data)
+            {
+                throw new NotSupportedException($"{nameof(RegisterForDisposal)} is never used in {nameof(StreamTimeSeriesActions)}. Shouldn't happen.");
+            }
+
+            public void RegisterForReturnToTheContext(AllocatedMemoryData data)
+            {
+                throw new NotSupportedException($"{nameof(RegisterForReturnToTheContext)} is never used in {nameof(StreamTimeSeriesActions)}. Shouldn't happen.");
+            }
+
+            public JsonOperationContext GetContextForNewDocument()
+            {
+                _context.CachedProperties.NewDocument();
+                return _context;
             }
         }
 

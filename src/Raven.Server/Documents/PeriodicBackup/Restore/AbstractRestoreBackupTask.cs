@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected virtual async Task OnAfterRestoreAsync()
         {
             DisableOngoingTasksIfNeeded(RestoreSettings.DatabaseRecord);
-            SmugglerBase.EnsureProcessed(Result, skipped: false);
+            SmugglerBase.EnsureProcessed(Result, skipped: false, indexesSkipped: Result.Indexes.Skipped);
             Progress.Invoke(Result.Progress);
 
             // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
@@ -353,6 +353,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var lastFilePath = RestoreSource.GetBackupPath(FilesToRestore.Last());
 
             Result.AddInfo($"Restoring file {FilesToRestore.Count:#,#;;0}/{FilesToRestore.Count:#,#;;0}");
+            Result.Indexes.Skipped = RestoreConfiguration.SkipIndexes;
             Progress.Invoke(Result.Progress);
 
             await ImportSingleBackupFileAsync(database, Progress, Result, lastFilePath, context, destination, options, isLastFile: true);
@@ -558,6 +559,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.ElasticSearchConnectionStrings = smugglerDatabaseRecord.ElasticSearchConnectionStrings;
                     databaseRecord.QueueEtls = smugglerDatabaseRecord.QueueEtls;
                     databaseRecord.QueueConnectionStrings = smugglerDatabaseRecord.QueueConnectionStrings;
+                    databaseRecord.IndexesHistory = smugglerDatabaseRecord.IndexesHistory;
                 };
             }
 

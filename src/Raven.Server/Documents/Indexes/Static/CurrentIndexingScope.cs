@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var id = GetSourceId(document);
 
-            return LoadAttachments(id, GetAttachmentNames());
+            return new DynamicArray(LoadAttachments(id, GetAttachmentNames()));
 
             IEnumerable<string> GetAttachmentNames()
             {

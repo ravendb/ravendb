@@ -279,6 +279,9 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue(GetMetadataMethod, new ClrFunctionInstance(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
                 ScriptEngine.SetValue("metadataFor", new ClrFunctionInstance(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
                 ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
+                ScriptEngine.SetValue("count", new ClrFunctionInstance(ScriptEngine, "count", JavaScriptUtils.Count));
+                ScriptEngine.SetValue("key", new ClrFunctionInstance(ScriptEngine, "key", JavaScriptUtils.Key));
+                ScriptEngine.SetValue("sum", new ClrFunctionInstance(ScriptEngine, "sum", JavaScriptUtils.Sum));
 
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, "output", OutputDebug));
 
@@ -1966,8 +1969,10 @@ namespace Raven.Server.Documents.Patch
 
                 try
                 {
+                    JavaScriptUtils.CurrentlyProcessedObject = _args[0];
                     var call = (FunctionInstance) ScriptEngine.GetValue(method);
                     var result = call.Call(JsValue.Undefined, _args);
+
                     return new ScriptRunnerResult(this, result);
                 }
                 catch (JavaScriptException e)
@@ -1983,6 +1988,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 finally
                 {
+                    JavaScriptUtils.CurrentlyProcessedObject = null;
                     _refResolver.ExplodeArgsOn(null, null);
                     _scope = null;
                     _loadScope = null;
