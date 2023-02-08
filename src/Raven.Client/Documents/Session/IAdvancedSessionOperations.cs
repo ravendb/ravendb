@@ -46,6 +46,12 @@ namespace Raven.Client.Documents.Session
         void Refresh<T>(T entity);
 
         /// <summary>
+        ///     Updates entities with latest changes from server
+        /// </summary>
+        /// <param name="entities">Collection of instances of an entity that will be refreshed</param>
+        void Refresh<T>(T[] entities);
+
+        /// <summary>
         /// Query the specified index using provided raw query
         /// </summary>
         /// <typeparam name="T">The query result type</typeparam>
