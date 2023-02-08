@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Handlers
 
                         try
                         {
-                            if (webSocket.State == WebSocketState.Aborted)
+                            if (webSocket.State != WebSocketState.Open)
                                 return;
 
                             await using (var ms = new MemoryStream())

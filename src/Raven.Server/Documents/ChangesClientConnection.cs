@@ -540,6 +540,8 @@ namespace Raven.Server.Documents
                 await using (var ms = new MemoryStream())
                 {
                     var sp = Stopwatch.StartNew();
+                    var sendTaskSp = Stopwatch.StartNew();
+
                     while (true)
                     {
                         if (_disposeToken.IsCancellationRequested)
@@ -591,16 +593,15 @@ namespace Raven.Server.Documents
                             continue;
                         }
 
-                        if (await WaitForSendTaskAsync(sendTask, messagesCount, ms) == false)
-                            return;
+                        await WaitForSendTaskAsync(sendTask, sendTaskSp, messagesCount, ms);
                     }
                 }
             }
         }
 
-        private async Task<bool> WaitForSendTaskAsync(Task sendTask, int messagesCount, MemoryStream ms)
+        private async Task WaitForSendTaskAsync(Task sendTask, Stopwatch sp, int messagesCount, MemoryStream ms)
         {
-            var sp = Stopwatch.StartNew();
+            sp.Restart();
 
             while (true)
             {
@@ -610,7 +611,7 @@ namespace Raven.Server.Documents
                 if (result == sendTask)
                 {
                     await sendTask;
-                    return true;
+                    return;
                 }
 
                 var isLowMemory = _lowMemoryFlag.IsRaised();
@@ -649,7 +650,6 @@ namespace Raven.Server.Documents
                 catch (ObjectDisposedException)
                 {
                     // the connection was already disposed
-                    return false;
                 }
 
                 throw new TimeoutException($"Waited for {sp.Elapsed} to send {messagesCount:#,#;;0} messages to the client but was unsuccessful " +
