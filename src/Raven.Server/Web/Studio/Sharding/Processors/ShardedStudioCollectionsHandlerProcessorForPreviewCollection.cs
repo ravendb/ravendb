@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using System.Web;
 using Microsoft.AspNetCore.Http;
 using NuGet.Packaging;
 using Raven.Client;
@@ -11,7 +10,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
@@ -49,7 +47,9 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         _releaseContext = RequestHandler.ContextPool.AllocateOperationContext(out _context);
         _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(_context);
 
-        var op = new ShardedCollectionPreviewOperation(RequestHandler, null, _continuationToken);
+        var expectedEtag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+
+        var op = new ShardedCollectionPreviewOperation(RequestHandler, expectedEtag, _continuationToken);
         var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
         _combinedReadState = await result.Result.InitializeAsync(_requestHandler.DatabaseContext, _requestHandler.AbortRequestToken);
         _combinedEtag = result.CombinedEtag;
@@ -61,9 +61,9 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
     }
 
     protected override async ValueTask WriteResultsAsync(
-        AsyncBlittableJsonTextWriter writer, 
-        IAsyncEnumerable<ShardStreamItem<Document>> results, 
-        JsonOperationContext context, 
+        AsyncBlittableJsonTextWriter writer,
+        IAsyncEnumerable<ShardStreamItem<Document>> results,
+        JsonOperationContext context,
         PreviewState state)
     {
         await base.WriteResultsAsync(writer, results, context, state);
@@ -157,15 +157,46 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         public HttpRequest HttpRequest => _handler.HttpContext.Request;
 
-        public RavenCommand<StreamResult> CreateCommandForShard(int shardNumber) =>
-            new ShardedCollectionPreviewCommand(_handler, _token.Pages[shardNumber].Start, _token.PageSize);
-
-        private class ShardedCommandAsStream : ShardedBaseCommand<StreamResult>
+        public RavenCommand<StreamResult> CreateCommandForShard(int shardNumber)
         {
-            public override bool IsReadRequest => true;
+            var collection = GetCollection();
 
-            public ShardedCommandAsStream(ShardedDatabaseRequestHandler handler, Headers headers) : base(handler, handler.Method, headers, content: null)
+            return new ShardedCollectionPreviewCommand(collection, _token.Pages[shardNumber].Start, _token.PageSize);
+        }
+
+        private string GetCollection()
+        {
+            return _handler.GetStringQueryString("collection", required: false);
+        }
+
+        private class ShardedCollectionPreviewCommand : RavenCommand<StreamResult>
+        {
+            private readonly string _collection;
+            private readonly int _start;
+            private readonly int _pageSize;
+
+            public ShardedCollectionPreviewCommand(string collection, int start, int pageSize)
             {
+                _collection = collection;
+                _start = start;
+                _pageSize = pageSize;
+            }
+
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/studio/collections/preview?{Web.RequestHandler.StartParameter}={_start}&{Web.RequestHandler.PageSizeParameter}={_pageSize}";
+
+                if (string.IsNullOrEmpty(_collection) == false)
+                    url += $"&collection={Uri.EscapeDataString(_collection)}";
+
+                var message = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                };
+
+                return message;
             }
 
             public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
@@ -182,22 +213,11 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
             }
         }
 
-        private class ShardedCollectionPreviewCommand : ShardedCommandAsStream
-        {
-            public ShardedCollectionPreviewCommand(ShardedDatabaseRequestHandler handler, int start, int pageSize) : base(handler, Documents.Sharding.Commands.Headers.IfNoneMatch)
-            {
-                var queryString = HttpUtility.ParseQueryString(handler.HttpContext.Request.QueryString.Value);
-                queryString[Web.RequestHandler.StartParameter] = start.ToString();
-                queryString[Web.RequestHandler.PageSizeParameter] = pageSize.ToString();
-                Url = handler.BaseShardUrl + "?" + queryString;
-            }
-        }
-
         public string ExpectedEtag { get; }
 
         public CombinedStreamResult CombineResults(Dictionary<int, ShardExecutionResult<StreamResult>> results)
         {
-            return new CombinedStreamResult {Results = results};
+            return new CombinedStreamResult { Results = results };
         }
     }
 }
