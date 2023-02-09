@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -71,23 +72,31 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public async Task RefreshAsync<T>(T[] entities, CancellationToken token = default(CancellationToken))
+        public async Task RefreshAsync<T>(IEnumerable<T> entities, CancellationToken token = default(CancellationToken))
         {
-            DocumentInfo[] documentInfos = new DocumentInfo[entities.Length];
-            for (int i = 0; i < entities.Length; i++)
+            using (AsyncTaskHolder())
             {
-                if (DocumentsByEntity.TryGetValue(entities[i], out documentInfos[i]) == false)
-                    throw new InvalidOperationException("Cannot refresh a transient instance");
-                IncrementRequestCount();
-            }
-            var ids = documentInfos.Select(x => x.Id).ToArray();
-            var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
-            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo,token).ConfigureAwait(false);
+                var entitiesArray = entities.ToArray();
+                var entitiesArrayLength = entitiesArray.Length;
+                string[] ids = new string[entitiesArrayLength];
+                DocumentInfo[] documentInfos = new DocumentInfo[entitiesArrayLength];
 
-            for (int i = 0; i < entities.Length; i++)
-            {
-                var commandResult = (BlittableJsonReaderObject)command.Result.Results[i];
-                RefreshInternal(entities[i], commandResult, documentInfos[i]);
+                for (int i = 0; i < entitiesArrayLength; i++)
+                {
+                    if (DocumentsByEntity.TryGetValue(entitiesArray[i], out documentInfos[i]) == false)
+                        throw new InvalidOperationException("Cannot refresh a transient instance");
+                    ids[i] = documentInfos[i].Id;
+                }
+                IncrementRequestCount();
+
+                var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo, token).ConfigureAwait(false);
+
+                for (int i = 0; i < entitiesArrayLength; i++)
+                {
+                    var commandResult = (BlittableJsonReaderObject)command.Result.Results[i];
+                    RefreshInternal(entitiesArray[i], commandResult, documentInfos[i]);
+                }
             }
         }
 

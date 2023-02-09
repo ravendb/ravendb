@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Session.Operations.Lazy;
 
 namespace Raven.Client.Documents.Session
@@ -49,7 +50,7 @@ namespace Raven.Client.Documents.Session
         ///     Updates entities with latest changes from server
         /// </summary>
         /// <param name="entities">Collection of instances of an entity that will be refreshed</param>
-        void Refresh<T>(T[] entities);
+        void Refresh<T>(IEnumerable<T> entities);
 
         /// <summary>
         /// Query the specified index using provided raw query
