@@ -21,6 +21,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Impl.Extensions;
 
@@ -379,7 +380,7 @@ namespace Raven.Server.Rachis
                             LogAndNotifyLeaderRunExceptions(ex);
                             Task.Run(async () =>
                             {
-                                await Task.Delay(100);
+                                await TimeoutManager.WaitFor(_engine.ElectionTimeout / 3);
                                 _newEntry.Set();
                             });
                             continue;
@@ -940,13 +941,13 @@ namespace Raven.Server.Rachis
                                     catch (Exception e)
                                     {
                                         entry.Value.TaskCompletionSource.TrySetException(e);
-                                        continue;
                                     }
                                 }
                                 else
                                 {
                                     entry.Value.TaskCompletionSource.TrySetResult((entry.Value.CommandIndex, entry.Value.Result));
                                 }
+                                continue;
                             }
                             
                             if (te == null)
