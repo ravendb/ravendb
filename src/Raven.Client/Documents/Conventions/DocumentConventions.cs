@@ -70,6 +70,8 @@ namespace Raven.Client.Documents.Conventions
 
         public readonly AggressiveCacheConventions AggressiveCache;
 
+        public readonly ShardingConventions Sharding;
+
         public ISerializationConventions Serialization
         {
             get { return _serialization; }
@@ -152,6 +154,30 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
+        public class ShardingConventions
+        {
+            private readonly DocumentConventions _conventions;
+
+            private ShardedBatchBehavior _batchBehavior;
+
+            public ShardedBatchBehavior BatchBehavior
+            {
+                get => _batchBehavior;
+                set
+                {
+                    _conventions.AssertNotFrozen();
+
+                    _batchBehavior = value;
+                }
+            }
+
+            internal ShardingConventions(DocumentConventions conventions)
+            {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+                _batchBehavior = ShardedBatchBehavior.SingleBucket;
+            }
+        }
+
         static DocumentConventions()
         {
 #if NETCOREAPP3_1_OR_GREATER
@@ -220,6 +246,7 @@ namespace Raven.Client.Documents.Conventions
             MaxNumberOfRequestsPerSession = 30;
 
             BulkInsert = new BulkInsertConventions(this);
+            Sharding = new ShardingConventions(this);
 
             PreserveDocumentPropertiesNotFoundOnModel = true;
 
@@ -380,11 +407,11 @@ namespace Raven.Client.Documents.Conventions
         {
             if (member is null)
                 return null;
-            
+
             var converter = PropertyNameConverter;
             if (converter == null)
                 return member?.Name;
-            
+
             //do not use convention for types in system namespaces
             if (member.DeclaringType?.Namespace?.StartsWith("System") == true ||
                 member.DeclaringType?.Namespace?.StartsWith("Microsoft") == true)

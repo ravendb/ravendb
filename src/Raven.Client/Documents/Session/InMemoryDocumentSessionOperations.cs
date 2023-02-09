@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -16,7 +15,6 @@ using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -37,7 +35,6 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -117,17 +114,17 @@ namespace Raven.Client.Documents.Session
         /// Translate between an ID and its associated entity
         /// </summary>
         internal readonly Dictionary<string, DocumentInfo> IncludedDocumentsById = new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
-        
+
         /// <summary>
         /// Translate between an CV and its associated entity
         /// </summary>
         internal Dictionary<string, DocumentInfo> IncludeRevisionsByChangeVector;
-        
+
         /// <summary>
         /// Translate between an ID and its associated entity
         /// </summary>
         internal Dictionary<string, Dictionary<DateTime, DocumentInfo>> IncludeRevisionsIdByDateTimeBefore;
-        
+
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
         /// </summary>
@@ -150,9 +147,9 @@ namespace Raven.Client.Documents.Session
             _timeSeriesByDocId ?? (_timeSeriesByDocId = new Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>>(StringComparer.OrdinalIgnoreCase));
 
         private Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> _timeSeriesByDocId;
-        
+
         protected readonly DocumentStoreBase _documentStore;
-        
+
         public string DatabaseName { get; }
 
         ///<summary>
@@ -251,6 +248,10 @@ namespace Raven.Client.Documents.Session
             _sessionInfo = new SessionInfo(this, options, _documentStore, asyncCommandRunning: false);
             TransactionMode = options.TransactionMode;
             DisableAtomicDocumentWritesInClusterWideTransaction = options.DisableAtomicDocumentWritesInClusterWideTransaction;
+
+            var shardedBatchBehavior = options.ShardedBatchBehavior ?? _requestExecutor.Conventions.Sharding.BatchBehavior;
+            if (shardedBatchBehavior != ShardedBatchBehavior.SingleBucket)
+                _saveChangesOptions = new BatchOptions { ShardedOptions = new ShardedBatchOptions { BatchBehavior = shardedBatchBehavior } };
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
@@ -692,7 +693,7 @@ more responsive application.
             if (DocumentsByEntity.TryGetValue(entity, out var value))
             {
                 if (id != null && value.Id.Equals(id, StringComparison.OrdinalIgnoreCase) == false)
-                    throw new InvalidOperationException($"Cannot store the same entity (id: {value.Id}) with a different id ({id})"); 
+                    throw new InvalidOperationException($"Cannot store the same entity (id: {value.Id}) with a different id ({id})");
 
                 value.ChangeVector = changeVector ?? value.ChangeVector;
                 value.ConcurrencyCheckMode = forceConcurrencyCheck;
@@ -968,7 +969,7 @@ more responsive application.
             foreach (var item in md)
             {
                 var v = item.Value;
-                if(v is IMetadataDictionary nested)
+                if (v is IMetadataDictionary nested)
                 {
                     RuntimeHelpers.EnsureSufficientExecutionStack();
                     v = HandleDictionaryObject(nested);
@@ -1036,7 +1037,7 @@ more responsive application.
 
                         if (UseOptimisticConcurrency == false)
                             changeVector = null;
-                       
+
                         if (deletedEntity.ExecuteOnBeforeDelete)
                         {
                             OnBeforeDeleteInvoke(new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity));
@@ -1250,8 +1251,7 @@ more responsive application.
             int replicas = 1, bool majority = false)
         {
             var realTimeout = timeout ?? Conventions.WaitForReplicationAfterSaveChangesTimeout;
-            if (_saveChangesOptions == null)
-                _saveChangesOptions = new BatchOptions();
+            _saveChangesOptions ??= new BatchOptions();
 
             var replicationOptions = new ReplicationBatchOptions
             {
@@ -1269,8 +1269,7 @@ more responsive application.
             string[] indexes = null)
         {
             var realTimeout = timeout ?? Conventions.WaitForIndexesAfterSaveChangesTimeout;
-            if (_saveChangesOptions == null)
-                _saveChangesOptions = new BatchOptions();
+            _saveChangesOptions ??= new BatchOptions();
 
             var indexOptions = new IndexBatchOptions
             {
@@ -1487,9 +1486,9 @@ more responsive application.
             {
                 includes.GetPropertyByIndex(i, ref propertyDetails);
 
-                if (propertyDetails.Value is not BlittableJsonReaderObject json) 
+                if (propertyDetails.Value is not BlittableJsonReaderObject json)
                     continue;
-                
+
                 var newDocumentInfo = DocumentInfo.GetNewDocumentInfo(json);
                 if (newDocumentInfo.Metadata.TryGetConflict(out var conflict) && conflict)
                     continue;
@@ -1497,7 +1496,7 @@ more responsive application.
                 IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
             }
         }
-        
+
         internal void RegisterRevisionIncludes(BlittableJsonReaderArray revisionIncludes)
         {
             if (NoTracking)
@@ -1505,12 +1504,12 @@ more responsive application.
 
             if (revisionIncludes == null)
                 return;
-            
+
             IncludeRevisionsByChangeVector ??= new Dictionary<string, DocumentInfo>(StringComparer.OrdinalIgnoreCase);
             IncludeRevisionsIdByDateTimeBefore ??= new Dictionary<string, Dictionary<DateTime, DocumentInfo>>(StringComparer.OrdinalIgnoreCase);
             foreach (var obj in revisionIncludes)
             {
-                if (obj is not BlittableJsonReaderObject json) 
+                if (obj is not BlittableJsonReaderObject json)
                     continue;
                 json = ((BlittableJsonReaderObject)obj);
                 json.TryGet(nameof(RevisionIncludeResult.Id), out string id);
@@ -1524,7 +1523,7 @@ more responsive application.
                 {
                     IncludeRevisionsIdByDateTimeBefore[id] = new Dictionary<DateTime, DocumentInfo>
                     {
-                        [dateTime] = new() {Document = revision}
+                        [dateTime] = new() { Document = revision }
                     };
                 }
             }
@@ -2183,21 +2182,21 @@ more responsive application.
             OnAfterConversionToEntityInvoke(id, document, entity);
             return entity;
         }
-        
+
         internal bool CheckIfAllChangeVectorsAreAlreadyIncluded(IEnumerable<string> changeVectors)
         {
-            if (IncludeRevisionsByChangeVector is null) 
-                 return false;
-            
+            if (IncludeRevisionsByChangeVector is null)
+                return false;
+
             foreach (var cv in changeVectors)
             {
-                if (IncludeRevisionsByChangeVector.ContainsKey(cv)  == false )
+                if (IncludeRevisionsByChangeVector.ContainsKey(cv) == false)
                     return false;
             }
 
             return true;
         }
-        
+
         internal bool CheckIfRevisionByDateTimeBeforeAlreadyIncluded(string id, DateTime dateTime)
         {
             if (IncludeRevisionsIdByDateTimeBefore is null)
@@ -2211,7 +2210,7 @@ more responsive application.
 
             return false;
         }
-        
+
         public bool CheckIfIdAlreadyIncluded(string[] ids, IEnumerable<string> includes)
         {
             foreach (var id in ids)
@@ -2493,7 +2492,7 @@ more responsive application.
 
             // Projection / MapReduce return results without @change-vector property
             metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector);
-            
+
             //MapReduce indexes return reduce results that don't have @id property
             metadata.TryGetId(out string id);
 

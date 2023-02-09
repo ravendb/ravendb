@@ -4,15 +4,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Raven.Server.Documents.Sharding.Operations;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Batches;
 
@@ -24,8 +25,10 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
 
     protected override async ValueTask<DynamicJsonArray> HandleTransactionAsync(JsonOperationContext context, ShardedBatchCommand command, IndexBatchOptions indexBatchOptions, ReplicationBatchOptions replicationBatchOptions)
     {
+        var batchBehavior = GetBatchBehavior();
+
         var shardedBatchCommands = new Dictionary<int, ShardedSingleNodeBatchCommand>(); // TODO sharding : consider cache those
-        foreach (var c in command)
+        foreach (var c in command.GetCommands(batchBehavior))
         {
             var shardNumber = c.ShardNumber;
             if (shardedBatchCommands.TryGetValue(shardNumber, out var shardedBatchCommand) == false)
@@ -53,6 +56,24 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
         // no-op
         // this is passed as a parameter when we execute transaction on each shard
         return ValueTask.CompletedTask;
+    }
+
+    private ShardedBatchBehavior GetBatchBehavior()
+    {
+        var shardedBatchBehaviorAsString = RequestHandler.GetStringQueryString("shardedBatchBehavior", required: false);
+        if (shardedBatchBehaviorAsString == null)
+        {
+            if (RequestRouter.TryGetClientVersion(RequestHandler.HttpContext, out var clientVersion) && clientVersion.Major < 6)
+                return ShardedBatchBehavior.MultiBucket;
+
+            return ShardedBatchBehavior.SingleBucket;
+        }
+
+        if (Enum.TryParse<ShardedBatchBehavior>(shardedBatchBehaviorAsString, ignoreCase: true, out var shardedBatchBehavior) == false)
+            throw new InvalidOperationException($"Invalid sharded batch behavior value '{shardedBatchBehaviorAsString}'.");
+
+        return shardedBatchBehavior;
+
     }
 
     protected override char GetIdentityPartsSeparator() => RequestHandler.DatabaseContext.IdentityPartsSeparator;

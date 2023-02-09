@@ -124,6 +124,8 @@ namespace Raven.Server.Documents.Sharding
 
         public Dictionary<int, DatabaseTopology> ShardsTopology => _record.Sharding.Shards;
 
+        public (int ShardNumber, int Bucket) GetShardNumberAndBucketFor(TransactionOperationContext context, string id) => ShardHelper.GetShardNumberAndBucketFor(_record.Sharding, context, id);
+
         public int GetShardNumberFor(TransactionOperationContext context, string id) => ShardHelper.GetShardNumberFor(_record.Sharding, context, id);
 
         public int GetShardNumberFor(ByteStringContext allocator, string id) => ShardHelper.GetShardNumberFor(_record.Sharding, allocator, id);
@@ -132,7 +134,7 @@ namespace Raven.Server.Documents.Sharding
 
         public int GetShardNumberFor(Slice id) => ShardHelper.GetShardNumberFor(_record.Sharding, id);
 
-        public int GetShardNumberForIdentity(TransactionOperationContext context, string id) => ShardHelper.GetShardNumberForIdentity(_record.Sharding, context, id, IdentityPartsSeparator);
+        public (int ShardNumber, int Bucket) GetShardNumberAndBucketForIdentity(TransactionOperationContext context, string id) => ShardHelper.GetShardNumberAndBucketForIdentity(_record.Sharding, context, id, IdentityPartsSeparator);
 
         public bool HasTopologyChanged(long etag)
         {

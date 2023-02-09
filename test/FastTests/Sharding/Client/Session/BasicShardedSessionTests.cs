@@ -29,7 +29,7 @@ namespace FastTests.Sharding.Client.Session
         }
 
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public void Should_Put_Documents_To_The_Same_Shard(Options options)
         {
             using (var store = GetDocumentStore(options))
