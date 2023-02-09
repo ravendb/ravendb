@@ -34,6 +34,11 @@ namespace Raven.Server.Documents.Handlers
                     catch (OperationCanceledException)
                     {
                     }
+                    catch (TimeoutException e)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("Timeout in changes handler", e);
+                    }
                     catch (Exception ex)
                     {
                         if (Logger.IsInfoEnabled)
@@ -41,6 +46,9 @@ namespace Raven.Server.Documents.Handlers
 
                         try
                         {
+                            if (webSocket.State != WebSocketState.Open)
+                                return;
+
                             await using (var ms = new MemoryStream())
                             {
                                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
@@ -56,10 +64,10 @@ namespace Raven.Server.Documents.Handlers
                                 await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
                             }
                         }
-                        catch (Exception)
+                        catch (Exception exception)
                         {
                             if (Logger.IsInfoEnabled)
-                                Logger.Info("Failed to send the error in changes handler to the client", ex);
+                                Logger.Info("Failed to send the error in changes handler to the client", exception);
                         }
                     }
                 }
@@ -73,16 +81,23 @@ namespace Raven.Server.Documents.Handlers
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
+
+                var connectionValues = Database.Changes.Connections.Values;
+
+                writer.WritePropertyName("NumberOfConnections");
+                writer.WriteInteger(connectionValues.Count);
+                writer.WriteComma();
+
                 writer.WritePropertyName("Connections");
 
                 writer.WriteStartArray();
                 var first = true;
-                foreach (var connection in Database.Changes.Connections)
+                foreach (var connectionValue in connectionValues)
                 {
                     if (first == false)
                         writer.WriteComma();
                     first = false;
-                    context.Write(writer, connection.Value.GetDebugInfo());
+                    context.Write(writer, connectionValue.GetDebugInfo());
                 }
                 writer.WriteEndArray();
 
@@ -106,14 +121,14 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var segments = new[] { segment1, segment2 };
                     int index = 0;
-                    var receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, Database.DatabaseShutdown);
+                    var receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, connection.CancellationToken.Token);
                     var jsonParserState = new JsonParserState();
                     using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                     {
                         connection.SendSupportedFeatures();
 
                         var result = await receiveAsync;
-                        Database.DatabaseShutdown.ThrowIfCancellationRequested();
+                        connection.CancellationToken.Token.ThrowIfCancellationRequested();
 
                         parser.SetBuffer(segments[index], 0, result.Count);
                         index++;
@@ -130,7 +145,7 @@ namespace Raven.Server.Documents.Handlers
                                 while (builder.Read() == false)
                                 {
                                     result = await receiveAsync;
-                                    Database.DatabaseShutdown.ThrowIfCancellationRequested();
+                                    connection.CancellationToken.Token.ThrowIfCancellationRequested();
 
                                     parser.SetBuffer(segments[index], 0, result.Count);
                                     if (++index >= segments.Length)
@@ -177,6 +192,11 @@ namespace Raven.Server.Documents.Handlers
                         && webSocket.State == WebSocketState.CloseReceived)
                     {
                         // ignore
+                    }
+                    else if (ex is OperationCanceledException)
+                    {
+                        await sendTask; // will throw if the task is faulted
+                        throw;
                     }
                     else
                     {
