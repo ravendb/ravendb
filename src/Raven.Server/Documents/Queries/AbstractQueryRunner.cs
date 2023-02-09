@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Queries
             var index = Database.IndexStore.GetIndex(indexName);
             if (index == null && throwIfNotExists)
                 IndexDoesNotExistException.ThrowFor(indexName);
-            
+
             if (index?.IsPending == true)
                 throw new PendingRollingIndexException($"Cannot use index `{indexName}` on node {Database.ServerStore.NodeTag} because a rolling index deployment is still pending on this node.");
 
@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Queries
             Action<DeterminateProgress> onProgress,
             Func<string, bool, BulkOperationCommand<T>> createCommandForId,
             OperationCancelToken token)
-            where T : TransactionOperationsMerger.MergedTransactionCommand
+            where T : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             if (index.Type.IsMapReduce())
                 throw new InvalidOperationException("Cannot execute bulk operation on Map-Reduce indexes.");
@@ -230,7 +230,8 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        internal class BulkOperationCommand<T> : TransactionOperationsMerger.MergedTransactionCommand where T : TransactionOperationsMerger.MergedTransactionCommand
+        internal class BulkOperationCommand<T> : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+            where T : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly T _command;
             private readonly bool _retrieveDetails;
@@ -245,7 +246,7 @@ namespace Raven.Server.Documents.Queries
                 _afterExecuted = afterExecuted;
             }
 
-            public override long Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
+            public override long Execute(DocumentsOperationContext context, AbstractTransactionOperationsMerger<DocumentsOperationContext, DocumentsTransaction>.RecordingState recording)
             {
                 try
                 {
@@ -262,7 +263,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
             {
                 throw new NotSupportedException($"ToDto() of {nameof(BulkOperationCommand<T>)} Should not be called");
             }

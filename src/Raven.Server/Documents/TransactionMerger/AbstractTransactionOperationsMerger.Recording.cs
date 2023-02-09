@@ -62,7 +62,7 @@ public abstract partial class AbstractTransactionOperationsMerger<TOperationCont
 
         public override void TryRecord(TOperationContext context, MergedTransactionCommand<TOperationContext, TTransaction> operation)
         {
-            var obj = new RecordingCommandDetails(operation.GetType().Name)
+            var obj = new RecordingCommandDetails<TOperationContext, TTransaction>(operation.GetType().Name)
             {
                 Command = operation.ToDto(context)
             };

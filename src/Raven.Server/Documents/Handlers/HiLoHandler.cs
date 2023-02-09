@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Documents;
-using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        internal class MergedNextHiLoCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedNextHiLoCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string Key;
             public DocumentDatabase Database;
@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
             {
                 return new MergedNextHiLoCommandDto
                 {
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Handlers
             NoContentStatus();
         }
 
-        internal class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedHiLoReturnCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string Key;
             public DocumentDatabase Database;
@@ -221,8 +221,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto<TTransaction>(TransactionOperationContext<TTransaction> context)
-            {
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(TransactionOperationContext<DocumentsTransaction> context)
                 return new MergedHiLoReturnCommandDto
                 {
                     Key = Key,
@@ -233,7 +232,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    internal class MergedHiLoReturnCommandDto : TransactionOperationsMerger.IReplayableCommandDto<HiLoHandler.MergedHiLoReturnCommand>
+    internal class MergedHiLoReturnCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, HiLoHandler.MergedHiLoReturnCommand>
     {
         public string Key;
         public long End;
@@ -241,7 +240,7 @@ namespace Raven.Server.Documents.Handlers
 
         public HiLoHandler.MergedHiLoReturnCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            return new HiLoHandler.MergedHiLoReturnCommand()
+            return new HiLoHandler.MergedHiLoReturnCommand
             {
                 Key = Key,
                 End = End,
@@ -251,7 +250,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    internal class MergedNextHiLoCommandDto : TransactionOperationsMerger.IReplayableCommandDto<HiLoHandler.MergedNextHiLoCommand>
+    internal class MergedNextHiLoCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, HiLoHandler.MergedNextHiLoCommand>
     {
         public string Key;
         public long Capacity;
