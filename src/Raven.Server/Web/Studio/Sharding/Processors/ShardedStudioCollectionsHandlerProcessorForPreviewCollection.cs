@@ -49,7 +49,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         var expectedEtag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
-        var op = new ShardedCollectionPreviewOperation(RequestHandler, expectedEtag, _continuationToken);
+        var op = new ShardedCollectionPreviewOperation(RequestHandler, Collection, expectedEtag, _continuationToken);
         var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
         _combinedReadState = await result.Result.InitializeAsync(_requestHandler.DatabaseContext, _requestHandler.AbortRequestToken);
         _combinedEtag = result.CombinedEtag;
@@ -146,11 +146,13 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
     private readonly struct ShardedCollectionPreviewOperation : IShardedStreamableOperation
     {
         private readonly ShardedDatabaseRequestHandler _handler;
+        private readonly string _collection;
         private readonly ShardedPagingContinuation _token;
 
-        public ShardedCollectionPreviewOperation(ShardedDatabaseRequestHandler handler, string etag, ShardedPagingContinuation token)
+        public ShardedCollectionPreviewOperation(ShardedDatabaseRequestHandler handler, string collection, string etag, ShardedPagingContinuation token)
         {
             _handler = handler;
+            _collection = collection;
             _token = token;
             ExpectedEtag = etag;
         }
@@ -159,14 +161,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         public RavenCommand<StreamResult> CreateCommandForShard(int shardNumber)
         {
-            var collection = GetCollection();
-
-            return new ShardedCollectionPreviewCommand(collection, _token.Pages[shardNumber].Start, _token.PageSize);
-        }
-
-        private string GetCollection()
-        {
-            return _handler.GetStringQueryString("collection", required: false);
+            return new ShardedCollectionPreviewCommand(_collection, _token.Pages[shardNumber].Start, _token.PageSize);
         }
 
         private class ShardedCollectionPreviewCommand : RavenCommand<StreamResult>
