@@ -2007,28 +2007,44 @@ namespace Raven.Server.Documents
         }
 
         // long - Etag, byte - separator char
-        protected const int ConflictedTombstoneOverhead = sizeof(long) + sizeof(byte);
+        private const int ConflictedTombstoneOverhead = sizeof(long) + sizeof(byte);
 
         private static LazyStringValue UnwrapLowerIdIfNeeded(JsonOperationContext context, LazyStringValue lowerId)
         {
-            if (lowerId.Size < ConflictedTombstoneOverhead + 1)
+            if (NeedToUnwrapLowerId(lowerId.Buffer, lowerId.Size) == false)
                 return lowerId;
 
-            if (lowerId[lowerId.Size - ConflictedTombstoneOverhead] == SpecialChars.RecordSeparator)
-            {
-                var size = lowerId.Size - ConflictedTombstoneOverhead;
-                var allocated = context.GetMemory(size + 1); // we need this extra byte to mark that there is no escaping
-                allocated.Address[size] = 0;
-
-                Memory.Copy(allocated.Address, lowerId.Buffer, size);
-                var lsv = context.AllocateStringValue(null, allocated.Address, size);
-                lsv.AllocatedMemoryData = allocated;
-                return lsv;
-            }
-
-            return lowerId;
+            var size = lowerId.Size - ConflictedTombstoneOverhead;
+            var allocated = context.GetMemory(size + 1); // we need this extra byte to mark that there is no escaping
+            allocated.Address[size] = 0;
+            Memory.Copy(allocated.Address, lowerId.Buffer, size);
+            var lsv = context.AllocateStringValue(null, allocated.Address, size);
+            lsv.AllocatedMemoryData = allocated;
+            return lsv;
         }
 
+        protected static void UnwrapLowerIdIfNeeded(Transaction tx, ref byte* lowerId, ref int size)
+        {
+            if (NeedToUnwrapLowerId(lowerId, size) == false)
+                return;
+
+            size -= ConflictedTombstoneOverhead;
+            using var scope = tx.Allocator.Allocate(size + 1, out var buffer); // we need this extra byte to mark that there is no escaping
+            buffer.Ptr[size] = 0;
+
+            Memory.Copy(buffer.Ptr, lowerId, size);
+            lowerId = buffer.Ptr;
+        }
+
+        private static bool NeedToUnwrapLowerId(byte* lowerId, int size)
+        {
+            if (size < ConflictedTombstoneOverhead + 1 ||
+                lowerId[size - ConflictedTombstoneOverhead] != SpecialChars.RecordSeparator)
+                return false;
+
+            return true;
+        }
+      
         public static bool IsTombstoneOfId(Slice tombstoneKey, Slice lowerId)
         {
             if (tombstoneKey.Size < ConflictedTombstoneOverhead + 1)

@@ -4,9 +4,7 @@ using System.Text;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -160,26 +158,6 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         var etag = *(long*)tvr.Read(etagIndex, out _);
 
         return GenerateBucketAndEtagSlice(tx, lowerId, size, etag, out slice);
-    }
-
-    private static void UnwrapLowerIdIfNeeded(Transaction tx, ref byte* lowerId, ref int size)
-    {
-        if (size < ConflictedTombstoneOverhead + 1)
-            return;
-
-        if (lowerId[size - ConflictedTombstoneOverhead] == SpecialChars.RecordSeparator)
-        {
-            var shardedContext = (ShardedDocumentDatabase)tx.Owner;
-            using (shardedContext.DatabaseContext.AllocateContext(out JsonOperationContext context))
-            {
-                size -= ConflictedTombstoneOverhead;
-                var allocated = context.GetMemory(size + 1); // we need this extra byte to mark that there is no escaping
-                allocated.Address[size] = 0;
-
-                Memory.Copy(allocated.Address, lowerId, size);
-                lowerId = allocated.Address;
-            }
-        }
     }
 
     internal static ByteStringContext.Scope ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(Transaction tx, int keyIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
