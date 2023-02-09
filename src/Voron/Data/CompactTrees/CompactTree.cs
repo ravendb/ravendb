@@ -38,6 +38,8 @@ namespace Voron.Data.CompactTrees
         internal CompactTreeState State => _state;
         internal LowLevelTransaction Llt => _llt;
 
+        
+
         // The reason why we use 2 is that the worst case scenario is caused by splitting pages where a single
         // page split will need 2 simultaneous key encoders. In this way we can get away with not instantiating
         // so many. 
@@ -691,6 +693,8 @@ namespace Voron.Data.CompactTrees
 
             using var _ = _parent.DirectAdd(Name, sizeof(CompactTreeState), out var ptr);
             _state.CopyTo((CompactTreeState*)ptr);
+
+            CompactTreeDumper.WriteCommit(this);
         }
 
         public static void Delete(CompactTree tree)
@@ -894,6 +898,8 @@ namespace Voron.Data.CompactTrees
 
         public bool TryRemove(ReadOnlySpan<byte> key, out long oldValue)
         {
+            CompactTreeDumper.WriteRemoval(this, key);
+
             using var scope = new EncodedKeyScope(this);
             FindPageFor(key, ref _internalCursor, scope.Key);
             return RemoveFromPage(allowRecurse: true, out oldValue);
@@ -1199,6 +1205,8 @@ namespace Voron.Data.CompactTrees
 
         public void Add(ReadOnlySpan<byte> key, long value)
         {
+            CompactTreeDumper.WriteAddition(this, key, value);
+
             AssertValueAndKeySize(key, value);
 
             using var scope = new EncodedKeyScope(this);
@@ -1208,6 +1216,8 @@ namespace Voron.Data.CompactTrees
         
         public void Add(ReadOnlySpan<byte> key, long value, EncodedKey encodedKey)
         {
+            CompactTreeDumper.WriteAddition(this, key, value);
+
             AssertValueAndKeySize(key, value);
             // this overload assumes that a previous call to TryGetValue (where you go the encodedKey
             // already placed us in the right place for the value)
