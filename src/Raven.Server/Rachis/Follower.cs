@@ -1029,7 +1029,6 @@ namespace Raven.Server.Rachis
                         }
 
                         FollowerSteadyState();
-                        // AsyncHelpers.RunSync(() => FollowerSteadyState());
                     }
                     catch (Exception e) when (RachisConsensus.IsExpectedException(e))
                     {

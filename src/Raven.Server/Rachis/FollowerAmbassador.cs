@@ -129,9 +129,6 @@ namespace Raven.Server.Rachis
 
         public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, RemoteConnection connection = null)
         {
-            if (engine.Tag == tag)
-            {
-            }
             _engine = engine;
             _term = leader.Term;
             _leader = leader;

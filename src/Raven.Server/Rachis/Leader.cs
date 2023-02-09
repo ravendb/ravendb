@@ -794,8 +794,6 @@ namespace Raven.Server.Rachis
             await _engine.TxMerger.Enqueue(rachisMergedCommand); //wait until 'rachisMergedCommand' is executed (until 'rachisMergedCommand.TaskResult' wont be null).
             timeout = timeout * 2;
 
-            // timeout = TimeSpan.FromMinutes(2);
-
             var t = rachisMergedCommand.TaskResult;
             if (await t.WaitWithTimeout(timeout) == false)
             {
