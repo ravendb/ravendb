@@ -1170,11 +1170,23 @@ namespace Raven.Server.Documents.Handlers
             FromSmuggler = true
         };
 
-        internal class SmugglerTimeSeriesBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        public class SmugglerTimeSeriesBatchCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>, IDisposable
         {
             private readonly DocumentDatabase _database;
 
             private readonly Dictionary<string, List<TimeSeriesItem>> _dictionary;
+
+            private readonly DocumentsOperationContext _context;
+
+            public DocumentsOperationContext Context => _context;
+
+            private IDisposable _releaseContext;
+
+            private bool _isDisposed;
+
+            private readonly List<IDisposable> _toDispose;
+
+            private readonly List<AllocatedMemoryData> _toReturn;
 
             public string LastChangeVector;
 
@@ -1182,6 +1194,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 _database = database;
                 _dictionary = new Dictionary<string, List<TimeSeriesItem>>();
+                _toDispose = new();
+                _toReturn = new();
+                _releaseContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -1232,9 +1247,39 @@ namespace Raven.Server.Documents.Handlers
                 return newItem;
             }
 
+            public void AddToDisposal(IDisposable disposable)
+            {
+                _toDispose.Add(disposable);
+            }
+
+            public void AddToReturn(AllocatedMemoryData allocatedMemoryData)
+            {
+                _toReturn.Add(allocatedMemoryData);
+            }
+
+            public void Dispose()
+            {
+                if (_isDisposed)
+                    return;
+
+                _isDisposed = true;
+
+                foreach (var disposable in _toDispose)
+                {
+                    disposable.Dispose();
+                }
+                _toDispose.Clear();
+
+                foreach (var returnable in _toReturn)
+                    _context.ReturnMemory(returnable);
+                _toReturn.Clear();
+
+                _releaseContext?.Dispose();
+                _releaseContext = null;
+            }
             public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
-                throw new System.NotImplementedException(); 
+                throw new NotImplementedException();
             }
         }
 

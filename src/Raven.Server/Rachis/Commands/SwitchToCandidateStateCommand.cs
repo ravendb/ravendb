@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Drawing;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.TransactionMerger.Commands;
@@ -13,50 +15,96 @@ public class SwitchToCandidateStateCommand : MergedTransactionCommand<ClusterOpe
     private readonly long _currentTerm;
     private readonly string _tag;
     private readonly string _reason;
+    private readonly bool _forced;
+    public Task Completed { get; private set; }
 
-    public SwitchToCandidateStateCommand([NotNull] RachisConsensus engine, long currentTerm, [NotNull] string tag, string reason)
+    public SwitchToCandidateStateCommand([NotNull] RachisConsensus engine, long currentTerm, [NotNull] string tag, string reason, bool forced)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _currentTerm = currentTerm;
         _tag = tag ?? throw new ArgumentNullException(nameof(tag));
         _reason = reason;
+        _forced = forced;
     }
 
     protected override long ExecuteCmd(ClusterOperationContext context)
     {
-        var clusterTopology = _engine.GetTopology(context);
-        if (clusterTopology.TopologyId == null ||
-            clusterTopology.AllNodes.ContainsKey(_tag) == false)
+        try
         {
-            if (_engine.Log.IsInfoEnabled)
+            var clusterTopology = _engine.GetTopology(context);
+            if (clusterTopology.TopologyId == null ||
+                clusterTopology.AllNodes.ContainsKey(_tag) == false)
             {
-                _engine.Log.Info($"We are not a part of the cluster so moving to passive (candidate because: {_reason})");
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"We are not a part of the cluster so moving to passive (candidate because: {_reason})");
+                }
+
+                _engine.SetNewStateInTx(context, RachisState.Passive, null, _currentTerm, "We are not a part of the cluster so moving to passive");
+                // completed after commit
+                context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += tx =>
+                {
+                    Completed = Task.CompletedTask;
+                };
+                return 1;
             }
 
-            _engine.SetNewStateInTx(context, RachisState.Passive, null, _currentTerm, "We are not a part of the cluster so moving to passive");
-            return 1;
+            if (clusterTopology.Members.ContainsKey(_tag) == false)
+            {
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Candidate because: {_reason}, but while we are part of the cluster, we aren't a member, so we can't be a candidate.");
+                }
+
+                // we aren't a member, nothing that we can do here
+                Completed = Task.CompletedTask; // completed immediately
+                return 1;
+            }
+
+            if (clusterTopology.AllNodes.Count == 1 &&
+                clusterTopology.Members.Count == 1)
+            {
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info("Trying to switch to candidate when I'm the only node in the cluster, turning into a leader, instead");
+                }
+
+                _engine.SwitchToSingleLeader(context);
+                // completed after commit
+                context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += tx =>
+                {
+                    Completed = Task.CompletedTask;
+                };
+                return 1;
+            }
+
+            // completed after commit
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += tx =>
+            {
+                try
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Switching to candidate state because {_reason} forced: {_forced}");
+                    }
+
+                    var candidate = new Candidate(_engine) { IsForcedElection = _forced };
+
+                    _engine.Candidate = candidate;
+                    _engine.SetNewState(RachisState.Candidate, candidate, _currentTerm, _reason);
+                    candidate.Start();
+                    Completed = Task.CompletedTask;
+                }
+                catch (Exception e)
+                {
+                    Completed = Task.FromException(e);
+                }
+
+            };
         }
-
-        if (clusterTopology.Members.ContainsKey(_tag) == false)
+        catch (Exception e)
         {
-            if (_engine.Log.IsInfoEnabled)
-            {
-                _engine.Log.Info($"Candidate because: {_reason}, but while we are part of the cluster, we aren't a member, so we can't be a candidate.");
-            }
-            // we aren't a member, nothing that we can do here
-            return 1;
-        }
-
-        if (clusterTopology.AllNodes.Count == 1 &&
-            clusterTopology.Members.Count == 1)
-        {
-            if (_engine.Log.IsInfoEnabled)
-            {
-                _engine.Log.Info("Trying to switch to candidate when I'm the only node in the cluster, turning into a leader, instead");
-            }
-
-            _engine.SwitchToSingleLeader(context);
-            return 1;
+            Completed = Task.FromException(e);
         }
 
         return 1;

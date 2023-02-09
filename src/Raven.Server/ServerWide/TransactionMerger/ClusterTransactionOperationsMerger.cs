@@ -3,6 +3,7 @@ using System.Threading;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.TransactionMerger;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Platform;
@@ -32,5 +33,10 @@ public class ClusterTransactionOperationsMerger : AbstractTransactionOperationsM
 
     protected override void UpdateLastAccessTime(DateTime time)
     {
+    }
+
+    public void EnqueueSync(MergedTransactionCommand<ClusterOperationContext, ClusterTransaction> cmd)
+    {
+        Enqueue(cmd).Wait();
     }
 }

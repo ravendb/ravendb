@@ -205,7 +205,7 @@ namespace Raven.Server.Rachis
                             _engine.Log.Info($"{ToString()}: Got a request to become candidate from the leader.");
                         }
 
-                        _engine.SwitchToCandidateStateAsync("Was asked to do so by my leader", forced: true);
+                        _engine.SwitchToCandidateState("Was asked to do so by my leader", forced: true);
                         return;
                     }
                     _debugRecorder.Record("Processing entries is completed");

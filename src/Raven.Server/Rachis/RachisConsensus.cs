@@ -408,7 +408,7 @@ namespace Raven.Server.Rachis
         private readonly ManualResetEventSlim _disposeEvent = new ManualResetEventSlim();
         private readonly Random _rand;
         private string _lastStateChangeReason;
-        public Candidate Candidate { get; private set; }
+        public Candidate Candidate { get; internal set; }
 
         protected RachisConsensus(CipherSuitesPolicy cipherSuitesPolicy, int? seed = null)
         {
@@ -1059,32 +1059,26 @@ namespace Raven.Server.Rachis
 
         public void SwitchToCandidateStateOnTimeout()
         {
-            SwitchToCandidateStateAsync("Election timeout").Wait();
+            SwitchToCandidateState("Election timeout");
         }
 
-        public async Task SwitchToCandidateStateAsync(string reason, bool forced = false)
+        public void SwitchToCandidateState(string reason, bool forced = false)
         {
             var currentTerm = CurrentTerm;
             try
             {
                 Timeout.DisableTimeout();
-
-                var command = new SwitchToCandidateStateCommand(this, currentTerm, _tag, reason);
-                await TxMerger.Enqueue(command);
-
-                if (Log.IsInfoEnabled)
+                var command = new SwitchToCandidateStateCommand(this, currentTerm, _tag, reason, forced);
+                TxMerger.EnqueueSync(command); // waits for the command to be executed
+                
+                try
                 {
-                    Log.Info($"Switching to candidate state because {reason} forced: {forced}");
+                    command.Completed.Wait();
                 }
-
-                var candidate = new Candidate(this)
+                catch (AggregateException e) when (e.InnerExceptions.Count == 1)
                 {
-                    IsForcedElection = forced
-                };
-
-                Candidate = candidate;
-                SetNewState(RachisState.Candidate, candidate, currentTerm, reason);
-                candidate.Start();
+                    throw e.InnerExceptions[0];
+                }
             }
             catch (Exception e)
             {
@@ -2264,7 +2258,7 @@ namespace Raven.Server.Rachis
         public abstract void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token);
         public abstract Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token);
 
-        private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
+        internal readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;
 
         public void InvokeBeforeAppendToRaftLog(ClusterOperationContext context, CommandBase cmd)

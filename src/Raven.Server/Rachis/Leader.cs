@@ -736,8 +736,7 @@ namespace Raven.Server.Rachis
 
                     _leader._errorOccurred.TrySetException(e);
 
-                    throw;
-                    // TaskResult = Task.FromException<(long, object)>(e);
+                    TaskResult = Task.FromException<(long, object)>(e);
                 }
 
                 return 1;
@@ -792,13 +791,12 @@ namespace Raven.Server.Rachis
             };
 
             await _engine.TxMerger.Enqueue(rachisMergedCommand); //wait until 'rachisMergedCommand' is executed (until 'rachisMergedCommand.TaskResult' wont be null).
-            timeout = timeout * 2;
 
             var t = rachisMergedCommand.TaskResult;
             if (await t.WaitWithTimeout(timeout) == false)
             {
                 GetConvertResult(command)?.AboutToTimeout();
-                throw new TimeoutException($"Waited2 for {timeout} but the command {command.RaftCommandIndex} was not applied in this time.");
+                throw new TimeoutException($"Waited for {timeout} but the command {command.RaftCommandIndex} was not applied in this time.");
             }
 
             try
