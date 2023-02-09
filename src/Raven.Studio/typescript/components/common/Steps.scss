@@ -1,0 +1,97 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+$step-bullet-size: 30px;
+$step-icon-size: 22px;
+
+.steps {
+    display: flex;
+    align-items: center;
+    padding: 0 sizes.$gutter-sm sizes.$gutter-sm;
+
+    .steps-item {
+        position: relative;
+
+        .steps-label {
+            position: absolute;
+            left: 50%;
+            top: sizes.$gutter + sizes.$gutter-xxs;
+            transform: translateX(-50%);
+            text-align: center;
+            transition: color 0.4s sizes.$easing-rubber;
+        }
+
+        .step-bullet {
+            width: $step-bullet-size;
+            height: $step-bullet-size;
+            transition: all 0.4s sizes.$easing-rubber;
+            border-radius: $step-bullet-size;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: colors.$border-color;
+            border: sizes.$border-width solid colors.$border-color;
+            transform: scale(0.3);
+            overflow: hidden;
+
+            i {
+                font-size: $step-icon-size;
+                position: absolute;
+                opacity: 0;
+
+                transition: all 0.4s sizes.$easing-rubber;
+            }
+            .bullet-icon-active {
+                color: colors.$text-emphasis-color;
+                transform: scale(0.3);
+            }
+            .bullet-icon-done {
+                color: colors.$dark;
+                transform: translateY(100%);
+            }
+        }
+
+        &.active {
+            .step-bullet {
+                transform: scale(1);
+                border-color: colors.$text-emphasis-color;
+                background-color: transparent;
+
+                .bullet-icon-active {
+                    opacity: 1;
+                    transform: scale(0.6);
+                }
+            }
+            .steps-label {
+                color: colors.$text-emphasis-color;
+            }
+        }
+
+        &.done {
+            .steps-label {
+                color: colors.$text-muted-color;
+            }
+            .step-bullet {
+                transform: scale(0.61);
+                background-color: colors.$success;
+                border-color: colors.$success;
+                border-radius: 7px;
+                .bullet-icon-done {
+                    opacity: 1;
+                    transform: translateY(0%);
+                }
+
+                .bullet-icon-active {
+                    opacity: 0;
+                    transform: scale(1.3);
+                }
+            }
+        }
+    }
+
+    .steps-spacer {
+        flex-grow: 1;
+        border-bottom: sizes.$border-width solid colors.$border-color;
+        margin: 0 sizes.$gutter-xs;
+    }
+}

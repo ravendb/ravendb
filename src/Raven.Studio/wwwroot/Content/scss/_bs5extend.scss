@@ -69,3 +69,9 @@
     line-height: 1.1em;
     font-weight: 700;
 }
+
+.popover-container-fix {
+    position: absolute;
+    width: 100%;
+    z-index: $zindex-popover;
+}
