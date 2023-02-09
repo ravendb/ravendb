@@ -144,54 +144,19 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static int GetShardNumberFor(ShardingConfiguration configuration, int bucket)
-        {
-            return FindBucketShard(configuration.BucketRanges, bucket);
-        }
+        public static int GetShardNumberFor(ShardingConfiguration configuration, int bucket) => FindBucketShard(configuration.BucketRanges, bucket);
 
-        public static int GetShardNumberFor(RawShardingConfiguration configuration, int bucket)
-        {
-            return FindBucketShard(configuration.BucketRanges, bucket);
-        }
+        public static int GetShardNumberFor(RawShardingConfiguration configuration, int bucket) => FindBucketShard(configuration.BucketRanges, bucket);
 
-        public static int GetShardNumberFor(ShardingConfiguration configuration, ByteStringContext allocator, string id)
-        {
-            using (DocumentIdWorker.GetLower(allocator, id, out var lowerId))
-            {
-                return GetShardNumberFor(configuration, lowerId);
-            }
-        }
+        public static int GetShardNumberFor(ShardingConfiguration configuration, ByteStringContext allocator, string id) => GetShardNumberAndBucketFor(configuration, allocator, id).ShardNumber;
 
         public static int GetShardNumberFor<TTransaction>(ShardingConfiguration configuration, TransactionOperationContext<TTransaction> context, string id)
-            where TTransaction : RavenTransaction
-        {
-            return GetShardNumberFor(configuration, context.Allocator, id);
-        }
+            where TTransaction : RavenTransaction => GetShardNumberFor(configuration, context.Allocator, id);
 
-        public static int GetShardNumberFor(ShardingConfiguration configuration, ByteStringContext allocator, LazyStringValue id)
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Avoid the allocation of the LazyStringValue below");
-            using (DocumentIdWorker.GetLower(allocator, id, out var lowerId))
-            {
-                return GetShardNumberFor(configuration, lowerId);
-            }
-        }
+        public static int GetShardNumberFor(ShardingConfiguration configuration, ByteStringContext allocator, LazyStringValue id) => GetShardNumberAndBucketFor(configuration, allocator, id).ShardNumber;
 
         public static int GetShardNumberFor<TTransaction>(RawShardingConfiguration configuration, TransactionOperationContext<TTransaction> context, string id)
-            where TTransaction : RavenTransaction
-        {
-            int bucket = GetBucketFor(context, id);
-            foreach (var setting in configuration.Prefixed)
-            {
-                if (id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    bucket += setting.BucketRangeStart;
-                    break;
-                }
-            }
-
-            return FindBucketShard(configuration.BucketRanges, bucket);
-        }
+            where TTransaction : RavenTransaction => GetShardNumberAndBucketFor(configuration, context, id).ShardNumber;
 
         public static int GetShardNumberFor(ShardingConfiguration configuration, Slice id) => GetShardNumberAndBucketFor(configuration, id).ShardNumber;
 
@@ -218,10 +183,35 @@ namespace Raven.Server.Utils
             }
         }
 
+        public static (int ShardNumber, int Bucket) GetShardNumberAndBucketFor(ShardingConfiguration configuration, ByteStringContext allocator, LazyStringValue id)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Avoid the allocation of the LazyStringValue below");
+            using (DocumentIdWorker.GetLower(allocator, id, out var lowerId))
+            {
+                return GetShardNumberAndBucketFor(configuration, lowerId);
+            }
+        }
+
         public static (int ShardNumber, int Bucket) GetShardNumberAndBucketFor<TTransaction>(ShardingConfiguration configuration, TransactionOperationContext<TTransaction> context, string id)
             where TTransaction : RavenTransaction
         {
             return GetShardNumberAndBucketFor(configuration, context.Allocator, id);
+        }
+
+        public static (int ShardNumber, int Bucket) GetShardNumberAndBucketFor<TTransaction>(RawShardingConfiguration configuration, TransactionOperationContext<TTransaction> context, string id)
+            where TTransaction : RavenTransaction
+        {
+            int bucket = GetBucketFor(context, id);
+            foreach (var setting in configuration.Prefixed)
+            {
+                if (id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    bucket += setting.BucketRangeStart;
+                    break;
+                }
+            }
+
+            return (FindBucketShard(configuration.BucketRanges, bucket), bucket);
         }
 
         private static int FindBucketShard(List<ShardBucketRange> ranges, int bucket)
@@ -247,7 +237,7 @@ namespace Raven.Server.Utils
             {
                 if (bucket >= NumberOfBuckets)
                 {
-                    if (record.Sharding.Prefixed is not {Count: > 0})
+                    if (record.Sharding.Prefixed is not { Count: > 0 })
                         throw new InvalidOperationException($"For database '{record.DatabaseName}' total number of buckets is {NumberOfBuckets}, requested: {bucket}");
 
                     // prefixed range
