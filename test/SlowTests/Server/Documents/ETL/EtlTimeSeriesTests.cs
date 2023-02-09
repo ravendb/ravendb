@@ -1713,9 +1713,10 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 var entity = new User { Name = "Joe Doe" };
                 await session.StoreAsync(entity, documentId);
 
+                var ts = session.TimeSeriesFor(documentId, timeSeriesName);
                 foreach (var entry in randomOrder)
                 {
-                    session.TimeSeriesFor(documentId, timeSeriesName).Append(entry.Timestamp, entry.Values, entry.Tag);
+                    ts.Append(entry.Timestamp, entry.Values, entry.Tag);
                 }
 
                 await session.SaveChangesAsync();
