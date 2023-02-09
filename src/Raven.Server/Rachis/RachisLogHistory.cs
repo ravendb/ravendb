@@ -195,7 +195,7 @@ namespace Raven.Server.Rachis
             if (Enum.TryParse<HistoryStatus>((string)cmdDjv[nameof(LogHistoryColumn.State)], out var status) == false)
                 return;
 
-            UpdateInternal(context, cmd, guid, type, index, term, status, null, null);
+            UpdateInternal(context, cmd, guid, type, index, term, status, result: null, exception: null);
         }
 
         private unsafe void UpdateInternal(ClusterOperationContext context, BlittableJsonReaderObject cmd, string guid, string type, long index, long term, HistoryStatus status, object result, Exception exception)
