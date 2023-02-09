@@ -2998,7 +2998,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     AppendLineToOutputFunction(name, ToJs(expression), wrapper);
                     return;
                 }
-                arg = ToJs(loadSupport.Arg, true);
+                
+                arg = ToJs(loadSupport.Arg, true, loadSupport);
+                if (loadSupport.IsEnumerable)
+                {
+                    AppendLineToOutputFunction(name, arg, wrapper);
+                    return;
+                }
             }
             else
             {
