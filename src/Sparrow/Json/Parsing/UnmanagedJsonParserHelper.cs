@@ -217,7 +217,7 @@ namespace Sparrow.Json.Parsing
 
                 using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", parser, state))
                 {
-                    cachedItemsRenew = builder.NeedClearPropertiesCache();
+                    cachedItemsRenew = context.CachedProperties.NeedClearPropertiesCache();
                     ReadObject(builder, peepingTomStream, parser, buffer);
 
                     yield return builder.CreateReader();
@@ -259,7 +259,7 @@ namespace Sparrow.Json.Parsing
 
                 using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", parser, state))
                 {
-                    cachedItemsRenew = builder.NeedClearPropertiesCache();
+                    cachedItemsRenew = context.CachedProperties.NeedClearPropertiesCache();
                     await ReadObjectAsync(builder, peepingTomStream, parser, buffer).ConfigureAwait(false);
 
                     yield return builder.CreateReader();

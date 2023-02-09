@@ -632,7 +632,7 @@ namespace Raven.Client.Documents.Session.Operations
                     return;
                 }
 
-                if (_builder.NeedClearPropertiesCache())
+                if (_builderContext.CachedProperties.NeedClearPropertiesCache())
                 {
                     _builderContext.CachedProperties.ClearRenew();
                     return;

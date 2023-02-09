@@ -76,6 +76,11 @@ namespace Raven.Server.Documents
                     context.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages +
                     context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes) / Constants.Storage.PageSize > _maxTransactionSizeInPages)
                     break;
+
+                if (context.CachedProperties.NeedClearPropertiesCache())
+                {
+                    context.CachedProperties.ClearRenew();
+                }
             }
 
             var tx = context.Transaction.InnerTransaction.LowLevelTransaction;

@@ -1,0 +1,146 @@
+using System.Collections.Generic;
+using Raven.Client.Documents;
+using Xunit;
+using Xunit.Abstractions;
+using Raven.Client.Documents.Indexes;
+using System.Linq;
+using FastTests;
+using Tests.Infrastructure;
+
+namespace SlowTests.Issues
+{
+    public class RavenDB_19650 : RavenTestBase
+    { 
+        public RavenDB_19650(ITestOutputHelper output) : base(output)
+        {
+          
+        }
+        
+        [RavenFact(RavenTestCategory.Querying)]
+        public void CanProjectDataFromBothIndexAndDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new Content_ByUrl());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Post { Id = "posts/1" });
+                    session.Store(new Post { Id = "posts/2", Slug = "posts-2", Origin = new OriginReference("posts/1", "Posts") });
+                    session.Store(new Post { Id = "posts/3", DisplayName = "Link name", Slug = "posts-3", Origin = new OriginReference("posts/2", "Posts") });
+                    session.Store(new Post { Id = "posts/4", Slug = "posts-4", Origin = new OriginReference("posts/3", "Posts") });
+                    session.Store(new Post { Id = "posts/5", Slug = "posts-5", Origin = new OriginReference("posts/4", "Posts") });
+
+                    session.SaveChanges();
+
+                    Indexes.WaitForIndexing(store);
+
+                    WaitForUserToContinueTheTest(store);
+
+                    var results = (session.Query<Content_ByUrl.Result, Content_ByUrl>().ProjectInto<Content_ByUrl.ProjectionResult>()).Single(x => x.Url == "/posts-2/posts-3/");
+          
+                    Assert.Equal("posts/3", results.Ref);
+                    Assert.Equal("Link name", results.DisplayName);
+                }
+            }
+        }
+        
+        private record Post
+        {
+            public string Id { get; set; }
+            public string DisplayName { get; set; }
+            public string Slug { get; set; } = string.Empty;
+            public OriginReference Origin { get; set; }
+        }
+        
+        private record OriginReference(string Id, string Collection);
+        
+        private class Content_ByUrl : AbstractJavaScriptIndexCreationTask
+        {
+            public class Result
+            {
+                public string Ref { get; set; }
+                public string Collection { get; set; }
+                public string Parent { get; set; }
+                public string Url { get; set; }
+            }
+
+            public class ProjectionResult
+            {
+                public string Ref { get; set; }
+                public string Collection { get; set; }
+                public string Parent { get; set; }
+                public string Url { get; set; }
+                public string DisplayName { get; set; }
+            }
+
+            public Content_ByUrl()
+            {
+                Maps = new HashSet<string>
+                { 
+                    @"map('Pages', p => {
+              let ref = id(p)
+              let url = ''
+              let collection = p['@metadata']['@collection']
+              let parent = p.Origin.Id
+              let visited = {}
+              do {
+                url = p.Slug + '/' + url
+                if (visited[p.Origin.Id])
+                  break
+                visited[p.Origin.Id] = true
+                p = load(p.Origin.Id, p.Origin.Collection)
+              } while(p);
+              return { Ref: ref, Collection: collection, Parent: parent, Url: url };
+          });",
+                    @"map('Homes', p => {
+              let ref = id(p)
+              let collection = p['@metadata']['@collection']
+              let parent = p.Origin.Id
+              let url = ''
+              let visited = {}
+              do {
+                url = p.Slug + '/' + url
+                if (visited[p.Origin.Id])
+                  break
+                visited[p.Origin.Id] = true
+                p = load(p.Origin.Id, p.Origin.Collection)
+              } while(p);
+              return { Ref: ref, Collection: collection, Parent: parent, Url: url };
+          });",
+                    @"map('Posts', p => {
+              let ref = id(p)
+              let collection = p['@metadata']['@collection']
+              let parent = p.Origin.Id
+              let url = ''
+              let visited = {}
+              do {
+                url = p.Slug + '/' + url
+                if (visited[p.Origin.Id])
+                  break
+                visited[p.Origin.Id] = true
+                p = load(p.Origin.Id, p.Origin.Collection)
+              } while(p);
+              return { Ref: ref, Collection: collection, Parent: parent, Url: url };
+          });"
+                };
+
+                Fields = new Dictionary<string, IndexFieldOptions>
+                {
+                    {
+                        "Ref", new IndexFieldOptions()
+                        {
+                            Storage = FieldStorage.Yes,
+                        }
+                    },
+                    {
+                        "Url", new IndexFieldOptions()
+                        {
+                            Storage = FieldStorage.Yes,
+                        }
+                    }
+                };
+            }
+        }
+    }
+}
