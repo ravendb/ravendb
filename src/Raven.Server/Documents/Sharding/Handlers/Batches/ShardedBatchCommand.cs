@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.ServerWide.Context;
@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Batches;
 
-public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedCommand>
+public class ShardedBatchCommand : IBatchCommand
 {
     private readonly TransactionOperationContext _context;
     private readonly ShardedDatabaseContext _databaseContext;
@@ -34,8 +34,10 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
         _databaseContext = databaseContext;
     }
 
-    public IEnumerator<SingleShardedCommand> GetEnumerator()
+    public IEnumerator<SingleShardedCommand> GetCommands(ShardedBatchBehavior behavior)
     {
+        int? previousBucket = null;
+
         var streamPosition = 0;
         var positionInResponse = 0;
         for (var index = 0; index < ParsedCommands.Count; index++)
@@ -56,13 +58,13 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
 
                     bjro.TryGet(nameof(ICommandData.ChangeVector), out string expectedChangeVector);
 
-                    var shardId = _databaseContext.GetShardNumberFor(_context, id);
-                    if (idsByShard.TryGetValue(shardId, out var list) == false)
-                    {
-                        list = new List<(string Id, string ChangeVector)>();
-                        idsByShard.Add(shardId, list);
-                    }
+                    var result = _databaseContext.GetShardNumberAndBucketFor(_context, id);
+                    if (idsByShard.TryGetValue(result.ShardNumber, out var list) == false)
+                        idsByShard[result.ShardNumber] = list = new List<(string Id, string ChangeVector)>();
+
                     list.Add((id, expectedChangeVector));
+
+                    AssertBehavior(behavior, ref previousBucket, result.Bucket);
                 }
 
                 foreach (var kvp in idsByShard)
@@ -86,16 +88,39 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
                 commandStream = bufferedCommand.ModifyIdentityStream(cmd);
             }
 
-            int shardNumber = GetShardNumberForCommandType(cmd, bufferedCommand.IsServerSideIdentity);
+            var cmdResult = GetShardNumberForCommandType(cmd, bufferedCommand.IsServerSideIdentity);
             var stream = cmd.Type == CommandType.AttachmentPUT ? AttachmentStreams[streamPosition++] : null;
+
+            AssertBehavior(behavior, ref previousBucket, cmdResult.Bucket);
 
             yield return new SingleShardedCommand
             {
-                ShardNumber = shardNumber,
+                ShardNumber = cmdResult.ShardNumber,
                 AttachmentStream = stream,
                 CommandStream = commandStream,
                 PositionInResponse = positionInResponse++
             };
+        }
+
+        static void AssertBehavior(ShardedBatchBehavior behavior, ref int? previousBucket, int bucket)
+        {
+            if (previousBucket == null)
+            {
+                previousBucket = bucket;
+                return;
+            }
+
+            switch (behavior)
+            {
+                case ShardedBatchBehavior.SingleBucket:
+                    if (previousBucket != bucket)
+                        throw new InvalidOperationException("Batch violates single bucket batch behavior.");
+                    break;
+                case ShardedBatchBehavior.MultiBucket:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(behavior), behavior, null);
+            }
         }
     }
 
@@ -108,20 +133,15 @@ public class ShardedBatchCommand : IBatchCommand, IEnumerable<SingleShardedComma
             cmd.Id = Guid.NewGuid().ToString();
     }
 
-    private int GetShardNumberForCommandType(BatchRequestParser.CommandData cmd, bool isServerSideIdentity)
+    private (int ShardNumber, int Bucket) GetShardNumberForCommandType(BatchRequestParser.CommandData cmd, bool isServerSideIdentity)
     {
         if (isServerSideIdentity)
-            return _databaseContext.GetShardNumberForIdentity(_context, cmd.Id);
+            return _databaseContext.GetShardNumberAndBucketForIdentity(_context, cmd.Id);
 
         if (cmd.Type == CommandType.Counters)
-            return _databaseContext.GetShardNumberFor(_context, cmd.Id ?? cmd.Counters.DocumentId);
+            return _databaseContext.GetShardNumberAndBucketFor(_context, cmd.Id ?? cmd.Counters.DocumentId);
 
-        return _databaseContext.GetShardNumberFor(_context, cmd.Id);
-    }
-
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
+        return _databaseContext.GetShardNumberAndBucketFor(_context, cmd.Id);
     }
 
     public void Dispose()

@@ -154,10 +154,10 @@ namespace Raven.Client.Documents.Commands.Batches
             if (_options == null)
                 return;
 
-            AppendOptions(sb, _options.IndexOptions, _options.ReplicationOptions);
+            AppendOptions(sb, _options.IndexOptions, _options.ReplicationOptions, _options.ShardedOptions);
         }
 
-        internal static void AppendOptions(StringBuilder sb, IndexBatchOptions indexOptions, ReplicationBatchOptions replicationOptions)
+        internal static void AppendOptions(StringBuilder sb, IndexBatchOptions indexOptions, ReplicationBatchOptions replicationOptions, ShardedBatchOptions shardedOptions)
         {
             if (replicationOptions != null)
             {
@@ -182,6 +182,12 @@ namespace Raven.Client.Documents.Commands.Batches
                         sb.Append("&waitForSpecificIndex=").Append(Uri.EscapeDataString(specificIndex));
                     }
                 }
+            }
+
+            if (shardedOptions != null)
+            {
+                if (shardedOptions.BatchBehavior != ShardedBatchBehavior.SingleBucket)
+                    sb.Append("&shardedBatchBehavior=").Append(shardedOptions.BatchBehavior);
             }
         }
 

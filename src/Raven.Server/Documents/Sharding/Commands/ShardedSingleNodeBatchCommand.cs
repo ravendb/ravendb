@@ -72,7 +72,7 @@ public class ShardedSingleNodeBatchCommand : RavenCommand<BlittableJsonReaderObj
     {
         var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/bulk_docs?");
 
-        SingleNodeBatchCommand.AppendOptions(sb, _indexBatchOptions, _replicationBatchOptions);
+        SingleNodeBatchCommand.AppendOptions(sb, _indexBatchOptions, _replicationBatchOptions, shardedOptions: null);
 
         url = sb.ToString();
 

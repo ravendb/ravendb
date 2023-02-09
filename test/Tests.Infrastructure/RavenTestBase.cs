@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -182,7 +183,11 @@ namespace FastTests
                         Certificate = options.ClientCertificate,
                         Conventions =
                         {
-                            DisableTopologyCache = true
+                            DisableTopologyCache = true,
+                            Sharding =
+                            {
+                                BatchBehavior = ShardedBatchBehavior.MultiBucket
+                            }
                         }
                     };
 

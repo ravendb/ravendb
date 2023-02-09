@@ -8,6 +8,12 @@ namespace Raven.Client.Documents.Session
         ClusterWide,
     }
 
+    public enum ShardedBatchBehavior
+    {
+        SingleBucket,
+        MultiBucket
+    }
+
     public class SessionOptions
     {
         public string Database { get; set; }
@@ -29,5 +35,7 @@ namespace Raven.Client.Documents.Session
         /// will only consider explicitly added compare exchange values to validate cluster wide transactions."
         /// </summary>
         public bool? DisableAtomicDocumentWritesInClusterWideTransaction { get; set; }
+
+        public ShardedBatchBehavior? ShardedBatchBehavior { get; set; }
     }
 }
