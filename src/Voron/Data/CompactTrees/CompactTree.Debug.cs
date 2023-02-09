@@ -10,6 +10,37 @@ namespace Voron.Data.CompactTrees;
 
 unsafe partial class CompactTree
 {
+    private static class CompactTreeDumper
+    {
+        [Conditional("ENABLE_COMPACT_DUMPER")]
+        public static void WriteCommit(CompactTree tree)
+        {
+#if ENABLE_COMPACT_DUMPER
+            using var writer = File.AppendText(tree.Name.ToString());
+            writer.WriteLine("###");
+#endif
+        }
+
+        [Conditional("ENABLE_COMPACT_DUMPER")]
+        public static void WriteAddition(CompactTree tree, ReadOnlySpan<byte> key, long value)
+        {
+#if ENABLE_COMPACT_DUMPER
+            using var writer = File.AppendText(tree.Name.ToString());
+            writer.WriteLine($"+{Encodings.Utf8.GetString(key)}|{value}");
+#endif
+        }
+
+        [Conditional("ENABLE_COMPACT_DUMPER")]
+        public static void WriteRemoval(CompactTree tree, ReadOnlySpan<byte> key)
+        {
+#if ENABLE_COMPACT_DUMPER
+            using var writer = File.AppendText(tree.Name.ToString());
+            writer.WriteLine($"-{Encodings.Utf8.GetString(key)}");
+#endif
+        }
+    }
+
+
     public void VerifyOrderOfElements()
     {
         var it = Iterate();
