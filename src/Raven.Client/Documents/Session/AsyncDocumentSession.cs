@@ -76,26 +76,30 @@ namespace Raven.Client.Documents.Session
         {
             using (AsyncTaskHolder())
             {
-                var entitiesArray = entities.ToArray();
-                var entitiesArrayLength = entitiesArray.Length;
-                string[] ids = new string[entitiesArrayLength];
-                DocumentInfo[] documentInfos = new DocumentInfo[entitiesArrayLength];
+                string[] ids = new string[entities.Count()];
+                List<DocumentInfo> documentInfos = new List<DocumentInfo>();
 
-                for (int i = 0; i < entitiesArrayLength; i++)
+                var i = 0;
+                foreach (var entity in entities)
                 {
-                    if (DocumentsByEntity.TryGetValue(entitiesArray[i], out documentInfos[i]) == false)
+                    DocumentInfo docInfo;
+                    if (DocumentsByEntity.TryGetValue(entity, out docInfo) == false)
                         throw new InvalidOperationException("Cannot refresh a transient instance");
-                    ids[i] = documentInfos[i].Id;
+                    documentInfos.Add(docInfo);
+                    ids[i] = docInfo.Id;
+                    i++;
                 }
                 IncrementRequestCount();
 
                 var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
                 await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo, token).ConfigureAwait(false);
-
-                for (int i = 0; i < entitiesArrayLength; i++)
+                
+                var j = 0;
+                foreach (var entity in entities)
                 {
-                    var commandResult = (BlittableJsonReaderObject)command.Result.Results[i];
-                    RefreshInternal(entitiesArray[i], commandResult, documentInfos[i]);
+                    var commandResult = (BlittableJsonReaderObject)command.Result.Results[j];
+                    RefreshInternal(entity, commandResult, documentInfos[j]);
+                    j++;
                 }
             }
         }

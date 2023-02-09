@@ -158,26 +158,32 @@ namespace Raven.Client.Documents.Session
         /// <param name="entities">The entities.</param>
         public void Refresh<T>(IEnumerable<T> entities)
         {
-            var entitiesArray = entities.ToArray();
-            var entitiesArrayLength = entitiesArray.Length;
-            string[] ids = new string[entitiesArrayLength];
-            DocumentInfo[] documentInfos = new DocumentInfo[entitiesArrayLength];
+            string[] ids = new string[entities.Count()];
+            List<DocumentInfo> documentInfos = new List<DocumentInfo>();
 
-            for (int i = 0; i < entitiesArrayLength; i++)
+            var i = 0;
+            foreach (var entity in entities)
             {
-                if (DocumentsByEntity.TryGetValue(entitiesArray[i], out documentInfos[i]) == false)
-                    throw new InvalidOperationException("Cannot refresh a transient instance");
-                ids[i] = documentInfos[i].Id;
+                DocumentInfo docInfo;
+                if (DocumentsByEntity.TryGetValue(entity, out docInfo) == false)
+                         throw new InvalidOperationException("Cannot refresh a transient instance");
+                documentInfos.Add(docInfo);
+                ids[i] = docInfo.Id;
+                i++;
             }
             IncrementRequestCount();
             
             var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
-            for (int i = 0; i < entitiesArrayLength; i++)
+           
+            var j = 0;
+            foreach (var entity in entities)
             {
-                var commandResult = (BlittableJsonReaderObject)command.Result.Results[i];
-                RefreshInternal(entitiesArray[i], commandResult, documentInfos[i]);
+                var commandResult = (BlittableJsonReaderObject)command.Result.Results[j]; 
+                RefreshInternal(entity, commandResult, documentInfos[j]);
+                j++;
             }
+     
         }
 
         /// <summary>
