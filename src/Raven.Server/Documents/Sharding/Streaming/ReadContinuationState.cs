@@ -93,7 +93,7 @@ public class ReadContinuationState : IDisposable
             return true;
         }
 
-        if (_builder.NeedClearPropertiesCache())
+        if (_builderContext.CachedProperties.NeedClearPropertiesCache())
         {
             _builderContext.CachedProperties.ClearRenew();
             return true;

@@ -63,6 +63,11 @@ namespace Raven.Server.Smuggler.Documents
                 if (!(translatedResult is BlittableJsonReaderObject bjro))
                     return null;
 
+                if (ctx.CachedProperties.NeedClearPropertiesCache())
+                {
+                    ctx.CachedProperties.ClearRenew();
+                }
+
                 return document.CloneWith(ctx, bjro);
             }
         }
