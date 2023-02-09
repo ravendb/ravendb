@@ -289,9 +289,6 @@ $border-color: $gray-300 !default;
 // scss-docs-end border-variables
 
 // scss-docs-start border-radius-variables
-$border-radius: 2px !default;
-$border-radius-sm: 2px !default;
-$border-radius-lg: 4px !default;
 $border-radius-pill: 30px !default;
 // scss-docs-end border-radius-variables
 
@@ -616,7 +613,7 @@ $input-disabled-bg: transparent !default;
 $input-disabled-border-color: $border-color-disabled !default;
 
 $input-color: $text-color !default;
-$input-border-color: $border-color-light !default;
+$input-border-color: transparent !default;
 $input-border-width: $input-btn-border-width !default;
 $input-box-shadow: $box-shadow-inset !default;
 
@@ -1094,11 +1091,11 @@ $popover-box-shadow: $box-shadow !default;
 $popover-header-bg: shade-color($popover-bg, 6%) !default;
 $popover-header-color: $headings-color !default;
 $popover-header-padding-y: 0.5rem !default;
-$popover-header-padding-x: $spacer !default;
+$popover-header-padding-x: $gutter-sm !default;
 
-$popover-body-color: $panel-bg-2 !default;
-$popover-body-padding-y: $spacer !default;
-$popover-body-padding-x: $spacer !default;
+$popover-body-color: $text-color-var !default;
+$popover-body-padding-y: $gutter-sm !default;
+$popover-body-padding-x: $gutter-sm !default;
 
 $popover-arrow-width: 1rem !default;
 $popover-arrow-height: 0.5rem !default;
@@ -1174,7 +1171,7 @@ $modal-md: 500px !default;
 $modal-lg: 800px !default;
 $modal-xl: 1140px !default;
 
-$modal-fade-transform: translate(0, -50px) !default;
+$modal-fade-transform: scale(0.3) !default;
 $modal-show-transform: none !default;
 $modal-transition: transform 0.3s ease-out !default;
 $modal-scale-transform: scale(1.02) !default;

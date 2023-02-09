@@ -1,0 +1,23 @@
+@use "sass:math";
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+.prop-summary {
+    padding: math.div(sizes.$gutter-xxs, 2) 0;
+    .prop-summary-item {
+        font-size: sizes.$font-size-xs;
+        display: flex;
+        padding: math.div(sizes.$gutter-xxs, 2) sizes.$gutter-sm;
+
+        .prop-summary-name {
+            flex-grow: 1;
+        }
+        .prop-summary-value {
+            margin-left: sizes.$gutter-sm;
+        }
+
+        & + .prop-summary-item {
+            border-top: sizes.$border-width solid colors.$border-color-light;
+        }
+    }
+}
