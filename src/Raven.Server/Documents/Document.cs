@@ -21,6 +21,7 @@ namespace Raven.Server.Documents
         public LazyStringValue LowerId;
         public BlittableJsonReaderObject Data;
         public string ChangeVector;
+        public LazyStringValue LazyChangeVector;
         public TimeSeriesStream TimeSeriesStream;
         public SpatialResult? Distance;
 
@@ -135,6 +136,9 @@ namespace Raven.Server.Documents
 
             Data?.Dispose();
             Data = null;
+            
+            LazyChangeVector?.Dispose();
+            LazyChangeVector = null;
 
             _disposed = true;
         }
@@ -153,8 +157,10 @@ namespace Raven.Server.Documents
         LowerId = 1 << 1,
         Data = 1 << 4,
         ChangeVector = 1 << 5,
+        LazyChangeVector = 1 << 6,
 
-        All = Id | LowerId | Data | ChangeVector
+        All = Id | LowerId | Data | ChangeVector,
+        AllLazy = Id | LowerId | Data | LazyChangeVector
     }
 
 

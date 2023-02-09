@@ -25,9 +25,10 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         private IEnumerable<Document> GetDocumentsEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize)
         {
+            const DocumentFields fields = DocumentFields.AllLazy;
             if (collection == Constants.Documents.Collections.AllDocumentsCollection)
-                return _documentsStorage.GetDocumentsFrom(queryContext.Documents, lastEtag + 1, 0, pageSize);
-            return _documentsStorage.GetDocumentsFrom(queryContext.Documents, collection, lastEtag + 1, 0, pageSize);
+                return _documentsStorage.GetDocumentsFrom(queryContext.Documents, lastEtag + 1, 0, pageSize, fields);
+            return _documentsStorage.GetDocumentsFrom(queryContext.Documents, collection, lastEtag + 1, 0, pageSize, fields);
         }
     }
 }
