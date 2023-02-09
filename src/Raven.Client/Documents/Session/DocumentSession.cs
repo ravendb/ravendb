@@ -156,23 +156,27 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="entities">The entities.</param>
-        public void Refresh<T>(T[] entities)
+        public void Refresh<T>(IEnumerable<T> entities)
         {
-            DocumentInfo[] documentInfos = new DocumentInfo[entities.Length];
-            for (int i = 0; i < entities.Length; i++)
-            {
-                if (DocumentsByEntity.TryGetValue(entities[i], out documentInfos[i]) == false)
-                    throw new InvalidOperationException("Cannot refresh a transient instance");
-                IncrementRequestCount();
-            }
+            var entitiesArray = entities.ToArray();
+            var entitiesArrayLength = entitiesArray.Length;
+            string[] ids = new string[entitiesArrayLength];
+            DocumentInfo[] documentInfos = new DocumentInfo[entitiesArrayLength];
 
-            var ids = documentInfos.Select(x => x.Id).ToArray();
+            for (int i = 0; i < entitiesArrayLength; i++)
+            {
+                if (DocumentsByEntity.TryGetValue(entitiesArray[i], out documentInfos[i]) == false)
+                    throw new InvalidOperationException("Cannot refresh a transient instance");
+                ids[i] = documentInfos[i].Id;
+            }
+            IncrementRequestCount();
+            
             var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
-            for (int i = 0; i < entities.Length; i++)
+            for (int i = 0; i < entitiesArrayLength; i++)
             {
-               var commandResult = (BlittableJsonReaderObject)command.Result.Results[i];
-                RefreshInternal(entities[i], commandResult, documentInfos[i]);
+                var commandResult = (BlittableJsonReaderObject)command.Result.Results[i];
+                RefreshInternal(entitiesArray[i], commandResult, documentInfos[i]);
             }
         }
 

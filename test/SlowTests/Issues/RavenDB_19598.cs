@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
@@ -52,7 +53,7 @@ namespace SlowTests.Issues
                     sd2.Name = "gelbeKraehe";
 
                     // refresh and assertion
-                    session.Advanced.Refresh(new[]{sd,sd1,sd2});
+                    session.Advanced.Refresh(new[]{sd,sd1,sd2}.AsEnumerable());
 
                     Assert.Equal("grossesNashorn", sd.Name);
                     Assert.Equal("kleinesNashorn", sd1.Name);
@@ -101,7 +102,7 @@ namespace SlowTests.Issues
                     sd2.Name = "gelbeKraehe";
 
                    
-                    await session.Advanced.RefreshAsync(new[] { sd, sd1, sd2 });
+                    await session.Advanced.RefreshAsync(new[] { sd, sd1, sd2 }.AsEnumerable());
 
                     // equality assertion of current names and pre-override names
                     Assert.Equal("grossesNashorn", sd.Name);
