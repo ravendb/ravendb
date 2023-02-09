@@ -175,8 +175,9 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var user2 = session.Load<User>("users/2-A");
-                    var user = session.Load<User>("users/1-A");
+                    var user = session.Load<User>(id);
+                    var user2 = session.Load<User>(id2);
+                    Assert.NotNull(user2);
 
                     foreach (var singleResult in session.Advanced.GetTimeSeriesFor(user))
                     {
@@ -187,14 +188,22 @@ namespace SlowTests.Client.TimeSeries.Issues
                     }
 
                     session.SaveChanges();
-
-                    var ts = session.TimeSeriesFor(user2, tag);
-                    var res = ts.Get();
-                    Assert.NotNull(res);
-                    ts = session.TimeSeriesFor(user2, p1.GetTimeSeriesName(tag));
-                    res = ts.Get();
-                    Assert.NotNull(res);
                 }
+                
+                Assert.True(WaitForValue(() =>
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var ts = session.TimeSeriesFor(id2, tag);
+                        var res = ts.Get();
+                        if (res == null)
+                            return false;
+
+                        ts = session.TimeSeriesFor(id2, p1.GetTimeSeriesName(tag));
+                        res = ts.Get();
+                        return res != null;
+                    }
+                }, true));
             }
         }
     }
