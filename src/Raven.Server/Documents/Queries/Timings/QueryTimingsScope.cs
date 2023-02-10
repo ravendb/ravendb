@@ -72,6 +72,9 @@ namespace Raven.Server.Documents.Queries.Timings
 
         public void MergeWith(string key, QueryTimings timings)
         {
+            if (timings == null)
+                return;
+            
             _additionalTimings ??= new SortedDictionary<string, QueryTimings>();
             _additionalTimings.Add(key, timings);
         }

@@ -400,13 +400,16 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
     }
 
-    protected async Task WaitForRaftIndexIfNeededAsync(long? raftCommandIndex)
+    protected async Task WaitForRaftIndexIfNeededAsync(long? raftCommandIndex, QueryTimingsScope scope)
     {
         if (IsAutoMapReduceQuery && raftCommandIndex.HasValue)
         {
-            // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
-            // so further queries would not throw index does not exist in case of a failover
-            await RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(raftCommandIndex.Value, Token);
+            using (scope?.For(nameof(QueryTimingsScope.Names.Cluster)))
+            {
+                // we are waiting here for all nodes, we should wait for all of the orchestrators at least to apply that
+                // so further queries would not throw index does not exist in case of a failover
+                await RequestHandler.DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(raftCommandIndex.Value, Token);
+            }
         }
     }
 }
