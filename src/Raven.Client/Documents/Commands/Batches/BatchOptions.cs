@@ -30,9 +30,9 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public class ShardedBatchOptions
     {
-        internal static readonly ShardedBatchOptions MultiBucket = new() { BatchBehavior = ShardedBatchBehavior.MultiBucket };
+        internal static readonly ShardedBatchOptions NonTransactionalMultiBucket = new() { BatchBehavior = ShardedBatchBehavior.NonTransactionalMultiBucket };
 
-        internal static readonly ShardedBatchOptions SingleBucket = new() { BatchBehavior = ShardedBatchBehavior.SingleBucket };
+        internal static readonly ShardedBatchOptions TransactionalSingleBucketOnly = new() { BatchBehavior = ShardedBatchBehavior.TransactionalSingleBucketOnly };
 
         public ShardedBatchBehavior BatchBehavior { get; set; }
 
@@ -41,8 +41,8 @@ namespace Raven.Client.Documents.Commands.Batches
             return behavior switch
             {
                 ShardedBatchBehavior.Default => null,
-                ShardedBatchBehavior.SingleBucket => SingleBucket,
-                ShardedBatchBehavior.MultiBucket => MultiBucket,
+                ShardedBatchBehavior.TransactionalSingleBucketOnly => TransactionalSingleBucketOnly,
+                ShardedBatchBehavior.NonTransactionalMultiBucket => NonTransactionalMultiBucket,
                 _ => throw new ArgumentOutOfRangeException(nameof(behavior), behavior, null)
             };
         }

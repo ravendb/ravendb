@@ -18,12 +18,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Allow to perform batch commands only on a single bucket, commands will be performed on single shard with ACID transaction guarantees
         /// </summary>
-        SingleBucket,
+        TransactionalSingleBucketOnly,
 
         /// <summary>
         /// Allow to spread batch commands to multiple buckets, commands can be performed on multiple shards without ACID transaction guarantees
         /// </summary>
-        MultiBucket
+        NonTransactionalMultiBucket
     }
 
     public class SessionOptions
