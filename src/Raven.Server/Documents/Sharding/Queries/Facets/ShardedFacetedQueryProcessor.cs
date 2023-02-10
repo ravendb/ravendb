@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations.Queries;
@@ -93,10 +94,10 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
         }
     }
 
-    public override async Task<FacetedQueryResult> ExecuteShardedOperations()
+    public override async Task<FacetedQueryResult> ExecuteShardedOperations(QueryTimingsScope scope)
     {
-        var commands = GetOperationCommands();
-        
+        var commands = GetOperationCommands(null); // TODO [ppekrol]
+
         var operation = new ShardedFacetedQueryOperation(_optionsByFacet, Context, RequestHandler, commands, ExistingResultEtag?.ToString());
 
         var shards = GetShardNumbers(commands);
@@ -120,5 +121,5 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
         return result;
     }
 
-    protected override ShardedQueryCommand CreateCommand(BlittableJsonReaderObject query) => CreateShardedQueryCommand(query);
+    protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
 }

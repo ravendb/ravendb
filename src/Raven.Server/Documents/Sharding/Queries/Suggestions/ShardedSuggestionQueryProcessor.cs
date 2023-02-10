@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestions;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Operations.Queries;
@@ -22,9 +23,9 @@ public class ShardedSuggestionQueryProcessor : AbstractShardedQueryProcessor<Sha
     {
     }
 
-    public override async Task<SuggestionQueryResult> ExecuteShardedOperations()
+    public override async Task<SuggestionQueryResult> ExecuteShardedOperations(QueryTimingsScope scope)
     {
-        var commands = GetOperationCommands();
+        var commands = GetOperationCommands(null); // TODO [ppekrol]
 
         Dictionary<string, SuggestionField> fieldsWithOptions = null;
 
@@ -56,5 +57,5 @@ public class ShardedSuggestionQueryProcessor : AbstractShardedQueryProcessor<Sha
         return result;
     }
 
-    protected override ShardedQueryCommand CreateCommand(BlittableJsonReaderObject query) => CreateShardedQueryCommand(query);
+    protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
 }

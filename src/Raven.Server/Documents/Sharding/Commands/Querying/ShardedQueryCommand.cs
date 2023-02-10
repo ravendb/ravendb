@@ -2,14 +2,15 @@
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Timings;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Commands.Querying;
 
 public class ShardedQueryCommand : AbstractShardedQueryCommand<QueryResult, BlittableJsonReaderObject>
 {
-    public ShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryServerSide indexQuery, bool metadataOnly, bool indexEntriesOnly, string indexName,
-        bool canReadFromCache, string raftUniqueRequestId) : base(query, indexQuery, metadataOnly, indexEntriesOnly, indexName, canReadFromCache, raftUniqueRequestId)
+    public ShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryServerSide indexQuery, QueryTimingsScope scope, bool metadataOnly, bool indexEntriesOnly, string indexName,
+        bool canReadFromCache, string raftUniqueRequestId) : base(query, indexQuery, scope, metadataOnly, indexEntriesOnly, indexName, canReadFromCache, raftUniqueRequestId)
     {
     }
 

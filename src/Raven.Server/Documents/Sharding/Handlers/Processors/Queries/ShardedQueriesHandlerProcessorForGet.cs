@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -55,7 +56,7 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
 
             await queryProcessor.InitializeAsync();
 
-            return await queryProcessor.ExecuteShardedOperations();
+            return await queryProcessor.ExecuteShardedOperations(null); // TODO [ppekrol]
         }
     }
 
@@ -69,26 +70,37 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
 
             await queryProcessor.InitializeAsync();
 
-            return await queryProcessor.ExecuteShardedOperations();
+            return await queryProcessor.ExecuteShardedOperations(null); // TODO [ppekrol]
         }
     }
 
     protected override async ValueTask<QueryResultServerSide<BlittableJsonReaderObject>> GetQueryResultsAsync(IndexQueryServerSide query,
         TransactionOperationContext queryContext, long? existingResultEtag, bool metadataOnly, OperationCancelToken token)
     {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
-            @"RavenDB-19071 what do we do with: var diagnostics = GetBoolValueQueryString(""diagnostics"", required: false) ?? false");
-
-        var indexName = AbstractQueryRunner.GetIndexName(query);
-
-        using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+        Stopwatch sw = null;
+        using (var scope = query.Timings?.Start())
         {
-            var queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly: false,
-                token: token.Token);
+            if (scope == null)
+                sw = Stopwatch.StartNew();
 
-            await queryProcessor.InitializeAsync();
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
+                @"RavenDB-19071 what do we do with: var diagnostics = GetBoolValueQueryString(""diagnostics"", required: false) ?? false");
 
-            return await queryProcessor.ExecuteShardedOperations();
+            var indexName = AbstractQueryRunner.GetIndexName(query);
+
+            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            {
+                var queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly: false,
+                    token: token.Token);
+
+                await queryProcessor.InitializeAsync();
+
+                var result = await queryProcessor.ExecuteShardedOperations(scope);
+
+                result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;
+
+                return result;
+            }
         }
     }
 }

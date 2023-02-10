@@ -8,6 +8,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Commands.Streaming;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Streaming;
 using Raven.Server.ServerWide.Context;
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Sharding.Queries
                 throw new NotSupportedInShardingException("Includes and Loads are not supported in sharded streaming queries");
         }
 
-        public override Task<(IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics)> ExecuteShardedOperations()
+        public override Task<(IEnumerator<BlittableJsonReaderObject>, StreamQueryStatistics)> ExecuteShardedOperations(QueryTimingsScope scope)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
 
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Sharding.Queries
                 ? new ShardedDocumentsComparer(Query.Metadata, isMapReduce: false)
                 : new ShardedStreamingHandlerProcessorForGetStreamQuery.DocumentBlittableLastModifiedComparer();
 
-            var commands = GetOperationCommands();
+            var commands = GetOperationCommands(null); // TODO [ppekrol]
 
             var op = new ShardedStreamQueryOperation(RequestHandler.HttpContext, () =>
             {
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Sharding.Queries
             return RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, op, Token);
         }
 
-        protected override PostQueryStreamCommand CreateCommand(BlittableJsonReaderObject query)
+        protected override PostQueryStreamCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope)
         {
             return new PostQueryStreamCommand(query, _debug, _ignoreLimit);
         }

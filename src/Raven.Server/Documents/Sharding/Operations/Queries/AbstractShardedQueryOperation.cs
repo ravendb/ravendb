@@ -17,14 +17,14 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
 {
     private readonly ShardedDatabaseRequestHandler _requestHandler;
 
-    private readonly Dictionary<int, ShardedQueryCommand> _queryCommands;
+    protected readonly Dictionary<int, ShardedQueryCommand> QueryCommands;
 
     protected readonly TransactionOperationContext Context;
     protected long CombinedResultEtag;
 
     protected AbstractShardedQueryOperation(Dictionary<int, ShardedQueryCommand> queryCommands, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, string expectedEtag)
     {
-        _queryCommands = queryCommands;
+        QueryCommands = queryCommands;
         Context = context;
         _requestHandler = requestHandler;
         ExpectedEtag = expectedEtag;
@@ -36,7 +36,7 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
 
     public HashSet<string> MissingDocumentIncludes { get; private set; }
 
-    RavenCommand<QueryResult> IShardedOperation<QueryResult, ShardedReadResult<TCombinedResult>>.CreateCommandForShard(int shardNumber) => _queryCommands[shardNumber];
+    RavenCommand<QueryResult> IShardedOperation<QueryResult, ShardedReadResult<TCombinedResult>>.CreateCommandForShard(int shardNumber) => QueryCommands[shardNumber];
 
     public string CombineCommandsEtag(Dictionary<int, ShardExecutionResult<QueryResult>> commands)
     {
