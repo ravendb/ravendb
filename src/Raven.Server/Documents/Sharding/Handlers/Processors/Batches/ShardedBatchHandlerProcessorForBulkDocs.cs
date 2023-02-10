@@ -10,7 +10,6 @@ using Raven.Server.Documents.Handlers.Processors.Batches;
 using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Raven.Server.Documents.Sharding.Operations;
-using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -62,15 +61,13 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     {
         var shardedBatchBehaviorAsString = RequestHandler.GetStringQueryString("shardedBatchBehavior", required: false);
         if (shardedBatchBehaviorAsString == null)
-        {
-            if (RequestRouter.TryGetClientVersion(RequestHandler.HttpContext, out var clientVersion) && clientVersion.Major < 6)
-                return ShardedBatchBehavior.MultiBucket;
-
-            return ShardedBatchBehavior.SingleBucket;
-        }
+            return ShardedBatchBehavior.MultiBucket;
 
         if (Enum.TryParse<ShardedBatchBehavior>(shardedBatchBehaviorAsString, ignoreCase: true, out var shardedBatchBehavior) == false)
             throw new InvalidOperationException($"Invalid sharded batch behavior value '{shardedBatchBehaviorAsString}'.");
+
+        if (shardedBatchBehavior == ShardedBatchBehavior.Default)
+            return ShardedBatchBehavior.MultiBucket;
 
         return shardedBatchBehavior;
 
