@@ -88,8 +88,8 @@ namespace Raven.Server.Documents.Replication
                             conflicts.Add(local);
 
                         var resolved = _conflictResolver.ResolveToLatest(conflicts);
-                        _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: true, conflictedDoc);
 
+                        _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: true, conflictedDoc);
                         return;
                     }
                 }
@@ -178,8 +178,8 @@ namespace Raven.Server.Documents.Replication
                 conflictedDocs,
                 documentsContext.GetLazyString(collection), out var resolved))
             {
-                _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: false, conflict);
-                return true;
+                 _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: false, conflict);
+                 return true;
             }
 
             return false;
@@ -261,7 +261,9 @@ namespace Raven.Server.Documents.Replication
                 if (compareResult.HasFlag(DocumentCompareResult.TimeSeriesNotEqual))
                     nonPersistentFlags |= NonPersistentDocumentFlags.ResolveTimeSeriesConflict;
 
-                _database.DocumentsStorage.Put(context, id, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistentFlags);
+                _database.DocumentsStorage.Put(context, id, null, incomingDoc, lastModifiedTicks, mergedChangeVector,
+                    flags: existingDoc.Flags | DocumentFlags.Resolved, 
+                    nonPersistentFlags: nonPersistentFlags);
                 return true;
             }
 
