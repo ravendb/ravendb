@@ -126,10 +126,10 @@ $escaped-characters: (("<", "%3c"), (">", "%3e"), ("#", "%23"), ("(", "%28"), ("
 
 $enable-caret: true !default;
 $enable-rounded: true !default;
-$enable-shadows: false !default;
+$enable-shadows: true !default;
 $enable-gradients: false !default;
 $enable-transitions: true !default;
-$enable-reduced-motion: true !default;
+$enable-reduced-motion: false !default;
 $enable-smooth-scroll: true !default;
 $enable-grid-classes: true !default;
 $enable-button-pointers: true !default;
@@ -546,7 +546,7 @@ $btn-font-size-xs: $input-btn-font-size-xs !default;
 $btn-border-width: $input-btn-border-width !default;
 
 $btn-font-weight: $font-weight-normal !default;
-$btn-box-shadow: inset 0 1px 0 rgba($white, 0.15), 0 1px 1px rgba($black, 0.075) !default;
+$btn-box-shadow: none !default;
 $btn-focus-width: $input-btn-focus-width !default;
 $btn-focus-box-shadow: $input-btn-focus-box-shadow !default;
 $btn-disabled-opacity: 0.65 !default;
@@ -1171,8 +1171,8 @@ $modal-md: 500px !default;
 $modal-lg: 800px !default;
 $modal-xl: 1140px !default;
 
-$modal-fade-transform: scale(0.3) !default;
-$modal-show-transform: none !default;
+$modal-fade-transform: translate(0, -50px) !default;
+$modal-show-transform: scale(0.2) !default;
 $modal-transition: transform 0.3s ease-out !default;
 $modal-scale-transform: scale(1.02) !default;
 // scss-docs-end modal-variables
