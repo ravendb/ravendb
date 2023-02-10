@@ -536,7 +536,7 @@ namespace Raven.Server.Documents.ETL
 
                     try
                     {
-                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl, responsibleNodes);
+                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, responsibleNodes);
 
                         process.Stop(reason);
                     }
@@ -569,7 +569,12 @@ namespace Raven.Server.Documents.ETL
             });
         }
 
-        private static string GetStopReason(EtlProcess process, List<RavenEtlConfiguration> myRavenEtl, List<SqlEtlConfiguration> mySqlEtl, Dictionary<string, string> responsibleNodes)
+        private static string GetStopReason(
+            EtlProcess process, 
+            List<RavenEtlConfiguration> myRavenEtl, 
+            List<SqlEtlConfiguration> mySqlEtl,
+            List<OlapEtlConfiguration> myOlapEtl, 
+            Dictionary<string, string> responsibleNodes)
         {
             EtlConfigurationCompareDifferences? differences = null;
             var transformationDiffs = new List<(string TransformationName, EtlConfigurationCompareDifferences Difference)>();
@@ -589,6 +594,13 @@ namespace Raven.Server.Documents.ETL
 
                 if (existing != null)
                     differences = sqlEtl.Configuration.Compare(existing, transformationDiffs);
+            }
+            else if (process is OlapEtl olapEtl)
+            {
+                var existing = myOlapEtl.FirstOrDefault(x => x.Name.Equals(olapEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                    differences = olapEtl.Configuration.Compare(existing, transformationDiffs);
             }
             else
             {
