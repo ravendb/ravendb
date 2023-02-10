@@ -113,11 +113,11 @@ public class ShardedBatchCommand : IBatchCommand
 
             switch (behavior)
             {
-                case ShardedBatchBehavior.SingleBucket:
+                case ShardedBatchBehavior.TransactionalSingleBucketOnly:
                     if (previousBucket != bucket)
                         throw new ShardedBatchBehaviorViolationException($"Batch command of type '{commandType}' operates on a shard bucket '{bucket}' which violates the requested sharded batch behavior to operate on a single bucket ('{previousBucket}').");
                     break;
-                case ShardedBatchBehavior.MultiBucket:
+                case ShardedBatchBehavior.NonTransactionalMultiBucket:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(behavior), behavior, null);

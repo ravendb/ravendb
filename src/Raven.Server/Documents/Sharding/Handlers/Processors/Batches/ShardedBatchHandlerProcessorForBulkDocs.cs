@@ -61,13 +61,13 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
     {
         var shardedBatchBehaviorAsString = RequestHandler.GetStringQueryString("shardedBatchBehavior", required: false);
         if (shardedBatchBehaviorAsString == null)
-            return ShardedBatchBehavior.MultiBucket;
+            return ShardedBatchBehavior.NonTransactionalMultiBucket;
 
         if (Enum.TryParse<ShardedBatchBehavior>(shardedBatchBehaviorAsString, ignoreCase: true, out var shardedBatchBehavior) == false)
             throw new InvalidOperationException($"Invalid sharded batch behavior value '{shardedBatchBehaviorAsString}'.");
 
         if (shardedBatchBehavior == ShardedBatchBehavior.Default)
-            return ShardedBatchBehavior.MultiBucket;
+            return ShardedBatchBehavior.NonTransactionalMultiBucket;
 
         return shardedBatchBehavior;
 

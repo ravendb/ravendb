@@ -22,7 +22,7 @@ public class RavenDB_16276 : RavenTestBase
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public void SingleBucket_BatchBehavior_Will_Work_For_Commands_In_Same_Bucket_Store(Options options)
     {
-        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.SingleBucket;
+        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.TransactionalSingleBucketOnly;
 
         using (var store = GetDocumentStore(options))
         {
@@ -45,7 +45,7 @@ public class RavenDB_16276 : RavenTestBase
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public void SingleBucket_BatchBehavior_Will_Throw_For_Commands_In_Different_Bucket_Store(Options options)
     {
-        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.SingleBucket;
+        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.TransactionalSingleBucketOnly;
 
         using (var store = GetDocumentStore(options))
         {
@@ -68,7 +68,7 @@ public class RavenDB_16276 : RavenTestBase
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public void SingleBucket_BatchBehavior_Will_Work_For_Commands_In_Same_Bucket_Patch(Options options)
     {
-        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.SingleBucket;
+        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.TransactionalSingleBucketOnly;
 
         using (var store = GetDocumentStore(options))
         {
@@ -86,7 +86,7 @@ public class RavenDB_16276 : RavenTestBase
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public void SingleBucket_BatchBehavior_Will_Throw_For_Commands_In_Different_Bucket_Patch(Options options)
     {
-        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.SingleBucket;
+        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.TransactionalSingleBucketOnly;
 
         using (var store = GetDocumentStore(options))
         {
@@ -104,7 +104,7 @@ public class RavenDB_16276 : RavenTestBase
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public void SingleBucket_BatchBehavior_Will_Work_For_Commands_In_Same_Bucket_PatchBatch(Options options)
     {
-        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.SingleBucket;
+        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.TransactionalSingleBucketOnly;
 
         using (var store = GetDocumentStore(options))
         {
@@ -127,7 +127,7 @@ public class RavenDB_16276 : RavenTestBase
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
     public void SingleBucket_BatchBehavior_Will_Throw_For_Commands_In_Different_Bucket_PatchBatch(Options options)
     {
-        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.SingleBucket;
+        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.TransactionalSingleBucketOnly;
 
         using (var store = GetDocumentStore(options))
         {
