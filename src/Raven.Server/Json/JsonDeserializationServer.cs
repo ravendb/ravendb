@@ -272,12 +272,6 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, GetEtlTaskProgressCommand.EtlTaskProgressResponse> EtlTaskProgressResponse = GenerateJsonDeserializationRoutine<GetEtlTaskProgressCommand.EtlTaskProgressResponse>();
 
-        internal static readonly Func<BlittableJsonReaderObject, GetEtlTaskStatsCommand.EtlTaskStatsResponse> EtlTaskStatsResponse = GenerateJsonDeserializationRoutine<GetEtlTaskStatsCommand.EtlTaskStatsResponse>();
-
-        internal static readonly Func<BlittableJsonReaderObject, GetEtlTaskDebugStatsCommand.EtlTaskDebugStatsResponse> EtlTaskDebugStatsResponse = GenerateJsonDeserializationRoutine<GetEtlTaskDebugStatsCommand.EtlTaskDebugStatsResponse>();
-
-        internal static readonly Func<BlittableJsonReaderObject, GetEtlTaskPerformanceStatsCommand.EtlTaskPerformanceStatsResponse> EtlTaskPerformanceStatsResponse = GenerateJsonDeserializationRoutine<GetEtlTaskPerformanceStatsCommand.EtlTaskPerformanceStatsResponse>();
-
         internal static readonly Func<BlittableJsonReaderObject, GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse> GetPeriodicBackupTimersCommandResponse = GenerateJsonDeserializationRoutine<GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse>();
 
         internal static readonly Func<BlittableJsonReaderObject, NotificationCenterDatabaseStats> NotificationCenterDatabaseStats = GenerateJsonDeserializationRoutine<NotificationCenterDatabaseStats>();
