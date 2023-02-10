@@ -73,8 +73,8 @@ $step-icon-size: 22px;
             }
             .step-bullet {
                 transform: scale(0.61);
-                background-color: colors.$success;
-                border-color: colors.$success;
+                background-color: colors.$text-muted-color;
+                border-color: colors.$text-muted-color;
                 border-radius: 7px;
                 .bullet-icon-done {
                     opacity: 1;
