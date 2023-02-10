@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.ServerWide.Context;
@@ -114,7 +115,7 @@ public class ShardedBatchCommand : IBatchCommand
             {
                 case ShardedBatchBehavior.SingleBucket:
                     if (previousBucket != bucket)
-                        throw new InvalidOperationException($"Batch command of type '{commandType}' operates on a shard bucket '{bucket}' which violates the requested sharded batch behavior to operate on a single bucket ('{previousBucket}').");
+                        throw new ShardedBatchBehaviorViolationException($"Batch command of type '{commandType}' operates on a shard bucket '{bucket}' which violates the requested sharded batch behavior to operate on a single bucket ('{previousBucket}').");
                     break;
                 case ShardedBatchBehavior.MultiBucket:
                     break;
