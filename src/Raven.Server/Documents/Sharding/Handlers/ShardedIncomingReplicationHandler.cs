@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         private TcpConnectionInfo GetConnectionInfo(ShardReplicationNode node)
         {
             var shardExecutor = _parent.Context.ShardExecutor;
-            using (_parent.Context.AllocateContext(out JsonOperationContext ctx))
+            using (_parent.Context.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 var cmd = new GetTcpInfoCommand("sharded-replication", node.Database);
                 RequestExecutor requestExecutor = null;
