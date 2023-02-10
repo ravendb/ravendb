@@ -813,7 +813,8 @@ namespace Raven.Server.Documents.ETL
 
                                 if (timeLeftToWait > TimeSpan.Zero)
                                 {
-                                    Thread.Sleep(timeLeftToWait);
+                                    if (CancellationToken.WaitHandle.WaitOne(timeLeftToWait))
+                                        return;
                                 }
                             }
 
