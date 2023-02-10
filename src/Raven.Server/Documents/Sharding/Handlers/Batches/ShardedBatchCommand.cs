@@ -38,6 +38,7 @@ public class ShardedBatchCommand : IBatchCommand
     public IEnumerator<SingleShardedCommand> GetCommands(ShardedBatchBehavior behavior)
     {
         int? previousBucket = null;
+        string previousDocumentId = null;
 
         var streamPosition = 0;
         var positionInResponse = 0;
@@ -65,7 +66,7 @@ public class ShardedBatchCommand : IBatchCommand
 
                     list.Add((id, expectedChangeVector));
 
-                    AssertBehavior(behavior, CommandType.BatchPATCH, ref previousBucket, result.Bucket);
+                    AssertBehavior(behavior, CommandType.BatchPATCH, ref previousDocumentId, ref previousBucket, result.Bucket, id);
                 }
 
                 foreach (var kvp in idsByShard)
@@ -89,10 +90,10 @@ public class ShardedBatchCommand : IBatchCommand
                 commandStream = bufferedCommand.ModifyIdentityStream(cmd);
             }
 
-            var cmdResult = GetShardNumberForCommandType(cmd, bufferedCommand.IsServerSideIdentity);
+            var cmdResult = GetShardNumberForCommandType(cmd, bufferedCommand.IsServerSideIdentity, out var documentId);
             var stream = cmd.Type == CommandType.AttachmentPUT ? AttachmentStreams[streamPosition++] : null;
 
-            AssertBehavior(behavior, cmd.Type, ref previousBucket, cmdResult.Bucket);
+            AssertBehavior(behavior, cmd.Type, ref previousDocumentId, ref previousBucket, cmdResult.Bucket, documentId);
 
             yield return new SingleShardedCommand
             {
@@ -103,11 +104,12 @@ public class ShardedBatchCommand : IBatchCommand
             };
         }
 
-        static void AssertBehavior(ShardedBatchBehavior behavior, CommandType commandType, ref int? previousBucket, int bucket)
+        static void AssertBehavior(ShardedBatchBehavior behavior, CommandType commandType, ref string previousDocumentId, ref int? previousBucket, int bucket, string documentId)
         {
             if (previousBucket == null)
             {
                 previousBucket = bucket;
+                previousDocumentId = documentId;
                 return;
             }
 
@@ -115,7 +117,7 @@ public class ShardedBatchCommand : IBatchCommand
             {
                 case ShardedBatchBehavior.TransactionalSingleBucketOnly:
                     if (previousBucket != bucket)
-                        throw new ShardedBatchBehaviorViolationException($"Batch command of type '{commandType}' operates on a shard bucket '{bucket}' which violates the requested sharded batch behavior to operate on a single bucket ('{previousBucket}').");
+                        throw new ShardedBatchBehaviorViolationException($"Batch command of type '{commandType}' operates on a document ID '{documentId}' with shard bucket '{bucket}' which violates the requested sharded batch behavior to operate on a single bucket ('{previousBucket}' from document ID '{previousDocumentId}').");
                     break;
                 case ShardedBatchBehavior.NonTransactionalMultiBucket:
                     break;
@@ -134,15 +136,16 @@ public class ShardedBatchCommand : IBatchCommand
             cmd.Id = Guid.NewGuid().ToString();
     }
 
-    private (int ShardNumber, int Bucket) GetShardNumberForCommandType(BatchRequestParser.CommandData cmd, bool isServerSideIdentity)
+    private (int ShardNumber, int Bucket) GetShardNumberForCommandType(BatchRequestParser.CommandData cmd, bool isServerSideIdentity, out string documentId)
     {
+        documentId = cmd.Id;
         if (isServerSideIdentity)
-            return _databaseContext.GetShardNumberAndBucketForIdentity(_context, cmd.Id);
+            return _databaseContext.GetShardNumberAndBucketForIdentity(_context, documentId);
 
         if (cmd.Type == CommandType.Counters)
-            return _databaseContext.GetShardNumberAndBucketFor(_context, cmd.Id ?? cmd.Counters.DocumentId);
+            documentId ??= cmd.Counters.DocumentId;
 
-        return _databaseContext.GetShardNumberAndBucketFor(_context, cmd.Id);
+        return _databaseContext.GetShardNumberAndBucketFor(_context, documentId);
     }
 
     public void Dispose()

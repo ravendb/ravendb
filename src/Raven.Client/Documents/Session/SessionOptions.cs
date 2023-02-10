@@ -16,7 +16,8 @@ namespace Raven.Client.Documents.Session
         Default,
 
         /// <summary>
-        /// Allow to perform batch commands only on a single bucket, commands will be performed on single shard with ACID transaction guarantees
+        /// Allow to perform batch commands only on a single bucket, commands will be performed on single shard with ACID transaction guarantees.
+        /// A transaction that contains changes that belong to multiple buckets will be rejected by the server.
         /// </summary>
         TransactionalSingleBucketOnly,
 
