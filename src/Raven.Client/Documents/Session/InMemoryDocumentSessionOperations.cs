@@ -1124,13 +1124,14 @@ more responsive application.
                     if (UseOptimisticConcurrency)
                     {
                         if (entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled)
-                            // if the user didn't provide a change vector, we'll test for an empty one
+                            // if the user didn't provide a change vector, we'll test for an empty one indicating it is a new document
                             changeVector = entity.Value.ChangeVector ?? string.Empty;
                         else
                             changeVector = null;
                     }
                     else if (entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced)
-                        changeVector = entity.Value.ChangeVector;
+                        // if the user didn't provide a change vector, we'll test for an empty one indicating it is a new document
+                        changeVector = entity.Value.ChangeVector ?? string.Empty;
                     else
                         changeVector = null;
 
