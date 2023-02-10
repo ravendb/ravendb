@@ -8,8 +8,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Suggestions;
@@ -18,7 +16,6 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Server.Documents.ETL.Stats;
-using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -29,6 +26,7 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
+using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Documents.Sharding.Queries.Suggestions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
@@ -37,6 +35,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Data.BTrees;
+using static Raven.Server.Documents.Sharding.Queries.ShardedQueryResultDocument;
 using IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 
 namespace Raven.Server.Json
@@ -370,14 +369,14 @@ namespace Raven.Server.Json
 
             writer.WriteArray(nameof(result.Suggestions), result.Suggestions);
 
-            if (result is SuggestionResultWithPopularity {SuggestionsWithPopularity: {Values.Count: > 0} suggestionsPopularity})
+            if (result is ShardedSuggestionResult {SuggestionsWithPopularity: {Values.Count: > 0} suggestionsPopularity})
             {
                 writer.WriteComma();
 
                 writer.WritePropertyName(Constants.Documents.Metadata.Key);
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(Constants.Documents.Metadata.SuggestionsPopularityFields);
+                writer.WritePropertyName(Constants.Documents.Metadata.Sharding.Querying.SuggestionsPopularityFields);
                 
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(suggestionsPopularity.Values));
@@ -2074,38 +2073,54 @@ namespace Raven.Server.Json
                 writer.WriteDateTime(document.LastModified, isUtc: true);
             }
 
-            if (document is DocumentWithOrderByFields documentForQuery && documentForQuery.OrderByFields != null)
+            if (document is ShardedQueryResultDocument shardedQueryResult)
             {
-                if (first == false)
+                if (shardedQueryResult.OrderByFields is {Count: > 0})
                 {
-                    writer.WriteComma();
-                }
-                first = false;
-                writer.WritePropertyName(Constants.Documents.Metadata.OrderByFields);
-                writer.WriteStartArray();
-
-                var firstOrderByField = true;
-                foreach (var orderByField in documentForQuery.OrderByFields)
-                {
-                    if (firstOrderByField == false)
-                        writer.WriteComma();
-
-                    firstOrderByField = false;
-                    switch (orderByField.OrderType)
+                    if (first == false)
                     {
-                        case OrderByFieldType.Long:
-                            writer.WriteInteger(orderByField.LongValue);
-                            break;
-                        case OrderByFieldType.Double:
-                            writer.WriteDouble(orderByField.DoubleValue);
-                            break;
-                        default:
-                            writer.WriteString(orderByField.StringValue);
-                            break;
+                        writer.WriteComma();
                     }
+
+                    first = false;
+                    
+                    writer.WritePropertyName(Constants.Documents.Metadata.Sharding.Querying.OrderByFields);
+                    writer.WriteStartArray();
+
+                    var firstOrderByField = true;
+                    foreach (var orderByField in shardedQueryResult.OrderByFields)
+                    {
+                        if (firstOrderByField == false)
+                            writer.WriteComma();
+
+                        firstOrderByField = false;
+                        switch (orderByField.OrderType)
+                        {
+                            case OrderByFieldType.Long:
+                                writer.WriteInteger(orderByField.LongValue);
+                                break;
+                            case OrderByFieldType.Double:
+                                writer.WriteDouble(orderByField.DoubleValue);
+                                break;
+                            default:
+                                writer.WriteString(orderByField.StringValue);
+                                break;
+                        }
+                    }
+
+                    writer.WriteEndArray();
                 }
 
-                writer.WriteEndArray();
+                if (shardedQueryResult.DistinctDataHash is not null)
+                {
+                    if (first == false)
+                    {
+                        writer.WriteComma();
+                    }
+
+                    writer.WritePropertyName(Constants.Documents.Metadata.Sharding.Querying.DistinctDataHash);
+                    writer.WriteString(shardedQueryResult.DistinctDataHash.Value.ToString());
+                }
             }
 
             writer.WriteEndObject();

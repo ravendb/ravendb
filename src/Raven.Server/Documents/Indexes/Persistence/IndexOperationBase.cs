@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
-using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results;
@@ -13,8 +12,6 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Query = Lucene.Net.Search.Query;
-using LuceneAnalyzer = Lucene.Net.Analysis.Analyzer;
-using CoraxAnalyzer = Corax.Analyzer;
 
 namespace Raven.Server.Documents.Indexes.Persistence;
 

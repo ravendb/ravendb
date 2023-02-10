@@ -17,7 +17,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public sealed partial class LuceneSuggestionIndexReader : SuggestionIndexReaderBase
+    public class LuceneSuggestionIndexReader : SuggestionIndexReaderBase
     {
         private readonly IndexSearcher _searcher;
         private readonly IDisposable _releaseSearcher;
@@ -301,7 +301,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return result.ToArray();
         }
 
-        partial void AddPopularity(SuggestWord suggestion, ref SuggestionResult result);
+        internal virtual void AddPopularity(SuggestWord suggestion, ref SuggestionResult result)
+        {
+
+        }
 
         public override void Dispose()
         {

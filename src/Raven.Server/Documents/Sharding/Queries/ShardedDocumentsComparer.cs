@@ -104,7 +104,7 @@ public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
         if (blittable.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
             ThrowIfCannotFindMetadata(blittable);
 
-        if (metadata.TryGet(Constants.Documents.Metadata.OrderByFields, out BlittableJsonReaderArray orderByFields) == false)
+        if (metadata.TryGet(Constants.Documents.Metadata.Sharding.Querying.OrderByFields, out BlittableJsonReaderArray orderByFields) == false)
             ThrowIfCannotFindOrderByFields(metadata);
 
         return orderByFields[index].ToString();
@@ -120,7 +120,7 @@ public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
         if (blittable.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
             ThrowIfCannotFindMetadata(blittable);
 
-        if (metadata.TryGet(Constants.Documents.Metadata.OrderByFields, out BlittableJsonReaderArray orderByFields) == false)
+        if (metadata.TryGet(Constants.Documents.Metadata.Sharding.Querying.OrderByFields, out BlittableJsonReaderArray orderByFields) == false)
             ThrowIfCannotFindOrderByFields(metadata);
 
         var arrayValue = orderByFields[index];
@@ -145,7 +145,7 @@ public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
         if (blittable.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
             ThrowIfCannotFindMetadata(blittable);
 
-        if (metadata.TryGet(Constants.Documents.Metadata.OrderByFields, out BlittableJsonReaderArray orderByFields) == false)
+        if (metadata.TryGet(Constants.Documents.Metadata.Sharding.Querying.OrderByFields, out BlittableJsonReaderArray orderByFields) == false)
             ThrowIfCannotFindOrderByFields(metadata);
 
         var arrayValue = orderByFields[index];
@@ -173,7 +173,7 @@ public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
 
     private static void ThrowIfCannotFindOrderByFields(BlittableJsonReaderObject metadata)
     {
-        throw new InvalidOperationException($"Unable to find {Constants.Documents.Metadata.OrderByFields} in metadata: {metadata}");
+        throw new InvalidOperationException($"Unable to find {Constants.Documents.Metadata.Sharding.Querying.OrderByFields} in metadata: {metadata}");
     }
 
     private static void ThrowIfNotExpectedType(string expectedType, object actualValue)

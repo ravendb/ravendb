@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
@@ -22,6 +23,7 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
 {
     private readonly IndexQueryServerSide _query;
     private readonly IComparer<BlittableJsonReaderObject> _sortingComparer;
+    private readonly HashSet<int> _alreadySeenProjections;
 
     public ShardedQueryOperation(IndexQueryServerSide query,
         TransactionOperationContext context,
@@ -32,6 +34,9 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
     {
         _query = query;
         _sortingComparer = sortingComparer ?? new RoundRobinComparer();
+
+        if (query.Metadata.IsDistinct)
+            _alreadySeenProjections = new HashSet<int>();
     }
 
     public bool FromStudio => HttpRequest.IsFromStudio();
@@ -139,13 +144,19 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
             {
                 foreach (BlittableJsonReaderObject item in array)
                 {
+                    if (_query.Metadata.IsDistinct)
+                    {
+                        if (CanIncludeResult(item) == false) 
+                            continue;
+                    }
+
                     if (FromStudio == false)
                     {
                         yield return item;
                         continue;
                     }
 
-                    yield return item.AddToMetadata(Context, Constants.Documents.Metadata.ShardNumber, shardNumber);
+                    yield return item.AddToMetadata(Context, Constants.Documents.Metadata.Sharding.ShardNumber, shardNumber);
                 }
             }
         }
@@ -153,6 +164,17 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
         result.RegisterSpatialProperties(_query);
 
         return result;
+    }
+
+    private bool CanIncludeResult(BlittableJsonReaderObject item)
+    {
+        if (item.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+            throw new InvalidOperationException($"Couldn't find metadata in a query result: {item}");
+
+        if (metadata.TryGet(Constants.Documents.Metadata.Sharding.Querying.DistinctDataHash, out LazyStringValue queryResultHash) == false)
+            throw new InvalidOperationException($"Couldn't find {Constants.Documents.Metadata.Sharding.Querying.DistinctDataHash} metadata in a query result: {item}");
+
+        return _alreadySeenProjections.Add(queryResultHash.GetHashCode());
     }
 
     private class RoundRobinComparer : IComparer<BlittableJsonReaderObject>

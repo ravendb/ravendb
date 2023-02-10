@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Sharding.Operations
 
                     var docId = cmdResult.GetMetadata().GetId();
                     var result = fromStudio ? 
-                        cmdResult.AddToMetadata(_context, Constants.Documents.Metadata.ShardNumber, shardNumber) : 
+                        cmdResult.AddToMetadata(_context, Constants.Documents.Metadata.Sharding.ShardNumber, shardNumber) : 
                         cmdResult.Clone(_context);
                     docs.TryAdd(docId, result);
                 }

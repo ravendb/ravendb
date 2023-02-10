@@ -25,6 +25,7 @@ using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Counters;
@@ -83,6 +84,8 @@ namespace Raven.Server.Documents.Indexes
 
         public DatabaseIndexCreateController Create;
 
+        public IIndexReadOperationFactory IndexReadOperationFactory;
+
         public readonly DatabaseIndexHasChangedController HasChanged;
 
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
@@ -96,6 +99,7 @@ namespace Raven.Server.Documents.Indexes
             Create = new DatabaseIndexCreateController(documentDatabase);
             Delete = new DatabaseIndexDeleteController(documentDatabase);
             HasChanged = new DatabaseIndexHasChangedController(documentDatabase);
+            IndexReadOperationFactory = new DatabaseIndexReadOperationFactory();
             Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
 
             var stoppedConcurrentIndexBatches = _documentDatabase.Configuration.Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory;

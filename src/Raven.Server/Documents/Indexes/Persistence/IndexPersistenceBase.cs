@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
 using Sparrow.Json;
@@ -12,10 +11,13 @@ namespace Raven.Server.Documents.Indexes.Persistence
     {
         protected readonly Index _index;
 
-        protected IndexPersistenceBase(Index index)
+        protected IndexPersistenceBase(Index index, IIndexReadOperationFactory indexReadOperationFactory)
         {
+            IndexReadOperationFactory = indexReadOperationFactory;
             _index = index;
         }
+
+        protected IIndexReadOperationFactory IndexReadOperationFactory { get; }
 
         public abstract bool HasWriter { get; }
 

@@ -66,7 +66,7 @@ public class ShardedSuggestionQueryOperation : AbstractShardedQueryOperation<Sug
                 BlittableJsonReaderObject popularityMetadata = null;
 
                 if (suggestionJson.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
-                    metadata.TryGet(Constants.Documents.Metadata.SuggestionsPopularityFields, out popularityMetadata);
+                    metadata.TryGet(Constants.Documents.Metadata.Sharding.Querying.SuggestionsPopularityFields, out popularityMetadata);
 
 
                 if (suggestions.TryGetValue(fieldName, out CombinedSuggestions combinedSuggestions) == false)
@@ -117,7 +117,7 @@ public class ShardedSuggestionQueryOperation : AbstractShardedQueryOperation<Sug
 
             aggregatedSuggestion.SuggestionsWithPopularity ??= new Dictionary<string, SuggestWord>();
 
-            var popularity = deserializer.FromBlittable<SuggestionResultWithPopularity.Popularity>(popularityObject, "suggestion/popularity");
+            var popularity = deserializer.FromBlittable<ShardedSuggestionResult.Popularity>(popularityObject, "suggestion/popularity");
 
             foreach (var p in popularity.Values)
             {

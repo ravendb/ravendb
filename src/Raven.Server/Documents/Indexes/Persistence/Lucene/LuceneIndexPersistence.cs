@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly object _readersLock = new object();
 
-        public LuceneIndexPersistence(Index index) : base(index)
+        public LuceneIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
         {
             _logger = LoggingSource.Instance.GetLogger<LuceneIndexPersistence>(index.DocumentDatabase.Name);
             _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
@@ -440,7 +440,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             CheckDisposed();
             CheckInitialized();
 
-            return new LuceneIndexReadOperation(_index, _directory, _luceneIndexSearcherHolder, _index._queryBuilderFactories, readTransaction, query);
+            return IndexReadOperationFactory.CreateLuceneIndexReadOperation(_index, _directory, _luceneIndexSearcherHolder, _index._queryBuilderFactories,
+                readTransaction, query);
         }
 
         public override IndexFacetReadOperationBase OpenFacetedIndexReader(Transaction readTransaction)
@@ -462,7 +463,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (!_suggestionsIndexSearcherHolders.TryGetValue(field, out LuceneIndexSearcherHolder holder))
                 throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
 
-            return new LuceneSuggestionIndexReader(_index, directory, holder, readTransaction);
+            return IndexReadOperationFactory.CreateLuceneSuggestionIndexReader(_index, directory, holder, readTransaction);
         }
 
         internal override void RecreateSearcher(Transaction asOfTx)

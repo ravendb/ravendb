@@ -829,12 +829,12 @@ namespace Raven.Server.Documents.Indexes
             {
                 case SearchEngineType.None:
                 case SearchEngineType.Lucene:
-                    IndexPersistence = new LuceneIndexPersistence(this);
+                    IndexPersistence = new LuceneIndexPersistence(this, documentDatabase.IndexStore.IndexReadOperationFactory);
                     SearchEngineType = SearchEngineType.Lucene;
                     break;
                 case SearchEngineType.Corax:
                     RavenConfiguration.AssertCanUseCoraxFeature(DocumentDatabase.ServerStore.Configuration);
-                    IndexPersistence = new CoraxIndexPersistence(this);
+                    IndexPersistence = new CoraxIndexPersistence(this, documentDatabase.IndexStore.IndexReadOperationFactory);
                     SearchEngineType = SearchEngineType.Corax;
                     break;
                 default:

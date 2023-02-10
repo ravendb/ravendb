@@ -46,7 +46,7 @@ public readonly struct ShardedSubscriptionTryoutOperation : IShardedOperation<Ge
         {
             foreach (BlittableJsonReaderObject obj in shardResult.Result.Results)
             {
-                objList.Add(obj.AddToMetadata(_context, Constants.Documents.Metadata.ShardNumber, shardNumber));
+                objList.Add(obj.AddToMetadata(_context, Constants.Documents.Metadata.Sharding.ShardNumber, shardNumber));
             }
         }
 
