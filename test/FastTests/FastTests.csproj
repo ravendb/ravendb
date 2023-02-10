@@ -22,6 +22,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Blittable\BlittableJsonWriterTests\Jsons\*.json" />
     <None Remove="Corax\Bugs\Corax.Set.Adds.txt" />
+    <None Remove="Voron\CompactTrees\RavenDB-19703.replay" />
+    <None Remove="Voron\CompactTrees\RavenDB-19937.replay" />
     <EmbeddedResource Include="Corax\Bugs\Corax.Set.Adds.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
@@ -70,6 +72,8 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\RavenDB_17185\memInfo.txt" />
+    <EmbeddedResource Include="Voron\CompactTrees\RavenDB-19703.replay" />
+    <EmbeddedResource Include="Voron\CompactTrees\RavenDB-19937.replay" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />

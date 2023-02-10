@@ -1958,7 +1958,11 @@ namespace Voron.Data.CompactTrees
 
             key = new Span<byte>(entryPos + lenOfKeyLen, keyLen);
             entryPos += keyLen + lenOfKeyLen;
-            value = ZigZagEncoding.Decode<long>(entryPos, out var valLen);
+
+            value = ZigZagEncoding.DecodeCompact<long>(entryPos, out var valLen, out var success);
+            if (success == false)
+                InvalidBufferContent();
+
             entryPos += valLen;
             return (int)(entryPos - page.Pointer - entryOffset);
         }
@@ -1982,7 +1986,7 @@ namespace Voron.Data.CompactTrees
             pos += keyLen;
             pos += lenOfKeyLen;
 
-            VariableSizeEncoding.ReadCompact<int>(pos, out var lenOfValue, out success);
+            ZigZagEncoding.DecodeCompact<long>(pos, out var lenOfValue, out success);
             if (success == false)
                 InvalidBufferContent();
 
