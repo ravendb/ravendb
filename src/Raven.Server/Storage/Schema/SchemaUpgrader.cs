@@ -13,13 +13,13 @@ namespace Raven.Server.Storage.Schema
     {
         internal sealed class CurrentVersion
         {
-            public const int ServerVersion = 53_001;
+            public const int ServerVersion = 60_000;
 
             public const int ConfigurationVersion = 50_000;
 
-            public const int DocumentsVersion = 50_002;
+            public const int DocumentsVersion = 60_000;
 
-            public const int LuceneIndexVersion = 54_000;
+            public const int LuceneIndexVersion = 60_000;
 
             public const int CoraxIndexVersion = 60_000;
 
