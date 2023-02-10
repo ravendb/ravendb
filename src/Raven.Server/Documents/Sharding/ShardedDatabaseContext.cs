@@ -83,12 +83,12 @@ namespace Raven.Server.Documents.Sharding
             Replication = new ShardedReplicationContext(this, serverStore);
         }
 
-        public IDisposable AllocateContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);
+        public IDisposable AllocateOperationContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);
 
         public void UpdateDatabaseRecord(RawDatabaseRecord record, long index)
         {
             UpdateConfiguration(record.Settings);
-            
+
             if (DictionaryExtensions.KeysEqual(record.Sharding.Shards, _record.Sharding.Shards) == false)
             {
                 using (var se = ShardExecutor)
@@ -154,38 +154,20 @@ namespace Raven.Server.Documents.Sharding
 
             _databaseShutdown.Cancel();
 
-            try
-            {
-                Replication.Dispose();
-            }
-            catch
-            {
-                // ignored
-            }
-            try
-            {
-                ShardExecutor.Dispose();
-            }
-            catch
-            {
-                // ignored
-            }
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ShardedDatabaseContext)} {DatabaseName}");
 
-            try
-            {
-                AllOrchestratorNodesExecutor.Dispose();
-            }
-            catch
-            {
-                // ignored
-            }
+            exceptionAggregator.Execute(() => Replication?.Dispose());
+
+            exceptionAggregator.Execute(() => ShardExecutor?.Dispose());
+
+            exceptionAggregator.Execute(() => AllOrchestratorNodesExecutor?.Dispose());
 
             foreach (var connection in Subscriptions.SubscriptionsConnectionsState)
-            {
-                connection.Value.Dispose();
-            }
+                exceptionAggregator.Execute(() => connection.Value.Dispose());
 
-            _databaseShutdown.Dispose();
+            exceptionAggregator.Execute(() => _databaseShutdown.Dispose());
+
+            exceptionAggregator.ThrowIfNeeded();
         }
     }
 }

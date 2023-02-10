@@ -160,7 +160,7 @@ namespace Raven.Server.Smuggler.Documents
                 _actions = actions;
                 _last = _actions.Last().Value;
                 _options = options;
-                _rtnCtx = DatabaseContext.AllocateContext(out _context);
+                _rtnCtx = DatabaseContext.AllocateOperationContext(out _context);
             }
 
             public JsonOperationContext GetContextForNewCompareExchangeValue() => GetContextForNewDocument();
@@ -172,7 +172,7 @@ namespace Raven.Server.Smuggler.Documents
                     var old = _rtnCtx;
                     using (_prevRtnCtx)
                     {
-                        _rtnCtx = DatabaseContext.AllocateContext(out _context);
+                        _rtnCtx = DatabaseContext.AllocateOperationContext(out _context);
                     }
                     _prevRtnCtx = old;
                 }
