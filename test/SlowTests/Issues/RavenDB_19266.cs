@@ -20,7 +20,7 @@ namespace SlowTests.Issues
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        internal class Order
+        private class Order
         {
             public List<string> Lines = new();
         }
