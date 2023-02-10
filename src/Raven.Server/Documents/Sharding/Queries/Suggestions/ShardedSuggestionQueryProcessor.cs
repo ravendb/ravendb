@@ -52,7 +52,7 @@ public class ShardedSuggestionQueryProcessor : AbstractShardedQueryProcessor<Sha
 
         var result = shardedReadResult.Result;
 
-        await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex);
+        await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex, scope);
 
         return result;
     }

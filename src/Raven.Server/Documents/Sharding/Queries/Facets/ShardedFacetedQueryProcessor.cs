@@ -111,7 +111,7 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
 
         var result = shardedReadResult.Result;
 
-        await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex);
+        await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex, scope);
 
         if (operation.MissingDocumentIncludes is { Count: > 0 })
         {
