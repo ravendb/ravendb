@@ -30,6 +30,21 @@ namespace Raven.Client.Documents.Commands.Batches
 
     public class ShardedBatchOptions
     {
+        internal static readonly ShardedBatchOptions MultiBucket = new() { BatchBehavior = ShardedBatchBehavior.MultiBucket };
+
+        internal static readonly ShardedBatchOptions SingleBucket = new() { BatchBehavior = ShardedBatchBehavior.SingleBucket };
+
         public ShardedBatchBehavior BatchBehavior { get; set; }
+
+        internal static ShardedBatchOptions For(ShardedBatchBehavior behavior)
+        {
+            return behavior switch
+            {
+                ShardedBatchBehavior.Default => null,
+                ShardedBatchBehavior.SingleBucket => SingleBucket,
+                ShardedBatchBehavior.MultiBucket => MultiBucket,
+                _ => throw new ArgumentOutOfRangeException(nameof(behavior), behavior, null)
+            };
+        }
     }
 }

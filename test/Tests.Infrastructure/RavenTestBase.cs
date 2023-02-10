@@ -183,11 +183,7 @@ namespace FastTests
                         Certificate = options.ClientCertificate,
                         Conventions =
                         {
-                            DisableTopologyCache = true,
-                            Sharding =
-                            {
-                                BatchBehavior = ShardedBatchBehavior.MultiBucket
-                            }
+                            DisableTopologyCache = true
                         }
                     };
 

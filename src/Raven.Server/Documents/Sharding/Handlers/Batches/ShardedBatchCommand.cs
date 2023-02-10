@@ -64,7 +64,7 @@ public class ShardedBatchCommand : IBatchCommand
 
                     list.Add((id, expectedChangeVector));
 
-                    AssertBehavior(behavior, ref previousBucket, result.Bucket);
+                    AssertBehavior(behavior, CommandType.BatchPATCH, ref previousBucket, result.Bucket);
                 }
 
                 foreach (var kvp in idsByShard)
@@ -91,7 +91,7 @@ public class ShardedBatchCommand : IBatchCommand
             var cmdResult = GetShardNumberForCommandType(cmd, bufferedCommand.IsServerSideIdentity);
             var stream = cmd.Type == CommandType.AttachmentPUT ? AttachmentStreams[streamPosition++] : null;
 
-            AssertBehavior(behavior, ref previousBucket, cmdResult.Bucket);
+            AssertBehavior(behavior, cmd.Type, ref previousBucket, cmdResult.Bucket);
 
             yield return new SingleShardedCommand
             {
@@ -102,7 +102,7 @@ public class ShardedBatchCommand : IBatchCommand
             };
         }
 
-        static void AssertBehavior(ShardedBatchBehavior behavior, ref int? previousBucket, int bucket)
+        static void AssertBehavior(ShardedBatchBehavior behavior, CommandType commandType, ref int? previousBucket, int bucket)
         {
             if (previousBucket == null)
             {
@@ -114,7 +114,7 @@ public class ShardedBatchCommand : IBatchCommand
             {
                 case ShardedBatchBehavior.SingleBucket:
                     if (previousBucket != bucket)
-                        throw new InvalidOperationException("Batch violates single bucket batch behavior.");
+                        throw new InvalidOperationException($"Batch command of type '{commandType}' operates on a shard bucket '{bucket}' which violates the requested sharded batch behavior to operate on a single bucket ('{previousBucket}').");
                     break;
                 case ShardedBatchBehavior.MultiBucket:
                     break;

@@ -250,8 +250,9 @@ namespace Raven.Client.Documents.Session
             DisableAtomicDocumentWritesInClusterWideTransaction = options.DisableAtomicDocumentWritesInClusterWideTransaction;
 
             var shardedBatchBehavior = options.ShardedBatchBehavior ?? _requestExecutor.Conventions.Sharding.BatchBehavior;
-            if (shardedBatchBehavior != ShardedBatchBehavior.SingleBucket)
-                _saveChangesOptions = new BatchOptions { ShardedOptions = new ShardedBatchOptions { BatchBehavior = shardedBatchBehavior } };
+            var shardedBatchOptions = ShardedBatchOptions.For(shardedBatchBehavior);
+            if (shardedBatchOptions != null)
+                _saveChangesOptions = new BatchOptions { ShardedOptions = ShardedBatchOptions.For(shardedBatchBehavior) };
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,

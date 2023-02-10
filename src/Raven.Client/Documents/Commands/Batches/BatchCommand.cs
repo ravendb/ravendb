@@ -186,7 +186,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
             if (shardedOptions != null)
             {
-                if (shardedOptions.BatchBehavior != ShardedBatchBehavior.SingleBucket)
+                if (shardedOptions.BatchBehavior != ShardedBatchBehavior.Default)
                     sb.Append("&shardedBatchBehavior=").Append(shardedOptions.BatchBehavior);
             }
         }

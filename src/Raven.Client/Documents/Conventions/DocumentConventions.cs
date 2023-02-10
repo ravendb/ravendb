@@ -174,7 +174,7 @@ namespace Raven.Client.Documents.Conventions
             internal ShardingConventions(DocumentConventions conventions)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-                _batchBehavior = ShardedBatchBehavior.SingleBucket;
+                _batchBehavior = ShardedBatchBehavior.Default;
             }
         }
 
