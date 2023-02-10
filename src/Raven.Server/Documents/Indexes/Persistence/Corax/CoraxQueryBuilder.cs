@@ -257,8 +257,8 @@ internal static class CoraxQueryBuilder
 
                     var match = valueType switch
                     {
-                        ValueTokenType.Double => new CoraxBooleanItem(indexSearcher, index, fieldMetadata, value, operation),
-                        ValueTokenType.Long => new CoraxBooleanItem(indexSearcher, index, fieldMetadata, value, operation),
+                        ValueTokenType.Double => CoraxBooleanItem.Build(indexSearcher, index, fieldMetadata, value, operation),
+                        ValueTokenType.Long => CoraxBooleanItem.Build(indexSearcher, index, fieldMetadata, value, operation),
                         ValueTokenType.True or
                             ValueTokenType.False or
                             ValueTokenType.Null or
@@ -275,7 +275,7 @@ internal static class CoraxQueryBuilder
                     return match;
 
 
-                    CoraxBooleanItem HandleStringUnaryMatch(Parameters queryEnvironment)
+                    IQueryMatch HandleStringUnaryMatch(Parameters queryEnvironment)
                     {
                         if (exact && queryEnvironment.Metadata.IsDynamic)
                         {
@@ -287,10 +287,10 @@ internal static class CoraxQueryBuilder
                         if (value == null)
                         {
                             if (operation is UnaryMatchOperation.Equals)
-                                return new CoraxBooleanItem(indexSearcher, index, fieldMetadata, null, UnaryMatchOperation.Equals);
+                                return CoraxBooleanItem.Build(indexSearcher, index, fieldMetadata, null, UnaryMatchOperation.Equals);
                             else if (operation is UnaryMatchOperation.NotEquals)
                                 //Please consider if we ever need to support this.
-                                return new CoraxBooleanItem(indexSearcher, index, fieldMetadata, null, UnaryMatchOperation.NotEquals);
+                                return CoraxBooleanItem.Build(indexSearcher, index, fieldMetadata, null, UnaryMatchOperation.NotEquals);
                             else
                                 throw new NotSupportedException($"Unhandled operation: {operation}");
                         }
@@ -299,7 +299,7 @@ internal static class CoraxQueryBuilder
                         if (highlightingTerm != null)
                             highlightingTerm.Values = valueAsString;
 
-                        return new CoraxBooleanItem(indexSearcher, index, fieldMetadata, valueAsString, operation);
+                        return CoraxBooleanItem.Build(indexSearcher, index, fieldMetadata, valueAsString, operation);
                     }
                 }
             }
@@ -548,7 +548,7 @@ internal static class CoraxQueryBuilder
         return ToCoraxQuery(builderParameters, expression.Arguments[0], true, proximity);
     }
 
-    private static CoraxBooleanItem TranslateBetweenQuery(Parameters builderParameters, BetweenExpression be, bool exact)
+    private static IQueryMatch TranslateBetweenQuery(Parameters builderParameters, BetweenExpression be, bool exact)
     {
         var metadata = builderParameters.Metadata;
         var queryParameters = builderParameters.QueryParameters;
@@ -576,11 +576,11 @@ internal static class CoraxQueryBuilder
         return (valueFirstType, valueSecondType) switch
         {
             (ValueTokenType.String, ValueTokenType.String) => HandleStringBetween(),
-            _ => new CoraxBooleanItem(builderParameters.IndexSearcher, index, fieldMetadata, valueFirst, valueSecond, UnaryMatchOperation.Between, leftSideOperation,
+            _ => CoraxBooleanItem.Build(builderParameters.IndexSearcher, index, fieldMetadata, valueFirst, valueSecond, UnaryMatchOperation.Between, leftSideOperation,
                 rightSideOperation)
         };
 
-        CoraxBooleanItem HandleStringBetween()
+        IQueryMatch HandleStringBetween()
         {
             exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
             var valueFirstAsString = QueryBuilderHelper.CoraxGetValueAsString(valueFirst);
@@ -592,7 +592,7 @@ internal static class CoraxQueryBuilder
                 builderParameters.HighlightingTerms[fieldName] = highlightingTerm;
             }
 
-            return new CoraxBooleanItem(builderParameters.IndexSearcher, index, fieldMetadata, valueFirstAsString, valueSecondAsString, UnaryMatchOperation.Between,
+            return CoraxBooleanItem.Build(builderParameters.IndexSearcher, index, fieldMetadata, valueFirstAsString, valueSecondAsString, UnaryMatchOperation.Between,
                 leftSideOperation, rightSideOperation);
         }
     }

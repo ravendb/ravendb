@@ -23,7 +23,7 @@ public struct CoraxBooleanItem : IQueryMatch
     public float? Boosting;
     public long Count { get; }
 
-    public CoraxBooleanItem(IndexSearcher searcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation)
+    private CoraxBooleanItem(IndexSearcher searcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation)
     {
         Field = field;
         var ticks = default(long);
@@ -49,7 +49,23 @@ public struct CoraxBooleanItem : IQueryMatch
         }
     }
 
-    public CoraxBooleanItem(IndexSearcher searcher, Index index, FieldMetadata field, object term1, object term2, UnaryMatchOperation operation, UnaryMatchOperation left, UnaryMatchOperation right) : this(searcher, index, field, term1, operation)
+    public static IQueryMatch Build(IndexSearcher searcher, Index index, FieldMetadata field, object term, UnaryMatchOperation operation)
+    {
+        var cbi = new CoraxBooleanItem(searcher, index, field, term, operation);
+        if (field.HasBoost)
+            return cbi.Materialize();
+        return cbi;
+    }
+    
+    public static IQueryMatch Build(IndexSearcher searcher, Index index, FieldMetadata field, object term1, object term2, UnaryMatchOperation operation, UnaryMatchOperation left, UnaryMatchOperation right)
+    {
+        var cbi = new CoraxBooleanItem(searcher, index, field, term1, term2, operation, left, right);
+        if (field.HasBoost)
+            return cbi.Materialize();
+        return cbi;
+    }
+    
+    private CoraxBooleanItem(IndexSearcher searcher, Index index, FieldMetadata field, object term1, object term2, UnaryMatchOperation operation, UnaryMatchOperation left, UnaryMatchOperation right) : this(searcher, index, field, term1, operation)
     {
         //Between handler
         
