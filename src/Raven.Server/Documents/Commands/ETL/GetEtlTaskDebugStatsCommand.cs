@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Net.Http;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Server.Documents.ETL.Stats;
-using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.ETL;
@@ -39,10 +39,11 @@ internal class GetEtlTaskDebugStatsCommand : RavenCommand<EtlTaskDebugStats[]>
         if (response == null)
             return;
 
-        Result = JsonDeserializationServer.EtlTaskDebugStatsResponse(response).Results;
+        Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<EtlTaskDebugStatsResponse>(response).Results;
     }
 
-    internal class EtlTaskDebugStatsResponse
+    // ReSharper disable once ClassNeverInstantiated.Local
+    private class EtlTaskDebugStatsResponse
     {
         public EtlTaskDebugStats[] Results { get; set; }
     }
