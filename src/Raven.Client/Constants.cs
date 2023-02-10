@@ -265,11 +265,19 @@ namespace Raven.Client
 
                 public const string Etag = "@etag";
 
-                internal const string OrderByFields = "@order-by-fields";
+                internal class Sharding
+                {
+                    internal const string ShardNumber = "@shard-number";
 
-                internal const string ShardNumber = "@shard-number";
+                    internal class Querying
+                    {
+                        internal const string OrderByFields = "@order-by-fields";
 
-                internal const string SuggestionsPopularityFields = "@suggestions-popularity";
+                        internal const string SuggestionsPopularityFields = "@suggestions-popularity";
+
+                        internal const string DistinctDataHash = "@distinct-data-hash";
+                    }
+                }
             }
 
             public class Collections

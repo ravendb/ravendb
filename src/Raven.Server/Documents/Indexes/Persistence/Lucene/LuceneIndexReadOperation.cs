@@ -23,7 +23,6 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Explanation;
-using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.MoreLikeThis.Lucene;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
@@ -42,22 +41,23 @@ using Query = Lucene.Net.Search.Query;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public sealed partial class LuceneIndexReadOperation : IndexReadOperationBase
+    public class LuceneIndexReadOperation : IndexReadOperationBase
     {
         private static readonly Sort SortByFieldScore = new Sort(SortField.FIELD_SCORE);
         private readonly IndexType _indexType;
         private readonly bool _indexHasBoostedFields;
 
-        private readonly IndexSearcher _searcher;
         private readonly LuceneRavenPerFieldAnalyzerWrapper _analyzer;
         private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
         private readonly int _maxNumberOfOutputsPerDocument;
 
-        private readonly IState _state;
+        protected readonly IState _state;
 
         private FastVectorHighlighter _highlighter;
         private FieldQuery _highlighterQuery;
+
+        protected readonly IndexSearcher _searcher;
 
         public LuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder, QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query)
             : base(index, LoggingSource.Instance.GetLogger<LuceneIndexReadOperation>(index._indexStorage.DocumentDatabase.Name), queryBuilderFactories, query)
@@ -182,9 +182,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         // We are going to return the documents to the caller in a streaming fashion.
                         bool markedAsSkipped = false;
                         var r = retriever.Get(ref retrieverInput, token);
+
+                        var parameters = new CreateQueryResultParameters(query, luceneQuery, scoreDoc, document, documentsContext, scope, highlightingScope,
+                            explanationsScope, explanationOptions, isDistinctCount);
+
                         if (r.Document != null)
                         {
-                            var qr = CreateQueryResult(r.Document);
+                            var qr = CreateQueryResult(r.Document, parameters, ref markedAsSkipped, skippedResults, ref returnedResults);
+
                             if (qr.Result == null)
                                 continue;
 
@@ -195,7 +200,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             int numberOfProjectedResults = 0;
                             foreach (Document item in r.List)
                             {
-                                var qr = CreateQueryResult(item);
+                                var qr = CreateQueryResult(item, parameters, ref markedAsSkipped, skippedResults, ref returnedResults);
+
                                 if (qr.Result == null)
                                     continue;
 
@@ -211,56 +217,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         else
                         {
                             skippedResults.Value++;
-                        }
-
-                        QueryResult CreateQueryResult(Document d)
-                        {
-                            // We check again if we are going to be including this document.                             
-                            if (scope.TryIncludeInResults(d) == false)
-                            {
-                                d?.Dispose();
-
-                                if (markedAsSkipped == false)
-                                {
-                                    skippedResults.Value++;
-                                    markedAsSkipped = true;
-                                }
-
-                                return default;
-                            }
-
-                            returnedResults++;
-
-                            if (isDistinctCount == false)
-                            {
-                                // If there are highlightings we retrieve them.
-                                Dictionary<string, Dictionary<string, string[]>> highlightings = null;
-                                if (query.Metadata.HasHighlightings)
-                                {
-                                    using (highlightingScope?.Start())
-                                        highlightings = GetHighlighterResults(query, _searcher, scoreDoc, d, document, documentsContext);
-                                }
-
-                                // If we have been asked for explanations, we get them. 
-                                ExplanationResult explanation = null;
-                                if (query.Metadata.HasExplanations)
-                                {
-                                    using (explanationsScope?.Start())
-                                    {
-                                        if (explanationOptions == null)
-                                            explanationOptions = query.Metadata.Explanation.GetOptions(documentsContext, query.QueryParameters);
-
-                                        explanation = GetQueryExplanations(explanationOptions, luceneQuery, _searcher, scoreDoc, d, document);
-                                    }
-                                }
-
-                                if (ShouldAddOrderByFieldValues(query))
-                                    AddOrderByFields(query, scoreDoc.Doc, ref d);
-                                
-                                // We return the document to the caller. 
-                                return new QueryResult { Result = d, Highlightings = highlightings, Explanation = explanation };
-                            }
-                            return default;
                         }
 
                         if (returnedResults == pageSize)
@@ -286,6 +242,56 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private static void ThrowQueryWantToExceedsInt32()
         {
             throw new InvalidDataException($"Lucene entries limit is int32 documents. ({int.MaxValue}).");
+        }
+
+        protected virtual QueryResult CreateQueryResult(Document doc, CreateQueryResultParameters parameters, ref bool markedAsSkipped, Reference<long> skippedResults, ref int returnedResults)
+        {
+            // We check again if we are going to be including this document.                             
+            if (parameters.QueryingScope.TryIncludeInResults(doc) == false)
+            {
+                doc?.Dispose();
+
+                if (markedAsSkipped == false)
+                {
+                    skippedResults.Value++;
+                    markedAsSkipped = true;
+                }
+
+                return default;
+            }
+
+            returnedResults++;
+
+            if (parameters.IsDistinctCount == false)
+            {
+                // If there are highlightings we retrieve them.
+                Dictionary<string, Dictionary<string, string[]>> highlightings = null;
+                if (parameters.Query.Metadata.HasHighlightings)
+                {
+                    using (parameters.HighlightingScope?.Start())
+                        highlightings = GetHighlighterResults(parameters.Query, _searcher, parameters.ScoreDoc, doc, parameters.LuceneDocument, parameters.DocumentsContext);
+                }
+
+                // If we have been asked for explanations, we get them. 
+                ExplanationResult explanation = null;
+                if (parameters.Query.Metadata.HasExplanations)
+                {
+                    using (parameters.ExplanationsScope?.Start())
+                    {
+                        var explanationOptions = parameters.ExplanationOptions;
+
+                        if (explanationOptions == null)
+                            explanationOptions = parameters.Query.Metadata.Explanation.GetOptions(parameters.DocumentsContext, parameters.Query.QueryParameters);
+
+                        explanation = GetQueryExplanations(explanationOptions, parameters.LuceneQuery, _searcher, parameters.ScoreDoc, doc, parameters.LuceneDocument);
+                    }
+                }
+
+                // We return the document to the caller. 
+                return new QueryResult {Result = doc, Highlightings = highlightings, Explanation = explanation};
+            }
+
+            return default;
         }
 
         private ExplanationResult GetQueryExplanations(ExplanationOptions options, Query luceneQuery, IndexSearcher searcher, ScoreDoc scoreDoc, Document document, global::Lucene.Net.Documents.Document luceneDocument)
@@ -372,8 +378,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             return results;
         }
-
-        partial void AddOrderByFields(IndexQueryServerSide query, int doc, ref Document d);
 
         private void SetupHighlighter(IndexQueryServerSide query, Query luceneQuery, JsonOperationContext context)
         {
@@ -980,6 +984,37 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _analyzer?.Dispose();
             _releaseSearcher?.Dispose();
             _releaseReadTransaction?.Dispose();
+        }
+
+        protected readonly struct CreateQueryResultParameters
+        {
+            public readonly IndexQueryServerSide Query;
+            public readonly Query LuceneQuery;
+            public readonly ScoreDoc ScoreDoc;
+            public readonly global::Lucene.Net.Documents.Document LuceneDocument;
+            public readonly DocumentsOperationContext DocumentsContext;
+            public readonly LuceneIndexQueryingScope QueryingScope;
+            public readonly QueryTimingsScope HighlightingScope;
+            public readonly QueryTimingsScope ExplanationsScope;
+            public readonly ExplanationOptions ExplanationOptions;
+            public readonly bool IsDistinctCount;
+
+            public CreateQueryResultParameters(IndexQueryServerSide query, Query luceneQuery, ScoreDoc scoreDoc,
+                global::Lucene.Net.Documents.Document luceneDocument, DocumentsOperationContext documentsContext,
+                LuceneIndexQueryingScope queryingScope, QueryTimingsScope highlightingScope, QueryTimingsScope explanationsScope, ExplanationOptions explanationOptions,
+                bool isDistinctCount)
+            {
+                Query = query;
+                LuceneQuery = luceneQuery;
+                ScoreDoc = scoreDoc;
+                LuceneDocument = luceneDocument;
+                DocumentsContext = documentsContext;
+                QueryingScope = queryingScope;
+                HighlightingScope = highlightingScope;
+                ExplanationsScope = explanationsScope;
+                ExplanationOptions = explanationOptions;
+                IsDistinctCount = isDistinctCount;
+            }
         }
     }
 }

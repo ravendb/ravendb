@@ -32,7 +32,7 @@ using IndexSearcher = Corax.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
-    public partial class CoraxIndexReadOperation : IndexReadOperationBase
+    public class CoraxIndexReadOperation : IndexReadOperationBase
     {
         // PERF: This is a hack in order to deal with RavenDB-19597. The ArrayPool creates contention under high requests environments.
         // There are 2 ways to avoid this contention, one is to avoid using it altogether and the other one is separating the pools from
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
         private readonly IndexFieldsMapping _fieldMappings;
-        private readonly IndexSearcher _indexSearcher;
+        protected readonly IndexSearcher _indexSearcher;
         private readonly ByteStringContext _allocator;
 
         private long _entriesCount = 0;
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override long EntriesCount() => _entriesCount;
 
 
-        private interface ISupportsHighlighting
+        protected interface ISupportsHighlighting
         {
             QueryTimingsScope TimingsScope { get; }
             Dictionary<string, CoraxHighlightingTermIndex> Terms { get; }
@@ -276,7 +276,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        private interface IHasDistinct
+        protected interface IHasDistinct
         {
         }
 
@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         // Even if there are no distinct statements we have to be sure that we are not including
         // documents that we have already included during this request. 
-        private struct IdentityTracker<TDistinct> where TDistinct : struct, IHasDistinct
+        protected struct IdentityTracker<TDistinct> where TDistinct : struct, IHasDistinct
         {
             private Index _index;
             private IndexQueryServerSide _query;
@@ -442,7 +442,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             public FilterResult Apply(ref RetrieverInput input, string key) => _filter.Apply(ref input, key);
         }
 
-        private interface IHasProjection
+        protected interface IHasProjection
         {
             bool IsProjection { get; }
         }
@@ -600,7 +600,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     var fetchedDocument = retriever.Get(ref retrieverInput, token);
                     if (fetchedDocument.Document != null)
                     {
-                        var qr = GetQueryResult(ref identityTracker, fetchedDocument.Document);
+                        var qr = CreateQueryResult(ref identityTracker, fetchedDocument.Document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults,
+                            ref hasProjections, ref markedAsSkipped);
                         if (qr.Result is null)
                         {
                             docsToLoad++;
@@ -613,7 +614,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         foreach (Document item in fetchedDocument.List)
                         {
-                            var qr = GetQueryResult(ref identityTracker, item);
+                            var qr = CreateQueryResult(ref identityTracker, item, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections,
+                                ref markedAsSkipped);
                             if (qr.Result is null)
                             {
                                 docsToLoad++;
@@ -622,31 +624,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                             yield return qr;
                         }
-                    }
-
-                    QueryResult GetQueryResult(ref IdentityTracker<TDistinct> tracker, Document document)
-                    {
-                        if (tracker.ShouldIncludeDocument(ref hasProjections, document) == false)
-                        {
-                            document?.Dispose();
-
-                            if (markedAsSkipped == false)
-                            {
-                                skippedResults.Value++;
-                                markedAsSkipped = true;
-                            }
-
-                            return default;
-                        }
-
-                        if (ShouldAddOrderByFieldValues(query))
-                            AddOrderByFields(query, indexEntryId, orderByFields, ref document);
-
-                        return new QueryResult
-                        {
-                            Result = document,
-                            Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, document),
-                        };
                     }
                 }
 
@@ -674,7 +651,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             QueryPool.Return(ids);
         }
 
-        partial void AddOrderByFields(IndexQueryServerSide query, long indexEntryId, OrderMetadata[] orderByFields, ref Document d);
+        protected virtual QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
+            IndexQueryServerSide query, DocumentsOperationContext documentsContext, long indexEntryId, OrderMetadata[] orderByFields, ref THighlighting highlightings,
+            Reference<long> skippedResults,
+            ref THasProjection hasProjections, ref bool markedAsSkipped) 
+            where TDistinct : struct, IHasDistinct
+            where THasProjection : struct, IHasProjection
+            where THighlighting : struct, ISupportsHighlighting
+        {
+            if (tracker.ShouldIncludeDocument(ref hasProjections, document) == false)
+            {
+                document?.Dispose();
+
+                if (markedAsSkipped == false)
+                {
+                    skippedResults.Value++;
+                    markedAsSkipped = true;
+                }
+
+                return default;
+            }
+
+            return new QueryResult
+            {
+                Result = document,
+                Highlightings = highlightings.Execute(query, documentsContext, _fieldMappings, document),
+            };
+        }
 
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
             Reference<long> totalResults, Reference<long> skippedResults,

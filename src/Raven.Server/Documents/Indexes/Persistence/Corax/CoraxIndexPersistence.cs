@@ -2,7 +2,6 @@
 using Corax.Exceptions;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Indexing;
@@ -19,7 +18,7 @@ public class CoraxIndexPersistence : IndexPersistenceBase
     private readonly Logger _logger;
     private readonly CoraxDocumentConverterBase _converter;
 
-    public CoraxIndexPersistence(Index index) : base(index)
+    public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
     {
         _logger = LoggingSource.Instance.GetLogger<CoraxIndexPersistence>(index.DocumentDatabase.Name);
         bool storeValue = false;
@@ -55,7 +54,8 @@ public class CoraxIndexPersistence : IndexPersistenceBase
 
     public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction, IndexQueryServerSide query = null)
     {
-        return new CoraxIndexReadOperation(_index, _logger, readTransaction, _index._queryBuilderFactories, _converter.GetKnownFieldsForQuerying(), query);
+        return IndexReadOperationFactory.CreateCoraxIndexReadOperation(_index, _logger, readTransaction, _index._queryBuilderFactories,
+            _converter.GetKnownFieldsForQuerying(), query);
     }
 
     public override bool ContainsField(string field)

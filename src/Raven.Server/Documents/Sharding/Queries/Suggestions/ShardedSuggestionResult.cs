@@ -4,7 +4,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
 
 namespace Raven.Server.Documents.Sharding.Queries.Suggestions;
 
-internal class SuggestionResultWithPopularity : SuggestionResult
+internal class ShardedSuggestionResult : SuggestionResult
 {
     public Popularity SuggestionsWithPopularity;
 
