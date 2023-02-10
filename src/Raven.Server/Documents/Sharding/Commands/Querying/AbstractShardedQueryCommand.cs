@@ -3,6 +3,7 @@ using System.Text;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Http;
+using Raven.Server.Documents.Queries.Timings;
 using Sparrow.Json;
 using Sparrow.Utils;
 
@@ -11,11 +12,15 @@ namespace Raven.Server.Documents.Sharding.Commands.Querying;
 public abstract class AbstractShardedQueryCommand<TResult, TParameters> : AbstractQueryCommand<TResult, TParameters>, IRaftCommand
 {
     private readonly BlittableJsonReaderObject _query;
+
+    public readonly QueryTimingsScope Scope;
+
     protected readonly string IndexName;
-    protected AbstractShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryBase<TParameters> indexQuery, bool metadataOnly, bool indexEntriesOnly, string indexName,
+    protected AbstractShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryBase<TParameters> indexQuery, QueryTimingsScope scope, bool metadataOnly, bool indexEntriesOnly, string indexName,
         bool canReadFromCache, string raftUniqueRequestId) : base(indexQuery, true, metadataOnly, indexEntriesOnly)
     {
         _query = query;
+        Scope = scope;
         IndexName = indexName;
         CanReadFromCache = canReadFromCache;
         RaftUniqueRequestId = raftUniqueRequestId;

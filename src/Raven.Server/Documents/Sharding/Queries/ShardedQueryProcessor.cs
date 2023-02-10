@@ -9,12 +9,14 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Util;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Counters;
@@ -37,69 +39,83 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
     {
     }
 
-    protected override ShardedQueryCommand CreateCommand(BlittableJsonReaderObject query) => CreateShardedQueryCommand(query);
+    protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
 
-    public override async Task<ShardedQueryResult> ExecuteShardedOperations()
+    public override async Task<ShardedQueryResult> ExecuteShardedOperations(QueryTimingsScope scope)
     {
-        ShardedDocumentsComparer documentsComparer = null;
-
-        if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery) == false)
+        using (var queryScope = scope?.For(nameof(QueryTimingsScope.Names.Query)))
         {
-            // sorting only if:
-            // 1. we have fields to sort
-            // 2. it isn't a map-reduce index/query (the sorting will be done after the re-reduce)
-            documentsComparer = new ShardedDocumentsComparer(Query.Metadata, IsMapReduceIndex || IsAutoMapReduceQuery);
+            ShardedDocumentsComparer documentsComparer = null;
+
+            if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery) == false)
+            {
+                // sorting only if:
+                // 1. we have fields to sort
+                // 2. it isn't a map-reduce index/query (the sorting will be done after the re-reduce)
+                documentsComparer = new ShardedDocumentsComparer(Query.Metadata, IsMapReduceIndex || IsAutoMapReduceQuery);
+            }
+
+            if (Query.Metadata.TimeSeriesIncludes != null)
+            {
+                var timeSeriesKeys = Query.Metadata.TimeSeriesIncludes.TimeSeries.Keys;
+            }
+
+            ShardedQueryOperation operation;
+            ShardedReadResult<ShardedQueryResult> shardedReadResult;
+
+            using (var executeScope = queryScope?.For(nameof(QueryTimingsScope.Names.Execute)))
+            {
+                var commands = GetOperationCommands(executeScope);
+
+                operation = new ShardedQueryOperation(Query, Context, RequestHandler, commands, documentsComparer, ExistingResultEtag?.ToString());
+                int[] shards = GetShardNumbers(commands);
+                shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
+            }
+
+            if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
+            {
+                return new ShardedQueryResult { NotModified = true };
+            }
+
+            var result = shardedReadResult.Result;
+
+            using (queryScope?.For(nameof(QueryTimingsScope.Names.Cluster)))
+            {
+                await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex);
+            }
+
+            using (Query.Metadata.HasIncludeOrLoad ? queryScope?.For(QueryTimingsScope.Names.Includes) : null)
+            {
+                if (operation.MissingDocumentIncludes is { Count: > 0 })
+                {
+                    await HandleMissingDocumentIncludes(operation.MissingDocumentIncludes, result);
+                }
+
+                if (operation.MissingCounterIncludes is { Count: > 0 })
+                {
+                    await HandleMissingCounterInclude(operation.MissingCounterIncludes, result);
+                }
+
+                if (operation.MissingTimeSeriesIncludes is { Count: > 0 })
+                {
+                    await HandleMissingTimeSeriesIncludes(operation.MissingTimeSeriesIncludes, result);
+                }
+            }
+
+            // For map/reduce - we need to re-run the reduce portion of the index again on the results
+            ReduceResults(ref result, queryScope);
+
+            ApplyPaging(ref result, queryScope);
+
+            // For map-reduce indexes we project the results after the reduce part 
+            ProjectAfterMapReduce(ref result, queryScope);
+
+            // * For JS projections and load clauses, we don't support calling load() on a
+            //   document that is not on the same shard
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-17889 Add a test for that");
+
+            return result;
         }
-
-        if (Query.Metadata.TimeSeriesIncludes != null)
-        {
-            var timeSeriesKeys = Query.Metadata.TimeSeriesIncludes.TimeSeries.Keys;
-        }
-
-        var commands = GetOperationCommands();
-
-        var operation = new ShardedQueryOperation(Query, Context, RequestHandler, commands, documentsComparer, ExistingResultEtag?.ToString());
-
-        int[] shards = GetShardNumbers(commands);
-        var shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
-
-        if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
-        {
-            return new ShardedQueryResult { NotModified = true };
-        }
-
-        var result = shardedReadResult.Result;
-
-        await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex);
-
-        if (operation.MissingDocumentIncludes is {Count: > 0})
-        {
-            await HandleMissingDocumentIncludes(operation.MissingDocumentIncludes, result);
-        }
-
-        if (operation.MissingCounterIncludes is {Count: > 0})
-        {
-            await HandleMissingCounterInclude(operation.MissingCounterIncludes, result);
-        }
-
-        if (operation.MissingTimeSeriesIncludes is {Count: > 0})
-        {
-            await HandleMissingTimeSeriesIncludes(operation.MissingTimeSeriesIncludes, result);
-        }
-
-        // For map/reduce - we need to re-run the reduce portion of the index again on the results
-        ReduceResults(ref result);
-
-        ApplyPaging(ref result);
-
-        // For map-reduce indexes we project the results after the reduce part 
-        ProjectAfterMapReduce(ref result);
-
-        // * For JS projections and load clauses, we don't support calling load() on a
-        //   document that is not on the same shard
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-17889 Add a test for that");
-
-        return result;
     }
 
     private async Task HandleMissingCounterInclude(HashSet<string> missingCounterIncludes, ShardedQueryResult result)
@@ -110,7 +126,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
         {
             var includes = result.GetCounterIncludes();
 
-            var  counterOperations = new List<CounterOperation>();
+            var counterOperations = new List<CounterOperation>();
 
             if (includes.IncludedCounterNames.TryGetValue(docId, out var counterNames) && counterNames.Length > 0)
             {
@@ -199,79 +215,88 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
     }
 
-    private void ApplyPaging(ref ShardedQueryResult result)
+    private void ApplyPaging(ref ShardedQueryResult result, QueryTimingsScope scope)
     {
-        if (Query.Offset is > 0 && result.Results.Count > Query.Offset)
+        using (scope?.For(nameof(QueryTimingsScope.Names.Paging)))
         {
-            var count = Math.Min(Query.Offset ?? 0, int.MaxValue);
-            result.Results.RemoveRange(0, (int)count);
-        }
-
-        if (Query.Limit is > 0 && result.Results.Count > Query.Limit)
-        {
-            var index = Math.Min(Query.Limit.Value, int.MaxValue);
-            var count = result.Results.Count - Query.Limit.Value;
-            if (count > int.MaxValue)
-                count = int.MaxValue; //todo: Grisha: take a look
-            result.Results.RemoveRange((int)index, (int)count);
-        }
-    }
-
-    private void ReduceResults(ref ShardedQueryResult result)
-    {
-        if (IsMapReduceIndex || IsAutoMapReduceQuery)
-        {
-            var merger = new ShardedMapReduceQueryResultsMerger(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context);
-            result.Results = merger.Merge();
-
-            if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery))
+            if (Query.Offset is > 0 && result.Results.Count > Query.Offset)
             {
-                // apply ordering after the re-reduce of a map-reduce index
-                result.Results.Sort(new ShardedDocumentsComparer(Query.Metadata, isMapReduce: true));
+                var count = Math.Min(Query.Offset ?? 0, int.MaxValue);
+                result.Results.RemoveRange(0, (int)count);
+            }
+
+            if (Query.Limit is > 0 && result.Results.Count > Query.Limit)
+            {
+                var index = Math.Min(Query.Limit.Value, int.MaxValue);
+                var count = result.Results.Count - Query.Limit.Value;
+                if (count > int.MaxValue)
+                    count = int.MaxValue; //todo: Grisha: take a look
+                result.Results.RemoveRange((int)index, (int)count);
             }
         }
     }
 
-    private void ProjectAfterMapReduce(ref ShardedQueryResult result)
+    private void ReduceResults(ref ShardedQueryResult result, QueryTimingsScope scope)
+    {
+        if (IsMapReduceIndex || IsAutoMapReduceQuery)
+        {
+            using (scope?.For(nameof(QueryTimingsScope.Names.Reduce)))
+            {
+                var merger = new ShardedMapReduceQueryResultsMerger(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context);
+                result.Results = merger.Merge();
+
+                if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery))
+                {
+                    // apply ordering after the re-reduce of a map-reduce index
+                    result.Results.Sort(new ShardedDocumentsComparer(Query.Metadata, isMapReduce: true));
+                }
+            }
+        }
+    }
+
+    private void ProjectAfterMapReduce(ref ShardedQueryResult result, QueryTimingsScope scope)
     {
         if (IsMapReduceIndex == false && IsAutoMapReduceQuery == false
             || (Query.Metadata.Query.Select == null || Query.Metadata.Query.Select.Count == 0)
             && Query.Metadata.Query.SelectFunctionBody.FunctionText == null)
             return;
 
-        var fieldsToFetch = new FieldsToFetch(Query, null);
-        var retriever = new ShardedMapReduceResultRetriever(RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache, Query, null, SearchEngineType.Lucene, fieldsToFetch, null, Context, false, null, null, null,
-            RequestHandler.DatabaseContext.IdentityPartsSeparator);
-
-        var currentResults = result.Results;
-        result.Results = new List<BlittableJsonReaderObject>();
-
-        foreach (var data in currentResults)
+        using (scope?.For(nameof(QueryTimingsScope.Names.Projection)))
         {
-            var retrieverInput = new RetrieverInput();
-            (Document document, List<Document> documents) = retriever.GetProjectionFromDocument(new Document
-            {
-                Data = data
-            }, ref retrieverInput, fieldsToFetch, Context, CancellationToken.None);
-            
-            var results = result.Results;
+            var fieldsToFetch = new FieldsToFetch(Query, null);
+            var retriever = new ShardedMapReduceResultRetriever(RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache, Query, null, SearchEngineType.Lucene, fieldsToFetch, null, Context, false, null, null, null,
+                RequestHandler.DatabaseContext.IdentityPartsSeparator);
 
-            if (document != null)
+            var currentResults = result.Results;
+            result.Results = new List<BlittableJsonReaderObject>();
+
+            foreach (var data in currentResults)
             {
-                AddDocument(document.Data);
-            }
-            else if (documents != null)
-            {
-                foreach (var doc in documents)
+                var retrieverInput = new RetrieverInput();
+                (Document document, List<Document> documents) = retriever.GetProjectionFromDocument(new Document
                 {
-                    AddDocument(doc.Data);
-                }
-            }
+                    Data = data
+                }, ref retrieverInput, fieldsToFetch, Context, CancellationToken.None);
 
-            void AddDocument(BlittableJsonReaderObject documentData)
-            {
-                var doc = Context.ReadObject(documentData, "modified-map-reduce-result");
-                results.Add(doc);
+                var results = result.Results;
+
+                if (document != null)
+                {
+                    AddDocument(document.Data);
+                }
+                else if (documents != null)
+                {
+                    foreach (var doc in documents)
+                    {
+                        AddDocument(doc.Data);
+                    }
+                }
+
+                void AddDocument(BlittableJsonReaderObject documentData)
+                {
+                    var doc = Context.ReadObject(documentData, "modified-map-reduce-result");
+                    results.Add(doc);
+                }
             }
         }
     }

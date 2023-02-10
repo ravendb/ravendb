@@ -30,6 +30,12 @@ namespace Raven.Server.Documents.Queries.Timings
             public static string Filter;
             public static string Terms;
             public static string AggregateBy;
+
+            public static string Execute;
+            public static string Cluster;
+            public static string Reduce;
+            public static string Paging;
+            public static string Remote;
         }
 
         public QueryTimingsScope(bool start = true) : base(null, start)
@@ -45,21 +51,29 @@ namespace Raven.Server.Documents.Queries.Timings
         {
             var timings = new QueryTimings
             {
-                DurationInMs = (long)Duration.TotalMilliseconds
+                DurationInMs = (long)Duration.TotalMilliseconds,
+                Timings = _additionalTimings
             };
 
             if (Scopes != null)
             {
                 foreach (var scope in Scopes)
                 {
-                    if (timings.Timings == null)
-                        timings.Timings = new SortedDictionary<string, QueryTimings>();
+                    timings.Timings ??= new SortedDictionary<string, QueryTimings>();
 
                     timings.Timings[scope.Key] = scope.Value.ToTimings();
                 }
             }
 
             return timings;
+        }
+
+        private SortedDictionary<string, QueryTimings> _additionalTimings;
+
+        public void MergeWith(string key, QueryTimings timings)
+        {
+            _additionalTimings ??= new SortedDictionary<string, QueryTimings>();
+            _additionalTimings.Add(key, timings);
         }
     }
 }

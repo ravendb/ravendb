@@ -6,6 +6,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Sharding;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Executors;
@@ -22,8 +23,11 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
     private readonly IndexQueryServerSide _query;
     private readonly IComparer<BlittableJsonReaderObject> _sortingComparer;
 
-    public ShardedQueryOperation(IndexQueryServerSide query, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler,
-        Dictionary<int, ShardedQueryCommand> queryCommands, IComparer<BlittableJsonReaderObject> sortingComparer, string expectedEtag)
+    public ShardedQueryOperation(IndexQueryServerSide query,
+        TransactionOperationContext context,
+        ShardedDatabaseRequestHandler requestHandler,
+        Dictionary<int, ShardedQueryCommand> queryCommands,
+        IComparer<BlittableJsonReaderObject> sortingComparer, string expectedEtag)
         : base(queryCommands, context, requestHandler, expectedEtag)
     {
         _query = query;
@@ -53,9 +57,15 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
 
         foreach (var (shardNumber, cmdResult) in results)
         {
+            var command = QueryCommands[shardNumber];
             var queryResult = cmdResult.Result;
 
-            CombineSingleShardResultProperties(result, queryResult);
+            using (command.Scope)
+            {
+                command.Scope?.MergeWith(nameof(QueryTimingsScope.Names.Remote), cmdResult.Result.Timings);
+
+                CombineSingleShardResultProperties(result, queryResult);
+            }
 
             // For includes, we send the includes to all shards, then we merge them together. We do explicitly
             // support including from another shard, so we'll need to do that again for missing includes
