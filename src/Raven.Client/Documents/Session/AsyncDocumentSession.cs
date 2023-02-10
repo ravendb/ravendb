@@ -59,8 +59,7 @@ namespace Raven.Client.Documents.Session
         {
             using (AsyncTaskHolder())
             {
-                DocumentInfo documentInfo;
-                if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
+                if (DocumentsByEntity.TryGetValue(entity, out var documentInfo) == false)
                     throw new InvalidOperationException("Cannot refresh a transient instance");
                 IncrementRequestCount();
 
@@ -72,28 +71,26 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public async Task RefreshAsync<T>(IEnumerable<T> entities, CancellationToken token = default(CancellationToken))
+        public async Task RefreshAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
         {
             using (AsyncTaskHolder())
             {
-                string[] ids = new string[entities.Count()];
-                List<DocumentInfo> documentInfos = new List<DocumentInfo>();
+                List<string> ids = new();
+                List<DocumentInfo> documentInfos = new();
 
-                var i = 0;
                 foreach (var entity in entities)
                 {
-                    DocumentInfo docInfo;
-                    if (DocumentsByEntity.TryGetValue(entity, out docInfo) == false)
+                    if (DocumentsByEntity.TryGetValue(entity, out var docInfo) == false)
                         throw new InvalidOperationException("Cannot refresh a transient instance");
                     documentInfos.Add(docInfo);
-                    ids[i] = docInfo.Id;
-                    i++;
+                    ids.Add(docInfo.Id);
                 }
+
                 IncrementRequestCount();
 
-                var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
+                var command = new GetDocumentsCommand(ids.ToArray(), includes: null, metadataOnly: false);
                 await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo, token).ConfigureAwait(false);
-                
+
                 var j = 0;
                 foreach (var entity in entities)
                 {
