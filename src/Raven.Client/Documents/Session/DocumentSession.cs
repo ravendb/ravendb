@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Session
         /// property to avoid cluttering the API
         /// </remarks>
         public IAdvancedSessionOperations Advanced => this;
-        
+
         /// <summary>
         /// Access the eager operations
         /// </summary>
@@ -139,11 +139,10 @@ namespace Raven.Client.Documents.Session
         /// <param name="entity">The entity.</param>
         public void Refresh<T>(T entity)
         {
-            DocumentInfo documentInfo;
-            if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
+            if (DocumentsByEntity.TryGetValue(entity, out var documentInfo) == false)
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
-        
+
             var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
 
@@ -158,32 +157,30 @@ namespace Raven.Client.Documents.Session
         /// <param name="entities">The entities.</param>
         public void Refresh<T>(IEnumerable<T> entities)
         {
-            string[] ids = new string[entities.Count()];
-            List<DocumentInfo> documentInfos = new List<DocumentInfo>();
+            List<string> ids = new();
+            List<DocumentInfo> documentInfos = new();
 
-            var i = 0;
             foreach (var entity in entities)
             {
-                DocumentInfo docInfo;
-                if (DocumentsByEntity.TryGetValue(entity, out docInfo) == false)
-                         throw new InvalidOperationException("Cannot refresh a transient instance");
+                if (DocumentsByEntity.TryGetValue(entity, out var docInfo) == false)
+                    throw new InvalidOperationException("Cannot refresh a transient instance");
                 documentInfos.Add(docInfo);
-                ids[i] = docInfo.Id;
-                i++;
+                ids.Add(docInfo.Id);
             }
+
             IncrementRequestCount();
-            
-            var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
+
+            var command = new GetDocumentsCommand(ids.ToArray(), includes: null, metadataOnly: false);
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
-           
+
             var j = 0;
             foreach (var entity in entities)
             {
-                var commandResult = (BlittableJsonReaderObject)command.Result.Results[j]; 
+                var commandResult = (BlittableJsonReaderObject)command.Result.Results[j];
                 RefreshInternal(entity, commandResult, documentInfos[j]);
                 j++;
             }
-     
+
         }
 
         /// <summary>
