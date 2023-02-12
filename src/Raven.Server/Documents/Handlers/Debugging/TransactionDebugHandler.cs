@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Handlers.Debugging.Processors;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -50,18 +51,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/admin/debug/cluster/txinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
         public async Task ClusterTxInfo()
         {
-            var from = GetLongQueryString("from", false);
-            var take = GetIntValueQueryString("take", false) ?? int.MaxValue;
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
-            {
-                context.Write(writer, new DynamicJsonValue
-                {
-                    ["Results"] = new DynamicJsonArray(ClusterTransactionCommand.ReadCommandsBatch(context, Database.Name, from, take))
-                });
-            }
+            using (var processor = new TransactionDebugHandlerProcessorForGetClusterInfo(this))
+                await processor.ExecuteAsync();
         }
 
         internal static DynamicJsonArray ToJson(List<TransactionInfo> txInfos)
