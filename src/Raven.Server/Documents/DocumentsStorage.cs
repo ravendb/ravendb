@@ -2023,17 +2023,12 @@ namespace Raven.Server.Documents
             return lsv;
         }
 
-        protected static void UnwrapLowerIdIfNeeded(Transaction tx, ref byte* lowerId, ref int size)
+        protected static int UnwrapLowerIdIfNeeded(byte* lowerId,int size)
         {
             if (NeedToUnwrapLowerId(lowerId, size) == false)
-                return;
+                return size;
 
-            size -= ConflictedTombstoneOverhead;
-            using var scope = tx.Allocator.Allocate(size + 1, out var buffer); // we need this extra byte to mark that there is no escaping
-            buffer.Ptr[size] = 0;
-
-            Memory.Copy(buffer.Ptr, lowerId, size);
-            lowerId = buffer.Ptr;
+            return size - ConflictedTombstoneOverhead;
         }
 
         private static bool NeedToUnwrapLowerId(byte* lowerId, int size)
