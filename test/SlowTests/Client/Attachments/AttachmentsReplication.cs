@@ -2516,5 +2516,213 @@ namespace SlowTests.Client.Attachments
                 }
             }
         }
+        
+        
+        [Fact]
+        public async Task ConflictOfAttachmentAndDocument3StoresDifferentLastModifiedOrder()
+        {
+            var options = new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = 1.ToString();
+                }
+            };
+            using (var store1 = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
+            using (var store3 = GetDocumentStore(options))
+            {
+                var user = new User {Name = "Karmel", Id = "users/1"};
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(user, user.Id);
+                    session.SaveChanges();
+                }
+
+                using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                {
+                    var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", profileStream, "image/png"));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/png", result.ContentType);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", result.Hash);
+                }
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store1, store3);
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store3);
+                
+                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                {
+                    var result = store2.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "image/png"));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/png", result.ContentType);
+                    Assert.Equal("igkD5aEdkdAsAB/VpYm1uFlfZIP9M2LSUsD6f6RVW9U=", result.Hash);
+                }
+                
+                using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50, 60 }))
+                {
+                    var result = store3.Operations.Send(new PutAttachmentOperation("users/1", "foo/bar", backgroundStream, "image/png"));
+                    Assert.Equal("foo/bar", result.Name);
+                    Assert.Equal("users/1", result.DocumentId);
+                    Assert.Equal("image/png", result.ContentType);
+                    Assert.Equal("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=", result.Hash);
+                }
+                
+                await WriteStatus(store1, store2, store3, "Stage 1");
+
+                
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var u = await session.LoadAsync<User>("users/1");
+                    u.Age = 30;
+                    await session.SaveChangesAsync();
+                }
+
+                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store3);
+
+                await WriteStatus(store1, store2, store3, "Stage 2");
+
+                await SetupReplicationAsync(store2, store1);
+                await SetupReplicationAsync(store2, store3);
+                await EnsureReplicatingAsync(store2, store1);
+                await EnsureReplicatingAsync(store2, store3);
+                
+                await WriteStatus(store1, store2, store3, "Stage 3");
+                
+                await SetupReplicationAsync(store3, store2);
+                await EnsureReplicatingAsync(store3, store2);
+                
+                await WriteStatus(store1, store2, store3, "Stage 4");
+                
+                var res2 =  await WaitForValueAsync(async () =>
+                {
+                    var cvs = new List<string>();
+                
+                        var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                        using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            cvs.Add(DocumentsStorage.GetDatabaseChangeVector(context));
+                        }
+                        var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+                        using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            cvs.Add(DocumentsStorage.GetDatabaseChangeVector(context));
+                        }
+                        var storage3 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.Database);
+                        using (storage3.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            cvs.Add(DocumentsStorage.GetDatabaseChangeVector(context));
+                        }
+
+                    return cvs.Any(x => x != cvs.FirstOrDefault()) == false;
+                }, true, timeout: 30_000, interval: 333);
+                Assert.True(res2);
+
+                var res = await WaitForValueAsync(async () =>
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    using (var session2 = store2.OpenAsyncSession())
+                    using (var session3 = store3.OpenAsyncSession())
+                    {
+                        var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                        var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                        var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+
+                        if (attachment != null && attachment2 != null && attachment3 != null &&
+                            attachment.Details.Name == "foo/bar" &&
+                            AreAttachmentDetailsEqual(attachment.Details, attachment2.Details) &&
+                            AreAttachmentDetailsEqual(attachment.Details, attachment3.Details))
+                        {
+                            return true;
+                        }
+
+                        return false;
+                    }
+                }, true, 30_000, interval: 333);
+             
+
+                await WriteStatus(store1, store2, store3, "Stage 5");
+
+                using (var session = store1.OpenAsyncSession())
+                using (var session2 = store2.OpenAsyncSession())
+                using (var session3 = store3.OpenAsyncSession())
+                {
+                    var u1 = await session.LoadAsync<User>("users/1");
+                    var u2 = await session2.LoadAsync<User>("users/1");
+                    var u3 = await session3.LoadAsync<User>("users/1");
+
+                    var cv1 = session.Advanced.GetChangeVectorFor(u1);
+                    var cv2 = session2.Advanced.GetChangeVectorFor(u2);
+                    var cv3 = session3.Advanced.GetChangeVectorFor(u3);
+
+                    Console.WriteLine($"\ncv1: {cv1}");
+                    Console.WriteLine($"cv2: {cv2}");
+                    Console.WriteLine($"cv3: {cv3}\n");
+                   
+                    Assert.True(cv1.Equals(cv2));
+                    Assert.True(cv1.Equals(cv3));
+
+                    var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                    var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                    var attachment3 = await session3.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+
+                    Assert.NotNull(attachment);
+                    Assert.NotNull(attachment2);
+                    Assert.NotNull(attachment3);
+
+                    user = await session.LoadAsync<User>("users/1");
+                    Assert.True(("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" == attachment.Details.Hash && user.Age == 30) ||
+                                ("7hoAZadly0e2TKk4NC6+MrtVuqZblV3+UDW7/Iz9H5U=" == attachment.Details.Hash && user.Age == 0));
+                    Assert.Equal("foo/bar", attachment.Details.Name);
+                    Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
+                    Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
+                    Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
+                    Assert.Equal(attachment3.Details.Hash, attachment2.Details.Hash);
+                    Assert.Equal(attachment3.Details.ChangeVector, attachment2.Details.ChangeVector);
+                    Assert.Equal(attachment3.Details.Name, attachment2.Details.Name);
+                }
+            }
+
+            async Task WriteStatus(DocumentStore store1, DocumentStore store2, DocumentStore store3, string s)
+            {
+                using (var session = store1.OpenAsyncSession())
+                using (var session2 = store2.OpenAsyncSession())
+                using (var session3 = store3.OpenAsyncSession())
+                {
+                    var u1 = await session.LoadAsync<User>("users/1");
+                    var u2 = await session2.LoadAsync<User>("users/1");
+                    var u3 = await session3.LoadAsync<User>("users/1");
+
+                    var cv1 = session.Advanced.GetChangeVectorFor(u1);
+                    var cv2 = session2.Advanced.GetChangeVectorFor(u2);
+                    var cv3 = session3.Advanced.GetChangeVectorFor(u3);
+
+                    Console.WriteLine(s);
+                    Console.WriteLine($"\ncv1: {cv1}");
+                    Console.WriteLine($"cv2: {cv2}");
+                    Console.WriteLine($"cv3: {cv3}\n");
+                    Console.WriteLine("-----");
+                }
+            }
+        }
+        
+        private bool AreAttachmentDetailsEqual(AttachmentDetails attachment1, AttachmentDetails attachment2)
+        {
+            if (attachment1.DocumentId == attachment2.DocumentId &&
+                attachment1.ChangeVector == attachment2.ChangeVector &&
+                attachment1.Hash == attachment2.Hash &&
+                attachment1.Name == attachment2.Name &&
+                attachment1.ContentType == attachment2.ContentType)
+                return true;
+            return false;
+        }
+
     }
 }
