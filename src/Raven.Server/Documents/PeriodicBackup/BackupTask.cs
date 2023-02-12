@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     runningBackupStatus.NodeTag = _database.ServerStore.NodeTag;
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;
-                    UpdateOperationId(runningBackupStatus);
+                    runningBackupStatus.LastOperationId = _operationId;
 
                     if (_isOneTimeBackup == false)
                     {
@@ -842,19 +842,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var backupUploader = new BackupUploader(uploaderSettings, _retentionPolicyParameters, _logger, _backupResult, _onProgress, TaskCancelToken);
             backupUploader.ExecuteUpload();
-        }
-
-        private void UpdateOperationId(PeriodicBackupStatus runningBackupStatus)
-        {
-            runningBackupStatus.LastOperationId = _operationId;
-            if (_previousBackupStatus.LastOperationId == null ||
-                _previousBackupStatus.NodeTag != _database.ServerStore.NodeTag ||
-                _previousBackupStatus.Error != null)
-                return;
-
-            // dismiss the previous operation
-            var id = $"{NotificationType.OperationChanged}/{_previousBackupStatus.LastOperationId.Value}";
-            _database.NotificationCenter.Dismiss(id);
         }
 
         public static string GetDateTimeFormat(string fileName)

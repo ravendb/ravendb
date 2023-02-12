@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
@@ -22,6 +23,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -32,6 +34,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1206,6 +1209,114 @@ namespace Tests.Infrastructure
                     sb.AppendLine(json.ToString());
                 }
             }
+        }
+
+        public IDisposable CollectBackupHistoryDebugData(RavenServer server, DocumentStore store, DocumentDatabase database,
+                    out Dictionary<(DateTime, bool), BlittableJsonReaderObject> historyEntriesFromResponseDictionary,
+                    out Dictionary<(DateTime, bool), BlittableJsonReaderObject> historyEntriesFromClusterDictionary,
+                    out Dictionary<(DateTime, bool), BlittableJsonReaderObject> historyEntriesFromTemporaryDictionary,
+                    out Dictionary<string, BlittableJsonReaderObject> detailsFromStorageDictionary)
+        {
+            using (var scope = new DisposableScope())
+            {
+                historyEntriesFromResponseDictionary = null;
+                historyEntriesFromClusterDictionary = null;
+                historyEntriesFromTemporaryDictionary = null;
+                detailsFromStorageDictionary = null;
+
+                scope.EnsureDispose(server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
+                scope.EnsureDispose(context.OpenReadTransaction());
+
+                if (database == null) 
+                    return scope.Delay();
+
+                historyEntriesFromResponseDictionary = GetBackupHistoryFromEndpoint(context, store, database.Name);
+                historyEntriesFromClusterDictionary = GetBackupHistoryFromClusterStorage(context, server, database.Name);
+
+                scope.EnsureDispose(database.ConfigurationStorage.BackupHistoryStorage.ReadItems(out var entriesFromTemporaryStorage, BackupHistoryItemType.HistoryEntry));
+                historyEntriesFromTemporaryDictionary = GetBackupHistoryFromTemporaryStorage(entriesFromTemporaryStorage);
+
+                scope.EnsureDispose(database.ConfigurationStorage.BackupHistoryStorage.ReadItems(out detailsFromStorageDictionary, BackupHistoryItemType.Details));
+                
+                return scope.Delay();
+            }
+        }
+
+        private Dictionary<(DateTime, bool), BlittableJsonReaderObject> GetBackupHistoryFromEndpoint(TransactionOperationContext context, DocumentStore store, string databaseName)
+        {
+            var client = store.GetRequestExecutor().HttpClient;
+            var response = AsyncHelpers.RunSync(() => client.GetAsync($"{store.Urls.First()}/backup-history?database={databaseName}"));
+            string result = response.Content.ReadAsStringAsync().Result;
+
+            var backupHistoryFromResponse = context.Sync.ReadForMemory(result, "Result");
+            backupHistoryFromResponse.TryGet(nameof(BackupHistory), out BlittableJsonReaderArray array);
+
+            return GetBackupHistory(array);
+        }
+
+        private Dictionary<(DateTime, bool), BlittableJsonReaderObject> GetBackupHistoryFromClusterStorage(TransactionOperationContext context, RavenServer server, string databaseName)
+        {
+            Dictionary<(DateTime, bool), BlittableJsonReaderObject> dict = new();
+            var prefix = BackupHistoryEntry.GenerateItemPrefix(databaseName);
+            var itemsFromCluster = server.ServerStore.Cluster
+                .ItemsStartingWith(context, prefix, 0, long.MaxValue);
+
+            foreach (var historyItem in itemsFromCluster)
+            {
+                historyItem.Value.TryGet(nameof(BackupHistory), out BlittableJsonReaderArray entriesFromCluster);
+                    
+                foreach (var entry in GetBackupHistory(entriesFromCluster))
+                    dict.Add(entry.Key, entry.Value);
+            }
+            return dict;
+        }
+
+        private Dictionary<(DateTime, bool), BlittableJsonReaderObject> GetBackupHistoryFromTemporaryStorage(Dictionary<string, BlittableJsonReaderObject> entriesFromTemporaryStorage)
+        {
+            Dictionary<(DateTime, bool), BlittableJsonReaderObject> dict = new();
+            foreach (var entry in entriesFromTemporaryStorage.Values)
+            {
+                entry.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime entryCreatedAt);
+                entry.TryGet(nameof(BackupHistoryEntry.IsFull), out bool entryIsFull);
+
+                dict.Add((entryCreatedAt, entryIsFull), entry);
+            }
+            return dict;
+        }
+
+        private Dictionary<(DateTime, bool), BlittableJsonReaderObject> GetBackupHistory(IEnumerable<object> blittableJsonReaderArray)
+        {
+            Dictionary<(DateTime, bool), BlittableJsonReaderObject> dict = new();
+
+            foreach (BlittableJsonReaderObject historyEntry in blittableJsonReaderArray)
+            {
+                historyEntry.TryGet(nameof(BackupHistory.FullBackup), out BlittableJsonReaderObject fullBackup);
+                fullBackup.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime fullBackupCreatedAt);
+
+                Assert.True(dict.TryAdd((fullBackupCreatedAt, true), fullBackup),
+                    $"Entry with {nameof(BackupHistoryEntry.CreatedAt)}={fullBackupCreatedAt} already exists in Dictionary");
+
+                historyEntry.TryGet(nameof(BackupHistory.IncrementalBackups), out BlittableJsonReaderArray increments);
+                foreach (BlittableJsonReaderObject increment in increments)
+                {
+                    increment.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime incrementCreatedAt);
+
+                    Assert.True(dict.TryAdd((incrementCreatedAt, false), increment),
+                        $"Entry with {nameof(BackupHistoryEntry.CreatedAt)}={incrementCreatedAt} already exists in Dictionary");
+                }
+            }
+
+            return dict;
+        }
+
+        /// <summary>
+        /// Start a backup sequence with the specified order of full and incremental backups
+        /// </summary>
+        /// <param name="backupPlan">Each entry indicates which backup should be made. <para><b>true</b> - for full backup and <b>false</b> - for incremental backup</para></param>
+        public async Task RunBackupsAccordingPlan(bool[] backupPlan, RavenServer server, long taskId, DocumentStore store)
+        {
+            foreach (bool isFull in backupPlan)
+                await Backup.RunBackupAsync(server, taskId, store, isFullBackup: isFull);
         }
 
         public override void Dispose()

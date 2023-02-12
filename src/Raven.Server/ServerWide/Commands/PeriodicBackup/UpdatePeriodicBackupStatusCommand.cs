@@ -1,5 +1,5 @@
-﻿using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.ServerWide;
+﻿using System.Collections.Generic;
+using Raven.Client.Documents.Operations.Backups;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -8,6 +8,32 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
     public class UpdatePeriodicBackupStatusCommand : UpdateValueForDatabaseCommand
     {
         public PeriodicBackupStatus PeriodicBackupStatus;
+        public List<BackupHistoryEntry> BackupHistoryEntries;
+
+        public List<BackupHistoryEntry> CurrentAndTemporarySavedEntries
+        {
+            get
+            {
+                var createdAt = PeriodicBackupStatus.IsFull
+                    ? PeriodicBackupStatus.LastFullBackup ?? PeriodicBackupStatus.Error.At
+                    : PeriodicBackupStatus.LastIncrementalBackup ?? PeriodicBackupStatus.Error.At;
+
+                var entryFromBackupStatus = new BackupHistoryEntry
+                {
+                    BackupType = PeriodicBackupStatus.BackupType,
+                    CreatedAt = createdAt,
+                    DatabaseName = DatabaseName,
+                    DurationInMs = PeriodicBackupStatus.DurationInMs,
+                    Error = PeriodicBackupStatus.Error?.Exception,
+                    IsFull = PeriodicBackupStatus.IsFull,
+                    NodeTag = PeriodicBackupStatus.NodeTag,
+                    LastFullBackup = PeriodicBackupStatus.LastFullBackup,
+                    TaskId = PeriodicBackupStatus.TaskId
+                };
+
+                return new List<BackupHistoryEntry>(BackupHistoryEntries) { entryFromBackupStatus };
+            }
+        }
 
         // ReSharper disable once UnusedMember.Local
         private UpdatePeriodicBackupStatusCommand()
@@ -32,6 +58,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(PeriodicBackupStatus)] = PeriodicBackupStatus.ToJson();
+            json[nameof(BackupHistoryEntries)] = new DynamicJsonArray(BackupHistoryEntries);
         }
     }
 }

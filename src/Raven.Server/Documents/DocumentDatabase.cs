@@ -1539,6 +1539,7 @@ namespace Raven.Server.Documents
                     SubscriptionStorage?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseValueChanged(record);
                     PeriodicBackupRunner?.HandleDatabaseValueChanged(type, changeState);
+                    ConfigurationStorage?.BackupHistoryStorage?.HandleDatabaseValueChanged(type, changeState);
 
                     LastValueChangeIndex = index;
                 }

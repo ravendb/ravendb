@@ -16,7 +16,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Operations
@@ -226,6 +225,13 @@ namespace Raven.Server.Documents.Operations
             var operationChanged = OperationChanged.Create(_name, change.OperationId, operation.Description, change.State, operation.Killable);
 
             operation.NotifyCenter(operationChanged, x => _notificationCenter.Add(x));
+
+            // All information regarding successful backups is moved to a dedicated section, so, we are disabling all notifications for successful backups. 
+            if (operationChanged.TaskType == OperationType.DatabaseBackup && change.State.Status == OperationStatus.Completed)
+            {
+                var notificationId = $"{NotificationType.OperationChanged}/{change.OperationId}";
+                _notificationCenter.Dismiss(notificationId);
+            }
 
             _changes?.RaiseNotifications(change);
         }

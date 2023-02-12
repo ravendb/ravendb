@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
-using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
@@ -58,6 +57,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.CloudStorageOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting CloudStorageOperationTimeout { get; set; }
 
+        [Description("Maximum number of last full backups with all their increments to be saved.")]
+        [DefaultValue(30)]
+        [ConfigurationEntry("Backup.MaxNumberOfFullBackupsInBackupHistory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxNumberOfFullBackupsInBackupHistory { get; set; }
 
         [Description("EXPERT: Indicates which library to use when doing Azure backups.")]
         [DefaultValue(false)]
