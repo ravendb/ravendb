@@ -154,9 +154,8 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
     internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(Transaction tx, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
     {
         var lowerId = tvr.Read(idIndex, out int size);
-        UnwrapLowerIdIfNeeded(tx, ref lowerId, ref size);
+        size = UnwrapLowerIdIfNeeded(lowerId, size);
         var etag = *(long*)tvr.Read(etagIndex, out _);
-
         return GenerateBucketAndEtagSlice(tx, lowerId, size, etag, out slice);
     }
 
