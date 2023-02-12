@@ -301,7 +301,7 @@ namespace Raven.Server.Rachis
             return (HasRemovedFromTopology: command.RemovedFromTopology, LastAcknowledgedIndex: lastAcknowledgedIndex, LastTruncate: command.LastTruncate, LastCommit: command.LastCommit);
         }
 
-        public static async Task<(bool Success, LogLengthNegotiation Negotiation)> CheckIfValidLeaderAsync(RachisConsensus engine, RemoteConnection connection)
+        public static Task<(bool Success, LogLengthNegotiation Negotiation)> CheckIfValidLeaderAsync(RachisConsensus engine, RemoteConnection connection)
         {
             using (engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
@@ -321,7 +321,7 @@ namespace Raven.Server.Rachis
                         CurrentTerm = engine.CurrentTerm
                     });
                     connection.Dispose();
-                    return (false, null);
+                    return Task.FromResult<(bool Success, LogLengthNegotiation Negotiation)>((false, null));
                 }
                 if (engine.Log.IsInfoEnabled)
                 {
@@ -330,7 +330,7 @@ namespace Raven.Server.Rachis
                 engine.FoundAboutHigherTerm(logLength.Term, "Setting the term of the new leader");
                 engine.Timeout.Defer(connection.Source);
 
-                return (true, logLength);
+                return Task.FromResult<(bool Success, LogLengthNegotiation Negotiation)>((true, logLength));
             }
         }
 
