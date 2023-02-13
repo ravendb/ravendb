@@ -31,13 +31,13 @@ for runtimeDir in "${RVN_RUNTIME_DIRS[@]}"
 do
 
 mkdir -p $runtimeDir
-chown ravendb:ravendb $runtimeDir
+chown root:ravendb $runtimeDir
 chmod 770 $runtimeDir 
 
 done
 
-chown ravendb:ravendb /usr/lib/ravendb/server/
-chown ravendb:ravendb /usr/lib/ravendb/server/{Raven.Server,rvn}
+chown root:ravendb /usr/lib/ravendb/server/
+chown root:ravendb /usr/lib/ravendb/server/{Raven.Server,rvn}
 
 if command -v setcap &> /dev/null; then
     setcap CAP_NET_BIND_SERVICE=+eip /usr/lib/ravendb/server/Raven.Server
@@ -60,7 +60,7 @@ do
         setcap cap_sys_ptrace=eip "$binFilePath"
     fi
 
-    chown ravendb:ravendb "$binFilePath"
+    chown root:ravendb "$binFilePath"
     chmod +s "$binFilePath"
 done
 
@@ -73,7 +73,7 @@ if [ ! -f /etc/ravendb/security/master.key ]; then
 fi
 
 chmod 660 /etc/ravendb/security/master.key /etc/ravendb/settings.json
-chown -R ravendb:ravendb /etc/ravendb
+chown -R root:ravendb /etc/ravendb
 
 #DEBHELPER#
 
