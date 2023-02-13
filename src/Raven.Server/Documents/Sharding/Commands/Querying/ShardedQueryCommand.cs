@@ -29,7 +29,7 @@ public class ShardedQueryCommand : AbstractShardedQueryCommand<QueryResult, Blit
 
             Result = JsonDeserializationClient.QueryResult(response);
 
-            Scope?.MergeWith(Result.Timings);
+            Scope?.WithBase(Result.Timings);
         }
     }
 }
