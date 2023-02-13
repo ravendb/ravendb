@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Sharding.Queries
                 ? new ShardedDocumentsComparer(Query.Metadata, isMapReduce: false)
                 : new ShardedStreamingHandlerProcessorForGetStreamQuery.DocumentBlittableLastModifiedComparer();
 
-            var commands = GetOperationCommands(null); // TODO [ppekrol]
+            var commands = GetOperationCommands(null);
 
             var op = new ShardedStreamQueryOperation(RequestHandler.HttpContext, () =>
             {
