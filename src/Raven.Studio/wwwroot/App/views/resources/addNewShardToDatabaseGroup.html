@@ -1,26 +1,18 @@
 <div class="modal-dialog add-new-node-to-db-group" role="document">
-    <div class="modal-content" tabindex="-1">
+    <div class="modal-content neo-modal" tabindex="-1">
         <div class="modal-header">
-            <div class="flex-horizontal">
-                <div class="flex-grow">
-                    <h3>Add a new shard</h3>
-                </div>
-                <div>
-                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
-                        <i class="icon-cancel"></i>
-                    </button>
-                </div>
+            <div class="d-flex align-items-center">
+                <img src="../../../Content/img/sharding/shard.svg" alt="Shard" class="img-responsive margin-center" style="width:24px;"/>
+                <h3 class="flex-grow margin-none margin-left-xxs">Add a new shard</h3>
             </div>
         </div>
         <div class="modal-body">
-            <div class="flex-form">
-                <div class="form-group" data-bind="validationElement: replicationFactor">
-                    <div>
-                        <label class="control-label">Replication factor</label>
-                    </div>
-                    <div class="flex-grow">
-                        <input class="form-control" type="number" min="1" placeholder="Enter number of nodes" data-bind="numericInput: replicationFactor">
-                    </div>
+            <h4>Replication Configuration <i class="icon-info" title="Set the number of nodes that will contain the database"></i></h4>
+            <!-- TODO: Add context -->
+            <div class="form-group">
+                <div class="input-group" title="Set the number of nodes that will contain the database" data-bind="validationElement: replicationFactor">
+                    <span class="input-group-addon">Replication factor</span>
+                    <input class="form-control" type="number" min="1" title="Set the number of nodes that will contain the database" placeholder="Enter number of nodes" data-bind="numericInput: replicationFactor">
                 </div>
             </div>
         </div>

@@ -22,7 +22,7 @@ function render() {
 const selectors = {
     detailedStatsHeader: /Detailed Database Stats/i,
     documentsCount: /Documents Count/,
-    showDetails: /show details/i,
+    showDetails: /show detailed/i,
     detailedIndexHeader: /Indexes Stats/i,
     noIndexes: /No indexes have been created for this database/i,
 };

@@ -64,3 +64,11 @@
         text-transform: uppercase;
     }
 }
+
+// Separate two buttons that are in a group
+.btn-group {
+    > :not(.btn-check:first-child) + .btn,
+    > .btn-group:not(:first-child) {
+        margin-left: 1px;
+    }
+}
