@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
 
                 await queryProcessor.InitializeAsync();
 
-                return await queryProcessor.ExecuteShardedOperations(null); // TODO [ppekrol]
+                return await queryProcessor.ExecuteShardedOperations(null);
             }
         }
 
