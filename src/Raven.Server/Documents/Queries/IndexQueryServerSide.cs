@@ -214,13 +214,6 @@ namespace Raven.Server.Documents.Queries
                     result.PageSize = Math.Min(limit, result.PageSize);
                 }
 
-                if (result.Metadata.Query.Limit != null)
-                {
-                    var limit = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
-                    result.Limit = limit;
-                    result.PageSize = Math.Min(limit, result.PageSize);
-                }
-
                 if (result.Metadata.Query.FilterLimit != null)
                 {
                     result.FilterLimit = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
