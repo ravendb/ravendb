@@ -51,7 +51,6 @@ namespace SlowTests.Issues
                         .ToArray()
                         .Select(x => x.FirstName)
                         .ToArray();
-                    WaitForUserToContinueTheTest(store);
                     Assert.Equal("Andrew", names[0]);
                     Assert.Equal("Anne", names[1]);
                 }

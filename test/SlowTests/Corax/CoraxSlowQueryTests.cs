@@ -371,7 +371,6 @@ public class CoraxSlowQueryTests : RavenTestBase
 
         {
             //UnaryTest
-            WaitForUserToContinueTheTest(luceneStore);
             Assertion($"from Results where boost(Age > {terms - 2}, 100) order by score(), Age as alphanumeric desc ");
         }
 

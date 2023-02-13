@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
 using Corax.Utils;
-using Sparrow;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 
@@ -15,24 +14,23 @@ namespace Corax.Queries
     public unsafe struct MultiTermMatch<TTermProvider> : IQueryMatch
         where TTermProvider : ITermProvider
     {
-        private bool _isBoosting;
-        internal long _totalResults;
-        internal long _current;
-        internal long _currentIdx;
+        private readonly bool _isBoosting;
+        private long _totalResults;
+        private long _current;
+        private long _currentIdx;
         private QueryCountConfidence _confidence;
 
-        private Bm25* _freqsStart;
+        private Bm25Relevance* _frequencyPerFieldStartPtr;
         private int _currentFreqIdx;
-        private int _freqsSize;
+        private int _frequenciesSize;
         private IDisposable _handler;
         
         
         internal TTermProvider _inner;
         private TermMatch _currentTerm;        
         private readonly ByteStringContext _context;
-        private bool _isFirst;
 
-        public bool IsBoosting => false;
+        public bool IsBoosting => _isBoosting;
         public long Count => _totalResults;
         public long Current => _currentIdx <= QueryMatch.Start ? _currentIdx : _current;
 
@@ -49,14 +47,13 @@ namespace Corax.Queries
             var result = _inner.Next(out _currentTerm);
             if (result == false)
                 _current = QueryMatch.Invalid;
-            _isFirst = true;
             
             _isBoosting = field.HasBoost;
             if (_isBoosting)
             {
-                _handler = _context.Allocate(64 * Unsafe.SizeOf<Bm25>(), out var bufferOutput);
-                _freqsStart = (Bm25*)bufferOutput.Ptr;
-                _freqsSize = 64;
+                _handler = _context.Allocate(64 * Unsafe.SizeOf<Bm25Relevance>(), out var bufferOutput);
+                _frequencyPerFieldStartPtr = (Bm25Relevance*)bufferOutput.Ptr;
+                _frequenciesSize = 64;
             }
         }
 
@@ -105,14 +102,14 @@ namespace Corax.Queries
 
         private void UnlikelyGrowBufferOfTermMatches()
         {
-            var handler = _context.Allocate(2 * _currentFreqIdx * sizeof(Bm25), out var tempBuffer);
-            var newStart = (Bm25*)tempBuffer.Ptr;
-            new Span<Bm25>(_freqsStart, _currentFreqIdx).CopyTo(new Span<Bm25>(newStart, _currentFreqIdx));
+            var handler = _context.Allocate(2 * _currentFreqIdx * Unsafe.SizeOf<Bm25Relevance>(), out var tempBuffer);
+            var newStart = (Bm25Relevance*)tempBuffer.Ptr;
+            new Span<Bm25Relevance>(_frequencyPerFieldStartPtr, _currentFreqIdx).CopyTo(new Span<Bm25Relevance>(newStart, _currentFreqIdx));
             
             _handler.Dispose();
             _handler = handler;
-            _freqsSize *= 2;
-            _freqsStart = newStart;
+            _frequenciesSize *= 2;
+            _frequencyPerFieldStartPtr = newStart;
         }
         
 #if !DEBUG
@@ -142,7 +139,7 @@ namespace Corax.Queries
             
             var actualMatches = buffer.Slice(0, matches);
 
-            bool hasData = _inner.Next(out var _currentTerm);
+            bool hasData = _inner.Next(out _currentTerm);
             AddTermToBm25();
 
             long totalRead = _currentTerm.Count;
@@ -176,7 +173,7 @@ namespace Corax.Queries
 
         private void ResetBm25Buffer()
         {
-            var begin = _freqsStart;
+            var begin = _frequencyPerFieldStartPtr;
             var end = begin + _currentFreqIdx;
 
             while (begin != end)
@@ -191,9 +188,9 @@ namespace Corax.Queries
         {
             if (_isBoosting && _currentTerm.Count != 0)
             {
-                if (_currentFreqIdx >= _freqsSize)
+                if (_currentFreqIdx >= _frequenciesSize)
                     UnlikelyGrowBufferOfTermMatches();
-                *(_freqsStart + _currentFreqIdx) = _currentTerm._bm25;
+                *(_frequencyPerFieldStartPtr + _currentFreqIdx) = _currentTerm._bm25Relevance;
                 _currentFreqIdx += 1;
             }
         }
@@ -204,15 +201,15 @@ namespace Corax.Queries
             if (_isBoosting == false)
                 return;
             
-            //We've to gather all data from already seen termmatches to get proper ranking :)
+            //We've to gather all data from already seen TermMatches to get proper ranking :)
 
-            var begin = _freqsStart;
+            var begin = _frequencyPerFieldStartPtr;
             var end = begin + _currentFreqIdx;
-
             while (begin != end)
             {
-                begin->Score(matches, scores, boostFactor);
-                begin->Dispose();
+                ref var beginRef = ref *begin;
+                beginRef.Score(matches, scores, boostFactor);
+                beginRef.Dispose();
                 begin += 1;
             }
             
@@ -229,6 +226,6 @@ namespace Corax.Queries
                 });
         }
 
-        string DebugView => Inspect().ToString();
+        public string DebugView => Inspect().ToString();
     }
 }

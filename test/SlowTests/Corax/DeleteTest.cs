@@ -88,7 +88,7 @@ public class DeleteTest : StorageTest
             var terms = fields?.CompactTreeFor("Content");
             Assert.True(terms!.TryGetValue("9", out var containerId));
             Assert.NotEqual(0, containerId & (long)TermIdMask.Set);
-            var setId = FrequencyUtils.RemoveFrequency(containerId);
+            var setId = EntryIdEncodings.DecodeAndDiscardFrequency(containerId);
             var setStateSpan = Container.GetMutable(llt, setId);
             ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             using var _ = Slice.From(llt.Allocator, "Content", ByteStringType.Immutable, out var fieldName);
@@ -102,7 +102,7 @@ public class DeleteTest : StorageTest
             // Look for "list/9" in the set
             while (iterator.MoveNext())
             {
-                Assert.False(previousIds.BinarySearch(FrequencyUtils.RemoveFrequency(iterator.Current)) >= 0);
+                Assert.False(previousIds.BinarySearch(EntryIdEncodings.DecodeAndDiscardFrequency(iterator.Current)) >= 0);
             }
 
             Assert.Equal(read, match.Count);
