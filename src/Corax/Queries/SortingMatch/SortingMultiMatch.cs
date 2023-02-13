@@ -95,6 +95,18 @@ namespace Corax.Queries
             TotalResults = 0;
 
             _comparer1 = comparer1;
+
+            if (HasBoostingComparer)
+            {
+                var boostingIsNotMainComparer = typeof(TComparer2) == typeof(BoostingComparer) || typeof(TComparer3) == typeof(BoostingComparer) ||
+                    typeof(TComparer4) == typeof(BoostingComparer) || typeof(TComparer5) == typeof(BoostingComparer) || typeof(TComparer6) == typeof(BoostingComparer) ||
+                    typeof(TComparer7) == typeof(BoostingComparer) || typeof(TComparer8) == typeof(BoostingComparer) || typeof(TComparer9) == typeof(BoostingComparer);
+                if (boostingIsNotMainComparer)
+                    throw new NotSupportedException(
+                        $"{nameof(SortingMultiMatch)} can compare score only as main property. Queries like 'order by Field, [..], score(), [..] ' etc are not supported.");
+
+            }
+            
             if (typeof(TComparer2) == typeof(SortingMultiMatch.NullComparer))
                 throw new NotSupportedException($"{nameof(SortingMultiMatch)} must have at least 2 different comparers. When a single comparer is needed use {nameof(SortingMatch)} instead.");
 
