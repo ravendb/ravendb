@@ -80,7 +80,7 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
             )
             break;
         }
-        "2022" {
+        "ltsc2022" {
              return @(
                 "$($repo):$($version)-windows-ltsc2022",
                 "$($repo):windows-ltsc2022-latest",
@@ -90,7 +90,7 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
             break;
         }
         Default{
-            throw "Windows Version not supported. There are '2022' and '1809' avaliable."
+            throw "Windows Version not supported. There are 'ltsc2022' and '1809' avaliable."
         }        
     }
 
