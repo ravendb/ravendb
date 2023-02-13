@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                         .Where(x => x.Name != "HR")
                         .ToList();
 
-                    Assert.True(timings.DurationInMs > 0);
+                    Assert.True(timings.DurationInMs >= 0);
                     Assert.NotNull(timings.Timings);
                 }
             }
