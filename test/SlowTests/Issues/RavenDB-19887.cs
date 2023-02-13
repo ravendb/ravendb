@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Core.AdminConsole;
 using Tests.Infrastructure;
@@ -38,10 +40,9 @@ namespace SlowTests.Issues
             {
                 var doc = new Doc { Id = "doc-1", NumVal = 1 };
                 session.Store(doc);
+                session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(15), replicas: 2);
                 session.SaveChanges();
             }
-
-            Assert.True(WaitForChangeVectorInCluster(nodes, store.Database));
 
             using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
