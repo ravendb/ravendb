@@ -87,7 +87,7 @@ export function DatabasesToolbarActions(props: DatabasesToolbarActionsProps) {
 
     return (
         <div className="actions d-flex justify-content-end">
-            <div className="mx-3 d-flex">
+            <div className="mx-3 gap-1 d-flex">
                 {isOperatorOrAbove() && (
                     <Button color="danger" onClick={onDelete} disabled={!canDeleteSelection || deleteChanges}>
                         {deleteChanges ? <Spinner size="sm" /> : <i className="icon-trash" />}

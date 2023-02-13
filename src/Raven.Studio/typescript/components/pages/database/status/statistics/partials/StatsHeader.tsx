@@ -19,21 +19,22 @@ export function StatsHeader() {
     return (
         <StickyHeader>
             <Row>
-                <Col />
                 <Col sm="auto">
                     <Button
-                        color="primary"
+                        color="secondary"
                         onClick={() => dispatch(toggleDetails())}
                         title="Click to load detailed statistics"
                     >
                         <i className={classNames(detailsVisible ? "icon-collapse-vertical" : "icon-expand-vertical")} />
-                        <span>{detailsVisible ? "Hide" : "Show"} details</span>
+                        <span>{detailsVisible ? "Hide" : "Show"} detailed database &amp; indexing stats</span>
                     </Button>
+                </Col>
+                <Col />
+                <Col sm="auto">
                     <Button
                         color="primary"
                         onClick={() => dispatch(refresh())}
                         disabled={spinnerRefresh}
-                        className="margin-left-xs"
                         title="Click to refresh stats"
                     >
                         {spinnerRefresh ? <Spinner size="sm" /> : <i className="icon-refresh"></i>}
