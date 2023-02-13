@@ -16,15 +16,20 @@ public class ShardedQueryCommand : AbstractShardedQueryCommand<QueryResult, Blit
 
     public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
     {
-        if (response == null)
+        using (Scope)
         {
-            // is null only when index doesn't exist
-            throw new IndexDoesNotExistException($"Index `{IndexName}` was not found");
+            if (response == null)
+            {
+                // is null only when index doesn't exist
+                throw new IndexDoesNotExistException($"Index `{IndexName}` was not found");
+            }
+
+            if (fromCache)
+                response = HandleCachedResponse(context, response);
+
+            Result = JsonDeserializationClient.QueryResult(response);
+
+            Scope?.MergeWith(Result.Timings);
         }
-
-        if (fromCache)
-            response = HandleCachedResponse(context, response);
-
-        Result = JsonDeserializationClient.QueryResult(response);
     }
 }

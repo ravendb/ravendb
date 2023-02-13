@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -159,23 +160,23 @@ namespace Raven.Server.Documents.Queries
                 if (cache.TryGetMetadata(result, addSpatialProperties, out var metadataHash, out var metadata))
                 {
                     result.Metadata = metadata;
+
+                    SetupTimings(result);
                     SetupPagingFromQueryMetadata();
+                    SetupTracker(result, tracker);
+                    SetupClientVersion(result, httpContext);
+
                     AssertPaging(result);
 
                     return result;
                 }
 
                 result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, addSpatialProperties, queryType);
-                if (result.Metadata.HasTimings)
-                    result.Timings = new QueryTimingsScope(start: false);
 
+                SetupTimings(result);
                 SetupPagingFromQueryMetadata();
-
-                if (tracker != null)
-                    tracker.Query = result.Query;
-
-                if (result.Metadata.HasFacet && httpContext.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var clientVersion))
-                    result.ClientVersion = clientVersion;
+                SetupTracker(result, tracker);
+                SetupClientVersion(result, httpContext);
 
                 AssertPaging(result);
 
@@ -282,30 +283,10 @@ namespace Raven.Server.Documents.Queries
 
                 result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, 0, addSpatialProperties);
 
-                if (result.Metadata.HasTimings)
-                    result.Timings = new QueryTimingsScope(start: false);
-
-                if (result.Metadata.Query.Offset != null)
-                {
-                    var offset = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
-                    result.Offset = offset;
-                    result.Start = start + offset;
-                }
-
-                if (result.Metadata.Query.Limit != null)
-                {
-                    pageSize = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
-                    result.Limit = pageSize;
-                    result.PageSize = Math.Min(result.PageSize, pageSize);
-                }
-
-                if (result.Metadata.Query.FilterLimit != null)
-                {
-                    result.FilterLimit = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
-                }
-
-                if (tracker != null)
-                    tracker.Query = result.Query;
+                SetupTimings(result);
+                SetupPagingFromQueryMetadata();
+                SetupTracker(result, tracker);
+                SetupClientVersion(result, httpContext);
 
                 AssertPaging(result);
 
@@ -325,8 +306,53 @@ namespace Raven.Server.Documents.Queries
 
                 throw;
             }
+
+            void SetupPagingFromQueryMetadata()
+            {
+                if (result.Metadata.Query.Offset != null)
+                {
+                    var offset = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    result.Offset = offset;
+                    result.Start = start + offset;
+                }
+
+                if (result.Metadata.Query.Limit != null)
+                {
+                    pageSize = (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    result.Limit = pageSize;
+                    result.PageSize = Math.Min(result.PageSize, pageSize);
+                }
+
+                if (result.Metadata.Query.FilterLimit != null)
+                {
+                    result.FilterLimit =
+                        (int)QueryBuilderHelper.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
+                }
+            }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetupTimings(IndexQueryServerSide indexQuery)
+        {
+            if (indexQuery.Metadata.HasTimings)
+                indexQuery.Timings = new QueryTimingsScope(start: false);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetupTracker(IndexQueryServerSide indexQuery, RequestTimeTracker tracker)
+        {
+            if (tracker != null)
+                tracker.Query = indexQuery.Query;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetupClientVersion(IndexQueryServerSide indexQuery, HttpContext httpContext)
+        {
+            if (indexQuery.Metadata.HasFacet && httpContext.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var clientVersion))
+                indexQuery.ClientVersion = clientVersion;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void AssertPaging(IndexQueryServerSide indexQuery)
         {
             if (indexQuery.Offset < 0)

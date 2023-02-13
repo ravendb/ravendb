@@ -214,15 +214,19 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
     private void ApplyPaging(ref ShardedQueryResult result, QueryTimingsScope scope)
     {
-        using (scope?.For(nameof(QueryTimingsScope.Names.Paging)))
+        var handleOffset = Query.Offset is > 0 && result.Results.Count > Query.Offset;
+        var handleLimit = Query.Limit is > 0 && result.Results.Count > Query.Limit;
+        var anyPaging = handleOffset || handleLimit;
+
+        using (anyPaging ? scope?.For(nameof(QueryTimingsScope.Names.Paging)) : null)
         {
-            if (Query.Offset is > 0 && result.Results.Count > Query.Offset)
+            if (handleOffset)
             {
                 var count = Math.Min(Query.Offset ?? 0, int.MaxValue);
                 result.Results.RemoveRange(0, (int)count);
             }
 
-            if (Query.Limit is > 0 && result.Results.Count > Query.Limit)
+            if (handleLimit)
             {
                 var index = Math.Min(Query.Limit.Value, int.MaxValue);
                 var count = result.Results.Count - Query.Limit.Value;
