@@ -60,12 +60,9 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
             var command = QueryCommands[shardNumber];
             var queryResult = cmdResult.Result;
 
-            using (command.Scope)
-            {
-                command.Scope?.MergeWith(nameof(QueryTimingsScope.Names.Remote), cmdResult.Result.Timings);
+            command.Scope?.MergeWith(cmdResult.Result.Timings);
 
-                CombineSingleShardResultProperties(result, queryResult);
-            }
+            CombineSingleShardResultProperties(result, queryResult);
 
             // For includes, we send the includes to all shards, then we merge them together. We do explicitly
             // support including from another shard, so we'll need to do that again for missing includes
