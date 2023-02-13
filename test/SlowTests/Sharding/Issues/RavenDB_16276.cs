@@ -5,7 +5,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Sharding;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -60,6 +59,32 @@ public class RavenDB_16276 : RavenTestBase
                 session.Store(order, "orders/1");
 
                 Assert.Throws<ShardedBatchBehaviorViolationException>(() => session.SaveChanges());
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Sharding)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+    public void SingleBucket_BatchBehavior_Will_Not_Throw_For_Commands_In_Different_Bucket_Store_When_Cluster_Transaction_Is_Used(Options options)
+    {
+        options.ModifyDocumentStore = s => s.Conventions.Sharding.BatchBehavior = ShardedBatchBehavior.TransactionalSingleBucketOnly;
+
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                var company = new Company();
+
+                session.Store(company, "companies/1");
+
+                var order = new Order { Company = company.Id };
+
+                session.Store(order, "orders/1");
+
+                session.SaveChanges();
             }
         }
     }

@@ -117,7 +117,7 @@ public class ShardedBatchCommand : IBatchCommand
             {
                 case ShardedBatchBehavior.TransactionalSingleBucketOnly:
                     if (previousBucket != bucket)
-                        throw new ShardedBatchBehaviorViolationException($"Batch command of type '{commandType}' operates on a document ID '{documentId}' with shard bucket '{bucket}' which violates the requested sharded batch behavior to operate on a single bucket ('{previousBucket}' from document ID '{previousDocumentId}').");
+                        throw new ShardedBatchBehaviorViolationException($"Batch command of type '{commandType}' operates on a document ID '{documentId}' with shard bucket '{bucket}' which violates the requested sharded batch behavior to operate on a single bucket ('{previousBucket}' from document ID '{previousDocumentId}'). Consider using cluster transactions in order to modify documents from multiple buckets without violating transaction boundaries.");
                     break;
                 case ShardedBatchBehavior.NonTransactionalMultiBucket:
                     break;
