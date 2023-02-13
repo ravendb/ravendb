@@ -252,7 +252,7 @@ namespace Raven.Client.Documents.Session
             var shardedBatchBehavior = options.ShardedBatchBehavior ?? _requestExecutor.Conventions.Sharding.BatchBehavior;
             var shardedBatchOptions = ShardedBatchOptions.For(shardedBatchBehavior);
             if (shardedBatchOptions != null)
-                _saveChangesOptions = new BatchOptions { ShardedOptions = ShardedBatchOptions.For(shardedBatchBehavior) };
+                _saveChangesOptions = new BatchOptions { ShardedOptions = shardedBatchOptions };
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
