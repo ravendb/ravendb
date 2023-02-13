@@ -294,7 +294,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact(Skip = "loading a related document that resides on a different shard than the parent document is not implemented")]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void RavenEtl_Loading_to_different_collections_with_load_document()
         {
             using (var src = Sharding.GetDocumentStore())
@@ -307,24 +307,28 @@ loadToUsers(this);
 loadToPeople({Name: this.Name + ' ' + this.LastName });
 loadToAddresses(load(this.AddressId));
 ");
-                const int count = 5;
+                const int count = 10;
 
                 using (var session = src.OpenSession())
                 {
                     for (int i = 0; i < count; i++)
                     {
+                        // make sure that user and address reside on the same shard
+                        var userId = $"users/{i}";
+                        var addressId = $"addresses/{i}/${userId}";
+
                         session.Store(new User
                         {
                             Age = i,
                             Name = "James",
                             LastName = "Smith",
-                            AddressId = $"addresses/{i}"
-                        }, $"users/{i}");
+                            AddressId = addressId
+                        }, userId);
 
                         session.Store(new Address
                         {
                             City = "New York"
-                        }, $"addresses/{i}");
+                        }, addressId);
                     }
 
                     session.SaveChanges();
@@ -332,6 +336,7 @@ loadToAddresses(load(this.AddressId));
 
                 var waitHandles = etlsDone.Select(mre => mre.WaitHandle).ToArray();
                 WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1));
+
                 using (var session = dest.OpenSession())
                 {
                     for (var i = 0; i < count; i++)
@@ -362,7 +367,8 @@ loadToAddresses(load(this.AddressId));
 
                 var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
-                Assert.Equal(15, stats.CountOfDocuments);
+                var expectedCount = count * 3;
+                Assert.Equal(expectedCount, stats.CountOfDocuments);
 
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -373,7 +379,7 @@ loadToAddresses(load(this.AddressId));
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(30));
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
 
                 using (var session = dest.OpenSession())
                 {
@@ -386,10 +392,11 @@ loadToAddresses(load(this.AddressId));
                     var addresses = session.Advanced.LoadStartingWith<Address>("users/3/addresses/");
                     Assert.Equal(0, addresses.Length);
                 }
+                
+                expectedCount -= 3;
 
                 stats = dest.Maintenance.Send(new GetStatisticsOperation());
-
-                Assert.Equal(12, stats.CountOfDocuments);
+                Assert.Equal(expectedCount, stats.CountOfDocuments);
             }
         }
 
