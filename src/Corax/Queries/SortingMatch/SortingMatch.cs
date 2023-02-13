@@ -226,9 +226,7 @@ namespace Corax.Queries
 
                 var scores = MemoryMarshal.Cast<byte, float>(bufferHolder.ToSpan());
                 Debug.Assert(scores.Length == totalMatches);
-
-                //When we don't have any conditions in 'Where' and returns whole collection from index let use boost from document to generate the order.
-                scores.Fill(match._inner.IsBoosting ? 0 : 1);
+                scores.Fill(Bm25Relevance.InitialScoreValue);
                 
                 // We perform the scoring process. 
                 match._inner.Score(matches[0..totalMatches], scores, 1f);

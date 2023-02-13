@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Sparrow;
 using Sparrow.Server.Debugging;
 using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
@@ -18,6 +20,45 @@ namespace FastTests.Voron
         {
         }
 
+        [RavenFact(RavenTestCategory.Voron)]
+        public void CompactTreeUpdates()
+        {
+            var fileStream = File.ReadLines(@"C:\Users\macie\Desktop\dump.txt");
+            var wtx = Env.WriteTransaction(); 
+            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+            try
+            {
+                foreach (var line in fileStream)
+                {
+                    switch (line[0])
+                    {
+                        case '#':
+                            wtx.Commit();
+                            wtx.Dispose();
+                            wtx = Env.WriteTransaction();
+                            tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                            break;
+                        case '-':
+                            var entryToRemove = line.Substring(1);
+                            tree.TryRemove(Encodings.Utf8.GetBytes(entryToRemove), out var oldValue);
+                            break;
+                        case '+':
+                            var entryIdPos = line.LastIndexOf('|') + 1;
+                            var key = line.Substring(1, entryIdPos - 2);
+                            var value = long.Parse(line.Substring(entryIdPos));
+                            tree.Add(Encodings.Utf8.GetBytes(key), value);
+                            break;
+                    }
+
+                }
+            }
+            finally
+            {
+                wtx.Commit();
+                wtx.Dispose();
+            }
+        }
+        
         [RavenFact(RavenTestCategory.Voron)]
         public void TrickyAttempts()
         {
@@ -43,6 +84,35 @@ namespace FastTests.Voron
                 Assert.True(tree.TryGetValue("Pipeline3", out  r));
                 Assert.Equal(5, r);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void CanCompactTreeAddAndRemoveThingsBiggerThanLong()
+        {
+            var key = 0;
+            var value = 130040335888;
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                for (int i = 0; i < 10_000; ++i)
+                    tree.Add($"{i++}", value++);
+                wtx.Commit();
+            }
+            using (var rtx = Env.ReadTransaction())
+            {
+                var tree = CompactTree.Create(rtx.LowLevelTransaction, "test");
+                Assert.True(tree.TryGetValue("2492", out var r));
+                //Assert.Equal(130040336388, r);
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
+                tree.TryRemove("2492", out var old);
+              //  Assert.Equal(130040336388, old);
+                wtx.Commit();
+            }            
+            
         }
         
         [RavenFact(RavenTestCategory.Voron)]

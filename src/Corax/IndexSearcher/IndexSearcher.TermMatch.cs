@@ -90,28 +90,23 @@ public partial class IndexSearcher
         TermMatch matches;
         if ((containerId & (long)TermIdMask.Set) != 0)
         {
-            var setId = FrequencyUtils.GetContainerId(containerId);// & Constants.StorageMask.ContainerType);
+            var setId = EntryIdEncodings.GetContainerId(containerId);
             var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
 
             ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             var set = new PostingList(_transaction.LowLevelTransaction, Slices.Empty, setState);
-            matches = field.HasBoost 
-                ? TermMatch.YieldSetWithFreq(this, Allocator, set, termRatioToWholeCollection, IsAccelerated) 
-                : TermMatch.YieldSetNoFreq(this, Allocator, set, IsAccelerated);
+            matches = TermMatch.YieldSet(this, Allocator, set, termRatioToWholeCollection, field.HasBoost, IsAccelerated);
         }
         else if ((containerId & (long)TermIdMask.Small) != 0)
         {
-            var smallSetId = FrequencyUtils.GetContainerId(containerId);// & Constants.StorageMask.ContainerType);
+            var smallSetId = EntryIdEncodings.GetContainerId(containerId);
             var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
-            matches = field.HasBoost ? 
-                TermMatch.YieldSmallWithFreq(this, Allocator, small, termRatioToWholeCollection) : 
-                TermMatch.YieldSmallNoFreq(this, Allocator, small);
+            matches = TermMatch.YieldSmall(this, Allocator, small, termRatioToWholeCollection, field.HasBoost);
         }
         else
         {
-            matches = field.HasBoost 
-                ? TermMatch.YieldOnceWithFreq(this, Allocator, containerId, termRatioToWholeCollection)
-                : TermMatch.YieldOnceNoFreq(this, Allocator, containerId);
+
+            matches = TermMatch.YieldOnce(this, Allocator, containerId, termRatioToWholeCollection, field.HasBoost);
         }
 
         return matches;
@@ -147,7 +142,7 @@ public partial class IndexSearcher
         
         if ((value & (long)TermIdMask.Set) != 0)
         {
-            var setId = FrequencyUtils.GetContainerId(value);
+            var setId = EntryIdEncodings.GetContainerId(value);
             var setStateSpan = Container.Get(_transaction.LowLevelTransaction, setId).ToSpan();
             ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
             return setState.NumberOfEntries;
@@ -155,7 +150,7 @@ public partial class IndexSearcher
         
         if ((value & (long)TermIdMask.Small) != 0)
         {
-            var smallSetId = FrequencyUtils.GetContainerId(value);
+            var smallSetId = EntryIdEncodings.GetContainerId(value);
             var small = Container.Get(_transaction.LowLevelTransaction, smallSetId);
             var itemsCount = ZigZagEncoding.Decode<int>(small.ToSpan(), out var len);
 

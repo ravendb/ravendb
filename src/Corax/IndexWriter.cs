@@ -84,8 +84,8 @@ namespace Corax
             
             private bool _deletedDuplicatesOfNewItems;
 
-            private long* _freqStart;
-            private long* _freqEnd;
+            private short* _freqStart;
+            private short* _freqEnd;
 
 
             public bool HasChanges()
@@ -114,17 +114,19 @@ namespace Corax
                 _context = context;
                 //todo: optimize, we can do FREQ part as int, should save us a lot of RAM
                 // [ADDITIONS][REMOVALS][ADDITIONS_TERMS_FREQ][REMOVAL_TERMS_FREQ] 
-                _disposableItems = _context.Allocate(2 * InitialSize * sizeof(long), out var output);
+                _disposableItems = _context.Allocate(CalculateSizeOfContainer(InitialSize), out var output);
                 
                 _start = (long*)output.Ptr;
                 _end = _start + InitialSize;
-                _freqStart = _end;
+                _freqStart = (short*)_end;
                 _freqEnd = _freqStart + InitialSize;
-                new Span<long>(_freqStart, InitialSize).Fill(1L);
+                new Span<short>(_freqStart, InitialSize).Fill(1);
                 _additions = 0;
                 _removals = 0;
                 _preparationFinished = false;
             }
+
+            private int CalculateSizeOfContainer(int size) => size * (sizeof(long) + sizeof(short));
 
             [Conditional("DEBUG")]
             public void AssertPreparationIsNotFinished()
@@ -133,7 +135,7 @@ namespace Corax
                     throw new InvalidOperationException("Tried to Add/Remove but data is already encoded.");
             }
 
-            public void Addition(long entryId, long freq = 1)
+            public void Addition(long entryId, short freq = 1)
             {
                 AssertPreparationIsNotFinished();
 
@@ -156,7 +158,7 @@ namespace Corax
 
                 if (_removals > 0 && *(_end - _removals) == entryId)
                 {
-                    *(_freqEnd - _removals) += 1;
+                    *(_freqEnd - _removals) -= 1;
                     return;
                 }
 
@@ -173,21 +175,21 @@ namespace Corax
                 int totalSpace = (int)TotalSpace;
                 int newTotalSpace = totalSpace * 2;
 
-                var itemsScope = _context.Allocate(newTotalSpace * sizeof(long) * 2, out var itemsOutput);
+                var itemsScope = _context.Allocate(CalculateSizeOfContainer(newTotalSpace), out var itemsOutput);
 
                 long* start = (long*)itemsOutput.Ptr;
                 long* end = start + newTotalSpace;
 
-                long* freqStart = end;
-                long* freqEnd = freqStart + newTotalSpace;
+                short* freqStart = (short*)end;
+                short* freqEnd = freqStart + newTotalSpace;
 
                 // Copy the contents that we already have.
                 Unsafe.CopyBlockUnaligned(start, _start, (uint)_additions * sizeof(long));
                 Unsafe.CopyBlockUnaligned(end - _removals, _end - _removals, (uint)_removals * sizeof(long));
 
                 //CopyFreq
-                Unsafe.CopyBlockUnaligned(freqStart, _freqStart, (uint)_additions * sizeof(long));
-                Unsafe.CopyBlockUnaligned( freqEnd - _removals, _freqEnd - _removals, (uint)_removals * sizeof(long));
+                Unsafe.CopyBlockUnaligned(freqStart, _freqStart, (uint)_additions * sizeof(short));
+                Unsafe.CopyBlockUnaligned( freqEnd - _removals, _freqEnd - _removals, (uint)_removals * sizeof(short));
                 
                 //All new items are 1 by default
                 new Span<long>(freqStart + _additions, newTotalSpace - (_additions+_removals)).Fill(1);
@@ -198,8 +200,8 @@ namespace Corax
 #if DEBUG
                 var addEqual = new Span<long>(_start, _additions).SequenceEqual(new Span<long>(start, _additions));
                 var removalEq =  new Span<long>(_end - _removals, _removals).SequenceEqual(new Span<long>(end - _removals, _removals));
-                var addFreq =  new Span<long>(_freqStart, _additions).SequenceEqual(new Span<long>(freqStart, _additions));
-                var remFreq =  new Span<long>(_freqEnd - _removals, _removals).SequenceEqual(new Span<long>(freqEnd - _removals, _removals));
+                var addFreq =  new Span<short>(_freqStart, _additions).SequenceEqual(new Span<short>(freqStart, _additions));
+                var remFreq =  new Span<short>(_freqEnd - _removals, _removals).SequenceEqual(new Span<short>(freqEnd - _removals, _removals));
                 if ((addEqual && removalEq && addFreq && remFreq) == false)
                     throw new InvalidDataException($"Lost item(s) in {nameof(GrowBuffer)}.");
 #endif
@@ -214,9 +216,9 @@ namespace Corax
             public void DeleteAllDuplicates()
             {
                 var additions = new Span<long>(_start, _additions);
-                var freqAdditions = new Span<long>(_freqStart, _additions);
+                var freqAdditions = new Span<short>(_freqStart, _additions);
                 var removals = new Span<long>(_end - _removals, _removals);
-                var freqRemovals = new Span<long>(_freqEnd - _removals, _removals);
+                var freqRemovals = new Span<short>(_freqEnd - _removals, _removals);
 
 
                 MemoryExtensions.Sort(additions, freqAdditions);
@@ -271,7 +273,7 @@ namespace Corax
                     freqAdditions.Slice(duplicatesFound).CopyTo(freqAdditions);
 
                     removals.Slice(duplicatesFound).CopyTo(new Span<long>(_end - _removals, _removals));
-                    freqRemovals.Slice(duplicatesFound).CopyTo(new Span<long>(_freqEnd - _removals, _removals));
+                    freqRemovals.Slice(duplicatesFound).CopyTo(new Span<short>(_freqEnd - _removals, _removals));
                     ValidateNoDuplicateEntries();
                 }
             }
@@ -287,8 +289,8 @@ namespace Corax
                 
                 DeleteAllDuplicates();
 
-                FrequencyUtils.EncodeFrequencies(new Span<long>(_start, _additions), new Span<long>(_freqStart, _additions));
-                FrequencyUtils.EncodeFrequencies(new Span<long>(_end - _removals, _removals), new ReadOnlySpan<long>(_freqEnd - _removals, _removals));
+                EntryIdEncodings.Encode(new Span<long>(_start, _additions), new Span<short>(_freqStart, _additions));
+                EntryIdEncodings.Encode(new Span<long>(_end - _removals, _removals), new ReadOnlySpan<short>(_freqEnd - _removals, _removals));
 
                 _preparationFinished = true;
             }
@@ -315,9 +317,9 @@ namespace Corax
 
             public ReadOnlySpan<long> Removals => new(_end - _removals, _removals);
             
-            public ReadOnlySpan<long> AdditionsFrequency => new(_freqStart, _additions);
+            public ReadOnlySpan<short> AdditionsFrequency => new(_freqStart, _additions);
 
-            public ReadOnlySpan<long> RemovalsFrequency => new(_freqEnd - _removals, _removals);
+            public ReadOnlySpan<short> RemovalsFrequency => new(_freqEnd - _removals, _removals);
 
             public void Dispose()
             {
@@ -484,7 +486,7 @@ namespace Corax
                     indexer.InsertToken();
                 }
 
-                return FrequencyUtils.Encode(entryId, 1, TermIdMask.Single);
+                return EntryIdEncodings.Encode(entryId, 1, TermIdMask.Single);
             }
         }
 
@@ -498,7 +500,7 @@ namespace Corax
                 
                 // We don't store `1` but if user update boost value to 1 we've to delete the previous one
                 if (isUpdate)
-                    _documentBoost.Delete(FrequencyUtils.RemoveFrequency(entryId));
+                    _documentBoost.Delete(EntryIdEncodings.DecodeAndDiscardFrequency(entryId));
                 
                 return;
             }
@@ -509,14 +511,14 @@ namespace Corax
 
             documentBoost = MathF.Log(documentBoost + 1); // ensure we've positive number
             
-            using var __ = _documentBoost.DirectAdd(FrequencyUtils.RemoveFrequency(entryId), out _, out byte* boostPtr);
+            using var __ = _documentBoost.DirectAdd(EntryIdEncodings.DecodeAndDiscardFrequency(entryId), out _, out byte* boostPtr);
             float* floatBoostPtr = (float*)boostPtr;
             *floatBoostPtr = documentBoost;
         }
 
         private unsafe void RemoveDocumentBoost(long entryId)
         {
-            _documentBoost.Delete(FrequencyUtils.RemoveFrequency(entryId));
+            _documentBoost.Delete(EntryIdEncodings.DecodeAndDiscardFrequency(entryId));
         }
 
         public unsafe long Update(string field, Span<byte> key, LazyStringValue id, Span<byte> data, ref long numberOfEntries, float documentBoost)
@@ -545,7 +547,7 @@ namespace Corax
             
             Page lastVisitedPage = default;
 
-            var entryId = FrequencyUtils.RemoveFrequency(idInTree);
+            var entryId = EntryIdEncodings.DecodeAndDiscardFrequency(idInTree);
             var oldEntryReader = IndexSearcher.GetEntryReaderFor(Transaction, ref lastVisitedPage, entryId, out var rawSize);
             
             if (oldEntryReader.Buffer.SequenceEqual(data))
@@ -1298,7 +1300,7 @@ namespace Corax
         {
             if ((idInTree & (long)TermIdMask.Set) != 0)
             {
-                var id = FrequencyUtils.GetContainerId(idInTree);
+                var id = EntryIdEncodings.GetContainerId(idInTree);
                 var setSpace = Container.GetMutable(Transaction.LowLevelTransaction, id);
                 ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
                 
@@ -1307,13 +1309,13 @@ namespace Corax
                 while (iterator.MoveNext())
                 {
                     // since this is also encoded we've to delete frequency and container type as well
-                    _deletedEntries.Add(FrequencyUtils.RemoveFrequency(iterator.Current));
+                    _deletedEntries.Add(EntryIdEncodings.DecodeAndDiscardFrequency(iterator.Current));
                     _numberOfModifications--;
                 }
             }
             else if ((idInTree & (long)TermIdMask.Small) != 0)
             {
-                var id = FrequencyUtils.GetContainerId(idInTree);
+                var id = EntryIdEncodings.GetContainerId(idInTree);
                 var smallSet = Container.Get(Transaction.LowLevelTransaction, id).ToSpan();
                 // combine with existing value
                 var cur = 0L;
@@ -1323,13 +1325,13 @@ namespace Corax
                     var value = ZigZagEncoding.Decode<long>(smallSet, out var len, pos);
                     pos += len;
                     cur += value;
-                    _deletedEntries.Add(FrequencyUtils.RemoveFrequency(cur));
+                    _deletedEntries.Add(EntryIdEncodings.DecodeAndDiscardFrequency(cur));
                     _numberOfModifications--;
                 }
             }
             else
             {
-                _deletedEntries.Add(FrequencyUtils.RemoveFrequency(idInTree));
+                _deletedEntries.Add(EntryIdEncodings.DecodeAndDiscardFrequency(idInTree));
                 _numberOfModifications--;
             }
         }
@@ -1447,7 +1449,8 @@ namespace Corax
             for (var index = 0; index < termsCount; index++)
             {
                 var term = sortedTermsBuffer[index];
-
+                if (term.ToString() == "10") Debugger.Break();
+                
                 ref var entries = ref CollectionsMarshal.GetValueRefOrNullRef(currentFieldTerms, term);
                 Debug.Assert(Unsafe.IsNullRef(ref entries) == false);
                 if (entries.HasChanges() == false)
@@ -1518,7 +1521,7 @@ namespace Corax
 
         private AddEntriesToTermResult AddEntriesToTermResultViaSmallSet(Span<byte> tmpBuf, ref EntriesModifications entries, out long termId, long id)
         {
-            id = FrequencyUtils.GetContainerId(id);
+            id = EntryIdEncodings.GetContainerId(id);
             
             var llt = Transaction.LowLevelTransaction;
             var smallSet = Container.GetMutable(llt, id);
@@ -1537,7 +1540,7 @@ namespace Corax
                 positionInEncodedBuffer += lengthOfDelta;
                 currentId += value;
 
-                var entryId = FrequencyUtils.RemoveFrequency(currentId);
+                var entryId = EntryIdEncodings.DecodeAndDiscardFrequency(currentId);
                 if (removalIndex < removals.Length)
                 {
                     if (entryId == removals[removalIndex])
@@ -1592,7 +1595,7 @@ namespace Corax
             var allocatedSize = encoded.Length + 32 - (encoded.Length % 32);
 
             termId = Container.Allocate(llt, _postingListContainerId, allocatedSize, out var space);
-            termId = FrequencyUtils.Encode(termId, 0, TermIdMask.Small);
+            termId = EntryIdEncodings.Encode(termId, 0, TermIdMask.Small);
             
             encoded.CopyTo(space);
             return AddEntriesToTermResult.UpdateTermId;
@@ -1601,7 +1604,7 @@ namespace Corax
         private AddEntriesToTermResult AddEntriesToTermResultSingleValue(Span<byte> tmpBuf, long existing, ref EntriesModifications entries, out long termId)
         {
             entries.AssertPreparationIsNotFinished();
-            var (existingEntryId, existingFrequency) = FrequencyUtils.Decode(existing);
+            var (existingEntryId, existingFrequency) = EntryIdEncodings.Decode(existing);
 
             // single
             if (entries.TotalAdditions == 1 && entries.Additions[0] == existingEntryId && entries.AdditionsFrequency[0] == existingFrequency && entries.TotalRemovals == 0)
@@ -1633,7 +1636,7 @@ namespace Corax
 
         private AddEntriesToTermResult AddEntriesToTermResultViaLargeSet(ref EntriesModifications entries, out long termId, long id)
         {
-            id = FrequencyUtils.GetContainerId(id);
+            id = EntryIdEncodings.GetContainerId(id);
             var llt = Transaction.LowLevelTransaction;
             var setSpace = Container.GetMutable(llt, id);
             ref var postingListState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
@@ -1766,7 +1769,7 @@ namespace Corax
             if (entries.TotalAdditions == 1)
             {
                 entries.AssertPreparationIsNotFinished();
-                termId = FrequencyUtils.Encode(additions[0], entries.AdditionsFrequency[0], (long)TermIdMask.Single);                
+                termId = EntryIdEncodings.Encode(additions[0], entries.AdditionsFrequency[0], (long)TermIdMask.Single);                
                 return;
             }
 
@@ -1783,7 +1786,7 @@ namespace Corax
             var containerId = Container.Allocate(Transaction.LowLevelTransaction, _postingListContainerId, allocatedSize, out var space);
             encoded.CopyTo(space);
 
-            termId = FrequencyUtils.Encode(containerId, 0, TermIdMask.Small);
+            termId = EntryIdEncodings.Encode(containerId, 0, TermIdMask.Small);
         }
 
         private unsafe void AddNewTermToSet(ReadOnlySpan<long> additions, out long termId)
@@ -1793,7 +1796,7 @@ namespace Corax
             PostingList.Create(Transaction.LowLevelTransaction, ref postingListState);
 
             PostingList.Update(Transaction.LowLevelTransaction, ref postingListState, additions, ReadOnlySpan<long>.Empty);
-            termId = FrequencyUtils.Encode(setId, 0, TermIdMask.Set);
+            termId = EntryIdEncodings.Encode(setId, 0, TermIdMask.Set);
         }
 
         private void UnlikelyGrowAnalyzerBuffer(int newBufferSize, int newTokenSize)

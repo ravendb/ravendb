@@ -47,7 +47,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
             var ids = new long[16];
             var read = termQuery.Fill(ids);
             Assert.Equal(1, read);
-            Assert.Equal(FrequencyUtils.Decode(oldId).EntryId, ids[0]);
+            Assert.Equal(EntryIdEncodings.Decode(oldId).EntryId, ids[0]);
         }
 
         long newId;
@@ -78,7 +78,7 @@ public unsafe class OptimizedUpdatesOnIndexes : StorageTest
             ids = new long[16];
             read = termQuery.Fill(ids);
             Assert.Equal(1, read);
-            Assert.Equal(FrequencyUtils.Decode(oldId).EntryId, ids[0]);
+            Assert.Equal(EntryIdEncodings.Decode(oldId).EntryId, ids[0]);
         }
 
     }

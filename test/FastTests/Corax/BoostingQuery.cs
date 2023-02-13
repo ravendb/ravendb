@@ -42,8 +42,9 @@ namespace FastTests.Corax
                 scores.Fill(1);
                 boostedMatch.Score(ids, scores, 1f);
 
+                //When we call 'Boost' on `AllEntries` there is no reason to apply it because it will increase all 'scores' equally and this don't make any sense.                
                 for (int i = 0; i < scores.Length; i++)
-                    Assert.Equal(10, scores[i]);
+                    Assert.Equal(1, scores[i]);
             }
         }
 
@@ -65,20 +66,20 @@ namespace FastTests.Corax
                 var contentMatch = searcher.TermQuery(searcher.FieldMetadataBuilder("Content1", hasBoost: true), "1");
                 var orMatch = searcher.Or(boostedStartWithMatch, contentMatch);
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
-
+                var orderByScore = searcher.OrderByScore(boostedOrMatch);
                 Span<long> ids = stackalloc long[2048];
-                int read = boostedOrMatch.Fill(ids);
+                int read = orderByScore.Fill(ids);
                 ids = ids.Slice(0, read);
-
-                Span<float> scores = stackalloc float[ids.Length];
-                scores.Fill(1);
-                boostedOrMatch.Score(ids, scores, 1);
-
-                Assert.Equal(10.117775, scores[0], 0.001);
-                Assert.Equal(10.117775, scores[1], 0.001);
-                Assert.Equal(10.117775, scores[2], 0.001);
-                Assert.Equal(1, scores[3], 0.001);
-                Assert.Equal(1, scores[4], 0.001);
+                
+                List<string> idsName = new();
+                for (int i = 0; i < read; ++i)
+                    idsName.Add(searcher.GetIdentityFor(ids[i]));
+                
+                Assert.Equal("list/1", idsName[0]); // most unique 
+                Assert.Equal("list/11", idsName[1]); // 2nd
+                Assert.Equal("list/111", idsName[2]); // 3th
+                Assert.Equal("list/2", idsName[3]); // those scoring has no impact
+                Assert.Equal("list/4", idsName[4]); //
             }
         }
 
