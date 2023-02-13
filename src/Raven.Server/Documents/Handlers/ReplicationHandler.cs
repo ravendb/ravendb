@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
         
-        [RavenAction("/databases/*/replication/all-items", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/debug/replication/all-items", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetAllItems()
         {
             var etag = GetLongQueryString("etag", required: false) ?? 0L;
