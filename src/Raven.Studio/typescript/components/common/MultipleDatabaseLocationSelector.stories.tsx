@@ -32,8 +32,24 @@ ShardedDatabase.args = {
             shardNumber: 0,
         },
         {
+            nodeTag: "A",
+            shardNumber: 1,
+        },
+        {
             nodeTag: "B",
             shardNumber: 1,
+        },
+        {
+            nodeTag: "B",
+            shardNumber: 2,
+        },
+        {
+            nodeTag: "C",
+            shardNumber: 0,
+        },
+        {
+            nodeTag: "C",
+            shardNumber: 2,
         },
     ],
 };

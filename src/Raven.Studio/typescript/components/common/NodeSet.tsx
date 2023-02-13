@@ -32,7 +32,6 @@ interface NodeSetItemProps {
     children?: ReactNode | ReactNode[];
     icon?: string;
     color?: string;
-
     title?: string;
 }
 
