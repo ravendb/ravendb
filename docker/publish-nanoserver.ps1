@@ -1,7 +1,7 @@
 param(
     $Repo = "ravendb/ravendb",
     $ArtifactsDir = "..\artifacts",
-    $WinVer = "2022",
+    $WinVer = "1809",
     [switch]$DryRun = $False,
     [switch]$RemoveImages = $False)
 
