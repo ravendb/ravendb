@@ -60,7 +60,7 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
             var command = QueryCommands[shardNumber];
             var queryResult = cmdResult.Result;
 
-            command.Scope?.MergeWith(cmdResult.Result.Timings);
+            command.Scope?.WithBase(cmdResult.Result.Timings);
 
             CombineSingleShardResultProperties(result, queryResult);
 
