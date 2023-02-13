@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.Queries
                     return result;
                 }
 
-                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, addSpatialProperties, queryType);
+                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, addSpatialProperties, queryType, database);
 
                 SetupTimings(result);
                 SetupPagingFromQueryMetadata();
