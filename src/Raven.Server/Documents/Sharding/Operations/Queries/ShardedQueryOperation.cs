@@ -57,13 +57,10 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
 
         foreach (var (shardNumber, cmdResult) in results)
         {
-            var command = QueryCommands[shardNumber];
             var queryResult = cmdResult.Result;
 
-            CombineExplanations(cmdResult);
-
-            command.Scope?.WithBase(cmdResult.Result.Timings);
-
+            CombineExplanations(result, cmdResult);
+            CombineTimings(shardNumber, cmdResult);
             CombineSingleShardResultProperties(result, queryResult);
 
             // For includes, we send the includes to all shards, then we merge them together. We do explicitly
@@ -156,17 +153,6 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
         result.RegisterSpatialProperties(_query);
 
         return result;
-
-        void CombineExplanations(ShardExecutionResult<QueryResult> cmdResult)
-        {
-            if (cmdResult.Result.Explanations is not { Count: > 0 }) 
-                return;
-
-            result.Explanations ??= new Dictionary<string, string[]>();
-
-            foreach (var kvp in cmdResult.Result.Explanations)
-                result.Explanations[kvp.Key] = kvp.Value;
-        }
     }
 
     private class RoundRobinComparer : IComparer<BlittableJsonReaderObject>

@@ -82,7 +82,7 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
                 if (result.Includes is List<BlittableJsonReaderObject> blittableIncludes)
                     blittableIncludes.Add(include.Clone(Context));
                 else if (result.Includes is List<Document> documentIncludes)
-                    documentIncludes.Add(new Document { Id = Context.GetLazyString(id), Data = include.Clone(Context)});
+                    documentIncludes.Add(new Document { Id = Context.GetLazyString(id), Data = include.Clone(Context) });
                 else
                     throw new NotSupportedException($"Unknown includes type: {result.Includes.GetType().FullName}");
             }
@@ -91,5 +91,21 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
                 (MissingDocumentIncludes ??= new HashSet<string>()).Add(id);
             }
         }
+    }
+
+    protected void CombineExplanations<TQueryResult, TQueryIncludes>(QueryResult<TQueryResult, TQueryIncludes> result, ShardExecutionResult<QueryResult> shardResult)
+    {
+        if (shardResult.Result.Explanations is not { Count: > 0 })
+            return;
+
+        result.Explanations ??= new Dictionary<string, string[]>();
+
+        foreach (var kvp in shardResult.Result.Explanations)
+            result.Explanations[kvp.Key] = kvp.Value;
+    }
+
+    protected void CombineTimings(int shardNumber, ShardExecutionResult<QueryResult> shardResult)
+    {
+        QueryCommands[shardNumber].Scope?.WithBase(shardResult.Result.Timings);
     }
 }

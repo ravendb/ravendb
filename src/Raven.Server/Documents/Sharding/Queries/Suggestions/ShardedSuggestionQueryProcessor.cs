@@ -8,6 +8,7 @@ using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Operations.Queries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -25,36 +26,45 @@ public class ShardedSuggestionQueryProcessor : AbstractShardedQueryProcessor<Sha
 
     public override async Task<SuggestionQueryResult> ExecuteShardedOperations(QueryTimingsScope scope)
     {
-        var commands = GetOperationCommands(null); // TODO [ppekrol]
-
-        Dictionary<string, SuggestionField> fieldsWithOptions = null;
-
-        foreach (var field in Query.Metadata.SelectFields)
+        using (var queryScope = scope?.For(nameof(QueryTimingsScope.Names.Query)))
         {
-            if (field is SuggestionField {HasOptions: true} suggestionField)
+            ShardedReadResult<SuggestionQueryResult> shardedReadResult;
+
+            using (var executeScope = queryScope?.For(nameof(QueryTimingsScope.Names.Execute)))
             {
-                fieldsWithOptions ??= new Dictionary<string, SuggestionField>();
+                var commands = GetOperationCommands(executeScope);
 
-                fieldsWithOptions.Add(suggestionField.Name, suggestionField);
+                Dictionary<string, SuggestionField> fieldsWithOptions = null;
+
+                foreach (var field in Query.Metadata.SelectFields)
+                {
+                    if (field is SuggestionField { HasOptions: true } suggestionField)
+                    {
+                        fieldsWithOptions ??= new Dictionary<string, SuggestionField>();
+
+                        fieldsWithOptions.Add(suggestionField.Name, suggestionField);
+                    }
+                }
+
+                var operation = new ShardedSuggestionQueryOperation(fieldsWithOptions, Query.QueryParameters, Context, RequestHandler, commands,
+                    ExistingResultEtag?.ToString());
+
+                var shards = GetShardNumbers(commands);
+
+                shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
             }
+
+            if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
+            {
+                return SuggestionQueryResult.NotModifiedResult;
+            }
+
+            var result = shardedReadResult.Result;
+
+            await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex, scope);
+
+            return result;
         }
-
-        var operation = new ShardedSuggestionQueryOperation(fieldsWithOptions, Query.QueryParameters, Context, RequestHandler, commands, ExistingResultEtag?.ToString());
-
-        var shards = GetShardNumbers(commands);
-
-        var shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
-
-        if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
-        {
-            return SuggestionQueryResult.NotModifiedResult;
-        }
-
-        var result = shardedReadResult.Result;
-
-        await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex, scope);
-
-        return result;
     }
 
     protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);

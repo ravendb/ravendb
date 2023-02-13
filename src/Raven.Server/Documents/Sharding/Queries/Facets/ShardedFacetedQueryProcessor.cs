@@ -12,6 +12,7 @@ using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Operations.Queries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -96,29 +97,41 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
 
     public override async Task<FacetedQueryResult> ExecuteShardedOperations(QueryTimingsScope scope)
     {
-        var commands = GetOperationCommands(null); // TODO [ppekrol]
-
-        var operation = new ShardedFacetedQueryOperation(_optionsByFacet, Context, RequestHandler, commands, ExistingResultEtag?.ToString());
-
-        var shards = GetShardNumbers(commands);
-
-        var shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
-
-        if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
+        using (var queryScope = scope?.For(nameof(QueryTimingsScope.Names.Query)))
         {
-            return FacetedQueryResult.NotModifiedResult;
+            ShardedFacetedQueryOperation operation;
+            ShardedReadResult<FacetedQueryResult> shardedReadResult;
+
+            using (var executeScope = queryScope?.For(nameof(QueryTimingsScope.Names.Execute)))
+            {
+                var commands = GetOperationCommands(executeScope);
+
+                operation = new ShardedFacetedQueryOperation(_optionsByFacet, Context, RequestHandler, commands, ExistingResultEtag?.ToString());
+
+                var shards = GetShardNumbers(commands);
+
+                shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
+            }
+
+            if (shardedReadResult.StatusCode == (int)HttpStatusCode.NotModified)
+            {
+                return FacetedQueryResult.NotModifiedResult;
+            }
+
+            var result = shardedReadResult.Result;
+
+            await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex, scope);
+
+            using (Query.Metadata.HasIncludeOrLoad ? queryScope?.For(QueryTimingsScope.Names.Includes) : null)
+            {
+                if (operation.MissingDocumentIncludes is { Count: > 0 })
+                {
+                    await HandleMissingDocumentIncludes(operation.MissingDocumentIncludes, result);
+                }
+            }
+
+            return result;
         }
-
-        var result = shardedReadResult.Result;
-
-        await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex, scope);
-
-        if (operation.MissingDocumentIncludes is { Count: > 0 })
-        {
-            await HandleMissingDocumentIncludes(operation.MissingDocumentIncludes, result);
-        }
-
-        return result;
     }
 
     protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);

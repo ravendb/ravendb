@@ -3,12 +3,15 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
+using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Queries.Suggestions;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Documents.Sharding.Queries.Facets;
 using Raven.Server.Documents.Sharding.Queries.Suggestions;
@@ -48,41 +51,51 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
 
     protected override async ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
     {
-        var indexName = AbstractQueryRunner.GetIndexName(query);
-
-        using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+        using (var timings = Timings(query))
         {
-            var queryProcessor = new ShardedFacetedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, token.Token);
+            var indexName = AbstractQueryRunner.GetIndexName(query);
 
-            await queryProcessor.InitializeAsync();
+            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            {
+                var queryProcessor = new ShardedFacetedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, token.Token);
 
-            return await queryProcessor.ExecuteShardedOperations(null); // TODO [ppekrol]
+                await queryProcessor.InitializeAsync();
+
+                var result = await queryProcessor.ExecuteShardedOperations(timings.Scope);
+
+                result.DurationInMs = timings.Duration;
+
+                return result;
+            }
         }
     }
 
     protected override async ValueTask<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
     {
-        var indexName = AbstractQueryRunner.GetIndexName(query);
-
-        using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+        using (var timings = Timings(query))
         {
-            var queryProcessor = new ShardedSuggestionQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, token.Token);
+            var indexName = AbstractQueryRunner.GetIndexName(query);
 
-            await queryProcessor.InitializeAsync();
+            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            {
+                var queryProcessor = new ShardedSuggestionQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, token.Token);
 
-            return await queryProcessor.ExecuteShardedOperations(null); // TODO [ppekrol]
+                await queryProcessor.InitializeAsync();
+
+                var result = await queryProcessor.ExecuteShardedOperations(timings.Scope);
+
+                result.DurationInMs = timings.Duration;
+
+                return result;
+            }
         }
     }
 
     protected override async ValueTask<QueryResultServerSide<BlittableJsonReaderObject>> GetQueryResultsAsync(IndexQueryServerSide query,
         TransactionOperationContext queryContext, long? existingResultEtag, bool metadataOnly, OperationCancelToken token)
     {
-        Stopwatch sw = null;
-        using (var scope = query.Timings?.Start())
+        using (var timings = Timings(query))
         {
-            if (scope == null)
-                sw = Stopwatch.StartNew();
-
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
                 @"RavenDB-19071 what do we do with: var diagnostics = GetBoolValueQueryString(""diagnostics"", required: false) ?? false");
 
@@ -95,12 +108,48 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
 
                 await queryProcessor.InitializeAsync();
 
-                var result = await queryProcessor.ExecuteShardedOperations(scope);
+                var result = await queryProcessor.ExecuteShardedOperations(timings.Scope);
 
-                result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;
+                result.DurationInMs = timings.Duration;
 
                 return result;
             }
+        }
+    }
+
+    private static TimingsScope Timings(IndexQueryServerSide query) => new(query);
+
+    private readonly struct TimingsScope : IDisposable
+    {
+        public readonly QueryTimingsScope Scope;
+
+        private readonly Stopwatch _sw;
+
+        public TimingsScope(IndexQueryServerSide query)
+        {
+            if (query.Timings != null)
+            {
+                Scope = query.Timings.Start();
+                return;
+            }
+
+            _sw = Stopwatch.StartNew();
+        }
+
+        public long Duration
+        {
+            get
+            {
+                if (Scope != null)
+                    return (long)Scope.Duration.TotalMilliseconds;
+
+                return (long)_sw.Elapsed.TotalMilliseconds;
+            }
+        }
+
+        public void Dispose()
+        {
+            Scope?.Dispose();
         }
     }
 }
