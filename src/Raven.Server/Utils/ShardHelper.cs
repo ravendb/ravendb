@@ -30,52 +30,57 @@ namespace Raven.Server.Utils
         /// per TB of overall db size. That means that even for *very* large databases, the
         /// size of the shard is still going to be manageable.
         /// </summary>
-        public static int GetBucketFor(ByteStringContext context, string id)
+        public static int GetBucketFor(ShardingConfiguration configuration, ByteStringContext context, string id)
         {
             using (DocumentIdWorker.GetLower(context, id, out var lowerId))
             {
-                return GetBucketFor(lowerId);
+                return GetBucketFor(configuration, lowerId);
             }
         }
 
-        public static int GetBucketFor<TTransaction>(TransactionOperationContext<TTransaction> context, string id)
+        public static int GetBucketFor<TTransaction>(TransactionOperationContext<TTransaction> context, ShardingConfiguration configuration, string id)
             where TTransaction : RavenTransaction
         {
-            return GetBucketFor(context.Allocator, id);
+            return GetBucketFor(configuration, context.Allocator, id);
         }
 
-        public static unsafe int GetBucketFor(byte* buffer, int size)
-        {
-            AdjustAfterSeparator((byte)'$', ref buffer, ref size);
+        public static int GetBucketFor(ShardingConfiguration configuration, Slice lowerId) => GetBucketFor(configuration, lowerId.AsReadOnlySpan());
 
-            var hash = Hashing.XXHash64.Calculate(buffer, (ulong)size);
-            return (int)(hash % NumberOfBuckets);
+        public static int GetBucketFor(ShardingConfiguration configuration, ReadOnlySpan<byte> lowerId)
+        {
+            var bucket = GetBucketFor(lowerId);
+
+            if (configuration.Prefixed != null)
+            {
+                foreach (var setting in configuration.Prefixed)
+                {
+                    if (lowerId.StartsWith(setting.PrefixBytesLowerCase))
+                    {
+                        bucket += setting.BucketRangeStart;
+                        break;
+                    }
+                }
+            }
+
+            return bucket;
         }
 
-        public static unsafe int GetBucketFor(Slice lowerId)
+        private static int GetBucketFor(Slice lowerId) => GetBucketFor(lowerId.AsReadOnlySpan());
+
+        private static int GetBucketFor(ReadOnlySpan<byte> buffer)
         {
-            byte* buffer = lowerId.Content.Ptr;
-            int size = lowerId.Size;
-
-            AdjustAfterSeparator((byte)'$', ref buffer, ref size);
-
-            if (size == 0)
-                throw new ArgumentException("Key '" + lowerId + "', has a shard id length of 0");
-
-            var hash = Hashing.XXHash64.Calculate(buffer, (ulong)size);
-            return (int)(hash % NumberOfBuckets);
-        }
-
-        private static unsafe void AdjustAfterSeparator(byte expected, ref byte* ptr, ref int len)
-        {
+            var len = buffer.Length;
             for (int i = len - 1; i > 0; i--)
             {
-                if (ptr[i] != expected)
+                if (buffer[i] != (byte)'$')
                     continue;
-                ptr += i + 1;
-                len -= i + 1;
+
+                buffer = buffer.Slice(i + 1, len - i - 1);
                 break;
             }
+
+            var hash = Hashing.XXHash64.Calculate(buffer);
+            return (int)(hash % NumberOfBuckets);
         }
 
         private static unsafe void AdjustAfterSeparator(char expected, ref char* ptr, ref int len)
@@ -161,16 +166,7 @@ namespace Raven.Server.Utils
 
         public static (int ShardNumber, int Bucket) GetShardNumberAndBucketFor(ShardingConfiguration configuration, Slice id)
         {
-            int bucket = GetBucketFromSlice(id);
-            foreach (var setting in configuration.Prefixed)
-            {
-                if (id.ToString().StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    bucket += setting.BucketRangeStart;
-                    break;
-                }
-            }
-
+            int bucket = GetBucketFor(configuration, id);
             return (FindBucketShard(configuration.BucketRanges, bucket), bucket);
         }
 
@@ -200,33 +196,8 @@ namespace Raven.Server.Utils
         public static (int ShardNumber, int Bucket) GetShardNumberAndBucketFor<TTransaction>(RawShardingConfiguration configuration, TransactionOperationContext<TTransaction> context, string id)
             where TTransaction : RavenTransaction
         {
-            int bucket = GetBucketFor(context, id);
-            foreach (var setting in configuration.Prefixed)
-            {
-                if (id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    bucket += setting.BucketRangeStart;
-                    break;
-                }
-            }
-
+            int bucket = GetBucketFor(configuration.MaterializedConfiguration, context.Allocator, id);
             return (FindBucketShard(configuration.BucketRanges, bucket), bucket);
-        }
-
-        //do not use this directly, we might mutate the slice buffer here.
-        public static int GetShardNumberFor(ShardingConfiguration configuration, Slice id)
-        {
-            int bucket = GetBucketFor(id);
-            foreach (var setting in configuration.Prefixed)
-            {
-                if (id.ToString().StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    bucket += setting.BucketRangeStart;
-                    break;
-                }
-            }
-
-            return FindBucketShard(configuration.BucketRanges, bucket);
         }
 
         private static int FindBucketShard(List<ShardBucketRange> ranges, int bucket)
@@ -415,7 +386,7 @@ namespace Raven.Server.Utils
             var actualIdAsString = actualId.ToString();
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 Optimize this");
 
-            int bucket = GetBucketFor(context.Allocator, actualIdAsString);
+            int bucket = GetBucketFor(configuration, context.Allocator, actualIdAsString);
             return (FindBucketShard(configuration.BucketRanges, bucket), bucket);
         }
 

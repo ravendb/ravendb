@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
-                var bucket = ShardHelper.GetBucketFor(context, id);
+                int? bucket = default;
                 int? shard = default;
                 if (database != null)
                 {
@@ -104,6 +104,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         if (raw.IsSharded == false)
                             throw new InvalidOperationException($"{database} is not sharded");
 
+                        bucket = ShardHelper.GetBucketFor(raw.Sharding.MaterializedConfiguration, context.Allocator, id);
                         shard = ShardHelper.GetShardNumberFor(raw.Sharding, context, id);
                     }
                 }
@@ -113,15 +114,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     writer.WriteStartObject();
 
                     writer.WritePropertyName("Bucket");
-                    writer.WriteInteger(bucket);
+                    writer.WriteInteger(bucket.Value);
 
-                    if (shard.HasValue)
-                    {
-                        writer.WriteComma();
+                    writer.WriteComma();
 
-                        writer.WritePropertyName("Shard");
-                        writer.WriteInteger(shard.Value);
-                    }
+                    writer.WritePropertyName("Shard");
+                    writer.WriteInteger(shard.Value);
 
                     writer.WriteEndObject();
                 }

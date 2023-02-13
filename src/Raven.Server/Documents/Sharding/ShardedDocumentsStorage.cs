@@ -180,24 +180,11 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
     {
         var scope = tx.Allocator.Allocate(sizeof(long) + sizeof(int), out var buffer);
 
-        var bucket = ShardHelper.GetBucketFor(idPtr, idSize);
-
+        var span = new ReadOnlySpan<byte>(idPtr, idSize);
+        
         var database = tx.Owner as ShardedDocumentDatabase;
-        var prefixedConfiguration = database?.ShardingConfiguration?.Prefixed;
-        if (prefixedConfiguration is { Count: > 0 })
-        {
-            var idAsStr = Encoding.UTF8.GetString(idPtr, idSize);
-            foreach (var setting in prefixedConfiguration)
-            {
-                var prefix = setting.Prefix;
-                 
-                if (idAsStr.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    bucket += setting.BucketRangeStart;
-                    break;
-                }
-            }
-        }
+        var config = database?.ShardingConfiguration;
+        var bucket = ShardHelper.GetBucketFor(config, span);
 
         *(int*)buffer.Ptr = Bits.SwapBytes(bucket);
         *(long*)(buffer.Ptr + sizeof(int)) = etag;

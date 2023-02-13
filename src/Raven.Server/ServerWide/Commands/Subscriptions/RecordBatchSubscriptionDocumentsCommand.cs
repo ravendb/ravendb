@@ -200,15 +200,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                             }
 
                             var vector = context.GetChangeVector(documentRecord.ChangeVector);
-                            var bucket = ShardHelper.GetBucketFor(context, documentRecord.DocumentId);
-                            foreach (var setting in record.Sharding.Prefixed)
-                            {
-                                if (documentRecord.DocumentId.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    bucket += setting.BucketRangeStart;
-                                    break;
-                                }
-                            }
+                            var bucket = ShardHelper.GetBucketFor(record.Sharding.MaterializedConfiguration, context.Allocator, documentRecord.DocumentId);
 
                             if (IsBucketUnderActiveMigration(record, bucket))
                             {
@@ -309,15 +301,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             string changeVector)
         {
             var vector = context.GetChangeVector(changeVector);
-            var bucket = ShardHelper.GetBucketFor(context, id);
-            foreach (var setting in configuration.Prefixed)
-            {
-                if (id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    bucket += setting.BucketRangeStart;
-                    break;
-                }
-            }
+            var bucket = ShardHelper.GetBucketFor(configuration.MaterializedConfiguration, context.Allocator, id);
 
             if (subscriptionShardingState.ProcessedChangeVectorPerBucket.TryGetValue(bucket, out var processedChangeVector))
             {

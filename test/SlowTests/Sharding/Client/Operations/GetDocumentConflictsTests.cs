@@ -79,7 +79,7 @@ namespace SlowTests.Sharding.Client.Operations
         {
             using var store = Sharding.GetDocumentStore();
 
-            int bucket = Sharding.GetBucket(_suffix);
+            int bucket = await Sharding.GetBucketAsync(store, _suffix);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -220,7 +220,7 @@ namespace SlowTests.Sharding.Client.Operations
         {
             using var store = Sharding.GetDocumentStore();
 
-            int bucket = Sharding.GetBucket(_suffix);
+            int bucket = await Sharding.GetBucketAsync(store, _suffix);
 
             using (var session = store.OpenAsyncSession())
             {

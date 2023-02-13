@@ -20,6 +20,7 @@ using Raven.Server.Web;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
+using static Lucene.Net.Documents.Field;
 
 namespace FastTests;
 
@@ -145,10 +146,16 @@ public partial class RavenTestBase
             return record.Sharding;
         }
 
-        public int GetBucket(string id)
+        public int GetBucket(ShardingConfiguration config, string id)
         {
             using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
-                return ShardHelper.GetBucketFor(allocator, id);
+                return ShardHelper.GetBucketFor(config, allocator, id);
+        }
+
+        public async Task<int> GetBucketAsync(IDocumentStore store, string id)
+        {
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            return GetBucket(record.Sharding, id);
         }
 
         public async Task<int> GetShardNumberFor(IDocumentStore store, string id)

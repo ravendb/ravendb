@@ -28,13 +28,12 @@ public partial class RavenTestBase
             servers ??= _parent.GetServers();
 
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-            var bucket = _parent.Sharding.GetBucket(id);
+            var bucket = _parent.Sharding.GetBucket(record.Sharding, id);
             PrefixedShardingSetting prefixed = null;
             foreach (var setting in record.Sharding.Prefixed)
             {
                 if (id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
                 {
-                    bucket += setting.BucketRangeStart;
                     prefixed = setting;
                     break;
                 }
