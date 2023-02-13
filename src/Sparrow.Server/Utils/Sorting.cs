@@ -38,39 +38,6 @@ namespace Sparrow.Server.Utils
             return outputIdx;
         }
 
-        //Function is made for BM25
-        public static int SortAndRemoveDuplicatesWithScoreMerging<T>(Span<T> values, Span<float> scores) 
-            where T : unmanaged, IBinaryNumber<T>
-        {
-            MemoryExtensions.Sort(values, scores);
-            
-            // We need to fill in the gaps left by removing deduplication process.
-            // If there are no duplicated the writes at the architecture level will execute
-            // way faster than if there are.
-            int nextI = 0;
-            int outputIdx = 0;
-            while (nextI < values.Length - 1)
-            {
-                int i = nextI;
-                nextI++;
-                //When item is duplicated lets merge all it scores into 1. 
-                if (values[nextI] == values[i])
-                    scores[outputIdx] += scores[nextI];
-                else
-                    outputIdx += 1;
-                
-                values[outputIdx] = values[nextI];
-            }
-
-            outputIdx++;
-            if (outputIdx != values.Length)
-            {
-                values[outputIdx] = values[^1];               
-            }
-
-            return outputIdx;
-        }
-
         public static unsafe int SortAndRemoveDuplicates<T>(Span<T> values)
             where T : unmanaged, IBinaryNumber<T>
         {
