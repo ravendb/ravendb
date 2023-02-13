@@ -62,24 +62,10 @@ namespace Raven.Server.Documents
                     break;
             }
 
-            var bucket = ShardHelper.GetBucketFor(attachmentKey.Content.Ptr, sizeOfDocId);
 
             var database = context.Transaction.InnerTransaction.Owner as ShardedDocumentDatabase;
-            var prefixedConfiguration = database?.ShardingConfiguration.Prefixed;
-            if (prefixedConfiguration is { Count: > 0 })
-            {
-                var idAsStr = Encoding.UTF8.GetString(attachmentKey.Content.Ptr, sizeOfDocId);
-                foreach (var setting in prefixedConfiguration)
-                {
-                    var prefix = setting.Prefix;
-
-                    if (idAsStr.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                    {
-                        bucket += setting.BucketRangeStart;
-                        break;
-                    }
-                }
-            }
+            
+            var bucket = ShardHelper.GetBucketFor(database.ShardingConfiguration, attachmentKey.AsReadOnlySpan()[..sizeOfDocId]);
 
             var scope = context.Allocator.Allocate(sizeof(int), out var buffer);
             *(int*)buffer.Ptr = Bits.SwapBytes(bucket);

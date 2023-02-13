@@ -44,7 +44,7 @@ namespace SlowTests.Sharding
                         for (int i = 0; i < 20; i++)
                         {
                             var id = $"user/{i}";
-                            var bucket = Sharding.GetBucket(id);
+                            var bucket = Sharding.GetBucket(sharding, id);
                             var shardNumberForDoc = await Sharding.GetShardNumberFor(store, id);
                             var user = new User()
                             {
@@ -133,6 +133,7 @@ namespace SlowTests.Sharding
             using (var store = GetDocumentStore(options))
             {
                 var bucketInfos = new Dictionary<int, BucketInfo>();
+                var sharding = await Sharding.GetShardingConfigurationAsync(store);
 
                 var executor = store.GetRequestExecutor();
                 using (var _ = executor.ContextPool.AllocateOperationContext(out var ctx))
@@ -142,7 +143,7 @@ namespace SlowTests.Sharding
                         for (int i = 0; i < 20; i++)
                         {
                             var id = $"user/{i}";
-                            var bucket = Sharding.GetBucket(id);
+                            var bucket = Sharding.GetBucket(sharding, id);
 
                             await session.StoreAsync(new User(), id);
 
@@ -167,7 +168,7 @@ namespace SlowTests.Sharding
                         for (int i = 0; i < 20; i++)
                         {
                             var id = $"user/{i}";
-                            var bucket = Sharding.GetBucket(id);
+                            var bucket = Sharding.GetBucket(sharding, id);
                             var cmd = new GetDocumentSizeCommand(id);
                             executor.Execute(cmd, ctx);
                             var docSize = cmd.Result.ActualSize;

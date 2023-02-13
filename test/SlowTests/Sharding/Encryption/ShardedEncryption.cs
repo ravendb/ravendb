@@ -182,12 +182,17 @@ namespace SlowTests.Sharding.Encryption
                     return record.Sharding.Shards.Count;
                 }, 3);
 
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var bucket = Sharding.GetBucket(record.Sharding, "foo/bar");
+                record.MoveBucket(bucket, newShardNumber);
+                await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor:1 ,record.Etag));
+
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newShardNumber)))
                 {
                     await session.StoreAsync(new User
                     {
                         Name = "ayende"
-                    });
+                    }, "foo/bar");
 
                     await session.SaveChangesAsync();
                 }

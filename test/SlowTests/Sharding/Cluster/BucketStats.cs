@@ -36,10 +36,10 @@ namespace SlowTests.Sharding.Cluster
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanGetBucketStats()
         {
-            var bucket = Sharding.GetBucket("users/1/$abc");
-
             using (var store = Sharding.GetDocumentStore())
             {
+                var bucket = await Sharding.GetBucketAsync(store,"users/1/$abc");
+
                 var before = DateTime.UtcNow;
                 using (var session = store.OpenAsyncSession())
                 {
@@ -120,19 +120,22 @@ namespace SlowTests.Sharding.Cluster
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanGetBucketStats2()
         {
-            var bucket1 = Sharding.GetBucket("users/1/$a");
-            var bucket2 = Sharding.GetBucket("users/1/$b");
-            var bucket3 = Sharding.GetBucket("users/1/$c");
-
-            var buckets = new Dictionary<int, (int NumOfDocs, int Size)>
-            {
-                [bucket1] = (10, 2771), 
-                [bucket2] = (20, 5611), 
-                [bucket3] = (30, 8431)
-            };
-
+            
             using (var store = Sharding.GetDocumentStore())
             {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+                var bucket1 = Sharding.GetBucket(record.Sharding, "users/1/$a");
+                var bucket2 = Sharding.GetBucket(record.Sharding, "users/1/$b");
+                var bucket3 = Sharding.GetBucket(record.Sharding, "users/1/$c");
+
+                var buckets = new Dictionary<int, (int NumOfDocs, int Size)>
+                {
+                    [bucket1] = (10, 2771), 
+                    [bucket2] = (20, 5611), 
+                    [bucket3] = (30, 8431)
+                };
+
                 var before = DateTime.UtcNow;
 
                 using (var session = store.OpenAsyncSession())
@@ -174,7 +177,6 @@ namespace SlowTests.Sharding.Cluster
                 }
 
                 var after = DateTime.UtcNow;
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var shard = ShardHelper.GetShardNumberFor(record.Sharding, bucket1);
 
                 var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
@@ -236,7 +238,7 @@ namespace SlowTests.Sharding.Cluster
                 for (int i = 1; i <= 100; i++)
                 {
                     var suffix = i.ToString();
-                    var bucket = Sharding.GetBucket($"users/1/${suffix}");
+                    var bucket = Sharding.GetBucket(record.Sharding, $"users/1/${suffix}");
                     var shard = ShardHelper.GetShardNumberFor(record.Sharding, bucket);
 
                     if (shard != 0)
@@ -276,10 +278,11 @@ namespace SlowTests.Sharding.Cluster
         public async Task CanGetBucketStats_WithDocumentExtensions()
         {
             const string id = "users/1$a";
-            var bucket = Sharding.GetBucket(id);
 
             using (var store = Sharding.GetDocumentStore())
             {
+                var bucket = await Sharding.GetBucketAsync(store, id);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -454,10 +457,11 @@ namespace SlowTests.Sharding.Cluster
         public async Task BucketStatsShouldTakeIntoAccountAttachmentStreamSize()
         {
             const string id = "users/1";
-            var bucket = Sharding.GetBucket(id);
 
             using (var store = Sharding.GetDocumentStore())
             {
+                var bucket = await Sharding.GetBucketAsync(store, id);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -586,10 +590,11 @@ namespace SlowTests.Sharding.Cluster
         public async Task BucketStatsWithDocumentsCompression()
         {
             const string id = "companies/1";
-            var bucket = Sharding.GetBucket(id);
 
             using (var store = Sharding.GetDocumentStore())
             {
+                var bucket = await Sharding.GetBucketAsync(store, id);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var arr = new string[10_000];

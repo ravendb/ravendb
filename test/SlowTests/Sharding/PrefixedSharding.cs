@@ -655,8 +655,7 @@ public class PrefixedSharding : RavenTestBase
         Assert.Equal(5, shardingConfiguration.BucketRanges.Count);
         Assert.Equal(ShardHelper.NumberOfBuckets, shardingConfiguration.Prefixed[0].BucketRangeStart);
 
-        var bucket = Sharding.GetBucket(id);
-        bucket += ShardHelper.NumberOfBuckets;
+        var bucket = await Sharding.GetBucketAsync(store, id);
 
         var originalLocation = ShardHelper.GetShardNumberFor(shardingConfiguration, bucket);
         Assert.Contains(originalLocation, shardingConfiguration.Prefixed[0].Shards);
@@ -758,8 +757,7 @@ public class PrefixedSharding : RavenTestBase
                 var shard = ShardHelper.GetShardNumberFor(shardingConfig, allocator, id);
                 Assert.Equal(0, shard);
 
-                var bucket = Sharding.GetBucket(id);
-                bucket += 1 << 20;
+                var bucket = await Sharding.GetBucketAsync(store, id);
 
                 var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -776,8 +774,7 @@ public class PrefixedSharding : RavenTestBase
                 shard = ShardHelper.GetShardNumberFor(shardingConfig, allocator, id);
                 Assert.Equal(1, shard);
 
-                bucket = Sharding.GetBucket(id);
-                bucket += 2 << 20;
+                bucket = await Sharding.GetBucketAsync(store, id);
 
                 db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard));
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))

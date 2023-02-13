@@ -18,8 +18,9 @@ public class ShardedDocumentPutAction : DocumentPutAction
     protected override void ValidateId(Slice lowerId)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle write documents to the wrong shard");
-        var bucket = ShardHelper.GetBucketFor(lowerId);
-        var shard = ShardHelper.GetShardNumberFor(_documentDatabase.ShardingConfiguration, bucket);
+        var config = _documentDatabase.ShardingConfiguration;
+        var bucket = ShardHelper.GetBucketFor(config, lowerId);
+        var shard = ShardHelper.GetShardNumberFor(config, bucket);
         if (shard != _documentDatabase.ShardNumber)
             throw new WrongShardException($"document '{lowerId}' was expected to be on shard #{shard}, but got to shard #{_documentDatabase.ShardNumber} (bucket: {bucket})");
     }

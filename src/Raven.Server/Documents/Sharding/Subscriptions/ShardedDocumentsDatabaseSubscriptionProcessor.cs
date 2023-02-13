@@ -39,15 +39,8 @@ public class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDatabaseSu
 
         if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
         {
-            var bucket = ShardHelper.GetBucketFor(_allocator, item.Id);
-            foreach (var setting in _sharding.Prefixed)
-            {
-                if (item.Id.StartsWith(setting.Prefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    bucket += setting.BucketRangeStart;
-                    break;
-                }
-            }
+            var bucket = ShardHelper.GetBucketFor(_sharding, _allocator, item.Id);
+           
             if (_sharding.BucketMigrations.TryGetValue(bucket, out var migration))
             {
                 if (migration.IsActive)
