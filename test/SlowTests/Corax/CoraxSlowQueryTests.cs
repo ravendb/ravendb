@@ -378,9 +378,9 @@ public class CoraxSlowQueryTests : RavenTestBase
         {
             using var coraxSession = coraxStore.OpenSession();
             using var luceneSession = luceneStore.OpenSession();
-            var luceneResult = luceneSession.Advanced.RawQuery<Result>(rawQuery.ToString()).ToList();
+            var luceneResult = luceneSession.Advanced.RawQuery<Result>(rawQuery.ToString()).WaitForNonStaleResults().ToList();
 
-            var coraxResult = coraxSession.Advanced.RawQuery<Result>(rawQuery.ToString()).ToList();
+            var coraxResult = coraxSession.Advanced.RawQuery<Result>(rawQuery.ToString()).WaitForNonStaleResults().ToList();
             Assert.NotEmpty(luceneResult);
             Assert.NotEmpty(coraxResult);
             Assert.Equal(luceneResult.Count, coraxResult.Count);

@@ -119,7 +119,7 @@ namespace Corax
                 _start = (long*)output.Ptr;
                 _end = _start + InitialSize;
                 _freqStart = (short*)_end;
-                _freqEnd = _freqStart + InitialSize;
+                _freqEnd = _freqStart + InitialSize ;
                 new Span<short>(_freqStart, InitialSize).Fill(1);
                 _additions = 0;
                 _removals = 0;
@@ -141,7 +141,9 @@ namespace Corax
 
                 if (_additions > 0 && *(_start + _additions - 1) == entryId)
                 {
-                    *(_freqStart + _additions - 1) += freq;
+                    ref var frequency = ref *(_freqStart + _additions - 1);
+                    if (frequency < short.MaxValue)
+                        frequency++;
                     return;
                 }
 
@@ -158,7 +160,9 @@ namespace Corax
 
                 if (_removals > 0 && *(_end - _removals) == entryId)
                 {
-                    *(_freqEnd - _removals) -= 1;
+                    ref var frequency = ref *(_freqEnd - _removals);
+                    if (frequency < short.MaxValue)
+                        frequency++;
                     return;
                 }
 
@@ -192,10 +196,8 @@ namespace Corax
                 Unsafe.CopyBlockUnaligned( freqEnd - _removals, _freqEnd - _removals, (uint)_removals * sizeof(short));
                 
                 //All new items are 1 by default
-                new Span<long>(freqStart + _additions, newTotalSpace - (_additions+_removals)).Fill(1);
+                new Span<short>(freqStart + _additions, newTotalSpace - (_additions+_removals)).Fill(1);
 
-                // Return the memory
-                _disposableItems.Dispose();
 
 #if DEBUG
                 var addEqual = new Span<long>(_start, _additions).SequenceEqual(new Span<long>(start, _additions));
@@ -206,6 +208,8 @@ namespace Corax
                     throw new InvalidDataException($"Lost item(s) in {nameof(GrowBuffer)}.");
 #endif
 
+                // Return the memory
+                _disposableItems.Dispose();
                 _freqStart = freqStart;
                 _freqEnd = freqEnd;
                 _start = start;
@@ -1449,8 +1453,6 @@ namespace Corax
             for (var index = 0; index < termsCount; index++)
             {
                 var term = sortedTermsBuffer[index];
-                if (term.ToString() == "10") Debugger.Break();
-                
                 ref var entries = ref CollectionsMarshal.GetValueRefOrNullRef(currentFieldTerms, term);
                 Debug.Assert(Unsafe.IsNullRef(ref entries) == false);
                 if (entries.HasChanges() == false)

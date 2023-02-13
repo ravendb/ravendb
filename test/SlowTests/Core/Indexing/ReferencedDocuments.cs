@@ -135,7 +135,7 @@ namespace SlowTests.Core.Indexing
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicLoadDocuments(Options options)
         {
             using (var store = GetDocumentStore(options))
