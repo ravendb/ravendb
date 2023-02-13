@@ -1,0 +1,190 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.splash-screen {
+    $orbit-base-size: 120px;
+    $orbit-icon-size: 32px;
+    $orbit-bg-color: colors.$color-4-3;
+    $orbit-icon-color: (
+        colors.$color-1,
+        colors.$color-1-1,
+        colors.$color-1-2,
+        colors.$color-1-3,
+        colors.$color-2,
+        colors.$color-2-1,
+        colors.$color-2-2,
+        colors.$color-2-3,
+        colors.$color-3,
+        colors.$color-3-1,
+        colors.$color-3-2,
+        colors.$color-3-3,
+        colors.$color-4,
+        colors.$color-4-1,
+        colors.$color-4-2,
+        colors.$color-4-3,
+        colors.$color-5,
+        colors.$color-5-1,
+        colors.$color-5-2,
+        colors.$color-5-3
+    );
+    $orbit-icon: (
+        "server",
+        "additional-sources",
+        "backup",
+        "certificate",
+        "cluster",
+        "cluster-dashboard",
+        "dashboard",
+        "index",
+        "json",
+        "document",
+        "patch",
+        "query",
+        "revisions",
+        "rocket",
+        "sharding",
+        "stats",
+        "system-storage",
+        "tasks",
+        "timeseries"
+    );
+    .spinner-box {
+        height: 80vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .orbit {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+        @for $i from 1 through length($orbit-icon-color) {
+            &:nth-of-type(#{$i}) {
+                .orbit-icon {
+                    &:before {
+                        background-color: nth($orbit-icon-color, random(length($orbit-icon-color)));
+                        content: nth($orbit-icon, random(length($orbit-icon)));
+                    }
+                    &:after {
+                        background-color: nth($orbit-icon-color, random(length($orbit-icon-color)));
+                        content: nth($orbit-icon, random(length($orbit-icon)));
+                    }
+                }
+            }
+        }
+    }
+
+    .orbit-1 {
+        position: relative;
+        width: $orbit-base-size;
+        height: $orbit-base-size;
+        background-color: $orbit-bg-color;
+        -webkit-animation: pulse 3500ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    .orbit-2,
+    .orbit-3 {
+        position: absolute;
+    }
+
+    .orbit-2 {
+        width: $orbit-base-size * 2;
+        height: $orbit-base-size * 2;
+        background-color: fade-out($orbit-bg-color, 0.75);
+        z-index: -1;
+        -webkit-animation: spin 3500ms cubic-bezier(0.4, 0, 0.2, 1) infinite,
+            opacity-orbit-2 3500ms cubic-bezier(0.18, 0.89, 0.32, 1.28) infinite;
+    }
+
+    .orbit-3 {
+        width: $orbit-base-size * 3;
+        height: $orbit-base-size * 3;
+        background-color: fade-out($orbit-bg-color, 0.9);
+        z-index: -2;
+        -webkit-animation: spin 5000ms cubic-bezier(0.4, 0, 0.2, 1) infinite,
+            opacity-orbit-3 5000ms cubic-bezier(0.18, 0.89, 0.32, 1.28) infinite;
+    }
+
+    .orbit-icon {
+        margin-left: -#{sizes.$gutter};
+        &:before,
+        &:after {
+            position: absolute;
+            content: "";
+            height: $orbit-icon-size;
+            width: $orbit-icon-size;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            font-family: "Icomoon";
+            font-style: normal;
+            color: white;
+            font-size: 18px;
+            -webkit-animation: scale 1100ms cubic-bezier(0.39, 0.58, 0.57, 1);
+        }
+        &:before {
+            top: -#{calc($orbit-icon-size/2)};
+        }
+        &:after {
+            bottom: -#{calc($orbit-icon-size/2)};
+        }
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(0.95);
+        }
+        33% {
+            transform: scale(1.05);
+        }
+        100% {
+            transform: scale(0.95);
+        }
+    }
+
+    @keyframes opacity-orbit-2 {
+        0% {
+            background-color: fade-out($orbit-bg-color, 0.75);
+        }
+        50% {
+            background-color: fade-out($orbit-bg-color, 0.8);
+        }
+        100% {
+            background-color: fade-out($orbit-bg-color, 0.75);
+        }
+    }
+    @keyframes opacity-orbit-3 {
+        0% {
+            background-color: fade-out($orbit-bg-color, 0.9);
+        }
+        50% {
+            background-color: fade-out($orbit-bg-color, 0.95);
+        }
+        100% {
+            background-color: fade-out($orbit-bg-color, 0.9);
+        }
+    }
+    @keyframes scale {
+        0% {
+            transform: scale(0);
+        }
+        50% {
+            transform: scale(1.2);
+        }
+        75% {
+            transform: scale(1);
+        }
+    }
+}
