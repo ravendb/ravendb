@@ -2023,7 +2023,7 @@ namespace Raven.Server.Documents
             return lsv;
         }
 
-        protected static int UnwrapLowerIdIfNeeded(byte* lowerId,int size)
+        protected static int GetSizeOfTombstoneId(byte* lowerId, int size)
         {
             if (NeedToUnwrapLowerId(lowerId, size) == false)
                 return size;
@@ -2033,13 +2033,15 @@ namespace Raven.Server.Documents
 
         private static bool NeedToUnwrapLowerId(byte* lowerId, int size)
         {
-            if (size < ConflictedTombstoneOverhead + 1 ||
-                lowerId[size - ConflictedTombstoneOverhead] != SpecialChars.RecordSeparator)
+            if (size < ConflictedTombstoneOverhead + 1)
+                return false;
+
+            if (lowerId[size - ConflictedTombstoneOverhead] != SpecialChars.RecordSeparator)
                 return false;
 
             return true;
         }
-      
+
         public static bool IsTombstoneOfId(Slice tombstoneKey, Slice lowerId)
         {
             if (tombstoneKey.Size < ConflictedTombstoneOverhead + 1)
