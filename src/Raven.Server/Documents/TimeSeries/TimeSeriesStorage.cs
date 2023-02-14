@@ -611,24 +611,28 @@ namespace Raven.Server.Documents.TimeSeries
         {
             // this will be called as part of document's delete
 
+            // create 'DeletedRange' items
+            var seriesNames = Stats.GetTimeSeriesNamesForDocumentOriginalCasing(context, documentId);
+            var deletionRangeRequest = new DeletionRangeRequest
+            {
+                DocumentId = documentId,
+                Collection = collection.Name,
+                From = DateTime.MinValue,
+                To = DateTime.MaxValue
+            };
+            foreach (var name in seriesNames)
+            {
+                deletionRangeRequest.Name = name;
+                InsertDeletedRange(context, deletionRangeRequest);
+            }
+
+            // delete segments, stats and roll-ups
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collection);
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
             {
                 table.DeleteByPrimaryKeyPrefix(documentKeyPrefix);
                 Stats.DeleteByPrimaryKeyPrefix(context, collection, documentKeyPrefix);
                 Rollups.DeleteByPrimaryKeyPrefix(context, documentKeyPrefix);
-            }
-        }
-
-        public void DeleteTimeSeriesForDocument(DocumentsOperationContext context, string documentId, CollectionName collection, string name)
-        {
-            var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collection);
-            using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collection.Name))
-            {
-                table.DeleteByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice);
-                Stats.DeleteStats(context, collection, slicer.StatsKey);
-                Rollups.DeleteByPrimaryKeyPrefix(context, slicer.StatsKey);
-                RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
             }
         }
 
