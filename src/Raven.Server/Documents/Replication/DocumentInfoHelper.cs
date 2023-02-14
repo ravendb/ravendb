@@ -33,8 +33,7 @@ namespace Raven.Server.Documents.Replication
             if (index == -1)
                 return null;
 
-            _tmpLazyStringInstance = _context.GetLazyString(key.Buffer, index);
-            return _tmpLazyStringInstance;
+            return _context.GetLazyString(key.Buffer, index);
         }
 
         // TODO unify if possible with AllowedPathsValidator
