@@ -126,6 +126,7 @@ namespace FastTests.Corax
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
 
+            
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
@@ -810,9 +811,14 @@ namespace FastTests.Corax
                 var match = searcher.StartWithQuery("Content", "a");
 
                 Span<long> ids = stackalloc long[2];
-                Assert.Equal(1, match.Fill(ids));
-                Assert.Equal(2, match.Fill(ids));
+
+                int idCount = match.Fill(ids);
+                Assert.NotEqual(0, idCount);
+                idCount += match.Fill(ids);
+                Assert.NotEqual(0, idCount);
                 Assert.Equal(0, match.Fill(ids));
+
+                Assert.Equal(3, idCount);
             }
         }
 

@@ -84,7 +84,17 @@ namespace Sparrow.Server.Compression
                 int pos = 0;
                 while (pos < key.Length)
                 {
-                    int idx = BinarySearch(key.Slice(pos, Math.Min(4, key.Length - pos)), intervalBoundaries);
+                    var boundary = key.Slice(pos, Math.Min(4, key.Length - pos));
+
+                    // To support nulls, we also need to ensure that boundary conditions are set to 0 frequency.
+                    // https://issues.hibernatingrhinos.com/issue/RavenDB-19703
+                    if (boundary is [0])
+                    {
+                        pos++; 
+                        continue;
+                    }
+                    
+                    int idx = BinarySearch(boundary, intervalBoundaries);
                     intervalFrequencies[idx]++;
                     pos += intervalPrefixes[idx].Length;
                 }
@@ -280,12 +290,20 @@ namespace Sparrow.Server.Compression
 
             frequencyMap.Clear();
 
+            Debug.Assert(GramSize == 3, "Gram size was changed and needs to update the null rejection code here.");
+
             keys.Reset();
             while (keys.MoveNext(out var key))
             {
                 for (int j = 0; j < key.Length - GramSize + 1; j++)
                 {
                     var slice = key.Slice(j, GramSize);
+
+                    // To support nulls, we need to ensure that we are not going to be counting any symbol that has nulls 
+                    // in it's content to force the frequency of such an even to go to 0. 
+                    // https://issues.hibernatingrhinos.com/issue/RavenDB-19703
+                    if (slice[0] == 0 || slice[1] == 0 || slice[2] == 0)
+                        continue;
 
                     int sliceDescriptor = slice[0] << 16 | slice[1] << 8 | slice[2];
                     if (!frequencyMap.TryGetValue(sliceDescriptor, out var frequency))

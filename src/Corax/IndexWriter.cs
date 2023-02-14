@@ -786,7 +786,9 @@ namespace Corax
                 _indexedField = indexedField;
             }
 
+#if !DEBUG
             [SkipLocalsInit]
+#endif
             public void InsertToken()
             {
                 switch (_fieldReader.Type)
@@ -1401,11 +1403,6 @@ namespace Corax
                 long termId;
                 ReadOnlySpan<byte> termsSpan = term.AsSpan();
                 
-                if (termsSpan[^1] == '\0')
-                {
-                    throw new InvalidDataException($"Got term '{Encodings.Utf8.GetString(termsSpan)}' with NULL character at the end for field {indexedField.Name}. This is a bug.");
-                }
-
                 bool found = fieldTree.TryGetNextValue(termsSpan, out var existing, out var scope);
                 if (entries.TotalAdditions > 0 && found == false)
                 {
