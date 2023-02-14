@@ -228,6 +228,7 @@ namespace Raven.Server.Web.System
             }
 
             result.WellKnownAdminCertificates = ServerStore.Configuration.Security.WellKnownAdminCertificates;
+            result.WellKnownAdminIssuers = Server.WellKnownIssuersThumbprints;
             return result;
         }
 

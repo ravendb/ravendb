@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.ETL
             var items = QueueDestinations.Where(x => x.BrokerType == brokerType);
             return items.Count();
         }
-        
+
         public void Initialize(DatabaseRecord record)
         {
             LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, toRemove: null);
@@ -309,7 +309,7 @@ namespace Raven.Server.Documents.ETL
                         process = new OlapEtl(transform, olapConfig, _database, _serverStore);
                     if (elasticSearchConfig != null)
                         process = new ElasticSearchEtl(transform, elasticSearchConfig, _database, _serverStore);
-                    if(queueConfig != null)
+                    if (queueConfig != null)
                         process = QueueEtl<QueueItem>.CreateInstance(transform, queueConfig, _database, _serverStore);
 
                     yield return process;
@@ -368,7 +368,7 @@ namespace Raven.Server.Documents.ETL
                     });
                 return true;
             }
-            
+
             if (_databaseRecord.Encrypted && config is ElasticSearchEtlConfiguration esConfig && esConfig.Connection.Authentication == null)
             {
                 LogConfigurationWarning(config,
@@ -377,7 +377,7 @@ namespace Raven.Server.Documents.ETL
                         $"{_database.Name} is encrypted and connection to ETL destination {config.GetDestination()} does not use authentication, but ETL is allowed."
                     });
                 return true;
-            }            
+            }
 
             if (uniqueNames.Add(config.Name) == false)
             {
@@ -600,51 +600,51 @@ namespace Raven.Server.Documents.ETL
                             break;
                         }
                     case KafkaEtl kafkaEtl:
-                    {
-                        QueueEtlConfiguration existing = null;
-
-                        foreach (var config in myQueueEtl)
                         {
-                            var diff = kafkaEtl.Configuration.Compare(config);
+                            QueueEtlConfiguration existing = null;
 
-                            if (diff == EtlConfigurationCompareDifferences.None && kafkaEtl.Configuration.Equals(config))
+                            foreach (var config in myQueueEtl)
                             {
-                                existing = config;
-                                break;
+                                var diff = kafkaEtl.Configuration.Compare(config);
+
+                                if (diff == EtlConfigurationCompareDifferences.None && kafkaEtl.Configuration.Equals(config))
+                                {
+                                    existing = config;
+                                    break;
+                                }
                             }
-                        }
 
-                        if (existing != null)
-                        {
-                            toRemove.Remove(processesPerConfig.Key);
-                            myQueueEtl.Remove(existing);
-                        }
+                            if (existing != null)
+                            {
+                                toRemove.Remove(processesPerConfig.Key);
+                                myQueueEtl.Remove(existing);
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case RabbitMqEtl rabbitMqEtl:
-                    {
-                        QueueEtlConfiguration existing = null;
-
-                        foreach (var config in myQueueEtl)
                         {
-                            var diff = rabbitMqEtl.Configuration.Compare(config);
+                            QueueEtlConfiguration existing = null;
 
-                            if (diff == EtlConfigurationCompareDifferences.None && rabbitMqEtl.Configuration.Equals(config))
+                            foreach (var config in myQueueEtl)
                             {
-                                existing = config;
-                                break;
+                                var diff = rabbitMqEtl.Configuration.Compare(config);
+
+                                if (diff == EtlConfigurationCompareDifferences.None && rabbitMqEtl.Configuration.Equals(config))
+                                {
+                                    existing = config;
+                                    break;
+                                }
                             }
-                        }
 
-                        if (existing != null)
-                        {
-                            toRemove.Remove(processesPerConfig.Key);
-                            myQueueEtl.Remove(existing);
-                        }
+                            if (existing != null)
+                            {
+                                toRemove.Remove(processesPerConfig.Key);
+                                myQueueEtl.Remove(existing);
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case ElasticSearchEtl elasticSearchEtl:
                         {
                             ElasticSearchEtlConfiguration existing = null;
@@ -679,7 +679,7 @@ namespace Raven.Server.Documents.ETL
 
                     try
                     {
-                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes);
+                        string reason = GetStopReason(process, myRavenEtl, mySqlEtl, myOlapEtl, myElasticSearchEtl, myQueueEtl, responsibleNodes);
 
                         process.Stop(reason);
                     }
@@ -712,8 +712,14 @@ namespace Raven.Server.Documents.ETL
             });
         }
 
-        private static string GetStopReason(EtlProcess process, List<RavenEtlConfiguration> myRavenEtl, List<SqlEtlConfiguration> mySqlEtl,
-            List<ElasticSearchEtlConfiguration> myElasticSearchEtl, List<QueueEtlConfiguration> myQueueEtl, Dictionary<string, string> responsibleNodes)
+        private static string GetStopReason(
+            EtlProcess process,
+            List<RavenEtlConfiguration> myRavenEtl,
+            List<SqlEtlConfiguration> mySqlEtl,
+            List<OlapEtlConfiguration> myOlapEtl,
+            List<ElasticSearchEtlConfiguration> myElasticSearchEtl,
+            List<QueueEtlConfiguration> myQueueEtl,
+            Dictionary<string, string> responsibleNodes)
         {
             EtlConfigurationCompareDifferences? differences = null;
             var transformationDiffs = new List<(string TransformationName, EtlConfigurationCompareDifferences Difference)>();
@@ -733,6 +739,13 @@ namespace Raven.Server.Documents.ETL
 
                 if (existing != null)
                     differences = sqlEtl.Configuration.Compare(existing, transformationDiffs);
+            }
+            else if (process is OlapEtl olapEtl)
+            {
+                var existing = myOlapEtl.FirstOrDefault(x => x.Name.Equals(olapEtl.ConfigurationName, StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                    differences = olapEtl.Configuration.Compare(existing, transformationDiffs);
             }
             else if (process is ElasticSearchEtl elasticSearchEtl)
             {
