@@ -42,7 +42,9 @@ namespace Corax.Queries
                 _current = QueryMatch.Invalid;
         }
 
+#if !DEBUG
         [SkipLocalsInit]
+#endif
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)
         {
@@ -82,16 +84,18 @@ namespace Corax.Queries
             return count;
         }
 
+#if !DEBUG
         [SkipLocalsInit]
+#endif
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> buffer, int matches)
         {
             // We should consider the policy where it makes sense to actually implement something different to avoid
-            // the N^2 check here. While could be interesting to do now we still dont know what are the conditions
+            // the N^2 check here. While could be interesting to do it now, we still dont know what are the conditions
             // that would trigger such optimization or if they are even necessary. The reason why is that buffer size
             // may offset some of the requirements for such a scan operation. Interesting approaches to consider include
             // evaluating directly, construct temporary data structures like bloom filters on subsequent iterations when
-            // the statistics guarrant those approaches, etc. Currently we apply memoization but without any limit to 
+            // the statistics guarantee those approaches, etc. Currently we apply memoization but without any limit to 
             // size of the result and it's subsequent usage of memory. 
 
             using var _ = _context.Allocate(3 * sizeof(long) * buffer.Length, out var bufferHolder);

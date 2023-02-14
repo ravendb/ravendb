@@ -302,6 +302,15 @@ namespace Sparrow.Binary
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ToBytes(int bits)
+        {
+            int bytes = Math.DivRem(bits, 8, out var remainder);
+            if (remainder > 0)
+                bytes++;
+            return bytes;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint RotateLeft32(uint value, int count)
         {
             return (value << count) | (value >> (32 - count));
