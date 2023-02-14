@@ -17,6 +17,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -157,30 +158,28 @@ namespace Raven.Client.Documents.Session
         /// <param name="entities">The entities.</param>
         public void Refresh<T>(IEnumerable<T> entities)
         {
-            List<string> ids = new();
-            List<DocumentInfo> documentInfos = new();
+            var idsEntitiesPairs = new Dictionary<string, (object Entity, DocumentInfo Info)>();
 
             foreach (var entity in entities)
             {
                 if (DocumentsByEntity.TryGetValue(entity, out var docInfo) == false)
                     throw new InvalidOperationException("Cannot refresh a transient instance");
-                documentInfos.Add(docInfo);
-                ids.Add(docInfo.Id);
+                idsEntitiesPairs.TryAdd(docInfo.Id, (entity, docInfo));
             }
-
             IncrementRequestCount();
 
-            var command = new GetDocumentsCommand(ids.ToArray(), includes: null, metadataOnly: false);
+            var command = new GetDocumentsCommand(idsEntitiesPairs.Keys.ToArray(), includes: null, metadataOnly: false);
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
 
-            var numOfCmdResults = command.Result.Results.Length;
+            var resultsCollection = command.Result.Results;
             
-            for (int i = 0; i < numOfCmdResults; i++)
+            foreach (BlittableJsonReaderObject result in resultsCollection)
             {
-                var commandResult = (BlittableJsonReaderObject)command.Result.Results[i];
-                RefreshInternal(entities.ElementAt(i), commandResult, documentInfos[i]);
+                var id = result.GetMetadata().GetId();
+                if (idsEntitiesPairs.TryGetValue(id, out var tuple) == false)
+                    throw new InvalidOperationException($"Could not refresh a entity with id: {id}");
+                RefreshInternal(tuple.Entity, result, tuple.Info);
             }
-
         }
 
         /// <summary>
