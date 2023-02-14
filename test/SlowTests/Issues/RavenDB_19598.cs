@@ -53,14 +53,14 @@ namespace SlowTests.Issues
                     sd1.Name = "weisseKraehe";
                     sd2.Name = "gelbeKraehe";
 
-                    // refresh and assertion
                     session.Advanced.Refresh(new[]{sd,sd1,sd2}.AsEnumerable());
 
                     /*
                     session.Advanced.Refresh(new[] { sd, sd, sd }.AsEnumerable());
                     Assert.Equal("grossesNashorn", sd.Name);
                     */
-
+                  
+                    // equality assertion of current names and pre-override names
                     Assert.Equal("grossesNashorn", sd.Name);
                     Assert.Equal("kleinesNashorn", sd1.Name);
                     Assert.Equal("krassesNashorn", sd2.Name);
