@@ -35,13 +35,13 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var tsf = session.TimeSeriesFor(id, tag);
                     for (int i = 0; i <= 20; i++)
                     {
-                        tsf.Append(baseline.AddMinutes(i), new[] {(double)i}, "watches/apple");
+                        tsf.Append(baseline.AddMinutes(i), new[] { (double)i }, "watches/apple");
                     }
 
                     tsf = session.TimeSeriesFor(id, tag2);
                     for (int i = 0; i <= 50; i++)
                     {
-                        tsf.Append(baseline.AddMinutes(i), new[] {(double)i}, "watches/apple");
+                        tsf.Append(baseline.AddMinutes(i), new[] { (double)i }, "watches/apple");
                     }
 
                     session.Store(new User(), id2);
@@ -123,7 +123,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                             singleResult));
                     }
 
-                    Assert.Throws<DocumentDoesNotExistException>(() =>session.SaveChanges());
+                    Assert.Throws<DocumentDoesNotExistException>(() => session.SaveChanges());
                 }
             }
         }
@@ -189,7 +189,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     session.SaveChanges();
                 }
-                
+
                 Assert.True(WaitForValue(() =>
                 {
                     using (var session = store.OpenSession())

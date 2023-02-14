@@ -177,6 +177,27 @@ namespace Raven.Server.Rachis
             UpdateInternal(context, cmd, guid, type, index, term, HistoryStatus.Committed, result, exception);
         }
 
+        public void UpdateHistoryLogPreservingGuidAndStatus(ClusterOperationContext context, long index, long term, BlittableJsonReaderObject cmd)
+        {
+            var list = GetLogByIndex(context, index);
+            if (list == null || list.Count != 1)
+            {
+                return;
+            }
+
+            var cmdDjv = list[0];
+            
+            var guid = (string)cmdDjv[nameof(LogHistoryColumn.Guid)];
+            if (guid == null)
+                return;
+
+            var type = GetTypeFromCommand(cmd);
+            if (Enum.TryParse<HistoryStatus>((string)cmdDjv[nameof(LogHistoryColumn.State)], out var status) == false)
+                return;
+
+            UpdateInternal(context, cmd, guid, type, index, term, status, result: null, exception: null);
+        }
+
         private unsafe void UpdateInternal(ClusterOperationContext context, BlittableJsonReaderObject cmd, string guid, string type, long index, long term, HistoryStatus status, object result, Exception exception)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
