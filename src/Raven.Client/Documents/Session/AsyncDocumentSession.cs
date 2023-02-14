@@ -91,13 +91,14 @@ namespace Raven.Client.Documents.Session
                 var command = new GetDocumentsCommand(ids.ToArray(), includes: null, metadataOnly: false);
                 await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo, token).ConfigureAwait(false);
 
-                var j = 0;
-                foreach (var entity in entities)
+                var numOfCmdResults = command.Result.Results.Length;
+
+                for (int i = 0; i < numOfCmdResults; i++)
                 {
-                    var commandResult = (BlittableJsonReaderObject)command.Result.Results[j];
-                    RefreshInternal(entity, commandResult, documentInfos[j]);
-                    j++;
+                    var commandResult = (BlittableJsonReaderObject)command.Result.Results[i];
+                    RefreshInternal(entities.ElementAt(i), commandResult, documentInfos[i]);
                 }
+
             }
         }
 
