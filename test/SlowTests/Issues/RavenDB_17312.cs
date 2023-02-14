@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -114,6 +116,57 @@ public class RavenDB_17312 : RavenTestBase
                 Assert.Equal(2, results[0].Count);
                 Assert.Equal("Joe", results[0].Name);
                 Assert.Equal("Doe", results[0].LastName);
+            }
+        }
+    }
+
+    [Fact]
+    public void BackwardCompatibilityWithIndexVersion54001()
+    {
+        var backupPath = NewDataPath(forceCreateDir: true);
+        var fullBackupPath = Path.Combine(backupPath, "54_001_index_ver.ravendb-snapshot");
+
+        using (var file = File.Create(fullBackupPath))
+        using (var stream = typeof(RavenDB_10404).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_17312.map-reduce_54_001_index_ver.ravendb-snapshot"))
+        {
+            stream.CopyTo(file);
+        }
+
+        using (var store = GetDocumentStore())
+        {
+            var databaseName = GetDatabaseName();
+
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+            {
+                BackupLocation = backupPath,
+                DatabaseName = databaseName
+            }))
+            {
+                using (var session = store.OpenSession(databaseName))
+                {
+                    session.Store(new User { Name = "Joe", LastName = "Doe", Age = 31 }, "users/1");
+                    session.Store(new User { Name = "Joe", LastName = "Doe", Age = 32 }, "users/2");
+
+                    session.SaveChanges();
+
+                    Indexes.WaitForIndexing(store);
+
+                    var results = session.Query<User>("UsersReducedByNameAndLastName").OfType<ReduceResults>().ToList();
+
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Equal(2, results[0].Count);
+                    Assert.Equal("Joe", results[0].Name);
+                    Assert.Equal("Doe", results[0].LastName);
+
+                    results = session.Query<User>("UsersReducedByNameAndLastName_FieldNamesNotExtracted").OfType<ReduceResults>().ToList();
+
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Equal(2, results[0].Count);
+                    Assert.Equal("Joe", results[0].Name);
+                    Assert.Equal("Doe", results[0].LastName);
+                }
             }
         }
     }

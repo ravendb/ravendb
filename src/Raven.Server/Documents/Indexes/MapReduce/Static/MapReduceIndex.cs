@@ -495,6 +495,23 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                             .ToDictionary(x => x.Name, x => groupByIndex++, StringComparer.Ordinal);
                     }
                 }
+                else if (index.Definition.Version == IndexDefinitionBaseServerSide.IndexVersion.GuaranteedOrderOfPropertiesInMapReduceIndexes_Legacy)
+                {
+                    // legacy mode for version 54_001 where we introduced consistent order of all properties, but it was faulty so we changed the approach and sort only
+                    // the group by fields - those are the fields which order really matters for calculation of the reduce key hash
+                    // this means that even if we don't sort by all fields now we'll get the same reduce key hashes because order of group by fields remained the same
+
+                    if (index.Definition.MapFields.Count > 0) // sometimes in JS indexes we're not able to extract field names
+                    {
+                        if (_groupByFields.Count > 1) // only if we group by multiple fields
+                        {
+                            var groupByIndex = 0;
+
+                            _orderedMultipleGroupByFieldPositions = _groupByFields.Values.OrderBy(x => x.Name, StringComparer.Ordinal)
+                                .ToDictionary(x => x.Name, x => groupByIndex++, StringComparer.Ordinal);
+                        }
+                    }
+                }
 
                 _isMultiMap = index.IsMultiMap;
                 _reduceKeyProcessor = new ReduceKeyProcessor(index.Definition.GroupByFields.Count, index._unmanagedBuffersPool, index.Definition.Version);
