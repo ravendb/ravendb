@@ -151,11 +151,11 @@ namespace Raven.Server.Documents.Indexes
 
             public const long EngineTypeStored = 54_000; // introducing Corax, added engine type to the index storage
 
-            public const long GuaranteedOrderOfPropertiesInMapReduceIndexes = 54_001; // RavenDB-17312
+            public const long GuaranteedOrderOfGroupByFieldsInMapReduceIndexes = 54_002; // RavenDB-17312 - version 54_001 had an issue so we had to fix it and bump version again
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = GuaranteedOrderOfPropertiesInMapReduceIndexes;
+            public const long CurrentVersion = GuaranteedOrderOfGroupByFieldsInMapReduceIndexes;
         }
     }
 
