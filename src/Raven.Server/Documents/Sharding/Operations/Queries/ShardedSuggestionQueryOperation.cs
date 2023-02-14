@@ -41,10 +41,12 @@ public class ShardedSuggestionQueryOperation : AbstractShardedQueryOperation<Sug
 
         var deserializer = DocumentConventions.DefaultForServer.Serialization.DefaultConverter;
 
-        foreach (var cmdResult in results.Values)
+        foreach (var (shardNumber, cmdResult) in results)
         {
             var queryResult = cmdResult.Result;
 
+            CombineExplanations(result, cmdResult);
+            CombineTimings(shardNumber, cmdResult);
             CombineSingleShardResultProperties(result, queryResult);
 
             foreach (BlittableJsonReaderObject suggestionJson in cmdResult.Result.Results)
