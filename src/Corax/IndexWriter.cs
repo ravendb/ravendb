@@ -107,13 +107,18 @@ namespace Corax
             public long FreeSpace => TotalSpace - (_additions + _removals);
 
             private const int InitialSize = 16;
-
+            // Entries Writer structure:
+            // [ADDITIONS][REMOVALS][ADDITIONS_FREQUENCY][REMOVALS_FREQUENCY]
+            // We've to track additions and removals independently since we encode frequencies inside entryId in inverted index.
+            // Reason:
+            // In case of posting lists we've to remove old encoded entry id from list when doing frequency update, to do so we've to options:
+            // iterate through all entries and encode them in-place to find which one to delete or just seek to exact key.
+            // To seek in place we store frequency during building data for Commit. This gives us possibility to encode old key
+            // and call "remove".
             public EntriesModifications([NotNull] ByteStringContext context, int size)
             {
                 _sizeOfTerm = size;
                 _context = context;
-                //todo: optimize, we can do FREQ part as int, should save us a lot of RAM
-                // [ADDITIONS][REMOVALS][ADDITIONS_TERMS_FREQ][REMOVAL_TERMS_FREQ] 
                 _disposableItems = _context.Allocate(CalculateSizeOfContainer(InitialSize), out var output);
                 
                 _start = (long*)output.Ptr;
@@ -200,12 +205,16 @@ namespace Corax
 
 
 #if DEBUG
-                var addEqual = new Span<long>(_start, _additions).SequenceEqual(new Span<long>(start, _additions));
-                var removalEq =  new Span<long>(_end - _removals, _removals).SequenceEqual(new Span<long>(end - _removals, _removals));
-                var addFreq =  new Span<short>(_freqStart, _additions).SequenceEqual(new Span<short>(freqStart, _additions));
-                var remFreq =  new Span<short>(_freqEnd - _removals, _removals).SequenceEqual(new Span<short>(freqEnd - _removals, _removals));
-                if ((addEqual && removalEq && addFreq && remFreq) == false)
-                    throw new InvalidDataException($"Lost item(s) in {nameof(GrowBuffer)}.");
+                var additionsBufferEqual = new Span<long>(_start, _additions).SequenceEqual(new Span<long>(start, _additions));
+                var removalsBufferEqual =  new Span<long>(_end - _removals, _removals).SequenceEqual(new Span<long>(end - _removals, _removals));
+                var additionsFrequencyBufferEqual =  new Span<short>(_freqStart, _additions).SequenceEqual(new Span<short>(freqStart, _additions));
+                var removalsFrequencyBufferEqual =  new Span<short>(_freqEnd - _removals, _removals).SequenceEqual(new Span<short>(freqEnd - _removals, _removals));
+                if ((additionsBufferEqual && removalsBufferEqual && additionsFrequencyBufferEqual && removalsFrequencyBufferEqual) == false)
+                    throw new InvalidDataException($"Lost item(s) in {nameof(GrowBuffer)}." +
+                                                   $"{Environment.NewLine}Additions buffer equal: {additionsBufferEqual}" +
+                                                   $"{Environment.NewLine}Removals buffer equal: {removalsBufferEqual}" +
+                                                   $"{Environment.NewLine}Additions frequency buffer equal: {additionsFrequencyBufferEqual}" +
+                                                   $"{Environment.NewLine}Removals frequency buffer equal: {removalsFrequencyBufferEqual}");
 #endif
 
                 // Return the memory
@@ -287,9 +296,12 @@ namespace Corax
             // This requires us to ensure we don't have duplicates here.
             public void PrepareDataForCommiting()
             {
+                #if DEBUG
                 //Already done shortcut.
                 if (_preparationFinished)
                     return;
+                #endif
+                
                 
                 DeleteAllDuplicates();
 
@@ -346,6 +358,10 @@ namespace Corax
             public readonly int Id;
             public readonly FieldIndexingMode FieldIndexingMode;
 
+            public IndexedField(IndexFieldBinding binding) : this(binding.FieldId, binding.FieldName, binding.FieldNameLong, binding.FieldNameDouble, binding.FieldTermTotalSumField, binding.Analyzer, binding.FieldIndexingMode, binding.HasSuggestions)
+            {
+            }
+            
             public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameSum, Analyzer analyzer, FieldIndexingMode fieldIndexingMode, bool hasSuggestions)
             {
                 Name = name;
@@ -393,10 +409,7 @@ namespace Corax
             var bufferSize = fieldsMapping!.Count;
             _knownFieldsTerms = new IndexedField[bufferSize];
             for (int i = 0; i < bufferSize; ++i)
-            {
-                IndexFieldBinding indexFieldBinding = fieldsMapping.GetByFieldId(i);
-                _knownFieldsTerms[i] = new IndexedField(indexFieldBinding.FieldId, indexFieldBinding.FieldName, indexFieldBinding.FieldNameLong, indexFieldBinding.FieldNameDouble, indexFieldBinding.FieldTermTotalSumField, indexFieldBinding.Analyzer, indexFieldBinding.FieldIndexingMode, indexFieldBinding.HasSuggestions);
-            }
+                _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i));
         }
         
         public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping) : this(fieldsMapping)

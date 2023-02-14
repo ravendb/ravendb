@@ -13,10 +13,6 @@ public static class EntryIdEncodings
     private const int EntryIdOffset = FrequencySizeInBits + ContainerTypeOffset;
     private const long Mask = 0xFFL;
     private const int ContainerTypeOffset = 2;
-
-    
-    
-    private const int AllBuffer = -1;
     
     // Quantization parameters:
     private const long Min = 0;
@@ -67,7 +63,7 @@ public static class EntryIdEncodings
             
             while (currentEntryPtr != entriesPtrEnd)
             {
-                *currentEntryPtr = (*currentEntryPtr << EntryIdOffset) | FrequencyQuantization(*currentFrequency);
+                *currentEntryPtr = (*currentEntryPtr << EntryIdOffset) | FrequencyQuantization(*currentFrequency) << ContainerTypeOffset;
 
                 currentEntryPtr++;
                 currentFrequency++;
@@ -88,24 +84,20 @@ public static class EntryIdEncodings
     public static long DecodeAndDiscardFrequency(long entryId) => entryId >> EntryIdOffset;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void DecodeAndDiscardFrequency(Span<long> entries, int read = AllBuffer)
+    public static void DecodeAndDiscardFrequency(Span<long> entries, int read)
     {
-        if (read == AllBuffer)
-            read = entries.Length;
-        
         for (int i = 0; i < read; ++i)
         {
             entries[i] >>= EntryIdOffset;
         }
     }
     
-    public static void Decode(Span<long> matches, Span<long> additionalMatchesOutput, Span<short> frequencies)
+    public static void Decode(Span<long> matches, Span<short> frequencies)
     {
         for (int i = 0; i < matches.Length; ++i)
         {
             frequencies[i] = (short)((matches[i] >> ContainerTypeOffset) & Mask);
             matches[i] >>= EntryIdOffset;
-            additionalMatchesOutput[i] = matches[i];
         }
     }
     

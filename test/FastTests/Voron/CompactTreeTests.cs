@@ -19,45 +19,6 @@ namespace FastTests.Voron
         public CompactTreeTests(ITestOutputHelper output) : base(output)
         {
         }
-
-        [RavenFact(RavenTestCategory.Voron)]
-        public void CompactTreeUpdates()
-        {
-            var fileStream = File.ReadLines(@"C:\Users\macie\Desktop\dump.txt");
-            var wtx = Env.WriteTransaction(); 
-            var tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
-            try
-            {
-                foreach (var line in fileStream)
-                {
-                    switch (line[0])
-                    {
-                        case '#':
-                            wtx.Commit();
-                            wtx.Dispose();
-                            wtx = Env.WriteTransaction();
-                            tree = CompactTree.Create(wtx.LowLevelTransaction, "test");
-                            break;
-                        case '-':
-                            var entryToRemove = line.Substring(1);
-                            tree.TryRemove(Encodings.Utf8.GetBytes(entryToRemove), out var oldValue);
-                            break;
-                        case '+':
-                            var entryIdPos = line.LastIndexOf('|') + 1;
-                            var key = line.Substring(1, entryIdPos - 2);
-                            var value = long.Parse(line.Substring(entryIdPos));
-                            tree.Add(Encodings.Utf8.GetBytes(key), value);
-                            break;
-                    }
-
-                }
-            }
-            finally
-            {
-                wtx.Commit();
-                wtx.Dispose();
-            }
-        }
         
         [RavenFact(RavenTestCategory.Voron)]
         public void TrickyAttempts()

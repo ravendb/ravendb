@@ -136,71 +136,11 @@ public partial class IndexSearcher
         Array.Sort(list, ((item, inItem) => item.Item.Span.SequenceCompareTo(inItem.Item.Span)));
         return UnaryQuery(stack[0], field, list, UnaryMatchOperation.AllIn, -1);
     }
-
-    // public MultiTermMatch InQuery<TScoreFunction>(FieldMetadata field, List<string> inTerms, TScoreFunction scoreFunction)
-    //     where TScoreFunction : IQueryScoreFunction
-    // {
-    //     var terms = _fieldsTree?.CompactTreeFor(field.FieldName);
-    //     if (terms == null)
-    //     {
-    //         // If either the term or the field does not exist the request will be empty. 
-    //         return MultiTermMatch.CreateEmpty(_transaction.Allocator);
-    //     }
-    //
-    //     if (inTerms.Count is > 1 and <= 4)
-    //     {
-    //         var stack = new BinaryMatch[inTerms.Count / 2];
-    //         for (int i = 0; i < inTerms.Count / 2; i++)
-    //         {
-    //             var term1 = Boost(TermQuery(field, inTerms[i * 2], terms), scoreFunction);
-    //             var term2 = Boost(TermQuery(field, inTerms[i * 2 + 1], terms), scoreFunction);
-    //             stack[i] = Or(term1, term2);
-    //         }
-    //
-    //         if (inTerms.Count % 2 == 1)
-    //         {
-    //             // We need even values to make the last work. 
-    //             var term = Boost(TermQuery(field, inTerms[^1], terms), scoreFunction);
-    //             stack[^1] = Or(stack[^1], term);
-    //         }
-    //
-    //         int currentTerms = stack.Length;
-    //         while (currentTerms > 1)
-    //         {
-    //             int termsToProcess = currentTerms / 2;
-    //             int excessTerms = currentTerms % 2;
-    //
-    //             for (int i = 0; i < termsToProcess; i++)
-    //                 stack[i] = Or(stack[i * 2], stack[i * 2 + 1]);
-    //
-    //             if (excessTerms != 0)
-    //                 stack[termsToProcess - 1] = Or(stack[termsToProcess - 1], stack[currentTerms - 1]);
-    //
-    //             currentTerms = termsToProcess;
-    //         }
-    //
-    //         return MultiTermMatch.Create(stack[0]);
-    //     }
-    //
-    //     return MultiTermMatch.Create(
-    //         MultiTermBoostingMatch<InTermProvider>.Create(
-    //             this, new InTermProvider(this, field, inTerms), scoreFunction));
-    // }
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public AndNotMatch NotInQuery<TInner>(FieldMetadata field, TInner inner, List<string> notInTerms)
         where TInner : IQueryMatch
     {
         return AndNot(inner, MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(field, _transaction.Allocator, new InTermProvider(this, field, notInTerms))));
     }
-
-    // [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    // public AndNotMatch NotInQuery<TScoreFunction, TInner>(FieldMetadata field, TInner inner, List<string> notInTerms, TScoreFunction scoreFunction)
-    //     where TScoreFunction : IQueryScoreFunction
-    //     where TInner : IQueryMatch
-    // {
-    //     return AndNot(inner, MultiTermMatch.Create(
-    //         MultiTermBoostingMatch<InTermProvider>.Create(
-    //             this, new InTermProvider(this, field, notInTerms), scoreFunction)));
-    // }
 }

@@ -20,9 +20,8 @@ public unsafe struct Bm25Relevance : IDisposable
     private const float BFactor = 0.25f;
     private const float K1 = 2f;
 
-
+    //We store sum of all length of terms under specific field. Then we can calculate 
     private readonly float _termRatioToWholeCollection;
-    private IDisposable _memoryHolder;
     private readonly long* _matchBuffer;
     private readonly short* _scoreBuffer;
     private readonly int _numberOfDocuments;
@@ -62,7 +61,7 @@ public unsafe struct Bm25Relevance : IDisposable
             _currentId = 0;
         }
 
-        _memoryHolder = context.Allocate(_bufferCapacity * (sizeof(long) + sizeof(short)), out var buffer);
+        context.Allocate(_bufferCapacity * (sizeof(long) + sizeof(short)), out var buffer);
         _matchBuffer = (long*)buffer.Ptr;
         _scoreBuffer = (short*)(buffer.Ptr + _bufferCapacity * sizeof(long));
 
@@ -121,8 +120,11 @@ public unsafe struct Bm25Relevance : IDisposable
     private static void DecodeAndSave(ref Bm25Relevance bm25, Span<long> matches, int count)
     {
         EntryIdEncodings.Decode(matches.Slice(0, count),
-            new(bm25._matchBuffer + bm25._currentId, bm25._numberOfDocuments - bm25._currentId),
             new(bm25._scoreBuffer + bm25._currentId, bm25._numberOfDocuments - bm25._currentId));
+        
+        matches.Slice(0, count)
+            .CopyTo(new Span<long>(bm25._matchBuffer + bm25._currentId, bm25._numberOfDocuments - bm25._currentId));
+        
         bm25._currentId += count;
     }
 
@@ -154,8 +156,6 @@ public unsafe struct Bm25Relevance : IDisposable
 
         _isDisposed = true;
         _currentId = 0;
-        _memoryHolder?.Dispose();
-        _memoryHolder = null;
     }
 
     public static Bm25Relevance Once(IndexSearcher indexSearcher, long termFrequency, ByteStringContext context, int numberOfDocuments, double termRatioToWholeCollection)

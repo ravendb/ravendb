@@ -8,15 +8,15 @@ namespace Corax.Mappings;
 public readonly struct FieldMetadata
 {
     public readonly Slice FieldName;
-    public readonly Slice SumName;
+    public readonly Slice TermLengthSumName;
     public readonly int FieldId;
     public readonly FieldIndexingMode Mode;
     public readonly Analyzer Analyzer;
     public readonly bool HasBoost;
 
-    private FieldMetadata(Slice fieldName, Slice sumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false)
+    private FieldMetadata(Slice fieldName, Slice termLengthSumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false)
     {
-        SumName = sumName;
+        TermLengthSumName = termLengthSumName;
         FieldName = fieldName;
         FieldId = fieldId;
         Mode = mode;
@@ -56,18 +56,18 @@ public readonly struct FieldMetadata
         return new(fieldNameAsSlice, sumName, fieldId, mode, analyzer, hasBoost);
     }
 
-    public static FieldMetadata Build(Slice fieldName, Slice sumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false) => new(fieldName, sumName, fieldId, mode, analyzer, hasBoost: hasBoost);
+    public static FieldMetadata Build(Slice fieldName, Slice termLengthSumName, int fieldId, FieldIndexingMode mode, Analyzer analyzer, bool hasBoost = false) => new(fieldName, termLengthSumName, fieldId, mode, analyzer, hasBoost: hasBoost);
 
     public FieldMetadata ChangeAnalyzer(FieldIndexingMode mode, Analyzer analyzer = null)
     {
-        return new FieldMetadata(FieldName, SumName, FieldId, mode, analyzer ?? Analyzer, HasBoost);
+        return new FieldMetadata(FieldName, TermLengthSumName, FieldId, mode, analyzer ?? Analyzer, HasBoost);
     }
 
     public FieldMetadata ChangeScoringMode(bool hasBoost)
     {
         if (HasBoost == hasBoost) return this;
         
-        return new FieldMetadata(FieldName, SumName, FieldId, Mode, Analyzer, hasBoost);
+        return new FieldMetadata(FieldName, TermLengthSumName, FieldId, Mode, Analyzer, hasBoost);
 
     }
     
