@@ -37,31 +37,6 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
 
     protected override RavenConfiguration Configuration => RequestHandler.Database.Configuration;
 
-    protected override async ValueTask HandleDebugAsync(IndexQueryServerSide query, QueryOperationContext queryContext, string debug, long? existingResultEtag,
-        OperationCancelToken token)
-    {
-        if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
-        {
-            var ignoreLimit = RequestHandler.GetBoolValueQueryString("ignoreLimit", required: false) ?? false;
-            await IndexEntries(queryContext, query, existingResultEtag, token, ignoreLimit);
-            return;
-        }
-
-        if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
-        {
-            await Explain(queryContext, query);
-            return;
-        }
-
-        if (string.Equals(debug, "serverSideQuery", StringComparison.OrdinalIgnoreCase))
-        {
-            await ServerSideQuery(queryContext, query);
-            return;
-        }
-
-        throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
-    }
-
     protected override async ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
         long? existingResultEtag, OperationCancelToken token)
     {
@@ -85,7 +60,7 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
         queryContext.WithQuery(indexQuery.Metadata);
     }
 
-    private async Task IndexEntries(QueryOperationContext queryContext, IndexQueryServerSide indexQuery, long? existingResultEtag, OperationCancelToken token, bool ignoreLimit)
+    protected override async ValueTask IndexEntriesAsync(QueryOperationContext queryContext, IndexQueryServerSide indexQuery, long? existingResultEtag, OperationCancelToken token, bool ignoreLimit)
     {
         var result = await RequestHandler.Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, queryContext, ignoreLimit, existingResultEtag, token);
 
@@ -103,7 +78,7 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
         }
     }
 
-    private async Task Explain(QueryOperationContext queryContext, IndexQueryServerSide indexQuery)
+    protected override async ValueTask ExplainAsync(QueryOperationContext queryContext, IndexQueryServerSide indexQuery)
     {
         var explanations = RequestHandler.Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery, out string indexName);
 
@@ -114,18 +89,6 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
             writer.WriteString(indexName);
             writer.WriteComma();
             writer.WriteArray(queryContext.Documents, "Results", explanations, (w, c, explanation) => w.WriteExplanation(queryContext.Documents, explanation));
-
-            writer.WriteEndObject();
-        }
-    }
-
-    private async Task ServerSideQuery(QueryOperationContext queryContext, IndexQueryServerSide indexQuery)
-    {
-        await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, RequestHandler.ResponseBodyStream()))
-        {
-            writer.WriteStartObject();
-            writer.WritePropertyName(nameof(indexQuery.ServerSideQuery));
-            writer.WriteString(indexQuery.ServerSideQuery);
 
             writer.WriteEndObject();
         }

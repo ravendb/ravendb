@@ -33,7 +33,33 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
     protected abstract IDisposable AllocateContextForQueryOperation(out TQueryContext queryContext, out TOperationContext context);
 
-    protected abstract ValueTask HandleDebugAsync(IndexQueryServerSide query, TQueryContext queryContext, string debug, long? existingResultEtag, OperationCancelToken token);
+    private async ValueTask HandleDebugAsync(IndexQueryServerSide query, TQueryContext queryContext, TOperationContext context, string debug, long? existingResultEtag, OperationCancelToken token)
+    {
+        if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
+        {
+            var ignoreLimit = RequestHandler.GetBoolValueQueryString("ignoreLimit", required: false) ?? false;
+            await IndexEntriesAsync(queryContext, query, existingResultEtag, token, ignoreLimit);
+            return;
+        }
+
+        if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
+        {
+            await ExplainAsync(queryContext, query);
+            return;
+        }
+
+        if (string.Equals(debug, "serverSideQuery", StringComparison.OrdinalIgnoreCase))
+        {
+            await ServerSideQuery(context, query);
+            return;
+        }
+
+        throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
+    }
+
+    protected abstract ValueTask IndexEntriesAsync(TQueryContext queryContext, IndexQueryServerSide indexQuery, long? existingResultEtag, OperationCancelToken token, bool ignoreLimit);
+
+    protected abstract ValueTask ExplainAsync(TQueryContext queryContext, IndexQueryServerSide indexQuery);
 
     protected abstract ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
 
@@ -77,7 +103,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
                     if (string.IsNullOrWhiteSpace(debug) == false)
                     {
-                        await HandleDebugAsync(indexQuery, queryContext, debug, existingResultEtag, token);
+                        await HandleDebugAsync(indexQuery, queryContext, context, debug, existingResultEtag, token);
                         return;
                     }
 
@@ -188,6 +214,18 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                 w.WriteArray(nameof(indexQuery.Diagnostics), indexQuery.Diagnostics);
             }
         };
+    }
+
+    private async Task ServerSideQuery(TOperationContext context, IndexQueryServerSide indexQuery)
+    {
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName(nameof(indexQuery.ServerSideQuery));
+            writer.WriteString(indexQuery.ServerSideQuery);
+
+            writer.WriteEndObject();
+        }
     }
 
     private async ValueTask HandleSuggestQueryAsync(IndexQueryServerSide query, TQueryContext queryContext, TOperationContext operationContext, long? existingResultEtag, OperationCancelToken token)
