@@ -3,13 +3,11 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Facets;
-using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Queries;
@@ -96,9 +94,6 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
     {
         using (var timings = Timings(query))
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
-                @"RavenDB-19071 what do we do with: var diagnostics = GetBoolValueQueryString(""diagnostics"", required: false) ?? false");
-
             var indexName = AbstractQueryRunner.GetIndexName(query);
 
             using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
@@ -115,6 +110,12 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
                 return result;
             }
         }
+    }
+
+    protected override void AssertIndexQuery(IndexQueryServerSide indexQuery)
+    {
+        if (indexQuery.Diagnostics != null)
+            throw new NotSupportedInShardingException("Query diagnostics for a sharded database are currently not supported.");
     }
 
     private static TimingsScope Timings(IndexQueryServerSide query) => new(query);
