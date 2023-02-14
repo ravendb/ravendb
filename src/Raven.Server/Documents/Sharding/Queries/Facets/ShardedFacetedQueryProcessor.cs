@@ -122,7 +122,7 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
 
             await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex, scope);
 
-            using (Query.Metadata.HasIncludeOrLoad ? queryScope?.For(QueryTimingsScope.Names.Includes) : null)
+            using (Query.Metadata.HasIncludeOrLoad ? queryScope?.For(nameof(QueryTimingsScope.Names.Includes)) : null)
             {
                 if (operation.MissingDocumentIncludes is { Count: > 0 })
                 {
