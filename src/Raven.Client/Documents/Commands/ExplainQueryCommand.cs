@@ -20,11 +20,18 @@ namespace Raven.Client.Documents.Commands
 
         private readonly DocumentConventions _conventions;
         private readonly IndexQuery _indexQuery;
+        private readonly BlittableJsonReaderObject _indexQueryAsJson;
 
         public ExplainQueryCommand(DocumentConventions conventions, IndexQuery indexQuery)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
+        }
+
+        internal ExplainQueryCommand(DocumentConventions conventions, BlittableJsonReaderObject indexQuery)
+        {
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            _indexQueryAsJson = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -41,6 +48,12 @@ namespace Raven.Client.Documents.Commands
                     {
                         await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
+                            if (_indexQueryAsJson != null)
+                            {
+                                writer.WriteObject(_indexQueryAsJson);
+                                return;
+                            }
+
                             writer.WriteIndexQuery(_conventions, ctx, _indexQuery);
                         }
                     }

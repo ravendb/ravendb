@@ -78,11 +78,11 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
         }
     }
 
-    protected override async ValueTask ExplainAsync(QueryOperationContext queryContext, IndexQueryServerSide indexQuery)
+    protected override async ValueTask ExplainAsync(QueryOperationContext queryContext, IndexQueryServerSide indexQuery, OperationCancelToken token)
     {
         var explanations = RequestHandler.Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery, out string indexName);
 
-        await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, RequestHandler.ResponseBodyStream()))
+        await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, RequestHandler.ResponseBodyStream(), token.Token))
         {
             writer.WriteStartObject();
             writer.WritePropertyName("IndexName");

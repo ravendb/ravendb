@@ -141,24 +141,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return bestComplete;
         }
 
-        private static DynamicQueryMatchResult SelectIndexMatchingCompletely(List<Explanation> explanations, DynamicQueryMatchResult[] matchResults)
-        {
-            var prioritizedResults = matchResults
-                .OrderByDescending(x => x.LastMappedEtag)
-                .ThenByDescending(x => x.NumberOfMappedFields)
-                .ToArray();
-
-            if (explanations != null)
-            {
-                for (var i = 1; i < prioritizedResults.Length; i++)
-                {
-                    explanations.Add(new Explanation(prioritizedResults[i].IndexName, "Wasn't the widest / most up to date index matching this query"));
-                }
-            }
-
-            return prioritizedResults[0];
-        }
-
         internal DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, AutoIndexDefinitionBaseServerSide definition, List<Explanation> explanations = null)
         {
             var collection = query.ForCollection;
