@@ -17,7 +17,6 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
 
@@ -36,16 +35,20 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
         return returnContext;
     }
 
+    protected override ValueTask IndexEntriesAsync(TransactionOperationContext queryContext, IndexQueryServerSide indexQuery, long? existingResultEtag, OperationCancelToken token,
+        bool ignoreLimit)
+    {
+        throw new NotImplementedException();
+    }
+
+    protected override ValueTask ExplainAsync(TransactionOperationContext queryContext, IndexQueryServerSide indexQuery)
+    {
+        throw new NotImplementedException();
+    }
+
     protected override AbstractDatabaseNotificationCenter NotificationCenter => RequestHandler.DatabaseContext.NotificationCenter;
 
     protected override RavenConfiguration Configuration => RequestHandler.DatabaseContext.Configuration;
-
-    protected override ValueTask HandleDebugAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, string debug, long? existingResultEtag, OperationCancelToken token)
-    {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19071 Implement debug");
-
-        throw new NotSupportedInShardingException("Query debug is not supported");
-    }
 
     protected override async ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
     {
