@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             {
                 var patternPropertiesAddedSuccessfully = true;
 
-                foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetPropertiesInOrder(reduceObject))
+                foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.GetProperties(reduceObject))
                 {
                     var value = property.Value;
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
