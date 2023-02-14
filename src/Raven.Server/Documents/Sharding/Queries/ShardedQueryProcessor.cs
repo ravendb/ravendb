@@ -214,19 +214,20 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
     private void ApplyPaging(ref ShardedQueryResult result, QueryTimingsScope scope)
     {
-        var handleOffset = Query.Offset is > 0 && result.Results.Count > Query.Offset;
-        var handleLimit = Query.Limit is > 0 && result.Results.Count > Query.Limit;
-        var anyPaging = handleOffset || handleLimit;
+        QueryTimingsScope pagingScope = null;
 
-        using (anyPaging ? scope?.For(nameof(QueryTimingsScope.Names.Paging)) : null)
+        if (Query.Offset is > 0 && result.Results.Count > Query.Offset)
         {
-            if (handleOffset)
+            using (GetPagingScope())
             {
                 var count = Math.Min(Query.Offset ?? 0, int.MaxValue);
                 result.Results.RemoveRange(0, (int)count);
             }
+        }
 
-            if (handleLimit)
+        if (Query.Limit is > 0 && result.Results.Count > Query.Limit)
+        {
+            using (GetPagingScope())
             {
                 var index = Math.Min(Query.Limit.Value, int.MaxValue);
                 var count = result.Results.Count - Query.Limit.Value;
@@ -234,6 +235,17 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
                     count = int.MaxValue; //todo: Grisha: take a look
                 result.Results.RemoveRange((int)index, (int)count);
             }
+        }
+
+        QueryTimingsScope GetPagingScope()
+        {
+            if (scope == null)
+                return null;
+
+            pagingScope ??= scope.For(nameof(QueryTimingsScope.Names.Paging), start: false);
+            pagingScope.Start();
+
+            return pagingScope;
         }
     }
 
