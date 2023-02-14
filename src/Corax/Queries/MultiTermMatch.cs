@@ -14,6 +14,8 @@ namespace Corax.Queries
     public unsafe struct MultiTermMatch<TTermProvider> : IQueryMatch
         where TTermProvider : ITermProvider
     {
+        private const int InitialFrequencyHolders = 64;
+        
         private readonly bool _isBoosting;
         private long _totalResults;
         private long _current;
@@ -51,9 +53,9 @@ namespace Corax.Queries
             _isBoosting = field.HasBoost;
             if (_isBoosting)
             {
-                _handler = _context.Allocate(64 * Unsafe.SizeOf<Bm25Relevance>(), out var bufferOutput);
+                _handler = _context.Allocate(InitialFrequencyHolders * Unsafe.SizeOf<Bm25Relevance>(), out var bufferOutput);
                 _frequencyPerFieldStartPtr = (Bm25Relevance*)bufferOutput.Ptr;
-                _frequenciesSize = 64;
+                _frequenciesSize = InitialFrequencyHolders;
             }
         }
 

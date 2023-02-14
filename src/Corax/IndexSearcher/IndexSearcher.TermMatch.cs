@@ -1,17 +1,15 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
+using System.Text; //do not delete, required for DEBUG parts
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
 using Sparrow.Compression;
-using Sparrow.Server.Debugging;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
-using DebugStuff = Voron.Debugging.DebugStuff;
 
 namespace Corax;
 
@@ -73,15 +71,15 @@ public partial class IndexSearcher
         if (field.HasBoost)
         {
             var totalTerms = tree.NumberOfEntries;
-            var totalSum = _metadataTree.Read(field.SumName)?.Reader.ReadLittleEndianInt64() ?? totalTerms;
+            var totalSum = _metadataTree.Read(field.TermLengthSumName)?.Reader.ReadLittleEndianInt64() ?? totalTerms;
             termRatioToWholeCollection = term.Length / (totalSum / (double)totalTerms);
         }
 
         var matches = TermQuery(field, value, termRatioToWholeCollection);
         
-#if DEBUG
+        #if DEBUG
         matches.Term = Encoding.UTF8.GetString(term);
-#endif
+        #endif
         return matches;
     }
 

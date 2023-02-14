@@ -41,17 +41,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
 
     public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
-
-    public long SumOfLengthsInField(Slice fieldName)
-    {
-        byte[] PostFix = new byte[] {(byte)'_', (byte)'C', (byte)'o', (byte)'u', (byte)'n', (byte)'t'};
-        using var _ = Allocator.Allocate(fieldName.Size + PostFix.Length, out ByteString output);
-        fieldName.Content.CopyTo(output.Ptr);
-        PostFix.CopyTo(new Span<byte>(output.Ptr + fieldName.Size, PostFix.Length));
-        var x = new Slice(SliceOptions.Key, output);
-        return _metadataTree?.ReadInt64(x) ?? 0;
-    }
-
+    
     public ByteStringContext Allocator => _transaction.Allocator;
 
     internal Transaction Transaction => _transaction;
