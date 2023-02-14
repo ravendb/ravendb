@@ -37,7 +37,6 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
-using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -480,6 +479,7 @@ namespace Raven.Server.ServerWide
 
                     case nameof(AcknowledgeSubscriptionBatchCommand):
                     case nameof(RecordBatchSubscriptionDocumentsCommand):
+                    case nameof(UpdatePeriodicBackupStatusCommand):
                     case nameof(UpdateExternalReplicationStateCommand):
                     case nameof(PutSubscriptionCommand):
                     case nameof(DeleteSubscriptionCommand):
@@ -490,11 +490,6 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveEtlProcessStateCommand):
                     case nameof(DelayBackupCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
-                        break;
-
-                    case nameof(UpdatePeriodicBackupStatusCommand):
-                        var command = (UpdatePeriodicBackupStatusCommand)SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result, notifyDatabase: false);
-                        UpdateBackupHistory(context, type, index, command, serverStore);
                         break;
 
                     case nameof(AddOrUpdateCompareExchangeCommand):
@@ -1402,7 +1397,7 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        private UpdateValueForDatabaseCommand SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, out object result, bool notifyDatabase = true)
+        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, out object result)
         {
             result = null;
             UpdateValueForDatabaseCommand updateCommand = null;
@@ -1420,8 +1415,6 @@ namespace Raven.Server.ServerWide
 
                     updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentState, out result);
                 }
-
-                return updateCommand;
             }
             catch (Exception e)
             {
@@ -1431,8 +1424,7 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(type, index, exception, updateCommand);
-                if (notifyDatabase)
-                    NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, updateCommand?.GetState());
+                NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, updateCommand?.GetState());
             }
         }
 
@@ -4489,165 +4481,6 @@ namespace Raven.Server.ServerWide
             }
 
             return false;
-        }
-
-        private unsafe void UpdateBackupHistory(ClusterOperationContext context, string type, long index, UpdatePeriodicBackupStatusCommand command,
-            ServerStore serverStore)
-        {
-            List<string> backupDetailsIdsToDelete = null;
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-
-            command.CurrentAndTemporarySavedEntries.ForEach(StoreEntry);
-
-            NotifyDatabaseAboutChanged(context, command.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, backupDetailsIdsToDelete);
-
-            void StoreEntry(BackupHistoryEntry backupHistoryEntryToAdd)
-            {
-                var itemKey = backupHistoryEntryToAdd.GenerateItemKey();
-
-                // We use the follow structure for the backup history data
-                // Each Full backup + all increments are one Backup entry: { FullBackup: {}, Increments: [] }
-                using (Slice.From(context.Allocator, itemKey, out Slice valueName))
-                using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered))
-                {
-                    BlittableJsonReaderObject blittable;
-                    if (items.ReadByKey(valueNameLowered, out var tvr) == false)
-                    {
-                        // This is the first backup history entry for such TaskId on that Node.Let's create a new entry.
-                        // It should be taken into account that if the incremental backup is completed first after implementing the functionality on the current server instance,
-                        // we should correctly handle this case. We'll define a fake backup entry with a minimal creation date as a full backup entry.
-                        var fullBackup = backupHistoryEntryToAdd.IsFull ? backupHistoryEntryToAdd.ToJson() : new DynamicJsonValue
-                        {
-                            [nameof(BackupHistoryEntry.BackupType)] = backupHistoryEntryToAdd.BackupType,
-                            [nameof(BackupHistoryEntry.CreatedAt)] = DateTime.MinValue,
-                            [nameof(BackupHistoryEntry.DatabaseName)] = backupHistoryEntryToAdd.DatabaseName,
-                            [nameof(BackupHistoryEntry.DurationInMs)] = 0,
-                            [nameof(BackupHistoryEntry.Error)] = null,
-                            [nameof(BackupHistoryEntry.IsFull)] = true,
-                            [nameof(BackupHistoryEntry.NodeTag)] = backupHistoryEntryToAdd.NodeTag,
-                            [nameof(BackupHistoryEntry.LastFullBackup)] = backupHistoryEntryToAdd.LastFullBackup,
-                            [nameof(BackupHistoryEntry.TaskId)] = backupHistoryEntryToAdd.TaskId,
-                        };
-
-                        var increments = backupHistoryEntryToAdd.IsFull ? new DynamicJsonArray() : new DynamicJsonArray { backupHistoryEntryToAdd.ToJson() };
-
-                        var backupHistoryJsonValue = new DynamicJsonValue
-                        {
-                            [nameof(BackupHistory)] = new DynamicJsonArray
-                            {
-                                new DynamicJsonValue
-                                {
-                                    [nameof(BackupHistory.FullBackup)] = fullBackup,
-                                    [nameof(BackupHistory.IncrementalBackups)] = increments
-                                }
-                            }
-                        };
-
-                        blittable = context.ReadObject(backupHistoryJsonValue, itemKey);
-                    }
-                    else
-                    {
-                        // We are already have history entries. We'll add a new value according to the given structure.
-                        var ptr = tvr.Read(2, out int size);
-                        blittable = new BlittableJsonReaderObject(ptr, size, context);
-
-                        blittable.TryGet(nameof(BackupHistory), out BlittableJsonReaderArray backupHistoryItems);
-
-                        if (backupHistoryEntryToAdd.IsFull)
-                        {
-                            // It's a full backup. Let's add a new backup history entry if it's unique.
-                            var isUnique = true;
-                            foreach (var entry in backupHistoryItems)
-                            {
-                                ((BlittableJsonReaderObject)entry).TryGet(nameof(BackupHistory.FullBackup), out BlittableJsonReaderObject fullBackup);
-                                fullBackup.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime entryCreatedAt);
-
-                                if (entryCreatedAt != backupHistoryEntryToAdd.CreatedAt)
-                                    continue;
-
-                                isUnique = false;
-                                break;
-                            }
-
-                            if (isUnique)
-                            {
-                                backupHistoryItems.Modifications ??= new DynamicJsonArray();
-                                backupHistoryItems.Modifications.Add(new DynamicJsonValue
-                                {
-                                    [nameof(BackupHistory.FullBackup)] = backupHistoryEntryToAdd.ToJson(),
-                                    [nameof(BackupHistory.IncrementalBackups)] = new DynamicJsonArray()
-                                });
-                            }
-                        }
-                        else
-                        {
-                            // It's an incremental backup.
-                            for (int i = backupHistoryItems.Length - 1; i >= 0; i--)
-                            {
-                                // We'll find (starting from the end) which full backup we are incrementing.
-                                var entry = (BlittableJsonReaderObject)backupHistoryItems[i];
-
-                                if (entry.TryGet(nameof(BackupHistory.FullBackup), out BlittableJsonReaderObject fullBackup) == false ||
-                                    fullBackup.TryGet(nameof(BackupHistoryEntry.LastFullBackup), out DateTime lastFullBackup) == false ||
-                                    backupHistoryEntryToAdd.LastFullBackup != lastFullBackup)
-                                    continue;
-
-                                // We found which full backup was incremented; now we'll append new entry.
-                                entry.TryGet(nameof(BackupHistory.IncrementalBackups), out BlittableJsonReaderArray increments);
-                                increments.Modifications ??= new DynamicJsonArray();
-                                if (increments.Length == 0)
-                                {
-                                    increments.Modifications.Add(backupHistoryEntryToAdd.ToJson());
-                                    break;
-                                }
-
-                                var lastIncremental = (BlittableJsonReaderObject)increments[^1];
-                                lastIncremental.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime lastIncrementalCreatedAt);
-
-                                if (lastIncrementalCreatedAt < backupHistoryEntryToAdd.CreatedAt)
-                                    increments.Modifications.Add(backupHistoryEntryToAdd.ToJson());
-                            }
-                        }
-
-                        var numberOfItems = backupHistoryItems.Length + (backupHistoryItems.Modifications?.Items.Count ?? 0);
-                        var maxAllowed = serverStore.Configuration.Backup.MaxNumberOfFullBackupsInBackupHistory;
-
-                        if (numberOfItems > maxAllowed)
-                        {
-                            var numberToRemove = numberOfItems - maxAllowed;
-
-                            backupHistoryItems.Modifications ??= new DynamicJsonArray();
-                            backupHistoryItems.Modifications.Removals ??= new List<int>();
-                            backupDetailsIdsToDelete ??= new List<string>();
-                            for (int i = 0; i < numberToRemove; i++)
-                            {
-                                backupHistoryItems.Modifications.Removals.Add(i);
-
-                                var itemToDelete = (BlittableJsonReaderObject)backupHistoryItems[i];
-
-                                itemToDelete.TryGet(nameof(BackupHistory.FullBackup), out BlittableJsonReaderObject fullBackup);
-
-                                fullBackup.TryGet(nameof(BackupHistoryEntry.TaskId), out long taskId);
-                                fullBackup.TryGet(nameof(BackupHistoryEntry.NodeTag), out string nodeTag);
-                                fullBackup.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime fullBackupCreatedAt);
-                                backupDetailsIdsToDelete.Add(BackupHistoryTableValue.GenerateKey(command.DatabaseName, taskId, nodeTag, fullBackupCreatedAt, BackupHistoryItemType.Details));
-
-                                itemToDelete.TryGet(nameof(BackupHistory.IncrementalBackups), out BlittableJsonReaderArray increments);
-                                foreach (var increment in increments)
-                                {
-                                    ((BlittableJsonReaderObject)increment).TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime incrementCreatedAt);
-
-                                    backupDetailsIdsToDelete.Add(BackupHistoryTableValue.GenerateKey(command.DatabaseName, taskId, nodeTag, incrementCreatedAt, BackupHistoryItemType.Details));
-                                }
-                            }
-                        }
-
-                        blittable = context.ReadObject(blittable, itemKey);
-                    }
-
-                    UpdateValue(index, items, valueNameLowered, valueName, blittable);
-                }
-            }
         }
     }
 

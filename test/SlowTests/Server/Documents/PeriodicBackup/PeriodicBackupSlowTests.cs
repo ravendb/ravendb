@@ -3588,7 +3588,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * 3 * *", mentorNode: leaderServer.ServerStore.NodeTag, name: "RavenDB-19358");
                 var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var taskId = result.TaskId;
-                WaitForUserToContinueTheTest(store);
+
                 var backupStatusesList = new List<PeriodicBackupStatus>
                 {
                     await Backup.RunBackupAndReturnStatusAsync(leaderServer, taskId, store, isFullBackup: true),
@@ -3660,7 +3660,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var client = store.GetRequestExecutor().HttpClient;
                     var response = AsyncHelpers.RunSync(() =>
-                        client.GetAsync($"{store.Urls.First()}/backup-history-details?taskId={tId}&database={dbName}&nodeTag={nodeTag}&id={id}"));
+                        client.GetAsync($"{store.Urls.First()}/databases/{dbName}/backup-history-details?taskId={tId}&id={id}"));
                     string result = response.Content.ReadAsStringAsync().Result;
 
                     var detailsFromResponse = context.Sync.ReadForMemory(result, "Result");
@@ -3895,8 +3895,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await WaitForValueAsync(async () =>
                     {
                         database = await newLeaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
-                        using (database.ConfigurationStorage.BackupHistoryStorage.ReadItems(out var entriesFromTemporaryStorage, BackupHistoryItemType.HistoryEntry))
+                        using (database.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var entriesFromTemporaryStorage = database.ConfigurationStorage.BackupHistoryStorage.ReadItems(context, BackupHistoryItemType.HistoryEntry);
                             return entriesFromTemporaryStorage != null;
+                        }
                     }, true);
 
                     // Assertion

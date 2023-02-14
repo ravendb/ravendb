@@ -7,13 +7,11 @@ using Raven.Client.Json.Serialization;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
-using Voron.Impl;
 
 namespace Raven.Server.Documents.PeriodicBackup.BackupHistory;
 
@@ -23,7 +21,7 @@ public unsafe class BackupHistoryStorage
     private StorageEnvironment _environment;
     private TransactionContextPool _contextPool;
 
-    protected readonly Logger Logger; //todo: log!
+    protected readonly Logger Logger;
 
     private readonly TableSchema _backupHistorySchema = new();
 
@@ -78,55 +76,30 @@ public unsafe class BackupHistoryStorage
         if (Logger.IsInfoEnabled)
             Logger.Info($"Saving to {nameof(BackupHistoryStorage)} {nameof(BackupHistoryItemType.Details)} with `{nameof(BackupHistoryTableValue.Key)}`: `{key}`.");
 
-        StoreInternal(key, result.ToJson());
+        using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (var transaction = context.OpenWriteTransaction())
+        {
+            StoreInternal(key, result.ToJson(), transaction, context);
+            transaction.Commit();
+        }
     }
 
-    private void StoreInternal(string key, DynamicJsonValue value, RavenTransaction transaction = null, TransactionOperationContext context = null)
+    private void StoreInternal(string key, DynamicJsonValue value, RavenTransaction transaction, TransactionOperationContext context)
     {
-        if (transaction == null && context == null)
-        {
-            using (_contextPool.AllocateOperationContext(out context))
-            using (transaction = context.OpenWriteTransaction())
-            {
-                Store(transaction, context);
-                transaction.Commit();
-            }
-        }
-        else
-        {
-            Store(transaction, context);
-        }
+        var table = transaction.InnerTransaction.OpenTable(_backupHistorySchema, BackupHistorySchema.BackupHistory);
 
-        void Store(RavenTransaction tx, JsonOperationContext ctx)
+        var lsKey = context.GetLazyString(key);
+        using (var json = context.ReadObject(value, nameof(BackupHistorySchema.BackupHistory), BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+        using (table.Allocate(out TableValueBuilder tvb))
         {
-            var table = tx.InnerTransaction.OpenTable(_backupHistorySchema, BackupHistorySchema.BackupHistory);
+            tvb.Add(lsKey.Buffer, lsKey.Size);
+            tvb.Add(json.BasePointer, json.Size);
 
-            var lsKey = ctx.GetLazyString(key);
-            using (var json = ctx.ReadObject(value, nameof(BackupHistorySchema.BackupHistory), BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-            using (table.Allocate(out TableValueBuilder tvb))
-            {
-                tvb.Add(lsKey.Buffer, lsKey.Size);
-                tvb.Add(json.BasePointer, json.Size);
-
-                table.Set(tvb);
-            }
+            table.Set(tvb);
         }
     }
-
-    public IDisposable ReadItems(out Dictionary<string, BlittableJsonReaderObject> entries, BackupHistoryItemType type)
-    {
-        using (var scope = new DisposableScope())
-        {
-            scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
-            scope.EnsureDispose(context.OpenReadTransaction());
-
-            entries = ReadInternal(context, type);
-
-            return scope.Delay();
-        }
-    }
-
-    private Dictionary<string, BlittableJsonReaderObject> ReadInternal(TransactionOperationContext context, BackupHistoryItemType type)
+    
+    public Dictionary<string, BlittableJsonReaderObject> ReadItems(TransactionOperationContext context, BackupHistoryItemType type)
     {
         var prefix = $"values/{_databaseName}/backup-history/{type}/";
 
@@ -146,8 +119,9 @@ public unsafe class BackupHistoryStorage
         }
     }
 
-    public IEnumerable<BackupHistoryEntry> RetractTemporaryStoredBackupHistoryEntries()
+    public List<BackupHistoryEntry> RetractTemporaryStoredBackupHistoryEntries()
     {
+        List<BackupHistoryEntry> temporaryStoredEntries = new();
         var prefix = $"values/{_databaseName}/backup-history/{BackupHistoryItemType.HistoryEntry}/";
 
         using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -156,79 +130,21 @@ public unsafe class BackupHistoryStorage
         {
             var items = context.Transaction.InnerTransaction.OpenTable(_backupHistorySchema, BackupHistorySchema.BackupHistory);
 
-            foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
+            items.DeleteByPrimaryKeyPrefix(loweredPrefix, beforeDelete: value =>
             {
-                var entry = GetCurrentHistoryEntry(context, result.Value);
-
-                Delete(entry.Key, tx);
-
-                yield return entry.Entry;
-            }
-
+                var ptr = value.Reader.Read(1, out int size);
+                var doc = new BlittableJsonReaderObject(ptr, size, context);
+                temporaryStoredEntries.Add(JsonDeserializationClient.BackupHistoryEntry(doc));
+            });
             tx.Commit();
         }
+
+        return temporaryStoredEntries;
     }
 
-    private static (string Key, BackupHistoryEntry Entry) GetCurrentHistoryEntry(TransactionOperationContext context, Table.TableValueHolder result)
+    public BlittableJsonReaderObject GetBackupHistoryDetails(string key, TransactionOperationContext context)
     {
-        var ptr = result.Reader.Read(1, out int size);
-        var doc = new BlittableJsonReaderObject(ptr, size, context);
-        var key = Encoding.UTF8.GetString(result.Reader.Read(0, out size), size);
-
-        Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
-        return (key, JsonDeserializationClient.BackupHistoryEntry(doc));
-    }
-
-    public bool Delete(string id, RavenTransaction existingTransaction = null)
-    {
-        bool deleteResult;
-
-        if (existingTransaction != null)
-        {
-            deleteResult = DeleteFromTable(existingTransaction);
-        }
-        else
-        {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                deleteResult = DeleteFromTable(tx);
-                tx.Commit();
-            }
-        }
-
-        if (deleteResult && Logger.IsInfoEnabled)
-            Logger.Info($"Deleted {nameof(BackupHistoryEntry)} '{id}'.");
-
-        return deleteResult;
-
-        bool DeleteFromTable(RavenTransaction tx)
-        {
-            var table = tx.InnerTransaction.OpenTable(_backupHistorySchema, BackupHistorySchema.BackupHistory);
-
-            using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice alertSlice))
-            {
-                return table.DeleteByKey(alertSlice);
-            }
-        }
-    }
-
-    public IDisposable ReadBackupHistoryDetails(string key, out BlittableJsonReaderObject details)
-    {
-        using (var scope = new DisposableScope())
-        {
-            RavenTransaction tx;
-            scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
-            scope.EnsureDispose(tx = context.OpenReadTransaction());
-
-            details = GetBackupHistoryDetails(key, context, tx);
-
-            return scope.Delay();
-        }
-    }
-
-    private BlittableJsonReaderObject GetBackupHistoryDetails(string key, JsonOperationContext context, RavenTransaction tx)
-    {
+        using var tx = context.OpenReadTransaction();
         var table = tx.InnerTransaction.OpenTable(_backupHistorySchema, BackupHistorySchema.BackupHistory);
         using (Slice.From(tx.InnerTransaction.Allocator, key, out Slice slice))
         {
@@ -242,24 +158,40 @@ public unsafe class BackupHistoryStorage
         }
     }
 
+    public void HandleDatabaseValueChanged(string type, object changeState)
+    {
+        if (type != nameof(UpdatePeriodicBackupStatusCommand) || changeState == null)
+            return;
+
+        using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (var transaction = context.OpenWriteTransaction())
+        {
+            var idsToDelete = (List<string>)changeState;
+            idsToDelete.ForEach(id =>
+            {
+                bool deleteResult;
+                var table = transaction.InnerTransaction.OpenTable(_backupHistorySchema, BackupHistorySchema.BackupHistory);
+
+                using (Slice.From(transaction.InnerTransaction.Allocator, id, out Slice alertSlice))
+                    deleteResult = table.DeleteByKey(alertSlice);
+
+                if (deleteResult && Logger.IsInfoEnabled)
+                    Logger.Info($"Deleted {nameof(BackupHistoryEntry)} '{id}'.");
+            });
+            transaction.Commit();
+        }
+    }
+
     public static class BackupHistorySchema
     {
         public const string BackupHistory = nameof(BackupHistoryTable);
 
         public static class BackupHistoryTable
         {
+            // key structure: values/<databaseName>/backup-history/<BackupHistoryItemType>/<taskId>/<nodeTag>/<createdAtTicksAsId>
             public const int ItemKey = 0;
             public const int ItemJsonIndex = 1;
         }
-    }
-
-    public void HandleDatabaseValueChanged(string type, object changeState)
-    {
-        if (type != nameof(UpdatePeriodicBackupStatusCommand) || changeState == null)
-            return;
-
-        var idsToDelete = (List<string>)changeState;
-        idsToDelete.ForEach(id => Delete(id));
     }
 }
 
@@ -282,10 +214,8 @@ public class BackupHistoryTableValue : IDynamicJsonValueConvertible
         return GenerateKey(databaseName, status.TaskId, status.NodeTag, createdAt, type);
     }
 
-    public static string GenerateKey(string databaseName, long taskId, string nodeTag, DateTime createdAt, BackupHistoryItemType type)
-    {
-        return $"values/{databaseName}/backup-history/{type}/{taskId}/{nodeTag}/{createdAt.Ticks}";
-    }
+    public static string GenerateKey(string databaseName, long taskId, string nodeTag, DateTime createdAt, BackupHistoryItemType type) => 
+        $"values/{databaseName}/backup-history/{type}/{taskId}/{nodeTag}/{createdAt.Ticks}";
 
     public DynamicJsonValue ToJson()
     {

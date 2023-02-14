@@ -58,6 +58,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly string _taskName;
         internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
+        private static int MaxNumberOfFullBackupsInBackupHistory;
+
         public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             _database = database;
@@ -76,6 +78,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _forTestingPurposes = forTestingPurposes;
             _backupResult = GenerateBackupResult();
             TaskCancelToken = new OperationCancelToken(_database.DatabaseShutdown, CancellationToken.None);
+            MaxNumberOfFullBackupsInBackupHistory = database.ServerStore.Configuration.Backup.MaxNumberOfFullBackupsInBackupHistory;
 
             _retentionPolicyParameters = new RetentionPolicyBaseParameters
             {

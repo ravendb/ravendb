@@ -1233,10 +1233,13 @@ namespace Tests.Infrastructure
                 historyEntriesFromResponseDictionary = GetBackupHistoryFromEndpoint(context, store, database.Name);
                 historyEntriesFromClusterDictionary = GetBackupHistoryFromClusterStorage(context, server, database.Name);
 
-                scope.EnsureDispose(database.ConfigurationStorage.BackupHistoryStorage.ReadItems(out var entriesFromTemporaryStorage, BackupHistoryItemType.HistoryEntry));
+                scope.EnsureDispose(database.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationContext));
+                scope.EnsureDispose(configurationContext.OpenReadTransaction());
+                var entriesFromTemporaryStorage = database.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationContext, BackupHistoryItemType.HistoryEntry);
+                
                 historyEntriesFromTemporaryDictionary = GetBackupHistoryFromTemporaryStorage(entriesFromTemporaryStorage);
 
-                scope.EnsureDispose(database.ConfigurationStorage.BackupHistoryStorage.ReadItems(out detailsFromStorageDictionary, BackupHistoryItemType.Details));
+                detailsFromStorageDictionary = database.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationContext, BackupHistoryItemType.Details);
                 
                 return scope.Delay();
             }
@@ -1245,7 +1248,7 @@ namespace Tests.Infrastructure
         private Dictionary<(DateTime, bool), BlittableJsonReaderObject> GetBackupHistoryFromEndpoint(TransactionOperationContext context, DocumentStore store, string databaseName)
         {
             var client = store.GetRequestExecutor().HttpClient;
-            var response = AsyncHelpers.RunSync(() => client.GetAsync($"{store.Urls.First()}/backup-history?database={databaseName}"));
+            var response = AsyncHelpers.RunSync(() => client.GetAsync($"{store.Urls.First()}/databases/{databaseName}/backup-history"));
             string result = response.Content.ReadAsStringAsync().Result;
 
             var backupHistoryFromResponse = context.Sync.ReadForMemory(result, "Result");
