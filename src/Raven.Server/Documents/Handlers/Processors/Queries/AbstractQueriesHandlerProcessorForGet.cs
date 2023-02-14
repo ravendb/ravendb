@@ -44,7 +44,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
         if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
         {
-            await ExplainAsync(queryContext, query);
+            await ExplainAsync(queryContext, query, token);
             return;
         }
 
@@ -59,7 +59,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
     protected abstract ValueTask IndexEntriesAsync(TQueryContext queryContext, IndexQueryServerSide indexQuery, long? existingResultEtag, OperationCancelToken token, bool ignoreLimit);
 
-    protected abstract ValueTask ExplainAsync(TQueryContext queryContext, IndexQueryServerSide indexQuery);
+    protected abstract ValueTask ExplainAsync(TQueryContext queryContext, IndexQueryServerSide indexQuery, OperationCancelToken token);
 
     protected abstract ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
 

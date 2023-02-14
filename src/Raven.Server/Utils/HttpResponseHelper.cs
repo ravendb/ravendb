@@ -15,7 +15,8 @@ public static class HttpResponseHelper
         "Vary",
         "Date",
         "Server",
-        Constants.Headers.TransferEncoding
+        Constants.Headers.TransferEncoding,
+        Constants.Headers.RequestTime
     };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

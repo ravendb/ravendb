@@ -37,7 +37,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                var index = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] {new AutoIndexField {Name = "Name1"}}),
+                var index = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }),
                     Guid.NewGuid().ToString());
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
@@ -163,7 +163,7 @@ namespace FastTests.Client.Indexing
 
                 var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => store.Maintenance.SendAsync(new SetIndexesLockOperation(index.Name, IndexLockMode.LockedIgnore)));
                 Assert.Equal("'Indexes list contains Auto-Indexes. Lock Mode' is not set for Auto-Indexes.", exception.Message);
-                
+
                 await store.Maintenance.SendAsync(new SetIndexesPriorityOperation(index.Name, IndexPriority.Low));
 
                 stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.Name));
@@ -426,7 +426,7 @@ namespace FastTests.Client.Indexing
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task CanExplain(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Processors.Queries;
@@ -16,6 +18,7 @@ using Raven.Server.Documents.Sharding.Queries.Suggestions;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Http;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
@@ -41,9 +44,13 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
         throw new NotImplementedException();
     }
 
-    protected override ValueTask ExplainAsync(TransactionOperationContext queryContext, IndexQueryServerSide indexQuery)
+    protected override async ValueTask ExplainAsync(TransactionOperationContext queryContext, IndexQueryServerSide indexQuery, OperationCancelToken token)
     {
-        throw new NotImplementedException();
+        var command = new ExplainQueryCommand(DocumentConventions.DefaultForServer, indexQuery.ToJson(queryContext));
+
+        var proxyCommand = new ProxyCommand<ExplainQueryCommand.ExplainQueryResult[]>(command, HttpContext.Response);
+
+        await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(queryContext, proxyCommand, shardNumber: 0, token.Token);
     }
 
     protected override AbstractDatabaseNotificationCenter NotificationCenter => RequestHandler.DatabaseContext.NotificationCenter;
