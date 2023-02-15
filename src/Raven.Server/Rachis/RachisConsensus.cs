@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -18,6 +17,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.Rachis.Commands;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -36,7 +36,6 @@ using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
-using Sparrow.Collections;
 using Sparrow.Threading;
 using Size = Sparrow.Size;
 
@@ -112,7 +111,7 @@ namespace Raven.Server.Rachis
             if (_serverStore.Initialized == false)
                 throw new InvalidOperationException("Server store isn't initialized.");
 
-            if (ForTestingPurposes!=null && ForTestingPurposes.NodeTagsToDisconnect.Contains(tag))
+            if (ForTestingPurposes != null && ForTestingPurposes.NodeTagsToDisconnect.Contains(tag))
             {
                 throw new InvalidOperationException($"Exception was thrown for disconnecting  node {tag} - For testing purposes.");
             }
@@ -540,7 +539,7 @@ namespace Raven.Server.Rachis
             return readResult?.Reader.ToStringValue();
         }
 
-        private void SwitchToSingleLeader(ClusterOperationContext context)
+        internal void SwitchToSingleLeader(ClusterOperationContext context)
         {
             var electionTerm = CurrentTerm + 1;
             CastVoteInTerm(context, electionTerm, Tag, "Switching to single leader");
@@ -746,7 +745,7 @@ namespace Raven.Server.Rachis
                 {
                     if (IsLocked)
                     {
-                        if (_releaser.WaitOne(TimeSpan.FromSeconds(3)) == false) 
+                        if (_releaser.WaitOne(TimeSpan.FromSeconds(3)) == false)
                             Complete();
                     }
                 }
@@ -1058,60 +1057,23 @@ namespace Raven.Server.Rachis
             return leader.PutAsync(cmd, cmd.Timeout ?? OperationTimeout);
         }
 
-        public void SwitchToCandidateStateOnTimeout()
-        {
-            SwitchToCandidateState("Election timeout");
-        }
+        public void SwitchToCandidateStateOnTimeout() => SwitchToCandidateStateAsync("Election timeout").Wait();
 
-        public void SwitchToCandidateState(string reason, bool forced = false)
+        public async Task SwitchToCandidateStateAsync(string reason, bool forced = false)
         {
             var currentTerm = CurrentTerm;
             try
             {
                 Timeout.DisableTimeout();
-                using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (var ctx = context.OpenWriteTransaction())
-                {
-                    var clusterTopology = GetTopology(context);
-                    if (clusterTopology.TopologyId == null ||
-                        clusterTopology.AllNodes.ContainsKey(_tag) == false)
-                    {
-                        if (Log.IsInfoEnabled)
-                        {
-                            Log.Info($"We are not a part of the cluster so moving to passive (candidate because: {reason})");
-                        }
 
-                        SetNewStateInTx(context, RachisState.Passive, null, currentTerm, "We are not a part of the cluster so moving to passive");
-                        ctx.Commit();
-                        return;
-                    }
-                    if (clusterTopology.Members.ContainsKey(_tag) == false)
-                    {
-                        if (Log.IsInfoEnabled)
-                        {
-                            Log.Info($"Candidate because: {reason}, but while we are part of the cluster, we aren't a member, so we can't be a candidate.");
-                        }
-                        // we aren't a member, nothing that we can do here
-                        return;
-                    }
-                    if (clusterTopology.AllNodes.Count == 1 &&
-                        clusterTopology.Members.Count == 1)
-                    {
-                        if (Log.IsInfoEnabled)
-                        {
-                            Log.Info("Trying to switch to candidate when I'm the only node in the cluster, turning into a leader, instead");
-                        }
-
-                        SwitchToSingleLeader(context);
-                        ctx.Commit();
-                        return;
-                    }
-                }
+                var command = new SwitchToCandidateStateCommand(this, currentTerm, _tag, reason);
+                await TxMerger.Enqueue(command);
 
                 if (Log.IsInfoEnabled)
                 {
                     Log.Info($"Switching to candidate state because {reason} forced: {forced}");
                 }
+
                 var candidate = new Candidate(this)
                 {
                     IsForcedElection = forced

@@ -291,10 +291,15 @@ namespace Raven.Server.Rachis
             }
         }
 
+        private void Run()
+        {
+            RunAsync().Wait();
+        }
+
         /// <summary>
         /// This is expected to run for a long time, and it cannot leak exceptions
         /// </summary>
-        private void Run()
+        private async Task RunAsync()
         {
             try
             {

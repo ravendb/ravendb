@@ -56,7 +56,7 @@ namespace Raven.Server.Rachis
             return $"Follower {_engine.Tag} of leader {_connection.Source} in term {_term}";
         }
 
-        private void FollowerSteadyState()
+        private async Task FollowerSteadyStateAsync()
         {
             var entries = new List<RachisEntry>();
             long lastCommit = 0, lastTruncate = 0, lastAcknowledgedIndex = 0;
@@ -204,7 +204,7 @@ namespace Raven.Server.Rachis
                         {
                             _engine.Log.Info($"{ToString()}: Got a request to become candidate from the leader.");
                         }
-                        _engine.SwitchToCandidateState("Was asked to do so by my leader", forced: true);
+                        await _engine.SwitchToCandidateStateAsync("Was asked to do so by my leader", forced: true);
                         return;
                     }
                     _debugRecorder.Record("Processing entries is completed");
@@ -1146,12 +1146,17 @@ namespace Raven.Server.Rachis
 
             _followerLongRunningWork =
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(
-                    action: x => Run(x),
+                    action: Run,
                     state: negotiation,
                     ThreadNames.ForFollower($"Follower thread from {_connection} in term {negotiation.Term}", _connection.ToString(), negotiation.Term));
         }
 
         private void Run(object obj)
+        {
+            RunAsync(obj).Wait();
+        }
+
+        private async Task RunAsync(object obj)
         {
             try
             {
@@ -1168,7 +1173,7 @@ namespace Raven.Server.Rachis
                             NegotiateWithLeader(context, (LogLengthNegotiation)obj);
                         }
 
-                        FollowerSteadyState();
+                        await FollowerSteadyStateAsync();
                     }
                     catch (Exception e) when (RachisConsensus.IsExpectedException(e))
                     {
