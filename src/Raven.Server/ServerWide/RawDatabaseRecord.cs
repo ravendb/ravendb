@@ -152,18 +152,18 @@ namespace Raven.Server.ServerWide
         {
             get
             {
+                if (_materializedRecord != null)
+                {
+                    if (_materializedRecord.Sharding == null)
+                        return null;
+
+                    _sharding = new RawShardingConfiguration(_materializedRecord.Sharding);
+
+                    return _sharding;
+                }
+
                 if (_sharding == null)
                 {
-                    if (_materializedRecord != null)
-                    {
-                        if (_materializedRecord.Sharding == null)
-                            return null;
-
-                        _sharding = new RawShardingConfiguration(_materializedRecord.Sharding);
-
-                        return _sharding;
-                    }
-
                     if (_record.TryGet(nameof(DatabaseRecord.Sharding), out BlittableJsonReaderObject obj) && obj != null)
                         _sharding = new RawShardingConfiguration(_context, obj);
                 }

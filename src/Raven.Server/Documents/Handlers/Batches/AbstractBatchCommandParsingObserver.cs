@@ -10,7 +10,7 @@ public abstract class AbstractBatchCommandParsingObserver
 
     public abstract void OnParserBufferRefill(UnmanagedJsonParser parser);
 
-    public abstract void OnId(UnmanagedJsonParser parser, int idLength);
+    public abstract void OnId(UnmanagedJsonParser parser, int idLength, bool isNull);
 
     public abstract void OnIdsStart(UnmanagedJsonParser parser);
 

@@ -831,6 +831,27 @@ namespace FastTests.Sharding.Client.Session
             }
         }
 
+        
+        [RavenTheory(RavenTestCategory.Sharding)]
+        [InlineData(null)]
+        [InlineData("")]
+        public async Task CanStoreNullOrEmptyId(string id)
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+
+                    var obj = new { Product = "Milk", Total = new decimal(1.1), Region = 1 };
+
+                    await session.StoreAsync(obj, id);
+                    session.Advanced.GetMetadataFor(obj)["@collection"] = "Orders";
+
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
         private class Poc
         {
             public string Name { get; set; }
