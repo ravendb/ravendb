@@ -81,7 +81,7 @@ namespace Raven.Client.Documents.Session
                 {
                     if (DocumentsByEntity.TryGetValue(entity, out var docInfo) == false)
                         throw new InvalidOperationException("Cannot refresh a transient instance");
-                    idsEntitiesPairs.TryAdd(docInfo.Id, (entity, docInfo));
+                    idsEntitiesPairs[docInfo.Id] = (entity, docInfo);
                 }
                 IncrementRequestCount();
 
