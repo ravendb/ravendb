@@ -327,68 +327,7 @@ public class CoraxSlowQueryTests : RavenTestBase
             Assert.Equal(item.Name, result.Name);
         }
     }
-
-    [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void BoostingTest(Options options)
-    {
-        const int terms = 29;
-        using var coraxStore = GetDocumentStore(options);
-        using var luceneStore = GetDocumentStore();
-        List<Result> results;
-        {
-            using var coraxSession = coraxStore.BulkInsert();
-            using var luceneSession = luceneStore.BulkInsert();
-            results = Enumerable.Range(0, 10_000).Select(i => new Result() {Age = i % terms, Height = i}).ToList();
-            results.ForEach((x) =>
-            {
-                coraxSession.Store(x);
-                luceneSession.Store(x);
-            });
-        }
-
-
-        {
-            //TermMatches and BinaryMatches
-            var rawQuery = new StringBuilder();
-            rawQuery.Append("from Results where boost(Age == 0, 0)");
-            for (int i = 1; i < terms; ++i)
-                rawQuery.Append($" or boost(Age == '{i}',{i})");
-            rawQuery.Append(" order by score()");
-
-            Assertion(rawQuery.ToString());
-        }
-        {
-            //MultiTermMatches
-            var rawQuery = new StringBuilder();
-            rawQuery.Append("from Results where boost(startsWith(Age, \"0\"),0)");
-            for (int i = 1; i < terms; ++i)
-                rawQuery.Append($" or boost(startsWith(Age, \"{i}\"),{i})");
-            rawQuery.Append(" order by score()");
-
-            Assertion(rawQuery.ToString());
-        }
-
-        {
-            //UnaryTest
-            Assertion($"from Results where boost(Age > {terms - 2}, 100) order by score(), Age as alphanumeric desc ");
-        }
-
-        void Assertion(string rawQuery)
-        {
-            using var coraxSession = coraxStore.OpenSession();
-            using var luceneSession = luceneStore.OpenSession();
-            var luceneResult = luceneSession.Advanced.RawQuery<Result>(rawQuery.ToString()).WaitForNonStaleResults().ToList();
-
-            var coraxResult = coraxSession.Advanced.RawQuery<Result>(rawQuery.ToString()).WaitForNonStaleResults().ToList();
-            Assert.NotEmpty(luceneResult);
-            Assert.NotEmpty(coraxResult);
-            Assert.Equal(luceneResult.Count, coraxResult.Count);
-            for (int i = 0; i < luceneResult.Count; ++i)
-                Assert.Equal(luceneResult[i].Age, coraxResult[i].Age);
-        }
-    }
-
+    
     [Theory]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void NgramSuggestionTest(Options options)

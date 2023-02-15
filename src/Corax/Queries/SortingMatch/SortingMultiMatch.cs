@@ -98,9 +98,13 @@ namespace Corax.Queries
 
             if (HasBoostingComparer)
             {
+                //In Corax's implementation of ranking, we assume that the IDs in the `Score()` parameter are sorted.
+                //This way, we can perform a BinarySearch to find the pair <Entry, Score> and append the score to it.
+                //In the case of compound sorting, when boosting is not the main comparator, matches are not sorted because the previous comparator may have changed the order.
+                //This would require a linear search, which can be extremely costly. Additionally, this would require changing the API of Scoring to indicate whether it's ordered or not.
                 var boostingIsNotMainComparer = typeof(TComparer2) == typeof(BoostingComparer) || typeof(TComparer3) == typeof(BoostingComparer) ||
-                    typeof(TComparer4) == typeof(BoostingComparer) || typeof(TComparer5) == typeof(BoostingComparer) || typeof(TComparer6) == typeof(BoostingComparer) ||
-                    typeof(TComparer7) == typeof(BoostingComparer) || typeof(TComparer8) == typeof(BoostingComparer) || typeof(TComparer9) == typeof(BoostingComparer);
+                                                typeof(TComparer4) == typeof(BoostingComparer) || typeof(TComparer5) == typeof(BoostingComparer) || typeof(TComparer6) == typeof(BoostingComparer) ||
+                                                typeof(TComparer7) == typeof(BoostingComparer) || typeof(TComparer8) == typeof(BoostingComparer) || typeof(TComparer9) == typeof(BoostingComparer);
                 if (boostingIsNotMainComparer)
                     throw new NotSupportedException(
                         $"{nameof(SortingMultiMatch)} can compare score only as main property. Queries like 'order by Field, [..], score(), [..] ' etc are not supported.");

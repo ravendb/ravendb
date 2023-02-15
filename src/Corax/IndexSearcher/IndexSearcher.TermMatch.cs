@@ -1,7 +1,9 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text; //do not delete, required for DEBUG parts
+#if DEBUG
+using System.Text;
+#endif
 using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
@@ -67,12 +69,16 @@ public partial class IndexSearcher
             return TermMatch.CreateEmpty(this, Allocator);
 
         // Calculate bias for BM25 only when needed. There is no reason to calculate this in BM25 class because it would require to pass more information to primitive (and there is no reason to do so).
-        double termRatioToWholeCollection = 0;
+        double termRatioToWholeCollection = 1;
         if (field.HasBoost)
         {
             var totalTerms = tree.NumberOfEntries;
             var totalSum = _metadataTree.Read(field.TermLengthSumName)?.Reader.ReadLittleEndianInt64() ?? totalTerms;
-            termRatioToWholeCollection = term.Length / (totalSum / (double)totalTerms);
+            
+            if (totalTerms == 0 || totalSum == 0)
+                termRatioToWholeCollection = 1;
+            else
+                termRatioToWholeCollection = term.Length /  (totalSum / (double)totalTerms);
         }
 
         var matches = TermQuery(field, value, termRatioToWholeCollection);
