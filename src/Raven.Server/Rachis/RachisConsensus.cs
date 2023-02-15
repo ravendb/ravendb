@@ -1239,15 +1239,8 @@ namespace Raven.Server.Rachis
                     }
                     if (_tag == InitialTag)
                     {
-                        using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                        using (context.OpenWriteTransaction())
-                        {
-                            if (_tag == InitialTag)// double checked locking under tx write lock
-                            {
-                                UpdateNodeTag(context, initialMessage.DebugDestinationIdentifier);
-                                context.Transaction.Commit();
-                            }
-                        }
+                        var command = new UpdateNodeTagCommand(this, _tag, initialMessage);
+                        await TxMerger.Enqueue(command);
 
                         if (_tag != initialMessage.DebugDestinationIdentifier)
                         {
