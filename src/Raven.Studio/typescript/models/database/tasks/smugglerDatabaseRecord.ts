@@ -8,7 +8,7 @@ class smugglerDatabaseRecord {
     
     instanceCounter: number;
 
-    customizeDatabaseRecordTypes = ko.observable<boolean>(false);
+    customizeDatabaseRecordTypes = ko.observable<boolean>(true);
     
     includeConflictSolverConfig = ko.observable<boolean>(true);
     includeDocumentsCompression = ko.observable<boolean>(true);

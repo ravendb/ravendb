@@ -90,15 +90,11 @@ class importDatabaseModel {
         });
 
         this.includeDatabaseRecord.subscribe(dbRecord => {
-            if (!dbRecord) {
-                this.databaseModel.customizeDatabaseRecordTypes(false);
-            }
+            this.databaseModel.customizeDatabaseRecordTypes(dbRecord);
         });
 
         this.databaseModel.customizeDatabaseRecordTypes.subscribe(customize => {
-            if (customize) {
-                this.includeDatabaseRecord(true);
-            }
+            this.includeDatabaseRecord(customize);
         });
 
         this.itemsToWarnAbout = ko.pureComputed(() => {
