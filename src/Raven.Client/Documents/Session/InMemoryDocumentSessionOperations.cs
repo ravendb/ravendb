@@ -2243,6 +2243,43 @@ more responsive application.
             return true;
         }
 
+        protected void BuildEntityDocInfoByIdHolder<T>(
+            IEnumerable<T> entities,
+            out Dictionary<string, (object Entity, DocumentInfo Info)> idsEntitiesPairs
+        )
+        {
+            idsEntitiesPairs = new();
+            foreach (var entity in entities)
+            {
+                if (DocumentsByEntity.TryGetValue(entity, out var docInfo) == false)
+                    ThrowCouldNotRefreshDocument("Cannot refresh a transient instance");
+                idsEntitiesPairs[docInfo.Id] = (entity, docInfo);
+            }
+        }
+
+        protected void RefreshEntities(
+            GetDocumentsCommand command,
+            Dictionary<string, (object Entity, DocumentInfo Info)> idsEntitiesPairs
+        )
+        {
+            var resultsCollection = command.Result.Results;
+            if (resultsCollection.Contains(null))
+                ThrowCouldNotRefreshDocument("Some Documents are no longer exist and were probably deleted");
+
+            foreach (BlittableJsonReaderObject result in resultsCollection)
+            {
+                var id = result.GetMetadata().GetId();
+                if (idsEntitiesPairs.TryGetValue(id, out var tuple) == false)
+                    ThrowCouldNotRefreshDocument($"Could not refresh a entity with id: {id}");
+                RefreshInternal(tuple.Entity, result, tuple.Info);
+            }
+        }
+
+        internal static void ThrowCouldNotRefreshDocument(string msg)
+        {
+            throw new InvalidOperationException(msg);
+        }
+
         protected void RefreshInternal<T>(T entity, BlittableJsonReaderObject cmdResult, DocumentInfo documentInfo)
         {
             var document = cmdResult;
