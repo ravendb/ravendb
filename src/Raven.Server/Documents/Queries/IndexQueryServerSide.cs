@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Queries
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
         [JsonDeserializationIgnore]
-        public bool ReturnMissingIncludeAsNull;
+        public QueryResultReturnOptions ReturnOptions;
 
         [JsonDeserializationIgnore]
         public long? Offset;
@@ -41,8 +41,6 @@ namespace Raven.Server.Documents.Queries
         [JsonDeserializationIgnore]
         public long? FilterLimit { get; set; }
 
-        [JsonDeserializationIgnore]
-        public bool ReturnRawFacetResults;
 
         [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
@@ -538,6 +536,28 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidQueryException(
                     $"Collection query does not support filtering by {Constants.Documents.Indexing.Fields.DocumentIdFieldName} using {@operator} operator. Supported operators are: =, IN",
                     QueryText, parameters);
+            }
+        }
+
+        public class QueryResultReturnOptions
+        {
+            public bool MissingIncludeAsNull;
+
+            public bool RawFacetResults;
+
+            public bool AddOrderByFieldsMetadata;
+
+            public bool AddDataHashMetadata;
+
+            public static QueryResultReturnOptions CreateForSharding(IndexQueryServerSide query)
+            {
+                return new QueryResultReturnOptions
+                {
+                    MissingIncludeAsNull = true,
+                    RawFacetResults = true,
+                    AddDataHashMetadata = query.Metadata.IsDistinct,
+                    AddOrderByFieldsMetadata = query.Metadata.OrderBy?.Length > 0 && (query.Limit is null || query.Limit > 0) // for sharded queries, we'll send the order by fields separately
+                };
             }
         }
     }

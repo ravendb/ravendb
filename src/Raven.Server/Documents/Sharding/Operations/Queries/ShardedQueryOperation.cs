@@ -22,10 +22,12 @@ namespace Raven.Server.Documents.Sharding.Operations.Queries;
 public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryResult, BlittableJsonReaderObject, BlittableJsonReaderObject>
 {
     private readonly IndexQueryServerSide _query;
+    private readonly bool _isDistinctQuery;
     private readonly IComparer<BlittableJsonReaderObject> _sortingComparer;
     private readonly HashSet<int> _alreadySeenProjections;
 
     public ShardedQueryOperation(IndexQueryServerSide query,
+        bool isProjectionFromMapReduceIndex,
         TransactionOperationContext context,
         ShardedDatabaseRequestHandler requestHandler,
         Dictionary<int, ShardedQueryCommand> queryCommands,
@@ -35,8 +37,11 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
         _query = query;
         _sortingComparer = sortingComparer ?? new RoundRobinComparer();
 
-        if (query.Metadata.IsDistinct)
+        if (query.Metadata.IsDistinct && isProjectionFromMapReduceIndex == false)
+        {
+            _isDistinctQuery = true;
             _alreadySeenProjections = new HashSet<int>();
+        }
     }
 
     public bool FromStudio => HttpRequest.IsFromStudio();
@@ -144,7 +149,7 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
             {
                 foreach (BlittableJsonReaderObject item in array)
                 {
-                    if (_query.Metadata.IsDistinct)
+                    if (_isDistinctQuery)
                     {
                         if (CanIncludeResult(item) == false) 
                             continue;
@@ -171,8 +176,8 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
         if (item.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
             throw new InvalidOperationException($"Couldn't find metadata in a query result: {item}");
 
-        if (metadata.TryGet(Constants.Documents.Metadata.Sharding.Querying.DistinctDataHash, out LazyStringValue queryResultHash) == false)
-            throw new InvalidOperationException($"Couldn't find {Constants.Documents.Metadata.Sharding.Querying.DistinctDataHash} metadata in a query result: {item}");
+        if (metadata.TryGet(Constants.Documents.Metadata.Sharding.Querying.ResultDataHash, out LazyStringValue queryResultHash) == false)
+            throw new InvalidOperationException($"Couldn't find {Constants.Documents.Metadata.Sharding.Querying.ResultDataHash} metadata in a query result: {item}");
 
         return _alreadySeenProjections.Add(queryResultHash.GetHashCode());
     }

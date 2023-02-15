@@ -90,7 +90,7 @@ namespace SlowTests.Tests.DistinctFacets
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetDistinctResult(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -113,7 +113,7 @@ namespace SlowTests.Tests.DistinctFacets
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanGetDistinctResult_WithPaging(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -137,7 +137,7 @@ namespace SlowTests.Tests.DistinctFacets
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void DistinctResult_WithFacets_ShouldThrow(Options options)
         {
             using (var store = GetDocumentStore(options))

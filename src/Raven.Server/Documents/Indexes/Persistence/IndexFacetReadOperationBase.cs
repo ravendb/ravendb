@@ -26,7 +26,7 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
 
     protected static void CompleteFacetCalculationsStage(Dictionary<string, FacetedQueryParser.FacetResult> results, IndexQueryServerSide query)
     {
-        if (query.ReturnRawFacetResults)
+        if (query.ReturnOptions?.RawFacetResults == true)
             return;
 
         foreach (var result in results)
@@ -138,19 +138,19 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
             int start;
             int pageSize;
 
-            if (query.ReturnRawFacetResults == false)
-            {
-                allTerms = GetAllTermsSorted(result.Value.Options.TermSortMode, groups);
-
-                start = result.Value.Options.Start;
-                pageSize = Math.Min(allTerms.Count, result.Value.Options.PageSize);
-            }
-            else
+            if (query.ReturnOptions?.RawFacetResults == true)
             {
                 allTerms = new List<string>(groups.Keys);
 
                 start = 0;
                 pageSize = int.MaxValue;
+            }
+            else
+            {
+                allTerms = GetAllTermsSorted(result.Value.Options.TermSortMode, groups);
+
+                start = result.Value.Options.Start;
+                pageSize = Math.Min(allTerms.Count, result.Value.Options.PageSize);
             }
 
             var values = GetSortedAndPagedFacetValues(allTerms, start, pageSize, groups);

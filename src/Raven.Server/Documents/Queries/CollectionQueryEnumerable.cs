@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Voron;
@@ -203,6 +203,9 @@ namespace Raven.Server.Documents.Queries
 
                     if (_alreadySeenProjections.Add(doc.DataHash))
                     {
+                        if (_query.ReturnOptions?.AddDataHashMetadata == true) 
+                            doc = doc.EnsureDataHashInQueryResultMetadata();
+
                         _returnedResults++;
                         Current = doc;
                         return true;

@@ -47,17 +47,13 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
         {
             ShardedDocumentsComparer documentsComparer = null;
 
-            if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery) == false)
+            if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery) == false && (Query.Limit is null || Query.Limit > 0))
             {
                 // sorting only if:
                 // 1. we have fields to sort
                 // 2. it isn't a map-reduce index/query (the sorting will be done after the re-reduce)
+                // 3. this isn't Count() query - Limit is 0 then
                 documentsComparer = new ShardedDocumentsComparer(Query.Metadata, IsMapReduceIndex || IsAutoMapReduceQuery);
-            }
-
-            if (Query.Metadata.TimeSeriesIncludes != null)
-            {
-                var timeSeriesKeys = Query.Metadata.TimeSeriesIncludes.TimeSeries.Keys;
             }
 
             ShardedQueryOperation operation;
@@ -67,7 +63,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             {
                 var commands = GetOperationCommands(executeScope);
 
-                operation = new ShardedQueryOperation(Query, Context, RequestHandler, commands, documentsComparer, ExistingResultEtag?.ToString());
+                operation = new ShardedQueryOperation(Query, IsProjectionFromMapReduceIndex, Context, RequestHandler, commands, documentsComparer, ExistingResultEtag?.ToString());
                 int[] shards = GetShardNumbers(commands);
                 shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
             }
@@ -269,9 +265,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
 
     private void ProjectAfterMapReduce(ref ShardedQueryResult result, QueryTimingsScope scope)
     {
-        if (IsMapReduceIndex == false && IsAutoMapReduceQuery == false
-            || (Query.Metadata.Query.Select == null || Query.Metadata.Query.Select.Count == 0)
-            && Query.Metadata.Query.SelectFunctionBody.FunctionText == null)
+        if (IsProjectionFromMapReduceIndex == false)
             return;
 
         using (scope?.For(nameof(QueryTimingsScope.Names.Projection)))

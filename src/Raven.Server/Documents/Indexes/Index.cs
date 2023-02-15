@@ -3317,7 +3317,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 using (fillScope?.Start())
                                 {
-                                    includeDocumentsCommand.Fill(resultToFill.Includes, query.ReturnMissingIncludeAsNull);
+                                    includeDocumentsCommand.Fill(resultToFill.Includes, query.ReturnOptions?.MissingIncludeAsNull ?? false);
                                     includeCompareExchangeValuesCommand?.Materialize();
                                 }
 
@@ -3554,7 +3554,7 @@ namespace Raven.Server.Documents.Indexes
                                                 cmd.Gather(result.Results);
 
                                             using (includesScope?.For(nameof(QueryTimingsScope.Names.Fill)))
-                                                cmd.Fill(result.Includes, query.ReturnMissingIncludeAsNull);
+                                                cmd.Fill(result.Includes, query.ReturnOptions?.MissingIncludeAsNull ?? false);
                                         }
                                     }
 

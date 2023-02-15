@@ -2111,15 +2111,15 @@ namespace Raven.Server.Json
                     writer.WriteEndArray();
                 }
 
-                if (shardedQueryResult.DistinctDataHash is not null)
+                if (shardedQueryResult.ResultDataHash is not null)
                 {
                     if (first == false)
                     {
                         writer.WriteComma();
                     }
 
-                    writer.WritePropertyName(Constants.Documents.Metadata.Sharding.Querying.DistinctDataHash);
-                    writer.WriteString(shardedQueryResult.DistinctDataHash.Value.ToString());
+                    writer.WritePropertyName(Constants.Documents.Metadata.Sharding.Querying.ResultDataHash);
+                    writer.WriteString(shardedQueryResult.ResultDataHash.Value.ToString());
                 }
             }
 

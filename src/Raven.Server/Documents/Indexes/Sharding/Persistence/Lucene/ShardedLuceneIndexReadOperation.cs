@@ -1,4 +1,5 @@
 ﻿using Lucene.Net.Search;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries;
@@ -22,25 +23,28 @@ public sealed class ShardedLuceneIndexReadOperation : LuceneIndexReadOperation
     protected override QueryResult CreateQueryResult(Document doc, CreateQueryResultParameters parameters, ref bool markedAsSkipped, Reference<long> skippedResults, ref int returnedResults)
     {
         var result = base.CreateQueryResult(doc, parameters, ref markedAsSkipped, skippedResults, ref returnedResults);
-        
-        if (result.Result != null && ShardedQueryResultDocument.ShouldAddShardingSpecificMetadata(parameters.Query, _index.Type, out var shouldAdd))
+
+        var query = parameters.Query;
+
+        if (result.Result != null && query.ReturnOptions != null)
         {
-            var shardedResult = ShardedQueryResultDocument.From(result.Result);
+            if (query.ReturnOptions.AddOrderByFieldsMetadata)
+            {
+                if (_index.Type.IsMapReduce() == false) // for a map-reduce index the returned results already have fields that are used for sorting
+                    result.Result = AddOrderByFields(result.Result, query, parameters.ScoreDoc.Doc);
+            }
 
-            if (shouldAdd.OrderByFields)
-                shardedResult = AddOrderByFields(shardedResult, parameters.Query, parameters.ScoreDoc.Doc);
-
-            if (shouldAdd.DistinctDataHash)
-                shardedResult.DistinctDataHash = shardedResult.DataHash;
-
-            result.Result = shardedResult;
+            if (query.ReturnOptions.AddDataHashMetadata) 
+                result.Result = result.Result.EnsureDataHashInQueryResultMetadata();
         }
 
         return result;
     }
 
-    private ShardedQueryResultDocument AddOrderByFields(ShardedQueryResultDocument result, IndexQueryServerSide query, int doc)
+    private ShardedQueryResultDocument AddOrderByFields(Document queryResult, IndexQueryServerSide query, int doc)
     {
+        var result = ShardedQueryResultDocument.From(queryResult);
+
         foreach (var field in query.Metadata.OrderBy)
         {
             switch (field.OrderingType)

@@ -1,6 +1,4 @@
 ﻿using System.Collections.Generic;
-using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 
 namespace Raven.Server.Documents.Sharding.Queries;
@@ -9,7 +7,7 @@ public class ShardedQueryResultDocument : Document
 {
     public List<OrderByField> OrderByFields = new();
 
-    public ulong? DistinctDataHash { get; set; }
+    public ulong? ResultDataHash { get; set; }
 
     private ShardedQueryResultDocument()
     {
@@ -59,21 +57,6 @@ public class ShardedQueryResultDocument : Document
             LowerId = doc.LowerId,
             Data = doc.Data
         };
-    }
-
-    public static bool ShouldAddShardingSpecificMetadata(IndexQueryServerSide query, IndexType indexType, out (bool OrderByFields, bool DistinctDataHash) shouldAdd)
-    {
-        // * for sharded queries, we'll send the order by fields separately
-        // * for a map-reduce index, it's fields are the ones that are used for sorting
-        if (query.Metadata.OrderBy?.Length > 0 == false || indexType.IsMapReduce())
-            shouldAdd.OrderByFields = false;
-        else
-            shouldAdd.OrderByFields = true;
-
-
-        shouldAdd.DistinctDataHash = query.Metadata.IsDistinct;
-
-        return shouldAdd.OrderByFields | shouldAdd.DistinctDataHash;
     }
 
     public struct OrderByField

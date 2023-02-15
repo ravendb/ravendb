@@ -94,6 +94,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     query.IsStream = true;
                 }
 
+                if (RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) == true)
+                    query.ReturnOptions = IndexQueryServerSide.QueryResultReturnOptions.CreateForSharding(query);
+
                 if (TrafficWatchManager.HasRegisteredClients)
                     RequestHandler.TrafficWatchStreamQuery(query);
 
