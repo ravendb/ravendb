@@ -1412,7 +1412,7 @@ namespace Corax
                     AddNewTerm(entries, tmpBuf, out termId);
 
                     dumper.WriteAddition(term, termId);
-                    fieldTree.Add(termsSpan, termId, scope.Key);
+                    fieldTree.Add(scope.Key, termId);
                 }
                 else
                 {
@@ -1420,7 +1420,7 @@ namespace Corax
                     {
                         case AddEntriesToTermResult.UpdateTermId:
                             dumper.WriteAddition(term, termId);
-                            fieldTree.Add(termsSpan, termId, scope.Key);
+                            fieldTree.Add(scope.Key, termId);
                             break;
                         case AddEntriesToTermResult.RemoveTermId:
                             if (fieldTree.TryRemove(termsSpan, out var ttt) == false)
