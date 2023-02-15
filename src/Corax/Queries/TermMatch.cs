@@ -12,6 +12,7 @@ using Sparrow.Compression;
 using Sparrow.Server;
 using Sparrow.Server.Binary;
 using Voron.Data.Containers;
+using Sparrow.Server.Binary;
 
 namespace Corax.Queries
 {
