@@ -2270,7 +2270,7 @@ more responsive application.
             {
                 var id = result.GetMetadata().GetId();
                 if (idsEntitiesPairs.TryGetValue(id, out var tuple) == false)
-                    ThrowCouldNotRefreshDocument($"Could not refresh a entity with id: {id}");
+                    ThrowCouldNotRefreshDocument($"Cannot refresh a transient instance with document id: {id}");
                 RefreshInternal(tuple.Entity, result, tuple.Info);
             }
         }
