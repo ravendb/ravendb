@@ -332,8 +332,6 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 scope.WriteNull(path, fieldId, ref entryWriter);
                 return;
             case ValueType.BoostedValue:
-                //todo maciej
-                //https://issues.hibernatingrhinos.com/issue/RavenDB-18146
                 throw new NotSupportedException("Boosting in index is not supported by Corax. You can do it during querying or change index type into Lucene.");
             case ValueType.EmptyString:
                 scope.Write(path, fieldId, ReadOnlySpan<byte>.Empty, ref entryWriter);

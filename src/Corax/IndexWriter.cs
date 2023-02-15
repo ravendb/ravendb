@@ -23,6 +23,7 @@ using Voron.Data.Fixed;
 using Voron.Data.PostingLists;
 using Voron.Impl;
 using Voron.Util;
+using InvalidOperationException = System.InvalidOperationException;
 
 namespace Corax
 {
@@ -66,47 +67,50 @@ namespace Corax
         internal unsafe struct EntriesModifications : IDisposable
         {
             private readonly ByteStringContext _context;
-            private ByteStringContext<ByteStringMemoryCache>.InternalScope _disposableItems;
+            private ByteStringContext<ByteStringMemoryCache>.InternalScope _memoryHandler;
 
             private long* _start;
             private long* _end;
             private int _additions;
             private int _removals;
             
-            private bool _preparationFinished;
             public int TermSize => _sizeOfTerm;
             private readonly int _sizeOfTerm;
-            
-            /// <summary>
-            /// We've to encode entries id with frequencies for posting lists.
-            /// </summary>
-            public bool IsPreparationFinished => _preparationFinished;
-            
-            private bool _deletedDuplicatesOfNewItems;
+
 
             private short* _freqStart;
             private short* _freqEnd;
 
-
+            #if DEBUG
+            private int _hasChangesCallCount = 0;
+            private bool _preparationFinished = false;
+            #endif
+            
             public bool HasChanges()
             {
-                if (_deletedDuplicatesOfNewItems == false)
-                {
-                    DeleteAllDuplicates();
-                    _deletedDuplicatesOfNewItems = true;
-                }
-
+                AssertHasChangesIsCalledOnlyOnce();
+                
+                DeleteAllDuplicates();
+                
                 return _removals != 0 || _additions != 0;
             }
-
-
+            
             public int TotalAdditions => _additions;
             public int TotalRemovals => _removals;
 
             public long TotalSpace => _end - _start;
             public long FreeSpace => TotalSpace - (_additions + _removals);
+            
+            public ReadOnlySpan<long> Additions => new(_start, _additions);
+
+            public ReadOnlySpan<long> Removals => new(_end - _removals, _removals);
+            
+            public ReadOnlySpan<short> AdditionsFrequency => new(_freqStart, _additions);
+
+            public ReadOnlySpan<short> RemovalsFrequency => new(_freqEnd - _removals, _removals);
 
             private const int InitialSize = 16;
+            
             // Entries Writer structure:
             // [ADDITIONS][REMOVALS][ADDITIONS_FREQUENCY][REMOVALS_FREQUENCY]
             // We've to track additions and removals independently since we encode frequencies inside entryId in inverted index.
@@ -119,7 +123,7 @@ namespace Corax
             {
                 _sizeOfTerm = size;
                 _context = context;
-                _disposableItems = _context.Allocate(CalculateSizeOfContainer(InitialSize), out var output);
+                _memoryHandler = _context.Allocate(CalculateSizeOfContainer(InitialSize), out var output);
                 
                 _start = (long*)output.Ptr;
                 _end = _start + InitialSize;
@@ -128,18 +132,10 @@ namespace Corax
                 new Span<short>(_freqStart, InitialSize).Fill(1);
                 _additions = 0;
                 _removals = 0;
-                _preparationFinished = false;
             }
 
-            private int CalculateSizeOfContainer(int size) => size * (sizeof(long) + sizeof(short));
-
-            [Conditional("DEBUG")]
-            public void AssertPreparationIsNotFinished()
-            {
-                if (_preparationFinished)
-                    throw new InvalidOperationException("Tried to Add/Remove but data is already encoded.");
-            }
-
+            private static int CalculateSizeOfContainer(int size) => size * (sizeof(long) + sizeof(short));
+            
             public void Addition(long entryId, short freq = 1)
             {
                 AssertPreparationIsNotFinished();
@@ -176,7 +172,6 @@ namespace Corax
                 
                 _removals++;
                 *(_end - _removals) = entryId;
-
             }
 
             private void GrowBuffer()
@@ -218,15 +213,15 @@ namespace Corax
 #endif
 
                 // Return the memory
-                _disposableItems.Dispose();
+                _memoryHandler.Dispose();
                 _freqStart = freqStart;
                 _freqEnd = freqEnd;
                 _start = start;
                 _end = end;
-                _disposableItems = itemsScope;
+                _memoryHandler = itemsScope;
             }
 
-            public void DeleteAllDuplicates()
+            private void DeleteAllDuplicates()
             {
                 var additions = new Span<long>(_start, _additions);
                 var freqAdditions = new Span<short>(_freqStart, _additions);
@@ -297,18 +292,16 @@ namespace Corax
             public void PrepareDataForCommiting()
             {
                 #if DEBUG
-                //Already done shortcut.
                 if (_preparationFinished)
-                    return;
+                    throw new InvalidOperationException($"{nameof(PrepareDataForCommiting)} should be called only once. This is a bug. It was called via: {Environment.NewLine}" + Environment.StackTrace);
+                _preparationFinished = true;
                 #endif
                 
                 
                 DeleteAllDuplicates();
 
                 EntryIdEncodings.Encode(new Span<long>(_start, _additions), new Span<short>(_freqStart, _additions));
-                EntryIdEncodings.Encode(new Span<long>(_end - _removals, _removals), new ReadOnlySpan<short>(_freqEnd - _removals, _removals));
-
-                _preparationFinished = true;
+                EntryIdEncodings.Encode(new Span<long>(_end - _removals, _removals), new Span<short>(_freqEnd - _removals, _removals));
             }
             
             [Conditional("DEBUG")]
@@ -328,18 +321,29 @@ namespace Corax
                         throw new InvalidOperationException("Found duplicate addition & removal item during indexing: " + removal);
                 }
             }
-
-            public ReadOnlySpan<long> Additions => new(_start, _additions);
-
-            public ReadOnlySpan<long> Removals => new(_end - _removals, _removals);
             
-            public ReadOnlySpan<short> AdditionsFrequency => new(_freqStart, _additions);
-
-            public ReadOnlySpan<short> RemovalsFrequency => new(_freqEnd - _removals, _removals);
-
+            [Conditional("DEBUG")]
+            public void AssertPreparationIsNotFinished()
+            {
+#if DEBUG
+                if (_preparationFinished)
+                    throw new InvalidOperationException("Tried to Add/Remove but data is already encoded.");
+#endif
+            }
+            
+            [Conditional("DEBUG")]
+            private void AssertHasChangesIsCalledOnlyOnce()
+            {
+#if DEBUG
+                _hasChangesCallCount++;
+                if (_hasChangesCallCount > 1)
+                    throw new InvalidOperationException($"{nameof(HasChanges)} should be called only once.");
+#endif
+            }
+            
             public void Dispose()
             {
-                _disposableItems.Dispose();
+                _memoryHandler.Dispose();
             }
         }
 
@@ -354,7 +358,7 @@ namespace Corax
             public readonly Slice Name;
             public readonly Slice NameLong;
             public readonly Slice NameDouble;
-            public readonly Slice NameSum;
+            public readonly Slice NameTotalLengthOfTerms;
             public readonly int Id;
             public readonly FieldIndexingMode FieldIndexingMode;
 
@@ -362,12 +366,12 @@ namespace Corax
             {
             }
             
-            public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameSum, Analyzer analyzer, FieldIndexingMode fieldIndexingMode, bool hasSuggestions)
+            public IndexedField(int id, Slice name, Slice nameLong, Slice nameDouble, Slice nameTotalLengthOfTerms, Analyzer analyzer, FieldIndexingMode fieldIndexingMode, bool hasSuggestions)
             {
                 Name = name;
                 NameLong = nameLong;
                 NameDouble = nameDouble;
-                NameSum = nameSum;
+                NameTotalLengthOfTerms = nameTotalLengthOfTerms;
                 Id = id;
                 Analyzer = analyzer;
                 HasSuggestions = hasSuggestions;
@@ -867,7 +871,7 @@ namespace Corax
             private readonly IndexWriter _parent;
             
             /// <summary>
-            /// Should not be encoded!
+            /// Id of index entry from container. We use it to build `EntriesModifications` so it has to be without frequency etc (because it will be added later). 
             /// </summary>
             private readonly long _entryId;
             
@@ -1481,7 +1485,7 @@ namespace Corax
                         throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {indexedField.Name}! This is a bug.");
 
                     AddNewTerm(ref entries, tmpBuf, out termId);
-                    _indexMetadata.Increment(indexedField.NameSum, entries.TermSize);
+                    _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, entries.TermSize);
                     
                     dumper.WriteAddition(term, termId);
                     fieldTree.Add(scope.Key, termId);
@@ -1501,7 +1505,7 @@ namespace Corax
                                 throw new InvalidOperationException($"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
                             }
 
-                            _indexMetadata.Increment(indexedField.NameSum, -entries.TermSize);
+                            _indexMetadata.Increment(indexedField.NameTotalLengthOfTerms, -entries.TermSize);
                             dumper.WriteRemoval(term, ttt);
                             _numberOfTermModifications--;
                             break;
