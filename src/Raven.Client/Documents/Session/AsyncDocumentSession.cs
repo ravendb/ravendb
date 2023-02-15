@@ -75,28 +75,14 @@ namespace Raven.Client.Documents.Session
         {
             using (AsyncTaskHolder())
             {
-                var idsEntitiesPairs = new Dictionary<string, (object Entity, DocumentInfo Info)>();
+                BuildEntityDocInfoByIdHolder(entities, out var idsEntitiesPairs);
 
-                foreach (var entity in entities)
-                {
-                    if (DocumentsByEntity.TryGetValue(entity, out var docInfo) == false)
-                        throw new InvalidOperationException("Cannot refresh a transient instance");
-                    idsEntitiesPairs[docInfo.Id] = (entity, docInfo);
-                }
                 IncrementRequestCount();
 
                 var command = new GetDocumentsCommand(idsEntitiesPairs.Keys.ToArray(), includes: null, metadataOnly: false);
                 await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo, token).ConfigureAwait(false);
 
-                var resultsCollection = command.Result.Results;
-
-                foreach (BlittableJsonReaderObject result in resultsCollection)
-                {
-                    var id = result.GetMetadata().GetId();
-                    if (idsEntitiesPairs.TryGetValue(id, out var tuple) == false)
-                        throw new InvalidOperationException($"Could not refresh a entity with id: {id}");
-                    RefreshInternal(tuple.Entity, result, tuple.Info);
-                }
+                RefreshEntities(command, idsEntitiesPairs);
             }
         }
 

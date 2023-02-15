@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -18,6 +19,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -141,7 +143,7 @@ namespace Raven.Client.Documents.Session
         public void Refresh<T>(T entity)
         {
             if (DocumentsByEntity.TryGetValue(entity, out var documentInfo) == false)
-                throw new InvalidOperationException("Cannot refresh a transient instance");
+                ThrowCouldNotRefreshDocument("Cannot refresh a transient instance");
             IncrementRequestCount();
 
             var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
@@ -158,28 +160,14 @@ namespace Raven.Client.Documents.Session
         /// <param name="entities">The entities.</param>
         public void Refresh<T>(IEnumerable<T> entities)
         {
-            var idsEntitiesPairs = new Dictionary<string, (object Entity, DocumentInfo Info)>();
+            BuildEntityDocInfoByIdHolder(entities, out var idsEntitiesPairs);
 
-            foreach (var entity in entities)
-            {
-                if (DocumentsByEntity.TryGetValue(entity, out var docInfo) == false)
-                    throw new InvalidOperationException("Cannot refresh a transient instance");
-                idsEntitiesPairs[docInfo.Id] = (entity, docInfo);
-            }
             IncrementRequestCount();
 
             var command = new GetDocumentsCommand(idsEntitiesPairs.Keys.ToArray(), includes: null, metadataOnly: false);
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
-
-            var resultsCollection = command.Result.Results;
             
-            foreach (BlittableJsonReaderObject result in resultsCollection)
-            {
-                var id = result.GetMetadata().GetId();
-                if (idsEntitiesPairs.TryGetValue(id, out var tuple) == false)
-                    throw new InvalidOperationException($"Could not refresh a entity with id: {id}");
-                RefreshInternal(tuple.Entity, result, tuple.Info);
-            }
+            RefreshEntities(command,idsEntitiesPairs);
         }
 
         /// <summary>
