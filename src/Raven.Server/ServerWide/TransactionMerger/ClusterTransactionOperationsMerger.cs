@@ -37,6 +37,13 @@ public class ClusterTransactionOperationsMerger : AbstractTransactionOperationsM
 
     public void EnqueueSync(MergedTransactionCommand<ClusterOperationContext, ClusterTransaction> cmd)
     {
-        Enqueue(cmd).Wait();
+        try
+        {
+            Enqueue(cmd).Wait();
+        }
+        catch (AggregateException e) when (e.InnerExceptions.Count == 1)
+        {
+            throw e.InnerExceptions[0];
+        }
     }
 }
