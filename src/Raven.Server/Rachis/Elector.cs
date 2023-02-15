@@ -39,6 +39,8 @@ namespace Raven.Server.Rachis
 
         private void HandleVoteRequest(object obj)
         {
+            _threadGuardian = new ThreadGuardian();
+
             try
             {
                 ThreadHelper.TrySetThreadPriority(ThreadPriority.AboveNormal, ToString(), _engine.Log);
@@ -47,7 +49,6 @@ namespace Raven.Server.Rachis
                 {
                     while (_engine.IsDisposed == false)
                     {
-                        _threadGuardian ??= new ThreadGuardian();
                         _threadGuardian.Guard();
 
                         _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
