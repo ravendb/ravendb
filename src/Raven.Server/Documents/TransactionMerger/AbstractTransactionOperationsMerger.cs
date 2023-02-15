@@ -947,7 +947,7 @@ namespace Raven.Server.Documents.TransactionMerger
             }
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             StopRecording();
 

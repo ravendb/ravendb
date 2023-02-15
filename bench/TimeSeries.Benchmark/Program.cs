@@ -38,7 +38,7 @@ namespace TimeSeries.Benchmark
                     Console.WriteLine();
                 }
             }
-
+            
             private static BenchParameters ParseArguments(string[] args, out string url, out int workers)
             {
                 url = null;

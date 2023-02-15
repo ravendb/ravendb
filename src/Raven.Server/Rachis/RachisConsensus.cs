@@ -77,6 +77,7 @@ namespace Raven.Server.Rachis
 
         public override void Dispose()
         {
+            TxMerger?.Dispose();
             SetNewStateImmediately(RachisState.Follower, new NullDisposable(), -1, "Disposing Rachis", asyncDispose: false); // To prevent "Could not dispose server" exception.
             StateMachine?.Dispose();
             base.Dispose();

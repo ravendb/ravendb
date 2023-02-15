@@ -443,10 +443,11 @@ namespace Tests.Infrastructure
             {
                 Assert.True(cmd.TryGet(nameof(TestCommand.Name), out string name));
                 Assert.True(cmd.TryGet(nameof(TestCommand.Value), out int val));
+                Assert.True(cmd.TryGet(nameof(TestCommand.RandomData), out string randomData));
 
                 var tree = context.Transaction.InnerTransaction.CreateTree("values");
                 var current = tree.Read(name)?.Reader.ToStringValue();
-                tree.Add(name, current + val);
+                tree.Add(name, current + val + randomData);
             }
 
             protected override RachisVersionValidation InitializeValidator()
@@ -504,6 +505,8 @@ namespace Tests.Infrastructure
 
             public object Value;
 
+            public string RandomData = "";
+
             public override DynamicJsonValue ToJson(JsonOperationContext context)
             {
                 var djv = base.ToJson(context);
@@ -512,6 +515,7 @@ namespace Tests.Infrastructure
                 djv[nameof(UniqueRequestId)] = UniqueRequestId;
                 djv[nameof(Name)] = Name;
                 djv[nameof(Value)] = Value;
+                djv[nameof(RandomData)] = RandomData;
 
                 return djv;
             }

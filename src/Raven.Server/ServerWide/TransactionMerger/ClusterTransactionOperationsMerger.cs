@@ -46,4 +46,15 @@ public class ClusterTransactionOperationsMerger : AbstractTransactionOperationsM
             throw e.InnerExceptions[0];
         }
     }
+
+    private readonly ManualResetEventSlim _disposeEvent = new ManualResetEventSlim();
+    public bool IsDisposed => _disposeEvent.IsSet;
+
+    public override void Dispose()
+    {
+        if (IsDisposed)
+            return;
+        _disposeEvent.Set();
+        base.Dispose();
+    }
 }

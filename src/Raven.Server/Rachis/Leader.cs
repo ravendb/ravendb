@@ -296,7 +296,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void Run()
+        private void Run(object obj)
         {
             RunAsync().Wait();
         }
@@ -337,7 +337,7 @@ namespace Raven.Server.Rachis
                                 break;
                             case 2: // promotable updated
                                 _promotableUpdated.Reset();
-                                CheckPromotables();
+                                CheckPromotablesAsync().Wait();
                                 break;
                             case WaitHandle.WaitTimeout:
                                 break;
@@ -481,7 +481,7 @@ namespace Raven.Server.Rachis
 
         private long _lastCommit;
 
-        private async Task OnVoterConfirmationAsync()
+        private void OnVoterConfirmation()
         {
             if (_hasNewTopology.Lower())
             {
@@ -527,7 +527,7 @@ namespace Raven.Server.Rachis
                 changedFromLeaderElectToLeader = _engine.TakeOffice();
 
                 var command = new LeaderApplyCommand(this, _engine, _lastCommit, maxIndexOnQuorum);
-                await _engine.TxMerger.Enqueue(command);
+                _engine.TxMerger.EnqueueSync(command);
 
                 _lastCommit = command.LastAppliedCommit;
             }
