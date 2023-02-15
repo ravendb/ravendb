@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Corax.Utils;
 
@@ -14,10 +15,10 @@ public static class EntryIdEncodings
     //At a speed ratio of 100,000 items per second, this would require approximately 5,712 years to complete.
 
     // Positions:
-    private const int FrequencySizeInBits = 8;
-    private const int EntryIdOffset = FrequencySizeInBits + ContainerTypeOffset;
+    private const byte FrequencySizeInBits = 8;
+    private const byte EntryIdOffset = FrequencySizeInBits + ContainerTypeOffset;
     private const long Mask = 0xFFL;
-    private const int ContainerTypeOffset = 2;
+    private const byte ContainerTypeOffset = 2;
     private const long MaxEntryId = 1L << 54;
 
     // Quantization parameters:
@@ -29,10 +30,10 @@ public static class EntryIdEncodings
     private const double QuantizationStep = (Max - Min) / (double)QuantizationMax;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static long Encode(long entryId, short count, TermIdMask containerType)
+    public static long Encode(long entryId, long count, TermIdMask containerType)
     {
-        Debug.Assert((count & ~Mask) == 0);
-
+        Debug.Assert(entryId < MaxEntryId);        
+        
         return count << ContainerTypeOffset | entryId << EntryIdOffset | (long)containerType;
     }
 
@@ -62,22 +63,14 @@ public static class EntryIdEncodings
         if (usePtrVersion == false)
             goto Classic;
 
-        long* entriesPtr = (long*)Unsafe.AsPointer(ref entries[0]);
-        short* frequenciesPtr = (short*)Unsafe.AsPointer(ref frequencies[0]);
-        var entriesPtrEnd = entriesPtr + entries.Length;
-        var currentFrequency = frequenciesPtr;
-
-        while (entriesPtr != entriesPtrEnd)
+        for (int idX = 0; idX < entries.Length; ++idX)
         {
-            *entriesPtr = (*entriesPtr << EntryIdOffset) | FrequencyQuantization(*currentFrequency) << ContainerTypeOffset;
-
-            entriesPtr++;
-            currentFrequency++;
+            ref var entryId = ref Unsafe.Add(ref MemoryMarshal.GetReference(entries), idX);
+            ref var frequency = ref Unsafe.Add(ref MemoryMarshal.GetReference(frequencies), idX);
+            entryId = entryId << EntryIdOffset | FrequencyQuantization(frequency) << ContainerTypeOffset;
         }
-
         return;
-
-
+        
         Classic:
         for (int i = 0; i < entries.Length; ++i)
         {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
@@ -34,7 +35,7 @@ namespace Corax.Queries
     //We should set inner type via generic but since we don't do that in QueryBuilder (we use interfaces all the time) let's skip that. 
     //This should be fixed when we introduce something similar to IL ( RavenDB-19568)
     [DebuggerDisplay("{DebugView,nq}")]
-    public unsafe struct BoostingMatch : IQueryMatch// where TInner : IQueryMatch
+    public unsafe struct BoostingMatch : IQueryMatch
     {
         internal IQueryMatch _inner;
         public float BoostFactor;
@@ -61,8 +62,12 @@ namespace Corax.Queries
 
         public QueryInspectionNode Inspect()
         {
-            //todo maciej:
-            return null;
+            return new QueryInspectionNode($"{nameof(BoostingMatch)}",
+                children: new List<QueryInspectionNode> { _inner.Inspect() },
+                parameters: new Dictionary<string, string>()
+                {
+                    { nameof(BoostFactor), $"[{BoostFactor}]" }
+                });
         }
     }
 }

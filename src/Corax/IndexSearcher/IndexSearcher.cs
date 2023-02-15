@@ -30,7 +30,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private Page _lastPage = default;
     private long? _numberOfEntries;
-    private long? _numberOfTermsInIndex;
 
     /// <summary>
     /// When true no SIMD instruction will be used. Useful for checking that optimized algorithms behave in the same
