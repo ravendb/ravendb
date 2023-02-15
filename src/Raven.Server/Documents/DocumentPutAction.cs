@@ -130,8 +130,7 @@ namespace Raven.Server.Documents
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                if (flags.HasFlag(DocumentFlags.FromResharding) == false && 
-                    nonPersistentFlags.HasFlag(NonPersistentDocumentFlags.FromSmuggler) == false)
+                if (flags.HasFlag(DocumentFlags.FromResharding) == false)
                     ValidateId(lowerId);
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
@@ -182,8 +181,7 @@ namespace Raven.Server.Documents
 
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
                     {
-                        flags = flags.Strip(DocumentFlags.FromReplication);
-                        flags = flags.Strip(DocumentFlags.FromResharding);
+                        flags = flags.Strip(DocumentFlags.FromReplication | DocumentFlags.FromResharding);
 
                         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) ||
                             nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate))

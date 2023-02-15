@@ -23,10 +23,11 @@ namespace SlowTests.Sharding.Issues
         public async Task TombstonesBucketAndEtagIndexShouldMapToSameBucket()
         {
             const string id = "foo/bar";
-            var bucket = Sharding.GetBucket(id);
 
             using (var store = Sharding.GetDocumentStore())
             {
+                var bucket = await Sharding.GetBucketAsync(store, id);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User(), id);

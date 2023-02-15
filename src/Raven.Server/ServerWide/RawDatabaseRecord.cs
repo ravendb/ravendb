@@ -237,8 +237,6 @@ namespace Raven.Server.ServerWide
             var sharding = Sharding.Raw;
             sharding.Modifications = new DynamicJsonValue(sharding)
             {
-                //[nameof(ShardingConfiguration.BucketRanges)] = null,
-                //[nameof(ShardingConfiguration.Prefixed)] = null,
                 [nameof(ShardingConfiguration.Shards)] = null
             };
 
