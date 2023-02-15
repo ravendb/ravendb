@@ -254,6 +254,8 @@ namespace SlowTests.Sharding.Cluster
 
                 using (var session = store.OpenAsyncSession())
                 {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1);
+
                     var user = new User
                     {
                         Name = "Original shard"
