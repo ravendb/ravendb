@@ -11,6 +11,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis.Commands;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -454,7 +455,7 @@ namespace Raven.Server.Rachis
 
             if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
             {
-                _engine.Log.Info($"{ToString()}:VoteOfNoConfidence{Environment.NewLine } {sb}");
+                _engine.Log.Info($"{ToString()}:VoteOfNoConfidence{Environment.NewLine} {sb}");
             }
             throw new TimeoutException(
                 "Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
@@ -495,7 +496,7 @@ namespace Raven.Server.Rachis
 
             bool changedFromLeaderElectToLeader;
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
+            using (var tx = context.OpenReadTransaction())
             {
                 if (_engine.ForTestingPurposes?.LeaderLock != null)
                     tx.InnerTransaction.LowLevelTransaction.OnDispose += _ => _engine.ForTestingPurposes?.LeaderLock?.Complete();
@@ -504,8 +505,7 @@ namespace Raven.Server.Rachis
 
                 _lastCommit = _engine.GetLastCommitIndex(context);
 
-                if (_lastCommit >= maxIndexOnQuorum ||
-                    maxIndexOnQuorum == 0)
+                if (_lastCommit >= maxIndexOnQuorum)
                     return; // nothing to do here
 
                 if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < Term)
@@ -513,18 +513,12 @@ namespace Raven.Server.Rachis
 
                 changedFromLeaderElectToLeader = _engine.TakeOffice();
 
-                var sp = Stopwatch.StartNew();
-                maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, sp);
+                var command = new LeaderApplyCommand(this, _engine, _lastCommit, maxIndexOnQuorum);
+                await _engine.TxMerger.Enqueue(command);
 
-                context.Transaction.Commit();
-
-                var elapsed = sp.Elapsed;
-                if (RachisStateMachine.EnableDebugLongCommit && elapsed > TimeSpan.FromSeconds(5))
-                    Console.WriteLine($"Commiting from {_lastCommit} to {maxIndexOnQuorum} took {elapsed}");
-
-                _lastCommit = maxIndexOnQuorum;
+                _lastCommit = command.LastAppliedCommit;
             }
-            
+
             foreach (var kvp in _entries)
             {
                 if (kvp.Key > _lastCommit)

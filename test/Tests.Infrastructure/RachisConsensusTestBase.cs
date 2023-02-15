@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq; 
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -206,7 +206,7 @@ namespace Tests.Infrastructure
             serverStore.Initialize();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
-            rachis.Initialize(storageEnvironment, configuration, new ClusterChanges(), configuration.Core.ServerUrls[0], out _);
+            rachis.Initialize(storageEnvironment, configuration, new ClusterChanges(), configuration.Core.ServerUrls[0], null, new SystemTime(), out _, CancellationToken.None);
             rachis.OnDispose += (sender, args) =>
             {
                 serverStore.Dispose();
@@ -507,7 +507,7 @@ namespace Tests.Infrastructure
             {
                 var djv = base.ToJson(context);
                 UniqueRequestId ??= Guid.NewGuid().ToString();
-                
+
                 djv[nameof(UniqueRequestId)] = UniqueRequestId;
                 djv[nameof(Name)] = Name;
                 djv[nameof(Value)] = Value;

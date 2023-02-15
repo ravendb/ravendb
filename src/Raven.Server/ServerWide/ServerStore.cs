@@ -13,7 +13,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
-using Microsoft.Extensions.Caching.Memory;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
 using Raven.Client;
@@ -295,7 +294,7 @@ namespace Raven.Server.ServerWide
                 throw new NotLeadingException($"Stats can be requested only from the raft leader {_engine.LeaderTag}");
             return ClusterMaintenanceSupervisor?.GetStats();
         }
-        
+
         internal LicenseType GetLicenseType()
         {
             return LicenseManager.LicenseStatus.Type;
@@ -808,7 +807,7 @@ namespace Raven.Server.ServerWide
             _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
 
             var myUrl = GetNodeHttpServerUrl();
-            _engine.Initialize(_env, Configuration, clusterChanges, myUrl, out _lastClusterTopologyIndex);
+            _engine.Initialize(_env, Configuration, clusterChanges, myUrl, Server.ServerStore.NotificationCenter, Server.Time, out _lastClusterTopologyIndex, ServerShutdown);
 
             SorterCompilationCache.Instance.AddServerWideItems(this);
             AnalyzerCompilationCache.Instance.AddServerWideItems(this);
@@ -1778,7 +1777,7 @@ namespace Raven.Server.ServerWide
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
             tree.Delete(name);
         }
-        
+
         public Task<(long Index, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string[] fromNodes, string raftRequestId)
         {
             var deleteCommand = new DeleteDatabaseCommand(db, raftRequestId)
@@ -1919,7 +1918,7 @@ namespace Raven.Server.ServerWide
             var editDocumentsCompression = new EditDocumentsCompressionCommand(documentsCompression, databaseName, raftRequestId);
             return SendToLeaderAsync(editDocumentsCompression);
         }
-        
+
         public Task<(long Index, object Result)> ModifyPostgreSqlConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var config = JsonDeserializationCluster.PostgreSqlConfiguration(configurationJson);
@@ -2318,9 +2317,9 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case ConnectionStringType.ElasticSearch:
-                        
+
                         var elasticSearchEtls = rawRecord.ElasticSearchEtls;
-                        
+
                         // Don't delete the connection string if used by tasks types: ElasticSearch Etl
                         if (elasticSearchEtls != null)
                         {
@@ -3442,10 +3441,10 @@ namespace Raven.Server.ServerWide
                 DiskSpaceResult = FillDiskSpaceResult(diskSpaceResult),
                 UsedSpaceByTempBuffers = 0
             };
-            
+
             var ioStatsResult = Server.DiskStatsGetter.Get(driveInfo?.BasePath.DriveName);
             if (ioStatsResult != null)
-                usage.IoStatsResult = FillIoStatsResult(ioStatsResult); 
+                usage.IoStatsResult = FillIoStatsResult(ioStatsResult);
 
             if (diskSpaceResult.DriveName == driveInfo?.JournalPath.DriveName)
             {
@@ -3466,8 +3465,8 @@ namespace Raven.Server.ServerWide
                     };
                     var journalIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.JournalPath.DriveName);
                     if (journalIoStatsResult != null)
-                        usage.IoStatsResult = FillIoStatsResult(ioStatsResult);  
-                    
+                        usage.IoStatsResult = FillIoStatsResult(ioStatsResult);
+
                     yield return journalUsage;
                 }
             }
@@ -3492,7 +3491,7 @@ namespace Raven.Server.ServerWide
                         };
                         var tempBufferIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.TempPath.DriveName);
                         if (tempBufferIoStatsResult != null)
-                            tempBuffersUsage.IoStatsResult = FillIoStatsResult(ioStatsResult);  
+                            tempBuffersUsage.IoStatsResult = FillIoStatsResult(ioStatsResult);
 
                         yield return tempBuffersUsage;
                     }
@@ -3517,7 +3516,7 @@ namespace Raven.Server.ServerWide
         {
             return new IoStatsResult
             {
-                IoReadOperations = ioStatsResult.IoReadOperations, 
+                IoReadOperations = ioStatsResult.IoReadOperations,
                 IoWriteOperations = ioStatsResult.IoWriteOperations,
                 ReadThroughputInKb = ioStatsResult.ReadThroughput.GetValue(SizeUnit.Kilobytes),
                 WriteThroughputInKb = ioStatsResult.WriteThroughput.GetValue(SizeUnit.Kilobytes),
@@ -3541,7 +3540,7 @@ namespace Raven.Server.ServerWide
             internal bool StopIndex;
             internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
         }
-        
+
         public readonly MemoryCache QueryClauseCache;
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)

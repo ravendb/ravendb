@@ -22,6 +22,7 @@ using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.TransactionMerger;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
@@ -319,6 +320,8 @@ namespace Raven.Server.Rachis
         private string _clusterId;
 
         public ClusterContextPool ContextPool { get; private set; }
+        public ClusterTransactionOperationsMerger TxMerger { get; private set; }
+
         private StorageEnvironment _persistentState;
         internal Logger Log;
 
@@ -427,7 +430,7 @@ namespace Raven.Server.Rachis
             Timeout.TimeoutPeriod = _rand.Next(timeout / 3 * 2, timeout);
         }
 
-        public unsafe void Initialize(StorageEnvironment env, RavenConfiguration configuration, ClusterChanges changes, string myUrl, out long clusterTopologyEtag)
+        public void Initialize(StorageEnvironment env, RavenConfiguration configuration, ClusterChanges changes, string myUrl, NotificationCenter.NotificationCenter notificationCenter, SystemTime time, out long clusterTopologyEtag, CancellationToken shutdown)
         {
             try
             {
@@ -443,6 +446,9 @@ namespace Raven.Server.Rachis
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
 
                 ContextPool = new ClusterContextPool(changes, _persistentState, configuration.Memory.MaxContextSizeToKeep);
+                TxMerger = new ClusterTransactionOperationsMerger(this, configuration, time, shutdown);
+                TxMerger.Initialize(ContextPool, notificationCenter);
+                TxMerger.Start();
 
                 ClusterTopology topology;
                 using (ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -2082,6 +2088,7 @@ namespace Raven.Server.Rachis
             _topologyChanged.TrySetCanceled();
             _stateChanged.TrySetCanceled();
             _commitIndexChanged.TrySetCanceled();
+            TxMerger?.Dispose();
             ContextPool?.Dispose();
         }
 
