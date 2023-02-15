@@ -73,7 +73,6 @@ namespace Raven.Server.Rachis
 
             while (true)
             {
-                _threadGuardian.Guard();
 
                 entries.Clear();
 
@@ -301,7 +300,7 @@ namespace Raven.Server.Rachis
             return (HasRemovedFromTopology: command.RemovedFromTopology, LastAcknowledgedIndex: lastAcknowledgedIndex, LastTruncate: command.LastTruncate, LastCommit: command.LastCommit);
         }
 
-        public static Task<(bool Success, LogLengthNegotiation Negotiation)> CheckIfValidLeaderAsync(RachisConsensus engine, RemoteConnection connection)
+        public static (bool Success, LogLengthNegotiation Negotiation) CheckIfValidLeader(RachisConsensus engine, RemoteConnection connection)
         {
             using (engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
@@ -321,7 +320,7 @@ namespace Raven.Server.Rachis
                         CurrentTerm = engine.CurrentTerm
                     });
                     connection.Dispose();
-                    return Task.FromResult<(bool Success, LogLengthNegotiation Negotiation)>((false, null));
+                    return (false, null);
                 }
                 if (engine.Log.IsInfoEnabled)
                 {
@@ -330,7 +329,7 @@ namespace Raven.Server.Rachis
                 engine.FoundAboutHigherTerm(logLength.Term, "Setting the term of the new leader");
                 engine.Timeout.Defer(connection.Source);
 
-                return Task.FromResult<(bool Success, LogLengthNegotiation Negotiation)>((true, logLength));
+                return (true, logLength);
             }
         }
 
@@ -1007,11 +1006,8 @@ namespace Raven.Server.Rachis
                     ThreadNames.ForFollower($"Follower thread from {_connection} in term {negotiation.Term}", _connection.ToString(), negotiation.Term));
         }
 
-        private ThreadGuardian _threadGuardian;
-
         private void Run(object obj)
         {
-            _threadGuardian = new ThreadGuardian();
 
             try
             {

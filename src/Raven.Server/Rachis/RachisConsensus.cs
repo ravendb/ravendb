@@ -1374,7 +1374,7 @@ namespace Raven.Server.Rachis
                             break;
 
                         case InitialMessageType.AppendEntries:
-                            var r = await Follower.CheckIfValidLeaderAsync(this, remoteConnection);
+                            var r = Follower.CheckIfValidLeader(this, remoteConnection);
                             if (r.Success)
                             {
                                 var follower = new Follower(this, r.Negotiation.Term, remoteConnection);
@@ -1473,7 +1473,7 @@ namespace Raven.Server.Rachis
         {
             try
             {
-                var command = new RemoveEntryFromRaftLogCommand(Tag, index);
+                var command = new RemoveEntryFromRaftLogCommand(Tag, index, LogHistory);
                 TxMerger.EnqueueSync(command);
                 return command.Succeeded;
             }
@@ -1487,11 +1487,14 @@ namespace Raven.Server.Rachis
         {
             private readonly long _index;
             private readonly string _tag;
+            private readonly RachisLogHistory _logHistory;
             public bool Succeeded { get; private set; }
 
-            public RemoveEntryFromRaftLogCommand(string tag, long index)
+            public RemoveEntryFromRaftLogCommand(string tag, long index, RachisLogHistory logHistory)
             {
                 _index = index;
+                _tag = tag;
+                _logHistory = logHistory;
             }
 
             protected override long ExecuteCmd(ClusterOperationContext context)
@@ -1524,8 +1527,7 @@ namespace Raven.Server.Rachis
                 var noopCmd = new DynamicJsonValue
                 {
                     ["Type"] = $"Noop for {_tag} in term {term}",
-                    ["Command"] = "noop",
-                    [nameof(CommandBase.UniqueRequestId)] = Guid.NewGuid().ToString()
+                    ["Command"] = "noop"
                 };
                 var cmd = context.ReadObject(noopCmd, "noop-cmd");
 
@@ -1537,6 +1539,9 @@ namespace Raven.Server.Rachis
                     tvb.Add((int)RachisEntryFlags.Noop);
                     table.Update(id, tvb, true);
                 }
+
+                _logHistory.UpdateHistoryLogPreservingGuidAndStatus(context, index, term, cmd);
+
                 return true;
             }
 

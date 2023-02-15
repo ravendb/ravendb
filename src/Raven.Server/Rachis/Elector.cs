@@ -23,8 +23,6 @@ namespace Raven.Server.Rachis
             _connection = connection;
         }
 
-        private ThreadGuardian _threadGuardian;
-
         public void Run()
         {
             _engine.AppendElector(this);
@@ -39,7 +37,6 @@ namespace Raven.Server.Rachis
 
         private void HandleVoteRequest(object obj)
         {
-            _threadGuardian = new ThreadGuardian();
 
             try
             {
@@ -49,7 +46,6 @@ namespace Raven.Server.Rachis
                 {
                     while (_engine.IsDisposed == false)
                     {
-                        _threadGuardian.Guard();
 
                         _engine.ForTestingPurposes?.LeaderLock?.HangThreadIfLocked();
 
@@ -120,7 +116,7 @@ namespace Raven.Server.Rachis
                             var currentTerm = _engine.CurrentTerm;
                             if (rv.Term == currentTerm && rv.ElectionResult == ElectionResult.Won)
                             {
-                                var r = Follower.CheckIfValidLeaderAsync(_engine, _connection).Result;
+                                var r = Follower.CheckIfValidLeader(_engine, _connection);
                                 if (r.Success)
                                 {
                                     _electionWon = true;

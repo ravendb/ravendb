@@ -443,7 +443,12 @@ namespace Tests.Infrastructure
             {
                 Assert.True(cmd.TryGet(nameof(TestCommand.Name), out string name));
                 Assert.True(cmd.TryGet(nameof(TestCommand.Value), out int val));
-                Assert.True(cmd.TryGet(nameof(TestCommand.RandomData), out string randomData));
+
+                string randomData = "";
+                if (cmd.TryGet(nameof(TestCommand.RandomData), out string randomData1))
+                {
+                    randomData = randomData1;
+                }
 
                 var tree = context.Transaction.InnerTransaction.CreateTree("values");
                 var current = tree.Read(name)?.Reader.ToStringValue();

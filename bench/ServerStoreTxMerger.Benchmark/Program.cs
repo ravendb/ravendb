@@ -14,7 +14,7 @@ namespace ServerStoreTxMerger.Benchmark;
 
 public class ServerStoreTxMergerBench
 {
-    private static readonly List<(int,int)> _numAndSizeOfCmds = new List<(int, int)> { (3000, 1_000_000), (100, 5_000_000) };
+    private static readonly List<(int Count,int Size)> _numAndSizeOfCmds = new List<(int, int)> { (3000, 1_000_000), (100, 5_000_000) };
     public static Dictionary<string, RachisConsensusTestBase.TestCommand[]> CmdsArrays = new Dictionary<string, RachisConsensusTestBase.TestCommand[]>();
     public static List<string> CmdsArraysKeys { get; set; } = new List<string>();
 
@@ -34,21 +34,21 @@ public class ServerStoreTxMergerBench
             .AddLogger(ConsoleLogger.Default)
             .AddColumnProvider(DefaultColumnProviders.Instance);
         
-        // var summary = BenchmarkRunner.Run<ServerStoreTxMergerBench>(config);
+        var summary = BenchmarkRunner.Run<ServerStoreTxMergerBench>(config);
 
         // Manual testing
-        var s = new ServerStoreTxMergerBench();
-        s.CmdsArrayKey = CmdsArraysKeys.First();
-        for (int i = 0; i < 10; i++)
-        {
-            Console.WriteLine($"test {i}");
-            s.BeforeTest();
-            var sw = Stopwatch.StartNew();
-            await s.Test();
-            var time = sw.Elapsed;
-            s.AfterTest();
-            Console.WriteLine($"{time.Hours}:{time.Minutes}:{time.Seconds}");
-        }
+        // var s = new ServerStoreTxMergerBench();
+        // s.CmdsArrayKey = CmdsArraysKeys.First();
+        // for (int i = 0; i < 10; i++)
+        // {
+        //     Console.WriteLine($"test {i}");
+        //     s.BeforeTest();
+        //     var sw = Stopwatch.StartNew();
+        //     await s.Test();
+        //     var time = sw.Elapsed;
+        //     s.AfterTest();
+        //     Console.WriteLine($"{time.Hours}:{time.Minutes}:{time.Seconds}");
+        // }
     }
 
     private static string GetRandomData(int size)
@@ -70,8 +70,8 @@ public class ServerStoreTxMergerBench
     {
         foreach(var pair in _numAndSizeOfCmds)
         {
-            var numOfCmds = pair.Item1;
-            var cmdSizeInBytes = pair.Item2;
+            var numOfCmds = pair.Count;
+            var cmdSizeInBytes = pair.Size;
 
             var cmds = new RachisConsensusTestBase.TestCommand[numOfCmds];
 
