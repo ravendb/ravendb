@@ -97,7 +97,7 @@ namespace Raven.Server.Routing
 
         internal async ValueTask<(bool Authorized, RavenServer.AuthenticationStatus Status)> TryAuthorizeAsync(RouteInformation route, HttpContext context, DocumentDatabase database)
         {
-            var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var feature = (RavenServer.AuthenticateConnection)context.Features.Get<IHttpAuthenticationFeature>();
 
             if (feature.WrittenToAuditLog == 0) // intentionally racy, we'll check it again later
             {
@@ -179,6 +179,7 @@ namespace Raven.Server.Routing
                 case AuthorizationStatus.RestrictedAccess:
                     switch (authenticationStatus)
                     {
+                        case RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided:
                         case RavenServer.AuthenticationStatus.NoCertificateProvided:
                         case RavenServer.AuthenticationStatus.Expired:
                         case RavenServer.AuthenticationStatus.NotYetValid:
@@ -331,6 +332,7 @@ namespace Raven.Server.Routing
                                 case RavenServer.AuthenticationStatus.ClusterAdmin:
                                 case RavenServer.AuthenticationStatus.Expired:
                                 case RavenServer.AuthenticationStatus.NotYetValid:
+                                case RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided:
                                     break;
 
                                 default:
@@ -450,7 +452,11 @@ namespace Raven.Server.Routing
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.NotYetValid)
                 {
-                    message = $"The supplied client certificate '{name}'cannot be used before {feature.Certificate.NotBefore:D}";
+                    message = $"The supplied client certificate '{name}' cannot be used before {feature.Certificate.NotBefore:D}";
+                }
+                else if (feature.Status == RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided)
+                {
+                    message = $"The supplied client certificate '{name}' requires two factor authorization to be valid. Please POST the relevant TOTP value to /authentication/2fa";
                 }
                 else
                 {

@@ -3,12 +3,15 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Data.BTrees;
 
 namespace Raven.Server.ServerWide.Commands
 {
     public class PutCertificateCommand : PutValueCommand<CertificateDefinition>
     {
         public string PublicKeyPinningHash;
+        public string TwoFactorAuthenticationKey;
+        public TimeSpan TwoFactorAuthenticationValidityPeriod = TimeSpan.FromHours(2);
 
         public PutCertificateCommand()
         {
@@ -42,14 +45,24 @@ namespace Raven.Server.ServerWide.Commands
         {
             var djv = base.ToJson(context);
             djv[nameof(Name)] = Name;
-            djv[nameof(Value)] = ValueToJson();
+            djv[nameof(Value)] = Value?.ToJson();
+            djv[nameof(TwoFactorAuthenticationKey)] = TwoFactorAuthenticationKey;
+            djv[nameof(TwoFactorAuthenticationValidityPeriod)] = TwoFactorAuthenticationValidityPeriod;
             djv[nameof(PublicKeyPinningHash)] = PublicKeyPinningHash;
             return djv;
         }
 
         public override DynamicJsonValue ValueToJson()
         {
-            return Value?.ToJson();
+            var djv = Value?.ToJson();
+            if (djv == null)
+                return null;
+            if (string.IsNullOrEmpty(TwoFactorAuthenticationKey) == false)
+            {
+                djv[nameof(TwoFactorAuthenticationKey)] = TwoFactorAuthenticationKey;
+                djv[nameof(TwoFactorAuthenticationValidityPeriod)] = TwoFactorAuthenticationValidityPeriod;
+            }
+            return djv;
         }
 
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
