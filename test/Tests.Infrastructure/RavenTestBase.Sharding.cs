@@ -179,6 +179,19 @@ public partial class RavenTestBase
             }
         }
 
+        public async Task WaitForOrchestratorsToUpdate(string database, long index)
+        {
+            var servers = _parent.GetServers();
+            foreach (var server in servers)
+            {
+                if (server.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(database, out var task))
+                {
+                    var orchestrator = await task;
+                    await orchestrator.RachisLogIndexNotifications.WaitForIndexNotification(index, TimeSpan.FromSeconds(10));
+                }
+            }
+        }
+
         public IAsyncEnumerable<ShardedDocumentDatabase> GetShardsDocumentDatabaseInstancesFor(IDocumentStore store, List<RavenServer> servers = null)
         {
             return GetShardsDocumentDatabaseInstancesFor(store.Database, servers);

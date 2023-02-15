@@ -362,6 +362,7 @@ namespace Raven.Server.Documents
 
                 long index;
                 DatabaseRecord record;
+
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                     record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
@@ -369,6 +370,7 @@ namespace Raven.Server.Documents
                 if (record == null)
                     DatabaseDoesNotExistException.Throw(Name);
 
+                OnDatabaseRecordChanged(record);
                 InitializeSubscriptionStorage();
                 InitializeCompareExchangeStorage();
 

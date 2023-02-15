@@ -47,6 +47,19 @@ public partial class RavenTestBase
             type.Environment.FillBase64Id(dbId);
         }
 
+        public async Task WaitForRaftIndex(string name, long index, TimeSpan? timeout = null)
+        {
+            var servers = _parent.GetServers();
+            foreach (var server in servers)
+            {
+                if (server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(name, out var task))
+                {
+                    var database = await task;
+                    await database.RachisLogIndexNotifications.WaitForIndexNotification(index, timeout ?? TimeSpan.FromSeconds(15));
+                }
+            }
+        }
+
         public Task<List<OngoingTask>> GetOngoingTasks(string database, RavenServer server) =>
             GetOngoingTasks(database, new List<RavenServer>(capacity: 1) { server });
 

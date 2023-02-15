@@ -185,7 +185,10 @@ namespace SlowTests.Sharding.Encryption
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var bucket = Sharding.GetBucket(record.Sharding, "foo/bar");
                 record.MoveBucket(bucket, newShardNumber);
-                await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor:1 ,record.Etag));
+                var putResult = await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, replicationFactor:1 ,record.Etag));
+                
+                await Sharding.WaitForOrchestratorsToUpdate(store.Database, putResult.RaftCommandIndex);
+                await Databases.WaitForRaftIndex(ShardHelper.ToShardName(store.Database, newShardNumber), putResult.RaftCommandIndex);
 
                 using (var session = store.OpenAsyncSession(ShardHelper.ToShardName(store.Database, newShardNumber)))
                 {
