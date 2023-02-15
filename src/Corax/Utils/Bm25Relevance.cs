@@ -6,6 +6,7 @@ using Voron.Data.PostingLists;
 
 namespace Corax.Utils;
 
+//This is implementation of BM25F from this white-paper:
 //https://www.researchgate.net/publication/45886647_Integrating_the_Probabilistic_Models_BM25BM25F_into_Lucene
 
 public unsafe struct Bm25Relevance : IDisposable
@@ -13,20 +14,33 @@ public unsafe struct Bm25Relevance : IDisposable
     private readonly delegate*<ref Bm25Relevance, Span<long>, int, void> _processFunc;
     private readonly delegate*<ref Bm25Relevance, Span<long>, Span<float>, float, void> _scoreFunc;
 
-
-    public const float InitialScoreValue = 1 / 1_000_000f; // In case of BM25 this has no "impact", but we need value bigger than 0 when only document boost is involved
+    /// <summary>
+    /// The default score array value must be bigger than 0 because of support for document boost.
+    /// This is necessary in case we use 'order by score()' without a WHERE clause, where the document boost is the only factor in the equation.
+    /// So in order not to multiply by 0 let set it to be very small. BM25F is using sum, so this has no impact on the result. 
+    /// </summary>
+    public const float InitialScoreValue = 1 / 1_000_000f; 
+    
     private const int MaximumDocumentCapacity = MaxSizeOfStorage / (sizeof(long) + sizeof(short));
     private const int MaxSizeOfStorage = 1024 * 1024; //1MB;
     private const float BFactor = 0.25f;
     private const float K1 = 2f;
 
-    //We store sum of all length of terms under specific field. Then we can calculate 
+    /// <summary>
+    /// This is L_c / Avl_c. This is ratio of current term length to whole collection under specific field.
+    /// Since we're indexing in batches we cannot calculate average during indexing. So we store sum of length
+    /// and then, during query calculate avg as total_sum / term_amount.
+    ///
+    /// Please notice that for numeric trees (like Double/Long) this is always one (since sizeof(T)/sizeof(T))
+    /// </summary>
     private readonly float _termRatioToWholeCollection;
     private readonly long* _matchBuffer;
     private readonly short* _scoreBuffer;
     private readonly int _numberOfDocuments;
     private int _currentId;
     private readonly float _idf;
+    
+    //In a case when we don't want to persist matches in memory we want to have possibility to load them again from disk.
     private PostingList.Iterator _setIterator;
 
 
@@ -68,6 +82,10 @@ public unsafe struct Bm25Relevance : IDisposable
         _idf = ComputeIdf(indexSearcher, termFrequency);
     }
 
+    /// <summary>
+    /// We add 1 to the IDF (Inverse Document Frequency) value to ensure that it is not equal to 0.
+    /// This guarantees that the boost factor is not 'forgotten' in the calculation of the score. 
+    /// </summary>
     private static float ComputeIdf(IndexSearcher indexSearcher, long termFrequency)
     {
         var m = indexSearcher.NumberOfEntries - termFrequency + 0.5D;
@@ -84,10 +102,18 @@ public unsafe struct Bm25Relevance : IDisposable
         _scoreFunc(ref this, matches, scores, boostFactor);
     }
 
-    //Requirements: ids are sorted!!!
+    /// <summary>
+    /// Legend (mapping code names to names from white-paper)
+    /// _termRatioToWholeCollection - l_c / avg_c
+    /// BFactor - B_c
+    /// boostFactor - Boost_c
+    /// frequencies - occurs
+    /// </summary>
+    /// <param name="matches">Ids of docs matched by query. Requirements: sorted</param>
+    /// <param name="scores"></param>
+    /// <param name="boostFactor">Scalar</param>
     private static void CalculateScoreFromMemory(ref Bm25Relevance bm25, Span<long> matches, Span<float> scores, float boostFactor)
     {
-        //The score will be almost 0. Don't care.
         if (bm25._idf.AlmostEquals(0f))
             return;
 
@@ -102,13 +128,13 @@ public unsafe struct Bm25Relevance : IDisposable
             if (idOfInner < 0)
                 continue;
 
-            var weight = frequencies[idOfInner] / ((1 - BFactor) + BFactor * bm25._termRatioToWholeCollection);
-            scores[idX] += bm25._idf * weight * boostFactor / (K1 + weight);
+            var weight = frequencies[idOfInner] * boostFactor / ((1 - BFactor) + BFactor * bm25._termRatioToWholeCollection);
+            scores[idX] += bm25._idf * weight  / (K1 + weight);
         }
     }
 
     /// <summary>
-    /// Creates a copy in memory of current match and remove frequencies from `matches` buffer.
+    /// Returns decoded spans of ids.
     /// </summary>
     public void Process(Span<long> matches, int count) => _processFunc(ref this, matches, count);
 
