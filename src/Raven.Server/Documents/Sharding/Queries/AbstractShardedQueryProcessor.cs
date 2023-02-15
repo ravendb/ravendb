@@ -100,6 +100,11 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         return _filteredShardIndexes == null ? commands.Keys.ToArray() : commands.Keys.Intersect(_filteredShardIndexes).ToArray();
     }
 
+    protected bool IsProjectionFromMapReduceIndex =>
+        (IsMapReduceIndex == false && IsAutoMapReduceQuery == false
+        || (Query.Metadata.Query.Select == null || Query.Metadata.Query.Select.Count == 0)
+        && Query.Metadata.Query.SelectFunctionBody.FunctionText == null) == false;
+
     public virtual ValueTask InitializeAsync()
     {
         AssertQueryExecution();

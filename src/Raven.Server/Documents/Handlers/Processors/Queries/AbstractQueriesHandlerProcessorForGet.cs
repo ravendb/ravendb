@@ -19,6 +19,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Handlers.Processors.Queries;
 
@@ -65,9 +66,8 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                     indexQuery.AddTimeSeriesNames = RequestHandler.GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
                     indexQuery.DisableAutoIndexCreation = RequestHandler.GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
 
-                    bool isSharded = RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) ?? false;
-                    indexQuery.ReturnMissingIncludeAsNull = isSharded;
-                    indexQuery.ReturnRawFacetResults = isSharded;
+                    if (RequestHandler.GetBoolFromHeaders(Constants.Headers.Sharded) == true)
+                        indexQuery.ReturnOptions = IndexQueryServerSide.QueryResultReturnOptions.CreateForSharding(indexQuery);
 
                     var existingResultEtag = RequestHandler.GetLongFromHeaders(Constants.Headers.IfNoneMatch);
 

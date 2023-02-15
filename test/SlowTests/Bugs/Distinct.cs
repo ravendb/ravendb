@@ -29,16 +29,16 @@ namespace SlowTests.Bugs
         };
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryForDistinctItems(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
-                    s.Store(new { Name = "ayende" });
-                    s.Store(new { Name = "ayende" });
-                    s.Store(new { Name = "rahien" });
+                    s.Store(new { Name = "ayende" }, "doc/1");
+                    s.Store(new { Name = "ayende" }, "doc/2");
+                    s.Store(new { Name = "rahien" }, "doc/3");
                     s.SaveChanges();
                 }
 
@@ -62,16 +62,16 @@ namespace SlowTests.Bugs
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryForDistinctItemsUsingLinq(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
-                    s.Store(new { Name = "ayende" });
-                    s.Store(new { Name = "ayende" });
-                    s.Store(new { Name = "rahien" });
+                    s.Store(new { Name = "ayende" }, "doc/1");
+                    s.Store(new { Name = "ayende" }, "doc/2");
+                    s.Store(new { Name = "rahien" }, "doc/3");
                     s.SaveChanges();
                 }
 
@@ -94,16 +94,16 @@ namespace SlowTests.Bugs
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryForDistinctItemsUsingLinq_WithPaging(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
-                    s.Store(new { Name = "ayende" });
-                    s.Store(new { Name = "ayende" });
-                    s.Store(new { Name = "rahien" });
+                    s.Store(new { Name = "ayende" }, "doc/1");
+                    s.Store(new { Name = "ayende" }, "doc/2");
+                    s.Store(new { Name = "rahien" }, "doc/3");
                     s.SaveChanges();
                 }
 
@@ -126,17 +126,16 @@ namespace SlowTests.Bugs
             }
         }
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Distinct")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryForDistinctItemsAndProperlyPage(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
-                    s.Store(new { Name = "ayende" });
-                    s.Store(new { Name = "ayende" });
-                    s.Store(new { Name = "rahien" });
+                    s.Store(new { Name = "ayende" }, "doc/1");
+                    s.Store(new { Name = "ayende" }, "doc/2");
+                    s.Store(new { Name = "rahien" }, "doc/3");
                     s.SaveChanges();
                 }
 
@@ -160,8 +159,7 @@ namespace SlowTests.Bugs
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Distinct")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void IncludeWithDistinct(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -198,7 +196,7 @@ namespace SlowTests.Bugs
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Lucene)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void DistinctWithMapReduce(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -222,7 +220,6 @@ namespace SlowTests.Bugs
                 Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
-
                     QueryStatistics qs;
                     var qRes = session.Advanced.DocumentQuery<Customer>("ReducedCustomersIndex")
                         .Statistics(out qs).WhereLucene("Occupation", "Marketing")

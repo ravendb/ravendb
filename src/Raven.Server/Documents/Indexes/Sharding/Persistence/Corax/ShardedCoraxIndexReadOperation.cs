@@ -4,6 +4,7 @@ using Corax.Mappings;
 using Corax.Queries;
 using Corax.Utils;
 using Corax.Utils.Spatial;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Queries;
@@ -35,24 +36,25 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
     {
         var result = base.CreateQueryResult(ref tracker, document, query, documentsContext, indexEntryId, orderByFields, ref highlightings, skippedResults, ref hasProjections, ref markedAsSkipped);
 
-        if (result.Result != null && ShardedQueryResultDocument.ShouldAddShardingSpecificMetadata(query, _index.Type, out var shouldAdd))
+        if (result.Result != null && query.ReturnOptions != null)
         {
-            var shardedResult = ShardedQueryResultDocument.From(result.Result);
+            if (query.ReturnOptions.AddOrderByFieldsMetadata)
+            {
+                if (_index.Type.IsMapReduce() == false) // for a map-reduce index the returned results already have fields that are used for sorting
+                    result.Result = AddOrderByFields(result.Result, query, indexEntryId, orderByFields);
+            }
 
-            if (shouldAdd.OrderByFields)
-                shardedResult = AddOrderByFields(shardedResult, query, indexEntryId, orderByFields);
-
-            if (shouldAdd.DistinctDataHash)
-                shardedResult.DistinctDataHash = shardedResult.DataHash;
-
-            result.Result = shardedResult;
+            if (query.ReturnOptions.AddDataHashMetadata) 
+                result.Result = result.Result.EnsureDataHashInQueryResultMetadata();
         }
 
         return result;
     }
 
-    private ShardedQueryResultDocument AddOrderByFields(ShardedQueryResultDocument result, IndexQueryServerSide query, long indexEntryId, OrderMetadata[] orderByFields)
+    private ShardedQueryResultDocument AddOrderByFields(Document queryResult, IndexQueryServerSide query, long indexEntryId, OrderMetadata[] orderByFields)
     {
+        var result = ShardedQueryResultDocument.From(queryResult);
+
         for (int i = 0; i < query.Metadata.OrderBy.Length; i++)
         {
             var orderByField = query.Metadata.OrderBy[i];

@@ -275,7 +275,7 @@ namespace Raven.Client
 
                         internal const string SuggestionsPopularityFields = "@suggestions-popularity";
 
-                        internal const string DistinctDataHash = "@distinct-data-hash";
+                        internal const string ResultDataHash = "@data-hash";
                     }
                 }
             }
