@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -33,6 +34,38 @@ public class BackupHistoryEntry : IDynamicJsonValueConvertible
             [nameof(LastFullBackup)] = LastFullBackup,
             [nameof(TaskId)] = TaskId,
         };
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (obj == null || GetType() != obj.GetType())
+            return false;
+
+        var other = (BackupHistoryEntry)obj;
+        return Equals(BackupType, other.BackupType)
+               && CreatedAt.Equals(other.CreatedAt)
+               && DatabaseName == other.DatabaseName
+               && EqualityComparer<long?>.Default.Equals(DurationInMs, other.DurationInMs)
+               && Error == other.Error
+               && IsFull == other.IsFull
+               && NodeTag == other.NodeTag
+               && Nullable.Equals(LastFullBackup, other.LastFullBackup)
+               && TaskId == other.TaskId;
+    }
+
+    public override int GetHashCode()
+    {
+        var hashCode = new HashCode();
+        hashCode.Add((int)BackupType);
+        hashCode.Add(CreatedAt);
+        hashCode.Add(DatabaseName);
+        hashCode.Add(DurationInMs);
+        hashCode.Add(Error);
+        hashCode.Add(IsFull);
+        hashCode.Add(NodeTag);
+        hashCode.Add(LastFullBackup);
+        hashCode.Add(TaskId);
+        return hashCode.ToHashCode();
     }
 }
 

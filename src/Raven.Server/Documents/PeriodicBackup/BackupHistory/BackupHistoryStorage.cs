@@ -50,12 +50,12 @@ public unsafe class BackupHistoryStorage
         }
     }
 
-    public void StoreBackupHistoryEntries(UpdatePeriodicBackupStatusCommand command)
+    public void StoreBackupHistoryEntries(List<BackupHistoryEntry> entriesToStore)
     {
         using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (var tx = context.OpenWriteTransaction())
         {
-            foreach (var entry in command.CurrentAndTemporarySavedEntries)
+            foreach (var entry in entriesToStore)
             {
                 var key = BackupHistoryTableValue.GenerateKey(entry);
 

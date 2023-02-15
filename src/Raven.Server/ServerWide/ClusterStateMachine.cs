@@ -194,6 +194,7 @@ namespace Raven.Server.ServerWide
                 Slice.From(ctx, "SubscriptionState", out SubscriptionState);
                 Slice.From(ctx, "SubscriptionStateKey", out SubscriptionStateKeySlice);
                 Slice.From(ctx, "SubscriptionStateByBatchId", out SubscriptionStateByBatchIdSlice);
+
             }
 
             ItemsSchema = new TableSchema();

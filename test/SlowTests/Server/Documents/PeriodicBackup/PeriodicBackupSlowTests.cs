@@ -29,6 +29,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
@@ -3568,11 +3569,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             await CreateDatabaseInCluster(databaseName, clusterSize, leaderServer.WebUrl);
 
             using (var store = new DocumentStore
-            {
+                   {
                 Urls = new[] { leaderServer.WebUrl },
                 Conventions = new DocumentConventions { DisableTopologyUpdates = true },
                 Database = databaseName
-            })
+                   })
             {
                 store.Initialize();
                 var documentDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
@@ -3595,44 +3596,36 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await Backup.RunBackupAndReturnStatusAsync(leaderServer, taskId, store, isFullBackup: false)
                 };
 
-                using (CollectBackupHistoryDebugData(leaderServer, store, documentDatabase,
-                           out var fromResponseDictionary, out _, out _, out var detailsFromStorageDictionary))
+                using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+                using (serverStoreContext.OpenReadTransaction())
+                using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationStorageContext))
+                using (configurationStorageContext.OpenReadTransaction())
                 {
+                    var fromResponseDictionary = GetBackupHistoryFromEndpoint(serverStoreContext, store, documentDatabase.Name);
+                    var detailsFromStorageDictionary = documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.Details);
+
                     Assert.Equal(2, fromResponseDictionary.Count);
                     Assert.Equal(2, detailsFromStorageDictionary.Count);
 
-                    using var context = JsonOperationContext.ShortTermSingleUse();
                     for (int i = 0; i < 2; i++)
-                    {
-                        AssertBackup(fromResponseDictionary.Values.ToList()[i], backupStatusesList[i], context);
-                    }
+                        AssertBackup(fromResponseDictionary.Values.ToList()[i], backupStatusesList[i], serverStoreContext);
                 }
 
-                void AssertBackup(BlittableJsonReaderObject entryFromResponse, PeriodicBackupStatus status, JsonOperationContext context)
+                void AssertBackup(BackupHistoryEntry entryFromResponse, PeriodicBackupStatus status, JsonOperationContext context)
                 {
-                    entryFromResponse.TryGet(nameof(BackupHistoryEntry.BackupType), out BackupType type);
-                    entryFromResponse.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime createdAt);
-                    entryFromResponse.TryGet(nameof(BackupHistoryEntry.DatabaseName), out string dbName);
-                    entryFromResponse.TryGet(nameof(BackupHistoryEntry.DurationInMs), out long? durationInMs);
-                    entryFromResponse.TryGet(nameof(BackupHistoryEntry.Error), out string error);
-                    entryFromResponse.TryGet(nameof(BackupHistoryEntry.IsFull), out bool isFull);
-                    entryFromResponse.TryGet(nameof(BackupHistoryEntry.NodeTag), out string nodeTag);
-                    entryFromResponse.TryGet(nameof(BackupHistoryEntry.LastFullBackup), out DateTime? lastFullBackup);
-                    entryFromResponse.TryGet(nameof(BackupHistoryEntry.TaskId), out long tId);
+                    var expectedCreatedAt = entryFromResponse.IsFull ? status.LastFullBackup.Value : status.LastIncrementalBackup.Value;
 
-                    var expectedCreatedAt = isFull ? status.LastFullBackup.Value : status.LastIncrementalBackup.Value;
+                    Assert.Equal(status.BackupType, entryFromResponse.BackupType);
+                    Assert.Equal(expectedCreatedAt, entryFromResponse.CreatedAt);
+                    Assert.Equal(databaseName, entryFromResponse.DatabaseName);
+                    Assert.Equal(status.DurationInMs, entryFromResponse.DurationInMs);
+                    Assert.Equal(status.Error?.Exception, entryFromResponse.Error);
+                    Assert.Equal(status.IsFull, entryFromResponse.IsFull);
+                    Assert.Equal(status.NodeTag, entryFromResponse.NodeTag);
+                    Assert.Equal(status.LastFullBackup, entryFromResponse.LastFullBackup);
+                    Assert.Equal(status.TaskId, entryFromResponse.TaskId);
 
-                    Assert.Equal(status.BackupType, type);
-                    Assert.Equal(expectedCreatedAt, createdAt);
-                    Assert.Equal(databaseName, dbName);
-                    Assert.Equal(status.DurationInMs, durationInMs);
-                    Assert.Equal(status.Error?.Exception, error);
-                    Assert.Equal(status.IsFull, isFull);
-                    Assert.Equal(status.NodeTag, nodeTag);
-                    Assert.Equal(status.LastFullBackup, lastFullBackup);
-                    Assert.Equal(status.TaskId, tId);
-
-                    var details = GetDetailsFromEndpoint(context, dbName, tId, nodeTag, createdAt.Ticks);
+                    var details = GetDetailsFromEndpoint(context, entryFromResponse);
 
                     details.TryGet(nameof(BackupResult.Documents), out BlittableJsonReaderObject documents);
                     documents.TryGet(nameof(BackupResult.Documents.Processed), out bool docsProcessed);
@@ -3640,9 +3633,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     details.TryGet(nameof(BackupResult.LocalBackup), out BlittableJsonReaderObject localBackup);
                     localBackup.TryGet(nameof(BackupResult.LocalBackup.BackupDirectory), out string backupDirectory);
-                    var expectedBackupDirectory = $"{createdAt.ToLocalTime().ToString(BackupTask.DateTimeFormat, CultureInfo.InvariantCulture)}.ravendb-{dbName}-{nodeTag}-{type.ToString().ToLower()}";
+                    var expectedBackupDirectory =
+                        $"{entryFromResponse.CreatedAt.ToLocalTime().ToString(BackupTask.DateTimeFormat, CultureInfo.InvariantCulture)}.ravendb-{entryFromResponse.DatabaseName}-{entryFromResponse.NodeTag}-{entryFromResponse.BackupType.ToString().ToLower()}";
 
-                    if (isFull)
+                    if (entryFromResponse.IsFull)
                     {
                         Assert.True(docsProcessed);
                         Assert.Equal(1, docsReadCount);
@@ -3656,11 +3650,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }
 
-                BlittableJsonReaderObject GetDetailsFromEndpoint(JsonOperationContext context, string dbName, long tId, string nodeTag, long id)
+                BlittableJsonReaderObject GetDetailsFromEndpoint(JsonOperationContext context, BackupHistoryEntry backupHistoryEntry)
                 {
                     var client = store.GetRequestExecutor().HttpClient;
                     var response = AsyncHelpers.RunSync(() =>
-                        client.GetAsync($"{store.Urls.First()}/databases/{dbName}/backup-history-details?taskId={tId}&id={id}"));
+                        client.GetAsync(
+                            $"{store.Urls.First()}/databases/{backupHistoryEntry.DatabaseName}/backup-history-details?taskId={backupHistoryEntry.TaskId}&id={backupHistoryEntry.CreatedAt.Ticks}"));
                     string result = response.Content.ReadAsStringAsync().Result;
 
                     var detailsFromResponse = context.Sync.ReadForMemory(result, "Result");
@@ -3708,25 +3703,30 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 await Backup.RunBackupAsync(leaderServer, taskId, store, isFullBackup: true, OperationStatus.Faulted);
 
-                IDisposable scope = null;
-                Dictionary<(DateTime, bool IsFull), BlittableJsonReaderObject> fromResponseDictionary = default;
-                Dictionary<string, BlittableJsonReaderObject> details = default;
-                WaitForValue(() =>
+                using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+                using (serverStoreContext.OpenReadTransaction())
                 {
-                    scope = CollectBackupHistoryDebugData(leaderServer, store, documentDatabase,
-                        out fromResponseDictionary, out _, out _, out details);
+                    Dictionary<(DateTime, bool IsFull), BackupHistoryEntry> fromResponseDictionary = default;
+                    WaitForValue(() =>
+                    {
+                        fromResponseDictionary = GetBackupHistoryFromEndpoint(serverStoreContext, store, documentDatabase.Name);
 
-                    return fromResponseDictionary.Count;
-                }, 1);
+                        return fromResponseDictionary.Count;
+                    }, 1);
 
-                var entryPeriodical = fromResponseDictionary.Single();
-                entryPeriodical.Value.TryGet(nameof(BackupHistoryEntry.BackupType), out BackupType type);
-                entryPeriodical.Value.TryGet(nameof(BackupHistoryEntry.Error), out string error);
-                Assert.Equal(BackupType.Backup, type);
-                Assert.True(entryPeriodical.Key.IsFull);
-                Assert.True(error.Contains(expectedError));
-                Assert.Equal(1, details.Count);
-                scope.Dispose();
+                    var entryPeriodical = fromResponseDictionary.Single();
+                    
+                    Assert.Equal(BackupType.Backup, entryPeriodical.Value.BackupType);
+                    Assert.True(entryPeriodical.Key.IsFull);
+                    Assert.True(entryPeriodical.Value.Error.Contains(expectedError));
+
+                    using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationStorageContext))
+                    using (configurationStorageContext.OpenReadTransaction())
+                    {
+                        var actualDetailsCount = documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.Details).Count;
+                        Assert.Equal(1, actualDetailsCount);
+                    }
+                }
             }
         }
 
@@ -3771,9 +3771,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var detailsKeysToRemove = new List<string>();
                 for (int i = 1; i <= historySizeLimit + 1; i++)
                 {
-                    Dictionary<(DateTime, bool IsFull), BlittableJsonReaderObject> fromResponseDictionary = default;
-                    Dictionary<string, BlittableJsonReaderObject> details = default;
-
                     int actualFullBackupsCount;
                     var backupPlan = new[] { true, false };
                     var countFullBackups = backupPlan.Count(isFull => isFull);
@@ -3781,58 +3778,59 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     await RunBackupsAccordingPlan(backupPlan, leaderServer, taskId, store);
 
-                    switch (i)
+                    using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+                    using (serverStoreContext.OpenReadTransaction())
+                    using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationStorageContext))
+                    using (configurationStorageContext.OpenReadTransaction())
                     {
-                        case 1:
-                            WaitForValue(() =>
-                            {
-                                using (CollectBackupHistoryDebugData(leaderServer, store, documentDatabase,
-                                           out fromResponseDictionary, out _, out _, out details))
+                        Dictionary<(DateTime, bool IsFull), BackupHistoryEntry> fromResponseDictionary = default;
+                        Dictionary<string, BlittableJsonReaderObject> detailsFromStorageDictionary = default;
+                        switch (i)
+                        {
+                            case 1:
+                                WaitForValue(() =>
                                 {
-                                    return fromResponseDictionary.Count;
-                                }
-                            }, backupPlan.Length);
-                            actualFullBackupsCount = fromResponseDictionary.Count(entry => entry.Key.IsFull);
-                            Assert.Equal(expectedFullBackupCount, actualFullBackupsCount);
+                                    fromResponseDictionary = GetBackupHistoryFromEndpoint(serverStoreContext, store, documentDatabase.Name);
+                                    detailsFromStorageDictionary = documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.Details);
+                                    return fromResponseDictionary.Count == backupPlan.Length && detailsFromStorageDictionary.Count == backupPlan.Length;
+                                }, true);
+                                actualFullBackupsCount = fromResponseDictionary.Count(entry => entry.Key.IsFull);
+                                Assert.Equal(expectedFullBackupCount, actualFullBackupsCount);
 
-                            entryKeyToRemove = fromResponseDictionary.First().Key;
-                            Assert.True(entryKeyToRemove.IsFull);
+                                entryKeyToRemove = fromResponseDictionary.First().Key;
+                                Assert.True(entryKeyToRemove.IsFull);
 
-                            Assert.Equal(backupPlan.Length, details.Count);
-                            detailsKeysToRemove.AddRange(details.Keys);
-                            break;
-                        case historySizeLimit + 1:
-                            WaitForValue(() =>
-                            {
-                                using (CollectBackupHistoryDebugData(leaderServer, store, documentDatabase,
-                                           out fromResponseDictionary, out _, out _, out details))
+                                detailsKeysToRemove.AddRange(detailsFromStorageDictionary.Keys);
+                                break;
+
+                            case historySizeLimit + 1:
+                                WaitForValue(() =>
                                 {
-                                    return fromResponseDictionary.Count;
-                                }
-                            }, historySizeLimit * backupPlan.Length);
+                                    fromResponseDictionary = GetBackupHistoryFromEndpoint(serverStoreContext, store, documentDatabase.Name);
+                                    detailsFromStorageDictionary = documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.Details);
+                                    return fromResponseDictionary.Count == historySizeLimit * backupPlan.Length &&
+                                           detailsFromStorageDictionary.Count == historySizeLimit * backupPlan.Length;
+                                }, true);
 
-                            actualFullBackupsCount = fromResponseDictionary.Count(entry => entry.Key.IsFull);
+                                actualFullBackupsCount = fromResponseDictionary.Count(entry => entry.Key.IsFull);
+                                Assert.Equal(historySizeLimit, actualFullBackupsCount);
+                                Assert.False(fromResponseDictionary.ContainsKey(entryKeyToRemove));
 
-                            Assert.Equal(historySizeLimit, actualFullBackupsCount);
-                            Assert.False(fromResponseDictionary.ContainsKey(entryKeyToRemove));
+                                detailsKeysToRemove.ForEach(key => Assert.False(detailsFromStorageDictionary.ContainsKey(key)));
+                                break;
 
-                            detailsKeysToRemove.ForEach(key => Assert.False(details.ContainsKey(key)));
-                            Assert.Equal(historySizeLimit * backupPlan.Length, details.Count);
-                            break;
-                        default:
-                            WaitForValue(() =>
-                            {
-                                using (CollectBackupHistoryDebugData(leaderServer, store, documentDatabase,
-                                           out fromResponseDictionary, out _, out _, out details))
+                            default:
+                                WaitForValue(() =>
                                 {
-                                    return fromResponseDictionary.Count;
-                                }
-                            }, i * backupPlan.Length);
+                                    fromResponseDictionary = GetBackupHistoryFromEndpoint(serverStoreContext, store, documentDatabase.Name);
+                                    detailsFromStorageDictionary = documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.Details);
+                                    return fromResponseDictionary.Count == i * backupPlan.Length && detailsFromStorageDictionary.Count == i * backupPlan.Length;
+                                }, true);
 
-                            actualFullBackupsCount = fromResponseDictionary.Count(entry => entry.Key.IsFull);
-                            Assert.Equal(i, actualFullBackupsCount);
-                            Assert.Equal(i * backupPlan.Length, details.Count);
-                            break;
+                                actualFullBackupsCount = fromResponseDictionary.Count(entry => entry.Key.IsFull);
+                                Assert.Equal(i, actualFullBackupsCount);
+                                break;
+                        }
                     }
                 }
             }
@@ -3873,11 +3871,28 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 foreach (var node in nodes.Where(x => x != leaderServer))
                     listOfNodeDisposeResults.Add(await DisposeServerAndWaitForFinishOfDisposalAsync(node));
 
+                var requestExecutor = leaderStore.GetRequestExecutor(databaseName);
+                var getTopologyCommand = new GetClusterTopologyCommand(leaderServer.DebugTag);
+                using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        await requestExecutor.ExecuteAsync(getTopologyCommand, context);
+                        return getTopologyCommand.Result.Status.Any(nodeStatus => nodeStatus.Value.Connected);
+                    }, false);
+                }
+                
                 // In the current state backup history entry will be stored in the temporary storage
-                await Backup.RunBackupAndReturnStatusAsync(leaderServer, taskId, leaderStore, isFullBackup: false);
-                await Task.Delay(5_000);
+                await Backup.RunBackupAsync(leaderServer, taskId, leaderStore, isFullBackup: false);
 
-                // Restart leader server and restore other nodes
+                var documentDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
+                using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+                using (serverStoreContext.OpenReadTransaction())
+                using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationStorageContext))
+                using (configurationStorageContext.OpenReadTransaction())
+                    WaitForValue(() => documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.HistoryEntry).Count, 1);
+
+                // Restart leader server
                 var leaderDisposingResult = await DisposeServerAndWaitForFinishOfDisposalAsync(leaderServer);
                 var newLeaderServer = CreateServerFromDisposeResult(leaderDisposingResult);
                 listOfNodeDisposeResults.ForEach(disposeResult => CreateServerFromDisposeResult(disposeResult));
@@ -3891,28 +3906,36 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     store.Initialize();
 
-                    DocumentDatabase database = null;
                     await WaitForValueAsync(async () =>
                     {
-                        database = await newLeaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
-                        using (database.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        documentDatabase = await newLeaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
+                        if (documentDatabase == null)
+                            return false;
+
+                        using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         using (context.OpenReadTransaction())
                         {
-                            var entriesFromTemporaryStorage = database.ConfigurationStorage.BackupHistoryStorage.ReadItems(context, BackupHistoryItemType.HistoryEntry);
+                            var entriesFromTemporaryStorage = documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(context, BackupHistoryItemType.HistoryEntry);
                             return entriesFromTemporaryStorage != null;
                         }
                     }, true);
 
                     // Assertion
-                    using (CollectBackupHistoryDebugData(newLeaderServer, store, database,
-                               out var fromResponseDictionary,
-                               out var entriesFromClusterDictionary,
-                               out var entriesFromTemporaryDictionary, out var details))
+                    using (newLeaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+                    using (serverStoreContext.OpenReadTransaction())
+                    using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationStorageContext))
+                    using (configurationStorageContext.OpenReadTransaction())
                     {
+                        var entriesFromClusterDictionary = GetBackupHistoryFromClusterStorage(serverStoreContext, newLeaderServer, documentDatabase.Name);
+                        var entriesFromTemporaryDictionary = GetBackupHistoryFromTemporaryStorage(
+                            documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.HistoryEntry));
+                        var fromResponseDictionary = GetBackupHistoryFromEndpoint(serverStoreContext, store, documentDatabase.Name);
+                        var actualDetailsCount = documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.Details).Count;
+
                         Assert.Equal(1, entriesFromClusterDictionary.Count);
                         Assert.Equal(1, entriesFromTemporaryDictionary.Count);
                         Assert.Equal(2, fromResponseDictionary.Count);
-                        Assert.Equal(2, details.Count);
+                        Assert.Equal(2, actualDetailsCount);
                     }
                 }
 
@@ -3992,40 +4015,42 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 using var store = new DocumentStore
                 {
-                    Urls = new[] { node.WebUrl },
-                    Conventions = new DocumentConventions { DisableTopologyUpdates = true },
-                    Database = databaseName
+                    Urls = new[] { node.WebUrl }, Conventions = new DocumentConventions { DisableTopologyUpdates = true }, Database = databaseName
                 };
                 store.Initialize();
-                var database = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
+                var documentDatabase = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
 
-                IDisposable scope = null;
-                Dictionary<(DateTime, bool), BlittableJsonReaderObject> fromResponseDictionary = default;
-                Dictionary<(DateTime, bool), BlittableJsonReaderObject> entriesFromClusterDictionary = default;
-                Dictionary<string, BlittableJsonReaderObject> details = default;
+                Dictionary<(DateTime, bool), BackupHistoryEntry> fromResponseDictionary = default;
+                Dictionary<(DateTime, bool), BackupHistoryEntry> entriesFromClusterDictionary = default;
 
-                WaitForValue(() =>
-                {
-                    scope = CollectBackupHistoryDebugData(node, store, database, out fromResponseDictionary, out entriesFromClusterDictionary, out _,
-                        out details);
+                using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+                using (serverStoreContext.OpenReadTransaction())
+                    WaitForValue(() =>
+                    {
+                        fromResponseDictionary = GetBackupHistoryFromEndpoint(serverStoreContext, store, documentDatabase.Name);
+                        entriesFromClusterDictionary = GetBackupHistoryFromClusterStorage(serverStoreContext, node, documentDatabase.Name);
 
-                    return fromResponseDictionary.Count == expectedCountOfBackupEntries && entriesFromClusterDictionary.Count == expectedCountOfBackupEntries;
-                }, true);
+                        return fromResponseDictionary.Count == expectedCountOfBackupEntries && entriesFromClusterDictionary.Count == expectedCountOfBackupEntries;
+                    }, true);
 
                 for (int i = 0; i < expectedCountOfBackupEntries; i++)
                 {
                     var index = (int)Math.Ceiling((double)(i + 1) / backupPlan.Length) - 1;
                     var expectedNodeTag = expectedNodeTagOrder[index];
 
-                    fromResponseDictionary.Values.ToList()[i].TryGet(nameof(BackupHistoryEntry.NodeTag), out string responseNodeTag);
-                    entriesFromClusterDictionary.Values.ToList()[i].TryGet(nameof(BackupHistoryEntry.NodeTag), out string storageNodeTag);
+                    var responseNodeTag = fromResponseDictionary.Values.ToList()[i].NodeTag;
+                    var storageNodeTag = entriesFromClusterDictionary.Values.ToList()[i].NodeTag;
 
                     Assert.Equal(expectedNodeTag, responseNodeTag);
                     Assert.Equal(expectedNodeTag, storageNodeTag);
                 }
 
-                Assert.Equal(backupPlan.Length, details.Count);
-                scope.Dispose();
+                using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationStorageContext))
+                using (configurationStorageContext.OpenReadTransaction())
+                {
+                    var actualDetailsCount = documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.Details).Count;
+                    Assert.Equal(backupPlan.Length, actualDetailsCount);
+                }
             }
         }
 
@@ -4045,11 +4070,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             await CreateDatabaseInCluster(databaseName, clusterSize, leaderServer.WebUrl);
 
             using (var leaderStore = new DocumentStore
-            {
+                   {
                 Urls = new[] { leaderServer.WebUrl },
                 Conventions = new DocumentConventions { DisableTopologyUpdates = true },
                 Database = databaseName
-            })
+                   })
             {
                 leaderStore.Initialize();
 
@@ -4075,9 +4100,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     disposeResults.Add(disposingResult);
                 }
 
+                var requestExecutor = leaderStore.GetRequestExecutor(databaseName);
+                var getTopologyCommand = new GetClusterTopologyCommand(leaderServer.DebugTag);
+                using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    await WaitForValueAsync(async () =>
+                    {
+                        await requestExecutor.ExecuteAsync(getTopologyCommand, context);
+                        return getTopologyCommand.Result.Status.Any(nodeStatus => nodeStatus.Value.Connected);
+                    }, false);
+                }
+
                 await RunBackupsAccordingPlan(backupPlanAfterClusterDown, leaderServer, taskId, leaderStore);
 
-                var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                var documentDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                 var generalBackupPlan = backupPlanBeforeClusterDown.Concat(backupPlanAfterClusterDown).ToList();
                 var backupCount = generalBackupPlan.Count;
 
@@ -4111,36 +4147,48 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 void CollectAndAssertBackupHistoryData(int expectedCountOfEntriesInClusterStorage, int expectedCountOfEntriesInTemporaryStorage)
                 {
-                    using (CollectBackupHistoryDebugData(leaderServer, leaderStore, database,
-                               out var fromResponseDictionary,
-                               out var entriesFromClusterDictionary,
-                               out var entriesFromTemporaryDictionary, out var details))
+                    Dictionary<(DateTime, bool), BackupHistoryEntry> fromResponseDictionary;
+                    Dictionary<(DateTime, bool), BackupHistoryEntry> entriesFromClusterDictionary;
+                    Dictionary<(DateTime, bool), BackupHistoryEntry> entriesFromTemporaryDictionary;
+
+                    using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+                    using (serverStoreContext.OpenReadTransaction())
                     {
-                        var fromStoragesDictionary = new Dictionary<(DateTime, bool), BlittableJsonReaderObject>();
-                        foreach (var entry in entriesFromClusterDictionary)
-                            fromStoragesDictionary.Add(entry.Key, entry.Value);
-                        foreach (var entry in entriesFromTemporaryDictionary)
-                            fromStoragesDictionary.Add(entry.Key, entry.Value);
+                        fromResponseDictionary = GetBackupHistoryFromEndpoint(serverStoreContext, leaderStore, documentDatabase.Name);
+                        entriesFromClusterDictionary = GetBackupHistoryFromClusterStorage(serverStoreContext, leaderServer, documentDatabase.Name);
+                    }
 
-                        // Asserts
-                        Assert.Equal(expectedCountOfEntriesInClusterStorage, entriesFromClusterDictionary.Count);
-                        Assert.Equal(expectedCountOfEntriesInTemporaryStorage, entriesFromTemporaryDictionary.Count);
+                    using (documentDatabase.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationStorageContext))
+                    using (configurationStorageContext.OpenReadTransaction())
+                    {
+                        entriesFromTemporaryDictionary = GetBackupHistoryFromTemporaryStorage(
+                            documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.HistoryEntry));
+                        var actualDetailsCount = documentDatabase.ConfigurationStorage.BackupHistoryStorage.ReadItems(configurationStorageContext, BackupHistoryItemType.Details).Count;
+                        Assert.Equal(expectedCountOfEntriesInClusterStorage + expectedCountOfEntriesInTemporaryStorage, actualDetailsCount);
+                    }
 
-                        Assert.Equal(backupCount, fromStoragesDictionary.Count);
-                        Assert.Equal(backupCount, fromResponseDictionary.Count);
+                    var fromStoragesDictionary = new Dictionary<(DateTime, bool), BackupHistoryEntry>();
+                    foreach (var entry in entriesFromClusterDictionary)
+                        fromStoragesDictionary.Add(entry.Key, entry.Value);
+                    foreach (var entry in entriesFromTemporaryDictionary)
+                        fromStoragesDictionary.Add(entry.Key, entry.Value);
 
-                        for (int i = 0; i < backupCount; i++)
-                        {
-                            var entryFromStorage = fromStoragesDictionary.Values.ToList()[i];
-                            var entryFromResponse = fromResponseDictionary.Values.ToList()[i];
-                            var writtenAsFullBackup = fromResponseDictionary.Keys.ToList()[i].Item2;
-                            var expectedIsFull = generalBackupPlan[i];
+                    // Asserts
+                    Assert.Equal(expectedCountOfEntriesInClusterStorage, entriesFromClusterDictionary.Count);
+                    Assert.Equal(expectedCountOfEntriesInTemporaryStorage, entriesFromTemporaryDictionary.Count);
 
-                            Assert.True(entryFromStorage.TryGet(nameof(BackupHistoryEntry.CreatedAt), out DateTime _));
-                            Assert.Equal(entryFromStorage, entryFromResponse);
-                            Assert.Equal(expectedIsFull, writtenAsFullBackup);
-                            Assert.Equal(expectedCountOfEntriesInClusterStorage + expectedCountOfEntriesInTemporaryStorage, details.Count);
-                        }
+                    Assert.Equal(backupCount, fromStoragesDictionary.Count);
+                    Assert.Equal(backupCount, fromResponseDictionary.Count);
+
+                    for (int i = 0; i < backupCount; i++)
+                    {
+                        var entryFromStorage = fromStoragesDictionary.Values.ToList()[i];
+                        var entryFromResponse = fromResponseDictionary.Values.ToList()[i];
+                        var writtenAsFullBackup = fromResponseDictionary.Keys.ToList()[i].Item2;
+                        var expectedIsFull = generalBackupPlan[i];
+
+                        Assert.Equal(entryFromStorage, entryFromResponse);
+                        Assert.Equal(expectedIsFull, writtenAsFullBackup);
                     }
                 }
             }
