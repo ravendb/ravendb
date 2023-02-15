@@ -11,7 +11,7 @@ public class PrefixedShardingSetting
 
     private byte[] _prefixBytesLowerCase;
 
-    public byte[] PrefixBytesLowerCase => _prefixBytesLowerCase ??= Encoding.UTF8.GetBytes(Prefix.ToLower());
+    internal byte[] PrefixBytesLowerCase => _prefixBytesLowerCase ??= Encoding.UTF8.GetBytes(Prefix.ToLower());
 
     public List<int> Shards { get; set; }
 

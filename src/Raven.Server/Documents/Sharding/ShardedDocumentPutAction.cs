@@ -22,7 +22,7 @@ public class ShardedDocumentPutAction : DocumentPutAction
         var bucket = ShardHelper.GetBucketFor(config, lowerId);
         var shard = ShardHelper.GetShardNumberFor(config, bucket);
         if (shard != _documentDatabase.ShardNumber)
-            throw new WrongShardException($"document '{lowerId}' was expected to be on shard #{shard}, but got to shard #{_documentDatabase.ShardNumber} (bucket: {bucket})");
+            throw new ShardMismatchException($"Document '{lowerId}' belongs to bucket '{bucket}' on shard #{shard}, but PUT operation was performed on shard #{_documentDatabase.ShardNumber}.");
     }
 
     protected override unsafe void CalculateSuffixForIdentityPartsSeparator(string id, ref char* idSuffixPtr, ref int idSuffixLength, ref int idLength)

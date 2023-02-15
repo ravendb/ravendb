@@ -36,19 +36,20 @@ namespace Raven.Server.Documents.Sharding.Operations
 
         public Exception Combine(Dictionary<int, ShardExecutionResult<BlittableJsonReaderObject>> results)
         {
-            WrongShardException lastException = null;
+            ShardMismatchException lastMismatchException = null;
             foreach (var c in _commands.Values)
             {
                 var executionResult = results[c.ShardNumber];
 
                 try
                 {
-                    executionResult.CommandTask.GetAwaiter().GetResult(); // should throw or return immediately
+                    if (executionResult.CommandTask.IsCompletedSuccessfully == false)
+                        executionResult.CommandTask.GetAwaiter().GetResult(); // should throw immediately
                 }
-                catch (WrongShardException e)
+                catch (ShardMismatchException e)
                 {
                     // will retry only for this type of exception
-                    lastException = e;
+                    lastMismatchException = e;
                     continue;
                 }
 
@@ -61,7 +62,7 @@ namespace Raven.Server.Documents.Sharding.Operations
                 }
             }
 
-            return lastException;
+            return lastMismatchException;
         }
 
         public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => _commands[shardNumber];

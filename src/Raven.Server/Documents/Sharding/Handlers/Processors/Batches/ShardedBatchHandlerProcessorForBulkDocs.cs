@@ -57,7 +57,7 @@ internal class ShardedBatchHandlerProcessorForBulkDocs : AbstractBatchHandlerPro
 
                 throw error;
             }
-            catch (WrongShardException) when (retries > 0)
+            catch (ShardMismatchException) when (retries > 0)
             {
                 retries--;
                 await Task.Delay(100);

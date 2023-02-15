@@ -129,7 +129,20 @@ public class ShardReplicationLoader : ReplicationLoader
                         Url = _clusterTopology.GetUrlFromTag(destNode)
                     };
 
-                    Task.Run(() => AddAndStartOutgoingReplication(migrationDestination));
+                    Task.Run(() =>
+                    {
+                        try
+                        {
+                            AddAndStartOutgoingReplication(migrationDestination);
+                        }
+                        catch (Exception e)
+                        {
+                            if (_logger.IsOperationsEnabled)
+                            {
+                                _logger.Operations($"Failed to start migration replication to shard {migrationDestination.Shard} on node {migrationDestination.Node}", e);
+                            }
+                        }
+                    });
                 }
             }
         }
