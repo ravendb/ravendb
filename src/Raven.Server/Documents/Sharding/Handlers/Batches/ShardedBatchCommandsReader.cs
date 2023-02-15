@@ -61,7 +61,7 @@ public class ShardedBatchCommandsReader : AbstractBatchCommandsReader<ShardedBat
 
             bufferedCommand.IsIdentity = IsIdentityCommand(ref result);
             bufferedCommand.IsServerSideIdentity = bufferedCommand.IsIdentity == false && IsServerSideIdentityCommand(ref result, _databaseContext.IdentityPartsSeparator);
-            bufferedCommand.IsEmptyId = result.Id == string.Empty;
+            bufferedCommand.IsNullOrEmptyId = string.IsNullOrEmpty(result.Id);
 
             BufferedCommands.Add(bufferedCommand);
 

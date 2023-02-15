@@ -13,19 +13,16 @@ public class BufferedCommand
     public MemoryStream CommandStream;
     public bool IsIdentity;
     public bool IsServerSideIdentity;
-    public bool IsEmptyId;
+    public bool IsNullOrEmptyId;
     public bool IsBatchPatch;
 
     // for identities we should replace the id and the change vector
     public int IdStartPosition;
     public int ChangeVectorPosition;
     public int IdLength;
+    public bool AddQuotes;
 
-    // for batch patch command we need to replace on to the relevant ids
-    public int IdsStartPosition;
-    public int IdsEndPosition;
-
-    public bool ModifyIdentityStreamRequired => IsServerSideIdentity || IsEmptyId || IsIdentity;
+    public bool ModifyIdentityStreamRequired => IsServerSideIdentity || IsIdentity || IsNullOrEmptyId;
 
     public MemoryStream ModifyIdentityStream(BatchRequestParser.CommandData cmd)
     {
@@ -35,11 +32,12 @@ public class BufferedCommand
         if (ModifyIdentityStreamRequired == false)
             throw new InvalidOperationException("Must be an identity");
 
-        using (CommandStream)
-        {
-            var modifier = IdentityCommandModifier.Create(IdStartPosition, IdLength, ChangeVectorPosition, cmd.Id);
-            return modifier.Rewrite(CommandStream);
-        }
+        var id = cmd.Id;
+        if (AddQuotes)
+            id = "\"" + id + "\"";
+
+        var modifier = IdentityCommandModifier.Create(IdStartPosition, IdLength, ChangeVectorPosition, id);
+        return modifier.Rewrite(CommandStream);
     }
 
     public MemoryStream ModifyBatchPatchStream(List<(string Id, string ChangeVector)> list)
@@ -47,7 +45,7 @@ public class BufferedCommand
         if (IsBatchPatch == false)
             throw new InvalidOperationException("Must be batch patch");
 
-        var modifier = new PatchCommandModifier(IdsStartPosition, IdsEndPosition - IdsStartPosition, list);
+        var modifier = new PatchCommandModifier(IdStartPosition, IdLength, list);
         return modifier.Rewrite(CommandStream);
     }
 

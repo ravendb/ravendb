@@ -132,7 +132,7 @@ public class ShardedBatchCommand : IBatchCommand
         if (isServerSideIdentity)
             cmd.Id = ShardHelper.GenerateStickyId(cmd.Id, _databaseContext.IdentityPartsSeparator); // generated id is 'users/$BASE26$/'
 
-        if (string.Empty == cmd.Id)
+        if (string.IsNullOrEmpty(cmd.Id))
             cmd.Id = Guid.NewGuid().ToString();
     }
 

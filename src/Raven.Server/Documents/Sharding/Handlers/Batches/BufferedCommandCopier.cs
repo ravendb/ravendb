@@ -17,21 +17,28 @@ public class BufferedCommandCopier : BatchCommandStreamCopier
         return new StreamScope(this);
     }
 
-    public override void OnId(UnmanagedJsonParser parser, int idLength)
+    public override void OnId(UnmanagedJsonParser parser, int idLength, bool isNull)
     {
-        _bufferedCommand.IdStartPosition = checked((int)(CommandStream.Position + parser.BufferOffset - CommandStartBufferPosition - idLength - 1));
+        var includeQuote = 1;
+        if (isNull)
+        {
+            _bufferedCommand.AddQuotes = true;
+            includeQuote = 0;
+        }
+
+        _bufferedCommand.IdStartPosition = checked((int)(CommandStream.Position + parser.BufferOffset - CommandStartBufferPosition - idLength - includeQuote));
         _bufferedCommand.IdLength = idLength;
     }
 
     public override void OnIdsStart(UnmanagedJsonParser parser)
     {
         _bufferedCommand.IsBatchPatch = true;
-        _bufferedCommand.IdsStartPosition = checked((int)(CommandStream.Position + parser.BufferOffset - CommandStartBufferPosition));
+        _bufferedCommand.IdStartPosition = checked((int)(CommandStream.Position + parser.BufferOffset - CommandStartBufferPosition));
     }
 
     public override void OnIdsEnd(UnmanagedJsonParser parser)
     {
-        _bufferedCommand.IdsEndPosition = checked((int)(CommandStream.Position + parser.BufferOffset - CommandStartBufferPosition));
+        _bufferedCommand.IdLength = checked((int)(CommandStream.Position + parser.BufferOffset - CommandStartBufferPosition)) - _bufferedCommand.IdStartPosition;
     }
 
     public override void OnNullChangeVector(UnmanagedJsonParser parser)

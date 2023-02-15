@@ -41,7 +41,7 @@ public class BatchCommandStreamCopier : AbstractBatchCommandParsingObserver
         CommandStartBufferPosition = 0;
     }
 
-    public override void OnId(UnmanagedJsonParser parser, int idLength)
+    public override void OnId(UnmanagedJsonParser parser, int idLength, bool isNull)
     {
     }
 

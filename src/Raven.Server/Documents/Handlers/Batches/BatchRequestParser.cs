@@ -205,16 +205,16 @@ namespace Raven.Server.Documents.Handlers.Batches
                     case CommandPropertyName.Id:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
+                        
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
                                 commandData.Id = null;
+                                CommandParsingObserver?.OnId(parser, 4, isNull: true);
                                 break;
 
                             case JsonParserToken.String:
-
-                                CommandParsingObserver?.OnId(parser, state.StringSize);
-
+                                CommandParsingObserver?.OnId(parser, state.StringSize, isNull: false);
                                 commandData.Id = GetStringPropertyValue(state);
                                 break;
 
@@ -222,6 +222,8 @@ namespace Raven.Server.Documents.Handlers.Batches
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
                                 break;
                         }
+
+
                         break;
 
                     case CommandPropertyName.Ids:
