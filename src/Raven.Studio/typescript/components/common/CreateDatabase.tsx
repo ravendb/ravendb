@@ -1,18 +1,22 @@
-﻿import React, { ReactFragment, useState } from "react";
+﻿import React, { ReactFragment, useEffect, useState } from "react";
+
+import "./CreateDatabase.scss";
+
 import {
     Button,
     CloseButton,
+    Col,
     FormGroup,
     Input,
     Label,
     Modal,
     ModalBody,
     ModalFooter,
+    Row,
     UncontrolledPopover,
 } from "reactstrap";
-import { active } from "sortablejs";
-import { Checkbox } from "./Checkbox";
 
+import { Checkbox } from "./Checkbox";
 import { FlexGrow } from "./FlexGrow";
 import { Icon } from "./Icon";
 import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "./PropSummary";
@@ -21,6 +25,19 @@ import { Steps } from "./Steps";
 interface CreateDatabaseProps {
     createDatabaseModal: boolean;
     toggleCreateDatabase: () => void;
+}
+
+type StepId = "createFromBackup" | "createNew" | "encryption" | "replicationAndSharding" | "nodeSelection" | "paths";
+
+interface StepItem {
+    id: StepId;
+    label: string;
+    active: boolean;
+}
+
+interface ActiveStepItem {
+    id: StepId;
+    label: string;
 }
 
 export function CreateDatabase(props: CreateDatabaseProps) {
@@ -41,40 +58,76 @@ export function CreateDatabase(props: CreateDatabaseProps) {
         setEncryption(false);
     };
 
-    const toggleManualNodeSelection = () => {
-        setManualNodeSelection(!manualNodeSelection);
-        console.log(activeSteps);
+    const onCreatorClose = () => {
+        setCurrentStep(0);
     };
 
-    const stepsList = [
-        { stepName: "New from backup", view: <StepCreateFromBackup />, active: false },
-        { stepName: "Setup", view: <StepBasicSetup />, active: true },
+    const [createFromBackup, setCreateFromBackup] = useState(false);
+
+    const toggleCreateFromBackup = () => {
+        setCreateFromBackup(!createFromBackup);
+    };
+
+    const toggleManualNodeSelection = () => {
+        setManualNodeSelection(!manualNodeSelection);
+    };
+
+    //useEffect(([createFromBackup,manualNodeSelection]) => updateActiveSteps());
+
+    const stepsList: StepItem[] = [
         {
-            stepName: "Encryption",
-            view: (
-                <StepEncryption
-                    encryption={encryption}
-                    enableEncryption={enableEncryption}
-                    disableEncryption={disableEncryption}
-                />
-            ),
+            id: "createFromBackup",
+            label: "New from backup",
+            active: createFromBackup,
+        },
+        { id: "createNew", label: "Setup", active: !createFromBackup },
+        {
+            id: "encryption",
+            label: "Encryption",
             active: true,
         },
         {
-            stepName: "Replication & Sharding",
-            view: (
-                <StepReplicationSharding
-                    manualNodeSelection={manualNodeSelection}
-                    toggleManualNodeSelection={toggleManualNodeSelection}
-                />
-            ),
+            id: "replicationAndSharding",
+            label: "Replication & Sharding",
             active: true,
         },
-        { stepName: "Manual Node Selection", view: <StepNodeSelection />, active: { manualNodeSelection } },
-        { stepName: "Paths Configuration", view: <StepPaths />, active: true },
+        {
+            id: "nodeSelection",
+            label: "Manual Node Selection",
+            active: manualNodeSelection,
+        },
+        { id: "paths", label: "Paths Configuration", active: true },
     ];
 
-    const activeSteps = stepsList.filter((step) => step.active === true);
+    const stepViews = {
+        createFromBackup: <StepCreateFromBackup />,
+        createNew: <StepBasicSetup />,
+        encryption: (
+            <StepEncryption
+                encryption={encryption}
+                enableEncryption={enableEncryption}
+                disableEncryption={disableEncryption}
+            />
+        ),
+        replicationAndSharding: (
+            <StepReplicationSharding
+                manualNodeSelection={manualNodeSelection}
+                toggleManualNodeSelection={toggleManualNodeSelection}
+            />
+        ),
+        nodeSelection: <StepNodeSelection />,
+        paths: <StepPaths />,
+    };
+
+    const [activeSteps, setActiveSteps] = useState(
+        stepsList.filter((step) => step.active === true).map((step) => ({ id: step.id, label: step.label }))
+    );
+
+    const updateActiveSteps = () => {
+        setActiveSteps(
+            stepsList.filter((step) => step.active === true).map((step) => ({ id: step.id, label: step.label }))
+        );
+    };
 
     const isLastStep = activeSteps.length - 2 < currentStep ? true : false;
     const isFirstStep = currentStep < 1 ? true : false;
@@ -96,23 +149,47 @@ export function CreateDatabase(props: CreateDatabaseProps) {
             autoFocus
             fade
             container="#OverlayContainer"
+            onClosed={onCreatorClose}
         >
             <ModalBody>
                 <div className="d-flex  mb-5">
                     <Steps
                         current={currentStep}
-                        steps={stepsList.filter((step) => step.active === true).map((step) => step.stepName)}
+                        steps={activeSteps.map((step) => step.label)}
                         className="flex-grow me-4"
                     ></Steps>
                     <CloseButton onClick={toggleCreateDatabase} />
                 </div>
 
-                <RenderSetupSteps currentStep={currentStep} stepsList={activeSteps.map((step) => step.view)} />
+                {stepViews[activeSteps[currentStep].id]}
+                <Row>
+                    <Col>
+                        {stepsList.map((step) => (
+                            <div>
+                                {step.label}: {step.active && <strong className="text-success">Active</strong>}
+                            </div>
+                        ))}
+                    </Col>
+                    <Col>
+                        {activeSteps.map((step) => (
+                            <div>{step.label}</div>
+                        ))}
+                    </Col>
+                </Row>
             </ModalBody>
+
             <ModalFooter>
                 {isFirstStep ? (
-                    <Button onClick={prevStep} className="rounded-pill">
-                        <Icon icon="database" addon="arrow-up me-1" /> Create from backup
+                    <Button onClick={toggleCreateFromBackup} className="rounded-pill">
+                        {createFromBackup ? (
+                            <>
+                                <Icon icon="database" addon="star me-1" /> Create new database
+                            </>
+                        ) : (
+                            <>
+                                <Icon icon="database" addon="arrow-up me-1" /> Create from backup
+                            </>
+                        )}
                     </Button>
                 ) : (
                     <Button onClick={prevStep} className="rounded-pill">
@@ -170,7 +247,7 @@ export function CreateDatabase(props: CreateDatabaseProps) {
                                 {manualNodeSelection && (
                                     <PropSummaryItem>
                                         <PropSummaryName>
-                                            <Icon icon="node" className="me-1" /> Manual node
+                                            <Icon icon="node" className="me-1" /> Manual node selection
                                         </PropSummaryName>
                                         <PropSummaryValue color="success"> ON</PropSummaryValue>
                                     </PropSummaryItem>
@@ -199,24 +276,19 @@ export function CreateDatabase(props: CreateDatabaseProps) {
         </Modal>
     );
 }
-interface RenderSetupStepsProps {
-    stepsList: JSX.Element[];
-    currentStep: number;
-}
-
-export function RenderSetupSteps(props: RenderSetupStepsProps) {
-    const { stepsList, currentStep } = props;
-    return stepsList[currentStep];
-}
 
 interface StepBasicSetupProps {}
 
 export function StepBasicSetup(props: StepBasicSetupProps) {
+    const newDatabaseImg = require("Content/img/createDatabase/new-database.svg");
     return (
-        <FormGroup floating>
-            <Input type="text" placeholder="Database Name" name="Database Name" id="DbName" />
-            <Label for="DbName">Database Name</Label>
-        </FormGroup>
+        <div>
+            <img src={newDatabaseImg} alt="" width="500px" />
+            <FormGroup floating>
+                <Input type="text" placeholder="Database Name" name="Database Name" id="DbName" />
+                <Label for="DbName">Database Name</Label>
+            </FormGroup>
+        </div>
     );
 }
 
@@ -277,4 +349,7 @@ interface StepCreateFromBackupProps {}
 
 export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
     return <h2>Restore from backup</h2>;
+}
+function componentDidMount() {
+    throw new Error("Function not implemented.");
 }

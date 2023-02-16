@@ -12,8 +12,8 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof CreateDatabase>;
 
-export function CreateDatabaseTest() {
-    const [createDatabaseModal, setCreateDatabaseModal] = useState(false);
+export function CreateDatabases() {
+    const [createDatabaseModal, setCreateDatabaseModal] = useState(true);
 
     const toggleCreateDatabase = () => setCreateDatabaseModal(!createDatabaseModal);
 

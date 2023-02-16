@@ -2,6 +2,7 @@
 import classNames from "classnames";
 
 import "./Steps.scss";
+import { Icon } from "./Icon";
 interface Props {
     current: number;
     steps: string[];
@@ -21,8 +22,8 @@ export class Steps extends React.Component<Props> {
             const stepItem = (
                 <div key={"step-" + i} className={classes}>
                     <div className="step-bullet">
-                        <i className="icon-arrow-thin-bottom bullet-icon-active" />
-                        <i className="icon-check bullet-icon-done" />
+                        <Icon icon="arrow-thin-bottom" className="bullet-icon-active" />
+                        <Icon icon="check" className="bullet-icon-done" />
                     </div>
                     <span className="steps-label small-label">{stepName}</span>
                 </div>
