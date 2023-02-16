@@ -30,17 +30,27 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
 
     public override async ValueTask ExecuteAsync()
     {
-        using (var token = RequestHandler.CreateOperationToken())
         using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
         {
+            var fromStudio = RequestHandler.GetBoolValueQueryString(StudioMarker, false) ?? false;
+            var throttleConnection = RequestHandler.GetBoolValueQueryString("throttleConnection", false).GetValueOrDefault(false);
+
+            var connection = CreateChangesClientConnection(webSocket, throttleConnection, fromStudio);
+            
+            using (var token = RequestHandler.CreateOperationToken(connection.DisposeToken))
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 try
                 {
-                    await HandleConnectionAsync(webSocket, context, token);
+                    await HandleConnectionAsync(webSocket, connection, context, token);
                 }
                 catch (OperationCanceledException)
                 {
+                }
+                catch (TimeoutException e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Timeout in changes handler", e);
                 }
                 catch (Exception ex)
                 {
@@ -49,6 +59,9 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
 
                     try
                     {
+                        if (webSocket.State != WebSocketState.Open)
+                            return;
+
                         await using (var ms = new MemoryStream())
                         {
                             await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
@@ -64,22 +77,23 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
                             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, token.Token);
                         }
                     }
-                    catch (Exception)
+                    catch (Exception exception)
                     {
                         if (Logger.IsInfoEnabled)
-                            Logger.Info("Failed to send the error in changes handler to the client", ex);
+                            Logger.Info("Failed to send the error in changes handler to the client", exception);
                     }
                 }
             }
         }
     }
 
-    private async Task HandleConnectionAsync(WebSocket webSocket, JsonOperationContext context, OperationCancelToken token)
+    private async Task HandleConnectionAsync(
+        WebSocket webSocket, 
+        TChangesClientConnection connection, 
+        JsonOperationContext context,
+        OperationCancelToken token)
     {
-        var fromStudio = RequestHandler.GetBoolValueQueryString(StudioMarker, false) ?? false;
-        var throttleConnection = RequestHandler.GetBoolValueQueryString("throttleConnection", false).GetValueOrDefault(false);
-
-        var connection = CreateChangesClientConnection(webSocket, throttleConnection, fromStudio);
+       
         Connect(connection);
 
         var sendTask = connection.StartSendingNotificationsAsync();
@@ -162,6 +176,11 @@ internal abstract class AbstractChangesHandlerProcessorForGetChanges<TRequestHan
                     && webSocket.State == WebSocketState.CloseReceived)
                 {
                     // ignore
+                }
+                else if (ex is OperationCanceledException)
+                {
+                    await sendTask; // will throw if the task is faulted
+                    throw;
                 }
                 else
                 {

@@ -69,7 +69,7 @@ select new
                     List<IndexingError> indexingErrors = stats.Errors;
 
                     Assert.Equal(1, indexingErrors.Count);
-                    Assert.Contains(@"current item to reduce: {""FakeValue"":0,""Product"":""Milk""}", indexingErrors.First().Error);
+                    Assert.Contains(@"current item to reduce: {""Product"":""Milk"",""FakeValue"":0}", indexingErrors.First().Error);
                     Assert.Equal(@"Reduce key: { 'Product' : Milk }", indexingErrors.First().Document);
                 }
             }

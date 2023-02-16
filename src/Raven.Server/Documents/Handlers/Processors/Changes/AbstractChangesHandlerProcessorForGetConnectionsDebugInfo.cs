@@ -23,16 +23,23 @@ internal abstract class AbstractChangesHandlerProcessorForGetConnectionsDebugInf
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
+
+            var connectionValues = GetConnections().Values;
+
+            writer.WritePropertyName("NumberOfConnections");
+            writer.WriteInteger(connectionValues.Count);
+            writer.WriteComma();
+
             writer.WritePropertyName("Connections");
 
             writer.WriteStartArray();
             var first = true;
-            foreach (var connection in GetConnections())
+            foreach (var connection in connectionValues)
             {
                 if (first == false)
                     writer.WriteComma();
                 first = false;
-                context.Write(writer, connection.Value.GetDebugInfo());
+                context.Write(writer, connection.GetDebugInfo());
             }
             writer.WriteEndArray();
 

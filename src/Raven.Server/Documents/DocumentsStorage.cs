@@ -29,6 +29,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
@@ -1729,8 +1730,8 @@ namespace Raven.Server.Documents
                 if (flags.Contain(DocumentFlags.HasCounters))
                     CountersStorage.DeleteCountersForDocument(context, id, collectionName);
 
-                if (flags.Contain(DocumentFlags.HasTimeSeries))
-                    TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName);
+                if (flags.Contain(DocumentFlags.HasTimeSeries)) 
+                    TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName, flags);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {

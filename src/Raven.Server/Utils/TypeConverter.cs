@@ -138,7 +138,7 @@ namespace Raven.Server.Utils
 
             var isSupported = true;
             var hasProperties = false;
-            foreach (var property in accessor.GetPropertiesInOrder(value))
+            foreach (var property in accessor.GetProperties(value))
             {
                 hasProperties = true;
 
@@ -376,7 +376,7 @@ namespace Raven.Server.Utils
             var inner = new DynamicJsonValue();
             var accessor = GetPropertyAccessor(value);
 
-            foreach (var property in accessor.GetPropertiesInOrder(value))
+            foreach (var property in accessor.GetProperties(value))
             {
                 var propertyValue = property.Value;
                 if (propertyValue is IEnumerable<object> propertyValueAsEnumerable && ShouldTreatAsEnumerable(propertyValue))
@@ -710,17 +710,17 @@ namespace Raven.Server.Utils
             return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.Create(type, value));
         }
 
-        public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, List<IndexFieldBase> orderedMapFields, Dictionary<string, CompiledIndexField> groupByFields)
+        public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, Dictionary<string, CompiledIndexField> groupByFields)
         {
             var type = value.GetType();
 
             if (type == typeof(JsObject)) // We don't cache JS types
-                return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, orderedMapFields, groupByFields, true);
+                return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields, true);
 
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries
-                return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, orderedMapFields, groupByFields);
+                return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields);
 
-            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, orderedMapFields, groupByFields));
+            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields));
         }
 
 

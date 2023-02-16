@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             {
                 var djv = new DynamicJsonValue();
 
-                foreach (var property in _propertyAccessor.GetPropertiesInOrder(output))
+                foreach (var property in _propertyAccessor.GetProperties(output))
                 {
                     var value = property.Value;
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);

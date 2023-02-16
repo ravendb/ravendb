@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             var storedValue = _storeValue ? new DynamicJsonValue() : null;
 
-            foreach (var property in accessor.GetPropertiesInOrder(documentToProcess))
+            foreach (var property in accessor.GetProperties(documentToProcess))
             {
                 var value = property.Value;
 

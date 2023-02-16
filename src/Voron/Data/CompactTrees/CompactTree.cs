@@ -38,6 +38,8 @@ namespace Voron.Data.CompactTrees
         internal CompactTreeState State => _state;
         internal LowLevelTransaction Llt => _llt;
 
+        
+
         // The reason why we use 2 is that the worst case scenario is caused by splitting pages where a single
         // page split will need 2 simultaneous key encoders. In this way we can get away with not instantiating
         // so many. 
@@ -189,7 +191,6 @@ namespace Voron.Data.CompactTrees
 
                     var encodedKey = new Span<byte>(encodedStartPtr + sizeof(int), maxSize);
                     dictionary.Encode(decodedKey, ref encodedKey);
-                    Debug.Assert(encodedKey[^1] == 0, "The encoded key is not null terminated.");
 
                     *(int*)encodedStartPtr = encodedKey.Length;
                     _currentPtr += encodedKey.Length + sizeof(int);
@@ -255,7 +256,6 @@ namespace Voron.Data.CompactTrees
 
                 byte* encodedStartPtr = _storage.Ptr + currentKeyIdx;
                 int length = *(int*)encodedStartPtr;
-                Debug.Assert(encodedStartPtr[sizeof(int) + length - 1] == 0, "The encoded key is not null terminated.");
 
                 int maxSize = dictionary.GetMaxDecodingBytes(length) + sizeof(int);
                 int currentSize = (int)(_currentEndPtr - _currentPtr);
@@ -270,7 +270,6 @@ namespace Voron.Data.CompactTrees
 
                 var decodedKey = new Span<byte>(_currentPtr + sizeof(int), maxSize);
                 dictionary.Decode(new ReadOnlySpan<byte>(encodedStartPtr + sizeof(int), length), ref decodedKey);
-                Debug.Assert(decodedKey[^1] == 0, "The decoded key is not null terminated.");
 
                 *(int*)_currentPtr = decodedKey.Length;
                 _currentPtr += decodedKey.Length + sizeof(int);
@@ -288,7 +287,6 @@ namespace Voron.Data.CompactTrees
                 byte* start = _storage.Ptr + _decodedKeyIdx;
                 int length = *((int*)start);
 
-                Debug.Assert(start[sizeof(int) + length - 1] == 0, "The key is not null terminated.");
                 return new ReadOnlySpan<byte>(start + sizeof(int), length);
             }
 
@@ -304,7 +302,6 @@ namespace Voron.Data.CompactTrees
                 byte* start = _storage.Ptr + _decodedKeyIdx;
                 length = *((int*)start);
 
-                Debug.Assert(start[sizeof(int) + length - 1] == 0, "The key is not null terminated.");
                 return start + sizeof(int);
             }
 
@@ -389,22 +386,15 @@ namespace Voron.Data.CompactTrees
                 Dictionary = Invalid;
 
                 int keyLength = key.Length;
-                int n = keyLength;
-                if (key[^1] != 0)
-                    n++;
 
                 // We write the size and the key. 
-                *((int*)currentPtr) = n;
+                *((int*)currentPtr) = keyLength;
                 currentPtr += sizeof(int);
                 
                 // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
                 Unsafe.CopyBlock(ref Unsafe.AsRef<byte>(currentPtr), ref Unsafe.AsRef<byte>(key[0]), (uint)keyLength );
 
-                currentPtr += n; // We update the new pointer. 
-
-                // If it is null terminated we are overwriting it, but we avoid a branch misprediction.
-                currentPtr[-1] = 0;
-                
+                currentPtr += keyLength; // We update the new pointer. 
                 _currentPtr = currentPtr;
             }
 
@@ -424,19 +414,15 @@ namespace Voron.Data.CompactTrees
                     Dictionary = dictionaryId;
 
                     int keyLength = key.Length;
-                    int n = keyLength + (key[^1] != 0).ToInt32();
                     int bucketIdx = SelectBucketForWrite();
                     _keyMappingCache[bucketIdx] = dictionaryId;
                     _keyMappingCacheIndex[bucketIdx] = _currentKeyIdx;
 
                     // We write the size and the key. 
-                    *(int*)_currentPtr = n;
+                    *(int*)_currentPtr = keyLength;
                     _currentPtr += sizeof(int);
                     Memory.Copy(_currentPtr, keyPtr, keyLength);
-                    _currentPtr += n; // We update the new pointer. 
-
-                    // If it is null terminated we are overwriting it, but we avoid a branch misprediction.
-                    _currentPtr[-1] = 0;
+                    _currentPtr += keyLength; // We update the new pointer. 
                 }
             }
 
@@ -491,7 +477,6 @@ namespace Voron.Data.CompactTrees
                 // This method allows us to compare the key in it's encoded form directly using the current dictionary. 
                 byte* encodedStartPtr = _storage.Ptr + _currentKeyIdx;
                 int length = *((int*)encodedStartPtr);
-                Debug.Assert(encodedStartPtr[sizeof(int) + length - 1] == 0, "The encoded key is not null terminated.");
 
                 var result = AdvMemory.CompareInline(encodedStartPtr + sizeof(int), nextEntryPtr, Math.Min(length, nextEntryLength));
                 return result == 0 ? length - nextEntryLength : result;
@@ -515,8 +500,6 @@ namespace Voron.Data.CompactTrees
                 {
                     encodedStartPtr = EncodedWith(dictionaryId, out encodedLength);
                 }
-
-                Debug.Assert(encodedStartPtr[encodedLength - 1] == 0, "The encoded key is not null terminated.");
 
                 var result = AdvMemory.CompareInline(encodedStartPtr, nextEntryPtr, Math.Min(encodedLength, nextEntryLength));
                 return result == 0 ? encodedLength - nextEntryLength : result;
@@ -691,6 +674,8 @@ namespace Voron.Data.CompactTrees
 
             using var _ = _parent.DirectAdd(Name, sizeof(CompactTreeState), out var ptr);
             _state.CopyTo((CompactTreeState*)ptr);
+
+            CompactTreeDumper.WriteCommit(this);
         }
 
         public static void Delete(CompactTree tree)
@@ -894,6 +879,8 @@ namespace Voron.Data.CompactTrees
 
         public bool TryRemove(ReadOnlySpan<byte> key, out long oldValue)
         {
+            CompactTreeDumper.WriteRemoval(this, key);
+
             using var scope = new EncodedKeyScope(this);
             FindPageFor(key, ref _internalCursor, scope.Key);
             return RemoveFromPage(allowRecurse: true, out oldValue);
@@ -1183,11 +1170,8 @@ namespace Voron.Data.CompactTrees
                 throw new ArgumentOutOfRangeException(nameof(value), value, "Only positive values are allowed");
             if (key.Length > Constants.CompactTree.MaximumKeySize)
                 throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key),$"key must be less than {Constants.CompactTree.MaximumKeySize} bytes in size");
-            if(key.Length <= 0)
+            if (key.Length <= 0)
                 throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key), "key must be at least 1 byte");
-            int indexOf = key.IndexOf((byte)0);
-            if(indexOf != -1)
-                throw new ArgumentOutOfRangeException(nameof(key), Encoding.UTF8.GetString(key), "key must NOT have a null terminator but had one in: " + indexOf);  
         }
         
         public void Add(string key, long value)
@@ -1199,6 +1183,8 @@ namespace Voron.Data.CompactTrees
 
         public void Add(ReadOnlySpan<byte> key, long value)
         {
+            CompactTreeDumper.WriteAddition(this, key, value);
+
             AssertValueAndKeySize(key, value);
 
             using var scope = new EncodedKeyScope(this);
@@ -1208,11 +1194,15 @@ namespace Voron.Data.CompactTrees
         
         public void Add(ReadOnlySpan<byte> key, long value, EncodedKey encodedKey)
         {
+            CompactTreeDumper.WriteAddition(this, key, value);
+
             AssertValueAndKeySize(key, value);
             // this overload assumes that a previous call to TryGetValue (where you go the encodedKey
             // already placed us in the right place for the value)
             Debug.Assert(_internalCursor._stk[_internalCursor._pos].Header->PageFlags == CompactPageFlags.Leaf,
                 $"Got {_internalCursor._stk[_internalCursor._pos].Header->PageFlags} flag instead of {nameof(CompactPageFlags.Leaf)}");
+
+            Debug.Assert(key.SequenceEqual(encodedKey.Decoded()));
 
             AddToPage(encodedKey, value);
         }
@@ -1536,9 +1526,6 @@ namespace Voron.Data.CompactTrees
 
             using var _ = _llt.GetTempPage(Constants.Storage.PageSize, out var tmp);
             Memory.Copy(tmp.Base, state.Page.Pointer, Constants.Storage.PageSize);
-
-            // TODO: Remove
-            // new CursorState() {Page = new Page(tmp.TempPagePointer)}.DumpPageDebug(this);
 
             Memory.Set(state.Page.DataPointer, 0, Constants.Storage.PageSize - PageHeader.SizeOf);
             state.Header->Upper = Constants.Storage.PageSize;
@@ -1884,7 +1871,11 @@ namespace Voron.Data.CompactTrees
         private static long GetValue(ref CursorState state, int pos)
         {
             GetValuePointer(ref state, pos, out var p);
-            return ZigZagEncoding.Decode<long>(p, out _);
+            var value = ZigZagEncoding.DecodeCompact<long>(p, out var valLen, out var success);
+            if (success == false)
+                InvalidBufferContent();
+
+            return value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1949,7 +1940,11 @@ namespace Voron.Data.CompactTrees
 
             key = new Span<byte>(entryPos + lenOfKeyLen, keyLen);
             entryPos += keyLen + lenOfKeyLen;
-            value = ZigZagEncoding.Decode<long>(entryPos, out var valLen);
+
+            value = ZigZagEncoding.DecodeCompact<long>(entryPos, out var valLen, out var success);
+            if (success == false)
+                InvalidBufferContent();
+
             entryPos += valLen;
             return (int)(entryPos - page.Pointer - entryOffset);
         }
@@ -1973,7 +1968,7 @@ namespace Voron.Data.CompactTrees
             pos += keyLen;
             pos += lenOfKeyLen;
 
-            VariableSizeEncoding.ReadCompact<int>(pos, out var lenOfValue, out success);
+            ZigZagEncoding.DecodeCompact<long>(pos, out var lenOfValue, out success);
             if (success == false)
                 InvalidBufferContent();
 
@@ -1994,9 +1989,8 @@ namespace Voron.Data.CompactTrees
             var actualKeyPtr = scope.Key.DecodedPtr(out int length);
             tree.Llt.Allocator.AllocateDirect(length, out var output);
             Unsafe.CopyBlockUnaligned(output.Ptr, actualKeyPtr, (uint)length);
-            
-            var outputSpan = output.ToSpan();
-            encodedKeyStream = outputSpan[^1] == 0 ? outputSpan[..^1] : outputSpan;
+
+            encodedKeyStream = output.ToSpan();
             return true;
         }
 
@@ -2044,21 +2038,17 @@ namespace Voron.Data.CompactTrees
                 encodedKeyLength = GetEncodedKeyPtr(state.Page, @base[bot + mid], out encodedKeyPtr);
 
                 match = AdvMemory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
+                match = match == 0 ? keyLength - encodedKeyLength : match;
+
                 if (match >= 0)
-                {
                     bot += mid;
-                    if (match == 0)
-                        goto IsMatch;
-                }
 
                 top -= mid;
             }
 
             encodedKeyLength = GetEncodedKeyPtr(state.Page, @base[bot], out encodedKeyPtr);
-            
-            match = AdvMemory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
 
-            IsMatch:
+            match = AdvMemory.CompareInline(keyPtr, encodedKeyPtr, Math.Min(keyLength, encodedKeyLength));
             match = match == 0 ? keyLength - encodedKeyLength : match;
             if (match == 0)
             {

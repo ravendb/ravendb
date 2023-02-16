@@ -462,6 +462,8 @@ namespace Raven.Server.Web.Authentication
                         writer.WriteString(Server.Certificate.Certificate?.Thumbprint);
                         writer.WriteComma();
                         writer.WriteArray("WellKnownAdminCerts", wellKnown);
+                        writer.WriteComma();
+                        writer.WriteArray("WellKnownIssuers", Server.WellKnownIssuers?.Select(x=>x.Thumbprint) ?? Array.Empty<string>());
                         writer.WriteEndObject();
                     }
                 }
@@ -602,6 +604,19 @@ namespace Raven.Server.Web.Authentication
                             PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash()
                         };
                         certificate = ctx.ReadObject(wellKnownCertDef.ToJson(), "WellKnown/Certificate/Definition");
+                    }
+                    else if(Server.CertificateHasWellKnownIssuer(clientCert, out var issuer))
+                    {
+                        var wellKnownCertDef = new CertificateDefinition
+                        {
+                            Name = "Well Known Issuer Certificate: " + issuer,
+                            Permissions = new Dictionary<string, DatabaseAccess>(),
+                            SecurityClearance = SecurityClearance.ClusterAdmin,
+                            Thumbprint = clientCert.Thumbprint,
+                            PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash()
+                        };
+                        certificate = ctx.ReadObject(wellKnownCertDef.ToJson(), "WellKnown/Certificate/Definition");
+
                     }
                 }
 

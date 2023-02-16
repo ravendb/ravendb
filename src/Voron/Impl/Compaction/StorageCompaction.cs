@@ -451,17 +451,9 @@ namespace Voron.Impl.Compaction
             Transaction txr, string treeName, long copiedTrees, long totalTreesCount,
             TransactionPersistentContext context, CancellationToken token)
         {
-            // Load table
-            var tableTree = txr.ReadTree(treeName, RootObjectType.Table);
+            TableSchema schema = GetTableSchema(txr, treeName, modifyTableSchema);
 
-            // Get the table schema
-            var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
-            var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
-            var schema = TableSchema.ReadFrom(txr.Allocator, schemaPtr, schemaSize);
-            modifyTableSchema?.Invoke(treeName, schema);
-
-            // Load table into structure 
-            var inputTable = txr.OpenTable(schema, treeName);
+            (long numberOfEntries, int numberOfPagesInActiveSection) = GetNumberOfEntries(txr, treeName, schema);
 
             // The next three variables are used to know what our current
             // progress is
@@ -474,22 +466,25 @@ namespace Voron.Impl.Compaction
             var lastSlice = Slices.BeforeAllKeys;
             long lastFixedIndex = 0L;
 
-            Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{inputTable.NumberOfEntries:#,#;;0} entries.", treeName);
+            Report(copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
             using (var txw = compactedEnv.WriteTransaction(context))
             {
-                schema.Create(txw, treeName, Math.Max((ushort)inputTable.ActiveDataSmallSection.NumberOfPages, (ushort)((ushort.MaxValue + 1) / Constants.Storage.PageSize)));
+                schema.Create(txw, treeName, Math.Max((ushort)numberOfPagesInActiveSection, (ushort)((ushort.MaxValue + 1) / Constants.Storage.PageSize)));
                 txw.Commit(); // always create a table, even if it is empty
             }
 
             var sp = Stopwatch.StartNew();
 
-            while (copiedEntries < inputTable.NumberOfEntries)
+            while (copiedEntries < numberOfEntries)
             {
+                
                 token.ThrowIfCancellationRequested();
+                using(var innerTxr = txr.LowLevelTransaction.Environment.ReadTransaction())
                 using (var txw = compactedEnv.WriteTransaction(context))
                 {
                     long transactionSize = 0L;
 
+                    Table inputTable = innerTxr.OpenTable(schema, treeName);
                     var outputTable = txw.OpenTable(schema, treeName);
 
                     if (schema.Key == null || schema.Key.IsGlobal) 
@@ -516,7 +511,7 @@ namespace Voron.Impl.Compaction
                                 copiedEntries++;
                                 transactionSize += tvr.Result.Reader.Size;
 
-                                ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{inputTable.NumberOfEntries:#,#;;0} entries.", treeName);
+                                ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
@@ -525,6 +520,7 @@ namespace Voron.Impl.Compaction
                                     lastSlice = tvr.Key.Clone(txr.Allocator);
                                     break;
                                 }
+                                innerTxr.ForgetAbout(tvr.Result.Reader.Id);
                             }
                         }
                         else
@@ -543,7 +539,7 @@ namespace Voron.Impl.Compaction
                                 copiedEntries++;
                                 transactionSize += entry.Reader.Size;
 
-                                ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{inputTable.NumberOfEntries:#,#;;0} entries.", treeName);
+                                ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
@@ -552,6 +548,7 @@ namespace Voron.Impl.Compaction
                                     lastFixedIndex = fixedSizeIndex.GetValue(ref entry.Reader);
                                     break;
                                 }
+                                innerTxr.ForgetAbout(entry.Reader.Id);
                             }
                         }
                     }
@@ -574,17 +571,18 @@ namespace Voron.Impl.Compaction
                             outputTable.Insert(ref entry.Reader);
                             copiedEntries++;
                             transactionSize += entry.Reader.Size;
-                            ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{inputTable.NumberOfEntries:#,#;;0} entries.", treeName);
+                            ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
+                            innerTxr.ForgetAbout(entry.Reader.Id);
                         }
                     }
 
                     txw.Commit();
                 }
 
-                if (copiedEntries == inputTable.NumberOfEntries)
+                if (copiedEntries == numberOfEntries)
                 {
                     copiedTrees++;
-                    Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Finished copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{inputTable.NumberOfEntries:#,#;;0} entries.", treeName);
+                    Report(copiedTrees, totalTreesCount, copiedEntries, numberOfEntries, progressReport, $"Finished copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{numberOfEntries:#,#;;0} entries.", treeName);
                 }
 
                 compactedEnv.FlushLogToDataFile();
@@ -592,7 +590,27 @@ namespace Voron.Impl.Compaction
 
             return copiedTrees;
         }
-        
+
+        private static (long NumberOfEntries, int ActiveDataSmallSection) GetNumberOfEntries(Transaction txr2, string treeName, TableSchema schema)
+        {
+            // Load table into structure 
+            Table openTable = txr2.OpenTable(schema, treeName);
+            return (openTable.NumberOfEntries, openTable.ActiveDataSmallSection.NumberOfPages);
+        }
+
+        private static TableSchema GetTableSchema(Transaction txr, string treeName, Action<string, TableSchema> modifyTableSchema)
+        {
+            // Load table
+            var tableTree = txr.ReadTree(treeName, RootObjectType.Table);
+
+            // Get the table schema
+            var schemaSize = tableTree.GetDataSize(TableSchema.SchemasSlice);
+            var schemaPtr = tableTree.DirectRead(TableSchema.SchemasSlice);
+            var schema = TableSchema.ReadFrom(txr.Allocator, schemaPtr, schemaSize);
+            modifyTableSchema?.Invoke(treeName, schema);
+            return schema;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool ShouldCloseTxFor32Bit(long transactionSize, StorageEnvironment env)
         {

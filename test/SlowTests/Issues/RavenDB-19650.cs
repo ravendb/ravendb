@@ -5,6 +5,7 @@ using Xunit.Abstractions;
 using Raven.Client.Documents.Indexes;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues
@@ -135,6 +136,94 @@ namespace SlowTests.Issues
                     },
                     {
                         "Url", new IndexFieldOptions()
+                        {
+                            Storage = FieldStorage.Yes,
+                        }
+                    }
+                };
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void CanLoadDocumentFromReferenceExistingOnlyInIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var m1 = new Manager() { Name = "CoolName", Age = 21};
+                    session.Store(m1);
+
+                    var e1 = new Employee() { ManId = m1.Id, Salary = 37};
+                    session.Store(e1);
+
+                    var o1 = new Order() { EmpId = e1.Id, Price = 44, Name = "OrderName"};
+                    session.Store(o1);
+                    
+                    session.SaveChanges();
+                    
+                    var index = new DummyIndex();
+                    store.ExecuteIndex(index);
+                    Indexes.WaitForIndexing(store);
+                    
+                    WaitForUserToContinueTheTest(store);
+
+                    var query = from res in session.Query<DummyIndex.Result>(index.IndexName)
+                        let manager = RavenQuery.Load<Manager>(res.ManRef)
+                        select manager.Name;
+
+                    var result = query.ToList();
+
+                    Assert.Equal("CoolName", result[0]);
+                }
+            }
+        }
+
+        private class Manager
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            
+            public int Age { get; set; }
+        }
+
+        private class Employee
+        {
+            public string Id { get; set; }
+            public string ManId { get; set; }
+            
+            public int Salary { get; set; }
+        }
+
+        private class Order
+        {
+            public string Id { get; set; }
+            public string EmpId { get; set; }
+            
+            public int Price { get; set; }
+            
+            public string Name { get; set; }
+        }
+
+        private class DummyIndex : AbstractJavaScriptIndexCreationTask
+        {
+            public class Result
+            {
+                public string ManRef { get; set; }
+            }
+            public DummyIndex()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('Orders', order => {
+                        let emp = load(order.EmpId, ""Employees"");
+                        return { ManRef: emp.ManId};
+                    });"
+                };
+                Fields = new Dictionary<string, IndexFieldOptions>
+                {
+                    {
+                        "ManRef", new IndexFieldOptions()
                         {
                             Storage = FieldStorage.Yes,
                         }

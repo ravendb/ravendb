@@ -98,7 +98,9 @@ namespace Corax.Queries
 
         public static BinaryMatch<TInner, TOuter> YieldOr(ByteStringContext ctx, in TInner inner, in TOuter outer)
         {
+#if !DEBUG
             [SkipLocalsInit]
+#endif
             static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> buffer, int matches)
             {
                 ref var inner = ref match._inner;
@@ -127,8 +129,9 @@ namespace Corax.Queries
 
                 return result;
             }
-
+#if !DEBUG
             [SkipLocalsInit]
+#endif
             static int FillFunc(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
             {
                 ref var inner = ref match._inner;
@@ -262,7 +265,7 @@ namespace Corax.Queries
                     }
                 }
 
-            END:
+                END:
                 return totalLength;
             }      
 

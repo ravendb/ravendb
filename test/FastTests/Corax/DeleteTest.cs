@@ -145,7 +145,7 @@ namespace FastTests.Corax
 
             using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
-                indexWriter.TryDeleteEntry("Id", "list/9");
+                Assert.True(indexWriter.TryDeleteEntry("Id", "list/9"));
                 indexWriter.Commit();
             }
 

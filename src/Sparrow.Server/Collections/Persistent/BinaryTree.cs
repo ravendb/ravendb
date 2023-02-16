@@ -227,12 +227,11 @@ namespace Sparrow.Server.Collections.Persistent
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly int FindCommonPrefix(ref byte key, int length, int currentBit, out T value)
+        public readonly int FindCommonPrefix(ref byte key, int lengthInBits, int currentBit, out T value)
         {
             ref Node nodeRef = ref MemoryMarshal.GetReference(_nodes);
 
-            // The key length is the current available bytes starting from the current bit.
-            int keyLength = length * 8 - currentBit;
+            int keyLength = lengthInBits - currentBit;
 
             ref Node currentNode = ref nodeRef;
             while (!currentNode.HasValue)

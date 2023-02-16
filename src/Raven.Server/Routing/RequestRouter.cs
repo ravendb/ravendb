@@ -432,9 +432,7 @@ namespace Raven.Server.Routing
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarIssuer)
                 {
-                    message = $"The supplied client certificate '{name}' is unknown to the server but has a known Public Key Pinning Hash. Will not use it to authenticate because the issuer is unknown. " +
-                              Environment.NewLine +
-                              $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{feature.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry.";
+                    message = $"The supplied client certificate '{name}' is unknown to the server but has a known Public Key Pinning Hash. Will not use it to authenticate because the issuer is unknown. ";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
                 {

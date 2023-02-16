@@ -40,6 +40,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     QueryTimings timings = null;
+    
                     var _ = session.Query<Company>()
                         .Customize(x =>
                         {
