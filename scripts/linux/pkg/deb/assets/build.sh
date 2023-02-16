@@ -5,11 +5,13 @@ DEST_DIR=/build
 release=$(lsb_release -sr | cut -d. -f1)
 
 if [[ $release -ge 22 ]]; then
-    sed -i 's/dh-systemd (>=1.5)/debhelper (>= 9.20160709)/g' $ASSETS_DIR/ravendb/debian/control
+    mv -v $ASSETS_DIR/ravendb/debian/control_$release $ASSETS_DIR/ravendb/debian/control
 else
     apt install dh-systemd
+    mv -v $ASSETS_DIR/ravendb/debian/control_legacy $ASSETS_DIR/ravendb/debian/control
 fi
 
+rm -v $ASSETS_DIR/ravendb/debian/control_*
 export RAVENDB_VERSION_MINOR=$( egrep -o -e '^[0-9]+.[0-9]+' <<< "$RAVENDB_VERSION" )
 
 set -e
@@ -24,7 +26,7 @@ fi
 dpkg -i $MS_DEB_NAME
 apt update
 
-DOWNLOAD_URL=https://daily-builds.s3.amazonaws.com/RavenDB-${RAVENDB_VERSION}-${RAVEN_PLATFORM}.tar.bz2 
+DOWNLOAD_URL=${DOWNLOAD_URL:-"https://daily-builds.s3.amazonaws.com/RavenDB-${RAVENDB_VERSION}-${RAVEN_PLATFORM}.tar.bz2"}
 
 export TARBALL="ravendb-${RAVENDB_VERSION}-${RAVEN_PLATFORM}.tar.bz2"
 export CACHED_TARBALL="${TARBALL_CACHE_DIR}/${TARBALL}"

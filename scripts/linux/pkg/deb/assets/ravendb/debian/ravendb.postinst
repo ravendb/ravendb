@@ -36,7 +36,6 @@ chmod 770 $runtimeDir
 
 done
 
-chown root:ravendb /usr/lib/ravendb/server/
 chown root:ravendb /usr/lib/ravendb/server/{Raven.Server,rvn}
 
 if command -v setcap &> /dev/null; then
