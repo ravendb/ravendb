@@ -18,12 +18,10 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.PostingLists;
 using Voron.Impl;
-using static Voron.Data.CompactTrees.CompactTree;
 
 namespace Corax
 {
