@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -161,10 +162,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void IndexesShouldGetCreated()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void IndexesShouldGetCreated(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var array = new RecurseIndexWithArray();
                 var hashSet = new RecurseIndexWithHashSet();
