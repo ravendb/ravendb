@@ -14,6 +14,7 @@ using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Documents.Sharding.Queries.Facets;
+using Raven.Server.Documents.Sharding.Queries.IndexEntries;
 using Raven.Server.Documents.Sharding.Queries.Suggestions;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
@@ -38,15 +39,31 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
         return returnContext;
     }
 
-    protected override ValueTask IndexEntriesAsync(TransactionOperationContext queryContext, IndexQueryServerSide indexQuery, long? existingResultEtag, OperationCancelToken token,
-        bool ignoreLimit)
+    protected override async ValueTask<IndexEntriesQueryResult> GetIndexEntriesAsync(TransactionOperationContext queryContext, TransactionOperationContext context, IndexQueryServerSide query, long? existingResultEtag,
+        bool ignoreLimit, OperationCancelToken token)
     {
-        throw new NotImplementedException();
+        using (var timings = Timings(query))
+        {
+            var indexName = AbstractQueryRunner.GetIndexName(query);
+
+            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            {
+                var queryProcessor = new ShardedIndexEntriesQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, token: token.Token);
+
+                await queryProcessor.InitializeAsync();
+
+                var result = await queryProcessor.ExecuteShardedOperations(timings.Scope);
+
+                result.DurationInMs = timings.Duration;
+
+                return result;
+            }
+        }
     }
 
-    protected override async ValueTask ExplainAsync(TransactionOperationContext queryContext, IndexQueryServerSide indexQuery, OperationCancelToken token)
+    protected override async ValueTask ExplainAsync(TransactionOperationContext queryContext, IndexQueryServerSide query, OperationCancelToken token)
     {
-        var command = new ExplainQueryCommand(DocumentConventions.DefaultForServer, indexQuery.ToJson(queryContext));
+        var command = new ExplainQueryCommand(DocumentConventions.DefaultForServer, query.ToJson(queryContext));
 
         var proxyCommand = new ProxyCommand<ExplainQueryCommand.ExplainQueryResult[]>(command, HttpContext.Response);
 

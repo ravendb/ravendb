@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client;
-using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
@@ -60,27 +57,14 @@ internal class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHandlerPro
         queryContext.WithQuery(indexQuery.Metadata);
     }
 
-    protected override async ValueTask IndexEntriesAsync(QueryOperationContext queryContext, IndexQueryServerSide indexQuery, long? existingResultEtag, OperationCancelToken token, bool ignoreLimit)
+    protected override async ValueTask<IndexEntriesQueryResult> GetIndexEntriesAsync(QueryOperationContext queryContext, DocumentsOperationContext context, IndexQueryServerSide query, long? existingResultEtag, bool ignoreLimit, OperationCancelToken token)
     {
-        var result = await RequestHandler.Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, queryContext, ignoreLimit, existingResultEtag, token);
-
-        if (result.NotModified)
-        {
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-            return;
-        }
-
-        HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
-
-        await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, RequestHandler.ResponseBodyStream()))
-        {
-            await writer.WriteIndexEntriesQueryResultAsync(queryContext.Documents, result, token.Token);
-        }
+        return await RequestHandler.Database.QueryRunner.ExecuteIndexEntriesQuery(query, queryContext, ignoreLimit, existingResultEtag, token);
     }
 
-    protected override async ValueTask ExplainAsync(QueryOperationContext queryContext, IndexQueryServerSide indexQuery, OperationCancelToken token)
+    protected override async ValueTask ExplainAsync(QueryOperationContext queryContext, IndexQueryServerSide query, OperationCancelToken token)
     {
-        var explanations = RequestHandler.Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery, out string indexName);
+        var explanations = RequestHandler.Database.QueryRunner.ExplainDynamicIndexSelection(query, out string indexName);
 
         await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, RequestHandler.ResponseBodyStream(), token.Token))
         {
