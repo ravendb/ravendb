@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -8,14 +7,12 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Results.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Queries.Timings;
-using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Counters;
 using Raven.Server.Documents.Sharding.Operations;
@@ -26,18 +23,12 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Queries;
 
-/// <summary>
-/// A struct that we use to hold state and break the process
-/// of handling a sharded query into distinct steps
-/// </summary>
-public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryCommand, QueryResult, ShardedQueryResult>
+public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResult>
 {
-    public ShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, long? existingResultEtag, bool metadataOnly, bool indexEntriesOnly,
-        CancellationToken token) : base(context, requestHandler, query, metadataOnly, indexEntriesOnly, existingResultEtag, token)
+    public ShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, long? existingResultEtag, bool metadataOnly, bool indexEntriesOnly, CancellationToken token)
+        : base(context, requestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly, token)
     {
     }
-
-    protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
 
     public override async Task<ShardedQueryResult> ExecuteShardedOperations(QueryTimingsScope scope)
     {
@@ -204,61 +195,6 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
             ((ShardedTimeSeriesIncludes)result.GetTimeSeriesIncludes()).AddMissingTimeSeries(tsInclude.Id, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(tsInclude.Values, Context));
         }
 
-    }
-
-    private void ApplyPaging(ref ShardedQueryResult result, QueryTimingsScope scope)
-    {
-        QueryTimingsScope pagingScope = null;
-
-        if (Query.Offset is > 0 && result.Results.Count > Query.Offset)
-        {
-            using (GetPagingScope())
-            {
-                var count = Math.Min(Query.Offset ?? 0, int.MaxValue);
-                result.Results.RemoveRange(0, (int)count);
-            }
-        }
-
-        if (Query.Limit is > 0 && result.Results.Count > Query.Limit)
-        {
-            using (GetPagingScope())
-            {
-                var index = Math.Min(Query.Limit.Value, int.MaxValue);
-                var count = result.Results.Count - Query.Limit.Value;
-                if (count > int.MaxValue)
-                    count = int.MaxValue; //todo: Grisha: take a look
-                result.Results.RemoveRange((int)index, (int)count);
-            }
-        }
-
-        QueryTimingsScope GetPagingScope()
-        {
-            if (scope == null)
-                return null;
-
-            pagingScope ??= scope.For(nameof(QueryTimingsScope.Names.Paging), start: false);
-            pagingScope.Start();
-
-            return pagingScope;
-        }
-    }
-
-    private void ReduceResults(ref ShardedQueryResult result, QueryTimingsScope scope)
-    {
-        if (IsMapReduceIndex || IsAutoMapReduceQuery)
-        {
-            using (scope?.For(nameof(QueryTimingsScope.Names.Reduce)))
-            {
-                var merger = new ShardedMapReduceQueryResultsMerger(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context);
-                result.Results = merger.Merge();
-
-                if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery))
-                {
-                    // apply ordering after the re-reduce of a map-reduce index
-                    result.Results.Sort(new ShardedDocumentsComparer(Query.Metadata, extractFromData: true));
-                }
-            }
-        }
     }
 
     private void ProjectAfterMapReduce(ref ShardedQueryResult result, QueryTimingsScope scope)

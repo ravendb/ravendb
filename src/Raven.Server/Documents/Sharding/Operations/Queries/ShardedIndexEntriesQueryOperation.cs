@@ -73,7 +73,7 @@ public class ShardedIndexEntriesQueryOperation : AbstractShardedQueryOperation<S
                         continue;
                     }
 
-                    yield return item.AddToMetadata(Context, Constants.Documents.Metadata.ShardNumber, shardNumber);
+                    yield return item.AddToMetadata(Context, Constants.Documents.Metadata.Sharding.ShardNumber, shardNumber);
                 }
             }
         }
