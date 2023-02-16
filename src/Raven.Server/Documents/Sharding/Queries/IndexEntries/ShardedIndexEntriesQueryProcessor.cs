@@ -13,10 +13,10 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Queries.IndexEntries;
 
-public class ShardedIndexEntriesQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryCommand, QueryResult, ShardedIndexEntriesQueryResult>
+public class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBase<ShardedIndexEntriesQueryResult>
 {
     public ShardedIndexEntriesQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, long? existingResultEtag, CancellationToken token)
-        : base(context, requestHandler, query, metadataOnly: false, indexEntriesOnly: true, existingResultEtag, token)
+        : base(context, requestHandler, query, existingResultEtag, metadataOnly: false, indexEntriesOnly: true, token)
     {
     }
 
@@ -41,10 +41,10 @@ public class ShardedIndexEntriesQueryProcessor : AbstractShardedQueryProcessor<S
 
         await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex, scope: null);
 
-        //// For map/reduce - we need to re-run the reduce portion of the index again on the results
-        //ReduceResults(ref result, queryScope);
+        // For map/reduce - we need to re-run the reduce portion of the index again on the results
+        ReduceResults(ref result, scope: null);
 
-        //ApplyPaging(ref result, queryScope);
+        ApplyPaging(ref result, scope: null);
 
         return result;
     }
