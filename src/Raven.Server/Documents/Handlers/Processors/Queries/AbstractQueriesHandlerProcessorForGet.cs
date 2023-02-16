@@ -50,7 +50,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
         if (string.Equals(debug, "serverSideQuery", StringComparison.OrdinalIgnoreCase))
         {
-            await ServerSideQuery(context, query);
+            await ServerSideQueryAsync(context, query);
             return;
         }
 
@@ -194,7 +194,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
     {
     }
 
-    private Action<AbstractBlittableJsonTextWriter> WriteAdditionalData(IndexQueryServerSide indexQuery, bool shouldReturnServerSideQuery)
+    private static Action<AbstractBlittableJsonTextWriter> WriteAdditionalData(IndexQueryServerSide indexQuery, bool shouldReturnServerSideQuery)
     {
         if (indexQuery.Diagnostics == null && shouldReturnServerSideQuery == false)
             return null;
@@ -216,7 +216,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         };
     }
 
-    private async Task ServerSideQuery(TOperationContext context, IndexQueryServerSide indexQuery)
+    private async ValueTask ServerSideQueryAsync(TOperationContext context, IndexQueryServerSide indexQuery)
     {
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
