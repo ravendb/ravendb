@@ -135,7 +135,7 @@ namespace SlowTests.Core.Commands
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanQueryForMetadataAndIndexEntriesOnly(Options options)
         {
             using (var store = GetDocumentStore(options))

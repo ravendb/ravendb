@@ -7,7 +7,6 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Sharding;
-using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Executors;
@@ -180,15 +179,5 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
             throw new InvalidOperationException($"Couldn't find {Constants.Documents.Metadata.Sharding.Querying.ResultDataHash} metadata in a query result: {item}");
 
         return _alreadySeenProjections.Add(queryResultHash.GetHashCode());
-    }
-
-    private class RoundRobinComparer : IComparer<BlittableJsonReaderObject>
-    {
-        private long _current;
-
-        public int Compare(BlittableJsonReaderObject _, BlittableJsonReaderObject __)
-        {
-            return _current++ % 2 == 0 ? 1 : -1;
-        }
     }
 }

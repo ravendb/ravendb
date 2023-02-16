@@ -38,7 +38,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
         {
             var ignoreLimit = RequestHandler.GetBoolValueQueryString("ignoreLimit", required: false) ?? false;
-            await IndexEntriesAsync(queryContext, query, existingResultEtag, token, ignoreLimit);
+            await IndexEntriesAsync(queryContext, context, query, existingResultEtag, ignoreLimit, token);
             return;
         }
 
@@ -57,9 +57,27 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
         throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
     }
 
-    protected abstract ValueTask IndexEntriesAsync(TQueryContext queryContext, IndexQueryServerSide indexQuery, long? existingResultEtag, OperationCancelToken token, bool ignoreLimit);
+    protected abstract ValueTask<IndexEntriesQueryResult> GetIndexEntriesAsync(TQueryContext queryContext, TOperationContext context, IndexQueryServerSide query, long? existingResultEtag, bool ignoreLimit, OperationCancelToken token);
 
-    protected abstract ValueTask ExplainAsync(TQueryContext queryContext, IndexQueryServerSide indexQuery, OperationCancelToken token);
+    private async ValueTask IndexEntriesAsync(TQueryContext queryContext, TOperationContext context, IndexQueryServerSide query, long? existingResultEtag, bool ignoreLimit, OperationCancelToken token)
+    {
+        var result = await GetIndexEntriesAsync(queryContext, context, query, existingResultEtag, ignoreLimit, token);
+
+        if (result.NotModified)
+        {
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+            return;
+        }
+
+        HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
+
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+        {
+            await writer.WriteIndexEntriesQueryResultAsync(context, result, token.Token);
+        }
+    }
+
+    protected abstract ValueTask ExplainAsync(TQueryContext queryContext, IndexQueryServerSide query, OperationCancelToken token);
 
     protected abstract ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, TQueryContext queryContext, long? existingResultEtag, OperationCancelToken token);
 

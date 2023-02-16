@@ -13,12 +13,12 @@ namespace Raven.Server.Documents.Sharding.Queries;
 public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
 {
     private readonly QueryMetadata _metadata;
-    private readonly bool _isMapReduce;
+    private readonly bool _extractFromData;
 
-    public ShardedDocumentsComparer(QueryMetadata metadata, bool isMapReduce)
+    public ShardedDocumentsComparer(QueryMetadata metadata, bool extractFromData)
     {
         _metadata = metadata;
-        _isMapReduce = isMapReduce;
+        _extractFromData = extractFromData;
     }
 
     public int Compare(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
@@ -95,7 +95,7 @@ public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
 
     private string GetString(BlittableJsonReaderObject blittable, string fieldName, int index)
     {
-        if (_isMapReduce)
+        if (_extractFromData)
         {
             blittable.TryGet(fieldName, out string value);
             return value;
@@ -112,7 +112,7 @@ public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
 
     private bool TryGetLongValue(BlittableJsonReaderObject blittable, string fieldName, int index, out long value)
     {
-        if (_isMapReduce)
+        if (_extractFromData)
         {
             return blittable.TryGetWithoutThrowingOnError(fieldName, out value);
         }
@@ -137,7 +137,7 @@ public class ShardedDocumentsComparer : IComparer<BlittableJsonReaderObject>
 
     private bool TryGetDoubleValue(BlittableJsonReaderObject blittable, string fieldName, int index, out double value)
     {
-        if (_isMapReduce)
+        if (_extractFromData)
         {
             return blittable.TryGetWithoutThrowingOnError(fieldName, out value);
         }

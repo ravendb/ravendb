@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Sharding.Queries
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
 
             IComparer<BlittableJsonReaderObject> comparer = Query.Metadata.OrderBy?.Length > 0
-                ? new ShardedDocumentsComparer(Query.Metadata, isMapReduce: false)
+                ? new ShardedDocumentsComparer(Query.Metadata, extractFromData: false)
                 : new ShardedStreamingHandlerProcessorForGetStreamQuery.DocumentBlittableLastModifiedComparer();
 
             var commands = GetOperationCommands(null);

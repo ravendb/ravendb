@@ -9,8 +9,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Timings;
-using Raven.Client.Util;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -257,7 +255,7 @@ public class ShardedQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryC
                 if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery))
                 {
                     // apply ordering after the re-reduce of a map-reduce index
-                    result.Results.Sort(new ShardedDocumentsComparer(Query.Metadata, isMapReduce: true));
+                    result.Results.Sort(new ShardedDocumentsComparer(Query.Metadata, extractFromData: true));
                 }
             }
         }
