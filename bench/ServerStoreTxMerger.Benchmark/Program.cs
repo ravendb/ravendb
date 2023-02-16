@@ -14,8 +14,8 @@ namespace ServerStoreTxMerger.Benchmark;
 
 public class ServerStoreTxMergerBench
 {
-    private static readonly List<(int Count,int Size)> _numAndSizeOfCmds = new List<(int, int)> { (3000, 1_000_000), (100, 5_000_000) };
-    public static Dictionary<string, RachisConsensusTestBase.TestCommand[]> CmdsArrays = new Dictionary<string, RachisConsensusTestBase.TestCommand[]>();
+    private static readonly List<(int Count,int Size)> _numAndSizeOfCmds = new List<(int, int)> { (3000, 1_000_000), (1000, 5_000_000) };
+    public static Dictionary<string, RachisConsensusTestBase.TestCommandWithLargeData[]> CmdsArrays = new Dictionary<string, RachisConsensusTestBase.TestCommandWithLargeData[]>();
     public static List<string> CmdsArraysKeys { get; set; } = new List<string>();
 
     [ParamsSource(nameof(CmdsArraysKeys))]
@@ -73,15 +73,14 @@ public class ServerStoreTxMergerBench
             var numOfCmds = pair.Count;
             var cmdSizeInBytes = pair.Size;
 
-            var cmds = new RachisConsensusTestBase.TestCommand[numOfCmds];
+            var cmds = new RachisConsensusTestBase.TestCommandWithLargeData[numOfCmds];
 
             for (int i = 0; i < numOfCmds; i++)
             {
                 var randomData = GetRandomData(cmdSizeInBytes);
-                cmds[i] = new RachisConsensusTestBase.TestCommand
+                cmds[i] = new RachisConsensusTestBase.TestCommandWithLargeData
                 {
                     Name = $"test{i}",
-                    Value = i,
                     RandomData = randomData,
                     Timeout = TimeSpan.MaxValue
                 };
@@ -133,7 +132,7 @@ public class ActualTests : RachisConsensusTestBase
         _leader = await CreateNetworkAndGetLeader(1);
     }
 
-    public async Task Test(TestCommand[] cmds)
+    public async Task Test(TestCommandWithLargeData[] cmds)
     {
         var tasks = new List<Task>();
         for (var i = 0; i < cmds.Length; i++)

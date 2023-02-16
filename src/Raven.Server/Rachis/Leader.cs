@@ -296,15 +296,10 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void Run(object obj)
-        {
-            RunAsync().Wait();
-        }
-
         /// <summary>
         /// This is expected to run for a long time, and it cannot leak exceptions
         /// </summary>
-        private async Task RunAsync()
+        private void Run(object obj)
         {
             try
             {
@@ -337,7 +332,7 @@ namespace Raven.Server.Rachis
                                 break;
                             case 2: // promotable updated
                                 _promotableUpdated.Reset();
-                                CheckPromotablesAsync().Wait();
+                                CheckPromotablesAsync().GetAwaiter().GetResult();
                                 break;
                             case WaitHandle.WaitTimeout:
                                 break;

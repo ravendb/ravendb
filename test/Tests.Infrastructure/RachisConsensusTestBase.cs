@@ -441,18 +441,38 @@ namespace Tests.Infrastructure
 
             protected override void Apply(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
             {
-                Assert.True(cmd.TryGet(nameof(TestCommand.Name), out string name));
-                Assert.True(cmd.TryGet(nameof(TestCommand.Value), out int val));
-
-                string randomData = "";
-                if (cmd.TryGet(nameof(TestCommand.RandomData), out string randomData1))
+                if (cmd.TryGet("Type", out string type) == false)
                 {
-                    randomData = randomData1;
+                    // ReSharper disable once UseNullPropagation
+                    leader?.SetStateOf(index, tcs => { tcs.TrySetException(new RachisApplyException("Cannot execute command, wrong format")); });
+                    return;
                 }
 
-                var tree = context.Transaction.InnerTransaction.CreateTree("values");
-                var current = tree.Read(name)?.Reader.ToStringValue();
-                tree.Add(name, current + val + randomData);
+                switch (type)
+                {
+                    case nameof(TestCommand):
+                        Assert.True(cmd.TryGet(nameof(TestCommand.Name), out string name0));
+                        Assert.True(cmd.TryGet(nameof(TestCommand.Value), out int val0));
+                        var tree0 = context.Transaction.InnerTransaction.CreateTree("values");
+                        var current0 = tree0.Read(name0)?.Reader.ToStringValue();
+                        tree0.Add(name0, current0 + val0);
+                        break;
+
+                    case nameof(TestCommandWithLargeData):
+                        Assert.True(cmd.TryGet(nameof(TestCommandWithLargeData.Name), out string name1));
+                        Assert.True(cmd.TryGet(nameof(TestCommandWithLargeData.RandomData), out string randomData1));
+                        var tree1 = context.Transaction.InnerTransaction.CreateTree("values");
+                        tree1.Add(name1, randomData1);
+                        break;
+
+                    case nameof(TestCommandWithRaftId):
+                        Assert.True(cmd.TryGet(nameof(TestCommandWithRaftId.Name), out string name2));
+                        Assert.True(cmd.TryGet(nameof(TestCommandWithRaftId.Value), out int val2));
+                        var tree2 = context.Transaction.InnerTransaction.CreateTree("values");
+                        var current2 = tree2.Read(name2)?.Reader.ToStringValue();
+                        tree2.Add(name2, current2 + val2);
+                        break;
+                }
             }
 
             protected override RachisVersionValidation InitializeValidator()
@@ -510,6 +530,23 @@ namespace Tests.Infrastructure
 
             public object Value;
 
+            public override DynamicJsonValue ToJson(JsonOperationContext context)
+            {
+                var djv = base.ToJson(context);
+                UniqueRequestId ??= Guid.NewGuid().ToString();
+
+                djv[nameof(UniqueRequestId)] = UniqueRequestId;
+                djv[nameof(Name)] = Name;
+                djv[nameof(Value)] = Value;
+
+                return djv;
+            }
+        }
+
+        public class TestCommandWithLargeData : CommandBase
+        {
+            public string Name;
+
             public string RandomData = "";
 
             public override DynamicJsonValue ToJson(JsonOperationContext context)
@@ -519,7 +556,6 @@ namespace Tests.Infrastructure
 
                 djv[nameof(UniqueRequestId)] = UniqueRequestId;
                 djv[nameof(Name)] = Name;
-                djv[nameof(Value)] = Value;
                 djv[nameof(RandomData)] = RandomData;
 
                 return djv;
@@ -528,10 +564,10 @@ namespace Tests.Infrastructure
 
         internal class TestCommandWithRaftId : CommandBase
         {
-            private string Name;
+            internal string Name;
 
 #pragma warning disable 649
-            private object Value;
+            internal object Value;
 #pragma warning restore 649
 
             public TestCommandWithRaftId(string name, string uniqueRequestId) : base(uniqueRequestId)
