@@ -1341,12 +1341,13 @@ namespace Voron.Data.CompactTrees
 
             AssertValueAndKeySize(key, value);
 
+            FindPageFor(key, ref _internalCursor);
+            
             // this overload assumes that a previous call to TryGetValue (where you go the encodedKey
             // already placed us in the right place for the value)
             Debug.Assert(_internalCursor._stk[_internalCursor._pos].Header->PageFlags == CompactPageFlags.Leaf,
                 $"Got {_internalCursor._stk[_internalCursor._pos].Header->PageFlags} flag instead of {nameof(CompactPageFlags.Leaf)}");
 
-            FindPageFor(key, ref _internalCursor);
             AddToPage(key, value);
         }
 

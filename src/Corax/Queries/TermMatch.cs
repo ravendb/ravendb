@@ -10,7 +10,6 @@ using System.Runtime.Intrinsics.X86;
 using System.Collections.Generic;
 using Sparrow.Compression;
 using Sparrow.Server;
-using System.Security.Cryptography;
 using Sparrow.Server.Binary;
 
 namespace Corax.Queries
