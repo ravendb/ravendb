@@ -12,8 +12,8 @@ namespace Raven.Server.Documents.Queries.Results.Sharding;
 
 public class ShardedMapReduceResultRetriever : QueryResultRetrieverBase
 {
-    public ShardedMapReduceResultRetriever(ScriptRunnerCache scriptRunnerCache, IndexQueryServerSide query, QueryTimingsScope queryTimings, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand, char identitySeparator)
-        : base(scriptRunnerCache, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, reduceResults, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, identitySeparator)
+    public ShardedMapReduceResultRetriever(ScriptRunnerCache scriptRunnerCache, IndexQueryServerSide query, QueryTimingsScope queryTimings, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand, char identitySeparator)
+        : base(scriptRunnerCache, query, queryTimings, searchEngineType, fieldsToFetch, documentsStorage, context, reduceResults: true, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, identitySeparator)
     {
     }
 

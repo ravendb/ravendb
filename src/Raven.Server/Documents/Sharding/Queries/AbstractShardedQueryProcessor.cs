@@ -192,21 +192,47 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     private void RewriteQueryIfNeeded(ref BlittableJsonReaderObject queryTemplate)
     {
         var rewriteForPaging = Query.Offset is > 0;
-        var rewriteForProjection = true;
+        var rewriteForProjectionFromMapReduceIndex = true;
+        var rewriteForProjectionFromAutoMapReduceIndex = true;
 
         var query = Query.Metadata.Query;
-        if (query.Select?.Count > 0 == false &&
-            query.SelectFunctionBody.FunctionText == null)
+        var isProjectionQuery = query.Select?.Count > 0 ||
+                 query.SelectFunctionBody.FunctionText != null;
+
+        if (isProjectionQuery == false)
         {
-            rewriteForProjection = false;
+            rewriteForProjectionFromMapReduceIndex = false;
+            rewriteForProjectionFromAutoMapReduceIndex = false;
+        }
+        else
+        {
+            if (IsMapReduceIndex == false) 
+                rewriteForProjectionFromMapReduceIndex = false;
+
+            if (IsAutoMapReduceQuery == false) 
+                rewriteForProjectionFromAutoMapReduceIndex = false;
+            else
+            {
+                if (query.Select?.Count > 0)
+                {
+                    var hasAlias = false;
+
+                    foreach (var selectField in query.Select)
+                    {
+                        if (selectField.Alias is not null)
+                        {
+                            hasAlias = true;
+                            break;
+                        }
+                    }
+
+                    if (hasAlias == false)
+                        rewriteForProjectionFromMapReduceIndex = false;
+                }
+            }
         }
 
-        if (Query.Metadata.IndexName == null || IsMapReduceIndex == false)
-        {
-            rewriteForProjection = false;
-        }
-
-        if (rewriteForPaging == false && rewriteForProjection == false)
+        if (rewriteForPaging == false && rewriteForProjectionFromMapReduceIndex == false && rewriteForProjectionFromAutoMapReduceIndex == false)
             return;
 
         var clone = Query.Metadata.Query.ShallowCopy();
@@ -244,7 +270,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             modifications.Remove(nameof(IndexQueryServerSide.PageSize));
         }
 
-        if (rewriteForProjection)
+        if (rewriteForProjectionFromMapReduceIndex)
         {
             // If we have a projection in a map-reduce index,
             // the shards will send the query result and the orchestrator will re-reduce and apply the projection
@@ -259,6 +285,16 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             clone.Select = null;
             clone.SelectFunctionBody = default;
             clone.DeclaredFunctions = null;
+        }
+        else if (rewriteForProjectionFromAutoMapReduceIndex)
+        {
+            for (int i = 0; i < clone.Select.Count; i++)
+            {
+                if (clone.Select[i].Alias is null)
+                    continue;
+
+                clone.Select[i] = (clone.Select[i].Expression, null);
+            }
         }
 
         modifications[nameof(IndexQuery.Query)] = clone.ToString();
