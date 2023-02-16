@@ -411,8 +411,7 @@ namespace Raven.Server.Rachis
 
                         if (e is TopologyMismatchException)
                         {
-                            var result = _leader.TryModifyTopologyAsync(_tag, _url, Leader.TopologyModification.Remove).Result;
-                            if (result.Success)
+                            if (_leader.TryModifyTopology(_tag, _url, Leader.TopologyModification.Remove, out _))
                             {
                                 StatusMessage = "No longer in the topology";
                                 Status = AmbassadorStatus.Disconnected;

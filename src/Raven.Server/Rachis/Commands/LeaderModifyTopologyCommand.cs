@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -15,78 +16,69 @@ namespace Raven.Server.Rachis.Commands;
 public class LeaderModifyTopologyCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
 {
     private readonly RachisConsensus _engine;
-    private readonly Leader _leader;
     private readonly Leader.TopologyModification _modification;
-    private readonly string _nodeTag;
+    private string _nodeTag;
     private readonly string _nodeUrl;
+    public readonly Leader _leader;
     private readonly bool _validateNotInTopology;
 
-    public long Index { get; private set; }
-
-    public LeaderModifyTopologyCommand([NotNull] RachisConsensus engine, Leader leader, Leader.TopologyModification modification, string nodeTag, string nodeUrl, bool validateNotInTopology)
+    public LeaderModifyTopologyCommand([NotNull] RachisConsensus engine, [NotNull] Leader leader, Leader.TopologyModification modification, string nodeTag, string nodeUrl, bool validateNotInTopology)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _leader = leader;
+        _leader = leader ?? throw new ArgumentNullException(nameof(leader));
         _modification = modification;
         _nodeTag = nodeTag;
         _nodeUrl = nodeUrl;
         _validateNotInTopology = validateNotInTopology;
     }
 
-    public static void AssertTopology(ClusterTopology clusterTopology, bool validateNotInTopology, string nodeTag, string nodeUrl)
-    {
-        if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.TryGetNodeTagByUrl(nodeUrl).HasUrl))
-        {
-            throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
-                                                "with validation that it is not contained by the topology but current topology contains it.");
-        }
-    }
-
     protected override long ExecuteCmd(ClusterOperationContext context)
     {
-        var nodeTag = _nodeTag;
-        var nodeUrl = _nodeUrl;
         var clusterTopology = _engine.GetTopology(context);
 
         //We need to validate that the node doesn't exists before we generate the nodeTag
-        AssertTopology(clusterTopology, _validateNotInTopology, nodeTag, nodeUrl);
-
-        if (nodeTag == null)
+        if (_validateNotInTopology && (_nodeTag != null && clusterTopology.Contains(_nodeTag) || clusterTopology.TryGetNodeTagByUrl(_nodeUrl).HasUrl))
         {
-            nodeTag = Leader.GenerateNodeTag(clusterTopology);
+            throw new InvalidOperationException($"Was requested to modify the topology for node={_nodeTag} " +
+                                                "with validation that it is not contained by the topology but current topology contains it.");
+        }
+
+        if (_nodeTag == null)
+        {
+            _nodeTag = Leader.GenerateNodeTag(clusterTopology);
         }
 
         var newVotes = new Dictionary<string, string>(clusterTopology.Members);
-        newVotes.Remove(nodeTag);
+        newVotes.Remove(_nodeTag);
         var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
-        newPromotables.Remove(nodeTag);
+        newPromotables.Remove(_nodeTag);
         var newNonVotes = new Dictionary<string, string>(clusterTopology.Watchers);
-        newNonVotes.Remove(nodeTag);
+        newNonVotes.Remove(_nodeTag);
 
-        var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new[] { nodeTag }).Max();
+        var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new[] { _nodeTag }).Max();
 
-        if (nodeTag == _engine.Tag)
+        if (_nodeTag == _engine.Tag)
             RachisTopologyChangeException.Throw("Cannot modify the topology of the leader node.");
 
         switch (_modification)
         {
             case Leader.TopologyModification.Voter:
-                Debug.Assert(nodeUrl != null);
-                newVotes[nodeTag] = nodeUrl;
+                Debug.Assert(_nodeUrl != null);
+                newVotes[_nodeTag] = _nodeUrl;
                 break;
             case Leader.TopologyModification.Promotable:
-                Debug.Assert(nodeUrl != null);
-                newPromotables[nodeTag] = nodeUrl;
+                Debug.Assert(_nodeUrl != null);
+                newPromotables[_nodeTag] = _nodeUrl;
                 break;
             case Leader.TopologyModification.NonVoter:
-                Debug.Assert(nodeUrl != null);
-                newNonVotes[nodeTag] = nodeUrl;
+                Debug.Assert(_nodeUrl != null);
+                newNonVotes[_nodeTag] = _nodeUrl;
                 break;
             case Leader.TopologyModification.Remove:
-                _leader.PeersVersion.TryRemove(nodeTag, out _);
-                if (clusterTopology.Contains(nodeTag) == false)
+                _leader.PeersVersion.TryRemove(_nodeTag, out _);
+                if (clusterTopology.Contains(_nodeTag) == false)
                 {
-                    throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
+                    throw new InvalidOperationException($"Was requested to remove node={_nodeTag} from the topology " +
                                                         "but it is not contained by the topology.");
                 }
                 break;
@@ -104,21 +96,24 @@ public class LeaderModifyTopologyCommand : MergedTransactionCommand<ClusterOpera
         );
 
         var topologyJson = _engine.SetTopology(context, clusterTopology);
-        Index = _engine.InsertToLeaderLog(context, _leader.Term, topologyJson, RachisEntryFlags.Topology);
+        var index = _engine.InsertToLeaderLog(context, _leader.Term, topologyJson, RachisEntryFlags.Topology);
 
         if (_modification == Leader.TopologyModification.Remove)
         {
-            _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, _leader.Term, nodeTag);
+            _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, _leader.Term, _nodeTag);
         }
 
+        // after commit but still under the lock
         context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += (tx) =>
         {
             var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _leader._entries[Index] = new Leader.CommandState { TaskCompletionSource = tcs, CommandIndex = Index };
+            _leader._entries[index] = new Leader.CommandState
+            {
+                TaskCompletionSource = tcs, 
+                CommandIndex = index
+            };
 
-#pragma warning disable CS4014
             tcs.Task.ContinueWith(_ =>
-#pragma warning restore CS4014
             {
                 Interlocked.Exchange(ref _leader._topologyModification, null)?.TrySetResult(null);
             });

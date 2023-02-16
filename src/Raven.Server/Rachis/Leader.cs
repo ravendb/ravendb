@@ -332,7 +332,7 @@ namespace Raven.Server.Rachis
                                 break;
                             case 2: // promotable updated
                                 _promotableUpdated.Reset();
-                                CheckPromotablesAsync().GetAwaiter().GetResult();
+                                CheckPromotables();
                                 break;
                             case WaitHandle.WaitTimeout:
                                 break;
@@ -646,7 +646,7 @@ namespace Raven.Server.Rachis
             return 0;
         }
 
-        private async Task CheckPromotablesAsync()
+        private void CheckPromotables()
         {
             long lastIndex;
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -660,7 +660,7 @@ namespace Raven.Server.Rachis
                 if (ambassador.Value.FollowerMatchIndex != lastIndex)
                     continue;
 
-                await TryModifyTopologyAsync(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter);
+                TryModifyTopology(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter, out Task _);
 
                 break;
             }
@@ -975,56 +975,31 @@ namespace Raven.Server.Rachis
             Remove
         }
 
-        public async Task<(bool Success, Task Task)> TryModifyTopologyAsync(string nodeTag, string nodeUrl, TopologyModification modification, bool validateNotInTopology = false, Action<TransactionOperationContext> beforeCommit = null)
+        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false, Action<TransactionOperationContext> beforeCommit = null)
         {
             if (nodeTag != null)
             {
                 RachisConsensus.ValidateNodeTag(nodeTag);
             }
 
-            using (await _disposerLock.EnsureNotDisposedAsync())
+            using (_disposerLock.EnsureNotDisposed())
             {
                 var topologyModification = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var existing = Interlocked.CompareExchange(ref _topologyModification, topologyModification, null);
                 if (existing != null)
                 {
-                    return (false, existing.Task);
+                    task = existing.Task;
+                    return false;
                 }
-                var task = topologyModification.Task;
+                task = topologyModification.Task;
 
                 try
                 {
-                    using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var clusterTopology = _engine.GetTopology(context);
-
-                        //We need to validate that the node doesn't exists before we generate the nodeTag
-                        LeaderModifyTopologyCommand.AssertTopology(clusterTopology, validateNotInTopology, nodeTag, nodeUrl);
-                    }
-
                     var command = new LeaderModifyTopologyCommand(_engine, this, modification, nodeTag, nodeUrl, validateNotInTopology);
-                    await _engine.TxMerger.Enqueue(command);
-
-                    var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    _entries[command.Index] = new CommandState
-                    {
-                        TaskCompletionSource = tcs,
-                        CommandIndex = command.Index
-                    };
-
-#pragma warning disable CS4014
-                    tcs.Task.ContinueWith(_ =>
-#pragma warning restore CS4014
-                    {
-                        Interlocked.Exchange(ref _topologyModification, null)?.TrySetResult(null);
-                    });
+                    _engine.TxMerger.EnqueueSync(command);
                 }
                 catch (Exception e)
                 {
-                    if (e is AggregateException ae)
-                        e = ae.ExtractSingleInnerException();
-
                     Interlocked.Exchange(ref _topologyModification, null)?.TrySetException(e);
                     throw;
                 }
@@ -1033,7 +1008,7 @@ namespace Raven.Server.Rachis
                 _voterResponded.Set();
                 _newEntry.Set();
 
-                return (true, task);
+                return true;
             }
         }
 

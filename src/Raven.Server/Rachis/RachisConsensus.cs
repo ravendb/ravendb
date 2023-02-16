@@ -2410,14 +2410,11 @@ namespace Raven.Server.Rachis
             if (leader == null)
                 throw new NotLeadingException("I am not the leader, cannot accept commands. " + _lastStateChangeReason);
 
-            while (true)
-            {
-                var result = await leader.TryModifyTopologyAsync(nodeTag, nodeUrl, modification, validateNotInTopology);
-                await result.Task;
+            Task task;
+            while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, out task, validateNotInTopology) == false)
+                await task;
 
-                if (result.Success)
-                    break;
-            }
+            await task;
         }
 
         private string _leaderTag;
