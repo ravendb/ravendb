@@ -3,6 +3,7 @@ using Raven.Client;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.Issues
             public Address Address { get; set; }
         }
 
-        [Fact]
-        public void Can_retrieve_index_entries_of_auto_map_reduce_index()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void Can_retrieve_index_entries_of_auto_map_reduce_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

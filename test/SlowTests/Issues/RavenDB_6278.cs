@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,10 +23,11 @@ namespace SlowTests.Issues
             public string AddressId { get; set; }
         }
 
-        [Fact]
-        public void ShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
@@ -53,7 +55,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var result = commands.Query(new IndexQuery {Query = "FROM Index 'test'"}, indexEntriesOnly: true);
+                    var result = commands.Query(new IndexQuery { Query = "FROM Index 'test'" }, indexEntriesOnly: true);
                     Assert.Equal(1, result.Results.Length);
                 }
             }
