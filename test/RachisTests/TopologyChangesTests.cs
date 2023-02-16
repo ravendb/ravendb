@@ -161,7 +161,7 @@ namespace RachisTests
                 id = node1.GetTopology(ctx).TopologyId;
             }
 
-            node2.HardResetToPassive(id);
+            await node2.HardResetToPassiveAsync(id);
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
             {
                 await node2.WaitForState(RachisState.Passive, cts.Token);

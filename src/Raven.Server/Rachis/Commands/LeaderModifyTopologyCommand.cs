@@ -103,23 +103,31 @@ public class LeaderModifyTopologyCommand : MergedTransactionCommand<ClusterOpera
             _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, _leader.Term, _nodeTag);
         }
 
+        Index = index;
         // after commit but still under the lock
         context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += (tx) =>
         {
-            var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _leader._entries[index] = new Leader.CommandState
-            {
-                TaskCompletionSource = tcs, 
-                CommandIndex = index
-            };
-
-            tcs.Task.ContinueWith(_ =>
-            {
-                Interlocked.Exchange(ref _leader._topologyModification, null)?.TrySetResult(null);
-            });
+            AfterCommit(index);
         };
 
         return 1;
+    }
+
+    public long Index = -1;
+
+    public void AfterCommit(long index)
+    {
+        var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _leader._entries[index] = new Leader.CommandState
+        {
+            TaskCompletionSource = tcs,
+            CommandIndex = index
+        };
+
+        tcs.Task.ContinueWith(_ =>
+        {
+            Interlocked.Exchange(ref _leader._topologyModification, null)?.TrySetResult(null);
+        });
     }
 
     public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>> ToDto(ClusterOperationContext context)

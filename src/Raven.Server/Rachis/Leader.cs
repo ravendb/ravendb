@@ -328,11 +328,11 @@ namespace Raven.Server.Rachis
                                 break;
                             case 1: // voter responded
                                 _voterResponded.Reset();
-                                OnVoterConfirmation();
+                                OnVoterConfirmationAsync().GetAwaiter().GetResult();
                                 break;
                             case 2: // promotable updated
                                 _promotableUpdated.Reset();
-                                CheckPromotables();
+                                CheckPromotablesAsync().GetAwaiter().GetResult();
                                 break;
                             case WaitHandle.WaitTimeout:
                                 break;
@@ -476,7 +476,7 @@ namespace Raven.Server.Rachis
 
         private long _lastCommit;
 
-        private void OnVoterConfirmation()
+        private async Task OnVoterConfirmationAsync()
         {
             if (_hasNewTopology.Lower())
             {
@@ -522,7 +522,7 @@ namespace Raven.Server.Rachis
                 changedFromLeaderElectToLeader = _engine.TakeOffice();
 
                 var command = new LeaderApplyCommand(this, _engine, _lastCommit, maxIndexOnQuorum);
-                _engine.TxMerger.EnqueueSync(command);
+                await _engine.TxMerger.Enqueue(command);
 
                 _lastCommit = command.LastAppliedCommit;
             }
@@ -646,7 +646,7 @@ namespace Raven.Server.Rachis
             return 0;
         }
 
-        private void CheckPromotables()
+        private async Task CheckPromotablesAsync()
         {
             long lastIndex;
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -660,7 +660,7 @@ namespace Raven.Server.Rachis
                 if (ambassador.Value.FollowerMatchIndex != lastIndex)
                     continue;
 
-                TryModifyTopology(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter, out Task _);
+                await TryModifyTopologyAsync(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter);
 
                 break;
             }
@@ -975,7 +975,7 @@ namespace Raven.Server.Rachis
             Remove
         }
 
-        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false, Action<TransactionOperationContext> beforeCommit = null)
+        public async Task<(bool Success, Task Task)> TryModifyTopologyAsync(string nodeTag, string nodeUrl, TopologyModification modification, bool validateNotInTopology = false, Action<TransactionOperationContext> beforeCommit = null)
         {
             if (nodeTag != null)
             {
@@ -988,15 +988,14 @@ namespace Raven.Server.Rachis
                 var existing = Interlocked.CompareExchange(ref _topologyModification, topologyModification, null);
                 if (existing != null)
                 {
-                    task = existing.Task;
-                    return false;
+                    return (false, existing.Task);
                 }
-                task = topologyModification.Task;
+                var task = topologyModification.Task;
 
                 try
                 {
                     var command = new LeaderModifyTopologyCommand(_engine, this, modification, nodeTag, nodeUrl, validateNotInTopology);
-                    _engine.TxMerger.EnqueueSync(command);
+                    await _engine.TxMerger.Enqueue(command);
                 }
                 catch (Exception e)
                 {
@@ -1008,7 +1007,7 @@ namespace Raven.Server.Rachis
                 _voterResponded.Set();
                 _newEntry.Set();
 
-                return true;
+                return (true, task);
             }
         }
 

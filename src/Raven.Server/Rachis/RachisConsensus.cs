@@ -2087,7 +2087,7 @@ namespace Raven.Server.Rachis
         {
             if (term != CurrentTerm)
             {
-                throw new ConcurrencyException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
+                throw new RachisConcurrencyException($"The term was changed from {term:#,#;;0} to {CurrentTerm:#,#;;0}");
             }
         }
 
@@ -2319,10 +2319,10 @@ namespace Raven.Server.Rachis
         }
 
 
-        public void HardResetToPassive(string topologyId = null)
+        public Task HardResetToPassiveAsync(string topologyId = null)
         {
             var command = new HardResetToPassiveCommand(this, _tag, topologyId);
-            TxMerger.EnqueueSync(command);
+            return TxMerger.Enqueue(command);
         }
 
         public class HardResetToPassiveCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
@@ -2410,11 +2410,14 @@ namespace Raven.Server.Rachis
             if (leader == null)
                 throw new NotLeadingException("I am not the leader, cannot accept commands. " + _lastStateChangeReason);
 
-            Task task;
-            while (leader.TryModifyTopology(nodeTag, nodeUrl, modification, out task, validateNotInTopology) == false)
-                await task;
+            while (true)
+            {
+                var result = await leader.TryModifyTopologyAsync(nodeTag, nodeUrl, modification, validateNotInTopology);
+                await result.Task;
 
-            await task;
+                if (result.Success)
+                    break;
+            }
         }
 
         private string _leaderTag;

@@ -214,7 +214,7 @@ namespace RachisTests.DatabaseCluster
                 var result = WaitForDocument(store2, "foo/bar");
                 Assert.True(result);
 
-                cluster.Leader.ServerStore.Engine.HardResetToPassive(Guid.NewGuid().ToString());
+                await cluster.Leader.ServerStore.Engine.HardResetToPassiveAsync(Guid.NewGuid().ToString());
                 await cluster.Leader.ServerStore.EnsureNotPassiveAsync(nodeTag: tag);
 
                 var outgoingConnections = WaitForValue(() =>
