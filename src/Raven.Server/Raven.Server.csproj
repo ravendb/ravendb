@@ -151,8 +151,9 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.101.12" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.103.10" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.105.4" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.101.13" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.103.11" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.5.1" />
     <PackageReference Include="CloudNative.CloudEvents" Version="2.5.1" />    
