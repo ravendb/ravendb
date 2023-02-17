@@ -51,7 +51,6 @@ input {
             margin-left: bs5variables.$form-check-padding-start * -1 * $ratio;
             width: bs5variables.$form-check-input-width * $ratio;
             height: bs5variables.$form-check-input-width * $ratio;
-            //margin-top: ($line-height-base - $form-check-input-width) * .5  * $ratio;
         }
 
         &.form-check-reverse {
