@@ -1,21 +1,7 @@
-﻿$additional-utilities: (
-    // Automatic color adjustment for backckround-color utility TODO - NOT WORKING :(
-    "bg-text-color":
-        (
-            property: color,
-            class: bg,
-            values: (
-                primary: color-contrast($primary),
-                success: color-contrast($success),
-                warning: color-contrast($warning),
-                danger: color-contrast($danger),
-                info: color-contrast($info),
-            ),
-        )
-);
-
-@each $key, $utility in $additional-utilities {
-    @include generate-utility($utility, null);
+﻿@each $key, $value in $theme-colors {
+    .bg-#{$key} {
+        color: color-contrast($value);
+    }
 }
 
 @each $key, $value in $theme-colors {
