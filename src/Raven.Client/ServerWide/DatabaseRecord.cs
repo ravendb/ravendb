@@ -235,10 +235,12 @@ namespace Raven.Client.ServerWide
             var isRolling = IsRolling(definition.DeploymentMode, globalDeploymentMode);
             
             AddIndexHistory(definition, source, revisionsToKeep, createdAt);
-            
+
+            definition.ClusterState ??= new IndexUpdateClusterState();
+
             if (isRolling)
             {
-                definition.ClusterState ??= new ClusterState();
+                
                 definition.ClusterState.LastRollingDeploymentIndex = raftIndex;
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
                 {
@@ -246,6 +248,8 @@ namespace Raven.Client.ServerWide
                     definition.DeploymentMode = IndexDeploymentMode.Rolling;
                 }
             }
+
+            definition.ClusterState.LastIndex = raftIndex;
         }
 
         internal void AddIndexHistory(IndexDefinition definition, string source, int revisionsToKeep, DateTime createdAt, Dictionary<string, RollingIndexDeployment> rollingIndexDeployment = null, bool isFromCommand = false, bool isRolling = false)
@@ -320,6 +324,9 @@ namespace Raven.Client.ServerWide
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
                     InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
             }
+
+            definition.ClusterState ??= new IndexUpdateClusterState();
+            definition.ClusterState.LastIndex = raftIndex;
         }
 
         internal static bool IsRolling(IndexDeploymentMode? fromDefinition, IndexDeploymentMode fromSetting)

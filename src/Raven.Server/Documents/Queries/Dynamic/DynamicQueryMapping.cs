@@ -34,33 +34,33 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 return new AutoMapIndexDefinition(ForCollection, MapFields.Values
                     .OrderBy(x => x.Name.Value, StringComparer.Ordinal)
                     .Select(field =>
-                    {
-                        var indexField = new AutoIndexField
                         {
-                            Id = idForFields++,
-                            Name = field.Name,
-                            Storage = FieldStorage.No,
-                            Indexing = AutoFieldIndexing.Default,
-                            HasQuotedName = field.Name.IsQuoted
-                        };
+                            var indexField = new AutoIndexField
+                            {
+                                Id = idForFields++,
+                                Name = field.Name,
+                                Storage = FieldStorage.No,
+                                Indexing = AutoFieldIndexing.Default,
+                                HasQuotedName = field.Name.IsQuoted
+                            };
 
-                        if (field.IsFullTextSearch)
-                            indexField.Indexing |= AutoFieldIndexing.Search;
+                            if (field.IsFullTextSearch)
+                                indexField.Indexing |= AutoFieldIndexing.Search;
 
-                        if (field.IsExactSearch)
-                            indexField.Indexing |= AutoFieldIndexing.Exact;
+                            if (field.IsExactSearch)
+                                indexField.Indexing |= AutoFieldIndexing.Exact;
 
-                        if (field.HasHighlighting)
-                            indexField.Indexing |= AutoFieldIndexing.Highlighting;
+                            if (field.HasHighlighting)
+                                indexField.Indexing |= AutoFieldIndexing.Highlighting;
 
-                        if (field.Spatial != null)
-                            indexField.Spatial = new AutoSpatialOptions(field.Spatial);
+                            if (field.Spatial != null)
+                                indexField.Spatial = new AutoSpatialOptions(field.Spatial);
 
-                        indexField.HasSuggestions = field.HasSuggestions;
+                            indexField.HasSuggestions = field.HasSuggestions;
 
-                        return indexField;
-                    }
-                ).ToArray(), deploymentMode: null);
+                            return indexField;
+                        }
+                    ).ToArray(), deploymentMode: null, clusterState: null);
             }
 
             if (GroupByFields.Count == 0)
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     indexField.HasSuggestions = field.HasSuggestions;
 
                     return indexField;
-                }).ToArray(), deploymentMode: null);
+                }).ToArray(), deploymentMode: null, clusterState: null);
         }
 
         public void ExtendMappingBasedOn(AutoIndexDefinitionBaseServerSide definitionOfExistingIndex)

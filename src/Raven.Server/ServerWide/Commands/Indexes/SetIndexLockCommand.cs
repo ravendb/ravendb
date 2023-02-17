@@ -28,6 +28,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (record.Indexes.TryGetValue(IndexName, out IndexDefinition staticIndex))
             {
                 staticIndex.LockMode = LockMode;
+                staticIndex.ClusterState.LastIndex = etag;
             }
 
             if (record.AutoIndexes.ContainsKey(IndexName))

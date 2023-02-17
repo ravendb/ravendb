@@ -357,7 +357,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition.Type == IndexType.AutoMap)
             {
-                var result = new AutoMapIndexDefinition(definition.Collection, mapFields, indexDeployment, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+                var result = new AutoMapIndexDefinition(definition.Collection, mapFields, indexDeployment, definition.ClusterState, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
@@ -381,7 +381,7 @@ namespace Raven.Server.Documents.Indexes
                     })
                     .ToArray();
 
-                var result = new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields, indexDeployment, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+                var result = new AutoMapReduceIndexDefinition(definition.Collection, mapFields, groupByFields, indexDeployment, definition.ClusterState, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 if (definition.Priority.HasValue)
                     result.Priority = definition.Priority.Value;
@@ -1638,7 +1638,8 @@ namespace Raven.Server.Documents.Indexes
                 if (indexDefinition.State != null && index.Definition.State != indexDefinition.State)
                     differences |= IndexDefinitionCompareDifferences.State;
 
-                index.Definition.ClusterState.LastStateIndex = (indexDefinition.ClusterState?.LastStateIndex ?? 0);
+                index.Definition.ClusterState.LastIndex = indexDefinition.ClusterState?.LastIndex ?? 0;
+                index.Definition.ClusterState.LastStateIndex = indexDefinition.ClusterState?.LastStateIndex ?? 0;
 
                 if (differences != IndexDefinitionCompareDifferences.None)
                 {

@@ -250,10 +250,10 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
-            if (result.RaftCommandIndex.HasValue)
+            if (result.IndexDefinitionRaftIndex.HasValue)
             {
-                writer.WritePropertyName(nameof(result.RaftCommandIndex));
-                writer.WriteInteger(result.RaftCommandIndex.Value);
+                writer.WritePropertyName(nameof(result.IndexDefinitionRaftIndex));
+                writer.WriteInteger(result.IndexDefinitionRaftIndex.Value);
                 writer.WriteComma();
             }
 
@@ -689,11 +689,11 @@ namespace Raven.Server.Json
                     (w, c, spatialShape) => w.WriteSpatialShapeResult(c, spatialShape));
             }
 
-            if (result.RaftCommandIndex.HasValue)
+            if (result.IndexDefinitionRaftIndex.HasValue)
             {
                 writer.WriteComma();
-                writer.WritePropertyName(nameof(result.RaftCommandIndex));
-                writer.WriteInteger(result.RaftCommandIndex.Value);
+                writer.WritePropertyName(nameof(result.IndexDefinitionRaftIndex));
+                writer.WriteInteger(result.IndexDefinitionRaftIndex.Value);
             }
 
             writeAdditionalData?.Invoke(writer);

@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes
     {
         protected IndexDefinitionBaseServerSide()
         {
-            ClusterState = new ClusterState();
+            ClusterState = new IndexUpdateClusterState();
         }
 
         public string Name { get; protected set; }
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; set; }
 
-        internal readonly ClusterState ClusterState;
+        internal readonly IndexUpdateClusterState ClusterState;
 
         public IndexDeploymentMode DeploymentMode { get; set; }
 
@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Indexes
             T[] mapFields,
             long indexVersion,
             IndexDeploymentMode? deploymentMode,
-            ClusterState clusterState)
+            IndexUpdateClusterState clusterState)
         {
             Name = name;
             DeploymentMode = deploymentMode ?? IndexDeploymentMode.Parallel;
@@ -210,6 +210,7 @@ namespace Raven.Server.Documents.Indexes
             Priority = priority;
             State = state;
             _indexVersion = indexVersion;
+            ClusterState.LastIndex = clusterState?.LastIndex ?? 0;
             ClusterState.LastStateIndex = clusterState?.LastStateIndex ?? 0;
             ClusterState.LastRollingDeploymentIndex = clusterState?.LastRollingDeploymentIndex ?? 0;
         }

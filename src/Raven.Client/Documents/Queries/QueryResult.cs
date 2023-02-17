@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Queries
         public long DurationInMs { get; set; }
 
         [ForceJsonSerialization]
-        internal long? RaftCommandIndex;
+        internal long? IndexDefinitionRaftIndex;
     }
 
     public class QueryResult : QueryResult<BlittableJsonReaderArray, BlittableJsonReaderObject>

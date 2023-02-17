@@ -3047,7 +3047,10 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer,
             IndexQueryServerSide query, QueryOperationContext queryContext, OperationCancelToken token)
         {
-            var result = new StreamDocumentQueryResult(response, writer, token);
+            var result = new StreamDocumentQueryResult(response, writer, token)
+            {
+                IndexDefinitionRaftIndex = Definition.ClusterState.LastIndex
+            };
             await QueryInternal(result, query, queryContext, pulseDocsReadingTransaction: true, token);
             result.Flush();
 
@@ -3057,7 +3060,10 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task StreamIndexEntriesQuery(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
             IndexQueryServerSide query, QueryOperationContext queryContext, bool ignoreLimit, OperationCancelToken token)
         {
-            var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token);
+            var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token)
+            {
+                IndexDefinitionRaftIndex = Definition.ClusterState.LastIndex
+            };
             await IndexEntriesQueryInternal(result, query, queryContext, ignoreLimit, token);
             result.Flush();
 
@@ -3071,7 +3077,10 @@ namespace Raven.Server.Documents.Indexes
             Action<DeterminateProgress> onProgress,
             OperationCancelToken token)
         {
-            var result = new DocumentIdQueryResult(progress, onProgress, token);
+            var result = new DocumentIdQueryResult(progress, onProgress, token)
+            {
+                IndexDefinitionRaftIndex = Definition.ClusterState.LastIndex
+            };
             await QueryInternal(result, query, queryContext, pulseDocsReadingTransaction: false, token: token);
             return result;
         }
@@ -3081,7 +3090,10 @@ namespace Raven.Server.Documents.Indexes
             QueryOperationContext queryContext,
             OperationCancelToken token)
         {
-            var result = new DocumentQueryResult();
+            var result = new DocumentQueryResult()
+            {
+                IndexDefinitionRaftIndex = Definition.ClusterState.LastIndex
+            };
             await QueryInternal(result, query, queryContext, pulseDocsReadingTransaction: false, token: token);
             return result;
         }
@@ -3679,7 +3691,10 @@ namespace Raven.Server.Documents.Indexes
             bool ignoreLimit,
             OperationCancelToken token)
         {
-            var result = new IndexEntriesQueryResult();
+            var result = new IndexEntriesQueryResult()
+            {
+                IndexDefinitionRaftIndex = Definition.ClusterState.LastIndex
+            };
             await IndexEntriesQueryInternal(result, query, queryContext, ignoreLimit, token);
             return result;
         }
