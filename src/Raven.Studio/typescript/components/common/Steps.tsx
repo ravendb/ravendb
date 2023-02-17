@@ -6,12 +6,13 @@ import { Icon } from "./Icon";
 interface Props {
     current: number;
     steps: string[];
+    onClick: (stepNum: number) => void;
     className?: string;
 }
 
 export class Steps extends React.Component<Props> {
     render() {
-        const { current, steps, className } = this.props;
+        const { current, steps, onClick, className } = this.props;
 
         const stepNodes = steps.map((stepName, i) => {
             const classes = classNames({
@@ -20,7 +21,7 @@ export class Steps extends React.Component<Props> {
                 active: i === current,
             });
             const stepItem = (
-                <div key={"step-" + i} className={classes}>
+                <div key={"step-" + i} className={classes} onClick={() => onClick(i)}>
                     <div className="step-bullet">
                         <Icon icon="arrow-thin-bottom" className="bullet-icon-active" />
                         <Icon icon="check" className="bullet-icon-done" />

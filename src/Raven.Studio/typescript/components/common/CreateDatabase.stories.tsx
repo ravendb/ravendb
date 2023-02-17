@@ -5,6 +5,7 @@ import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Button, Card } from "reactstrap";
 import { CreateDatabase } from "./CreateDatabase";
 import { Icon } from "./Icon";
+import { boundCopy } from "components/utils/common";
 
 export default {
     title: "Bits/CreateDatabase",
@@ -12,9 +13,8 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } as ComponentMeta<typeof CreateDatabase>;
 
-export function CreateDatabases() {
+const TemplatePanel = (args: { serverAuthentication: boolean }) => {
     const [createDatabaseModal, setCreateDatabaseModal] = useState(true);
-
     const toggleCreateDatabase = () => setCreateDatabaseModal(!createDatabaseModal);
 
     return (
@@ -30,10 +30,15 @@ export function CreateDatabases() {
             <CreateDatabase
                 createDatabaseModal={createDatabaseModal}
                 toggleCreateDatabase={toggleCreateDatabase}
+                serverAuthentication={args.serverAuthentication}
             ></CreateDatabase>
 
             <div id="OverlayContainer"></div>
             <div id="PopoverContainer" className="popover-container-fix"></div>
         </>
     );
-}
+};
+
+export const Panel = boundCopy(TemplatePanel, {
+    serverAuthentication: true,
+});
