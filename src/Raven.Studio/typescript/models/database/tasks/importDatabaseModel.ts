@@ -27,6 +27,9 @@ class importDatabaseModel {
     includeExpiredDocuments = ko.observable(true);
     includeArtificialDocuments = ko.observable(false);
     removeAnalyzers = ko.observable(false);
+
+    includeAllCollections = ko.observable<boolean>(true);
+    includedCollections = ko.observableArray<string>([]);
     
     transformScript = ko.observable<string>();
 
@@ -179,7 +182,8 @@ class importDatabaseModel {
             RemoveAnalyzers: this.removeAnalyzers(),
             EncryptionKey: this.encryptedInput() ? this.encryptionKey() : undefined,
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
-            OperateOnDatabaseRecordTypes: recordTypes
+            OperateOnDatabaseRecordTypes: recordTypes,
+            Collections: this.includeAllCollections() ? null : this.includedCollections(),
         } as Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions;
     }
 
