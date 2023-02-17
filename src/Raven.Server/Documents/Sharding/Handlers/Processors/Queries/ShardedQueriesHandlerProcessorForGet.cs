@@ -48,7 +48,7 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
 
             using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
             {
-                var queryProcessor = new ShardedIndexEntriesQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, token: token.Token);
+                var queryProcessor = new ShardedIndexEntriesQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, ignoreLimit, token.Token);
 
                 await queryProcessor.InitializeAsync();
 
@@ -125,8 +125,7 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
 
             using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
             {
-                var queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly: false,
-                    token: token.Token);
+                var queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, metadataOnly, token.Token);
 
                 await queryProcessor.InitializeAsync();
 

@@ -18,11 +18,13 @@ namespace Raven.Client.Documents.Commands
 
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
+        private readonly bool _ignoreLimit;
 
-        protected AbstractQueryCommand(IndexQueryBase<TParameters> indexQuery, bool canCache, bool metadataOnly, bool indexEntriesOnly)
+        protected AbstractQueryCommand(IndexQueryBase<TParameters> indexQuery, bool canCache, bool metadataOnly, bool indexEntriesOnly, bool ignoreLimit)
         {
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
+            _ignoreLimit = ignoreLimit;
 
             if (indexQuery.WaitForNonStaleResultsTimeout.HasValue && indexQuery.WaitForNonStaleResultsTimeout != TimeSpan.MaxValue)
             {
@@ -65,6 +67,9 @@ namespace Raven.Client.Documents.Commands
                 path.Append("&debug=entries");
             }
 
+            if (_ignoreLimit)
+                path.Append("&ignoreLimit=true");
+
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
@@ -92,7 +97,8 @@ namespace Raven.Client.Documents.Commands
         private readonly IndexQuery _indexQuery;
         private readonly InMemoryDocumentSessionOperations _session;
 
-        public QueryCommand(InMemoryDocumentSessionOperations session, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false) : base(indexQuery, indexQuery.DisableCaching == false, metadataOnly, indexEntriesOnly)
+        public QueryCommand(InMemoryDocumentSessionOperations session, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false) 
+            : base(indexQuery, indexQuery.DisableCaching == false, metadataOnly, indexEntriesOnly, ignoreLimit: false)
         {
             _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
             _session = session ?? throw new ArgumentNullException(nameof(session));

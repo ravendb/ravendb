@@ -24,8 +24,9 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
         long? existingResultEtag,
         bool metadataOnly,
         bool indexEntriesOnly,
+        bool ignoreLimit,
         CancellationToken token)
-        : base(context, requestHandler, query, metadataOnly, indexEntriesOnly, existingResultEtag, token)
+        : base(context, requestHandler, query, metadataOnly, indexEntriesOnly, ignoreLimit, existingResultEtag, token)
     {
 
     }
@@ -87,5 +88,5 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
         }
     }
 
-    protected virtual ShardedMapReduceQueryResultsMerger CreateMapReduceQueryResultsMerger(TCombinedResult result) => new(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context);
+    protected virtual ShardedMapReduceQueryResultsMerger CreateMapReduceQueryResultsMerger(TCombinedResult result) => new(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context, Token);
 }

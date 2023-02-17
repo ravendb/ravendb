@@ -25,8 +25,14 @@ namespace Raven.Server.Documents.Sharding.Queries;
 
 public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResult>
 {
-    public ShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, long? existingResultEtag, bool metadataOnly, bool indexEntriesOnly, CancellationToken token)
-        : base(context, requestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly, token)
+    public ShardedQueryProcessor(
+        TransactionOperationContext context,
+        ShardedDatabaseRequestHandler requestHandler,
+        IndexQueryServerSide query,
+        long? existingResultEtag,
+        bool metadataOnly,
+        CancellationToken token)
+        : base(context, requestHandler, query, existingResultEtag, metadataOnly, indexEntriesOnly: false, ignoreLimit: false, token)
     {
     }
 

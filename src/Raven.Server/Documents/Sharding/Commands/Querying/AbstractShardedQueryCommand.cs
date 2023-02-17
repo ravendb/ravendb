@@ -16,8 +16,17 @@ public abstract class AbstractShardedQueryCommand<TResult, TParameters> : Abstra
     public readonly QueryTimingsScope Scope;
 
     protected readonly string IndexName;
-    protected AbstractShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryBase<TParameters> indexQuery, QueryTimingsScope scope, bool metadataOnly, bool indexEntriesOnly, string indexName,
-        bool canReadFromCache, string raftUniqueRequestId) : base(indexQuery, true, metadataOnly, indexEntriesOnly)
+    protected AbstractShardedQueryCommand(
+        BlittableJsonReaderObject query,
+        IndexQueryBase<TParameters> indexQuery,
+        QueryTimingsScope scope,
+        bool metadataOnly,
+        bool indexEntriesOnly,
+        bool ignoreLimit,
+        string indexName,
+        bool canReadFromCache,
+        string raftUniqueRequestId)
+        : base(indexQuery, true, metadataOnly, indexEntriesOnly, ignoreLimit)
     {
         _query = query;
         Scope = scope;

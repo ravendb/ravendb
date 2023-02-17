@@ -24,14 +24,16 @@ public class ShardedMapReduceQueryResultsMerger
     private readonly string _indexName;
     private readonly bool _isAutoMapReduceQuery;
     protected readonly TransactionOperationContext Context;
+    protected readonly CancellationToken Token;
 
-    public ShardedMapReduceQueryResultsMerger(List<BlittableJsonReaderObject> currentResults, ShardedDatabaseContext.ShardedIndexesContext indexesContext, string indexName, bool isAutoMapReduceQuery, TransactionOperationContext context)
+    public ShardedMapReduceQueryResultsMerger(List<BlittableJsonReaderObject> currentResults, ShardedDatabaseContext.ShardedIndexesContext indexesContext, string indexName, bool isAutoMapReduceQuery, TransactionOperationContext context, CancellationToken token)
     {
         CurrentResults = currentResults;
         _indexesContext = indexesContext;
         _indexName = indexName;
         _isAutoMapReduceQuery = isAutoMapReduceQuery;
         Context = context;
+        Token = token;
     }
 
     public List<BlittableJsonReaderObject> Merge()
@@ -88,6 +90,6 @@ public class ShardedMapReduceQueryResultsMerger
     protected virtual AggregationResult AggregateForAutoMapReduce(AutoMapReduceIndexDefinition indexDefinition)
     {
         BlittableJsonReaderObject currentlyProcessedResult = null;
-        return ReduceMapResultsOfAutoIndex.Aggregator.AggregateOn(CurrentResults, indexDefinition, Context, null, ref currentlyProcessedResult, CancellationToken.None);
+        return ReduceMapResultsOfAutoIndex.Aggregator.AggregateOn(CurrentResults, indexDefinition, Context, null, ref currentlyProcessedResult, Token);
     }
 }
