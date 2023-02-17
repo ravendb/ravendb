@@ -172,6 +172,37 @@
                 <div class="margin-left margin-left-lg">
                     <div class="margin-bottom">
                         <div class="toggle">
+                            <input id="collections" type="checkbox" data-bind="checked: includeAllCollections" />
+                            <label for="collections">Import all collections</label>
+                        </div>
+                        <div data-bind="collapse: !includeAllCollections()">
+                            <div class="row margin-bottom">
+                                <div class="flex-horizontal col-lg-3">
+                                    <input class="form-control" placeholder="Enter a collection" autocomplete="off" data-bind="textInput: $root.inputCollection" />
+                                    <button class="btn btn-info" data-bind="click: $root.addCollection, disable: !$root.inputCollection()">
+                                        <i class="icon-plus"></i><span>Add Collection</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="margin-top margin-bottom" data-bind="visible: includedCollections().length">
+                                <label>
+                                    <strong>Collections Selected:</strong>
+                                </label>
+                                <div class="row">
+                                    <div class="col-lg-3">
+                                        <ul class="well collection-list" data-bind="foreach: includedCollections">
+                                            <li>
+                                                <div class="name" data-bind="text: $data"></div>
+                                                <a title="Remove collection" href="#" data-bind="click: $root.removeCollection">
+                                                    <i class="icon-trash"></i>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="toggle">
                             <input id="useTransformScript" type="checkbox" data-bind="checked: $root.showTransformScript" />
                             <label for="useTransformScript" class="use-transform-script margin-right margin-right-sm">Use Transform script </label>
                             <small id="scriptPopover"><i class="icon-info text-info"></i></small>
