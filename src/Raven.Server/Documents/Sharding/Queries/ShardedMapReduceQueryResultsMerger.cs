@@ -48,7 +48,7 @@ public class ShardedMapReduceQueryResultsMerger
         }
 
         if (_isAutoMapReduceQuery)
-            throw new InvalidOperationException($"Failed to get {_indexName} index for the reduce part in the orchestrator");
+            throw new InvalidOperationException($"Failed to get '{_indexName}' index for the reduce part in the orchestrator");
 
         if (index.Type.IsStaticMapReduce() == false)
             throw new InvalidOperationException($"Index '{_indexName}' is not a map-reduce index");
@@ -77,10 +77,13 @@ public class ShardedMapReduceQueryResultsMerger
             if (propertyAccessor == null)
                 return new List<BlittableJsonReaderObject>(0);
 
-            var objects = new ShardedAggregatedAnonymousObjects(results, propertyAccessor, Context);
+            var objects = CreateShardedAggregatedAnonymousObjects(results, propertyAccessor);
             return objects.GetOutputsToStore().ToList();
         }
     }
+
+    protected virtual AggregatedAnonymousObjects CreateShardedAggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor)
+        => new ShardedAggregatedAnonymousObjects(results, propertyAccessor, Context);
 
     protected virtual AggregationResult AggregateForAutoMapReduce(AutoMapReduceIndexDefinition indexDefinition)
     {
