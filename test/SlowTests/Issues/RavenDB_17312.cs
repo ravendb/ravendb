@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -87,6 +89,84 @@ public class RavenDB_17312 : RavenTestBase
                 Assert.Equal(4, resultsFromCSharpIndexWithDict[0].Count);
                 Assert.Equal("Joe", resultsFromCSharpIndexWithDict[0].Name);
                 Assert.Equal("Doe", resultsFromCSharpIndexWithDict[0].LastName);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Indexes)]
+    public void WillNotThrowOnJsIndexIfCannotExtractFieldNameFromMapDefinitionButOneFieldWasSpecifiedInOptions()
+    {
+        using (var store = GetDocumentStore())
+        {
+            store.ExecuteIndex(new UsersReducedByNameAndLastNameResultsPushedToJsArray());
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User { Name = "Joe", LastName = "Doe", Age = 33 });
+                session.Store(new User { Name = "Joe", LastName = "Doe", Age = 34 });
+
+                session.SaveChanges();
+
+                Indexes.WaitForIndexing(store);
+
+                var results = session.Query<User>("UsersReducedByNameAndLastNameResultsPushedToJsArray").OfType<ReduceResults>().ToList();
+
+                Assert.Equal(1, results.Count);
+
+                Assert.Equal(2, results[0].Count);
+                Assert.Equal("Joe", results[0].Name);
+                Assert.Equal("Doe", results[0].LastName);
+            }
+        }
+    }
+
+    [Fact]
+    public void BackwardCompatibilityWithIndexVersion54001()
+    {
+        var backupPath = NewDataPath(forceCreateDir: true);
+        var fullBackupPath = Path.Combine(backupPath, "54_001_index_ver.ravendb-snapshot");
+
+        using (var file = File.Create(fullBackupPath))
+        using (var stream = typeof(RavenDB_10404).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_17312.map-reduce_54_001_index_ver.ravendb-snapshot"))
+        {
+            stream.CopyTo(file);
+        }
+
+        using (var store = GetDocumentStore())
+        {
+            var databaseName = GetDatabaseName();
+
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+            {
+                BackupLocation = backupPath,
+                DatabaseName = databaseName
+            }))
+            {
+                using (var session = store.OpenSession(databaseName))
+                {
+                    session.Store(new User { Name = "Joe", LastName = "Doe", Age = 31 }, "users/1");
+                    session.Store(new User { Name = "Joe", LastName = "Doe", Age = 32 }, "users/2");
+
+                    session.SaveChanges();
+
+                    Indexes.WaitForIndexing(store);
+
+                    var results = session.Query<User>("UsersReducedByNameAndLastName").OfType<ReduceResults>().ToList();
+
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Equal(2, results[0].Count);
+                    Assert.Equal("Joe", results[0].Name);
+                    Assert.Equal("Doe", results[0].LastName);
+
+                    results = session.Query<User>("UsersReducedByNameAndLastName_FieldNamesNotExtracted").OfType<ReduceResults>().ToList();
+
+                    Assert.Equal(1, results.Count);
+
+                    Assert.Equal(2, results[0].Count);
+                    Assert.Equal("Joe", results[0].Name);
+                    Assert.Equal("Doe", results[0].LastName);
+                }
             }
         }
     }
@@ -224,6 +304,45 @@ public class RavenDB_17312 : RavenTestBase
                     g.Key.LastName,
                     Count = g.Sum(x => x.Count)
                 };
+        }
+    }
+
+    private class UsersReducedByNameAndLastNameResultsPushedToJsArray : AbstractJavaScriptIndexCreationTask
+    {
+        public UsersReducedByNameAndLastNameResultsPushedToJsArray()
+        {
+            Maps = new HashSet<string>
+            {
+                // we're forcing here different order of fields of returned results based on Age property
+
+                @"map('Users', function (u){ 
+                    
+                    var res = [];
+                    
+                    if (u.Age % 2 == 0)
+                    {
+                        res.push({ Count: 1, Name: u.Name, LastName: u.LastName });
+                    }
+                    else
+                    {
+                        res.push({ LastName: u.LastName, Name: u.Name, Count: 1});
+                    }
+
+                    return res;
+                })",
+
+            };
+            Reduce = @"groupBy(x => { return { Name: x.Name, LastName: x.LastName } })
+                                .aggregate(g => {return {
+                                    Name: g.key.Name,
+                                    LastName: g.key.LastName,
+                                    Count: g.values.reduce((total, val) => val.Count + total,0)
+                               };})";
+
+            Fields = new Dictionary<string, IndexFieldOptions>
+            {
+                {"LastName", new IndexFieldOptions() {Indexing = FieldIndexing.Search}}
+            };
         }
     }
 }

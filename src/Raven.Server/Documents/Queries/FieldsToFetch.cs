@@ -205,8 +205,7 @@ namespace Raven.Server.Documents.Queries
 
         private static bool ShouldTryToExtractBySourceAliasName(string selectFieldName, SelectField selectField)
         {
-            return selectFieldName.Length == 0 &&
-                   selectField.HasSourceAlias &&
+            return selectField.HasSourceAlias &&
                    selectField.SourceAlias != null;
         }
 

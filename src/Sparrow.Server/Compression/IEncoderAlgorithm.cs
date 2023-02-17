@@ -18,14 +18,7 @@ namespace Sparrow.Server.Compression
             where TSampleEnumerator : struct, IReadOnlySpanIndexer
             where TOutputEnumerator : struct, ISpanIndexer;
 
-        void DecodeBatch<TSampleEnumerator, TOutputEnumerator>(ReadOnlySpan<int> bits, in TSampleEnumerator data, Span<int> outputSize, in TOutputEnumerator outputBuffer)
-            where TSampleEnumerator : struct, IReadOnlySpanIndexer
-            where TOutputEnumerator : struct, ISpanIndexer;
-
-
         int Encode(ReadOnlySpan<byte> data, Span<byte> outputBuffer);
-
-        int Decode(ReadOnlySpan<byte> data, Span<byte> outputBuffer);
 
         int Decode(int bits, ReadOnlySpan<byte> data, Span<byte> outputBuffer);
     }

@@ -7,22 +7,27 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 using Sparrow.Server.Collections;
 using Sparrow.Threading;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Changes;
 
-public abstract class AbstractChangesClientConnection<TOperationContext> : IDisposable
+public abstract class AbstractChangesClientConnection<TOperationContext> : ILowMemoryHandler, IDisposable
     where TOperationContext : JsonOperationContext
 {
     private readonly WebSocket _webSocket;
     private readonly AsyncQueue<SendQueueItem> _sendQueue = new();
 
+    private readonly MultipleUseFlag _lowMemoryFlag = new();
+
     private readonly CancellationTokenSource _cts;
-    private readonly CancellationToken _disposeToken;
+    public CancellationToken DisposeToken => _cts.Token;
 
     private readonly DateTime _startedAt;
 
@@ -47,7 +52,6 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
         _webSocket = webSocket;
         _startedAt = SystemTime.UtcNow;
         _cts = CancellationTokenSource.CreateLinkedTokenSource(databaseShutdown);
-        _disposeToken = _cts.Token;
     }
 
     public readonly long Id;
@@ -147,15 +151,18 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
             await using (var ms = new MemoryStream())
             {
                 var sp = Stopwatch.StartNew();
+                var sendTaskSp = Stopwatch.StartNew();
+
                 while (true)
                 {
-                    if (_disposeToken.IsCancellationRequested)
+                    if (DisposeToken.IsCancellationRequested)
                         break;
 
                     ms.SetLength(0);
                     context.Reset();
                     context.Renew();
 
+                    var messagesCount = 0;
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
                     {
                         sp.Restart();
@@ -166,7 +173,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
                         do
                         {
                             var value = await GetNextMessage();
-                            if (value == null || _disposeToken.IsCancellationRequested)
+                            if (value == null || DisposeToken.IsCancellationRequested)
                                 break;
 
                             if (first == false)
@@ -183,8 +190,8 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
                                     context.Write(writer, bjro);
                                     break;
                             }
-
-                            await writer.FlushAsync(_disposeToken);
+                            messagesCount++;
+                            await writer.FlushAsync(DisposeToken);
 
                             if (ms.Length > 16 * 1024)
                                 break;
@@ -193,13 +200,81 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
                         writer.WriteEndArray();
                     }
 
-                    if (_disposeToken.IsCancellationRequested)
+                    if (DisposeToken.IsCancellationRequested)
                         break;
 
                     ms.TryGetBuffer(out ArraySegment<byte> bytes);
-                    await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken);
+                    var sendTask = _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, DisposeToken);
+                    if (sendTask.IsCompleted)
+                    {
+                        await sendTask;
+                        continue;
+                    }
+
+                    await WaitForSendTaskAsync(sendTask, sendTaskSp, messagesCount, ms);
                 }
             }
+        }
+    }
+
+    private async Task WaitForSendTaskAsync(Task sendTask, Stopwatch sp, int messagesCount, MemoryStream ms)
+    {
+        sp.Restart();
+
+        while (true)
+        {
+            var waitTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(5), DisposeToken);
+
+            var result = await Task.WhenAny(sendTask, waitTask);
+            if (result == sendTask)
+            {
+                await sendTask;
+                return;
+            }
+
+            var isLowMemory = _lowMemoryFlag.IsRaised();
+            switch (isLowMemory)
+            {
+                case true:
+                    if (_sendQueue.Count < 16 * 1024)
+                    {
+                        // we are in low memory state and the number of messages in the queue is reasonable.
+                        // continue waiting for the send task to complete.
+                        continue;
+                    }
+
+                    break;
+
+                case false:
+                    if (_sendQueue.Count < 128 * 1024)
+                    {
+                        // we aren't in low memory state and the number of pending messages is less than 128K.
+                        // continue waiting for the send task to complete.
+                        continue;
+                    }
+
+                    break;
+            }
+
+            // - we waited for some time for the send task to complete,
+            // - we are in low memory state and the number of messages waiting in the queue exceeds 16K
+            // - OR we have 128K messages waiting in the queue.
+            // - we'll close the WebSocket connection and let the client reconnect again.
+
+            try
+            {
+                _cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // the connection was already disposed
+            }
+
+            throw new TimeoutException($"Waited for {sp.Elapsed} to send {messagesCount:#,#;;0} messages to the client but was unsuccessful " +
+                                       $"(total size: {new Sparrow.Size(ms.Length, SizeUnit.Bytes)}), " +
+                                       $"low memory state: {isLowMemory} and there are {_sendQueue.Count:#,#;;0} messages waiting in the queue. " +
+                                       $"Changes connection from studio: {IsChangesConnectionOriginatedFromStudio}. " +
+                                       $"Closing the changes WebSocket and letting the client reconnect again.");
         }
     }
 
@@ -274,7 +349,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
 
     protected void AddToQueue(SendQueueItem item)
     {
-        if (_disposeToken.IsCancellationRequested)
+        if (DisposeToken.IsCancellationRequested)
             return;
 
         _sendQueue.Enqueue(item);
@@ -476,6 +551,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
         return new DynamicJsonValue
         {
             ["Id"] = Id,
+            ["PendingMessagesCount"] = _sendQueue.Count,
             ["State"] = _webSocket.State.ToString(),
             ["CloseStatus"] = _webSocket.CloseStatus,
             ["CloseStatusDescription"] = _webSocket.CloseStatusDescription,
@@ -483,6 +559,16 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : IDisp
             ["Age"] = Age,
             ["WatchAllOperations"] = _watchAllOperations > 0
         };
+    }
+
+    public void LowMemory(LowMemorySeverity lowMemorySeverity)
+    {
+        _lowMemoryFlag.Raise();
+    }
+
+    public void LowMemoryOver()
+    {
+        _lowMemoryFlag.Lower();
     }
 
     protected static DynamicJsonValue CreateValueToSend(string type, DynamicJsonValue value)

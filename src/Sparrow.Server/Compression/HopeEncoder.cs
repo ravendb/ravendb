@@ -87,7 +87,13 @@ namespace Sparrow.Server.Compression
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Decode(in ReadOnlySpan<byte> data, in Span<byte> outputBuffer)
         {
-            return _encoder.Decode(data, outputBuffer);
+            return _encoder.Decode(data.Length * 8, data, outputBuffer);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Decode(int bits, in ReadOnlySpan<byte> data, in Span<byte> outputBuffer)
+        {
+            return _encoder.Decode(bits, data, outputBuffer);
         }
 
 

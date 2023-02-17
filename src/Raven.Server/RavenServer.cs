@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -155,6 +156,7 @@ namespace Raven.Server
             EchoServer.StartEchoSockets(Configuration.Core.EchoSocketPort);
 
             Certificate = LoadCertificateAtStartup() ?? new CertificateUtils.CertificateHolder();
+            ReadWellKnownIssuers();
 
             CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
                 ? CpuHelper.GetOSCpuUsageCalculator()
@@ -375,7 +377,7 @@ namespace Raven.Server
         }
 
         public T GetService<T>() => _webHost.Services.GetService<T>();
-        
+
         private void UpdateCertificateExpirationAlert()
         {
             var remainingDays = (Certificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
@@ -1537,8 +1539,6 @@ namespace Raven.Server
 
             public AuthenticationStatus StatusForAudit => _status;
 
-            public string IssuerHash;
-
             public AuthenticationStatus Status
             {
                 get
@@ -1610,6 +1610,18 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
+            else if (CertificateHasWellKnownIssuer(certificate, out var issuer))
+            {
+                if (_authAuditLog.IsInfoEnabled)
+                {
+                    _authAuditLog.Info(
+                        $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                        "Allowing the connection based on the certificate's *issuer* which is trusted by the cluster. " +
+                        $"Registering the new certificate explicitly based on permissions of existing certificate '{issuer}'. Security Clearance: {AuthenticationStatus.ClusterAdmin}");
+                }
+
+                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+            }
             else
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -1651,14 +1663,13 @@ namespace Raven.Server
             }
 
             CertificateDefinition certWithSameHash = null;
-            string issuerHash = null;
 
             foreach (var certDef in certificatesWithSameHash.OrderByDescending(x => x.NotAfter))
             {
                 // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
                 using (var goodKnownCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(certDef.Certificate)))
                 {
-                    if (CertificateUtils.CertHasKnownIssuer(certificate, goodKnownCert, Configuration.Security, out issuerHash))
+                    if (CertificateUtils.CertHasKnownIssuer(certificate, goodKnownCert, Configuration.Security))
                     {
                         certWithSameHash = certDef;
                         break;
@@ -1666,28 +1677,16 @@ namespace Raven.Server
                 }
             }
 
-            string remoteAddress = null;
-            switch (connectionInfo)
-            {
-                case TcpClient tcp:
-                    remoteAddress = tcp.Client.RemoteEndPoint.ToString();
-                    break;
-
-                case HttpConnectionFeature http:
-                    remoteAddress = $"{http.RemoteIpAddress}:{http.RemotePort}";
-                    break;
-            }
+            string remoteAddress = GetRemoteAddress(connectionInfo);
 
             if (certWithSameHash == null)
             {
                 if (_authAuditLog.IsInfoEnabled)
                     _authAuditLog.Info($"Connection from {remoteAddress} with certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                                        "Tried to allow the connection implicitly based on the client certificate's Public Key Pinning Hash but the client certificate was signed by an unknown issuer - closing the connection. " +
-                                       $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{issuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry." +
                                        $"Alternatively, the admin can register the actual certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') explicitly in the cluster.");
 
                 authenticationStatus.Status = AuthenticationStatus.UnfamiliarIssuer;
-                authenticationStatus.IssuerHash = issuerHash;
                 return;
             }
 
@@ -1737,10 +1736,30 @@ namespace Raven.Server
             cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
         }
 
+        private static string GetRemoteAddress(object connectionInfo)
+        {
+            string remoteAddress = null;
+            switch (connectionInfo)
+            {
+                case TcpClient tcp:
+                    remoteAddress = tcp.Client.RemoteEndPoint.ToString();
+                    break;
+
+                case HttpConnectionFeature http:
+                    remoteAddress = $"{http.RemoteIpAddress}:{http.RemotePort}";
+                    break;
+            }
+
+            return remoteAddress;
+        }
+
 
         public string WebUrl { get; private set; }
 
         internal CertificateUtils.CertificateHolder Certificate;
+
+        internal X509Certificate2[] WellKnownIssuers;
+        internal string[] WellKnownIssuersThumbprints = Array.Empty<string>();
 
         public class TcpListenerStatus
         {
@@ -2582,8 +2601,9 @@ namespace Raven.Server
                             throw new InvalidOperationException("Unknown operation " + header.Operation);
                     }
                 case AuthenticationStatus.UnfamiliarIssuer:
-                    msg = $"The client certificate {certificate.FriendlyName} is not registered in the cluster. Tried to allow the connection implicitly based on the client certificate's Public Key Pinning Hash but the client certificate was signed by an unknown issuer - closing the connection. " +
-                          $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{auth.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry. Alternatively, the admin can register the actual certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') explicitly in the cluster.";
+                    msg = $"The client certificate {certificate.FriendlyName} is not registered in the cluster. " +
+                          "Tried to allow the connection implicitly based on the client certificate's Public Key Pinning Hash but the client certificate was signed by an unknown issuer - closing the connection. " +
+                          $"The admin can register the actual certificate ({certificate.FriendlyName} '{certificate.Thumbprint}') explicitly in the cluster.";
                     return false;
 
                 case AuthenticationStatus.UnfamiliarCertificate:
@@ -2839,6 +2859,90 @@ namespace Raven.Server
             {
                 internal string[] RoutesToSkip = new string[] { };
             }
+        }
+
+        public bool CertificateHasWellKnownIssuer(X509Certificate2 cert, out string issuer)
+        {
+            issuer = null;
+            if (WellKnownIssuers == null)
+                return false;
+
+            foreach (var knownIssuer in WellKnownIssuers)
+            {
+                using var chain = new X509Chain(false);
+                chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                chain.ChainPolicy.DisableCertificateDownloads = true;
+                chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                chain.ChainPolicy.CustomTrustStore.Add(knownIssuer);
+
+                if (chain.Build(cert))
+                {
+                    issuer = knownIssuer.SubjectName.Name + " - " + knownIssuer.Thumbprint;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void ReadWellKnownIssuers()
+        {
+            if (Configuration.Security.WellKnownIssuerHashes is { Length: > 0 })
+            {
+                throw new InvalidOperationException(
+                    $"The configuration option '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' has been deprecated and should not be used. You should instead use '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)}'.");
+            }
+            if (Configuration.Security.WellKnownIssuers == null)
+                return;
+
+            WellKnownIssuersThumbprints = new string[Configuration.Security.WellKnownIssuers.Length];
+            WellKnownIssuers = new X509Certificate2[Configuration.Security.WellKnownIssuers.Length];
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(8192);
+            for (int index = 0; index < Configuration.Security.WellKnownIssuers.Length; index++)
+            {
+                string issuer = Configuration.Security.WellKnownIssuers[index];
+                if (issuer.Length > buffer.Length) // the rate is actually 75%, but easier to just assume 1:1 here, we have enough space
+                {
+                    ArrayPool<byte>.Shared.Return(buffer);
+                    buffer = ArrayPool<byte>.Shared.Rent(issuer.Length);
+                }
+
+                X509Certificate2 certificate;
+                if (Convert.TryFromBase64String(issuer, buffer, out var read))
+                {
+                    try
+                    {
+                        certificate = new X509Certificate2(buffer[0..read]);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException(
+                            $"Unable to parse the provided '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)}' value: {issuer[..Math.Min(64, issuer.Length)]}",
+                            e);
+                    }
+                }
+                else // maybe it's a path?
+                {
+                    try
+                    {
+                        certificate = new X509Certificate2(issuer);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException($"Unable to read file provided via '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)}' from: {issuer}",
+                            e);
+                    }
+                }
+
+                if (certificate.HasPrivateKey)
+                    throw new InvalidOperationException(
+                        $"The certificate provided by '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuers)}' configuration for {certificate.SubjectName} {certificate.Thumbprint} includes the PRIVATE KEY, that is not a secured model, and was rejected by RavenDB");
+
+                WellKnownIssuers[index] = certificate;
+                WellKnownIssuersThumbprints[index] = certificate.Thumbprint;
+            }
+
+            ArrayPool<byte>.Shared.Return(buffer);
         }
     }
 }

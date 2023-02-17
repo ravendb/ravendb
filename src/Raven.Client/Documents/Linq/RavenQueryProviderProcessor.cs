@@ -2973,7 +2973,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 arg = DocumentQuery.ProjectionParameter(constantExpression.Value);
             }
-            else if (loadSupport.Arg is MemberExpression memberExpression)
+            else if (loadSupport.Arg is MemberExpression memberExpression && IsDictionaryOnDictionaryExpression(memberExpression) == false)
             {
                 // if memberExpression is <>h__TransparentIdentifierN...TransparentIdentifier1.TransparentIdentifier0.something
                 // then the load-argument is 'something' which is not a real path (a real path should be 'x.something')
@@ -3004,6 +3004,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     AppendLineToOutputFunction(name, ToJs(expression), wrapper);
                     return;
                 }
+                
                 arg = ToJs(loadSupport.Arg, true);
             }
             else
@@ -3086,6 +3087,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             AppendLineToOutputFunction(name, doc + js, wrapper);
+        }
+
+        private bool IsDictionaryOnDictionaryExpression(Expression expression)
+        {
+            //We want to wrap expressions like doc.SomeDictionary.Values inside a JS declared function
+            //because they are translated to JS map
+            return expression is MemberExpression memberExpression && 
+                   memberExpression.Expression.Type.GetInterfaces().Contains(typeof(IDictionary)) &&
+                   memberExpression.Member.DeclaringType != null &&
+                   memberExpression.Member.DeclaringType.GetInterfaces().Contains(typeof(IDictionary));
         }
 
         private void AddLoadToken(string arg, string alias)

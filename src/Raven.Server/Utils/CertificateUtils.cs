@@ -38,9 +38,8 @@ namespace Raven.Server.Utils
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(CertificateUtils).FullName);
 
-        internal static bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, SecurityConfiguration securityConfiguration, out string issuerPinningHash)
+        internal static bool CertHasKnownIssuer(X509Certificate2 userCertificate, X509Certificate2 knownCertificate, SecurityConfiguration securityConfiguration)
         {
-            issuerPinningHash = null;
             X509Certificate2 issuerCertificate = null;
 
             var userChain = new X509Chain();
@@ -69,7 +68,6 @@ namespace Raven.Server.Utils
                 issuerCertificate = userChain.ChainElements.Count > 1
                     ? userChain.ChainElements[1].Certificate
                     : userChain.ChainElements[0].Certificate;
-                issuerPinningHash = issuerCertificate.GetPublicKeyPinningHash();
             }
             catch (Exception e)
             {
@@ -77,10 +75,6 @@ namespace Raven.Server.Utils
                     Logger.Info($"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.", e);
                 return false;
             }
-
-            var wellKnown = securityConfiguration.WellKnownIssuerHashes;
-            if (wellKnown != null && wellKnown.Contains(issuerPinningHash, StringComparer.Ordinal)) // Case sensitive, base64
-                return true;
 
             try
             {
@@ -102,7 +96,6 @@ namespace Raven.Server.Utils
                 var currentElementPinningHash = userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
                 if (currentElementPinningHash != knownCertChain.ChainElements[i].Certificate.GetPublicKeyPinningHash())
                 {
-                    issuerPinningHash = currentElementPinningHash;
                     return false;
                 }
             }
@@ -331,7 +324,7 @@ namespace Raven.Server.Utils
             log?.AppendLine($"cert in base64 = {Convert.ToBase64String(certBytes)}");
         }
 
-        public static void CreateCertificateAuthorityCertificate(string commonNameValue,
+        public static X509Certificate2 CreateCertificateAuthorityCertificate(string commonNameValue,
             out (AsymmetricKeyParameter PrivateKey, AsymmetricKeyParameter PublicKey) ca,
             out X509Name name, StringBuilder log = null)
         {
@@ -353,6 +346,13 @@ namespace Raven.Server.Utils
             certificateGenerator.SetSubjectDN(subjectDN);
             log?.AppendLine($"issuerDN = {issuerDN}");
             log?.AppendLine($"subjectDN = {subjectDN}");
+            
+            certificateGenerator.AddExtension(
+                X509Extensions.BasicConstraints.Id, true, new BasicConstraints(true));
+            certificateGenerator.AddExtension(X509Extensions.KeyUsage.Id, true, 
+                new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.CrlSign | KeyUsage.KeyCertSign));
+            certificateGenerator.AddExtension(X509Extensions.ExtendedKeyUsage.Id, true,
+                new ExtendedKeyUsage(KeyPurposeID.IdKPServerAuth, KeyPurposeID.IdKPClientAuth));
 
             // Valid For
             DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
@@ -373,11 +373,39 @@ namespace Raven.Server.Utils
             var issuerKeyPair = subjectKeyPair;
             ISignatureFactory signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", issuerKeyPair.Private, random);
 
+            var authorityKeyIdentifier =
+                new AuthorityKeyIdentifier(
+                    SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(issuerKeyPair.Public),
+                    new GeneralNames(new GeneralName(issuerDN)),
+                    serialNumber);
+            certificateGenerator.AddExtension(
+                X509Extensions.AuthorityKeyIdentifier.Id, false, authorityKeyIdentifier);
+            
+            var subjectKeyIdentifier =
+                new SubjectKeyIdentifier(
+                    SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(subjectKeyPair.Public));
+            certificateGenerator.AddExtension(
+                X509Extensions.SubjectKeyIdentifier.Id, false, subjectKeyIdentifier);
+
             // selfsign certificate
             var certificate = certificateGenerator.Generate(signatureFactory);
 
             ca = (issuerKeyPair.Private, issuerKeyPair.Public);
             name = certificate.SubjectDN;
+
+            var store = new Pkcs12Store();
+            string friendlyName = certificate.SubjectDN.ToString();
+            var certificateEntry = new X509CertificateEntry(certificate);
+            var keyEntry = new AsymmetricKeyEntry(subjectKeyPair.Private);
+
+            log?.AppendLine($"certificateEntry.Certificate = {certificateEntry.Certificate}");
+
+            store.SetCertificateEntry(friendlyName, certificateEntry);
+            store.SetKeyEntry(friendlyName, keyEntry, new[] { certificateEntry });
+            var stream = new MemoryStream();
+            store.Save(stream, Array.Empty<char>(), random);
+
+            return new X509Certificate2(stream.ToArray());
         }
 
         // generating this can take a while, so we cache that at the process level, to significantly speed up the tests

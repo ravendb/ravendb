@@ -265,7 +265,7 @@ namespace Raven.Client.Http
             TimeSpan? httpPooledConnectionIdleTimeout = null;
 #endif
 
-            return new HttpClientCacheKey(Certificate?.Thumbprint ?? string.Empty, Conventions.UseCompression, httpPooledConnectionLifetime, httpPooledConnectionIdleTimeout);
+            return new HttpClientCacheKey(Certificate?.Thumbprint ?? string.Empty, Conventions.UseCompression, httpPooledConnectionLifetime, httpPooledConnectionIdleTimeout, Conventions.HttpClientType);
         }
 
         internal static void ClearHttpClientsPool()
@@ -1937,10 +1937,10 @@ namespace Raven.Client.Http
                 httpPooledConnectionIdleTimeout
             );
 
-            return new HttpClient(httpMessageHandler)
-            {
-                Timeout = GlobalHttpClientTimeout
-            };
+            var httpClient = Conventions.CreateHttpClient(httpMessageHandler);
+            httpClient.Timeout = GlobalHttpClientTimeout;
+
+            return httpClient;
         }
 
         private static void ValidateClientKeyUsages(X509Certificate2 certificate)
@@ -2284,18 +2284,24 @@ namespace Raven.Client.Http
             private readonly bool _useCompression;
             private readonly TimeSpan? _pooledConnectionLifetime;
             private readonly TimeSpan? _pooledConnectionIdleTimeout;
+            private readonly Type _httpClientType;
 
-            public HttpClientCacheKey(string certificateThumbprint, bool useCompression, TimeSpan? pooledConnectionLifetime, TimeSpan? pooledConnectionIdleTimeout)
+            public HttpClientCacheKey(string certificateThumbprint, bool useCompression, TimeSpan? pooledConnectionLifetime, TimeSpan? pooledConnectionIdleTimeout, Type httpClientType)
             {
                 _certificateThumbprint = certificateThumbprint;
                 _useCompression = useCompression;
                 _pooledConnectionLifetime = pooledConnectionLifetime;
                 _pooledConnectionIdleTimeout = pooledConnectionIdleTimeout;
+                _httpClientType = httpClientType;
             }
 
             private bool Equals(HttpClientCacheKey other)
             {
-                return _certificateThumbprint == other._certificateThumbprint && _useCompression == other._useCompression && Nullable.Equals(_pooledConnectionLifetime, other._pooledConnectionLifetime) && Nullable.Equals(_pooledConnectionIdleTimeout, other._pooledConnectionIdleTimeout);
+                return _certificateThumbprint == other._certificateThumbprint 
+                       && _useCompression == other._useCompression 
+                       && Nullable.Equals(_pooledConnectionLifetime, other._pooledConnectionLifetime) 
+                       && Nullable.Equals(_pooledConnectionIdleTimeout, other._pooledConnectionIdleTimeout)
+                       && _httpClientType == other._httpClientType;
             }
 
             public override bool Equals(object obj)
@@ -2305,7 +2311,7 @@ namespace Raven.Client.Http
 
             public override int GetHashCode()
             {
-                return HashCode.Combine(_certificateThumbprint, _useCompression, _pooledConnectionLifetime, _pooledConnectionIdleTimeout);
+                return HashCode.Combine(_certificateThumbprint, _useCompression, _pooledConnectionLifetime, _pooledConnectionIdleTimeout, _httpClientType);
             }
         }
     }

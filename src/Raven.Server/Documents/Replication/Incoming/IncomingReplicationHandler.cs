@@ -419,7 +419,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     From = deletedRange.From,
                                     To = deletedRange.To
                                 };
-                                var removedChangeVector = tss.DeleteTimestampRange(context, deletionRangeRequest, changeVectorVersion);
+                                var removedChangeVector = tss.DeleteTimestampRange(context, deletionRangeRequest, changeVectorVersion, updateMetadata: false);
                                 if (removedChangeVector != null)
                                 {
                                     var removed = context.GetChangeVector(removedChangeVector);

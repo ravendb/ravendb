@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
-    <RuntimeFrameworkVersion>7.0.2</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>7.0.3</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -85,6 +85,7 @@
     <EmbeddedResource Include="Data\RavenDB_15159\12119.smaps.gz" />
     <EmbeddedResource Include="Data\RavenDB_15294\northwind-4.2.103.zip" />
     <None Remove="Data\RavenDB_18864\53AutoIndexCoraxImportTest.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_17312\map-reduce_54_001_index_ver.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_18864\53AutoIndexCoraxImportTest.ravendbdump" />
     <None Remove="Data\RavenDB_19449\RavenDB_19449.zip" />
     <EmbeddedResource Include="Data\RavenDB_19449\RavenDB_19449.zip" />

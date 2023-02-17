@@ -247,6 +247,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("List of well known admin certificate thumbprints")]
             public const string WellKnownAdminCertificates = "1.11.3";
 
+            [Description("List of well known admin certificate issuers")]
+            public const string WellKnownAdminIssuers = "1.11.4";
+
             [Description("Number of processor on the machine")]
             public const string MachineProcessorCount = "1.12.1";
 

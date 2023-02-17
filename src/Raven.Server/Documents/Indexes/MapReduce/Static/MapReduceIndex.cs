@@ -508,7 +508,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private IndexingStatsScope _createBlittableResultStats;
             private readonly ReduceKeyProcessor _reduceKeyProcessor;
             private readonly Dictionary<string, CompiledIndexField> _groupByFields;
-            private readonly List<IndexFieldBase> _orderedMapFields;
+            private readonly Dictionary<string, int> _orderedMultipleGroupByFieldPositions;
             private readonly bool _isMultiMap;
             private IPropertyAccessor _propertyAccessor;
             private readonly AbstractStaticIndexBase _compiledIndex;
@@ -518,11 +518,31 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 _indexContext = indexContext;
                 _groupByFields = index.Definition.GroupByFields;
 
-                if (index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.GuaranteedOrderOfPropertiesInMapReduceIndexes)
+                if (index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.GuaranteedOrderOfGroupByFieldsInMapReduceIndexes)
                 {
+                    if (_groupByFields.Count > 1) // only if we group by multiple fields
+                    {
+                        var groupByIndex = 0;
+
+                        _orderedMultipleGroupByFieldPositions = _groupByFields.Values.OrderBy(x => x.Name, StringComparer.Ordinal)
+                            .ToDictionary(x => x.Name, x => groupByIndex++, StringComparer.Ordinal);
+                    }
+                }
+                else if (index.Definition.Version == IndexDefinitionBaseServerSide.IndexVersion.GuaranteedOrderOfPropertiesInMapReduceIndexes_Legacy)
+                {
+                    // legacy mode for version 54_001 where we introduced consistent order of all properties, but it was faulty so we changed the approach and sort only
+                    // the group by fields - those are the fields which order really matters for calculation of the reduce key hash
+                    // this means that even if we don't sort by all fields now we'll get the same reduce key hashes because order of group by fields remained the same
+
                     if (index.Definition.MapFields.Count > 0) // sometimes in JS indexes we're not able to extract field names
                     {
-                        _orderedMapFields = index.Definition.MapFields.Values.OrderBy(x => x.Name, StringComparer.Ordinal).ToList();
+                        if (_groupByFields.Count > 1) // only if we group by multiple fields
+                        {
+                            var groupByIndex = 0;
+
+                            _orderedMultipleGroupByFieldPositions = _groupByFields.Values.OrderBy(x => x.Name, StringComparer.Ordinal)
+                                .ToDictionary(x => x.Name, x => groupByIndex++, StringComparer.Ordinal);
+                        }
                     }
                 }
 
@@ -564,7 +584,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;
                 private readonly IndexingStatsScope _createBlittableResult;
                 private readonly Dictionary<string, CompiledIndexField> _groupByFields;
-                private readonly List<IndexFieldBase> _orderedMapFields;
+                private readonly Dictionary<string, int> _orderedMultipleGroupByFieldPositions;
+                private readonly object[] _orderedMultipleGroupByValues;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
                 private readonly Queue<(string PropertyName, object PropertyValue)> _propertyQueue = new Queue<(string PropertyName, object PropertyValue)>();
                 private readonly CurrentIndexingScope.MetadataFieldCache _metadataFields;
@@ -575,8 +596,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     _parent = parent;
                     _createBlittableResult = createBlittableResult;
                     _groupByFields = _parent._groupByFields;
-                    _orderedMapFields = _parent._orderedMapFields;
+                    _orderedMultipleGroupByFieldPositions = _parent._orderedMultipleGroupByFieldPositions;
                     _reduceKeyProcessor = _parent._reduceKeyProcessor;
+
+                    if (_orderedMultipleGroupByFieldPositions is {Count: > 0})
+                        _orderedMultipleGroupByValues = new object[_orderedMultipleGroupByFieldPositions.Count];
 
                     _metadataFields = CurrentIndexingScope.Current.MetadataFields;
                 }
@@ -593,16 +617,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         IPropertyAccessor accessor;
 
                         if (_parent._isMultiMap == false)
-                            accessor = _parent._propertyAccessor ??= PropertyAccessor.CreateMapReduceOutputAccessor(output.GetType(), output, _orderedMapFields, _groupByFields);
+                            accessor = _parent._propertyAccessor ??= PropertyAccessor.CreateMapReduceOutputAccessor(output.GetType(), output, _groupByFields);
                         else
-                            accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(output, _orderedMapFields, _groupByFields);
+                            accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(output, _groupByFields);
 
                         _reduceKeyProcessor.Reset();
 
                         if (_propertyQueue.Count > 0)
                             _propertyQueue.Clear();
 
-                        foreach (var property in accessor.GetPropertiesInOrder(output))
+                        foreach (var property in accessor.GetProperties(output))
                         {
                             var value = property.Value;
                             var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext);
@@ -612,6 +636,25 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                             if (property.IsGroupByField)
                             {
                                 var valueForProcessor = property.GroupByField.GetValue(value, blittableValue);
+
+                                if (_orderedMultipleGroupByFieldPositions is null)
+                                {
+                                    // group by one field only
+                                    _reduceKeyProcessor.Process(_parent._indexContext.Allocator, valueForProcessor);
+                                }
+                                else
+                                {
+                                    var orderedGroupByIndex = _orderedMultipleGroupByFieldPositions[property.Key];
+
+                                    _orderedMultipleGroupByValues[orderedGroupByIndex] = valueForProcessor;
+                                }
+                            }
+                        }
+
+                        if (_orderedMultipleGroupByValues is not null)
+                        {
+                            foreach (object valueForProcessor in _orderedMultipleGroupByValues)
+                            {
                                 _reduceKeyProcessor.Process(_parent._indexContext.Allocator, valueForProcessor);
                             }
                         }
