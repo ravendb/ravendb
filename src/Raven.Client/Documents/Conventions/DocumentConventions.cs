@@ -238,7 +238,9 @@ namespace Raven.Client.Documents.Conventions
 
             TransformTypeCollectionNameToDocumentIdPrefix = DefaultTransformCollectionNameToDocumentIdPrefix;
             FindCollectionName = DefaultGetCollectionName;
-
+            
+            ShouldApplyPropertyNameConverter = DefaultShouldApplyPropertyNameConverter;
+            
             FindPropertyNameForIndex = DefaultFindPropertyNameForIndex;
             FindPropertyNameForDynamicIndex = DefaultFindPropertyNameForDynamicIndex;
 
@@ -325,6 +327,7 @@ namespace Raven.Client.Documents.Conventions
         private bool? _useCompression;
         private Func<MemberInfo, string> _propertyNameConverter;
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
+        private Func<MemberInfo, bool> _shouldApplyPropertyNameConverter;
         private OperationStatusFetchMode _operationStatusFetchMode;
         private bool _disableTopologyCache;
         private string _topologyCacheLocation;
@@ -351,6 +354,16 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
+        public Func<MemberInfo, bool> ShouldApplyPropertyNameConverter
+        {
+            get => _shouldApplyPropertyNameConverter;
+            set
+            {
+                AssertNotFrozen();
+                _shouldApplyPropertyNameConverter = value;
+            }
+        }
+        
         public Size MaxContextSizeToKeep
         {
             get => _maxContextSizeToKeep;
@@ -440,8 +453,9 @@ namespace Raven.Client.Documents.Conventions
                 return member?.Name;
 
             //do not use convention for types in system namespaces
-            if (member.DeclaringType?.Namespace?.StartsWith("System") == true ||
-                member.DeclaringType?.Namespace?.StartsWith("Microsoft") == true)
+            var old = member.DeclaringType?.Namespace?.StartsWith("System") == true ||
+                      member.DeclaringType?.Namespace?.StartsWith("Microsoft") == true;
+            if (ShouldApplyPropertyNameConverter(member) == false)
                 return member.Name;
 
             return converter(member);
@@ -1246,7 +1260,9 @@ namespace Raven.Client.Documents.Conventions
                 _identityPartsSeparator = configuration.IdentityPartsSeparator ?? _originalConfiguration.IdentityPartsSeparator ?? _identityPartsSeparator;
             }
         }
-
+        
+        public static bool DefaultShouldApplyPropertyNameConverter(MemberInfo member) => (member.DeclaringType?.Namespace?.StartsWith("System") == true ||
+                                                                                            member.DeclaringType?.Namespace?.StartsWith("Microsoft") == true) == false;
         public static string DefaultTransformCollectionNameToDocumentIdPrefix(string collectionName)
         {
             var count = collectionName.Count(char.IsUpper);
