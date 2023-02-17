@@ -70,7 +70,7 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
 
             var result = shardedReadResult.Result;
 
-            await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex, queryScope);
+            await WaitForRaftIndexIfNeededAsync(result.IndexDefinitionRaftIndex, queryScope);
 
             using (Query.Metadata.HasIncludeOrLoad ? queryScope?.For(nameof(QueryTimingsScope.Names.Includes)) : null)
             {

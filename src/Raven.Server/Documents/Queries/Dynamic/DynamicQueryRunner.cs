@@ -62,7 +62,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
                 var queryResult = await index.Query(query, queryContext, token);
-                queryResult.RaftCommandIndex = result.Index;
 
                 return queryResult;
             }
@@ -133,7 +132,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
                 var queryResult = await ExecuteSuggestion(query, index, queryContext, existingResultEtag, token);
-                queryResult.RaftCommandIndex = result.Index;
 
                 return queryResult;
             }
