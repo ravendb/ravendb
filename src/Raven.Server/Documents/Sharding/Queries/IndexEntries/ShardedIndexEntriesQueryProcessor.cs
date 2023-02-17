@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Sharding;
 using Raven.Server.Documents.Queries.Timings;
@@ -48,6 +47,8 @@ public class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBase<Shard
 
         return result;
     }
+
+    protected override ShardedMapReduceQueryResultsMerger CreateMapReduceQueryResultsMerger(ShardedIndexEntriesQueryResult result) => new ShardedMapReduceIndexEntriesQueryResultsMerger(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context);
 
     protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
 }
