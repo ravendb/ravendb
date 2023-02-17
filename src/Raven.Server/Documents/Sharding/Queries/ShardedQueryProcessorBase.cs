@@ -17,9 +17,17 @@ namespace Raven.Server.Documents.Sharding.Queries;
 public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShardedQueryProcessor<ShardedQueryCommand, QueryResult, TCombinedResult>
     where TCombinedResult : QueryResultServerSide<BlittableJsonReaderObject>
 {
-    protected ShardedQueryProcessorBase(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, long? existingResultEtag, bool metadataOnly, bool indexEntriesOnly,
-        CancellationToken token) : base(context, requestHandler, query, metadataOnly, indexEntriesOnly, existingResultEtag, token)
+    protected ShardedQueryProcessorBase(
+        TransactionOperationContext context,
+        ShardedDatabaseRequestHandler requestHandler,
+        IndexQueryServerSide query,
+        long? existingResultEtag,
+        bool metadataOnly,
+        bool indexEntriesOnly,
+        CancellationToken token)
+        : base(context, requestHandler, query, metadataOnly, indexEntriesOnly, existingResultEtag, token)
     {
+
     }
 
     protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
@@ -67,7 +75,7 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
         {
             using (scope?.For(nameof(QueryTimingsScope.Names.Reduce)))
             {
-                var merger = new ShardedMapReduceQueryResultsMerger(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context);
+                var merger = CreateMapReduceQueryResultsMerger(result);
                 result.Results = merger.Merge();
 
                 if (Query.Metadata.OrderBy?.Length > 0 && (IsMapReduceIndex || IsAutoMapReduceQuery))
@@ -79,5 +87,5 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
         }
     }
 
-
+    protected virtual ShardedMapReduceQueryResultsMerger CreateMapReduceQueryResultsMerger(TCombinedResult result) => new(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context);
 }
