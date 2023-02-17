@@ -11,11 +11,13 @@ $step-icon-size: 22px;
 
     .steps-item {
         position: relative;
+        cursor: pointer;
 
         .steps-label {
             position: absolute;
             left: 50%;
-            top: sizes.$gutter + sizes.$gutter-xxs;
+            //top: sizes.$gutter + sizes.$gutter-xxs;
+            padding: sizes.$gutter-xs;
             transform: translateX(-50%);
             text-align: center;
             transition: color 0.4s sizes.$easing-rubber;
@@ -85,6 +87,16 @@ $step-icon-size: 22px;
                     opacity: 0;
                     transform: scale(1.3);
                 }
+            }
+        }
+
+        &:hover:not(.active) {
+            .steps-label {
+                transition: none;
+                color: colors.$text-emphasis-color;
+            }
+            .step-bullet {
+                background-color: colors.$text-emphasis-color;
             }
         }
     }
