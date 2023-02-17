@@ -24,8 +24,13 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
 {
     private Dictionary<string, FacetOptions> _optionsByFacet;
 
-    public ShardedFacetedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query,
-        long? existingResultEtag, CancellationToken token) : base(context, requestHandler, query, metadataOnly: false, indexEntriesOnly: false, existingResultEtag, token)
+    public ShardedFacetedQueryProcessor(
+        TransactionOperationContext context,
+        ShardedDatabaseRequestHandler requestHandler,
+        IndexQueryServerSide query,
+        long? existingResultEtag,
+        CancellationToken token)
+        : base(context, requestHandler, query, metadataOnly: false, indexEntriesOnly: false, ignoreLimit: false, existingResultEtag, token)
     {
     }
 

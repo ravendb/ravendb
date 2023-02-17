@@ -14,8 +14,14 @@ namespace Raven.Server.Documents.Sharding.Queries.IndexEntries;
 
 public class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBase<ShardedIndexEntriesQueryResult>
 {
-    public ShardedIndexEntriesQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, long? existingResultEtag, CancellationToken token)
-        : base(context, requestHandler, query, existingResultEtag, metadataOnly: false, indexEntriesOnly: true, token)
+    public ShardedIndexEntriesQueryProcessor(
+        TransactionOperationContext context,
+        ShardedDatabaseRequestHandler requestHandler
+        , IndexQueryServerSide query,
+        long? existingResultEtag,
+        bool ignoreLimit,
+        CancellationToken token)
+        : base(context, requestHandler, query, existingResultEtag, metadataOnly: false, indexEntriesOnly: true, ignoreLimit, token)
     {
     }
 
@@ -48,7 +54,7 @@ public class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBase<Shard
         return result;
     }
 
-    protected override ShardedMapReduceQueryResultsMerger CreateMapReduceQueryResultsMerger(ShardedIndexEntriesQueryResult result) => new ShardedMapReduceIndexEntriesQueryResultsMerger(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context);
+    protected override ShardedMapReduceQueryResultsMerger CreateMapReduceQueryResultsMerger(ShardedIndexEntriesQueryResult result) => new ShardedMapReduceIndexEntriesQueryResultsMerger(result.Results, RequestHandler.DatabaseContext.Indexes, result.IndexName, IsAutoMapReduceQuery, Context, Token);
 
     protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
 }

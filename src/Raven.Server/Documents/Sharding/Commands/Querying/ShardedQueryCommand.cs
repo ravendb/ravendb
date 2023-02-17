@@ -9,8 +9,17 @@ namespace Raven.Server.Documents.Sharding.Commands.Querying;
 
 public class ShardedQueryCommand : AbstractShardedQueryCommand<QueryResult, BlittableJsonReaderObject>
 {
-    public ShardedQueryCommand(BlittableJsonReaderObject query, IndexQueryServerSide indexQuery, QueryTimingsScope scope, bool metadataOnly, bool indexEntriesOnly, string indexName,
-        bool canReadFromCache, string raftUniqueRequestId) : base(query, indexQuery, scope, metadataOnly, indexEntriesOnly, indexName, canReadFromCache, raftUniqueRequestId)
+    public ShardedQueryCommand(
+        BlittableJsonReaderObject query,
+        IndexQueryServerSide indexQuery,
+        QueryTimingsScope scope,
+        bool metadataOnly,
+        bool indexEntriesOnly,
+        bool ignoreLimit,
+        string indexName,
+        bool canReadFromCache,
+        string raftUniqueRequestId)
+        : base(query, indexQuery, scope, metadataOnly, indexEntriesOnly, ignoreLimit, indexName, canReadFromCache, raftUniqueRequestId)
     {
     }
 

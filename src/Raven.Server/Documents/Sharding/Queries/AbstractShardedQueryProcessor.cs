@@ -33,6 +33,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     private Dictionary<int, TCommand> _commands;
     private readonly bool _metadataOnly;
     private readonly bool _indexEntriesOnly;
+    private readonly bool _ignoreLimit;
     private readonly string _raftUniqueRequestId;
     private readonly HashSet<int> _filteredShardIndexes;
 
@@ -44,13 +45,21 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     protected readonly bool IsAutoMapReduceQuery;
     protected readonly long? ExistingResultEtag;
 
-    protected AbstractShardedQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query, bool metadataOnly, bool indexEntriesOnly,
-        long? existingResultEtag, CancellationToken token)
+    protected AbstractShardedQueryProcessor(
+        TransactionOperationContext context,
+        ShardedDatabaseRequestHandler requestHandler,
+        IndexQueryServerSide query,
+        bool metadataOnly,
+        bool indexEntriesOnly,
+        bool ignoreLimit,
+        long? existingResultEtag,
+        CancellationToken token)
     {
         RequestHandler = requestHandler;
         Query = query;
         _metadataOnly = metadataOnly;
         _indexEntriesOnly = indexEntriesOnly;
+        _ignoreLimit = ignoreLimit;
         Token = token;
         Context = context;
         ExistingResultEtag = existingResultEtag;
@@ -172,6 +181,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             scope?.For($"Shard_{shardNumber}"),
             _metadataOnly,
             _indexEntriesOnly,
+            _ignoreLimit,
             Query.Metadata.IndexName,
             canReadFromCache: ExistingResultEtag != null,
             _raftUniqueRequestId);
@@ -211,10 +221,10 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
         else
         {
-            if (IsMapReduceIndex == false) 
+            if (IsMapReduceIndex == false)
                 rewriteForProjectionFromMapReduceIndex = false;
 
-            if (IsAutoMapReduceQuery == false) 
+            if (IsAutoMapReduceQuery == false)
                 rewriteForProjectionFromAutoMapReduceIndex = false;
             else
             {

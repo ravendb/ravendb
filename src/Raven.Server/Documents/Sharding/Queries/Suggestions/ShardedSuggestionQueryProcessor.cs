@@ -17,10 +17,13 @@ namespace Raven.Server.Documents.Sharding.Queries.Suggestions;
 
 public class ShardedSuggestionQueryProcessor : AbstractShardedQueryProcessor<ShardedQueryCommand, QueryResult, SuggestionQueryResult>
 {
-
-
-    public ShardedSuggestionQueryProcessor(TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, IndexQueryServerSide query,
-        long? existingResultEtag, CancellationToken token) : base(context, requestHandler, query, metadataOnly: false,  indexEntriesOnly: false, existingResultEtag, token)
+    public ShardedSuggestionQueryProcessor(
+        TransactionOperationContext context,
+        ShardedDatabaseRequestHandler requestHandler,
+        IndexQueryServerSide query,
+        long? existingResultEtag,
+        CancellationToken token)
+        : base(context, requestHandler, query, metadataOnly: false, indexEntriesOnly: false, ignoreLimit: false, existingResultEtag, token)
     {
     }
 

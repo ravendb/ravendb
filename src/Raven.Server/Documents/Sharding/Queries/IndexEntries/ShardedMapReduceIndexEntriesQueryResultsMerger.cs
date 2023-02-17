@@ -23,15 +23,16 @@ public class ShardedMapReduceIndexEntriesQueryResultsMerger : ShardedMapReduceQu
         ShardedDatabaseContext.ShardedIndexesContext indexesContext,
         string indexName,
         bool isAutoMapReduceQuery,
-        TransactionOperationContext context)
-        : base(currentResults, indexesContext, indexName, isAutoMapReduceQuery, context)
+        TransactionOperationContext context,
+        CancellationToken token)
+        : base(currentResults, indexesContext, indexName, isAutoMapReduceQuery, context, token)
     {
     }
 
     protected override AggregationResult AggregateForAutoMapReduce(AutoMapReduceIndexDefinition indexDefinition)
     {
         BlittableJsonReaderObject currentlyProcessedResult = null;
-        return Aggregator.AggregateOn(CurrentResults, indexDefinition, Context, null, ref currentlyProcessedResult, CancellationToken.None);
+        return Aggregator.AggregateOn(CurrentResults, indexDefinition, Context, null, ref currentlyProcessedResult, Token);
     }
 
     protected override List<BlittableJsonReaderObject> AggregateForStaticMapReduce(IndexInformationHolder index)
@@ -45,6 +46,6 @@ public class ShardedMapReduceIndexEntriesQueryResultsMerger : ShardedMapReduceQu
         return base.AggregateForStaticMapReduce(index);
     }
 
-    protected override AggregatedAnonymousObjects CreateShardedAggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor) 
+    protected override AggregatedAnonymousObjects CreateShardedAggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor)
         => new ShardedAggregatedAnonymousObjectsForIndexEntries(results, propertyAccessor, _reduceKeyHash, Context);
 }
