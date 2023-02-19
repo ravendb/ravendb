@@ -9,16 +9,26 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
+using Sparrow.Logging;
 
 namespace Raven.Server.Web.Authentication;
 
 public class TwoFactorAuthenticationHandler : ServerRequestHandler
 {
+    private readonly Logger _auditLogger;
+
+    public TwoFactorAuthenticationHandler()
+    {
+        _auditLogger = LoggingSource.AuditLog.GetLogger(nameof(TwoFactorAuthenticationHandler), "Audit");
+    }
+
     [RavenAction("/authentication/2fa", "POST", AuthorizationStatus.UnauthenticatedClients)]
     public async Task ValidateTotp()
-    {
+    {        
         using var _ = ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx);
         ctx.OpenReadTransaction();
+
+        bool ipLimit = GetBoolValueQueryString("ipLimit") ?? false;
 
         var clientCert = GetCurrentCertificate();
 
@@ -53,8 +63,21 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
                 period = TimeSpan.FromHours(2);
             }
             var feature = (RavenServer.AuthenticateConnection)HttpContext.Features.Get<IHttpAuthenticationFeature>();
-            feature.SuccessfulTwoFactorAuthentication(); // enable access for the current connection 
-            Server.RegisterTwoFactorAuthSuccess(clientCert.Thumbprint, period);
+            feature.SuccessfulTwoFactorAuthentication(); // enable access for the current connection
+            
+            if (_auditLogger.IsInfoEnabled)
+            {
+                _auditLogger.Info($"Connection from {HttpContext.Connection.RemoteIpAddress} with new certificate '{clientCert.Subject} ({clientCert.Thumbprint})' successfully authenticated with two factor auth for {period}. IP Limit: {ipLimit}");
+            }
+
+            
+            Server.RegisterTwoFactorAuthSuccess(new RavenServer.TwoFactorAuthRegistration
+            {
+                Thumbprint = clientCert.Thumbprint,
+                Period = period,
+                FromIpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                LimitToIpAddress = ipLimit
+            });
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Accepted;
         }
         else
@@ -65,6 +88,12 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
 
     private void ReplyWith(TransactionOperationContext ctx, string err, HttpStatusCode httpStatusCode)
     {
+        if (_auditLogger.IsInfoEnabled)
+        {
+            var clientCert = GetCurrentCertificate();
+            _auditLogger.Info(
+                $"Two factor auth failure from IP: {HttpContext.Connection.RemoteIpAddress}  with cert: '{clientCert?.Thumbprint ?? "None"}/{clientCert?.Subject ?? "None"}' because: {err}");
+        }
         HttpContext.Response.StatusCode = (int)httpStatusCode;
         using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
         {

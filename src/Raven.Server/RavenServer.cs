@@ -100,7 +100,7 @@ namespace Raven.Server
         private readonly ExternalCertificateValidator _externalCertificateValidator;
         internal readonly JsonContextPool _tcpContextPool;
 
-        private readonly ConcurrentDictionary<string, DateTime> _twoFactoAuthTimeByCertThumbprintExpiry = new();
+        private readonly ConcurrentDictionary<string, TwoFactorAuthRegistration> _twoFactorAuthTimeByCertThumbprintExpiry = new();
 
         public event Action AfterDisposal;
 
@@ -1594,7 +1594,7 @@ namespace Raven.Server
             }
         }
 
-        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo)
+        internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo, IPAddress address)
         {
             var authenticationStatus = new AuthenticateConnection
             {
@@ -1656,15 +1656,20 @@ namespace Raven.Server
                         if (cert.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _))
                         {
                             bool hasTotpRecently = false;
-                            if (_twoFactoAuthTimeByCertThumbprintExpiry.TryGetValue(certificate.Thumbprint, out var expiry))
+                            if (_twoFactorAuthTimeByCertThumbprintExpiry.TryGetValue(certificate.Thumbprint, out var twoFactorAuthRegistration))
                             {
-                                if (Time.GetUtcNow() < expiry)
+                                if (Time.GetUtcNow() < twoFactorAuthRegistration.Expiry)
                                 {
+                                    if (twoFactorAuthRegistration.LimitToIpAddress && twoFactorAuthRegistration.FromIpAddress != address.ToString())
+                                    {
+                                        authenticationStatus.Status = AuthenticationStatus.TwoFactorAuthFromInvalidIp;
+                                        return authenticationStatus;
+                                    }
                                     hasTotpRecently = true;
                                 }
                                 else
                                 {
-                                    _twoFactoAuthTimeByCertThumbprintExpiry.TryRemove(new KeyValuePair<string, DateTime>(certificate.Thumbprint, expiry));
+                                    _twoFactorAuthTimeByCertThumbprintExpiry.TryRemove(new KeyValuePair<string, TwoFactorAuthRegistration>(certificate.Thumbprint, twoFactorAuthRegistration));
                                 }
                             }
                             if(hasTotpRecently == false)
@@ -2538,7 +2543,7 @@ namespace Raven.Server
             }
 
             var certificate = (X509Certificate2)sslStream.RemoteCertificate;
-            var auth = AuthenticateConnectionCertificate(certificate, tcpClient);
+            var auth = AuthenticateConnectionCertificate(certificate, tcpClient, ((IPEndPoint)tcpClient.Client.RemoteEndPoint)?.Address);
 
             switch (auth.Status)
             {
@@ -2817,7 +2822,8 @@ namespace Raven.Server
             ClusterAdmin,
             Expired,
             NotYetValid,
-            TwoFactorAuthNotProvided
+            TwoFactorAuthNotProvided,
+            TwoFactorAuthFromInvalidIp
         }
 
         internal TestingStuff ForTestingPurposesOnly()
@@ -2925,9 +2931,20 @@ namespace Raven.Server
             ArrayPool<byte>.Shared.Return(buffer);
         }
 
-        public void RegisterTwoFactorAuthSuccess(string thumbprint, TimeSpan period)
+        public void RegisterTwoFactorAuthSuccess(TwoFactorAuthRegistration registration)
         {
-            _twoFactoAuthTimeByCertThumbprintExpiry[thumbprint] = Time.GetUtcNow() + period;
+            registration.Expiry = Time.GetUtcNow() + registration.Period;
+            _twoFactorAuthTimeByCertThumbprintExpiry[registration.Thumbprint] = registration;
+        }
+
+        public class TwoFactorAuthRegistration
+        {
+            public string Thumbprint;
+            public DateTime Expiry;
+            
+            public TimeSpan Period;
+            public string FromIpAddress;
+            public bool LimitToIpAddress;
         }
     }
 }

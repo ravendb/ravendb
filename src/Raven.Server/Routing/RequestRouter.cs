@@ -180,6 +180,7 @@ namespace Raven.Server.Routing
                     switch (authenticationStatus)
                     {
                         case RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided:
+                        case RavenServer.AuthenticationStatus.TwoFactorAuthFromInvalidIp:
                         case RavenServer.AuthenticationStatus.NoCertificateProvided:
                         case RavenServer.AuthenticationStatus.Expired:
                         case RavenServer.AuthenticationStatus.NotYetValid:
@@ -333,6 +334,7 @@ namespace Raven.Server.Routing
                                 case RavenServer.AuthenticationStatus.Expired:
                                 case RavenServer.AuthenticationStatus.NotYetValid:
                                 case RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided:
+                                case RavenServer.AuthenticationStatus.TwoFactorAuthFromInvalidIp:
                                     break;
 
                                 default:
@@ -457,6 +459,10 @@ namespace Raven.Server.Routing
                 else if (feature.Status == RavenServer.AuthenticationStatus.TwoFactorAuthNotProvided)
                 {
                     message = $"The supplied client certificate '{name}' requires two factor authorization to be valid. Please POST the relevant TOTP value to /authentication/2fa";
+                }
+                else if (feature.Status == RavenServer.AuthenticationStatus.TwoFactorAuthFromInvalidIp)
+                {
+                    message = $"The supplied client certificate '{name}' requires two factor authorization and is limited to a specified IP address, but this request came from a different IP address. Please POST the relevant TOTP value to /authentication/2fa to register this IP address";
                 }
                 else
                 {

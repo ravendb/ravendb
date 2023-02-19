@@ -26,6 +26,8 @@ public class ValidateTwoFactorAuthenticationTokenOperation : IServerOperation
     {
         private readonly string _validationCode;
 
+        public override bool IsReadRequest => false;
+
         public ValidateTwoFactorAuthenticationTokenCommand(string validationCode)
         {
             _validationCode = validationCode;
