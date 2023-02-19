@@ -202,7 +202,7 @@ namespace Voron.Data.Tables
 
             public delegate ByteStringContext.Scope IndexEntryKeyGenerator(Transaction tx, ref TableValueReader value, out Slice slice);
 
-            public delegate void OnIndexEntryChangedDelegate(Transaction tx, Slice key, long oldSize, long newSize);
+            public delegate void OnIndexEntryChangedDelegate(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue);
 
             public OnIndexEntryChangedDelegate OnEntryChanged;
 
@@ -228,9 +228,25 @@ namespace Voron.Data.Tables
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnIndexEntryChanged(Transaction tx, Slice key, long oldSize, long newSize)
+            public void OnIndexEntryChanged(Transaction tx, Slice key, TableValueReader oldValue, TableValueReader newValue)
             {
-                OnEntryChanged?.Invoke(tx, key, oldSize, newSize);
+                OnEntryChanged?.Invoke(tx, key, oldValue, newValue);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void OnIndexEntryChanged(Transaction tx, Slice key, TableValueReader oldValue, TableValueBuilder newValue)
+            {
+                if (OnEntryChanged == null)
+                    return;
+
+                using (tx.Allocator.Allocate(newValue.Size, out var buffer))
+                {
+                    // todo RavenDB-18105 : try to optimize this - avoid creating a copy of the value here
+
+                    newValue.CopyTo(buffer.Ptr);
+                    var reader = newValue.CreateReader(buffer.Ptr);
+                    OnIndexEntryChanged(tx, key, oldValue, reader);
+                }
             }
 
             public byte[] Serialize()
