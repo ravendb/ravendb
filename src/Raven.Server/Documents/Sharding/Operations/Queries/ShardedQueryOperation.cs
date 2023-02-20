@@ -70,7 +70,7 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
 
             CombineExplanations(result, cmdResult);
             CombineTimings(shardNumber, cmdResult);
-            CombineSingleShardResultProperties(result, queryResult);
+            CombineSingleShardResultProperties(result, queryResult, _query.Metadata.IsDistinct);
 
             // For includes, we send the includes to all shards, then we merge them together. We do explicitly
             // support including from another shard, so we'll need to do that again for missing includes

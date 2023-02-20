@@ -47,7 +47,7 @@ public class ShardedIndexEntriesQueryOperation : AbstractShardedQueryOperation<S
         {
             var queryResult = cmdResult.Result;
 
-            CombineSingleShardResultProperties(result, queryResult);
+            CombineSingleShardResultProperties(result, queryResult, _query.Metadata.IsDistinct);
         }
 
         // all the results from each command are already ordered

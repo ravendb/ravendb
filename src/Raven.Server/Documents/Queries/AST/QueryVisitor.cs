@@ -48,6 +48,10 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 VisitSelect(q.Select, q.IsDistinct);
             }
+            else if (q.Select == null && q.IsDistinct)
+            {
+                VisitSelectDistinct();
+            }
 
             if (q.SelectFunctionBody.FunctionText != null)
             {
@@ -119,6 +123,11 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 VisitExpression(s.Expression);
             }
+        }
+
+        public virtual void VisitSelectDistinct()
+        {
+
         }
 
         public virtual void VisitLoad(List<(QueryExpression Expression, StringSegment? Alias)> load)

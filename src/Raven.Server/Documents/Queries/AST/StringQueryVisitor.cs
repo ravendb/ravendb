@@ -69,6 +69,14 @@ namespace Raven.Server.Documents.Queries.AST
             _sb.AppendLine();
         }
 
+        public override void VisitSelectDistinct()
+        {
+            EnsureLine();
+            _sb.Append("SELECT DISTINCT *");
+
+            _sb.AppendLine();
+        }
+
         private void VisitExpressionList(List<(QueryExpression Expression, StringSegment? Alias)> expressions)
         {
             for (int i = 0; i < expressions.Count; i++)

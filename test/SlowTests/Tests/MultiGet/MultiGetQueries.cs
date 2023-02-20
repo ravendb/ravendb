@@ -48,10 +48,11 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
-        public void WithPaging()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void WithPaging(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -70,10 +71,11 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
-        public void CanGetQueryStats()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetQueryStats(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -109,10 +111,11 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
-        public void WithQueuedActions()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void WithQueuedActions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

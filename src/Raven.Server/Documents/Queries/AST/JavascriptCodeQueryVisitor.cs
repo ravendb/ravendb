@@ -52,6 +52,11 @@ namespace Raven.Server.Documents.Queries.AST
             throw new NotSupportedException();
         }
 
+        public override void VisitSelectDistinct()
+        {
+            throw new NotSupportedException();
+        }
+
         public override void VisitLoad(List<(QueryExpression Expression, StringSegment? Alias)> load)
         {
             throw new NotSupportedException();

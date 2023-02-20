@@ -59,6 +59,16 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
+        public override void VisitSelectDistinct()
+        {
+            _writer.WritePropertyName("Select");
+            _writer.WriteStartArray();
+            _writer.WriteEndArray();
+
+            _writer.WritePropertyName("IsDistinct");
+            _writer.WriteValue(true);
+        }
+
         private void WriteExpressionList(List<(QueryExpression Expression, StringSegment? Alias)>  expressions)
         {
             _writer.WriteStartArray();

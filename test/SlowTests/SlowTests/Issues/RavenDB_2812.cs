@@ -41,7 +41,7 @@ namespace SlowTests.SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task ShouldProperlyPageResults(Options options)
         {
             var store = GetDocumentStore(options);
