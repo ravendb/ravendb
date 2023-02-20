@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Patch
 
             public string OriginalDocumentId;
             public bool RefreshOriginalDocument;
-            private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
+            private readonly ConcurrentLruRegexCache _regexCache;
             public HashSet<string> DocumentCountersToUpdate;
             public HashSet<string> DocumentTimeSeriesToUpdate;
             public JavaScriptUtils JavaScriptUtils;
@@ -229,6 +229,7 @@ namespace Raven.Server.Documents.Patch
             {
                 _database = database;
                 _configuration = configuration;
+                _regexCache = new(ConcurrentLruRegexCache.DefaultCapacity, configuration.Queries.RegexTimeout.AsTimeSpan);
                 _runner = runner;
                 ScriptEngine = new Engine(options =>
                 {

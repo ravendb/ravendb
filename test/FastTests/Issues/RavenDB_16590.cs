@@ -79,7 +79,9 @@ namespace FastTests.Issues
                 "Indexing.MaxTimeToWaitAfterFlushAndSyncWhenReplacingSideBySideIndexInSec",
                 "Indexing.MinimumTotalSizeOfJournalsToRunFlushAndSyncWhenReplacingSideBySideIndexInMb",
                 "Indexing.OrderByTicksAutomaticallyWhenDatesAreInvolved",
-
+                "Query.RegexTimeoutInMs",
+                
+                
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",
                 "Indexing.Analyzers.NGram.MaxGram",
