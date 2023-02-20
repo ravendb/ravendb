@@ -47,7 +47,7 @@ public class ShardedSuggestionQueryOperation : AbstractShardedQueryOperation<Sug
 
             CombineExplanations(result, cmdResult);
             CombineTimings(shardNumber, cmdResult);
-            CombineSingleShardResultProperties(result, queryResult);
+            CombineSingleShardResultProperties(result, queryResult, isDistinct: false);
 
             foreach (BlittableJsonReaderObject suggestionJson in cmdResult.Result.Results)
             {

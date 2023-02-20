@@ -52,11 +52,13 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
 
     public abstract TCombinedResult CombineResults(Dictionary<int, ShardExecutionResult<QueryResult>> results);
 
-    protected static void CombineSingleShardResultProperties(QueryResult<List<TResult>, List<TIncludes>> combinedResult, QueryResult singleShardResult)
+    protected static void CombineSingleShardResultProperties(QueryResult<List<TResult>, List<TIncludes>> combinedResult, QueryResult singleShardResult, bool isDistinct)
     {
         combinedResult.TotalResults += singleShardResult.TotalResults;
         combinedResult.IsStale |= singleShardResult.IsStale;
-        combinedResult.SkippedResults += singleShardResult.SkippedResults;
+
+        combinedResult.SkippedResults = 0; // sharded queries start from 0 on all shards and we apply paging on the orchestrator side
+
         combinedResult.IndexName = singleShardResult.IndexName;
         combinedResult.IncludedPaths = singleShardResult.IncludedPaths;
 

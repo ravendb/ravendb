@@ -37,7 +37,7 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
     {
         QueryTimingsScope pagingScope = null;
 
-        if (Query.Offset is > 0 && result.Results.Count > Query.Offset)
+        if (Query.Offset is > 0 && result.Results.Count >= Query.Offset)
         {
             using (GetPagingScope())
             {

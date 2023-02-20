@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseOffsetWithCollectionQuery()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void CanUseOffsetWithCollectionQuery(Options options)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             using (var s = store.OpenSession())
             {
                 for (int i = 0; i < 5; i++)

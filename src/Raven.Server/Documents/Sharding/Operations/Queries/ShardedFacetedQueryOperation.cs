@@ -42,7 +42,7 @@ public class ShardedFacetedQueryOperation : AbstractShardedQueryOperation<Facete
 
             CombineExplanations(result, cmdResult);
             CombineTimings(shardNumber, cmdResult);
-            CombineSingleShardResultProperties(result, queryResult);
+            CombineSingleShardResultProperties(result, queryResult, isDistinct: false);
 
             if (queryResult.Includes is { Count: > 0 })
             {

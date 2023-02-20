@@ -93,10 +93,10 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
             // For map/reduce - we need to re-run the reduce portion of the index again on the results
             ReduceResults(ref result, queryScope);
 
-            ApplyPaging(ref result, queryScope);
-
             // For map-reduce indexes we project the results after the reduce part 
             ProjectAfterMapReduce(ref result, queryScope);
+
+            ApplyPaging(ref result, queryScope);
 
             // * For JS projections and load clauses, we don't support calling load() on a
             //   document that is not on the same shard

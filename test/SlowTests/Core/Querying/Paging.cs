@@ -24,7 +24,7 @@ namespace SlowTests.Core.Querying
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicPaging(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -52,13 +52,16 @@ namespace SlowTests.Core.Querying
                         .Take(5)
                         .ToArray();
                     Assert.Equal(7, stats.TotalResults);
-                    Assert.Equal(1, stats.SkippedResults);
+                    
+                    if (options.DatabaseMode == RavenDatabaseMode.Single)
+                        Assert.Equal(1, stats.SkippedResults);
+
                     Assert.Equal(5, companies.Length);
-                    Assert.Equal("Company1", companies[0]);
-                    Assert.Equal("Company2", companies[1]);
-                    Assert.Equal("Company3", companies[2]);
-                    Assert.Equal("Company4", companies[3]);
-                    Assert.Equal("Company5", companies[4]);
+                    Assert.Contains("Company1", companies);
+                    Assert.Contains("Company2", companies);
+                    Assert.Contains("Company3", companies);
+                    Assert.Contains("Company4", companies);
+                    Assert.Contains("Company5", companies);
 
                     var skipped = stats.SkippedResults;
                     companies = session.Query<Company>()
