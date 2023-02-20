@@ -113,7 +113,9 @@ public static class TwoFactorAuthentication
     // base 32 taken from:
     // https://github.com/dotnet/aspnetcore/blob/74389644ecb9f7abc63b2d54bf615e1c3887ffd5/src/Identity/Extensions.Core/src/Base32.cs
     private const string _base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    
+    public const string CookieName = "csrf-cookie";
+    public const string HeaderName = "Csrf-Token";
+
     private static string GenerateBase32()
     {
         const int length = 20;

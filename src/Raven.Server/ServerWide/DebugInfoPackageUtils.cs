@@ -44,14 +44,13 @@ namespace Raven.Server.ServerWide
         public static IEnumerable<RouteInformation> GetAuthorizedRoutes(RavenServer server, HttpContext httpContext, string databaseName = null)
         {
             var routes = Routes.Where(x => server._forTestingPurposes == null || server._forTestingPurposes.DebugPackage.RoutesToSkip.Contains(x.Path) == false);
-            var feature = httpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var feature = (RavenServer.AuthenticateConnection)httpContext.Features.Get<IHttpAuthenticationFeature>();
 
             foreach (var route in routes)
             {
                 if (server.Certificate.Certificate != null)
                 {
-                    Debug.Assert(feature != null);
-                    if (server.Router.CanAccessRoute(route, httpContext, databaseName, feature, out _))
+                    if (server.Router.CanAccessRoute(route, httpContext, databaseName, feature))
                     {
                         yield return route;
                     }

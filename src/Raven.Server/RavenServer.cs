@@ -1539,6 +1539,8 @@ namespace Raven.Server
 
             public AuthenticationStatus StatusForAudit => _status;
 
+            public TwoFactorAuthRegistration TwoFactorAuthRegistration;
+            
             public void WaitingForTwoFactorAuthentication()
             {
                 _statusAfterTwoFactorAuth = _status;
@@ -1660,11 +1662,14 @@ namespace Raven.Server
                             {
                                 if (Time.GetUtcNow() < twoFactorAuthRegistration.Expiry)
                                 {
-                                    if (twoFactorAuthRegistration.LimitToIpAddress && twoFactorAuthRegistration.FromIpAddress != address.ToString())
+                                    if (twoFactorAuthRegistration.HasLimits && twoFactorAuthRegistration.IpAddresses != null &&
+                                        Array.IndexOf(twoFactorAuthRegistration.IpAddresses, address.ToString()) == -1)
                                     {
-                                        authenticationStatus.Status = AuthenticationStatus.TwoFactorAuthFromInvalidIp;
+                                        authenticationStatus.Status = AuthenticationStatus.TwoFactorAuthFromInvalidLimit;
                                         return authenticationStatus;
                                     }
+
+                                    authenticationStatus.TwoFactorAuthRegistration = twoFactorAuthRegistration;
                                     hasTotpRecently = true;
                                 }
                                 else
@@ -2823,7 +2828,7 @@ namespace Raven.Server
             Expired,
             NotYetValid,
             TwoFactorAuthNotProvided,
-            TwoFactorAuthFromInvalidIp
+            TwoFactorAuthFromInvalidLimit
         }
 
         internal TestingStuff ForTestingPurposesOnly()
@@ -2943,8 +2948,10 @@ namespace Raven.Server
             public DateTime Expiry;
             
             public TimeSpan Period;
-            public string FromIpAddress;
-            public bool LimitToIpAddress;
+            public string[] IpAddresses;
+            public bool HasLimits;
+            public string ExpectedCookieValue;
+            public string CsrfAccessToken;
         }
     }
 }

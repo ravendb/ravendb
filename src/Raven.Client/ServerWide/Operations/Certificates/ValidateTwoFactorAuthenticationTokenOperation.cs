@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates;
 
-public class ValidateTwoFactorAuthenticationTokenOperation : IServerOperation
+public class ValidateTwoFactorAuthenticationTokenOperation : IServerOperation<string>
 {
     private readonly string _validationCode;
 
@@ -17,12 +17,12 @@ public class ValidateTwoFactorAuthenticationTokenOperation : IServerOperation
         _validationCode = validationCode;
     }
     
-    public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
+    public RavenCommand<string> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new ValidateTwoFactorAuthenticationTokenCommand(_validationCode);
     }
     
-    private class ValidateTwoFactorAuthenticationTokenCommand : RavenCommand
+    private class ValidateTwoFactorAuthenticationTokenCommand : RavenCommand<string>
     {
         private readonly string _validationCode;
 
@@ -31,6 +31,11 @@ public class ValidateTwoFactorAuthenticationTokenOperation : IServerOperation
         public ValidateTwoFactorAuthenticationTokenCommand(string validationCode)
         {
             _validationCode = validationCode;
+        }
+
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+        {
+            response.TryGet("Token", out Result);
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

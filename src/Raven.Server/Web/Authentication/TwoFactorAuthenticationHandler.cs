@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Microsoft.Extensions.Primitives;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
@@ -28,7 +30,9 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
         using var _ = ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx);
         ctx.OpenReadTransaction();
 
-        bool ipLimit = GetBoolValueQueryString("ipLimit") ?? false;
+        bool hasLimits = GetBoolValueQueryString("hasLimits") ?? false;
+        var ipsStrVals = GetStringValuesQueryString("ip");
+        var ips = ipsStrVals.Count == 0 ? new[] { HttpContext.Connection.RemoteIpAddress?.ToString() } : ipsStrVals.ToArray();
 
         var clientCert = GetCurrentCertificate();
 
@@ -67,18 +71,39 @@ public class TwoFactorAuthenticationHandler : ServerRequestHandler
             
             if (_auditLogger.IsInfoEnabled)
             {
-                _auditLogger.Info($"Connection from {HttpContext.Connection.RemoteIpAddress} with new certificate '{clientCert.Subject} ({clientCert.Thumbprint})' successfully authenticated with two factor auth for {period}. IP Limit: {ipLimit}");
+                _auditLogger.Info($"Connection from {HttpContext.Connection.RemoteIpAddress} with new certificate '{clientCert.Subject} ({clientCert.Thumbprint})' successfully authenticated with two factor auth for {period}. Has limits: {hasLimits}, IPs: [{string.Join(", ", ips)}]");
             }
 
+
+            string expectedCookieValue = Guid.NewGuid().ToString();
+            string csrfAccessToken = Guid.NewGuid().ToString();
+            
+            HttpContext.Response.Cookies.Append(TwoFactorAuthentication.CookieName, expectedCookieValue, new CookieOptions
+            {
+                HttpOnly = true,
+                MaxAge = period,
+                IsEssential = true,
+                SameSite = SameSiteMode.Strict,
+                Secure = true
+            });
             
             Server.RegisterTwoFactorAuthSuccess(new RavenServer.TwoFactorAuthRegistration
             {
                 Thumbprint = clientCert.Thumbprint,
                 Period = period,
-                FromIpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
-                LimitToIpAddress = ipLimit
+                IpAddresses = ips,
+                HasLimits = hasLimits,
+                CsrfAccessToken = csrfAccessToken,
+                ExpectedCookieValue = expectedCookieValue
             });
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Accepted;
+            using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Token");
+                writer.WriteString(csrfAccessToken);
+                writer.WriteEndObject();
+            }
         }
         else
         {
