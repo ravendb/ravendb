@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading;
 using Amazon.SQS.Model;
 using Corax;
 using Corax.Mappings;
 using Corax.Queries;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -281,8 +281,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private struct NoDistinct : IHasDistinct { }
 
         private struct HasDistinct : IHasDistinct { }
-
-
+        
         // Even if there are no distinct statements we have to be sure that we are not including
         // documents that we have already included during this request. 
         private struct IdentityTracker<TDistinct> where TDistinct : struct, IHasDistinct
@@ -295,8 +294,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             private bool _isMap;
 
-            private HashSet<UnmanagedSpan> _alreadySeenDocumentKeysInPreviousPage;
-            private HashSet<ulong> _alreadySeenProjections;
+            private GrowableHashSet<UnmanagedSpan> _alreadySeenDocumentKeysInPreviousPage;
+            private GrowableHashSet<ulong> _alreadySeenProjections;
 
             public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, IndexFieldsMapping fieldsMapping, FieldsToFetch fieldsToFetch, IQueryResultRetriever retriever)
             {
@@ -307,7 +306,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _retriever = retriever;
 
                 _alreadySeenDocumentKeysInPreviousPage = new(UnmanagedSpanComparer.Instance);
-
                 _isMap = index.Type.IsMap();
             }
 
@@ -348,7 +346,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 if (typeof(TDistinct) == typeof(HasDistinct))
                 {
                     _alreadySeenProjections ??= new();
-
                     var retriever = _retriever;
                     foreach (var id in distinctIds)
                     {
@@ -1262,6 +1259,62 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 if (staticFields.Contains(field))
                     continue;
                 yield return field;
+            }
+        }
+        
+        internal class GrowableHashSet<TItem>
+        {
+            private List<HashSet<TItem>> _hashSetsBucket;
+            private HashSet<TItem> _newestHashSet;
+            private readonly int _maxSizePerCollection;
+            private readonly IEqualityComparer<TItem> _comparer;
+
+            public bool HasMultipleHashSets => _hashSetsBucket != null;
+
+            public GrowableHashSet(IEqualityComparer<TItem> comparer = null, int? maxSizePerCollection = null)
+            {
+                _comparer = comparer;
+                _hashSetsBucket = null;
+                _maxSizePerCollection = maxSizePerCollection ?? int.MaxValue;
+                CreateNewHashSet();
+            }
+
+            public bool Add(TItem item)
+            {
+                if (_newestHashSet!.Count >= _maxSizePerCollection)
+                    UnlikelyGrowBuffer();
+
+                if (_hashSetsBucket != null && Contains(item))
+                    return false;
+
+                return _newestHashSet.Add(item);
+            }
+
+            private void UnlikelyGrowBuffer()
+            {
+                _hashSetsBucket ??= new();
+                _hashSetsBucket.Add(_newestHashSet);
+                CreateNewHashSet();
+            }
+
+            public bool Contains(TItem item)
+            {
+                if (_hashSetsBucket != null)
+                {
+                    foreach (var hashSet in _hashSetsBucket)
+                        if (hashSet.Contains(item))
+                            return true;
+                }
+
+                return _newestHashSet!.Contains(item);
+            }
+
+            private void CreateNewHashSet()
+            {
+                if (_comparer == null)
+                    _newestHashSet = new();
+                else
+                    _newestHashSet = new(_comparer);
             }
         }
 
