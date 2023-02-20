@@ -2328,6 +2328,8 @@ namespace Raven.Server.Documents.Indexes
 
                             IndexFieldsPersistence.Persist(indexContext);
                             HandleReferences(tx);
+
+                            HandleMismatchedReferences();
                         }
 
                         using (stats.For(IndexingOperation.Storage.Commit))
@@ -2388,6 +2390,18 @@ namespace Raven.Server.Documents.Indexes
             DocumentDatabase.NotificationCenter.Indexing.AddWarning(Name, _referenceLoadWarning);
 
             _updateReferenceLoadWarning = false;
+        }
+
+        private void HandleMismatchedReferences()
+        {
+            if (CurrentIndexingScope.Current.MismatchedReferences == null) 
+                return;
+            
+            MismatchedReferencesLoadWarning warning = new (Name, CurrentIndexingScope.Current.MismatchedReferences);
+                
+            DocumentDatabase.NotificationCenter.Indexing.AddWarning(warning);
+                
+            CurrentIndexingScope.Current.MismatchedReferences = null;
         }
 
         private void DisposeIndexWriterOnError(Lazy<IndexWriteOperationBase> writeOperation)

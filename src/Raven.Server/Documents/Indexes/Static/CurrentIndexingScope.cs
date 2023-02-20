@@ -36,6 +36,18 @@ namespace Raven.Server.Documents.Indexes.Static
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollectionForCompareExchange;
 
+        public Dictionary<string, Dictionary<string, LoadFailure>> MismatchedReferences;
+
+        private const int MaxMismatchedReferencesPerSource = 3;
+        private const int MaxMismatchedDocumentLoadsPerIndex = 3;
+
+        public class LoadFailure
+        {
+            public string SourceId;
+            public string ReferenceId;
+            public HashSet<string> MismatchedCollections;
+        }
+        
         [ThreadStatic]
         public static CurrentIndexingScope Current;
 
@@ -222,11 +234,59 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (document.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection))
                 {
                     if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false)
+                    {
+                        MismatchedReferences ??= new Dictionary<string, Dictionary<string, LoadFailure>>();
+
+                        if (MismatchedReferences.Count < MaxMismatchedDocumentLoadsPerIndex)
+                            HandleMismatchedReference(document, collectionName, id);
+
                         return DynamicNullObject.Null;
+                    }
                 }
 
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
                 return new DynamicBlittableJson(document);
+            }
+        }
+
+        private void HandleMismatchedReference(Document referencedDocument, string referencedCollectionName, LazyStringValue sourceId)
+        {
+            //another mismatch for source document
+            if(MismatchedReferences.TryGetValue(sourceId, out Dictionary<string, LoadFailure> mismatchesForDocument) && mismatchesForDocument.Count < MaxMismatchedReferencesPerSource)
+            {
+                //another mismatch referencing the same document
+                if(mismatchesForDocument.TryGetValue(referencedDocument.Id, out LoadFailure loadFailure))
+                    loadFailure.MismatchedCollections.Add(referencedCollectionName);
+
+                else
+                {
+                    mismatchesForDocument.Add(
+                        referencedDocument.Id, new LoadFailure()
+                        {
+                            SourceId = sourceId, 
+                            ReferenceId = referencedDocument.Id, 
+                            MismatchedCollections = new HashSet<string>()
+                            {
+                                referencedCollectionName
+                            } 
+                        });
+                }
+            }
+
+            //first mismatch for source document
+            else
+            {
+                LoadFailure failure = new ()
+                {
+                    SourceId = sourceId, 
+                    ReferenceId = referencedDocument.Id, 
+                    MismatchedCollections = new HashSet<string>()
+                    {
+                        referencedCollectionName
+                    }
+                };
+                            
+                MismatchedReferences.Add(sourceId, new Dictionary<string, LoadFailure>(){ {referencedDocument.Id, failure} });
             }
         }
 

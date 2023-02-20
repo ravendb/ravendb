@@ -25,6 +25,8 @@ namespace Raven.Server.NotificationCenter
 
         private readonly ConcurrentQueue<(string indexName, IndexingReferenceLoadWarning.WarningDetails warningDetails)> _warningReferenceDocumentLoadsQueue =  new();
 
+        private MismatchedReferencesLoadWarning _mismatchedReferencesLoadWarning;
+
         private Timer _indexingTimer;
         private readonly Logger _logger;
         private readonly object _locker = new object();
@@ -66,6 +68,16 @@ namespace Raven.Server.NotificationCenter
 
             EnsureTimer();
         }
+        
+        public void AddWarning(MismatchedReferencesLoadWarning mismatchedReferenceLoadWarningDetails)
+        {
+            if (CanAdd(out DateTime now) == false)
+                return;
+            
+            _mismatchedReferencesLoadWarning = mismatchedReferenceLoadWarningDetails;
+
+            EnsureTimer();
+        }
 
         private bool CanAdd(out DateTime now)
         {
@@ -98,7 +110,7 @@ namespace Raven.Server.NotificationCenter
         {
             try
             {
-                if (_warningIndexOutputsPerDocumentQueue.IsEmpty && _warningReferenceDocumentLoadsQueue.IsEmpty)
+                if (_warningIndexOutputsPerDocumentQueue.IsEmpty && _warningReferenceDocumentLoadsQueue.IsEmpty && _mismatchedReferencesLoadWarning == null)
                     return;
 
                 PerformanceHint indexOutputPerDocumentHint = null;
@@ -121,11 +133,19 @@ namespace Raven.Server.NotificationCenter
                     ((IndexingReferenceLoadWarning)referenceLoadsHint.Details).Update(tuple.indexName, tuple.warningDetails);
                 }
 
+                AlertRaised mismatchedReferencesAlert = null;
+                
+                if(_mismatchedReferencesLoadWarning != null) 
+                    mismatchedReferencesAlert = GetMismatchedReferencesAlert();
+                
                 if (indexOutputPerDocumentHint != null)
                     _notificationCenter.Add(indexOutputPerDocumentHint);
 
                 if (referenceLoadsHint != null)
                     _notificationCenter.Add(referenceLoadsHint);
+                
+                if(mismatchedReferencesAlert != null)
+                    _notificationCenter.Add(mismatchedReferencesAlert);
             }
             catch (Exception e)
             {
@@ -165,6 +185,13 @@ namespace Raven.Server.NotificationCenter
                     "Please see Indexing Performance graph to check the performance of your indexes.",
                     PerformanceHintType.Indexing_References, NotificationSeverity.Warning, Source, details);
             }
+        }
+        
+        private AlertRaised GetMismatchedReferencesAlert()
+        {
+            return AlertRaised.Create(_database, "bla bla",
+                "bla bla",
+                AlertType.Etl_Warning, NotificationSeverity.Warning, Source, _mismatchedReferencesLoadWarning);
         }
 
         public void Dispose()
