@@ -3828,10 +3828,10 @@ namespace Raven.Server.ServerWide
 
             const string dbKey = "db/";
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
-            long? oldTaskId = null;
 
             var allServerWideBackupNames = GetSeverWideBackupNames(context);
 
+            var taskIdPerDatabase = new Dictionary<string, long>();
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
@@ -3862,7 +3862,6 @@ namespace Raven.Server.ServerWide
                             if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
                             {
                                 periodicBackupConfiguration.TaskId = taskId;
-                                oldTaskId = taskId;
                             }
                         }
                     }
@@ -3870,6 +3869,7 @@ namespace Raven.Server.ServerWide
                     if (serverWideBackupConfiguration.IsExcluded(databaseName) == false)
                     {
                         newBackups.Add(periodicBackupConfiguration.ToJson());
+                        taskIdPerDatabase[databaseName] = periodicBackupConfiguration.TaskId;
                     }
 
                     using (oldDatabaseRecord)
@@ -3885,7 +3885,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            ApplyDatabaseRecordUpdates(toUpdate, type, oldTaskId ?? serverWideBackupConfiguration.TaskId, index, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, serverWideBackupConfiguration.TaskId, index, items, context, taskIdPerDatabase);
         }
 
         private static bool IsServerWideBackupToEdit(BlittableJsonReaderObject databaseTask, string serverWideTaskName, HashSet<string> allServerWideTasksNames)
@@ -4238,7 +4238,7 @@ namespace Raven.Server.ServerWide
                    taskNameToFind.Equals(foundTaskName, StringComparison.OrdinalIgnoreCase);
         }
 
-        private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long indexForValueChanges, long index, Table items, ClusterOperationContext context)
+        private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long indexForValueChanges, long index, Table items, ClusterOperationContext context, object changeState = null)
         {
             var tasks = new List<Func<Task>> { () => Changes.OnValueChanges(indexForValueChanges, type) };
 
@@ -4250,7 +4250,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, update.DatabaseRecord);
                 }
 
-                tasks.Add(() => Changes.OnDatabaseChanges(update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
+                tasks.Add(() => Changes.OnDatabaseChanges(update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, changeState));
             }
 
             ExecuteManyOnDispose(context, index, type, tasks);

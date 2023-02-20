@@ -387,12 +387,12 @@ namespace FastTests
             Assert.Equal(expectedVal, val);
         }
 
-        protected static async Task<T> AssertWaitFoGreaterAsync<T>(Func<T> act, T value, int timeout = 15000, int interval = 100) where T : IComparable
+        protected static async Task<T> AssertWaitForGreaterAsync<T>(Func<T> act, T value, int timeout = 15000, int interval = 100) where T : IComparable
         {
-            return await AssertWaitFoGreaterAsync(() => Task.FromResult(act()), value, timeout, interval);
+            return await AssertWaitForGreaterAsync(() => Task.FromResult(act()), value, timeout, interval);
         }
 
-        protected static async Task<T> AssertWaitFoGreaterAsync<T>(Func<Task<T>> act, T value, int timeout = 15000, int interval = 100) where T : IComparable
+        protected static async Task<T> AssertWaitForGreaterAsync<T>(Func<Task<T>> act, T value, int timeout = 15000, int interval = 100) where T : IComparable
         {
             var ret = await WaitForPredicateAsync(r => r.CompareTo(value) > 0, act, timeout, interval);
             Assert.NotNull(ret);
