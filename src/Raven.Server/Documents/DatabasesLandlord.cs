@@ -1108,7 +1108,7 @@ namespace Raven.Server.Documents
                 return true;
 
             // if we have a small value or even a negative one, simply don't dispose the database.
-            dueTime = (int)(wakeupUtc - DateTime.UtcNow).Value.TotalMilliseconds;
+            dueTime = (int)Math.Min(int.MaxValue, (wakeupUtc - DateTime.UtcNow).Value.TotalMilliseconds);
 
             if (SkipShouldContinueDisposeCheck)
                 return true;
