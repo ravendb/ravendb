@@ -16,7 +16,7 @@ namespace SlowTests.Issues
 
         protected StorageEnvironmentOptions ModifyOptions(StorageEnvironmentOptions options, bool manualFlushing)
         {
-            options.MaxLogFileSize = 8 * 1024 * 1024; // 8mb
+            options.MaxLogFileSize = 4 * 1024 * 1024; // 8mb
             options.ManualFlushing = manualFlushing;
 
             ForceConstantCompressionAcceleration(options);

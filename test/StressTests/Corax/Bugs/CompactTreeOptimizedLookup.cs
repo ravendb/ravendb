@@ -39,7 +39,7 @@ public class CompactTreeOptimizedLookup : StorageTest
                     byte[] key = Encoding.UTF8.GetBytes(term);
                     if (dates.TryGetNextValue(key, out var v, out var scope) == false)
                     {
-                        dates.Add(key, 3333333, scope.Key);
+                        dates.Add(scope.Key, 3333333);
                     }
                 }
             }

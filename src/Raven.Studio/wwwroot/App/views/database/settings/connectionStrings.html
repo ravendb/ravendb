@@ -376,7 +376,7 @@
         <i class="icon-cancel"></i><span>Cancel</span>
     </button>
     <button class="btn btn-success" title="Click to save this connection string"
-            data-bind="click: onSave, visible: !editedRavenEtlConnectionString() || !editedRavenEtlConnectionString().isServerWide()">
+            data-bind="click: onSave, visible: !editedRavenEtlConnectionString() || !editedRavenEtlConnectionString().isServerWide(), disable: !$root.dirtyFlag().isDirty()">
         <i class="icon-check"></i><span>Save</span>
     </button>
 </script>

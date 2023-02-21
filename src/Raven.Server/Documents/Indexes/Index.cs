@@ -779,7 +779,7 @@ namespace Raven.Server.Documents.Indexes
                 _environment = environment;
                 var safeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name);
                 _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{safeName}");
-
+                _regexCache = new(ConcurrentLruRegexCache.DefaultCapacity, documentDatabase.Configuration.Queries.RegexTimeout.AsTimeSpan);
                 InitializeComponentsUsingEnvironment(documentDatabase, _environment);
 
                 LoadValues();
@@ -3911,7 +3911,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client
 
-        private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
+        private ConcurrentLruRegexCache _regexCache;
 
         internal static bool WillResultBeAcceptable(bool isStale, IndexQueryBase<BlittableJsonReaderObject> query, AsyncWaitForIndexing wait)
         {
