@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -53,11 +54,11 @@ public class RavenDB_19541 : RavenTestBase
     {
         using var store = GetDocumentStoreWithDocuments();
         using var session = OpenSessionAndGetProjectIntoQuery(store, out var projectIntoQuery);
-        var selectAnonymous = projectIntoQuery.Select(i => new MemberInitProjection() {FirstName = i.FirstName, FavoriteFood = i.FavoriteFood});
+        var memberInitQuery = projectIntoQuery.Select(i => new MemberInitProjection() {FirstName = i.FirstName, FavoriteFood = i.FavoriteFood});
 
-        Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", selectAnonymous.ToString());
-        Assert.Equal("MACIEJ", selectAnonymous.Single().FirstName);
-        Assert.Equal("Zylc", selectAnonymous.Single().FavoriteFood);
+        Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", memberInitQuery.ToString());
+        Assert.Equal("MACIEJ", memberInitQuery.Single().FirstName);
+        Assert.Equal("Zylc", memberInitQuery.Single().FavoriteFood);
     }
 
     [Fact]
@@ -71,6 +72,38 @@ public class RavenDB_19541 : RavenTestBase
         Assert.Equal(1, selectAnonymous.Single());
     }
 
+    [Fact]
+    public void DocumentQueryProjectionWithMultipleSelects()
+    {
+        using var store = GetDocumentStoreWithDocuments();
+
+        using (var session = store.OpenSession())
+        {
+            var projectIntoQuery = session.Advanced.DocumentQuery<FullData, CapsLockIndex>().WhereEquals(i => i.FirstName, "maciej").SelectFields<ProjectionInto>();
+            Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, LastNameName, Age, FavoriteFood, Props", projectIntoQuery.ToString());
+            var dqProjectionIntoAnother = projectIntoQuery.SelectFields<MemberInitProjection>();
+            Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", dqProjectionIntoAnother.ToString());
+            Assert.Equal("MACIEJ", dqProjectionIntoAnother.Single().FirstName);
+            Assert.Equal("Zylc", dqProjectionIntoAnother.Single().FavoriteFood);
+        }
+    }
+    
+    [Fact]
+    public async Task AsyncDocumentQueryProjectionWithMultipleSelects()
+    {
+        using var store = GetDocumentStoreWithDocuments();
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var projectIntoQuery = session.Advanced.AsyncDocumentQuery<FullData, CapsLockIndex>().WhereEquals(i => i.FirstName, "maciej").SelectFields<ProjectionInto>();
+            Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, LastNameName, Age, FavoriteFood, Props", projectIntoQuery.ToString());
+            var dqProjectionIntoAnother = projectIntoQuery.SelectFields<MemberInitProjection>();
+            Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", dqProjectionIntoAnother.ToString());
+            Assert.Equal("MACIEJ", (await dqProjectionIntoAnother.SingleAsync()).FirstName);
+            Assert.Equal("Zylc", (await dqProjectionIntoAnother.SingleAsync()).FavoriteFood);
+        }
+    }
+    
     private IDocumentSession OpenSessionAndGetProjectIntoQuery(IDocumentStore store, out IRavenQueryable<ProjectionInto> projectIntoQuery)
     {
         var session = store.OpenSession();
