@@ -13,6 +13,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -64,6 +65,11 @@ namespace Raven.Server.Documents.Patch
             run.DebugMode = _debugMode;
             if (runIfMissing != null)
                 runIfMissing.DebugMode = _debugMode;
+
+            using (DocumentIdWorker.GetLower(context.Allocator, id, out Slice lowerId))
+            {
+                _database.DocumentsStorage.DocumentPut.ValidateId(lowerId);
+            }
 
             var originalDocument = GetCurrentDocument(context, id);
 

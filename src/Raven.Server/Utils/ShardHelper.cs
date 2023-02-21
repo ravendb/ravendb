@@ -38,12 +38,6 @@ namespace Raven.Server.Utils
             }
         }
 
-        public static int GetBucketFor<TTransaction>(TransactionOperationContext<TTransaction> context, ShardingConfiguration configuration, string id)
-            where TTransaction : RavenTransaction
-        {
-            return GetBucketFor(configuration, context.Allocator, id);
-        }
-
         public static int GetBucketFor(ShardingConfiguration configuration, Slice lowerId) => GetBucketFor(configuration, lowerId.AsReadOnlySpan());
 
         public static int GetBucketFor(ShardingConfiguration configuration, ReadOnlySpan<byte> lowerId)
@@ -64,8 +58,6 @@ namespace Raven.Server.Utils
 
             return bucket;
         }
-
-        private static int GetBucketFor(Slice lowerId) => GetBucketFor(lowerId.AsReadOnlySpan());
 
         private static int GetBucketFor(ReadOnlySpan<byte> buffer)
         {
@@ -154,10 +146,10 @@ namespace Raven.Server.Utils
 
         public static int GetShardNumberFor(ShardingConfiguration configuration, ByteStringContext allocator, string id) => GetShardNumberAndBucketFor(configuration, allocator, id).ShardNumber;
 
+        public static int GetShardNumberFor(ShardingConfiguration configuration, ByteStringContext allocator, LazyStringValue id) => GetShardNumberAndBucketFor(configuration, allocator, id).ShardNumber;
+
         public static int GetShardNumberFor<TTransaction>(ShardingConfiguration configuration, TransactionOperationContext<TTransaction> context, string id)
             where TTransaction : RavenTransaction => GetShardNumberFor(configuration, context.Allocator, id);
-
-        public static int GetShardNumberFor(ShardingConfiguration configuration, ByteStringContext allocator, LazyStringValue id) => GetShardNumberAndBucketFor(configuration, allocator, id).ShardNumber;
 
         public static int GetShardNumberFor<TTransaction>(RawShardingConfiguration configuration, TransactionOperationContext<TTransaction> context, string id)
             where TTransaction : RavenTransaction => GetShardNumberAndBucketFor(configuration, context, id).ShardNumber;
@@ -385,9 +377,21 @@ namespace Raven.Server.Utils
             var actualId = id.AsSpan(0, id.Length - 2);
             var actualIdAsString = actualId.ToString();
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 Optimize this");
+            return GetShardNumberAndBucketFor(configuration, context.Allocator, actualIdAsString);
+        }
 
-            int bucket = GetBucketFor(configuration, context.Allocator, actualIdAsString);
-            return (FindBucketShard(configuration.BucketRanges, bucket), bucket);
+        public static int GetShardNumberFor(ShardingConfiguration configuration, TransactionOperationContext context, string id, char identityPartsSeparator)
+        {
+            // the expected id format here is users/$BASE26$/
+            // so we cut the '$/' from the end to detect shard number based on BASE26 part
+            if (id[^1] == identityPartsSeparator && id[^2] == '$')
+            {
+                var actualId = id.AsSpan(0, id.Length - 2);
+                id = actualId.ToString();
+            }
+            
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Normal, "RavenDB-19086 Optimize this");
+            return GetShardNumberAndBucketFor(configuration, context.Allocator, id).ShardNumber;
         }
 
         public static unsafe void ExtractStickyId(ref char* buffer, ref int size)

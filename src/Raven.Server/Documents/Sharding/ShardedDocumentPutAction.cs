@@ -15,7 +15,7 @@ public class ShardedDocumentPutAction : DocumentPutAction
     }
 
     // TODO need to make sure we check that for counters/TS/etc...
-    protected override void ValidateId(Slice lowerId)
+    public override void ValidateId(Slice lowerId)
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Handle write documents to the wrong shard");
         var config = _documentDatabase.ShardingConfiguration;

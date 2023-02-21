@@ -170,11 +170,13 @@ namespace Raven.Server.Documents
                 var safeFileHandle = new SafeFileHandle(_parent._file.InnerStream.SafeFileHandle.DangerousGetHandle(), ownsHandle: false);
                 Stream stream = new FileStream(safeFileHandle, FileAccess.Read);
                 stream.Seek(_startPosition, SeekOrigin.Begin);
+                var relativePosition = _startPosition;
                 if (_stream is TempCryptoStream tcs)
                 {
+                    relativePosition = 0;
                     stream = new TempCryptoStream(stream, tcs);
                 }
-                limitedStream = new LimitedStream(stream, Length, _startPosition, _startPosition);
+                limitedStream = new LimitedStream(stream, Length, relativePosition, relativePosition);
 
                 return new DisposableAction(() =>
                 {
@@ -184,6 +186,20 @@ namespace Raven.Server.Documents
                         // disposing
                     }
                 });
+            }
+
+            public LimitedStream CreateReaderStream()
+            {
+                var streamDispose = CreateReaderStream(out var stream);
+                var disposableAction = new DisposableAction(() =>
+                {
+                    using (streamDispose)
+                    {
+                        
+                    }
+                });
+                stream._disposable = disposableAction;
+                return stream;
             }
 
             public LimitedStream CreateDisposableReaderStream(IDisposable onDisposable)

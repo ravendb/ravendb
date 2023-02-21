@@ -29,9 +29,16 @@ namespace Raven.Client.Documents.Operations.Attachments
             throw new NotSupportedException();
         }
 
-        public override long Seek(long offset, SeekOrigin origin)
+        public override long Seek(long position, SeekOrigin origin)
         {
-            throw new NotSupportedException();
+            if (position > _length)
+                throw new ArgumentOutOfRangeException(nameof(position));
+
+            var offset = _read - position;
+            _read -= offset;
+            OverallRead -= offset;
+
+            return _inner.Seek(_currentPos + _read, SeekOrigin.Begin);
         }
 
         public override void SetLength(long value)
@@ -110,6 +117,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                     if (read == 0)
                         break;
 
+                    _read += read;
                     OverallRead += read;
                 }
 
@@ -137,6 +145,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                     if (read == 0)
                         break;
 
+                    _read += read;
                     OverallRead += read;
                 }
 
@@ -163,9 +172,9 @@ namespace Raven.Client.Documents.Operations.Attachments
             throw new EndOfStreamException(msg);
         }
 
-        public override bool CanRead => true;
+        public override bool CanRead => _inner.CanRead;
 
-        public override bool CanSeek => false;
+        public override bool CanSeek => _inner.CanSeek;
 
         public override bool CanWrite => false;
 
@@ -173,8 +182,8 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public override long Position
         {
-            get { throw new NotSupportedException(); }
-            set { throw new NotSupportedException(); }
+            get => _read;
+            set => Seek(value, SeekOrigin.Begin);
         }
     }
 }
