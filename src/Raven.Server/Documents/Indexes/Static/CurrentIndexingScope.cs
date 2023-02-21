@@ -262,13 +262,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private void HandleMismatchedReference(Document referencedDocument, string referencedCollectionName, LazyStringValue sourceId)
         {
-            //another mismatch for source document
+            // another mismatch for source document
             if(MismatchedReferences.TryGetValue(sourceId, out Dictionary<string, LoadFailure> mismatchesForDocument) && mismatchesForDocument.Count < MaxMismatchedReferencesPerSource)
             {
-                //another mismatch referencing the same document
-                if(mismatchesForDocument.TryGetValue(referencedDocument.Id, out LoadFailure loadFailure))
+                // another mismatch referencing the same document
+                if (mismatchesForDocument.TryGetValue(referencedDocument.Id, out LoadFailure loadFailure))
                     loadFailure.MismatchedCollections.Add(referencedCollectionName);
-
                 else
                 {
                     mismatchesForDocument.Add(
@@ -283,10 +282,9 @@ namespace Raven.Server.Documents.Indexes.Static
                         });
                 }
             }
-
-            //first mismatch for source document
             else
             {
+                // first mismatch for source document
                 LoadFailure failure = new ()
                 {
                     SourceId = sourceId, 
