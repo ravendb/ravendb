@@ -9,14 +9,18 @@ namespace Raven.Server.Documents.Indexes
 {
     public class ConcurrentLruRegexCache
     {
-        public ConcurrentLruRegexCache(int capacity)
+        public const int DefaultCapacity = 1024;
+        
+        public ConcurrentLruRegexCache(int capacity, TimeSpan regexTimeout)
         {
             _capacity = capacity;
             _halfCapacity = _capacity / 2;
+            _regexTimeout = regexTimeout;
             Debug.Assert(_halfCapacity > 0);
         }
         private readonly ConcurrentDictionary<string, ConcurrentLruRegexCacheNode> _regexCache = new ConcurrentDictionary<string, ConcurrentLruRegexCacheNode>();
         private readonly int _capacity;
+        private readonly TimeSpan _regexTimeout;
         private long _count;
         private bool _neverCompile;
         private DateTime _lastClearTime = DateTime.MinValue;
@@ -53,7 +57,7 @@ namespace Raven.Server.Documents.Indexes
         private Regex GetUnlikely(string pattern)
         {
             var result = new ConcurrentLruRegexCacheNode(
-                pattern, _neverCompile ? RegexOptions.None : RegexOptions.Compiled)
+                pattern, _regexTimeout, _neverCompile ? RegexOptions.None : RegexOptions.Compiled)
             {
                 Timestamp = Stopwatch.GetTimestamp()
             };
@@ -114,14 +118,14 @@ namespace Raven.Server.Documents.Indexes
         public long Timestamp;
         public Lazy<Regex> RegexLazy { get; }
 
-        public ConcurrentLruRegexCacheNode(string pattern, RegexOptions options = RegexOptions.None)
+        public ConcurrentLruRegexCacheNode(string pattern, TimeSpan regexTimeout, RegexOptions options = RegexOptions.None)
         {
             var flags = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | options;
             RegexLazy = new Lazy<Regex>(()=>new Regex(pattern, flags, 
                 // we use 50 ms as the max timeout because this is going to be evaluated
                 // on _each_ term in the results, potentially millions, so we specify a very
                 // short value to avoid very long queries
-                TimeSpan.FromMilliseconds(50)));
+                regexTimeout));
         }
     }
 }

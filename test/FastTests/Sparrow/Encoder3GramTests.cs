@@ -452,6 +452,66 @@ namespace FastTests.Sparrow
             }
         }
 
+        [Theory]
+        [MemberData("RandomSeed")]
+        public void EnsureEscapedSequencesWithNullsWork(int randomSeed)
+        {
+            State state = new(64000);
+            var encoder = new HopeEncoder<Encoder3Gram<State>>(new Encoder3Gram<State>(state));
+
+            var rgn = new Random(randomSeed);
+            const int size = 1000;
+            int dictSize = rgn.Next(512);
+
+            byte[][] keysAsStrings = new byte[size][];
+            for (int i = 0; i < keysAsStrings.Length; i++)
+            {
+                var key = new byte[rgn.Next(100) + 2];
+                rgn.NextBytes(key);
+                key[^1] = 0; // It has to be null terminated. 
+
+                key[rgn.Next(key.Length - 1)] = 0; // Plant a null in between. 
+
+                keysAsStrings[i] = key;
+            }
+
+            ByteKeys keys = new(keysAsStrings);
+
+            encoder.Train(keys, dictSize);
+
+            Span<byte> value = new byte[128];
+            Span<byte> decoded = new byte[128];
+
+            var escape = new byte[] { 0 };
+            int lengthInBits = encoder.Encode(escape, value);
+            var decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+
+            escape = new byte[] { 0, 0 };
+            lengthInBits = encoder.Encode(escape, value);
+            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+
+            escape = new byte[] { 0, 1 };
+            lengthInBits = encoder.Encode(escape, value);
+            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+
+            escape = new byte[] { 0, 1, 1 };
+            lengthInBits = encoder.Encode(escape, value);
+            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+
+            escape = new byte[] { 1, 1, 1 };
+            lengthInBits = encoder.Encode(escape, value);
+            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+
+            escape = new byte[] { 0, 1, 1, 1 };
+            lengthInBits = encoder.Encode(escape, value);
+            decodedBytes = encoder.Decode(lengthInBits, value, decoded);
+            Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
+        }
 
         [Theory]
         [MemberData("RandomSeed")]

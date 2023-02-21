@@ -34,6 +34,8 @@ class importDatabaseFromFile extends shardViewModelBase {
 
     showAdvancedOptions = ko.observable(false);
     showTransformScript = ko.observable(false);
+    
+    inputCollection = ko.observable<string>("");
 
     hasFileSelected = ko.observable(false);
     importedFileName = ko.observable<string>();
@@ -55,7 +57,7 @@ class importDatabaseFromFile extends shardViewModelBase {
     constructor(db: database) {
         super(db);
 
-        this.bindToCurrentInstance("copyCommandToClipboard", "fileSelected", "customizeConfigurationClicked");
+        this.bindToCurrentInstance("copyCommandToClipboard", "fileSelected", "customizeConfigurationClicked", "addCollection", "removeCollection");
 
         aceEditorBindingHandler.install();
         this.isUploading.subscribe(v => {
@@ -290,6 +292,15 @@ class importDatabaseFromFile extends shardViewModelBase {
             case "Bash":
                 return `curl -F 'importOptions=${json}' -F 'file=@${fileName}' ${commandEndpointUrl(db)}`;
         }
+    }
+
+    addCollection() {
+        this.model.includedCollections.push(this.inputCollection());
+        this.inputCollection("");
+    }
+
+    removeCollection(collection: string) {
+        this.model.includedCollections.remove(collection);
     }
 }
 

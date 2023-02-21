@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Buffers;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -79,21 +81,85 @@ namespace Sparrow.Server.Compression
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [SkipLocalsInit]
         public int Encode(in ReadOnlySpan<byte> data, in Span<byte> outputBuffer)
         {
+            // When we support NULL values and try to store only the necessary bytes instead of the bits, we face a challenge.
+            // If we store the bits length, we may need to use an extra byte when the key length is greater than 15 bytes,
+            // even though we could use a single byte for up to 127 bytes if we quantize.However, since the scenario of storing
+            // keys with nulls is very uncommon (although it can occur), we have to choose between paying for a little more
+            // complexity and instructions versus using bigger storage for very common key lengths.
+
+            // In most cases, null values are handled seamlessly during the decoding process. However, if the key ends with a
+            // NULL value and certain conditions are met, the decoding process may return an extra null value. Since we do not
+            // know the original size of the array, we cannot disambiguate the size. To address this issue,
+            // we escape the last '\0' value by adding an extra '\1' value.
+            //
+            // As a result, the following mapping is applied:
+            //      0 -> 0 1
+            //    0 1 -> 0 1 1
+            //  0 1 1 -> 0 1 1 1
+            //  and so on.
+
+            for (int i = data.Length - 1; i >= 0; i--)
+            {
+                byte value = data[i];
+                if (value >= 2)
+                    goto Unescaped;
+                if (value == 0)
+                    goto Unlikely;
+            }
+
+            Unescaped:
             return _encoder.Encode(data, outputBuffer);
+
+            Unlikely:
+            return EncodeEscapedUnlikely(data, outputBuffer);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private int EncodeEscapedUnlikely(in ReadOnlySpan<byte> data, in Span<byte> outputBuffer)
+        {
+            var pool = ArrayPool<byte>.Shared;
+            var tmp = pool.Rent(data.Length + 1);
+            data.CopyTo(tmp);
+            tmp[data.Length] = 1;
+
+            var bitsUsed = _encoder.Encode(tmp.AsSpan(0, data.Length + 1), outputBuffer);
+            pool.Return(tmp);
+
+            return bitsUsed;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Decode(in ReadOnlySpan<byte> data, in Span<byte> outputBuffer)
         {
-            return _encoder.Decode(data.Length * 8, data, outputBuffer);
+            return Decode(data.Length * 8, data, outputBuffer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Decode(int bits, in ReadOnlySpan<byte> data, in Span<byte> outputBuffer)
         {
-            return _encoder.Decode(bits, data, outputBuffer);
+            int length = _encoder.Decode(bits, data, outputBuffer);
+
+            // Since we may have already escaped the data, we need to detect such a condition. 
+            // If any of the following conditions is met, then the inverse mapping is applied:
+            //     0 1 -> 0  
+            //   0 1 1 -> 0 1
+            // 0 1 1 1 -> 0 1 1 
+            // and so on.
+
+            // In order to address this issue, we will remove only the last `\1`.
+            for (int i = length - 1; i >= 0; i--)
+            {
+                byte value = outputBuffer[i];
+                if (value >= 2)
+                    return length;
+                if (value == 0)
+                    return length - 1;
+            }
+
+            return length;
         }
 
 

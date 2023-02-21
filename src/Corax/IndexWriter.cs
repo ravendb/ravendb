@@ -18,12 +18,10 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
 using Voron.Data.PostingLists;
 using Voron.Impl;
-using static Voron.Data.CompactTrees.CompactTree;
 
 namespace Corax
 {
@@ -1412,7 +1410,7 @@ namespace Corax
                     AddNewTerm(entries, tmpBuf, out termId);
 
                     dumper.WriteAddition(term, termId);
-                    fieldTree.Add(termsSpan, termId, scope.Key);
+                    fieldTree.Add(scope.Key, termId);
                 }
                 else
                 {
@@ -1420,7 +1418,7 @@ namespace Corax
                     {
                         case AddEntriesToTermResult.UpdateTermId:
                             dumper.WriteAddition(term, termId);
-                            fieldTree.Add(termsSpan, termId, scope.Key);
+                            fieldTree.Add(scope.Key, termId);
                             break;
                         case AddEntriesToTermResult.RemoveTermId:
                             if (fieldTree.TryRemove(termsSpan, out var ttt) == false)

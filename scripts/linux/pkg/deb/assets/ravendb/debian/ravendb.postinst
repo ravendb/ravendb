@@ -84,9 +84,9 @@ if grep -e '"Setup.Mode": "Initial"' /etc/ravendb/settings.json >&/dev/null; the
     user="${SUDO_USER:-username}"
     publicAddr="target-machine.com"
     if command -v dig >&/dev/null; then
-        foundPublicAddr=`dig +short myip.opendns.com @resolver1.opendns.com`
+        foundPublicAddr=$(dig +short myip.opendns.com @resolver1.opendns.com)
     elif command -v curl >&/dev/null; then
-        foundPublicAddr=`curl -s https://api.ipify.org`
+        foundPublicAddr=$(curl -s https://api.ipify.org)
     fi
 
     if [ $? -eq 0 ] && [ ! -z "$foundPublicAddr" ]; then

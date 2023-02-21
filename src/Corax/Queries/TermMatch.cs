@@ -10,6 +10,7 @@ using System.Runtime.Intrinsics.X86;
 using System.Collections.Generic;
 using Sparrow.Compression;
 using Sparrow.Server;
+using Sparrow.Server.Binary;
 
 namespace Corax.Queries
 {
@@ -120,17 +121,24 @@ namespace Corax.Queries
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static int AndWithFunc(ref TermMatch term, Span<long> buffer, int matches)
             {
-                // TODO: If matches is too big, we should use quicksort
+                uint bot = 0;
+                uint top = (uint)matches;
+
                 long current = term._current;
-                for (int i = 0; i < matches; i++)
+                while (top > 1)
                 {
-                    if (buffer[i] == current)
-                    {
-                        buffer[0] = current;
-                        return 1;
-                    }
+                    uint mid = top / 2;
+
+                    if (current >= Unsafe.Add(ref MemoryMarshal.GetReference(buffer), bot + mid))
+                        bot += mid;
+                    top -= mid;
                 }
-                return 0;
+
+                if (current != Unsafe.Add(ref MemoryMarshal.GetReference(buffer), bot))
+                    return 0;
+
+                buffer[0] = current;
+                return 1;
             }
 
             static QueryInspectionNode InspectFunc(ref TermMatch term)
@@ -245,19 +253,21 @@ namespace Corax.Queries
 
                 var it = term._set;
 
-                it.Seek(buffer[0] - 1);
+                ref long start = ref MemoryMarshal.GetReference(buffer);
+                it.Seek(start - 1);
                 if (it.MoveNext() == false)
                     goto Fail;                    
                 
                 // We update the current value we want to work with.
                 var current = it.Current;
 
-                // Check if there are matches left to process or is any posibility of a match to be available in this block.
+                // Check if there are matches left to process or is any possibility of a match to be available in this block.
                 int i = 0;
-                while (i < matches && current <= buffer[matches-1])
+                long end = Unsafe.Add(ref start, matches - 1);
+                while (i < matches && current <= end)
                 {
                     // While the current match is smaller we advance.
-                    while (buffer[i] < current)
+                    while (Unsafe.Add(ref start, i) < current)
                     {
                         i++;
                         if (i >= matches)
@@ -268,9 +278,10 @@ namespace Corax.Queries
                     Debug.Assert(buffer[i] >= current);
 
                     // We have a match, we include it into the matches and go on. 
-                    if (current == buffer[i])
+                    if (current == Unsafe.Add(ref start, i))
                     {
-                        buffer[matchedIdx++] = current;
+                        ref long location = ref Unsafe.Add(ref start, matchedIdx++);
+                        location = current;
                         i++;
                     }
 
@@ -401,7 +412,7 @@ namespace Corax.Queries
                             }
                         }
 
-                        // The scalar version. This shouldnt cost much either way. 
+                        // The scalar version. This shouldn't cost much either way. 
                         while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
                         {
                             ulong leftValue = (ulong)*smallerPtr;
