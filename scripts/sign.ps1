@@ -47,12 +47,27 @@ function SignFile( $projectDir, $filePath, $dryRun ) {
     }
 
     Write-Host "Signing the following file: $filePath"
-
-    $timeservers = @("http://tsa.starfieldtech.com", "http://timestamp.globalsign.com/scripts/timstamp.dll", "http://timestamp.comodoca.com/authenticode", "http://www.startssl.com/timestamp", "http://timestamp.verisign.com/scripts/timstamp.dll")
+    $timeservers = @(
+        "http://timestamp.digicert.com",
+        "http://timestamp.globalsign.com/tsa/r6advanced1",
+        "http://rfc3161timestamp.globalsign.com/advanced",
+        "http://timestamp.sectigo.com",
+        "http://timestamp.apple.com/ts01",
+        "http://tsa.mesign.com",
+        "http://time.certum.pl",
+        "https://freetsa.org",
+        "http://tsa.startssl.com/rfc3161",
+        "http://dse200.ncipher.com/TSS/HttpTspServer",
+        "http://zeitstempel.dfn.de",
+        "https://ca.signfiles.com/tsa/get.aspx",
+        "http://services.globaltrustfinder.com/adss/tsa",
+        "https://tsp.iaik.tugraz.at/tsp/TspRequest",
+        "http://timestamp.entrust.net/TSS/RFC3161sha2TS"
+    )
     foreach ($time in $timeservers) {
         try {
             Write-Host "Command: $signTool sign /f `"$installerCert`" /p `"PASSWORD`" /d `"RavenDB`" /du `"https://ravendb.net`" /t `"$time`" /v /debug `"$filePath`""
-            exec { & $signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "https://ravendb.net" /t "$time" /v /debug "$filePath" }
+            exec { & $signTool sign /f "$installerCert" /p "$certPassword" /fd SHA256 /d "RavenDB" /du "https://ravendb.net" /tr "$time" /td SHA256 /v /debug "$filePath" }
             CheckLastExitCode
             return
         }
