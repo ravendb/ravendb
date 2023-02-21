@@ -1,9 +1,13 @@
 #!/bin/bash
+
+# 5.x -> 6.0 migration assistance
+/usr/lib/ravendb/link-legacy-datadir.sh 
+
 COMMAND="./Raven.Server"
 [ -z "$RAVEN_ServerUrl" ] && export RAVEN_ServerUrl="http://$(hostname):8080"
 
 if [ ! -z "$RAVEN_SETTINGS" ]; then
-    echo "$RAVEN_SETTINGS" > settings.json
+    echo "$RAVEN_SETTINGS" > /etc/ravendb/settings.json
 fi
 
 if [ ! -z "$RAVEN_ARGS" ]; then
@@ -26,7 +30,7 @@ trap 'handle_term' TERM INT
 $COMMAND &
 COMMANDPID=$!
 
-[ -n "$RAVEN_DATABASE" ]  && source ./server-utils.sh && create-database
+[ -n "$RAVEN_DATABASE" ] && source ../scripts/server-utils.sh && ../scripts/create-database
 
 [ "$TERM_KILL_NEEDED" ] && kill -TERM "$COMMANDPID" 2>/dev/null 
 wait $COMMANDPID 2>/dev/null
