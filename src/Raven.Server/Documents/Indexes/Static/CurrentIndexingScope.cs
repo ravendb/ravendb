@@ -38,8 +38,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public Dictionary<string, Dictionary<string, LoadFailure>> MismatchedReferences;
 
-        private const int MaxMismatchedReferencesPerSource = 3;
-        private const int MaxMismatchedDocumentLoadsPerIndex = 3;
+        private const int MaxMismatchedReferencesPerSource = 10;
+        private const int MaxMismatchedDocumentLoadsPerIndex = 10;
+        
+        private bool _lastLoadMismatched = false;
 
         public class LoadFailure
         {
@@ -238,9 +240,18 @@ namespace Raven.Server.Documents.Indexes.Static
                         MismatchedReferences ??= new Dictionary<string, Dictionary<string, LoadFailure>>();
 
                         if (MismatchedReferences.Count < MaxMismatchedDocumentLoadsPerIndex)
+                        {
+                            _lastLoadMismatched = true;
                             HandleMismatchedReference(document, collectionName, id);
+                        }
 
                         return DynamicNullObject.Null;
+                    }
+
+                    if (_lastLoadMismatched)
+                    {
+                        RemoveMismatchedReferenceOnMatchingLoad(document, id);
+                        _lastLoadMismatched = false;
                     }
                 }
 
@@ -288,6 +299,20 @@ namespace Raven.Server.Documents.Indexes.Static
                             
                 MismatchedReferences.Add(sourceId, new Dictionary<string, LoadFailure>(){ {referencedDocument.Id, failure} });
             }
+        }
+
+        private void RemoveMismatchedReferenceOnMatchingLoad(Document document, string sourceId)
+        {
+            if (!MismatchedReferences.TryGetValue(sourceId, out var failing)) 
+                return;
+            
+            failing.Remove(document.Id);
+
+            if (failing.Count == 0)
+                MismatchedReferences.Remove(sourceId);
+
+            if (MismatchedReferences.Count == 0)
+                MismatchedReferences = null;
         }
 
         public unsafe dynamic LoadCompareExchangeValue(LazyStringValue keyLazy, string keyString)
