@@ -10,10 +10,10 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoMapIndexDefinition : AutoIndexDefinitionBaseServerSide
+    internal class AutoMapIndexDefinition : AutoIndexDefinitionBaseServerSide
     {
         public AutoMapIndexDefinition(string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode,
-            IndexUpdateClusterState clusterState, long? indexVersion = null)
+            IndexDefinitionClusterState clusterState, long? indexVersion = null)
             : base(AutoIndexNameFinder.FindMapIndexName(collection, fields), collection, fields, deploymentMode, clusterState, indexVersion)
         {
         }

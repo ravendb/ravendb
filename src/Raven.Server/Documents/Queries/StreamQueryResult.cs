@@ -4,9 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Session.Loaders;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.ServerWide;
@@ -21,7 +18,7 @@ namespace Raven.Server.Documents.Queries
         private bool _anyWrites;
         private bool _anyExceptions;
 
-        protected StreamQueryResult(HttpResponse response, IStreamQueryResultWriter<T> writer, OperationCancelToken token)
+        protected StreamQueryResult(HttpResponse response, IStreamQueryResultWriter<T> writer, long? indexDefinitionRaftIndex, OperationCancelToken token) : base(indexDefinitionRaftIndex)
         {
             if (response.HasStarted)
                 throw new InvalidOperationException("You cannot start streaming because response has already started.");

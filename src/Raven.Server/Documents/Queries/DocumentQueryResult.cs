@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Queries
 {
     public class DocumentQueryResult : QueryResultServerSide<Document>
     {
-        public static readonly DocumentQueryResult NotModifiedResult = new DocumentQueryResult { NotModified = true };
+        public static readonly DocumentQueryResult NotModifiedResult = new DocumentQueryResult(null) { NotModified = true };
 
         public override bool SupportsInclude => true;
 
@@ -31,6 +31,10 @@ namespace Raven.Server.Documents.Queries
         private ITimeSeriesIncludes _timeSeriesIncludes;
 
         private Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> _compareExchangeValueIncludes;
+
+        public DocumentQueryResult(long? indexDefinitionRaftIndex) : base(indexDefinitionRaftIndex)
+        {
+        }
 
         public override void AddCounterIncludes(ICounterIncludes includeCountersCommand)
         {

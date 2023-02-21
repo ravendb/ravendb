@@ -11,7 +11,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
-    public class AutoMapReduceIndexDefinition : AutoIndexDefinitionBaseServerSide
+    internal class AutoMapReduceIndexDefinition : AutoIndexDefinitionBaseServerSide
     {
         public readonly Dictionary<string, AutoIndexField> GroupByFields;
 
@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         public readonly AutoIndexField[] OrderedGroupByFields;
 
-        public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, IndexDeploymentMode? deploymentMode, IndexUpdateClusterState clusterState, long? indexVersion = null)
+        public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState, long? indexVersion = null)
             : base(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields, deploymentMode, clusterState, indexVersion)
         {
             OrderedGroupByFields = groupByFields.OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();

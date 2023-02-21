@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto;
 
 public class AutoMapReduceIndexResultsAggregator
 {
-    public AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, AutoMapReduceIndexDefinition indexDefinition, TransactionOperationContext indexContext, IndexingStatsScope stats, ref BlittableJsonReaderObject currentlyProcessedResult, CancellationToken token)
+    internal AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, AutoMapReduceIndexDefinition indexDefinition, TransactionOperationContext indexContext, IndexingStatsScope stats, ref BlittableJsonReaderObject currentlyProcessedResult, CancellationToken token)
     {
         var aggregatedResultsByReduceKey = new Dictionary<BlittableJsonReaderObject, Dictionary<string, PropertyResult>>(ReduceKeyComparer.Instance);
 
@@ -61,7 +61,7 @@ public class AutoMapReduceIndexResultsAggregator
         return new AggregatedDocuments(resultObjects);
     }
 
-    protected virtual DynamicJsonValue BuildResult(KeyValuePair<BlittableJsonReaderObject, Dictionary<string, PropertyResult>> aggregationResult)
+    internal virtual DynamicJsonValue BuildResult(KeyValuePair<BlittableJsonReaderObject, Dictionary<string, PropertyResult>> aggregationResult)
     {
         var djv = new DynamicJsonValue();
 
@@ -71,7 +71,7 @@ public class AutoMapReduceIndexResultsAggregator
         return djv;
     }
 
-    protected virtual void HandleProperty(AutoMapReduceIndexDefinition indexDefinition, string propertyName, BlittableJsonReaderObject json, Dictionary<string, PropertyResult> aggregatedResult)
+    internal virtual void HandleProperty(AutoMapReduceIndexDefinition indexDefinition, string propertyName, BlittableJsonReaderObject json, Dictionary<string, PropertyResult> aggregatedResult)
     {
         if (indexDefinition.TryGetField(propertyName, out var indexField))
         {
@@ -111,7 +111,7 @@ public class AutoMapReduceIndexResultsAggregator
         }
     }
 
-    protected virtual PropertyResult HandleSumAndCount(object value)
+    internal virtual PropertyResult HandleSumAndCount(object value)
     {
         var numberType = BlittableNumber.Parse(value, out var doubleValue, out var longValue);
 
@@ -132,7 +132,7 @@ public class AutoMapReduceIndexResultsAggregator
         return aggregate;
     }
 
-    protected class PropertyResult
+    internal class PropertyResult
     {
         private NumberParseResult? _numberType;
 

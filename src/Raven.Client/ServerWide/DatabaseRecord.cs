@@ -236,7 +236,7 @@ namespace Raven.Client.ServerWide
             
             AddIndexHistory(definition, source, revisionsToKeep, createdAt);
 
-            definition.ClusterState ??= new IndexUpdateClusterState();
+            definition.ClusterState ??= new IndexDefinitionClusterState();
 
             if (isRolling)
             {
@@ -325,7 +325,7 @@ namespace Raven.Client.ServerWide
                     InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
             }
 
-            definition.ClusterState ??= new IndexUpdateClusterState();
+            definition.ClusterState ??= new IndexDefinitionClusterState();
             definition.ClusterState.LastIndex = raftIndex;
         }
 

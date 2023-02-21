@@ -51,14 +51,14 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(DefaultStaticDeploymentMode)] = TypeConverter.ToBlittableSupportedType(DefaultStaticDeploymentMode);
         }
 
-        public static PutAutoIndexCommand Create(AutoIndexDefinitionBaseServerSide definition, string databaseName, string raftRequestId, IndexDeploymentMode mode)
+        internal static PutAutoIndexCommand Create(AutoIndexDefinitionBaseServerSide definition, string databaseName, string raftRequestId, IndexDeploymentMode mode)
         {
             var indexType = GetAutoIndexType(definition);
 
             return new PutAutoIndexCommand(GetAutoIndexDefinition(definition, indexType), databaseName, raftRequestId, mode, SystemTime.UtcNow);
         }
 
-        public static IndexType GetAutoIndexType(AutoIndexDefinitionBaseServerSide definition)
+        internal static IndexType GetAutoIndexType(AutoIndexDefinitionBaseServerSide definition)
         {
             var indexType = IndexType.None;
             if (definition is AutoMapIndexDefinition)
@@ -73,7 +73,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             return indexType;
         }
 
-        public static AutoIndexDefinition GetAutoIndexDefinition(AutoIndexDefinitionBaseServerSide definition, IndexType indexType)
+        internal static AutoIndexDefinition GetAutoIndexDefinition(AutoIndexDefinitionBaseServerSide definition, IndexType indexType)
         {
             Debug.Assert(indexType == IndexType.AutoMap || indexType == IndexType.AutoMapReduce);
 

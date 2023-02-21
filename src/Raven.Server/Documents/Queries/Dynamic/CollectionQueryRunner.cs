@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
-            var result = new DocumentQueryResult();
+            var result = new DocumentQueryResult(indexDefinitionRaftIndex: null);
 
             if (queryContext.AreTransactionsOpened() == false)
                 queryContext.OpenReadTransaction();
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, QueryOperationContext queryContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
             OperationCancelToken token)
         {
-            var result = new StreamDocumentQueryResult(response, writer, token);
+            var result = new StreamDocumentQueryResult(response, writer, indexDefinitionRaftIndex: null, token);
 
             using (queryContext.OpenReadTransaction())
             {

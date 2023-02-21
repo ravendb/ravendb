@@ -18,7 +18,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
-    public class AutoMapReduceIndex : MapReduceIndexBase<AutoMapReduceIndexDefinition, AutoIndexField>
+    internal class AutoMapReduceIndex : MapReduceIndexBase<AutoMapReduceIndexDefinition, AutoIndexField>
     {
         private ReduceKeyProcessor _reduceKeyProcessor;
 

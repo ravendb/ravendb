@@ -532,7 +532,7 @@ namespace Raven.Client.Documents.Indexes
             definition.PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences;
             definition.PatternReferencesCollectionName = PatternReferencesCollectionName;
             definition.DeploymentMode = DeploymentMode;
-            definition.ClusterState = (ClusterState == null) ? null : new IndexUpdateClusterState(ClusterState);
+            definition.ClusterState = (ClusterState == null) ? null : new IndexDefinitionClusterState(ClusterState);
 
             foreach (var kvp in _configuration)
                 definition.Configuration[kvp.Key] = kvp.Value;

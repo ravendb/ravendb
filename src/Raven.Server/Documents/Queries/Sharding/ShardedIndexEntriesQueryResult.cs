@@ -2,4 +2,8 @@
 
 public class ShardedIndexEntriesQueryResult : IndexEntriesQueryResult
 {
+
+    public ShardedIndexEntriesQueryResult() : base(indexDefinitionRaftIndex: null)
+    {
+    }
 }

@@ -12,7 +12,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
-    public class ReduceMapResultsOfAutoIndex : ReduceMapResultsBase<AutoMapReduceIndexDefinition>
+    internal class ReduceMapResultsOfAutoIndex : ReduceMapResultsBase<AutoMapReduceIndexDefinition>
     {
         public static readonly AutoMapReduceIndexResultsAggregator Aggregator = new();
 
