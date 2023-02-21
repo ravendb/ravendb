@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             : base(databaseName, uniqueRequestId)
         {
             Definition = definition;
-            Definition.ClusterState ??= new IndexUpdateClusterState();
+            Definition.ClusterState ??= new IndexDefinitionClusterState();
             Source = source;
             CreatedAt = createdAt;
             RevisionsToKeep = revisionsToKeep;

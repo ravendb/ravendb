@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Queries
             GetToken().Delay();
         }
 
-        public StreamDocumentQueryResult(HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token) : base(response, writer, token)
+        public StreamDocumentQueryResult(HttpResponse response, IStreamQueryResultWriter<Document> writer, long? indexDefinitionRaftIndex, OperationCancelToken token) : base(response, writer, indexDefinitionRaftIndex, token)
         {
             if (response.HasStarted)
                 throw new InvalidOperationException("You cannot start streaming because response has already started.");

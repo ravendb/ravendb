@@ -16,6 +16,11 @@ public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObjec
     private ITimeSeriesIncludes _includeTimeSeries;
     private ICompareExchangeValueIncludes _includeCompareExchangeValues;
 
+    public ShardedQueryResult() : base(indexDefinitionRaftIndex: null)
+    {
+        
+    }
+
     public override ValueTask AddResultAsync(BlittableJsonReaderObject result, CancellationToken token)
     {
         throw new NotSupportedException();

@@ -44,7 +44,7 @@ public class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBase<Shard
 
         var result = shardedReadResult.Result;
 
-        await WaitForRaftIndexIfNeededAsync(result.RaftCommandIndex, scope: null);
+        await WaitForRaftIndexIfNeededAsync(result.IndexDefinitionRaftIndex, scope: null);
 
         // For map/reduce - we need to re-run the reduce portion of the index again on the results
         ReduceResults(ref result, scope: null);

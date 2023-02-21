@@ -6,9 +6,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public abstract class AutoIndexDefinitionBaseServerSide : IndexDefinitionBaseServerSide<AutoIndexField>
+    internal abstract class AutoIndexDefinitionBaseServerSide : IndexDefinitionBaseServerSide<AutoIndexField>
     {
-        protected AutoIndexDefinitionBaseServerSide(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode, IndexUpdateClusterState clusterState, long? indexVersion = null)
+        protected AutoIndexDefinitionBaseServerSide(string indexName, string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode, IndexDefinitionClusterState clusterState, long? indexVersion = null)
             : base(indexName, new [] { collection }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, fields, indexVersion ?? IndexVersion.CurrentVersion, deploymentMode, clusterState)
         {
             if (string.IsNullOrEmpty(collection))

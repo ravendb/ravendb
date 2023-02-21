@@ -87,7 +87,7 @@ public class ShardedMapReduceQueryResultsMerger
     protected virtual AggregatedAnonymousObjects CreateShardedAggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor)
         => new ShardedAggregatedAnonymousObjects(results, propertyAccessor, Context);
 
-    protected virtual AggregationResult AggregateForAutoMapReduce(AutoMapReduceIndexDefinition indexDefinition)
+    internal virtual AggregationResult AggregateForAutoMapReduce(AutoMapReduceIndexDefinition indexDefinition)
     {
         BlittableJsonReaderObject currentlyProcessedResult = null;
         return ReduceMapResultsOfAutoIndex.Aggregator.AggregateOn(CurrentResults, indexDefinition, Context, null, ref currentlyProcessedResult, Token);

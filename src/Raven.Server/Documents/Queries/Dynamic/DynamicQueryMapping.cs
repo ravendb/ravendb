@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public List<Index> SupersededIndexes;
 
-        public AutoIndexDefinitionBaseServerSide CreateAutoIndexDefinition()
+        internal AutoIndexDefinitionBaseServerSide CreateAutoIndexDefinition()
         {
             int idForFields = 1;
             if (IsGroupBy == false)
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }).ToArray(), deploymentMode: null, clusterState: null);
         }
 
-        public void ExtendMappingBasedOn(AutoIndexDefinitionBaseServerSide definitionOfExistingIndex)
+        internal void ExtendMappingBasedOn(AutoIndexDefinitionBaseServerSide definitionOfExistingIndex)
         {
             Debug.Assert(definitionOfExistingIndex is AutoMapIndexDefinition || definitionOfExistingIndex is AutoMapReduceIndexDefinition, "Dynamic queries are handled only by auto indexes");
 

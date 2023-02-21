@@ -29,7 +29,7 @@ public class ShardedMapReduceIndexEntriesQueryResultsMerger : ShardedMapReduceQu
     {
     }
 
-    protected override AggregationResult AggregateForAutoMapReduce(AutoMapReduceIndexDefinition indexDefinition)
+    internal override AggregationResult AggregateForAutoMapReduce(AutoMapReduceIndexDefinition indexDefinition)
     {
         BlittableJsonReaderObject currentlyProcessedResult = null;
         return Aggregator.AggregateOn(CurrentResults, indexDefinition, Context, null, ref currentlyProcessedResult, Token);

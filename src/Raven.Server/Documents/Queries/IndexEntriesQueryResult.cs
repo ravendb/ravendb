@@ -11,7 +11,11 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexEntriesQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
     {
-        public static readonly IndexEntriesQueryResult NotModifiedResult = new IndexEntriesQueryResult { NotModified = true };
+        public static readonly IndexEntriesQueryResult NotModifiedResult = new IndexEntriesQueryResult(null) { NotModified = true };
+
+        public IndexEntriesQueryResult(long? indexDefinitionRaftIndex) : base(indexDefinitionRaftIndex)
+        {
+        }
 
         public override ValueTask AddResultAsync(BlittableJsonReaderObject result, CancellationToken token)
         {

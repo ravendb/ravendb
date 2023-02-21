@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Queries
             GetToken().Delay();
         }
 
-        public StreamDocumentIndexEntriesQueryResult(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token) : base(response, writer, token)
+        public StreamDocumentIndexEntriesQueryResult(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, long? indexDefinitionRaftIndex, OperationCancelToken token) : base(response, writer, indexDefinitionRaftIndex, token)
         {
             if (response.HasStarted)
                 throw new InvalidOperationException("You cannot start streaming because response has already started.");

@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Queries
 
         public readonly Queue<string> DocumentIds = new Queue<string>();
 
-        public DocumentIdQueryResult(DeterminateProgress progress, Action<DeterminateProgress> onProgress, OperationCancelToken token)
+        public DocumentIdQueryResult(DeterminateProgress progress, Action<DeterminateProgress> onProgress, long? indexDefinitionRaftIndex, OperationCancelToken token) : base(indexDefinitionRaftIndex)
         {
             _progress = progress;
             _onProgress = onProgress;

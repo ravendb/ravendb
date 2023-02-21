@@ -10,7 +10,7 @@ public class ShardedAutoMapReduceIndexResultsAggregatorForIndexEntries : AutoMap
 {
     private string _reduceKeyHash;
 
-    protected override void HandleProperty(AutoMapReduceIndexDefinition indexDefinition, string propertyName, BlittableJsonReaderObject json, Dictionary<string, PropertyResult> aggregatedResult)
+    internal override void HandleProperty(AutoMapReduceIndexDefinition indexDefinition, string propertyName, BlittableJsonReaderObject json, Dictionary<string, PropertyResult> aggregatedResult)
     {
         if (_reduceKeyHash == null && propertyName == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName)
             json.TryGet(propertyName, out _reduceKeyHash);
@@ -18,7 +18,7 @@ public class ShardedAutoMapReduceIndexResultsAggregatorForIndexEntries : AutoMap
         base.HandleProperty(indexDefinition, propertyName, json, aggregatedResult);
     }
 
-    protected override DynamicJsonValue BuildResult(KeyValuePair<BlittableJsonReaderObject, Dictionary<string, PropertyResult>> aggregationResult)
+    internal override DynamicJsonValue BuildResult(KeyValuePair<BlittableJsonReaderObject, Dictionary<string, PropertyResult>> aggregationResult)
     {
         var djv = base.BuildResult(aggregationResult);
 
@@ -28,7 +28,7 @@ public class ShardedAutoMapReduceIndexResultsAggregatorForIndexEntries : AutoMap
         return djv;
     }
 
-    protected override PropertyResult HandleSumAndCount(object value)
+    internal override PropertyResult HandleSumAndCount(object value)
     {
         if (value is LazyStringValue or LazyCompressedStringValue)
         {

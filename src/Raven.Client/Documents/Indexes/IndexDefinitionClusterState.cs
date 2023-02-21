@@ -1,15 +1,15 @@
 ﻿namespace Raven.Client.Documents.Indexes
 {
-    public class IndexUpdateClusterState
+    internal class IndexDefinitionClusterState
     {
-        public IndexUpdateClusterState()
+        public IndexDefinitionClusterState()
         {
             LastIndex = 0;
             LastStateIndex = 0;
             LastRollingDeploymentIndex = 0;
         }
 
-        public IndexUpdateClusterState(IndexUpdateClusterState clusterState)
+        public IndexDefinitionClusterState(IndexDefinitionClusterState clusterState)
         {
             LastIndex = clusterState.LastIndex;
             LastStateIndex = clusterState.LastStateIndex;

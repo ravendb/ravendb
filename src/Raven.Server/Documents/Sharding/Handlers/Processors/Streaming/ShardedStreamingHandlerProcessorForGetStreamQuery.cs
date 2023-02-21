@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
                 {
                     var (results, queryStatistics) = await ExecuteQueryAsync(context, query, null, ignoreLimit, token);
 
-                    var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, token); // writes blittable docs as blittable docs
+                    var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, indexDefinitionRaftIndex: null, token); // writes blittable docs as blittable docs
                     queryResult.TotalResults = queryStatistics.TotalResults;
                     queryResult.IndexName = queryStatistics.IndexName;
                     queryResult.IndexTimestamp = queryStatistics.IndexTimestamp;
@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
                 {
                     var (results, _) = await ExecuteQueryAsync(context, query, debug, ignoreLimit, token);
 
-                    var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, token);
+                    var queryResult = new StreamDocumentIndexEntriesQueryResult(HttpContext.Response, writer, indexDefinitionRaftIndex: null, token);
 
                     foreach (BlittableJsonReaderObject doc in results)
                     {
