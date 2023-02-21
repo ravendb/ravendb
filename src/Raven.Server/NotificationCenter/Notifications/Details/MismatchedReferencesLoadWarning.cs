@@ -50,6 +50,7 @@ public class MismatchedReferencesLoadWarning : INotificationDetails
                 {
                     [nameof(WarningDetails.ReferenceId)] = details.ReferenceId,
                     [nameof(WarningDetails.SourceId)] = details.SourceId,
+                    [nameof(WarningDetails.ActualCollection)] = details.ActualCollection,
                     [nameof(WarningDetails.MismatchedCollections)] = details.MismatchedCollections
                 });
             }
@@ -68,6 +69,7 @@ public class MismatchedReferencesLoadWarning : INotificationDetails
     {
         public string SourceId { get; set; }
         public string ReferenceId { get; set; }
+        public string ActualCollection { get; set; }
         public HashSet<string> MismatchedCollections { get; set; }
 
         public WarningDetails()
@@ -80,6 +82,7 @@ public class MismatchedReferencesLoadWarning : INotificationDetails
             SourceId = loadFailure.SourceId;
             ReferenceId = loadFailure.ReferenceId;
             MismatchedCollections = loadFailure.MismatchedCollections;
+            ActualCollection = loadFailure.ActualCollection;
         }
     }
 }

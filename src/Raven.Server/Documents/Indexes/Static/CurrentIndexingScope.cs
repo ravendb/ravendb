@@ -47,6 +47,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             public string SourceId;
             public string ReferenceId;
+            public string ActualCollection;
             public HashSet<string> MismatchedCollections;
         }
         
@@ -242,7 +243,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         if (MismatchedReferences.Count < MaxMismatchedDocumentLoadsPerIndex)
                         {
                             _lastLoadMismatched = true;
-                            HandleMismatchedReference(document, collectionName, id);
+                            HandleMismatchedReference(document, collectionName, id, collection);
                         }
 
                         return DynamicNullObject.Null;
@@ -260,7 +261,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private void HandleMismatchedReference(Document referencedDocument, string referencedCollectionName, LazyStringValue sourceId)
+        private void HandleMismatchedReference(Document referencedDocument, string referencedCollectionName, LazyStringValue sourceId, string actualCollection)
         {
             // another mismatch for source document
             if(MismatchedReferences.TryGetValue(sourceId, out Dictionary<string, LoadFailure> mismatchesForDocument) && mismatchesForDocument.Count < MaxMismatchedReferencesPerSource)
@@ -274,7 +275,8 @@ namespace Raven.Server.Documents.Indexes.Static
                         referencedDocument.Id, new LoadFailure()
                         {
                             SourceId = sourceId, 
-                            ReferenceId = referencedDocument.Id, 
+                            ReferenceId = referencedDocument.Id,
+                            ActualCollection = actualCollection,
                             MismatchedCollections = new HashSet<string>()
                             {
                                 referencedCollectionName
@@ -288,7 +290,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 LoadFailure failure = new ()
                 {
                     SourceId = sourceId, 
-                    ReferenceId = referencedDocument.Id, 
+                    ReferenceId = referencedDocument.Id,
+                    ActualCollection = actualCollection,
                     MismatchedCollections = new HashSet<string>()
                     {
                         referencedCollectionName
@@ -301,7 +304,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private void RemoveMismatchedReferenceOnMatchingLoad(Document document, string sourceId)
         {
-            if (!MismatchedReferences.TryGetValue(sourceId, out var failing)) 
+            if (MismatchedReferences.TryGetValue(sourceId, out var failing) == false) 
                 return;
             
             failing.Remove(document.Id);

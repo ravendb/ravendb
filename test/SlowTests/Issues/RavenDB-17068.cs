@@ -78,6 +78,7 @@ public class RavenDB_17068: RavenTestBase
                 Assert.Equal(1, warnings.Count);
                 Assert.Equal("animals/1-A", warnings.First().ReferenceId);
                 Assert.Equal("orders/2-A", warnings.First().SourceId);
+                Assert.Equal("Animals", warnings.First().ActualCollection);
                 Assert.Equal(2, warnings.First().MismatchedCollections.Count);
             }
         }
