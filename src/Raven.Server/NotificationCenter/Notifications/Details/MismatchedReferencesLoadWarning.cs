@@ -15,7 +15,7 @@ public class MismatchedReferencesLoadWarning : INotificationDetails
         //deserialization
     }
     
-    public MismatchedReferencesLoadWarning(string indexName, Dictionary<string, Dictionary<string, CurrentIndexingScope.LoadFailure>> mismatchedReferences)
+    public MismatchedReferencesLoadWarning(string indexName, Dictionary<string, Dictionary<string, MismatchedReferencesHandler.LoadFailure>> mismatchedReferences)
     {
         IndexName = indexName;
         
@@ -77,7 +77,7 @@ public class MismatchedReferencesLoadWarning : INotificationDetails
             //deserialization
         }
         
-        public WarningDetails(CurrentIndexingScope.LoadFailure loadFailure)
+        public WarningDetails(MismatchedReferencesHandler.LoadFailure loadFailure)
         {
             SourceId = loadFailure.SourceId;
             ReferenceId = loadFailure.ReferenceId;
