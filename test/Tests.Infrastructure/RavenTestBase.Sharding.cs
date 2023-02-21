@@ -179,6 +179,14 @@ public partial class RavenTestBase
             }
         }
 
+        public ShardedDatabaseContext GetOrchestrator(string database)
+        {
+            if (_parent.Server.ServerStore.DatabasesLandlord.ShardedDatabasesCache.TryGetValue(database, out var task) == false)
+                throw new InvalidOperationException($"The orchestrator for '{database}' wasn't found on this node");
+
+            return task.Result;
+        }
+
         public async Task WaitForOrchestratorsToUpdate(string database, long index)
         {
             var servers = _parent.GetServers();

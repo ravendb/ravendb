@@ -95,7 +95,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        protected virtual void ValidateId(Slice lowerId)
+        public virtual void ValidateId(Slice lowerId)
         {
 
         }

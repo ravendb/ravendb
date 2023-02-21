@@ -7,37 +7,34 @@ using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Documents.Sharding.Handlers.Batches;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Sharding.Operations
 {
-    public readonly struct SingleNodeShardedBatchOperation : IShardedOperation<BlittableJsonReaderObject, Exception>
+    public readonly struct ShardedBatchOperation : IShardedOperation<BlittableJsonReaderObject, DynamicJsonArray>
     {
         private readonly HttpContext _httpContext;
         private readonly JsonOperationContext _resultContext;
-        private readonly Dictionary<int, ShardedSingleNodeBatchCommand> _commands;
+        private readonly Dictionary<int, ShardedSingleNodeBatchCommand> _commandsPerShard;
         private readonly ShardedBatchCommand _command;
-        private readonly object[] _result;
 
-        public SingleNodeShardedBatchOperation(
-            HttpContext httpContext, 
+        public ShardedBatchOperation(HttpContext httpContext,
             JsonOperationContext resultContext,
-            Dictionary<int, ShardedSingleNodeBatchCommand> commands, 
-            ShardedBatchCommand command,
-            object[] result)
+            Dictionary<int, ShardedSingleNodeBatchCommand> commandsPerShard,
+            ShardedBatchCommand command)
         {
             _httpContext = httpContext;
             _resultContext = resultContext;
-            _commands = commands;
+            _commandsPerShard = commandsPerShard;
             _command = command;
-            _result = result;
         }
 
         public HttpRequest HttpRequest => _httpContext.Request;
 
-        public Exception Combine(Dictionary<int, ShardExecutionResult<BlittableJsonReaderObject>> results)
+        public DynamicJsonArray Combine(Dictionary<int, ShardExecutionResult<BlittableJsonReaderObject>> results)
         {
             ShardMismatchException lastMismatchException = null;
-            foreach (var c in _commands.Values)
+            foreach (var c in _commandsPerShard.Values)
             {
                 var executionResult = results[c.ShardNumber];
 
@@ -53,18 +50,15 @@ namespace Raven.Server.Documents.Sharding.Operations
                     continue;
                 }
 
-                c.AssembleShardedReply(_resultContext, _result);
-                _command.Skip ??= new HashSet<int>();
-
-                foreach (var p in c.PositionInResponse)
-                {
-                    _command.Skip.Add(p);
-                }
+                _command.MarkShardAsComplete(_resultContext, c.ShardNumber);
             }
 
-            return lastMismatchException;
+            if (lastMismatchException != null)
+                throw lastMismatchException;
+
+            return _command.Result;
         }
 
-        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => _commands[shardNumber];
+        public RavenCommand<BlittableJsonReaderObject> CreateCommandForShard(int shardNumber) => _commandsPerShard[shardNumber];
     }
 }
