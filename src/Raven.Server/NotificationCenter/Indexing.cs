@@ -135,7 +135,7 @@ namespace Raven.Server.NotificationCenter
 
                 AlertRaised mismatchedReferencesAlert = null;
                 
-                if(_mismatchedReferencesLoadWarning != null) 
+                if (_mismatchedReferencesLoadWarning != null) 
                     mismatchedReferencesAlert = GetMismatchedReferencesAlert();
                 
                 if (indexOutputPerDocumentHint != null)
@@ -144,7 +144,7 @@ namespace Raven.Server.NotificationCenter
                 if (referenceLoadsHint != null)
                     _notificationCenter.Add(referenceLoadsHint);
                 
-                if(mismatchedReferencesAlert != null)
+                if (mismatchedReferencesAlert != null)
                     _notificationCenter.Add(mismatchedReferencesAlert);
             }
             catch (Exception e)
