@@ -155,8 +155,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
                         if (IsBoostExpression(ce))
                             HasBoostedFields = true;
-                        else if (IsCreateDynamicExpression(ce))
-                            HasDynamicReturns = true;
                         else if (IsArrowFunctionExpressionWithObjectExpressionBody(ce, out var oea))
                         {
                             foreach (var prop in oea.Properties)
@@ -170,7 +168,8 @@ namespace Raven.Server.Documents.Indexes.Static
                                 }
                             }
                         }
-
+                        else
+                            HasDynamicReturns = true;
                         break;
 
                     default:
@@ -184,11 +183,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name == "boost";
             }
             
-            static bool IsCreateDynamicExpression(Expression expression)
-            {
-                return expression is CallExpression ce && ce.Callee is Identifier identifier && identifier.Name == "createField";
-            }
-
             static bool IsArrowFunctionExpressionWithObjectExpressionBody(CallExpression callExpression, out ObjectExpression oea)
             {
                 oea = null;
