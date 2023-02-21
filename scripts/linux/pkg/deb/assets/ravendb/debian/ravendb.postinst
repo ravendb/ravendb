@@ -16,7 +16,7 @@ case "$1" in
         [[ -n "$RAVEN_USER_ID" ]] && UID_ARG="--uid $RAVEN_USER_ID"
 
         getent passwd ravendb || adduser --disabled-login --disabled-password --system --home /var/lib/ravendb --no-create-home --quiet $UID_ARG --gid "$RAVEN_GID" ravendb
-
+        
         ldconfig
     ;;
 
