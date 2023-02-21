@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Background;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Background
@@ -30,9 +28,7 @@ namespace Raven.Server.Documents.Sharding.Background
         {
             try
             {
-                var etag = 0L;
                 var buckets = new Dictionary<int, int>();
-
                 using (_database.ShardedDocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     while (true)
@@ -43,29 +39,33 @@ namespace Raven.Server.Documents.Sharding.Background
 
                         using (context.OpenReadTransaction())
                         {
-                            var record = _database.ReadDatabaseRecord();
-                            var documents = _database.ShardedDocumentsStorage.GetDocumentsFrom(context, etag, start: 0, take: 1024).ToList();
-
-                            if (documents.Any() == false)
-                                return;
-
-                            foreach (var document in documents)
+                            var configuration = _database.ShardingConfiguration;
+                            for (var index = 0; index < configuration.BucketRanges.Count; index++)
                             {
-                                var (shardNumber, bucket) = ShardHelper.GetShardNumberAndBucketFor(record.Sharding, context.Allocator, document.Id);
-                                if (shardNumber == _database.ShardNumber)
+                                var range = configuration.BucketRanges[index];
+                                if (range.ShardNumber == _database.ShardNumber)
                                     continue;
 
-                                if (buckets.ContainsKey(bucket) == false)
-                                    buckets.Add(bucket, shardNumber);
-                              
-                                etag = document.Etag;
+                                var start = range.BucketRangeStart;
+                                var end = index == configuration.BucketRanges.Count - 1
+                                    ? int.MaxValue
+                                    : configuration.BucketRanges[index + 1].BucketRangeStart;
+
+                                var bucketStatistics = ShardedDocumentsStorage.GetBucketStatistics(context, start, end);
+
+                                if (bucketStatistics == null)
+                                    continue;
+
+                                foreach (var bucketStats in bucketStatistics)
+                                    buckets.Add(bucketStats.Bucket, range.ShardNumber);
                             }
                         }
 
                         if (buckets.Count > 0)
+                        {
                             await MoveDocumentsToShard(buckets);
-                        
-                        etag++;
+                            return;
+                        }
                     }
                 }
             }
@@ -97,6 +97,9 @@ namespace Raven.Server.Documents.Sharding.Background
             {
                 var result = await _database.ServerStore.SendToLeaderAsync(cmd);
                 await _database.ServerStore.Cluster.WaitForIndexNotification(result.Index);
+               
+                while (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
+                    await WaitOrThrowOperationCanceled(TimeSpan.FromMilliseconds(300));
             }
         }
     }
