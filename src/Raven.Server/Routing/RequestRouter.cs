@@ -171,7 +171,7 @@ namespace Raven.Server.Routing
         {
             if (context.Request.Cookies.TryGetValue(TwoFactorAuthentication.CookieName, out var cookieStr) == false)
             {
-                msg = "Missing the csrf-cookie in the request";
+                msg = $"Missing the '{TwoFactorAuthentication.CookieName}' in the request";
                 return false;
             }
 
@@ -187,7 +187,7 @@ namespace Raven.Server.Routing
             {
                 if (context.Request.Headers.TryGetValue(TwoFactorAuthentication.HeaderName, out var headerStr) == false || headerStr.Count == 0)
                 {
-                    msg = "Missing Csrf-Token header";
+                    msg = $"Missing '{TwoFactorAuthentication.HeaderName}' header";
                     return false;
                 }
                 var header = MemoryMarshal.Cast<char, byte>(headerStr[0]);
