@@ -1,8 +1,10 @@
 FROM mcr.microsoft.com/dotnet/runtime-deps:7.0-jammy
 
+ARG path_to_deb
+
 RUN apt-get update \
-    && apt-get install -y \
-    && apt-get install --no-install-recommends openssl unzip jq curl libc6-dev -y
+    && apt-get install \
+    && apt-get install --no-install-recommends openssl jq curl -y
 
 ENV RAVEN_ARGS='' \
     RAVEN_SETTINGS='' \
@@ -19,25 +21,18 @@ ENV RAVEN_ARGS='' \
 
 EXPOSE 8080 38888 161
 
-COPY package-22.04.zip /opt/ravendb-deb.zip
+COPY ${path_to_deb} /opt/ravendb.deb
 
-RUN cd /opt \
-    && unzip ravendb-deb.zip \
-    && rm ravendb-deb.zip \
-    && apt-get remove unzip -y \
+RUN apt install /opt/ravendb.deb -y \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-RUN dpkg -i /opt/ravendb_5.4-0_amd64.deb
 USER ravendb:ravendb
 
-COPY run-raven.sh healthcheck.sh link-legacy-datadir.sh /usr/lib/ravendb/
-COPY settings.json server-utils.sh cert-utils.sh /usr/lib/ravendb/server/
+COPY server-utils.sh cert-utils.sh run-raven.sh healthcheck.sh link-legacy-datadir.sh /usr/lib/ravendb/scripts/
+COPY settings.json /etc/ravendb/
 
-RUN /usr/lib/ravendb/link-legacy-datadir.sh
-
-HEALTHCHECK --start-period=60s CMD /opt/RavenDB/healthcheck.sh
-VOLUME /var/lib/ravendb/data /etc/ravendb/
+HEALTHCHECK --start-period=60s CMD /usr/lib/ravendb/scripts/healthcheck.sh
+VOLUME /var/lib/ravendb/data /etc/ravendb
 WORKDIR /usr/lib/ravendb
-
-CMD [ "/bin/bash", "/opt/RavenDB/run-raven.sh" ]
+CMD [ "/bin/bash", "/usr/lib/ravendb/scripts/run-raven.sh" ]
