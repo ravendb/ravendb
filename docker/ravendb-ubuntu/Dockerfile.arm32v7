@@ -1,29 +1,38 @@
 FROM mcr.microsoft.com/dotnet/runtime-deps:7.0-jammy-arm32v7
 
-RUN apt-get update \
-    && apt-get install -y \
-    && apt-get install --no-install-recommends openssl bzip2 jq curl -y
+ARG path_to_deb
 
-ENV RAVEN_ARGS='' RAVEN_SETTINGS='' RAVEN_Setup_Mode='Initial' RAVEN_DataDir='RavenData' RAVEN_ServerUrl_Tcp='38888' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
+RUN apt-get update \
+    && apt-get install \
+    && apt-get install --no-install-recommends openssl jq curl -y
+
+ENV RAVEN_ARGS='' \
+    RAVEN_SETTINGS='' \
+    RAVEN_IN_DOCKER='true' \
+    RAVEN_Setup_Mode='Initial' \
+    RAVEN_ServerUrl_Tcp='38888' \
+    RAVEN_AUTO_INSTALL_CA='true' \
+    RAVEN_DataDir='/var/lib/ravendb/data' \
+    RAVEN_Indexing_NugetPackagesPath='/var/lib/ravendb/nuget' \
+    RAVEN_Logs_Path='/var/log/ravendb/logs' \
+    RAVEN_Security_AuditLog_FolderPath='/var/log/ravendb/audit' \
+    RAVEN_Security_MasterKey_Path='/etc/ravendb/security/master.key' \
+    RAVEN_Setup_Certificate_Path='/etc/ravendb/security/server.pfx'
 
 EXPOSE 8080 38888 161
 
-COPY RavenDB.tar.bz2 /opt/RavenDB.tar.bz2
+COPY ${path_to_deb} /opt/ravendb.deb
 
-RUN cd /opt \
-    && tar xjvf RavenDB.tar.bz2 \
-    && rm RavenDB.tar.bz2 \
-    && apt-get remove bzip2 -y \
+RUN apt install /opt/ravendb.deb -y \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
-COPY run-raven.sh healthcheck.sh /opt/RavenDB/
-COPY settings.json server-utils.sh cert-utils.sh /opt/RavenDB/Server/
+USER ravendb:ravendb
 
-HEALTHCHECK --start-period=60s CMD /opt/RavenDB/healthcheck.sh
+COPY server-utils.sh cert-utils.sh run-raven.sh healthcheck.sh link-legacy-datadir.sh /usr/lib/ravendb/scripts/
+COPY settings.json /etc/ravendb/
 
-WORKDIR /opt/RavenDB/Server
-
-VOLUME /opt/RavenDB/Server/RavenData /opt/RavenDB/config
-
-CMD [ "/bin/bash", "/opt/RavenDB/run-raven.sh" ]
+HEALTHCHECK --start-period=60s CMD /usr/lib/ravendb/scripts/healthcheck.sh
+VOLUME /var/lib/ravendb/data /etc/ravendb
+WORKDIR /usr/lib/ravendb
+CMD [ "/bin/bash", "/usr/lib/ravendb/scripts/run-raven.sh" ]
