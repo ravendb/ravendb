@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             await ServerStore.Cluster.WaitForIndexNotification(index);
             
             if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("WaitForIndexCommand", TrafficWatchChangeType.ClusterCommands);
+                AddStringToHttpContext(nameof(WaitForIndex), TrafficWatchChangeType.ClusterCommands);
         }
 
         [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
@@ -125,14 +125,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 NoContentStatus();
+                if (TrafficWatchManager.HasRegisteredClients)
+                   AddStringToHttpContext(nameof(SuspendObserver), TrafficWatchChangeType.ClusterCommands);
                 return Task.CompletedTask;
             }
 
             RedirectToLeader();
             
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("SuspendObserverCommand", TrafficWatchChangeType.ClusterCommands);
-           
             return Task.CompletedTask;
         }
 
@@ -317,7 +316,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             NoContentStatus();
 
             if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("BootstrapCommand", TrafficWatchChangeType.ClusterCommands);
+                AddStringToHttpContext(nameof(Bootstrap), TrafficWatchChangeType.ClusterCommands);
         }
 
         [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
@@ -536,13 +535,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                     }
 
                     NoContentStatus();
+
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(nameof(AddNode), TrafficWatchChangeType.ClusterCommands);
+
                     return;
                 }
             }
             RedirectToLeader();
-            
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("AddNodeCommand", TrafficWatchChangeType.ClusterCommands);
         }
 
         private static void AssertCanAddNodeWithTopologyId(ClusterTopology clusterTopology, Client.ServerWide.Commands.NodeInfo nodeInfo, string nodeUrl)
@@ -576,6 +576,9 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             if (ServerStore.IsLeader())
             {
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext(nameof(DeleteNode), TrafficWatchChangeType.ClusterCommands);
+
                 if (nodeTag == ServerStore.Engine.Tag)
                 {
                     // cannot remove the leader, let's change the leader
@@ -591,9 +594,6 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
 
             RedirectToLeader();
-           
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("DeleteNodeCommand", TrafficWatchChangeType.ClusterCommands);
         }
 
         [RavenAction("/admin/license/set-limit", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
@@ -608,7 +608,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             NoContentStatus();
 
             if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("SetLimitCommand", TrafficWatchChangeType.ClusterCommands);
+                AddStringToHttpContext(nameof(SetLicenseLimit), TrafficWatchChangeType.ClusterCommands);
         }
 
         [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
@@ -618,7 +618,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             NoContentStatus();
 
             if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("TimeoutCommand", TrafficWatchChangeType.ClusterCommands);
+                AddStringToHttpContext(nameof(TimeoutNow), TrafficWatchChangeType.ClusterCommands);
 
             return Task.CompletedTask;
         }
@@ -627,7 +627,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         public Task EnforceReelection()
         {
             if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("ReelectCommand", TrafficWatchChangeType.ClusterCommands);  
+                AddStringToHttpContext(nameof(EnforceReelection), TrafficWatchChangeType.ClusterCommands);
 
             if (ServerStore.IsLeader())
             {
@@ -644,6 +644,9 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task PromoteNode()
         {
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext(nameof(PromoteNode), TrafficWatchChangeType.ClusterCommands);
+
             if (ServerStore.LeaderTag == null)
             {
                 NoContentStatus();
@@ -670,9 +673,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var url = topology.GetUrlFromTag(nodeTag);
                 await ServerStore.Engine.ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Promotable);
                 NoContentStatus();
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext("PromoteWatcherNodeCommand", TrafficWatchChangeType.ClusterCommands);
             }
         }
 
@@ -681,6 +681,9 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task DemoteNode()
         {
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext(nameof(DemoteNode), TrafficWatchChangeType.ClusterCommands);
+
             if (ServerStore.LeaderTag == null)
             {
                 NoContentStatus();
@@ -713,9 +716,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var url = topology.GetUrlFromTag(nodeTag);
                 await ServerStore.Engine.ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.NonVoter);
                 NoContentStatus();
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext("DemoteNodeCommand", TrafficWatchChangeType.ClusterCommands);
             }
         }
 
