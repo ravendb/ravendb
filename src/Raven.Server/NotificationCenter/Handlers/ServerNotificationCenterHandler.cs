@@ -52,7 +52,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                     await writer.WriteNotifications(isValidFor);
 
                     if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Notifications);
                 }
             }
         }
@@ -65,6 +65,10 @@ namespace Raven.Server.NotificationCenter.Handlers
             var forever = GetBoolValueQueryString("forever", required: false);
             var dbForId = ServerStore.NotificationCenter.GetDatabaseFor(id);
             var isValidFor = GetDatabaseAccessValidationFunc();
+
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext(nameof(DismissPost), TrafficWatchChangeType.Notifications);
+
             if (isValidFor != null && isValidFor(dbForId, true) == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -76,9 +80,6 @@ namespace Raven.Server.NotificationCenter.Handlers
             else
                 ServerStore.NotificationCenter.Dismiss(id);
 
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("DismissCommand", TrafficWatchChangeType.ClusterCommands);
-
             return NoContent();
         }
 
@@ -89,6 +90,10 @@ namespace Raven.Server.NotificationCenter.Handlers
             var timeInSec = GetLongQueryString("timeInSec");
             var dbForId = ServerStore.NotificationCenter.GetDatabaseFor(id);
             var isValidFor = GetDatabaseAccessValidationFunc();
+            
+            if (TrafficWatchManager.HasRegisteredClients)
+                AddStringToHttpContext(nameof(PostponePost), TrafficWatchChangeType.Notifications);
+
             if (isValidFor != null && isValidFor(dbForId, true) == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
@@ -98,9 +103,6 @@ namespace Raven.Server.NotificationCenter.Handlers
 
             var until = timeInSec == 0 ? DateTime.MaxValue : SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec));
             ServerStore.NotificationCenter.Postpone(id, until);
-
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext("PostponeCommand", TrafficWatchChangeType.ClusterCommands);
 
             return NoContent();
         }

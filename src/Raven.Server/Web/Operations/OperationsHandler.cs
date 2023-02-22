@@ -102,7 +102,6 @@ namespace Raven.Server.Web.Operations
                     // writes Patch response
                     if (TrafficWatchManager.HasRegisteredClients)
                         AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
-
                 }
             }
         }
