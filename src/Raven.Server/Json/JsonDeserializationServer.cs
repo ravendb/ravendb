@@ -63,6 +63,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.Studio.Processors;
 using Raven.Server.Web.System;
+using Raven.Server.Web.System.Processors.Studio;
 using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
@@ -277,6 +278,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, NotificationCenterDatabaseStats> NotificationCenterDatabaseStats = GenerateJsonDeserializationRoutine<NotificationCenterDatabaseStats>();
 
         internal static readonly Func<BlittableJsonReaderObject, DatabasesInfo> DatabasesInfo = GenerateJsonDeserializationRoutine<DatabasesInfo>();
+
+        internal static readonly Func<BlittableJsonReaderObject, StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState> StudioDatabasesState = GenerateJsonDeserializationRoutine<StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState>();
 
         internal static readonly Func<BlittableJsonReaderObject, BucketsResults> BucketsResults = GenerateJsonDeserializationRoutine<BucketsResults>();
 

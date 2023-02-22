@@ -36,32 +36,17 @@ namespace Raven.Client.ServerWide.Operations
         }
     }
 
-    public class DatabaseInfo : IDynamicJson
+    public class DatabaseInfo : DatabaseState
     {
-        public string Name { get; set; }
         public bool Disabled { get; set; }
         public DatabaseLockMode LockMode;
-        public Size TotalSize { get; set; }
-        public Size TempBuffersSize { get; set; }
-
         public bool IsAdmin { get; set; }
         public bool IsEncrypted { get; set; }
-        public TimeSpan? UpTime { get; set; }
-        public BackupInfo BackupInfo { get; set; }
-
-        public long? Alerts { get; set; }
-        public long? PerformanceHints { get; set; }
         public bool RejectClients { get; set; }
-        public string LoadError { get; set; }
-        public long? IndexingErrors { get; set; }
-
-        public long? DocumentsCount { get; set; }
         public bool HasRevisionsConfiguration { get; set; }
         public bool HasExpirationConfiguration { get; set; }
         public bool HasRefreshConfiguration { get; set; }
         public int? IndexesCount { get; set; }
-        public IndexRunningStatus IndexingStatus { get; set; }
-
         public NodesTopology NodesTopology { get; set; }
         public int ReplicationFactor { get; set; }
         public bool DynamicNodesDistribution { get; set; }
@@ -69,13 +54,49 @@ namespace Raven.Client.ServerWide.Operations
 
         public StudioConfiguration.StudioEnvironment Environment { get; set; }
 
-        public DynamicJsonValue ToJson()
+        public override DynamicJsonValue ToJson()
+        {
+            var djv = base.ToJson();
+
+            djv[nameof(Name)] = Name;
+            djv[nameof(Disabled)] = Disabled;
+            djv[nameof(LockMode)] = LockMode;
+            djv[nameof(IsAdmin)] = IsAdmin;
+            djv[nameof(IsEncrypted)] = IsEncrypted;
+            djv[nameof(RejectClients)] = false;
+            djv[nameof(HasRevisionsConfiguration)] = HasRevisionsConfiguration;
+            djv[nameof(HasExpirationConfiguration)] = HasExpirationConfiguration;
+            djv[nameof(HasRefreshConfiguration)] = HasRefreshConfiguration;
+            djv[nameof(IndexesCount)] = IndexesCount;
+            djv[nameof(NodesTopology)] = NodesTopology?.ToJson();
+            djv[nameof(ReplicationFactor)] = ReplicationFactor;
+            djv[nameof(DynamicNodesDistribution)] = DynamicNodesDistribution;
+            djv[nameof(DeletionInProgress)] = DynamicJsonValue.Convert(DeletionInProgress);
+            djv[nameof(Environment)] = Environment;
+
+            return djv;
+        }
+    }
+
+    public class DatabaseState : IDynamicJson
+    {
+        public string Name { get; set; }
+        public Size TotalSize { get; set; }
+        public Size TempBuffersSize { get; set; }
+        public TimeSpan? UpTime { get; set; }
+        public BackupInfo BackupInfo { get; set; }
+        public long? DocumentsCount { get; set; }
+        public long? Alerts { get; set; }
+        public long? PerformanceHints { get; set; }
+        public string LoadError { get; set; }
+        public long? IndexingErrors { get; set; }
+        public IndexRunningStatus IndexingStatus { get; set; }
+
+        public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(Disabled)] = Disabled,
-                [nameof(LockMode)] = LockMode,
                 [nameof(TotalSize)] = new DynamicJsonValue
                 {
                     [nameof(Size.HumaneSize)] = TotalSize.HumaneSize,
@@ -86,28 +107,15 @@ namespace Raven.Client.ServerWide.Operations
                     [nameof(Size.HumaneSize)] = TempBuffersSize.HumaneSize,
                     [nameof(Size.SizeInBytes)] = TempBuffersSize.SizeInBytes
                 },
-                [nameof(IsAdmin)] = IsAdmin,
-                [nameof(IsEncrypted)] = IsEncrypted,
                 [nameof(UpTime)] = UpTime?.ToString(),
                 [nameof(BackupInfo)] = BackupInfo?.ToJson(),
 
                 [nameof(Alerts)] = Alerts,
                 [nameof(PerformanceHints)] = PerformanceHints,
-                [nameof(RejectClients)] = false,
                 [nameof(IndexingErrors)] = IndexingErrors,
 
                 [nameof(DocumentsCount)] = DocumentsCount,
-                [nameof(HasRevisionsConfiguration)] = HasRevisionsConfiguration,
-                [nameof(HasExpirationConfiguration)] = HasExpirationConfiguration,
-                [nameof(HasRefreshConfiguration)] = HasRefreshConfiguration,
-                [nameof(IndexesCount)] = IndexesCount,
-                [nameof(IndexingStatus)] = IndexingStatus.ToString(),
-
-                [nameof(NodesTopology)] = NodesTopology?.ToJson(),
-                [nameof(ReplicationFactor)] = ReplicationFactor,
-                [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,
-                [nameof(DeletionInProgress)] = DynamicJsonValue.Convert(DeletionInProgress),
-                [nameof(Environment)] = Environment
+                [nameof(IndexingStatus)] = IndexingStatus.ToString()
             };
         }
     }
@@ -119,9 +127,9 @@ namespace Raven.Client.ServerWide.Operations
         public string Type { get; set; }
 
         public DiskSpaceResult DiskSpaceResult { get; set; }
-        
+
         public IoStatsResult IoStatsResult { get; set; }
-        
+
         public long UsedSpace { get; set; }
 
         public long UsedSpaceByTempBuffers { get; set; }
@@ -167,11 +175,11 @@ namespace Raven.Client.ServerWide.Operations
         public double IoReadOperations { get; set; }
 
         public double IoWriteOperations { get; set; }
-        
+
         public long ReadThroughputInKb { get; set; }
-        
+
         public long WriteThroughputInKb { get; set; }
-        
+
         public long? QueueLength { get; set; }
 
         public DynamicJsonValue ToJson()
