@@ -384,11 +384,7 @@ class databases {
             });
     }
     
-    compactDatabase(db: databaseInfo) {
-        eventsCollector.default.reportEvent("databases", "compact");
-        this.changesContext.disconnectIfCurrent(db.asDatabase(), "DatabaseDisabled");
-        app.showBootstrapDialog(new compactDatabaseDialog(db));
-    }
+  
 
     togglePauseDatabaseIndexing(db: databaseInfo) {
         eventsCollector.default.reportEvent("databases", "pause-indexing");

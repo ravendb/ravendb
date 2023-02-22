@@ -35,6 +35,7 @@ interface NodeSetItemProps {
     icon?: string;
     color?: string;
     title?: string;
+    extraIconClassName?: string;
 }
 
 export function NodeSetLabel(props: NodeSetItemProps) {
@@ -51,12 +52,12 @@ export function NodeSetLabel(props: NodeSetItemProps) {
 }
 
 export function NodeSetItem(props: NodeSetItemProps) {
-    const { children, icon, color, ...rest } = props;
+    const { children, icon, color, extraIconClassName, ...rest } = props;
     const colorClass = color ? "text-" + color : undefined;
 
     return (
         <div className="node-set-item" {...rest}>
-            {icon && <i className={classNames("icon-" + icon, colorClass)} />}
+            {icon && <i className={classNames("icon-" + icon, colorClass, extraIconClassName)} />}
             <strong className="node-set-item-name">{children}</strong>
         </div>
     );

@@ -6,14 +6,13 @@ import compactDatabaseCommand = require("commands/resources/compactDatabaseComma
 import genUtils = require("common/generalUtils");
 import dialog = require("plugins/dialog");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-
-type compactDatabaseItem = { name: string; }
+import { DatabaseSharedInfo } from "components/models/databases";
 
 class compactDatabaseDialog extends dialogViewModelBase {
 
     view = require("views/resources/compactDatabaseDialog.html");
     
-    database: compactDatabaseItem;
+    database: DatabaseSharedInfo;
     
     allIndexes = ko.observableArray<string>([]);
     indexesToCompact = ko.observableArray<string>([]);
@@ -35,7 +34,7 @@ class compactDatabaseDialog extends dialogViewModelBase {
     numberOfNodes: KnockoutComputed<number>;
     currentNodeTag: KnockoutComputed<string>;
     
-    constructor(db: compactDatabaseItem) {
+    constructor(db: DatabaseSharedInfo) {
         super(); 
         
         this.database = db;

@@ -1,6 +1,6 @@
 ﻿import React, { ChangeEvent, useCallback } from "react";
-import { DatabaseFilterCriteria } from "../../../models/databases";
-import { CheckboxTriple } from "../../../common/CheckboxTriple";
+import { DatabaseFilterCriteria } from "components/models/databases";
+import { CheckboxTriple } from "components/common/CheckboxTriple";
 import { Col, Input, InputGroup, Row } from "reactstrap";
 
 interface DatabasesFilterProps {
