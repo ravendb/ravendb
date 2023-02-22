@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
+using Nest;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -23,35 +24,19 @@ public class StudioDatabasesHandler : RequestHandler
     [RavenAction("/studio-tasks/databases", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
     public async Task Databases()
     {
-        var databaseName = GetStringQueryString("name", required: false);
+        var name = GetStringQueryString("name", required: false);
 
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {
-            IEnumerable<RawDatabaseRecord> items;
-            if (string.IsNullOrEmpty(databaseName) == false)
+            var items = await DatabasesHandlerProcessorForGet.GetAllowedDatabaseRecordsAsync(name, ServerStore, this, context, GetStart(), GetPageSize())
+                .ToListAsync();
+
+            if (items.Count == 0 && name != null)
             {
-                var item = ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName);
-                if (item == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
-                items = new[] { item };
-            }
-            else
-            {
-                items = ServerStore.Cluster.GetAllRawDatabases(context, GetStart(), GetPageSize());
-            }
-
-            var allowedDbs = await GetAllowedDbsAsync(null, requireAdmin: false, requireWrite: false);
-
-            if (allowedDbs.HasAccess == false)
+                await NoContent(HttpStatusCode.NotFound);
                 return;
-
-            if (allowedDbs.AuthorizedDatabases != null)
-                items = items.Where(item => allowedDbs.AuthorizedDatabases.ContainsKey(item.DatabaseName));
+            }
 
             await using var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream());
 
@@ -93,13 +78,13 @@ public class StudioDatabasesHandler : RequestHandler
         public int? IndexesCount { get; set; }
 
         public StudioConfiguration.StudioEnvironment StudioEnvironment { get; set; }
-        
+
         public bool HasRevisionsConfiguration { get; set; }
-        
+
         public bool HasExpirationConfiguration { get; set; }
-        
+
         public bool HasRefreshConfiguration { get; set; }
-        
+
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress { get; set; }
 
         public DatabaseLockMode LockMode { get; set; }

@@ -39,7 +39,7 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractServerHandle
         using (context.OpenReadTransaction())
         {
             var name = GetName();
-            var items = await DatabasesHandlerProcessorForGet.GetDatabaseRecordsAsync(name, ServerStore, RequestHandler, context, GetStart(), GetPageSize())
+            var items = await DatabasesHandlerProcessorForGet.GetAllowedDatabaseRecordsAsync(name, ServerStore, RequestHandler, context, GetStart(), GetPageSize())
                 .ToListAsync();
 
             if (items.Count == 0 && name != null)
