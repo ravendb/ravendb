@@ -305,7 +305,7 @@ $component-active-bg: $primary !default;
 // scss-docs-start caret-variables
 $caret-width: 0.3em !default;
 $caret-vertical-align: $caret-width * 0.85 !default;
-$caret-spacing: $caret-width * 0.85 !default;
+$caret-spacing: $caret-width * 2.85 !default;
 // scss-docs-end caret-variables
 
 $transition-base: all 0.2s ease-in-out !default;
