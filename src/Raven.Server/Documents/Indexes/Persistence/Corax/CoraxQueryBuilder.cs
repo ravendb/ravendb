@@ -824,7 +824,7 @@ internal static class CoraxQueryBuilder
         }
 
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics,
-            builderParameters.DynamicFields);
+            builderParameters.DynamicFields, handleSearch: true);
 
         if (proximity.HasValue)
         {
