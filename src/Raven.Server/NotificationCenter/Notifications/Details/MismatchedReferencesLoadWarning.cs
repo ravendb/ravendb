@@ -12,10 +12,10 @@ public class MismatchedReferencesLoadWarning : INotificationDetails
 
     public MismatchedReferencesLoadWarning()
     {
-        //deserialization
+        // deserialization
     }
     
-    public MismatchedReferencesLoadWarning(string indexName, Dictionary<string, Dictionary<string, MismatchedReferencesHandler.LoadFailure>> mismatchedReferences)
+    public MismatchedReferencesLoadWarning(string indexName, Dictionary<string, Dictionary<string, MismatchedReferencesWarningHandler.LoadFailure>> mismatchedReferences)
     {
         IndexName = indexName;
         
@@ -74,10 +74,10 @@ public class MismatchedReferencesLoadWarning : INotificationDetails
 
         public WarningDetails()
         {
-            //deserialization
+            // deserialization
         }
         
-        public WarningDetails(MismatchedReferencesHandler.LoadFailure loadFailure)
+        public WarningDetails(MismatchedReferencesWarningHandler.LoadFailure loadFailure)
         {
             SourceId = loadFailure.SourceId;
             ReferenceId = loadFailure.ReferenceId;
