@@ -2262,16 +2262,29 @@ more responsive application.
             Dictionary<string, (object Entity, DocumentInfo Info)> idsEntitiesPairs
         )
         {
+            List<(object Entity, DocumentInfo Info, BlittableJsonReaderObject Result)> list = new();
+            var hasDeleted = false;
             var resultsCollection = command.Result.Results;
-            if (resultsCollection.Contains(null))
-                ThrowCouldNotRefreshDocument("Some Documents are no longer exist and were probably deleted");
 
             foreach (BlittableJsonReaderObject result in resultsCollection)
             {
+                if (result == null)
+                {
+                    hasDeleted = true;
+                    break;
+                }
                 var id = result.GetMetadata().GetId();
                 if (idsEntitiesPairs.TryGetValue(id, out var tuple) == false)
-                    ThrowCouldNotRefreshDocument($"Cannot refresh a transient instance with document id: {id}");
-                RefreshInternal(tuple.Entity, result, tuple.Info);
+                    ThrowCouldNotRefreshDocument($"Could not refresh an entity, the server returned an invalid id: '{id}'. Should not happen!");
+                list.Add((tuple.Entity, tuple.Info, result));
+            }
+
+            if (hasDeleted)
+                ThrowCouldNotRefreshDocument("Some of the requested documents are no longer exists and were probably deleted");
+
+            foreach (var tuple in list)
+            {
+                RefreshInternal(tuple.Entity, tuple.Result, tuple.Info);
             }
         }
 
