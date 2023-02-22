@@ -8,6 +8,9 @@ import {
     CloseButton,
     Col,
     Collapse,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
     FormGroup,
     Input,
     InputGroup,
@@ -16,6 +19,7 @@ import {
     ModalBody,
     ModalFooter,
     Row,
+    UncontrolledDropdown,
     UncontrolledPopover,
 } from "reactstrap";
 
@@ -24,6 +28,7 @@ import { FlexGrow } from "./FlexGrow";
 import { Icon } from "./Icon";
 import { PropSummary, PropSummaryItem, PropSummaryName, PropSummaryValue } from "./PropSummary";
 import { Steps } from "./Steps";
+import { backup } from "configuration";
 
 interface CreateDatabaseProps {
     createDatabaseModal: boolean;
@@ -31,7 +36,18 @@ interface CreateDatabaseProps {
     serverAuthentication: boolean;
 }
 
-type StepId = "createFromBackup" | "createNew" | "encryption" | "replicationAndSharding" | "nodeSelection" | "paths";
+type StepId =
+    | "createFromBackup"
+    | "backupSourceLocal"
+    | "backupSourceCloud"
+    | "backupSourceAws"
+    | "backupSourceAzure"
+    | "backupSourceGcp"
+    | "createNew"
+    | "encryption"
+    | "replicationAndSharding"
+    | "nodeSelection"
+    | "paths";
 
 interface StepItem {
     id: StepId;
@@ -73,6 +89,7 @@ export function CreateDatabase(props: CreateDatabaseProps) {
     };
 
     const [createFromBackup, setCreateFromBackup] = useState(false);
+    const [backupSource, setBackupSource] = useState(null);
 
     const toggleCreateFromBackup = () => {
         setCreateFromBackup(!createFromBackup);
@@ -84,6 +101,11 @@ export function CreateDatabase(props: CreateDatabaseProps) {
             label: "Select backup",
             active: createFromBackup,
         },
+        { id: "backupSourceLocal", label: "From Local", active: createFromBackup && backupSource === "local" },
+        { id: "backupSourceCloud", label: "RavenDB Cloud", active: createFromBackup && backupSource === "cloud" },
+        { id: "backupSourceAws", label: "AWS Credentials", active: createFromBackup && backupSource === "aws" },
+        { id: "backupSourceAzure", label: "Azure Credentials", active: createFromBackup && backupSource === "azure" },
+        { id: "backupSourceGcp", label: "GCP Credentials", active: createFromBackup && backupSource === "gcp" },
         { id: "createNew", label: "Name", active: !createFromBackup },
         {
             id: "encryption",
@@ -105,6 +127,11 @@ export function CreateDatabase(props: CreateDatabaseProps) {
 
     const stepViews = {
         createFromBackup: <StepCreateFromBackup />,
+        backupSourceLocal: <StepCreateFromBackup />,
+        backupSourceCloud: <StepCreateFromBackup />,
+        backupSourceAws: <StepCreateFromBackup />,
+        backupSourceAzure: <StepCreateFromBackup />,
+        backupSourceGcp: <StepCreateFromBackup />,
         createNew: <StepCreateNew />,
         encryption: (
             <StepEncryption
@@ -423,7 +450,71 @@ export function StepPaths(props: StepPathsProps) {
 interface StepCreateFromBackupProps {}
 
 export function StepCreateFromBackup(props: StepCreateFromBackupProps) {
-    return <h2>Restore from backup</h2>;
+    const fromBackupImg = require("Content/img/createDatabase/from-backup.svg");
+    return (
+        <>
+            <div className="d-flex justify-content-center">
+                <img src={fromBackupImg} alt="" className="step-img" />
+            </div>
+
+            <h2 className="text-center mb-4">Restore from backup</h2>
+            <Row>
+                <Col sm={{ offset: 2, size: 8 }}>
+                    <Label for="DbName">Database Name</Label>
+                    <Input type="text" placeholder="Database Name" name="Database Name" id="DbName" />
+
+                    <Label className="mt-2">Backup Source</Label>
+                    <UncontrolledDropdown>
+                        <DropdownToggle caret className="w-100">
+                            Select
+                        </DropdownToggle>
+                        <DropdownMenu className="w-100">
+                            <DropdownItem>
+                                <Icon icon="storage" className="me-1" /> Local Server Directory
+                            </DropdownItem>
+                            <DropdownItem>
+                                <Icon icon="cloud" className="me-1" />
+                                RavenDB Cloud
+                            </DropdownItem>
+                            <DropdownItem>
+                                <Icon icon="aws" className="me-1" />
+                                Amazon S3
+                            </DropdownItem>
+                            <DropdownItem>
+                                <Icon icon="azure" className="me-1" />
+                                Azure
+                            </DropdownItem>
+                            <DropdownItem>
+                                <Icon icon="gcp" className="me-1" />
+                                Google Cloud Platform
+                            </DropdownItem>
+                        </DropdownMenu>
+                    </UncontrolledDropdown>
+                    <div className="d-flex justify-content-center mt-4">
+                        <Button
+                            // active={!encryptionEnabled}
+                            // onClick={disableEncryption}
+                            // disabled={!serverAuthentication}
+                            outline
+                            className="rounded-pill me-2"
+                        >
+                            <Icon icon="node" /> Unsharded
+                        </Button>
+                        <Button
+                            // active={encryptionEnabled}
+                            // onClick={enableEncryption}
+                            // disabled={!serverAuthentication}
+                            color="shard"
+                            outline
+                            className="rounded-pill"
+                        >
+                            <Icon icon="sharding" /> Sharded
+                        </Button>
+                    </div>
+                </Col>
+            </Row>
+        </>
+    );
 }
 function componentDidMount() {
     throw new Error("Function not implemented.");
