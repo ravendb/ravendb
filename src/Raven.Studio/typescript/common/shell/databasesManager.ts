@@ -15,7 +15,7 @@ import nonShardedDatabase from "models/resources/nonShardedDatabase";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import getDatabasesForStudioCommand from "commands/resources/getDatabasesForStudioCommand";
 import getDatabaseForStudioCommand from "commands/resources/getDatabaseForStudioCommand";
-import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
+import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
 
 class databasesManager {
 

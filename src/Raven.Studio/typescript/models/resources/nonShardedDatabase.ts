@@ -1,5 +1,5 @@
 import database from "models/resources/database";
-import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
+import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
 
 class nonShardedDatabase extends database {
     get root(): database {

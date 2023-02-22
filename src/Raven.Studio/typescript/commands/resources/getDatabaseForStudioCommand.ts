@@ -1,6 +1,6 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
+import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
 
 class getDatabaseForStudioCommand extends commandBase {
 

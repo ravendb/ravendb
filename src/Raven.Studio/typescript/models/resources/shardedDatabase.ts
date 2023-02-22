@@ -1,6 +1,6 @@
 import database from "models/resources/database";
 import shard from "models/resources/shard";
-import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
+import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
 import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
 
 class shardedDatabase extends database {
