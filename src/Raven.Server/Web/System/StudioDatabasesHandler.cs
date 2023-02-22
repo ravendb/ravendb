@@ -12,6 +12,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors.Databases;
+using Raven.Server.Web.System.Processors.Studio;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -23,7 +24,6 @@ public class StudioDatabasesHandler : RequestHandler
     public async Task Databases()
     {
         var databaseName = GetStringQueryString("name", required: false);
-        var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
@@ -69,6 +69,13 @@ public class StudioDatabasesHandler : RequestHandler
         }
     }
 
+    [RavenAction("/studio-tasks/databases/state", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task GetDatabasesState()
+    {
+        using (var processor = new StudioDatabasesHandlerForGetDatabasesState(this))
+            await processor.ExecuteAsync();
+    }
+
     internal class StudioDatabaseInfo : IDynamicJson
     {
         private StudioDatabaseInfo()
@@ -82,6 +89,8 @@ public class StudioDatabasesHandler : RequestHandler
         public bool IsDisabled { get; set; }
 
         public bool IsEncrypted { get; set; }
+
+        public int? IndexesCount { get; set; }
 
         public StudioConfiguration.StudioEnvironment StudioEnvironment { get; set; }
         
@@ -114,6 +123,7 @@ public class StudioDatabasesHandler : RequestHandler
                 [nameof(HasExpirationConfiguration)] = HasExpirationConfiguration,
                 [nameof(HasRefreshConfiguration)] = HasRefreshConfiguration,
                 [nameof(DeletionInProgress)] = DynamicJsonValue.Convert(DeletionInProgress),
+                [nameof(IndexesCount)] = IndexesCount
             };
         }
 
@@ -135,11 +145,12 @@ public class StudioDatabasesHandler : RequestHandler
                 LockMode = record.LockMode,
                 IsEncrypted = record.IsEncrypted,
                 IsSharded = record.IsSharded,
-                StudioEnvironment = record.StudioConfiguration?.Environment ?? StudioConfiguration.StudioEnvironment.None,
+                StudioEnvironment = DatabasesHandlerProcessorForGet.GetStudioEnvironment(record),
                 HasExpirationConfiguration = record.ExpirationConfiguration != null,
                 HasRefreshConfiguration = record.RefreshConfiguration != null,
                 HasRevisionsConfiguration = record.RevisionsConfiguration != null,
-                DeletionInProgress = record.DeletionInProgress
+                DeletionInProgress = record.DeletionInProgress,
+                IndexesCount = record.Indexes?.Count
             };
 
             if (record.IsSharded)
