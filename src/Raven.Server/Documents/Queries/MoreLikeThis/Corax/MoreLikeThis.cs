@@ -71,7 +71,7 @@ internal class RavenMoreLikeThis : MoreLikeThisBase, IDisposable
 
             foreach (var fieldName in _fieldNames)
             {
-                var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(_builderParameters.Allocator, fieldName, _builderParameters.Index, _builderParameters.IndexFieldsMapping, _builderParameters.FieldsToFetch, _builderParameters.HasDynamics, _builderParameters.DynamicFields);
+                var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(_builderParameters.Allocator, fieldName, _builderParameters.Index, _builderParameters.IndexFieldsMapping, _builderParameters.FieldsToFetch, _builderParameters.HasDynamics, _builderParameters.DynamicFields, handleSearch: true);
                 var freq = indexSearcher.TermAmount(fieldMetadata, word);
                 topField = freq > docFreq ? fieldName : topField;
                 docFreq = freq > docFreq ? freq : docFreq;

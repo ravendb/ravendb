@@ -5,6 +5,7 @@ using System.Text;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Queries.Suggestions;
@@ -518,6 +519,42 @@ public class CoraxSlowQueryTests : RavenTestBase
         }
     }
 
+    [Theory]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void OnTermMatchCoraxShouldUseOnlyStandardAnalyzer(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        {
+            using var s = store.OpenSession();
+            s.Store(new Person(){Name = "Super simple query at stopword"});
+            s.SaveChanges();
+            new FullTextSearchIndex().Execute(store);
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        {
+            using var session = store.OpenSession();
+            var withStopWord = session.Query<Person, FullTextSearchIndex>().Count(i => i.Name == "at");
+            Assert.Equal(0, withStopWord);
+            
+            var withSentence = session.Query<Person, FullTextSearchIndex>().Count(i => i.Name == "simple query");
+            Assert.Equal(0, withSentence);
+
+            var noStopWord = session.Query<Person, FullTextSearchIndex>().Count(i => i.Name == "simple");
+            Assert.Equal(1, noStopWord);
+        }
+    }
+
+    private class FullTextSearchIndex : AbstractIndexCreationTask<Person>
+    {
+        public FullTextSearchIndex()
+        {
+            Map = persons => persons.Select(i => new {i.Name});
+            Index(i => i.Name, FieldIndexing.Search);
+        }
+    }
+    
     [Theory]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanSearchOnLists(Options options)
