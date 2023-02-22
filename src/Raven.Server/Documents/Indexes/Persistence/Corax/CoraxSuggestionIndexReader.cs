@@ -44,16 +44,25 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
 
         var result = new SuggestionResult { Name = field.Alias ?? field.Name };
 
-        result.Suggestions.AddRange(terms.Count > 1
-            ? QueryOverMultipleWords(field, terms, options)
-            : QueryOverSingleWord(field, terms[0], options));
+        foreach (var suggestion in terms.Count > 1
+                     ? QueryOverMultipleWords(field, terms, options)
+                     : QueryOverSingleWord(field, terms[0], options))
+        {
+            result.Suggestions.Add(suggestion.Term);
+
+            if (options.SortMode == SuggestionSortMode.Popularity)
+            {
+                AddPopularity(suggestion, ref result);
+            }
+        }
 
         return result;
     }
 
-    private string[] QueryOverMultipleWords(SuggestionField field, List<string> words, SuggestionOptions options)
+    private SuggestWord[] QueryOverMultipleWords(SuggestionField field, List<string> words, SuggestionOptions options)
     {
-        var result = new HashSet<string>();
+        var uniqueSuggestions = new HashSet<string>();
+        var result = new List<SuggestWord>();
 
         var pageSize = options.PageSize;
         foreach (var term in words)
@@ -63,8 +72,10 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
 
             foreach (var suggestion in QueryOverSingleWord(field, term, options))
             {
-                if (result.Add(suggestion) == false)
+                if (uniqueSuggestions.Add(suggestion.Term) == false)
                     continue;
+
+                result.Add(suggestion);
 
                 pageSize--;
                 if (pageSize <= 0)
@@ -78,7 +89,7 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
 
     private const int MaxTermSize = 128;
 
-    private unsafe string[] QueryOverSingleWord(SuggestionField field, string word, SuggestionOptions options)
+    private unsafe SuggestWord[] QueryOverSingleWord(SuggestionField field, string word, SuggestionOptions options)
     {
         var sortByPopularity = options.SortMode == SuggestionSortMode.Popularity;
         var match = options.Distance switch
@@ -104,10 +115,22 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
 
         match.Next(ref terms, ref tokens, ref score);
 
-        var list = new List<string>();
-        foreach (var token in tokens)
+        var list = new List<SuggestWord>();
+        for (int i = 0; i < tokens.Length; i++)
         {
-            list.Add(Encoding.UTF8.GetString(terms.Slice(token.Offset, (int)token.Length)));
+            var token= tokens[i];
+
+            var suggestWord = new SuggestWord();
+
+            suggestWord.Term = Encoding.UTF8.GetString(terms.Slice(token.Offset, (int)token.Length));
+
+            if (sortByPopularity)
+            {
+                suggestWord.Score = score[i];
+                suggestWord.Freq = (int)_indexSearcher.TermAmount(_binding.Metadata, suggestWord.Term);
+            }
+
+            list.Add(suggestWord);
         }
 
         var result = list.ToArray();
@@ -115,7 +138,12 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
 
         return result;
     }
-    
+
+    internal virtual void AddPopularity(SuggestWord suggestion, ref SuggestionResult result)
+    {
+
+    }
+
     public override void Dispose()
     {
         _indexSearcher?.Dispose();

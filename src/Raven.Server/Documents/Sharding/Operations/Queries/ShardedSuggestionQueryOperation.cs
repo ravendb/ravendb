@@ -6,7 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Suggestions;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Sharding.Commands.Querying;
 using Raven.Server.Documents.Sharding.Executors;

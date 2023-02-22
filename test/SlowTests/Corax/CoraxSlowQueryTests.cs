@@ -496,7 +496,7 @@ public class CoraxSlowQueryTests : RavenTestBase
     private record SortingData(string data);
 
     [Theory]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
     public void MaxSuggestionsShouldWork(Options options)
     {
         using (var store = GetDocumentStore(options))
@@ -514,6 +514,11 @@ public class CoraxSlowQueryTests : RavenTestBase
                     .Execute();
 
                 Assert.True(result["Name"].Suggestions.Count is > 0 and <= 5);
+
+                Assert.Equal("chai", result["Name"].Suggestions[0]);
+                Assert.Equal("chang", result["Name"].Suggestions[1]);
+                Assert.Equal("chocolade", result["Name"].Suggestions[2]);
+                Assert.Equal("tofu", result["Name"].Suggestions[3]);
             }
         }
     }
