@@ -109,21 +109,21 @@ namespace Raven.Server.Documents.Indexes
             return new IndexingStatsScope(stats, start);
         }
 
-        public int MapAttempts => _stats.MapAttempts;
+        public long MapAttempts => _stats.MapAttempts;
 
-        public int MapReferenceAttempts => _stats.MapReferenceAttempts;
+        public long MapReferenceAttempts => _stats.MapReferenceAttempts;
 
-        public int MapErrors => _stats.MapErrors;
+        public long MapErrors => _stats.MapErrors;
 
-        public int ReduceAttempts => _stats.ReduceAttempts;
+        public long ReduceAttempts => _stats.ReduceAttempts;
 
-        public int ReduceErrors => _stats.ReduceErrors;
+        public long ReduceErrors => _stats.ReduceErrors;
 
         public int ErrorsCount => _stats.Errors?.Count ?? 0;
 
         public int NumberOfKeptReduceErrors => _stats.NumberOfKeptReduceErrors;
 
-        public int TombstoneDeleteSuccesses => _stats.TombstoneDeleteSuccesses;
+        public long TombstoneDeleteSuccesses => _stats.TombstoneDeleteSuccesses;
 
         public void SetAllocatedManagedBytes(long sizeInBytes)
         {

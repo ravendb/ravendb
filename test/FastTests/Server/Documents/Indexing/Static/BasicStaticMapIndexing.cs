@@ -587,7 +587,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 for (var i = 0; i < numberOfBatches; i++)
                 {
                     index.DoIndexingWork(stats, CancellationToken.None);
-                    Assert.Equal((i + 1) * mapBatchSize, stats.MapAttempts);
+                    Assert.Equal((i + 1L) * mapBatchSize, stats.MapAttempts);
                 }
 
                 index.DoIndexingWork(stats, CancellationToken.None);
@@ -621,7 +621,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 for (var i = 0; i < numberOfBatches; i++)
                 {
                     index.DoIndexingWork(stats, CancellationToken.None);
-                    Assert.Equal((i + 1) * mapBatchSize, stats.MapReferenceAttempts);
+                    Assert.Equal((i + 1L) * mapBatchSize, stats.MapReferenceAttempts);
                 }
 
                 index.DoIndexingWork(stats, CancellationToken.None);

@@ -10,19 +10,19 @@ namespace Raven.Server.Documents.Indexes
 {
     public class IndexingRunStats
     {
-        public int MapAttempts;
-        public int MapReferenceAttempts;
-        public int MapSuccesses;
-        public int MapReferenceSuccesses;
-        public int TombstoneDeleteSuccesses;
-        public int MapErrors;
-        public int MapReferenceErrors;
+        public long MapAttempts;
+        public long MapReferenceAttempts;
+        public long MapSuccesses;
+        public long MapReferenceSuccesses;
+        public long TombstoneDeleteSuccesses;
+        public long MapErrors;
+        public long MapReferenceErrors;
 
-        public int ReduceAttempts;
-        public int ReduceSuccesses;
-        public int ReduceErrors;
+        public long ReduceAttempts;
+        public long ReduceSuccesses;
+        public long ReduceErrors;
 
-        public int IndexingOutputs;
+        public long IndexingOutputs;
         
         public Size AllocatedManagedBytes;
         
