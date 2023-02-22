@@ -2239,6 +2239,11 @@ namespace Raven.Server.Rachis
             return true;
         }
 
+        public string HardResetToNewCluster(string nodeTag = "A")
+        {
+            return HardResetToNewClusterAsync(nodeTag).GetAwaiter().GetResult();
+        }
+
         public async Task<string> HardResetToNewClusterAsync(string nodeTag = "A")
         {
             bool committed = false;
