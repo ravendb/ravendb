@@ -50,17 +50,17 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Indicates how many times database tried to index documents (reduce) using this index.
         /// </summary>
-        public int? ReduceAttempts { get; set; }
+        public long? ReduceAttempts { get; set; }
 
         /// <summary>
         /// Indicates how many reducing attempts succeeded.
         /// </summary>
-        public int? ReduceSuccesses { get; set; }
+        public long? ReduceSuccesses { get; set; }
 
         /// <summary>
         /// Indicates how many reducing attempts failed.
         /// </summary>
-        public int? ReduceErrors { get; set; }
+        public long? ReduceErrors { get; set; }
         
         /// <summary>
         /// The reduce output collection.

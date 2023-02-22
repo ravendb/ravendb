@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Indexes
         public IndexingPerformanceOperation(TimeSpan duration)
         {
             DurationInMs = Math.Round(duration.TotalMilliseconds, 2);
-            Operations = new IndexingPerformanceOperation[0];
+            Operations = Array.Empty<IndexingPerformanceOperation>();
         }
 
         public string Name { get; set; }

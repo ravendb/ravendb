@@ -36,13 +36,13 @@ namespace Raven.Client.Documents.Indexes
             DurationInMs = Math.Round(duration.TotalMilliseconds, 2);
         }
 
-        public int InputCount { get; set; }
+        public long InputCount { get; set; }
 
-        public int FailedCount { get; set; }
+        public long FailedCount { get; set; }
 
-        public int OutputCount { get; set; }
+        public long OutputCount { get; set; }
 
-        public int SuccessCount { get; set; }
+        public long SuccessCount { get; set; }
 
         public DateTime Started { get; set; }
 

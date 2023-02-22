@@ -8,11 +8,11 @@
 
         public long CurrentlyAllocated { get; set; }
 
-        public int ReduceAttempts { get; set; }
+        public long ReduceAttempts { get; set; }
 
-        public int ReduceSuccesses { get; set; }
+        public long ReduceSuccesses { get; set; }
 
-        public int ReduceErrors { get; set; }
+        public long ReduceErrors { get; set; }
 
         public TreesReduceDetails TreesReduceDetails { get; set; }
     }
