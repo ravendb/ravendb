@@ -6,17 +6,17 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Server;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Raven.Server.Config;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using XunitLogger;
 
 namespace SlowTests.Server.Documents.ETL
 {
@@ -51,17 +51,24 @@ namespace SlowTests.Server.Documents.ETL
             const double value = 58d;
             var tsOwnerId = "users/1";
             var justCheckEtl = new User();
-            const int clusterSize = 3; 
-            
-            (_, RavenServer leader) = await CreateRaftCluster(clusterSize, customSettings: _customSettings);
-            using var src = GetDocumentStore(new Options {Server = leader, ReplicationFactor = clusterSize});
-            var dest = GetDocumentStore();
+            const int clusterSize = 3;
+
+            var srcDatabaseName = GetDatabaseName();
+            var (nodes, leader) = await CreateRaftCluster(clusterSize, customSettings: _customSettings);
+            await CreateDatabaseInCluster(srcDatabaseName, clusterSize, leader.WebUrl);
+            using var src = GetDocumentStore(new Options
+            {
+                Server = leader,
+                CreateDatabase = false,
+                ModifyDatabaseName = _ => srcDatabaseName
+            });
+            using var dest = GetDocumentStore();
 
             var etlConfiguration = new RavenEtlConfiguration
             {
                 Name = connectionStringName,
                 ConnectionStringName = connectionStringName,
-                Transforms = {new Transformation { Name = $"ETL : {connectionStringName}", ApplyToAllDocuments = true}},
+                Transforms = { new Transformation { Name = $"ETL : {connectionStringName}", ApplyToAllDocuments = true } },
                 MentorNode = "A",
             };
             var connectionString = new RavenConnectionString
@@ -75,7 +82,7 @@ namespace SlowTests.Server.Documents.ETL
             var etlResult = src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
 
             var srcDatabase = await GetDatabase(leader, src.Database);
-            
+
             using (var context = DocumentsOperationContext.ShortTermSingleUse(srcDatabase))
             using (var tr = context.OpenWriteTransaction())
             {
@@ -84,12 +91,12 @@ namespace SlowTests.Server.Documents.ETL
                 {
                     new SingleResult
                     {
-                        Status = TimeSeriesValuesSegment.Live, 
-                        Tag = context.GetLazyString(tag), 
-                        Timestamp = time, 
-                        Type = SingleResultType.Raw, 
+                        Status = TimeSeriesValuesSegment.Live,
+                        Tag = context.GetLazyString(tag),
+                        Timestamp = time,
+                        Type = SingleResultType.Raw,
                         Values = new Memory<double>(new []{value})
-                    }, 
+                    },
                 };
                 tsStorage.AppendTimestamp(context, tsOwnerId, "Users", timeSeriesName.ToLower(), toAppend, null, verifyName: false);
                 tr.Commit();
@@ -100,7 +107,7 @@ namespace SlowTests.Server.Documents.ETL
                 await session.StoreAsync(justCheckEtl);
                 await session.SaveChangesAsync();
             }
-            
+
             await WaitForNotNullAsync(async () =>
             {
                 using var session = dest.OpenAsyncSession();
@@ -108,8 +115,8 @@ namespace SlowTests.Server.Documents.ETL
             }, interval: _waitInterval);
 
             etlConfiguration.MentorNode = "B";
-            src.Maintenance.Send(new UpdateEtlOperation<RavenConnectionString>(etlResult.TaskId,etlConfiguration));
-            
+            src.Maintenance.Send(new UpdateEtlOperation<RavenConnectionString>(etlResult.TaskId, etlConfiguration));
+
             using (var context = DocumentsOperationContext.ShortTermSingleUse(srcDatabase))
             using (var tr = context.OpenWriteTransaction())
             {
@@ -118,7 +125,7 @@ namespace SlowTests.Server.Documents.ETL
                     [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     {
                         [Constants.Documents.Metadata.Collection] = "Users",
-                        [Constants.Documents.Metadata.TimeSeries] = new DynamicJsonArray(new []{timeSeriesName}),
+                        [Constants.Documents.Metadata.TimeSeries] = new DynamicJsonArray(new[] { timeSeriesName }),
                     }
                 };
 
@@ -126,13 +133,15 @@ namespace SlowTests.Server.Documents.ETL
                 srcDatabase.DocumentsStorage.Put(context, tsOwnerId, null, doc, flags: DocumentFlags.HasTimeSeries);
                 tr.Commit();
             }
-            
+
+            Assert.True(await WaitForDocumentInClusterAsync<User>(nodes, src.Database, tsOwnerId, predicate: null, timeout: TimeSpan.FromSeconds(30)));
+
             await AssertWaitForNotNullAsync(async () =>
             {
                 using var session = dest.OpenAsyncSession();
                 var timeSeriesEntries = await session.TimeSeriesFor(tsOwnerId, timeSeriesName).GetAsync(time, time);
                 return timeSeriesEntries?.FirstOrDefault();
-            }, interval: 1000);
+            }, interval: _waitInterval);
         }
     }
 }
