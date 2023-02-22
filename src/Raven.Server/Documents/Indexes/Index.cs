@@ -2394,14 +2394,14 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleMismatchedReferences()
         {
-            if (CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.IsEmpty) 
+            if (CurrentIndexingScope.Current.MismatchedReferencesWarningHandler == null || CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.IsEmpty)
                 return;
             
             MismatchedReferencesLoadWarning warning = new (Name, CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.GetLoadFailures());
 
             DocumentDatabase.NotificationCenter.Indexing.AddWarning(warning);
                 
-            CurrentIndexingScope.Current.MismatchedReferencesWarningHandler.Clear();
+            CurrentIndexingScope.Current.MismatchedReferencesWarningHandler = null;
         }
 
         private void DisposeIndexWriterOnError(Lazy<IndexWriteOperationBase> writeOperation)
