@@ -492,34 +492,26 @@ namespace SlowTests.Blittable
                 var expectedDot = expected.ToDto(_context);
                 var actualDot = actual.ToDto(_context);
 
-                var type = actualDot.GetType();
-
-                var props = type.GetProperties();
-                foreach (var prop in props)
+                var jsonSerializer = GetJsonSerializer();
+                BlittableJsonReaderObject expectedBlittle;
+                BlittableJsonReaderObject actualBlittle;
+                using (var writer = new BlittableJsonWriter(_context))
                 {
-                    var expectedValue = prop.GetValue(expectedDot);
-                    var actualValue = prop.GetValue(actualDot);
-                    InnerEquals(expectedValue, actualValue, prop.PropertyType);
+                    jsonSerializer.Serialize(writer, expectedDot);
+                    writer.FinalizeDocument();
+
+                    expectedBlittle = writer.CreateReader();
                 }
 
-                var fields = type.GetFields();
-                foreach (var field in fields)
+                using (var writer = new BlittableJsonWriter(_context))
                 {
-                    var expectedValue = field.GetValue(expectedDot);
-                    var actualValue = field.GetValue(actualDot);
-                    InnerEquals(expectedValue, actualValue, field.FieldType);
+                    jsonSerializer.Serialize(writer, actualDot);
+                    writer.FinalizeDocument();
+
+                    actualBlittle = writer.CreateReader();
                 }
 
-                return true;
-            }
-
-            private void InnerEquals(object expectedValue, object actualValue, Type type)
-            {
-                if (_notCheckTypes.Contains(type))
-                {
-                    return;
-                }
-                Assert.Equal(expectedValue, actualValue);
+                return expectedBlittle.Equals(actualBlittle);
             }
 
             public int GetHashCode(T parameterValue)
