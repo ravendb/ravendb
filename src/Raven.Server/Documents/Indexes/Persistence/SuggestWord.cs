@@ -1,7 +1,6 @@
 ﻿using System;
-using Raven.Server.Documents.Patch;
 
-namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions
+namespace Raven.Server.Documents.Indexes.Persistence
 {
     /// <summary>  SuggestWord Class, used in suggestSimilar method in SpellChecker class.
     /// 

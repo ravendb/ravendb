@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
-using Raven.Client.Documents.Queries.Suggestions;
+﻿using Raven.Client.Documents.Queries.Suggestions;
+using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
-using Raven.Server.Documents.Sharding.Queries.Suggestions;
+using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Indexing;
 using Voron.Impl;
 
@@ -16,24 +15,6 @@ public sealed class ShardedLuceneSuggestionIndexReader : LuceneSuggestionIndexRe
 
     internal override void AddPopularity(SuggestWord suggestion, ref SuggestionResult result)
     {
-        if (result is ShardedSuggestionResult resultWithPopularity)
-        {
-            resultWithPopularity.SuggestionsWithPopularity.Values.Add(suggestion);
-        }
-        else
-        {
-            result = new ShardedSuggestionResult
-            {
-                Name = result.Name,
-                Suggestions = result.Suggestions,
-                SuggestionsWithPopularity = new ShardedSuggestionResult.Popularity
-                {
-                    Values = new List<SuggestWord>
-                        {
-                            suggestion
-                        }
-                }
-            };
-        }
+        result = result.AddPopularity(suggestion);
     }
 }

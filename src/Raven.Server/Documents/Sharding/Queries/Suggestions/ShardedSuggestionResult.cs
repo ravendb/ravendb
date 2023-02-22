@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Queries.Suggestions;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
+using Raven.Server.Documents.Indexes.Persistence;
 
 namespace Raven.Server.Documents.Sharding.Queries.Suggestions;
 
