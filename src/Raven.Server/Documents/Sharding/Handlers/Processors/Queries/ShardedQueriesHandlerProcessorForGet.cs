@@ -142,6 +142,9 @@ internal class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProc
     {
         if (indexQuery.Diagnostics != null)
             throw new NotSupportedInShardingException("Query diagnostics for a sharded database are currently not supported.");
+
+        if (indexQuery.Metadata.HasMoreLikeThis)
+            throw new NotSupportedInShardingException("MoreLikeThis queries are currently not supported in a sharded database ");
     }
 
     private static TimingsScope Timings(IndexQueryServerSide query) => new(query);
