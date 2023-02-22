@@ -1,7 +1,7 @@
 import database from "models/resources/database";
 import shardedDatabase from "models/resources/shardedDatabase";
 import NodesTopology = Raven.Client.ServerWide.Operations.NodesTopology;
-import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
+import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
 
 class shard extends database {
     private readonly shardTopology: NodesTopology;

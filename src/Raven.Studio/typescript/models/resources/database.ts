@@ -5,7 +5,7 @@ import accessManager from "common/shell/accessManager";
 import { DatabaseSharedInfo, NodeInfo } from "components/models/databases";
 import NodeId = Raven.Client.ServerWide.Operations.NodeId;
 import NodesTopology = Raven.Client.ServerWide.Operations.NodesTopology;
-import StudioDatabaseInfo = Raven.Server.Web.System.StudioDatabasesHandler.StudioDatabaseInfo;
+import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import type shardedDatabase from "models/resources/shardedDatabase";
 
