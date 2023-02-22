@@ -61,7 +61,7 @@ namespace Raven.Server.Rachis
 
                     if (clusterTopology.Members.Count == 1)
                     {
-                        CastVoteForSelfAsync(ElectionTerm + 1, "Single member cluster, natural leader");
+                        CastVoteForSelf(ElectionTerm + 1, "Single member cluster, natural leader");
                         _engine.SwitchToLeaderState(ElectionTerm, ClusterCommandsVersionManager.CurrentClusterMinimalVersion,
                             "I'm the only one in the cluster, so no need for elections, I rule.");
                         return;
@@ -79,7 +79,7 @@ namespace Raven.Server.Rachis
 
                     if (IsForcedElection)
                     {
-                        CastVoteForSelfAsync(ElectionTerm + 1, "Voting for self in forced elections");
+                        CastVoteForSelf(ElectionTerm + 1, "Voting for self in forced elections");
                     }
                     else
                     {
@@ -177,7 +177,7 @@ namespace Raven.Server.Rachis
                         if (RunRealElectionAtTerm != ElectionTerm &&
                             trialElectionsCount >= majority)
                         {
-                            CastVoteForSelfAsync(ElectionTerm, "Won in the trial elections");
+                            CastVoteForSelf(ElectionTerm, "Won in the trial elections");
                         }
                     }
                 }
@@ -246,7 +246,7 @@ namespace Raven.Server.Rachis
             return true;
         }
 
-        private void CastVoteForSelfAsync(long electionTerm, string reason, bool setStateChange = true)
+        private void CastVoteForSelf(long electionTerm, string reason, bool setStateChange = true)
         {
             var command = new CandidateCastVoteInTermCommand(_engine, electionTerm, reason);
             _engine.TxMerger.EnqueueSync(command);

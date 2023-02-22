@@ -41,22 +41,33 @@ public class ServerStoreTxMergerBench
                 .WithIterationCount(10)
                 .WithWarmupCount(5)
                 .AsDefault());
-
+        
         var summary = BenchmarkRunner.Run<ServerStoreTxMergerBench>(config);
+
 
         // Manual testing
         // var s = new ServerStoreTxMergerBench();
-        // s.CmdsArrayKey = CmdsArraysKeys.First();
-        // for (int i = 0; i < 10; i++)
-        // {
-        //     Console.WriteLine($"test {i}");
-        //     s.BeforeTest();
-        //     var sw = Stopwatch.StartNew();
-        //     await s.Test();
-        //     var time = sw.Elapsed;
-        //     s.AfterTest();
-        //     Console.WriteLine($"{time.Hours}:{time.Minutes}:{time.Seconds}");
-        // }
+        // s.CommandsGroup = CmdsArraysKeys.First();
+
+        // regular test
+        // s.NumOfNodes = 1;
+        // Console.WriteLine($"test");
+        // s.BeforeTest();
+        // var sw = Stopwatch.StartNew();
+        // await s.Test();
+        // var time = sw.Elapsed;
+        // s.AfterTest();
+        // Console.WriteLine($"{time.Hours}:{time.Minutes}:{time.Seconds}");
+
+        // Console.WriteLine($"cluster test");
+        // s.NumOfNodes = 3;
+        // s.BeforeTest();
+        // var sw1 = Stopwatch.StartNew();
+        // await s.Test();
+        // var time1 = sw1.Elapsed;
+        // s.AfterTest();
+        // Console.WriteLine($"{time1.Hours}:{time1.Minutes}:{time1.Seconds}");
+
     }
 
     private static string GetRandomData(int size)
@@ -137,10 +148,7 @@ public class ActualTests : RachisConsensusTestBase
 
     public async Task Initialize(int nodesCount)
     {
-        _leader = await CreateNetworkAndGetLeader(nodesCount, watcherCluster: true, shouldRunInMemory: false);
-        // var followers = GetFollowers();
-        //
-        // _leader.ServerStore.Configuration.Core.RunInMemory
+        _leader = await CreateNetworkAndGetLeader(nodeCount: nodesCount, watcherCluster: true, shouldRunInMemory: false);
     }
 
     public async Task Test(TestCommandWithLargeData[] cmds)

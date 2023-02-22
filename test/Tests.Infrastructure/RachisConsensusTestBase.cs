@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -17,12 +18,14 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Raven.Server.Monitoring.Snmp.Objects.Cluster;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -35,6 +38,7 @@ using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
+using static FastTests.TestBase;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Tests.Infrastructure
@@ -69,6 +73,8 @@ namespace Tests.Infrastructure
 
         protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null, bool watcherCluster = false, bool shouldRunInMemory = true)
         {
+            string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
+
             var initialCount = RachisConsensuses.Count;
             var leaderIndex = _random.Next(0, nodeCount);
             var timeout = TimeSpan.FromSeconds(10);
@@ -76,7 +82,7 @@ namespace Tests.Infrastructure
             for (var i = 0; i < nodeCount; i++)
             {
                 // ReSharper disable once ExplicitCallerInfoArgument
-                SetupServer(i == leaderIndex, electionTimeout: electionTimeout, caller: caller, shouldRunInMemory: shouldRunInMemory);
+                SetupServer(i == leaderIndex, nodeTag: allowedNodeTags[i], electionTimeout: electionTimeout, caller: caller, shouldRunInMemory: shouldRunInMemory);
             }
             var leader = RachisConsensuses[leaderIndex + initialCount];
             for (var i = 0; i < nodeCount; i++)
@@ -86,7 +92,7 @@ namespace Tests.Infrastructure
                     continue;
                 }
                 var follower = RachisConsensuses[i + initialCount];
-                await leader.AddToClusterAsync(follower.Url, asWatcher: watcherCluster);
+                await leader.AddToClusterAsync(follower.Url, asWatcher: watcherCluster, nodeTag: allowedNodeTags[i]);
                 var done = await follower.WaitForTopology(watcherCluster? Leader.TopologyModification.NonVoter : Leader.TopologyModification.Voter).WaitWithoutExceptionAsync(timeout);
                 Assert.True(done, "Waited for node to become a follower for too long");
             }
@@ -179,7 +185,7 @@ namespace Tests.Infrastructure
             return sb.ToString();
         }
 
-        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null, bool shouldRunInMemory = true)
+        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null, bool shouldRunInMemory = true, string nodeTag=null)
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
@@ -195,14 +201,23 @@ namespace Tests.Infrastructure
 
             var url = $"tcp://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}/?{caller}#{ch}";
 
-            var server = StorageEnvironmentOptions.CreateMemoryOnly();
-
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : (int)Interlocked.Read(ref _count);
             var configuration = RavenConfiguration.CreateForServer(caller);
             configuration.Initialize();
-            configuration.Core.RunInMemory = shouldRunInMemory;
             configuration.Core.PublicServerUrl = new UriSetting($"http://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}");
             configuration.Cluster.ElectionTimeout = new TimeSetting(electionTimeout, TimeUnit.Milliseconds);
+
+            configuration.Core.RunInMemory = shouldRunInMemory;
+            StorageEnvironmentOptions server = null;
+            if (shouldRunInMemory)
+                server = StorageEnvironmentOptions.CreateMemoryOnly();
+            else
+            {
+                string dataDirectory = NewDataPath(prefix: $"GetNewServer-{nodeTag ?? "A"}", forceCreateDir: true);
+                server = StorageEnvironmentOptions.ForPath(dataDirectory);
+                configuration.Core.DataDirectory = new PathSetting(dataDirectory);
+            }
+
             var serverStore = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true }.ServerStore;
             serverStore.Initialize();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
@@ -215,7 +230,7 @@ namespace Tests.Infrastructure
             };
             if (bootstrap)
             {
-                rachis.Bootstrap(url, "A");
+                rachis.Bootstrap(url, nodeTag ?? "A");
             }
 
             rachis.Url = url;
@@ -229,6 +244,19 @@ namespace Tests.Infrastructure
             }
 
             return rachis;
+        }
+
+        private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null, bool forceCreateDir = false)
+        {
+            if (suffix != null)
+                prefix += suffix;
+            var path = RavenTestHelper.NewDataPath(prefix, 0, forceCreateDir);
+
+            _localPathsToDelete.Add(path);
+
+            return path;
         }
 
         private void AcceptConnection(TcpListener tcpListener, RachisConsensus rachis)
@@ -403,20 +431,36 @@ namespace Tests.Infrastructure
         {
             base.Dispose();
 
+            var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
+
+
             foreach (var rc in RachisConsensuses)
             {
-                rc.Dispose();
+                exceptionAggregator.Execute(() =>
+                {
+                    rc.Dispose();
+                });
             }
 
             foreach (var listener in _listeners)
             {
-                listener.Stop();
+                exceptionAggregator.Execute(() =>
+                {
+                    listener.Stop();
+                });
             }
 
-            foreach (var mustBeSuccessfulTask in _mustBeSuccessfulTasks)
+            exceptionAggregator.Execute(() =>
             {
-                Assert.True(mustBeSuccessfulTask.Wait(250));
-            }
+                foreach (var mustBeSuccessfulTask in _mustBeSuccessfulTasks)
+                {
+                    Assert.True(mustBeSuccessfulTask.Wait(250));
+                }
+            });
+
+            RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         public class CountingValidator : RachisVersionValidation
