@@ -67,7 +67,7 @@ namespace Tests.Infrastructure
 
         protected int LongWaitTime = 15000; //under stress the thread pool may take time to schedule the task to complete the set of the TCS
 
-        protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null)
+        protected async Task<RachisConsensus<CountingStateMachine>> CreateNetworkAndGetLeader(int nodeCount, [CallerMemberName] string caller = null, bool watcherCluster = false, bool shouldRunInMemory = true)
         {
             var initialCount = RachisConsensuses.Count;
             var leaderIndex = _random.Next(0, nodeCount);
@@ -76,7 +76,7 @@ namespace Tests.Infrastructure
             for (var i = 0; i < nodeCount; i++)
             {
                 // ReSharper disable once ExplicitCallerInfoArgument
-                SetupServer(i == leaderIndex, electionTimeout: electionTimeout, caller: caller);
+                SetupServer(i == leaderIndex, electionTimeout: electionTimeout, caller: caller, shouldRunInMemory: shouldRunInMemory);
             }
             var leader = RachisConsensuses[leaderIndex + initialCount];
             for (var i = 0; i < nodeCount; i++)
@@ -86,8 +86,8 @@ namespace Tests.Infrastructure
                     continue;
                 }
                 var follower = RachisConsensuses[i + initialCount];
-                await leader.AddToClusterAsync(follower.Url);
-                var done = await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitWithoutExceptionAsync(timeout);
+                await leader.AddToClusterAsync(follower.Url, asWatcher: watcherCluster);
+                var done = await follower.WaitForTopology(watcherCluster? Leader.TopologyModification.NonVoter : Leader.TopologyModification.Voter).WaitWithoutExceptionAsync(timeout);
                 Assert.True(done, "Waited for node to become a follower for too long");
             }
             var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentState;
@@ -179,7 +179,7 @@ namespace Tests.Infrastructure
             return sb.ToString();
         }
 
-        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null)
+        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null, bool shouldRunInMemory = true)
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
@@ -200,7 +200,7 @@ namespace Tests.Infrastructure
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : (int)Interlocked.Read(ref _count);
             var configuration = RavenConfiguration.CreateForServer(caller);
             configuration.Initialize();
-            configuration.Core.RunInMemory = true;
+            configuration.Core.RunInMemory = shouldRunInMemory;
             configuration.Core.PublicServerUrl = new UriSetting($"http://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}");
             configuration.Cluster.ElectionTimeout = new TimeSetting(electionTimeout, TimeUnit.Milliseconds);
             var serverStore = new RavenServer(configuration) { ThrowOnLicenseActivationFailure = true }.ServerStore;

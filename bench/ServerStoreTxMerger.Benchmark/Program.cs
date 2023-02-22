@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Text;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Loggers;
 using BenchmarkDotNet.Validators;
 using Raven.Server.Rachis;
@@ -19,7 +20,10 @@ public class ServerStoreTxMergerBench
     public static List<string> CmdsArraysKeys { get; set; } = new List<string>();
 
     [ParamsSource(nameof(CmdsArraysKeys))]
-    public string CmdsArrayKey { get; set; }
+    public string CommandsGroup { get; set; }
+
+    [Params( 1, 3)]
+    public int NumOfNodes { get; set; }
 
     static ServerStoreTxMergerBench()
     {
@@ -32,8 +36,12 @@ public class ServerStoreTxMergerBench
             .WithOptions(ConfigOptions.DisableOptimizationsValidator)
             .AddValidator(JitOptimizationsValidator.DontFailOnError)
             .AddLogger(ConsoleLogger.Default)
-            .AddColumnProvider(DefaultColumnProviders.Instance);
-        
+            .AddColumnProvider(DefaultColumnProviders.Instance)
+            .With(Job.Default
+                .WithIterationCount(10)
+                .WithWarmupCount(5)
+                .AsDefault());
+
         var summary = BenchmarkRunner.Run<ServerStoreTxMergerBench>(config);
 
         // Manual testing
@@ -86,7 +94,7 @@ public class ServerStoreTxMergerBench
                 };
             }
 
-            var key = $"{numOfCmds} commands in size {cmdSizeInBytes}";
+            var key = $"{numOfCmds/1000}k of {cmdSizeInBytes/1_000_000}MB";
             CmdsArraysKeys.Add(key);
             CmdsArrays[key] = cmds;
         }
@@ -101,13 +109,13 @@ public class ServerStoreTxMergerBench
     public void BeforeTest()
     {
         _tests = new ActualTests(_testOutputHelper);
-        _tests.Initialize().GetAwaiter().GetResult();
+        _tests.Initialize(NumOfNodes).GetAwaiter().GetResult();
     }
 
     [Benchmark]
     public async Task Test()
     {
-        await _tests.Test(CmdsArrays[CmdsArrayKey]);
+        await _tests.Test(CmdsArrays[CommandsGroup]);
     }
 
     [IterationCleanup]
@@ -127,9 +135,12 @@ public class ActualTests : RachisConsensusTestBase
     {
     }
 
-    public async Task Initialize()
+    public async Task Initialize(int nodesCount)
     {
-        _leader = await CreateNetworkAndGetLeader(1);
+        _leader = await CreateNetworkAndGetLeader(nodesCount, watcherCluster: true, shouldRunInMemory: false);
+        // var followers = GetFollowers();
+        //
+        // _leader.ServerStore.Configuration.Core.RunInMemory
     }
 
     public async Task Test(TestCommandWithLargeData[] cmds)
