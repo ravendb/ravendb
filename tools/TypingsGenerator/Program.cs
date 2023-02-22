@@ -105,6 +105,7 @@ using Raven.Server.Web.Studio;
 using Raven.Server.Web.Studio.Processors;
 using Raven.Server.Web.System;
 using Raven.Server.Web.System.Processors.CompareExchange;
+using Raven.Server.Web.System.Processors.Studio;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -213,7 +214,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabasePutResult));
             scripter.AddType(typeof(AddDatabaseShardResult));
             scripter.AddType(typeof(DatabaseRecord));
-            scripter.AddType(typeof(StudioDatabasesHandler.StudioDatabaseInfo));
+            scripter.AddType(typeof(StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo));
             
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(DetailedDatabaseStatistics));

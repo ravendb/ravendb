@@ -11,11 +11,9 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web.Http;
 using Raven.Server.Web.System.Processors.Databases;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -23,7 +21,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Web.System.Processors.Studio;
 
-internal class StudioDatabasesHandlerForGetDatabasesState : AbstractServerHandlerProxyReadProcessor<StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState>
+internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHandlerProcessorForAllowedDatabases<StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState>
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
 
@@ -39,7 +37,7 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractServerHandle
         using (context.OpenReadTransaction())
         {
             var name = GetName();
-            var items = await DatabasesHandlerProcessorForGet.GetAllowedDatabaseRecordsAsync(name, ServerStore, RequestHandler, context, GetStart(), GetPageSize())
+            var items = await GetAllowedDatabaseRecordsAsync(name, context, GetStart(), GetPageSize())
                 .ToListAsync();
 
             if (items.Count == 0 && name != null)
@@ -76,17 +74,6 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractServerHandle
         return new GetStudioDatabasesStateCommand(start, pageSize, nodeTag);
     }
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<StudioDatabasesState> command, JsonOperationContext context, OperationCancelToken token)
-    {
-        return RequestHandler.ServerStore.ClusterRequestExecutor.ExecuteAsync(command, context, token: token.Token);
-    }
-
-    private string GetName() => RequestHandler.GetStringQueryString("name", required: false);
-
-    private int GetStart() => RequestHandler.GetStart();
-
-    private int GetPageSize() => RequestHandler.GetPageSize();
-
     private void WriteStudioDatabaseState(string databaseName, RawDatabaseRecord record, TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)
     {
         try
@@ -102,9 +89,9 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractServerHandle
             }
 
             var database = online ? dbTask.Result : null;
-            var indexingStatus = DatabasesHandlerProcessorForGet.GetIndexingStatus(record, database);
-            var upTime = DatabasesHandlerProcessorForGet.GetUpTime(database);
-            var backupInfo = DatabasesHandlerProcessorForGet.GetBackupInfo(databaseName, record, database, ServerStore, context);
+            var indexingStatus = GetIndexingStatus(record, database);
+            var upTime = GetUpTime(database);
+            var backupInfo = GetBackupInfo(databaseName, record, database, ServerStore, context);
             var state = StudioDatabaseState.From(databaseName, database, backupInfo, upTime, indexingStatus);
 
             context.Write(writer, state.ToJson());
@@ -181,12 +168,12 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractServerHandle
         }
     }
 
-    public class StudioDatabasesState
+    internal class StudioDatabasesState
     {
         public List<StudioDatabaseState> Databases { get; set; }
     }
 
-    public class StudioDatabaseState : DatabaseState
+    internal class StudioDatabaseState : DatabaseState
     {
         public static StudioDatabaseState From(string databaseName, DocumentDatabase database, BackupInfo backupInfo, TimeSpan? upTime, IndexRunningStatus? indexingStatus)
         {
