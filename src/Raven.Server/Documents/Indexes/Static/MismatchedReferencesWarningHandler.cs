@@ -85,14 +85,6 @@ public class MismatchedReferencesWarningHandler
         if (failing.Count == 0)
             _mismatchedReferences.Remove(sourceId);
 
-        if (_mismatchedReferences.Count == 0)
-            Clear();
-        
         LastLoadMismatched = false;
-    }
-
-    public void Clear()
-    {
-        _mismatchedReferences = new Dictionary<string, Dictionary<string, LoadFailure>>();
     }
 }
