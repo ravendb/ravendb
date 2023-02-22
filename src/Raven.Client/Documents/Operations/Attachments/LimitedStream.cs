@@ -117,7 +117,6 @@ namespace Raven.Client.Documents.Operations.Attachments
                     if (read == 0)
                         break;
 
-                    _read += read;
                     OverallRead += read;
                 }
 
@@ -145,7 +144,6 @@ namespace Raven.Client.Documents.Operations.Attachments
                     if (read == 0)
                         break;
 
-                    _read += read;
                     OverallRead += read;
                 }
 
