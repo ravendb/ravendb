@@ -7,47 +7,32 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
-using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Raven.Server.Web.Http;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Web.System.Processors.Databases;
 
-internal class DatabasesHandlerProcessorForGet : AbstractServerHandlerProxyReadProcessor<DatabasesInfo>
+internal class DatabasesHandlerProcessorForGet : AbstractDatabasesHandlerProcessorForAllowedDatabases<DatabasesInfo>
 {
     private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("Server");
 
-    public DatabasesHandlerProcessorForGet([NotNull] RequestHandler requestHandler)
-        : base(requestHandler)
+    public DatabasesHandlerProcessorForGet([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {
     }
 
-    protected override bool SupportsCurrentNode => true;
-
     protected bool GetNamesOnly() => RequestHandler.GetBoolValueQueryString("namesOnly", required: false) ?? false;
-
-    protected string GetName() => RequestHandler.GetStringQueryString("name", required: false);
-
-    protected int GetStart() => RequestHandler.GetStart();
-
-    protected int GetPageSize() => RequestHandler.GetPageSize();
 
     protected override RavenCommand<DatabasesInfo> CreateCommandForNode(string nodeTag)
     {
@@ -70,7 +55,7 @@ internal class DatabasesHandlerProcessorForGet : AbstractServerHandlerProxyReadP
         {
             var name = GetName();
 
-            var items = await GetAllowedDatabaseRecordsAsync(name, ServerStore, RequestHandler, context, GetStart(), GetPageSize())
+            var items = await GetAllowedDatabaseRecordsAsync(name, context, GetStart(), GetPageSize())
                 .ToListAsync();
 
             if (items.Count == 0 && name != null)
@@ -101,11 +86,6 @@ internal class DatabasesHandlerProcessorForGet : AbstractServerHandlerProxyReadP
                 writer.WriteEndObject();
             }
         }
-    }
-
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<DatabasesInfo> command, JsonOperationContext context, OperationCancelToken token)
-    {
-        return RequestHandler.ServerStore.ClusterRequestExecutor.ExecuteAsync(command, context, token: token.Token);
     }
 
     internal static void FillNodesTopology(ref NodesTopology nodesTopology, DatabaseTopology topology, RawDatabaseRecord databaseRecord, TransactionOperationContext context, ServerStore serverStore, HttpContext httpContext)
@@ -323,41 +303,6 @@ internal class DatabasesHandlerProcessorForGet : AbstractServerHandlerProxyReadP
         context.Write(writer, doc);
     }
 
-    internal static BackupInfo GetBackupInfo(string databaseName, RawDatabaseRecord record, DocumentDatabase database, ServerStore serverStore, TransactionOperationContext context)
-    {
-        if (database == null)
-        {
-            var periodicBackups = new List<PeriodicBackup>();
-
-            foreach (var periodicBackupConfiguration in record.PeriodicBackupsConfiguration)
-            {
-                periodicBackups.Add(new PeriodicBackup
-                {
-                    Configuration = periodicBackupConfiguration,
-                    BackupStatus = BackupUtils.GetBackupStatusFromCluster(serverStore, context, databaseName, periodicBackupConfiguration.TaskId)
-                });
-            }
-
-            return BackupUtils.GetBackupInfo(new BackupUtils.BackupInfoParameters
-            {
-                ServerStore = serverStore,
-                PeriodicBackups = periodicBackups,
-                DatabaseName = databaseName,
-                Context = context
-            });
-        }
-
-        return database.PeriodicBackupRunner.GetBackupInfo(context);
-    }
-
-    internal static TimeSpan? GetUpTime(DocumentDatabase database)
-    {
-        if (database == null)
-            return null;
-
-        return SystemTime.UtcNow - database.StartTime;
-    }
-
     private static NodeId GetNodeId(InternalReplication node, string responsible = null)
     {
         var nodeId = new NodeId
@@ -368,58 +313,6 @@ internal class DatabasesHandlerProcessorForGet : AbstractServerHandlerProxyReadP
         };
 
         return nodeId;
-    }
-
-    internal static IndexRunningStatus? GetIndexingStatus(RawDatabaseRecord record, DocumentDatabase database)
-    {
-        var indexingStatus = database?.IndexStore?.Status;
-        if (indexingStatus == null)
-        {
-            // Looking for disabled indexing flag inside the database settings for offline database status
-            if (record.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) &&
-                bool.TryParse(val, out var indexingDisabled) && indexingDisabled)
-                indexingStatus = IndexRunningStatus.Disabled;
-        }
-
-        return indexingStatus;
-    }
-
-    internal static StudioConfiguration.StudioEnvironment GetStudioEnvironment(RawDatabaseRecord record)
-    {
-        if (record.StudioConfiguration == null || record.StudioConfiguration.Disabled)
-            return StudioConfiguration.StudioEnvironment.None;
-
-        return record.StudioConfiguration.Environment;
-    }
-
-    internal static async IAsyncEnumerable<RawDatabaseRecord> GetAllowedDatabaseRecordsAsync(string name, ServerStore serverStore, RequestHandler requestHandler, TransactionOperationContext context, int start, int pageSize)
-    {
-        IEnumerable<RawDatabaseRecord> items;
-        if (name != null)
-        {
-            var databaseRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, name, out long _);
-            if (databaseRecord == null)
-                yield break;
-
-            items = new[] { databaseRecord };
-        }
-        else
-        {
-            items = serverStore.Cluster.GetAllRawDatabases(context, start, pageSize);
-        }
-
-        var allowedDbs = await requestHandler.GetAllowedDbsAsync(null, requireAdmin: false, requireWrite: false);
-
-        if (allowedDbs.HasAccess == false)
-            yield break;
-
-        if (allowedDbs.AuthorizedDatabases != null)
-        {
-            items = items.Where(item => allowedDbs.AuthorizedDatabases.ContainsKey(item.DatabaseName));
-        }
-
-        foreach (var item in items)
-            yield return item;
     }
 
     private class GetDatabasesInfoCommand : RavenCommand<DatabasesInfo>
