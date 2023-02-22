@@ -5,15 +5,21 @@ import { shardingTodo } from "common/developmentHelper";
 
 class getIndexNamesCommand extends commandBase {
 
-    constructor(private db: database, private location: databaseLocationSpecifier = null) {
+    private db: database;
+
+    private readonly location: databaseLocationSpecifier = null;
+
+    constructor(db: database, location: databaseLocationSpecifier = null) {
         super();
+        this.location = location;
+        this.db = db;
         shardingTodo("Danielle"); // TODO - location param should not be optional
     }
 
     execute(): JQueryPromise<string[]> {
         const args = {
             namesOnly: true,
-            pageSize: 102,
+            pageSize: 1024,
             ...this.location
         };
         

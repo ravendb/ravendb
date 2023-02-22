@@ -1,9 +1,9 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { DatabasePanel } from "./DatabasePanel";
-import { DatabasesToolbarActions } from "./DatabasesToolbarActions";
-import { DatabasesFilter } from "./DatabasesFilter";
-import { DatabasesCounter } from "./DatabasesCounter";
-import { NoDatabases } from "./NoDatabases";
+import { DatabasePanel } from "./partials/DatabasePanel";
+import { DatabasesToolbarActions } from "./partials/DatabasesToolbarActions";
+import { DatabasesFilter } from "./partials/DatabasesFilter";
+import { DatabasesCounter } from "./partials/DatabasesCounter";
+import { NoDatabases } from "./partials/NoDatabases";
 import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/databases";
 import { useChanges } from "hooks/useChanges";
 import { Col, Row } from "reactstrap";
@@ -24,8 +24,6 @@ function filterDatabases(databases: DatabaseSharedInfo[], criteria: DatabaseFilt
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function DatabasesPage() {
-    //TODO: highlight active database
-
     const activeDatabase = useAppSelector(selectActiveDatabase);
     const databases = useAppSelector(selectAllDatabases);
 

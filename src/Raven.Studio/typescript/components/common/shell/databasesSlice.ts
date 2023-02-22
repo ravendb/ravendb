@@ -8,6 +8,9 @@ import deleteDatabaseConfirm from "viewmodels/resources/deleteDatabaseConfirm";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import disableDatabaseToggleConfirm from "viewmodels/resources/disableDatabaseToggleConfirm";
 import viewHelpers from "common/helpers/view/viewHelpers";
+import changesContext from "common/changesContext";
+import compactDatabaseDialog from "viewmodels/resources/compactDatabaseDialog";
+import databasesManager from "common/shell/databasesManager";
 
 interface DatabasesState {
     databases: EntityState<DatabaseSharedInfo>;
@@ -104,6 +107,14 @@ export const deleteDatabases =
             !keepFiles
         );
     };
+
+export const compactDatabase = (database: DatabaseSharedInfo) => () => {
+    const db = databasesManager.default.getDatabaseByName(database.name);
+    if (db) {
+        changesContext.default.disconnectIfCurrent(db, "DatabaseDisabled");
+    }
+    app.showBootstrapDialog(new compactDatabaseDialog(database));
+};
 
 export const changeDatabasesLockMode =
     (databases: DatabaseSharedInfo[], lockMode: DatabaseLockMode): AppAsyncThunk =>

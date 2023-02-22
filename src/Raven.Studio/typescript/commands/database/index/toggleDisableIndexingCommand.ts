@@ -1,10 +1,17 @@
 ﻿import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
+import { DatabaseSharedInfo } from "components/models/databases";
 
 class toggleDisableIndexingCommand extends commandBase {
 
-    constructor(private start: boolean, private db: {  name: string }) { //TODO:
+    private readonly start: boolean;
+
+    private readonly db: DatabaseSharedInfo;
+
+    constructor(start: boolean, db: DatabaseSharedInfo) {
         super();
+        this.db = db;
+        this.start = start;
     }
 
     execute(): JQueryPromise<void> {

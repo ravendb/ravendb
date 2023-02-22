@@ -1,11 +1,12 @@
 ﻿import React, { useState } from "react";
-import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "../../../models/databases";
+import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import {
     Button,
     ButtonGroup,
+    Collapse,
     DropdownItem,
     DropdownMenu,
     DropdownToggle,
@@ -23,19 +24,23 @@ import {
     RichPanelName,
     RichPanelSelect,
     RichPanelStatus,
-} from "../../../common/RichPanel";
+} from "components/common/RichPanel";
 import appUrl from "common/appUrl";
 import { NodeSet, NodeSetItem, NodeSetLabel } from "components/common/NodeSet";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { useAppDispatch, useAppSelector } from "components/store";
 import {
     changeDatabasesLockMode,
+    compactDatabase,
     confirmDeleteDatabases,
     confirmSetLockMode,
+    confirmToggleDatabases,
     deleteDatabases,
     selectActiveDatabase,
+    toggleDatabases,
 } from "components/common/shell/databasesSlice";
 import { useEventsCollector } from "hooks/useEventsCollector";
+import useBoolean from "hooks/useBoolean";
 
 interface DatabasePanelProps {
     db: DatabaseSharedInfo;
@@ -167,6 +172,19 @@ function DatabaseTopology(props: DatabaseTopologyProps) {
                             </NodeSetItem>
                         );
                     })}
+                    {db.deletionInProgress.map((node) => {
+                        return (
+                            <NodeSetItem
+                                key={"deletion-" + node}
+                                icon="trash"
+                                color="warning"
+                                title="Deletion in progress"
+                                extraIconClassName="pulse"
+                            >
+                                {node}
+                            </NodeSetItem>
+                        );
+                    })}
                 </NodeSet>
             </div>
         );
@@ -194,6 +212,8 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
     const { reportEvent } = useEventsCollector();
 
+    const { value: panelCollapsed, toggle: togglePanelCollapsed } = useBoolean(true);
+
     const [lockChanges, setLockChanges] = useState(false);
 
     const localDocumentsUrl = appUrl.forDocuments(null, db.name);
@@ -202,7 +222,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const localManageGroupUrl = appUrl.forManageDatabaseGroup(db.name);
     const manageGroupUrl = db.currentNode.relevant ? localManageGroupUrl : toExternalUrl(db, localManageGroupUrl);
 
-    const canNavigateToDatabase = !db.disabled; //tODO: && !db.currentNode.hasLoadError
+    const canNavigateToDatabase = !db.disabled;
 
     const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
         if (db.lockMode === lockMode) {
@@ -235,22 +255,29 @@ export function DatabasePanel(props: DatabasePanelProps) {
         }
     };
 
+    const onCompactDatabase = async () => {
+        reportEvent("databases", "compact");
+        dispatch(compactDatabase(db));
+    };
+
+    const onToggleDatabase = async () => {
+        const enable = db.disabled;
+
+        const confirmation = await dispatch(confirmToggleDatabases([db], enable));
+        if (confirmation) {
+            await dispatch(toggleDatabases([db], enable));
+        }
+    };
+
     return (
         <RichPanel
             className={classNames("flex-row", badgeClass(db), {
                 active: activeDatabase === db.name,
                 relevant: true,
             })}
-            data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), 
-                           ) }"
         >
             <RichPanelStatus color={getStatusColor(db)}>{badgeText(db)}</RichPanelStatus>
             <div className="flex-grow-1">
-                {/* <div TODO: legacy RichPanelStatus replaced this
-                    className={classNames("state", "flex-shrink-0", badgeClass(db))}                    
-                    data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', 
-    class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"
-                /> */}
                 <div className="flex-grow-1">
                     <RichPanelHeader>
                         <RichPanelInfo>
@@ -296,46 +323,7 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 )}
                             </RichPanelName>
 
-                            {/* TODO:
-
-                            <Button
-                                className="rounded-pill me-1"
-                                href="#"
-                                target="_blank"
-                                title="Click to navigate to this database on node A"
-                            >
-                                <i className="icon-dbgroup-member me-1" title="Member" />{" "}
-                                <strong className="text-node">
-                                    <i className="icon-node me-1" />A
-                                </strong>
-                            </Button>
-                            <Button
-                                className="rounded-pill me-1"
-                                href="#"
-                                target="_blank"
-                                title="Click to navigate to this database on node B"
-                            >
-                                <i className="icon-dbgroup-watcher me-1" title="Watcher" />{" "}
-                                <strong className="text-node">
-                                    <i className="icon-node me-1" />B
-                                </strong>
-                            </Button>
-                            */}
-
                             <div className="member">
-                                {/* ko foreach: _.slice(nodes(), 0, 5) */}
-                                {/* <a
-                                    data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank',
-                                                      title: 'Click to navigate to this database on node ' + tag() },
-                                              css: { 'link-disabled': $parent.isBeingDeleted }"
-                                >
-                                    <small>
-                                        <i data-bind="attr: { class: cssIcon }" />
-                                        <span data-bind="text: 'Node ' + tag()" />
-                                    </small>
-                                </a> */}
-                                {/* /ko --> */}
-
                                 {/* TODO: <!-- ko foreach: deletionInProgress -->
                             <div>
                                 <div title="Deletion in progress" className="text-warning pulse">
@@ -343,23 +331,9 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 </div>
                             </div>
                             <!-- /ko -->*/}
-
-                                {/* TODO
-                            <div data-bind="visible: nodes().length > 5">
-                                <a href="#" data-bind="attr: { href: $root.createManageDbGroupUrlObsevable($data) }"
-                                   data-toggle="more-nodes-tooltip">
-                                    <small><i className="icon-dbgroup"/><span>+<span
-    data-bind="text: nodes().length - 5"/> more</span></small>
-                                </a>
-                            </div> */}
                             </div>
                         </RichPanelInfo>
 
-                        {/* TODO
-                        <span data-bind="visible: isLoading">
-                            <span className="global-spinner spinner-sm"/>&nbsp;&nbsp;&nbsp;&nbsp;
-                        </span>
-                        */}
                         <RichPanelActions>
                             <Button
                                 href={manageGroupUrl}
@@ -372,24 +346,32 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                 Manage group
                             </Button>
 
-                            <UncontrolledDropdown className="me-1" style={{ display: "none" }}>
-                                {" "}
-                                {/* TODO */}
+                            <UncontrolledDropdown className="me-1">
                                 <ButtonGroup>
-                                    <Button>
-                                        <i className="icon-database-cutout icon-addon-cancel me-1" /> Disable
+                                    <Button onClick={onToggleDatabase}>
+                                        {db.disabled ? (
+                                            <span>
+                                                <i className="icon-database-cutout icon-addon-play2 me-1" /> Enable
+                                            </span>
+                                        ) : (
+                                            <span>
+                                                <i className="icon-database-cutout icon-addon-cancel me-1" /> Disable
+                                            </span>
+                                        )}
                                     </Button>
                                     <DropdownToggle caret></DropdownToggle>
                                 </ButtonGroup>
                                 <DropdownMenu end>
-                                    <DropdownItem>
+                                    {/* TODO details */}
+                                    <DropdownItem style={{ display: "none" }}>
                                         <i className="icon-pause me-1" /> Pause indexing
                                     </DropdownItem>
-                                    <DropdownItem>
+                                    {/* TODO details */}
+                                    <DropdownItem style={{ display: "none" }}>
                                         <i className="icon-stop me-1" /> Disable indexing
                                     </DropdownItem>
                                     <DropdownItem divider />
-                                    <DropdownItem>
+                                    <DropdownItem onClick={onCompactDatabase}>
                                         <i className="icon-compact me-1" /> Compact database
                                     </DropdownItem>
                                 </DropdownMenu>
@@ -506,10 +488,23 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     </DropdownItem>
                                 </DropdownMenu>
                             </UncontrolledDropdown>
+                            {/* TODO details */}
+                            <Button
+                                color="secondary"
+                                style={{ display: "none" }}
+                                onClick={togglePanelCollapsed}
+                                title="Toggle distribution details"
+                            >
+                                <i className={panelCollapsed ? "icon-expand-vertical" : "icon-collapse-vertical"} />
+                            </Button>
                         </RichPanelActions>
                     </RichPanelHeader>
 
                     <ValidDatabasePropertiesPanel db={db} />
+
+                    <Collapse isOpen={!panelCollapsed}>
+                        <h3>TODO</h3>
+                    </Collapse>
 
                     <DatabaseTopology db={db} />
                 </div>

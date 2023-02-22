@@ -39,6 +39,21 @@ export const Cluster: ComponentStory<typeof DatabasesPage> = () => {
     );
 };
 
+export const WithDeletion: ComponentStory<typeof DatabasesPage> = () => {
+    accessManager.default.securityClearance("ClusterAdmin");
+    clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");
+
+    mockStore.databases.with_Cluster((x) => {
+        x.deletionInProgress = ["Z"];
+    });
+
+    return (
+        <div style={{ height: "100vh", overflow: "auto" }}>
+            <DatabasesPage />
+        </div>
+    );
+};
+
 export const Single: ComponentStory<typeof DatabasesPage> = () => {
     accessManager.default.securityClearance("ClusterAdmin");
     clusterTopologyManager.default.localNodeTag = ko.pureComputed(() => "A");

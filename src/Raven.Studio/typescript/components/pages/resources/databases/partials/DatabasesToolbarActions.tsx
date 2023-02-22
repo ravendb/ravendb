@@ -15,6 +15,7 @@ import { useAppDispatch } from "components/store";
 import { DatabaseSharedInfo } from "components/models/databases";
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { useEventsCollector } from "hooks/useEventsCollector";
+import { ButtonGroupWithLabel } from "components/common/ButtonGroupWithLabel";
 
 interface DatabasesToolbarActionsProps {
     selectedDatabases: DatabaseSharedInfo[];
@@ -34,6 +35,11 @@ export function DatabasesToolbarActions(props: DatabasesToolbarActionsProps) {
 
     const canDeleteSelection = selectedDatabases.some((x) => x.lockMode === "Unlock");
     const anythingSelected = selectedDatabases.length > 0;
+
+    if (!isOperatorOrAbove()) {
+        // no access
+        return null;
+    }
 
     const onChangeLockMode = async (lockMode: DatabaseLockMode) => {
         const dbs = selectedDatabases;
@@ -79,15 +85,9 @@ export function DatabasesToolbarActions(props: DatabasesToolbarActionsProps) {
         }
     };
 
-    /* TODO put into named group
-     <div className="btn-group-label"
-                 data-bind="css: { active: selectedDatabases().length }, visible: accessManager.canSetState || accessManager.canDelete"
-                 data-label="Selection" role="group">
-     */
-
     return (
         <div className="actions d-flex justify-content-end">
-            <div className="mx-3 gap-1 d-flex">
+            <ButtonGroupWithLabel label="Selection" className="mx-3 gap-1">
                 {isOperatorOrAbove() && (
                     <Button color="danger" onClick={onDelete} disabled={!canDeleteSelection || deleteChanges}>
                         {deleteChanges ? <Spinner size="sm" /> : <i className="icon-trash" />}
@@ -154,7 +154,7 @@ export function DatabasesToolbarActions(props: DatabasesToolbarActionsProps) {
                         </DropdownMenu>
                     </UncontrolledDropdown>
                 )}
-            </div>
+            </ButtonGroupWithLabel>
 
             {canCreateNewDatabase && (
                 <UncontrolledDropdown group>

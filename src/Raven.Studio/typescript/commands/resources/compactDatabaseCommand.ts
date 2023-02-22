@@ -3,8 +3,20 @@ import endpoints = require("endpoints");
 
 class compactDatabaseCommand extends commandBase {
 
-    constructor(private databaseName: string, private compactDocuments: boolean, private indexesToCompact: Array<string>, private skipOptimizeIndexes = false) {
+    private readonly databaseName: string;
+
+    private readonly compactDocuments: boolean;
+
+    private readonly indexesToCompact: Array<string>;
+
+    private readonly skipOptimizeIndexes: boolean = false;
+
+    constructor(databaseName: string, compactDocuments: boolean, indexesToCompact: Array<string>, skipOptimizeIndexes = false) {
         super();
+        this.skipOptimizeIndexes = skipOptimizeIndexes;
+        this.indexesToCompact = indexesToCompact;
+        this.compactDocuments = compactDocuments;
+        this.databaseName = databaseName;
     }
 
     execute(): JQueryPromise<operationIdDto> {
