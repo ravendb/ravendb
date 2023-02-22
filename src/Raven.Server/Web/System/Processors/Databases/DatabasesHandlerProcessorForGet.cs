@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
@@ -71,7 +70,7 @@ internal class DatabasesHandlerProcessorForGet : AbstractServerHandlerProxyReadP
         {
             var name = GetName();
 
-            var items = await GetDatabaseRecordsAsync(name, ServerStore, RequestHandler, context, GetStart(), GetPageSize())
+            var items = await GetAllowedDatabaseRecordsAsync(name, ServerStore, RequestHandler, context, GetStart(), GetPageSize())
                 .ToListAsync();
 
             if (items.Count == 0 && name != null)
@@ -393,7 +392,7 @@ internal class DatabasesHandlerProcessorForGet : AbstractServerHandlerProxyReadP
         return record.StudioConfiguration.Environment;
     }
 
-    internal static async IAsyncEnumerable<RawDatabaseRecord> GetDatabaseRecordsAsync(string name, ServerStore serverStore, RequestHandler requestHandler, TransactionOperationContext context, int start, int pageSize)
+    internal static async IAsyncEnumerable<RawDatabaseRecord> GetAllowedDatabaseRecordsAsync(string name, ServerStore serverStore, RequestHandler requestHandler, TransactionOperationContext context, int start, int pageSize)
     {
         IEnumerable<RawDatabaseRecord> items;
         if (name != null)
