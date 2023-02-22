@@ -1221,16 +1221,13 @@ namespace Raven.Server.ServerWide
             if (IdleDatabases.ContainsKey(db) == false)
                 return;
 
-            if (state is Dictionary<string, long> indexPerDatabase == false)
+            if (state is long taskId == false)
             {
-                Debug.Assert(state is Dictionary<string, long>, 
-                    $"This is probably a bug. This method should be called only for {nameof(PutServerWideBackupConfigurationCommand)} and the state should be dictionary of task id per database - {nameof(Dictionary<string, long>)}.");
+                Debug.Assert(state == null, 
+                    $"This is probably a bug. This method should be called only for {nameof(PutServerWideBackupConfigurationCommand)} and the state should be the database periodic backup task id.");
+                //The database is excluded from the server-wide backup.
                 return;
             }
-            
-            if (indexPerDatabase.TryGetValue(db, out var taskId) == false)
-                //The database was excluded from the server wide backup
-                return;
             
             PeriodicBackupConfiguration backupConfig;
             DatabaseTopology topology;
