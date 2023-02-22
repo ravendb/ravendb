@@ -9,6 +9,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -88,6 +89,7 @@ namespace SlowTests.Sharding.BucketMigration
                             Shards = new List<int> { 2 }
                         }
                     };
+                    record.Settings[RavenConfiguration.GetKey(x => x.Sharding.PeriodicDocumentsMigrationInterval)] = 1.ToString();
                 }
             });
 

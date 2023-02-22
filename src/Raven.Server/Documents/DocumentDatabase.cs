@@ -330,6 +330,10 @@ namespace Raven.Server.Documents
             CompareExchangeStorage.Initialize(Name);
         }
 
+        protected virtual void InitializeAndStartPeriodicDocumentsMigrator()
+        {
+        }
+
         protected virtual ReplicationLoader CreateReplicationLoader()
         {
             return new ReplicationLoader(this, _serverStore);
@@ -373,6 +377,7 @@ namespace Raven.Server.Documents
                 OnDatabaseRecordChanged(record);
                 InitializeSubscriptionStorage();
                 InitializeCompareExchangeStorage();
+                InitializeAndStartPeriodicDocumentsMigrator();
 
                 ReplicationLoader = CreateReplicationLoader();
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);

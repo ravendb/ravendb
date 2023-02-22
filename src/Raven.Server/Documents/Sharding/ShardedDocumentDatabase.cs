@@ -28,7 +28,7 @@ public class ShardedDocumentDatabase : DocumentDatabase
 
     public ShardedDocumentsStorage ShardedDocumentsStorage;
 
-    public ShardedPeriodicDocumentsMigrator PeriodicDocumentsMigrator { get; }
+    public ShardedPeriodicDocumentsMigrator PeriodicDocumentsMigrator { get; private set; }
 
     public ShardedDocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         : base(name, configuration, serverStore, addToInitLog)
@@ -36,7 +36,6 @@ public class ShardedDocumentDatabase : DocumentDatabase
         ShardNumber = ShardHelper.GetShardNumberFromDatabaseName(name);
         ShardedDatabaseName = ShardHelper.ToDatabaseName(name);
         Smuggler = new ShardedDatabaseSmugglerFactory(this);
-        PeriodicDocumentsMigrator = new ShardedPeriodicDocumentsMigrator(this);
     }
 
     protected override byte[] ReadSecretKey(TransactionOperationContext context) => ServerStore.GetSecretKey(context, ShardedDatabaseName);
@@ -49,6 +48,12 @@ public class ShardedDocumentDatabase : DocumentDatabase
     protected override void InitializeCompareExchangeStorage()
     {
         CompareExchangeStorage.Initialize(ShardedDatabaseName);
+    }
+
+    protected override void InitializeAndStartPeriodicDocumentsMigrator()
+    {
+        PeriodicDocumentsMigrator = new ShardedPeriodicDocumentsMigrator(this);
+        PeriodicDocumentsMigrator.Start();
     }
 
     protected override DocumentsStorage CreateDocumentsStorage(Action<string> addToInitLog)
