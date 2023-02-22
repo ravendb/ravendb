@@ -3,15 +3,17 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static;
 
-public class MismatchedReferencesHandler
+public class MismatchedReferencesWarningHandler
 {
-    public Dictionary<string, Dictionary<string, LoadFailure>> MismatchedReferences;
+    private Dictionary<string, Dictionary<string, LoadFailure>> _mismatchedReferences;
 
     internal const int MaxMismatchedReferencesPerSource = 10;
     internal const int MaxMismatchedDocumentLoadsPerIndex = 10;
         
-    internal bool _lastLoadMismatched = false;
-    
+    public bool LastLoadMismatched { get; set; }
+    public bool IsEmpty => _mismatchedReferences.Count == 0;
+    public bool IsFull => _mismatchedReferences.Count >= MaxMismatchedDocumentLoadsPerIndex;
+
     public class LoadFailure
     {
         public string SourceId;
@@ -20,15 +22,20 @@ public class MismatchedReferencesHandler
         public HashSet<string> MismatchedCollections;
     }
 
-    public MismatchedReferencesHandler()
+    public MismatchedReferencesWarningHandler()
     {
-        MismatchedReferences = new Dictionary<string, Dictionary<string, LoadFailure>>();
+        _mismatchedReferences = new Dictionary<string, Dictionary<string, LoadFailure>>();
     }
-    
+
+    public Dictionary<string, Dictionary<string, LoadFailure>> GetLoadFailures()
+    {
+        return _mismatchedReferences;
+    }
+
     public void HandleMismatchedReference(Document referencedDocument, string referencedCollectionName, LazyStringValue sourceId, string actualCollection)
     {
         // another mismatch for source document
-        if(MismatchedReferences.TryGetValue(sourceId, out Dictionary<string, LoadFailure> mismatchesForDocument) && mismatchesForDocument.Count < MaxMismatchedReferencesPerSource)
+        if(_mismatchedReferences.TryGetValue(sourceId, out Dictionary<string, LoadFailure> mismatchesForDocument) && mismatchesForDocument.Count < MaxMismatchedReferencesPerSource)
         {
             // another mismatch referencing the same document
             if (mismatchesForDocument.TryGetValue(referencedDocument.Id, out LoadFailure loadFailure))
@@ -62,21 +69,30 @@ public class MismatchedReferencesHandler
                 }
             };
                             
-            MismatchedReferences.Add(sourceId, new Dictionary<string, LoadFailure>(){ {referencedDocument.Id, failure} });
+            _mismatchedReferences.Add(sourceId, new Dictionary<string, LoadFailure>(){ {referencedDocument.Id, failure} });
         }
+        
+        LastLoadMismatched = true;
     }
-    
+
     public void RemoveMismatchedReferenceOnMatchingLoad(Document document, string sourceId)
     {
-        if (MismatchedReferences.TryGetValue(sourceId, out var failing) == false) 
+        if (_mismatchedReferences.TryGetValue(sourceId, out var failing) == false)
             return;
-            
+
         failing.Remove(document.Id);
 
         if (failing.Count == 0)
-            MismatchedReferences.Remove(sourceId);
+            _mismatchedReferences.Remove(sourceId);
 
-        if (MismatchedReferences.Count == 0)
-            MismatchedReferences = new Dictionary<string, Dictionary<string, LoadFailure>>();
+        if (_mismatchedReferences.Count == 0)
+            Clear();
+        
+        LastLoadMismatched = false;
+    }
+
+    public void Clear()
+    {
+        _mismatchedReferences = new Dictionary<string, Dictionary<string, LoadFailure>>();
     }
 }

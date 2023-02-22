@@ -133,19 +133,17 @@ namespace Raven.Server.NotificationCenter
                     ((IndexingReferenceLoadWarning)referenceLoadsHint.Details).Update(tuple.indexName, tuple.warningDetails);
                 }
 
-                AlertRaised mismatchedReferencesAlert = null;
-                
-                if (_mismatchedReferencesLoadWarning != null) 
-                    mismatchedReferencesAlert = GetMismatchedReferencesAlert();
-                
                 if (indexOutputPerDocumentHint != null)
                     _notificationCenter.Add(indexOutputPerDocumentHint);
 
                 if (referenceLoadsHint != null)
                     _notificationCenter.Add(referenceLoadsHint);
                 
-                if (mismatchedReferencesAlert != null)
+                if (_mismatchedReferencesLoadWarning != null)
+                {
+                    AlertRaised mismatchedReferencesAlert = GetMismatchedReferencesAlert();
                     _notificationCenter.Add(mismatchedReferencesAlert);
+                }
             }
             catch (Exception e)
             {
@@ -191,7 +189,7 @@ namespace Raven.Server.NotificationCenter
         {
             return AlertRaised.Create(_database, "Loading documents with mismatched collection name",
                 "We have detected usage of LoadDocument(doc, collectionName) where loaded document collection is different than given parameter.",
-                AlertType.Etl_Warning, NotificationSeverity.Warning, Source, _mismatchedReferencesLoadWarning);
+                AlertType.MismatchedReferenceLoad, NotificationSeverity.Warning, Source, _mismatchedReferencesLoadWarning);
         }
 
         public void Dispose()

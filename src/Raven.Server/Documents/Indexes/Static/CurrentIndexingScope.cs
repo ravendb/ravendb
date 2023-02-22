@@ -36,15 +36,7 @@ namespace Raven.Server.Documents.Indexes.Static
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollectionForCompareExchange;
 
-        /*
-        public Dictionary<string, Dictionary<string, LoadFailure>> MismatchedReferences;
-
-        private const int MaxMismatchedReferencesPerSource = 10;
-        private const int MaxMismatchedDocumentLoadsPerIndex = 10;
-        
-        private bool _lastLoadMismatched = false;
-        */
-        internal MismatchedReferencesHandler _mismatchedReferencesHandler = new MismatchedReferencesHandler();
+        public MismatchedReferencesWarningHandler MismatchedReferencesWarningHandler;
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
@@ -233,19 +225,19 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false)
                     {
-                        if (_mismatchedReferencesHandler.MismatchedReferences.Count < MismatchedReferencesHandler.MaxMismatchedDocumentLoadsPerIndex)
+                        MismatchedReferencesWarningHandler ??= new MismatchedReferencesWarningHandler();
+                        
+                        if (MismatchedReferencesWarningHandler.IsFull == false)
                         {
-                            _mismatchedReferencesHandler._lastLoadMismatched = true;
-                            _mismatchedReferencesHandler.HandleMismatchedReference(document, collectionName, id, collection);
+                            MismatchedReferencesWarningHandler.HandleMismatchedReference(document, collectionName, id, collection);
                         }
 
                         return DynamicNullObject.Null;
                     }
 
-                    if (_mismatchedReferencesHandler._lastLoadMismatched)
+                    if (MismatchedReferencesWarningHandler?.LastLoadMismatched == true)
                     {
-                        _mismatchedReferencesHandler.RemoveMismatchedReferenceOnMatchingLoad(document, id);
-                        _mismatchedReferencesHandler._lastLoadMismatched = false;
+                        MismatchedReferencesWarningHandler.RemoveMismatchedReferenceOnMatchingLoad(document, id);
                     }
                 }
 
