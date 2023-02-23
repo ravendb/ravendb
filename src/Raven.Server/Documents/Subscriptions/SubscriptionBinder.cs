@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Subscriptions;
 
 public interface ISubscriptionBinder
-{ 
+{
     Task Run(TcpConnectionOptions tcpConnectionOptions, IDisposable subscriptionConnectionInProgress);
 }
 
@@ -24,13 +24,13 @@ public static class SubscriptionBinder
         TcpConnectionOptions tcpConnectionOptions,
         JsonOperationContext.MemoryBuffer buffer,
         IDisposable onDispose,
-        out SubscriptionConnectionBase connection)
+        out ISubscriptionConnection connection)
     {
         if (databaseResult.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Sharded)
         {
             var orch = new OrchestratedSubscriptionConnection(server, tcpConnectionOptions, onDispose, buffer);
             connection = orch;
-            return new SubscriptionBinder<SubscriptionConnectionsStateOrchestrator, OrchestratedSubscriptionConnection>(
+            return new SubscriptionBinder<SubscriptionConnectionsStateOrchestrator, OrchestratedSubscriptionConnection, IncludeDocumentsOrchestratedSubscriptionCommand>(
                 tcpConnectionOptions.DatabaseContext.Subscriptions,
                 new Lazy<SubscriptionConnectionsStateOrchestrator>(orch.GetOrchestratedSubscriptionConnectionState), orch);
         }
@@ -40,7 +40,7 @@ public static class SubscriptionBinder
             var connectionForShard = new SubscriptionConnectionForShard(server, tcpConnectionOptions, onDispose, buffer,
                 shardedDocumentDatabase.ShardedDatabaseName);
             connection = connectionForShard;
-            return new SubscriptionBinder<SubscriptionConnectionsState, SubscriptionConnection>(tcpConnectionOptions.DocumentDatabase.SubscriptionStorage,
+            return new SubscriptionBinder<SubscriptionConnectionsState, SubscriptionConnection, IncludeDocumentsCommand>(tcpConnectionOptions.DocumentDatabase.SubscriptionStorage,
                 new Lazy<SubscriptionConnectionsState>(connectionForShard.GetSubscriptionConnectionStateForShard), connectionForShard);
         }
 
@@ -48,14 +48,15 @@ public static class SubscriptionBinder
             tcpConnectionOptions.DocumentDatabase.Name);
         connection = nonShardedConnection;
 
-        return new SubscriptionBinder<SubscriptionConnectionsState, SubscriptionConnection>(tcpConnectionOptions.DocumentDatabase.SubscriptionStorage,
+        return new SubscriptionBinder<SubscriptionConnectionsState, SubscriptionConnection, IncludeDocumentsCommand>(tcpConnectionOptions.DocumentDatabase.SubscriptionStorage,
             new Lazy<SubscriptionConnectionsState>(nonShardedConnection.GetSubscriptionConnectionState), nonShardedConnection);
     }
 }
 
-public class SubscriptionBinder<TState, TConnection> : ISubscriptionBinder
-    where TState : SubscriptionConnectionsStateBase<TConnection>
-    where TConnection : SubscriptionConnectionBase
+public class SubscriptionBinder<TState, TConnection, TIncludeCommand> : ISubscriptionBinder
+    where TState : SubscriptionConnectionsStateBase<TConnection, TIncludeCommand>
+    where TConnection : SubscriptionConnectionBase<TIncludeCommand>
+    where TIncludeCommand : AbstractIncludeDocumentsCommand
 {
     private readonly ISubscriptionSemaphore _semaphore;
     private readonly Lazy<TState> _state;

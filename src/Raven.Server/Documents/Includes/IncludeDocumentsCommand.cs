@@ -13,7 +13,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeDocumentsCommand
+    public class IncludeDocumentsCommand : AbstractIncludeDocumentsCommand
     {
         private readonly DocumentsStorage _storage;
         private readonly DocumentsOperationContext _context;
@@ -26,11 +26,6 @@ namespace Raven.Server.Documents.Includes
 
         public DocumentsOperationContext Context => _context;
 
-        protected IncludeDocumentsCommand()
-        {
-
-        }
-
         public IncludeDocumentsCommand(DocumentsStorage storage, DocumentsOperationContext context, string[] includes, bool isProjection)
         {
             _storage = storage;
@@ -39,8 +34,6 @@ namespace Raven.Server.Documents.Includes
             _isProjection = isProjection;
         }
 
-        internal virtual bool HasIncludesIds() => _includedIds?.Count > 0;
-        
         public void AddRange(HashSet<string> ids, string documentId)
         {
             AddToIgnore(documentId);
@@ -131,15 +124,6 @@ namespace Raven.Server.Documents.Includes
             }
         }
 
-        public virtual void Gather(List<BlittableJsonReaderObject> includes)
-        {
-            throw new NotImplementedException(@"Should be called only from Orchestrator.");
-        }
-
-        public virtual void Fill(List<BlittableJsonReaderObject> result)
-        {
-            throw new NotImplementedException(@"Should be called only from Orchestrator.");
-        }
 
         public virtual void Fill(List<Document> result, bool includeMissingAsNull)
         {
@@ -209,5 +193,12 @@ namespace Raven.Server.Documents.Includes
                 Id = docId;
             }
         }
+
+        internal override bool HasIncludesIds() => _includedIds?.Count > 0;
+    }
+
+    public abstract class AbstractIncludeDocumentsCommand
+    {
+        internal abstract bool HasIncludesIds();
     }
 }

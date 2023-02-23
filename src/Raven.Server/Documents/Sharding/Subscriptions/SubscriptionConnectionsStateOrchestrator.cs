@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
+using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions;
  * Orchestrator sends the CONFIRM to client
  */
 
-public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsStateBase<OrchestratedSubscriptionConnection>
+public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsStateBase<OrchestratedSubscriptionConnection, IncludeDocumentsOrchestratedSubscriptionCommand>
 {
     internal readonly ShardedDatabaseContext _databaseContext;
     private Dictionary<string, ShardedSubscriptionWorker> _shardWorkers;

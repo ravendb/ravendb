@@ -106,7 +106,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         private bool IsLegacyCommand()
         {
             return BatchId == null || // from an old version CSM
-                   BatchId == SubscriptionConnectionBase.NonExistentBatch; // from noop ack
+                   BatchId == ISubscriptionConnection.NonExistentBatch; // from noop ack
         }
 
         public override void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
@@ -171,7 +171,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
         }
 
-        public static readonly long SwappedNonExistentBatch = Bits.SwapBytes(SubscriptionConnectionBase.NonExistentBatch);
+        public static readonly long SwappedNonExistentBatch = Bits.SwapBytes(ISubscriptionConnection.NonExistentBatch);
 
         public static Func<string> GetLastResponsibleNode(
             bool hasHighlyAvailableTasks,

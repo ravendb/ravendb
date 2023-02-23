@@ -73,14 +73,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 processor = new TestRevisionsDatabaseSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
             else
                 processor = new TestDocumentsDatabaseSubscriptionProcessor(RequestHandler.Server.ServerStore, RequestHandler.Database, state, subscription, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
-            
+
             processor.Patch = patch;
 
             using (processor)
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             using (RequestHandler.Database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
             using (clusterOperationContext.OpenReadTransaction())
-            using (processor.InitializeForNewBatch(clusterOperationContext, out var includeCmd))
+            using (processor.InitializeForNewBatch(clusterOperationContext, out var includeDocuments, out _, out _))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                         {
                             using (itemDetails.Doc.Data)
                             {
-                                includeCmd.IncludeDocumentsCommand?.Gather(itemDetails.Doc);
+                                includeDocuments?.Gather(itemDetails.Doc);
 
                                 if (first == false)
                                     writer.WriteComma();
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 writer.WriteComma();
                 writer.WritePropertyName("Includes");
                 var includes = new List<Document>();
-                includeCmd.IncludeDocumentsCommand?.Fill(includes, includeMissingAsNull: false);
+                includeDocuments?.Fill(includes, includeMissingAsNull: false);
                 await writer.WriteIncludesAsync(context, includes);
                 writer.WriteEndObject();
             }
