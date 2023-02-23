@@ -18,6 +18,7 @@ using Xunit;
 using System.Text;
 using Xunit.Sdk;
 using ExceptionAggregator = Raven.Server.Utils.ExceptionAggregator;
+using System.Runtime.CompilerServices;
 
 namespace FastTests
 {
@@ -243,6 +244,12 @@ namespace FastTests
             {
                 return obj.GetHashCode();
             }
+        }
+
+        public static void AssertNotRunningOnCi([CallerMemberName] string caller = null)
+        {
+            if (IsRunningOnCI)
+                throw new InvalidOperationException($"Operation '{caller}' is forbidden, because tests are running on CI.");
         }
     }
 }
