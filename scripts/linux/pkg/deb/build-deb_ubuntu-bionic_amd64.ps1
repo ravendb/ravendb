@@ -1,4 +1,7 @@
-$env:OUTPUT_DIR = "$PSScriptRoot/dist"
+if (-not $env:OUTPUT_DIR) {
+    $env:OUTPUT_DIR = "$PSScriptRoot/dist"
+}
+
 
 .\set-ubuntu-bionic.ps1
 .\set-raven-platform-amd64.ps1
