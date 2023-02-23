@@ -1166,13 +1166,20 @@ namespace Raven.Server.Documents.Replication
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
 
-                                if (localAttachment == null || ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment.ChangeVector) !=
-                                    ConflictStatus.AlreadyMerged)
+                                var newChangeVector = ChangeVectorUtils.GetConflictStatus(attachment.ChangeVector, localAttachment?.ChangeVector) switch
+                                {
+                                    // we don't need to worry about the *contents* of the attachments, that is handled by the conflict detection during document replication
+                                    ConflictStatus.Conflict => ChangeVectorUtils.MergeVectors(attachment.ChangeVector, localAttachment.ChangeVector),
+                                    ConflictStatus.Update => attachment.ChangeVector,
+                                    ConflictStatus.AlreadyMerged => null, // nothing to do
+                                    _ => throw new ArgumentOutOfRangeException()
+                                };
+
+                                if (newChangeVector != null)
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, attachment.ChangeVector);
+                                        contentType, attachment.Base64Hash, newChangeVector);
                                 }
-
                                 break;
 
                             case AttachmentTombstoneReplicationItem attachmentTombstone:

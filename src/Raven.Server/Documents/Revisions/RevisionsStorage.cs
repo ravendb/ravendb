@@ -1699,7 +1699,7 @@ namespace Raven.Server.Documents.Revisions
 
             private static void InsertNewMetadataInfo(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)
             {
-                documentsStorage.AttachmentsStorage.PutAttachmentRevert(context, document, out bool has);
+                documentsStorage.AttachmentsStorage.PutAttachmentRevert(context, document.Id,  document.Data, out bool has);
                 RevertCounters(context, documentsStorage, document, collectionName);
 
                 document.Data = RevertSnapshotFlags(context, document.Data, document.Id);

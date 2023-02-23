@@ -2763,6 +2763,8 @@ namespace SlowTests.Client.Attachments
                     }
                 }, true, 15_000, 500);
 
+                Assert.True(res);
+                
                 using (var session = store1.OpenAsyncSession())
                 using (var session2 = store2.OpenAsyncSession())
                 {
@@ -2833,55 +2835,60 @@ namespace SlowTests.Client.Attachments
                 await WriteStatus(stores, "Stage 2");
 
                 b1.Mend();
-                b2.Mend();
 
-                await EnsureReplicatingAsync(store1, store2);
+                b2.Mend();
+             
+                WaitForUserToContinueTheTest(store1);
                 await EnsureReplicatingAsync(store2, store1);
+                await EnsureReplicatingAsync(store1, store2);
+
 
                 var res2 = await WaitForChangeVectorInReplicationAsync(stores);
                 Assert.True(res2);
 
                 await WriteStatus(stores, "Stage 3");
 
-                using (var session = store1.OpenAsyncSession())
-                using (var session2 = store2.OpenAsyncSession())
+                await WaitForValueAsync(async () =>
                 {
-                    await WaitForValueAsync(async () =>
-                    {
-                        var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-                        var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
-
-                        if (attachment != null && attachment2 != null &&
-                            attachment.Details.Hash == "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" &&
-                            attachment.Details.Name == "foo/bar" &&
-                            AreAttachmentDetailsEqual(attachment.Details, attachment2.Details))
-                        {
-                            return true;
-                        }
-
-                        return false;
-                    }, true, 10000, 500);
-
-                    var user = await session.LoadAsync<User>("users/1");
-                    Assert.Equal(30, user.Age);
-                    var user2 = await session2.LoadAsync<User>("users/1");
-                    Assert.Equal(30, user2.Age);
-
-                    await WriteAttachmentDetails(stores);
-
-                    var attachment = await session.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                    using var session1 = store1.OpenAsyncSession();
+                    using var session2 = store2.OpenAsyncSession();
+                    var attachment = await session1.Advanced.Attachments.GetAsync("users/1", "foo/bar");
                     var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
 
-                    Assert.NotNull(attachment);
-                    Assert.NotNull(attachment2);
+                    if (attachment != null && attachment2 != null &&
+                        attachment.Details.Hash == "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=" &&
+                        attachment.Details.Name == "foo/bar" &&
+                        AreAttachmentDetailsEqual(attachment.Details, attachment2.Details))
+                    {
+                        return true;
+                    }
 
-                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
-                    Assert.Equal("foo/bar", attachment.Details.Name);
+                    return false;
+                }, true, 10000, 500);
 
-                    Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
-                    Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
-                    Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
-                }
+
+                using var session1 = store1.OpenAsyncSession();
+                using var session2 = store2.OpenAsyncSession();
+
+                var user = await session1.LoadAsync<User>("users/1");
+                Assert.Equal(30, user.Age);
+                var user2 = await session2.LoadAsync<User>("users/1");
+                Assert.Equal(30, user2.Age);
+
+                await WriteAttachmentDetails(stores);
+
+                var attachment = await session1.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+                var attachment2 = await session2.Advanced.Attachments.GetAsync("users/1", "foo/bar");
+          
+                Assert.NotNull(attachment);
+                Assert.NotNull(attachment2);
+
+                Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
+                Assert.Equal("foo/bar", attachment.Details.Name);
+
+                Assert.Equal(attachment.Details.Hash, attachment2.Details.Hash);
+                Assert.Equal(attachment.Details.ChangeVector, attachment2.Details.ChangeVector);
+                Assert.Equal(attachment.Details.Name, attachment2.Details.Name);
             }
         }
 
@@ -3081,6 +3088,7 @@ namespace SlowTests.Client.Attachments
                 var buffer = new byte[3];
                 using (var session = destination.OpenAsyncSession())
                 {
+                    session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
                     for (int i = 0; i < 25; i++)
                     {
                         var user = await session.LoadAsync<User>($"FoObAr/{i}");
