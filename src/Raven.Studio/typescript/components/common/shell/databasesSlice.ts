@@ -1,7 +1,7 @@
-﻿import { createEntityAdapter, createSlice, EntityState, PayloadAction } from "@reduxjs/toolkit";
-import { DatabaseSharedInfo } from "components/models/databases";
+﻿import { createAsyncThunk, createEntityAdapter, createSlice, EntityState, PayloadAction } from "@reduxjs/toolkit";
+import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
 import genUtils from "common/generalUtils";
-import { AppAsyncThunk, RootState } from "components/store";
+import { AppAsyncThunk, AppDispatch, RootState } from "components/store";
 import createDatabase from "viewmodels/resources/createDatabase";
 import app from "durandal/app";
 import deleteDatabaseConfirm from "viewmodels/resources/deleteDatabaseConfirm";
@@ -11,9 +11,24 @@ import viewHelpers from "common/helpers/view/viewHelpers";
 import changesContext from "common/changesContext";
 import compactDatabaseDialog from "viewmodels/resources/compactDatabaseDialog";
 import databasesManager from "common/shell/databasesManager";
+import { loadableData, locationAwareLoadableData, perNodeTagLoadStatus } from "components/models/common";
+import { services } from "hooks/useServices";
+import DatabaseUtils from "components/utils/DatabaseUtils";
+import { createFailureState, createLoadingState, createSuccessState } from "components/utils/common";
 
 interface DatabasesState {
-    databases: EntityState<DatabaseSharedInfo>;
+    /**
+     * global database information - sharded between shards/nodes - i.e. name, encryption, etc
+     */
+    databases: EntityState<DatabaseSharedInfo>; // global database information
+    /**
+     * holds database info specific for given shard/node (document count, errors, etc)
+     */
+    localDatabaseDetailedInfo: EntityState<DatabaseLocalInfo>;
+    /**
+     * Data loading status per each node
+     */
+    localDatabaseDetailedLoadStatus: EntityState<perNodeTagLoadStatus>;
     activeDatabase: string;
 }
 
@@ -22,10 +37,25 @@ const databasesAdapter = createEntityAdapter<DatabaseSharedInfo>({
     sortComparer: (a, b) => genUtils.sortAlphaNumeric(a.name, b.name),
 });
 
+const selectDatabaseInfoId = (dbName: string, location: databaseLocationSpecifier) =>
+    dbName + "_$$$_" + genUtils.formatLocation(location);
+
+const localDatabaseInfoAdapter = createEntityAdapter<DatabaseLocalInfo>({
+    selectId: (x) => selectDatabaseInfoId(x.name, x.location),
+});
+
+const localDatabaseDetailedLoadStatusAdapter = createEntityAdapter<perNodeTagLoadStatus>({
+    selectId: (x) => x.nodeTag,
+});
+
 const databasesSelectors = databasesAdapter.getSelectors();
+const localDatabaseDetailedLoadStatusSelectors = localDatabaseDetailedLoadStatusAdapter.getSelectors();
+const localDatabaseDetailedInfoSelectors = localDatabaseInfoAdapter.getSelectors();
 
 const initialState: DatabasesState = {
     databases: databasesAdapter.getInitialState(),
+    localDatabaseDetailedInfo: localDatabaseInfoAdapter.getInitialState(),
+    localDatabaseDetailedLoadStatus: localDatabaseDetailedLoadStatusAdapter.getInitialState(),
     activeDatabase: null,
 };
 
@@ -39,6 +69,48 @@ export function selectDatabaseByName(name: string) {
     return (store: RootState) => databasesSelectors.selectById(store.databases.databases, name);
 }
 
+export function selectDatabaseState(name: string) {
+    return (store: RootState) => {
+        const db = selectDatabaseByName(name)(store);
+        const locations = DatabaseUtils.getLocations(db);
+
+        return locations.map((location): locationAwareLoadableData<DatabaseLocalInfo> => {
+            const loadState = localDatabaseDetailedLoadStatusSelectors.selectById(
+                store.databases.localDatabaseDetailedLoadStatus,
+                location.nodeTag
+            ) || {
+                status: "idle",
+                nodeTag: location.nodeTag,
+            };
+
+            switch (loadState.status) {
+                case "idle":
+                case "loading":
+                    return {
+                        status: loadState.status,
+                        location,
+                    };
+                case "failure":
+                    return {
+                        status: "failure",
+                        location,
+                    };
+                case "success": {
+                    const data = localDatabaseDetailedInfoSelectors.selectById(
+                        store.databases.localDatabaseDetailedInfo,
+                        selectDatabaseInfoId(name, location)
+                    );
+                    return {
+                        location,
+                        status: "success",
+                        data,
+                    };
+                }
+            }
+        });
+    };
+}
+
 export const databasesSlice = createSlice({
     initialState,
     name: sliceName,
@@ -50,10 +122,84 @@ export const databasesSlice = createSlice({
             //TODO: update in shallow mode?
             databasesAdapter.setAll(state.databases, action.payload);
         },
+
+        initDetails: {
+            reducer: (state, action: PayloadAction<{ nodeTags: string[] }>) => {
+                localDatabaseDetailedLoadStatusAdapter.setAll(
+                    state.localDatabaseDetailedLoadStatus,
+                    action.payload.nodeTags.map((tag) => ({
+                        nodeTag: tag,
+                        status: "idle",
+                    }))
+                );
+            },
+            prepare: (nodeTags: string[]) => {
+                return {
+                    payload: {
+                        nodeTags,
+                    },
+                };
+            },
+        },
+    },
+    extraReducers: (builder) => {
+        builder.addCase(fetchDatabases.pending, (state, action) => {
+            localDatabaseDetailedLoadStatusAdapter.setOne(state.localDatabaseDetailedLoadStatus, {
+                nodeTag: action.meta.arg,
+                status: "loading",
+            });
+        });
+
+        builder.addCase(fetchDatabases.fulfilled, (state, action) => {
+            const nodeTag = action.meta.arg;
+            localDatabaseDetailedLoadStatusAdapter.setOne(state.localDatabaseDetailedLoadStatus, {
+                nodeTag,
+                status: "success",
+            });
+
+            action.payload.Databases.forEach((db) => {
+                localDatabaseInfoAdapter.setOne(state.localDatabaseDetailedInfo, {
+                    name: DatabaseUtils.shardGroupKey(db.Name),
+                    location: {
+                        nodeTag,
+                        shardNumber: DatabaseUtils.shardNumber(db.Name),
+                    },
+                    alerts: db.Alerts,
+                    documentsCount: db.DocumentsCount,
+                    indexingStatus: db.IndexingStatus,
+                    indexingErrors: db.IndexingErrors,
+                    performanceHints: db.PerformanceHints,
+                    upTime: db.UpTime,
+                    backupInfo: db.BackupInfo,
+                    totalSize: db.TotalSize,
+                    tempBuffersSize: db.TempBuffersSize,
+                });
+            });
+            //TODO: remove old items!
+        });
+
+        builder.addCase(fetchDatabases.rejected, (state, action) => {
+            localDatabaseDetailedLoadStatusAdapter.setOne(state.localDatabaseDetailedLoadStatus, {
+                nodeTag: action.meta.arg,
+                status: "failure",
+            });
+        });
     },
 });
 
-export const { databasesLoaded, activeDatabaseChanged } = databasesSlice.actions;
+export const { databasesLoaded, activeDatabaseChanged, initDetails } = databasesSlice.actions;
+
+export const loadDatabaseDetails = (nodeTags: string[]) => async (dispatch: AppDispatch, getState: () => RootState) => {
+    dispatch(initDetails(nodeTags));
+
+    const tasks = nodeTags.map((nodeTag) => dispatch(fetchDatabases(nodeTag)));
+
+    await Promise.all(tasks);
+};
+
+const fetchDatabases = createAsyncThunk(sliceName + "/fetchDatabases", async (nodeTag: string) => {
+    return await services.databasesService.getDatabasesState(nodeTag);
+});
 
 export const openCreateDatabaseDialog = () => () => {
     const createDbView = new createDatabase("newDatabase");

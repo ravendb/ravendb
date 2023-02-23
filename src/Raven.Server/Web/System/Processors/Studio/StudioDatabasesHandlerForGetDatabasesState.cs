@@ -50,7 +50,7 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
             {
                 writer.WriteStartObject();
 
-                writer.WriteArray(context, nameof(StudioDatabasesState.Databases), items.SelectMany(x => x.AsShardsOrNormal()), (w, _, record) =>
+                writer.WriteArray(context, nameof(StudioDatabasesState.Databases), items.SelectMany(x => x.AsShardsOrNormal(RequestHandler.ServerStore.NodeTag)), (w, _, record) =>
                 {
                     var databaseName = record.DatabaseName;
 
@@ -142,7 +142,7 @@ internal class StudioDatabasesHandlerForGetDatabasesState : AbstractDatabasesHan
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases?";
+            url = $"{node.Url}/studio-tasks/databases/state?";
 
             if (_name != null)
                 url += $"name={Uri.EscapeDataString(_name)}";

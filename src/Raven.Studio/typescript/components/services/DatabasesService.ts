@@ -15,6 +15,8 @@ import shard from "models/resources/shard";
 import deleteOrchestratorFromNodeCommand from "commands/resources/deleteOrchestratorFromNodeCommand";
 import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
 import toggleDatabaseCommand from "commands/resources/toggleDatabaseCommand";
+import StudioDatabasesState = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState;
+import getDatabasesStateForStudioCommand from "commands/resources/getDatabasesStateForStudioCommand";
 
 export default class DatabasesService {
     async setLockMode(databases: DatabaseSharedInfo[], newLockMode: DatabaseLockMode) {
@@ -31,6 +33,10 @@ export default class DatabasesService {
 
     async getEssentialStats(db: DatabaseSharedInfo): Promise<EssentialDatabaseStatistics> {
         return new getEssentialDatabaseStatsCommand(db).execute();
+    }
+
+    async getDatabasesState(targetNodeTag: string): Promise<StudioDatabasesState> {
+        return new getDatabasesStateForStudioCommand(targetNodeTag).execute();
     }
 
     async getDetailedStats(

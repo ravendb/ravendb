@@ -215,6 +215,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AddDatabaseShardResult));
             scripter.AddType(typeof(DatabaseRecord));
             scripter.AddType(typeof(StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo));
+            scripter.AddType(typeof(StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState));
             
             scripter.AddType(typeof(DatabaseStatistics));
             scripter.AddType(typeof(DetailedDatabaseStatistics));
@@ -326,7 +327,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PatchResult));
             scripter.AddType(typeof(PatchDebugActions));
 
-            scripter.AddType(typeof(Raven.Client.ServerWide.Operations.DatabasesInfo));
             scripter.AddType(typeof(RawShardingConfiguration));
             scripter.AddType(typeof(AddDatabaseShardResult));
             scripter.AddType(typeof(ReshardingHandler.ReshardingResult));

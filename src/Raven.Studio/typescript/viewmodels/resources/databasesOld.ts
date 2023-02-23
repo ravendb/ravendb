@@ -543,34 +543,6 @@ class databaseInfo {
     documentsCount = ko.observable<number>();
     indexesCount = ko.observable<number>();
 
-    deletionInProgress = ko.observableArray<string>([]);
-
-    constructor(dto: Raven.Client.ServerWide.Operations.DatabaseInfo) {
-        this.initializeObservables();
-
-        this.update(dto);
-    }
-
-    get qualifier() {
-        return "db";
-    }
-
-    get fullTypeName() {
-        return "database";
-    }
-
-    asDatabase(): database {
-        const casted = databasesManager.default.getDatabaseByName(this.name);
-        if (!casted) {
-            throw new Error("Unable to find database: " + this.name + " in database manager");
-        }
-        return casted;
-    }
-
-    static extractQualifierAndNameFromNotification(input: string): { qualifier: string, name: string } {
-        return { qualifier: input.substr(0, 2), name: input.substr(3) };
-    }
-
     private computeBackupStatus(backupInfo: Raven.Client.ServerWide.Operations.BackupInfo) {
         if (!backupInfo || !backupInfo.LastBackup) {
             this.lastBackupText("Never backed up");
@@ -616,16 +588,9 @@ class databaseInfo {
     }
 
     update(dto: Raven.Client.ServerWide.Operations.DatabaseInfo): void {
-        this.name = dto.Name;
-        this.lockMode(dto.LockMode);
-        this.disabled(dto.Disabled);
         this.isAdmin(dto.IsAdmin);
-        this.isEncrypted(dto.IsEncrypted);
         this.totalSize(dto.TotalSize ? dto.TotalSize.SizeInBytes : 0);
         this.totalTempBuffersSize(dto.TempBuffersSize ? dto.TempBuffersSize.SizeInBytes : 0);
-        this.indexingErrors(dto.IndexingErrors);
-        this.alerts(dto.Alerts);
-        this.performanceHints(dto.PerformanceHints);
         this.loadError(dto.LoadError);
         this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
         this.dynamicDatabaseDistribution(dto.DynamicNodesDistribution);
@@ -642,8 +607,6 @@ class databaseInfo {
         this.indexingStatus(dto.IndexingStatus);
         this.indexingDisabled(dto.IndexingStatus === "Disabled");
         this.indexingPaused(dto.IndexingStatus === "Paused");
-        this.documentsCount(dto.DocumentsCount);
-        this.indexesCount(dto.IndexesCount);
         this.deletionInProgress(dto.DeletionInProgress ? Object.keys(dto.DeletionInProgress) : []);
         this.databaseAccessText(accessManager.default.getDatabaseAccessLevelTextByDbName(this.name));
         this.databaseAccessColor(accessManager.default.getAccessColorByDbName(this.name));

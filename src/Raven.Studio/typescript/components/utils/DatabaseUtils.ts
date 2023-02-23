@@ -1,4 +1,6 @@
-﻿export default class DatabaseUtils {
+﻿import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+
+export default class DatabaseUtils {
     static isSharded(name: string) {
         return name.includes("$");
     }
@@ -8,6 +10,34 @@
     }
 
     static shardNumber(name: string): number {
-        return parseInt(name.split("$")[1], 10);
+        if (name.includes("$")) {
+            return parseInt(name.split("$")[1], 10);
+        } else {
+            return undefined;
+        }
+    }
+
+    static getLocations(db: DatabaseSharedInfo): databaseLocationSpecifier[] {
+        if (db.sharded) {
+            const shardedDb = db as ShardedDatabaseSharedInfo;
+
+            const locations: databaseLocationSpecifier[] = shardedDb.shards.flatMap((shard) => {
+                const shardNumber = DatabaseUtils.shardNumber(shard.name);
+
+                return shard.nodes.map((node) => {
+                    return {
+                        nodeTag: node.tag,
+                        shardNumber,
+                    };
+                });
+            });
+
+            return locations;
+        } else {
+            return db.nodes.map((node) => ({
+                nodeTag: node.tag,
+                shardNumber: undefined,
+            }));
+        }
     }
 }

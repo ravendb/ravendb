@@ -1,5 +1,7 @@
 ﻿import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import DatabasePromotionStatus = Raven.Client.ServerWide.DatabasePromotionStatus;
+import IndexingStatus = Raven.Client.Documents.Indexes.IndexingStatus;
+import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 
 export interface NodeInfo {
     tag: string;
@@ -10,6 +12,21 @@ export interface NodeInfo {
     lastStatus?: DatabasePromotionStatus;
 }
 
+export interface DatabaseLocalInfo {
+    name: string;
+    location: databaseLocationSpecifier;
+    indexingErrors: number;
+    alerts: number;
+    performanceHints: number;
+    indexingStatus: IndexRunningStatus;
+    documentsCount: number;
+
+    tempBuffersSize: Raven.Client.Util.Size;
+    totalSize: Raven.Client.Util.Size;
+    upTime?: string;
+    backupInfo: Raven.Client.ServerWide.Operations.BackupInfo;
+}
+
 export interface DatabaseSharedInfo {
     name: string;
     sharded: this is ShardedDatabaseSharedInfo;
@@ -17,6 +34,7 @@ export interface DatabaseSharedInfo {
     deletionInProgress: string[];
     encrypted: boolean;
     disabled: boolean;
+    indexesCount: number;
     nodes: NodeInfo[];
     currentNode: {
         relevant: boolean;

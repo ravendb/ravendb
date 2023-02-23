@@ -120,7 +120,7 @@ class databaseGroupGraph {
     private previousLinks: string = null;
 
     private ongoingTasksCache: Raven.Server.Web.System.OngoingTasksResult;
-    private databaseInfoCache: Raven.Client.ServerWide.Operations.DatabaseInfo;
+    private databaseInfoCache: any; //TODO: type was Raven.Client.ServerWide.Operations.DatabaseInfo;
 
     private edgesContainer: d3.Selection<void>;
     private tasksContainer: d3.Selection<void>;
@@ -638,8 +638,8 @@ class databaseGroupGraph {
         this.updateData();
         this.draw();
     }
-
-    onDatabaseInfoChanged(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo) {
+    
+    onDatabaseInfoChanged(dbInfo: any) { // type was Raven.Client.ServerWide.Operations.DatabaseInfo
         this.databaseInfoCache = dbInfo;
         this.updateData();
         this.draw();
