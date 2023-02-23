@@ -35,7 +35,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                                     isValidFor(db, false) == false)
                                     continue; // not valid for this, skipping
                             }
-
+                            
+                            if (TrafficWatchManager.HasRegisteredClients)
+                                AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Notifications);
                             await writer.WriteToWebSocket(action.Json);
                         }
                     }
@@ -44,15 +46,14 @@ namespace Raven.Server.NotificationCenter.Handlers
                     {
                         var action = OperationChanged.Create(null, operation.Id, operation.Description, operation.State, operation.Killable);
 
+                        if (TrafficWatchManager.HasRegisteredClients)
+                            AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Notifications);
                         await writer.WriteToWebSocket(action.ToJson());
                     }
 
                     // update the connection with the current cluster topology
                     writer.AfterTrackActionsRegistration = ServerStore.NotifyAboutClusterTopologyAndConnectivityChanges;
                     await writer.WriteNotifications(isValidFor);
-
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Notifications);
                 }
             }
         }
@@ -65,9 +66,6 @@ namespace Raven.Server.NotificationCenter.Handlers
             var forever = GetBoolValueQueryString("forever", required: false);
             var dbForId = ServerStore.NotificationCenter.GetDatabaseFor(id);
             var isValidFor = GetDatabaseAccessValidationFunc();
-
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext(nameof(DismissPost), TrafficWatchChangeType.Notifications);
 
             if (isValidFor != null && isValidFor(dbForId, true) == false)
             {
@@ -90,9 +88,6 @@ namespace Raven.Server.NotificationCenter.Handlers
             var timeInSec = GetLongQueryString("timeInSec");
             var dbForId = ServerStore.NotificationCenter.GetDatabaseFor(id);
             var isValidFor = GetDatabaseAccessValidationFunc();
-            
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext(nameof(PostponePost), TrafficWatchChangeType.Notifications);
 
             if (isValidFor != null && isValidFor(dbForId, true) == false)
             {

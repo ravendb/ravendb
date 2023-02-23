@@ -30,6 +30,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.TrafficWatch;
 
+
 namespace Raven.Server.Documents.Handlers.Admin
 {
     public class RachisAdminHandler : RequestHandler
@@ -60,6 +61,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                             cmpExchange.ContextToWriteResult = context;
                             break;
                     }
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(commandJson.ToString(), TrafficWatchChangeType.ClusterCommands);
 
                     var isClusterAdmin = IsClusterAdmin();
                     command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
@@ -76,9 +79,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                                 [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
                                 [nameof(ServerStore.PutRaftCommandResult.Data)] = result,
                             });
-                           
-                            if (TrafficWatchManager.HasRegisteredClients)
-                                AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
                         }
 
                         // now that we know that we properly serialized it
@@ -108,9 +108,6 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var index = GetLongQueryString("index");
             await ServerStore.Cluster.WaitForIndexNotification(index);
-            
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext(nameof(WaitForIndex), TrafficWatchChangeType.ClusterCommands);
         }
 
         [RavenAction("/admin/cluster/observer/suspend", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
@@ -125,13 +122,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 NoContentStatus();
-                if (TrafficWatchManager.HasRegisteredClients)
-                   AddStringToHttpContext(nameof(SuspendObserver), TrafficWatchChangeType.ClusterCommands);
                 return Task.CompletedTask;
             }
 
             RedirectToLeader();
-            
+
             return Task.CompletedTask;
         }
 
@@ -154,8 +149,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                     };
 
                     context.Write(writer, json);
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
                     return;
                 }
             }
@@ -170,9 +163,6 @@ namespace Raven.Server.Documents.Handlers.Admin
             {
                 context.OpenReadTransaction();
                 context.Write(writer, ServerStore.GetLogDetails(context));
-                
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
             }
         }
 
@@ -186,8 +176,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 context.OpenReadTransaction();
                 writer.WriteArray("RachisLogHistory", ServerStore.Engine.LogHistory.GetHistoryLogs(context), context);
                 writer.WriteEndObject();
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
             }
         }
 
@@ -202,9 +190,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
 
                 context.Write(writer, json);
-               
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
             }
         }
 
@@ -269,9 +254,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                     json["Status"] = DynamicJsonValue.Convert(nodesStatues);
 
                     context.Write(writer, json);
-                    
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
                 }
             }
         }
@@ -290,10 +272,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (ServerStore.IsLeader())
                 {
                     context.Write(writer, DynamicJsonValue.Convert(ServerStore.ClusterMaintenanceSupervisor?.GetStats()));
-                    
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
-                    
                     await writer.FlushAsync();
                     return;
                 }
@@ -314,9 +292,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 await ServerStore.EnsureNotPassiveAsync(nodeTag: tag);
             }
             NoContentStatus();
-
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext(nameof(Bootstrap), TrafficWatchChangeType.ClusterCommands);
         }
 
         [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
@@ -535,10 +510,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                     }
 
                     NoContentStatus();
-
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(nameof(AddNode), TrafficWatchChangeType.ClusterCommands);
-
                     return;
                 }
             }
@@ -576,9 +547,6 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             if (ServerStore.IsLeader())
             {
-                if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(nameof(DeleteNode), TrafficWatchChangeType.ClusterCommands);
-
                 if (nodeTag == ServerStore.Engine.Tag)
                 {
                     // cannot remove the leader, let's change the leader
@@ -606,9 +574,6 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, maxUtilizedCores, GetRaftRequestIdFromQuery());
             NoContentStatus();
-
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext(nameof(SetLicenseLimit), TrafficWatchChangeType.ClusterCommands);
         }
 
         [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
@@ -616,19 +581,12 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             Server.ServerStore.Engine.Timeout.ExecuteTimeoutBehavior();
             NoContentStatus();
-
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext(nameof(TimeoutNow), TrafficWatchChangeType.ClusterCommands);
-
             return Task.CompletedTask;
         }
 
         [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
         public Task EnforceReelection()
         {
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext(nameof(EnforceReelection), TrafficWatchChangeType.ClusterCommands);
-
             if (ServerStore.IsLeader())
             {
                 ServerStore.Engine.CurrentLeader.StepDown();
@@ -644,9 +602,6 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task PromoteNode()
         {
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext(nameof(PromoteNode), TrafficWatchChangeType.ClusterCommands);
-
             if (ServerStore.LeaderTag == null)
             {
                 NoContentStatus();
@@ -681,9 +636,6 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task DemoteNode()
         {
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext(nameof(DemoteNode), TrafficWatchChangeType.ClusterCommands);
-
             if (ServerStore.LeaderTag == null)
             {
                 NoContentStatus();
@@ -755,9 +707,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                     writer.WriteStartObject();
                     writer.WriteArray("Nodes", nodeList);
                     writer.WriteEndObject();
-
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.ClusterCommands);
                 }
             }
         }

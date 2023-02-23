@@ -74,9 +74,6 @@ namespace Raven.Server.Web.Operations
                     writer.WriteStartObject();
                     writer.WriteArray(context, "Results", operations, (w, c, operation) => c.Write(w, operation.ToJson()));
                     writer.WriteEndObject();
-
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
                 }
             }
         }
