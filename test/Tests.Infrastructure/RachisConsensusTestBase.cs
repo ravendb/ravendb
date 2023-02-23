@@ -199,7 +199,7 @@ namespace Tests.Infrastructure
                 ch = (char)(65 + Interlocked.Increment(ref _count));
             }
 
-            var url = $"tcp://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}/?{caller}#{ch}";
+            var url = $"tcp://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}/?{caller}#{nodeTag ?? $"{ch}"}";
 
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : (int)Interlocked.Read(ref _count);
             var configuration = RavenConfiguration.CreateForServer(caller);
