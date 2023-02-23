@@ -18,6 +18,147 @@
         <link rel="mask-icon" href="icons/safari-pinned-tab.svg" color="#ca1c59">
         <meta name="theme-color" content="#2c343c">
 
+        <style>
+            body {
+                background-color: #22252b;
+            }
+            .splash-screen .lead {
+                text-align: center;
+                font-size: 1.25rem;
+                font-weight: 300;
+            }
+            .splash-screen .spinner-box {
+                height: 80vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            .splash-screen .orbit {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border-radius: 50%;
+            }
+            .splash-screen .orbit-1 {
+                position: relative;
+                width: 120px;
+                height: 120px;
+                background-color: #8361d4;
+                -webkit-animation: pulse 3500ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            }
+            .splash-screen .orbit-1 .icon-raven {
+                font-size: 300%;
+                color: #F0F4F6;
+            }
+            .splash-screen .orbit-2,
+            .splash-screen .orbit-3 {
+                position: absolute;
+            }
+            .splash-screen .orbit-2 {
+                width: 240px;
+                height: 240px;
+                background-color: rgba(131, 97, 212, 0.25);
+                z-index: -1;
+                -webkit-animation: spin 3500ms cubic-bezier(0.4, 0, 0.2, 1) infinite, opacity-orbit-2 3500ms cubic-bezier(0.18, 0.89, 0.32, 1.28) infinite;
+            }
+            .splash-screen .orbit-2 .orbit-icon:before {
+                content: attr(orbit-icon-content-before-2);
+            }
+            .splash-screen .orbit-2 .orbit-icon:after {
+                content: attr(orbit-icon-content-after-2);
+            }
+            .splash-screen .orbit-3 {
+                width: 360px;
+                height: 360px;
+                background-color: rgba(131, 97, 212, 0.1);
+                z-index: -2;
+                -webkit-animation: spin 5000ms cubic-bezier(0.4, 0, 0.2, 1) infinite, opacity-orbit-3 5000ms cubic-bezier(0.18, 0.89, 0.32, 1.28) infinite;
+            }
+            .splash-screen .orbit-3 .orbit-icon:before {
+                content: attr(orbit-icon-content-before-3);
+            }
+            .splash-screen .orbit-3 .orbit-icon:after {
+                content: attr(orbit-icon-content-after-3);
+            }
+            .splash-screen .orbit-icon {
+                margin-left: -30px;
+            }
+            .splash-screen .orbit-icon:before,
+            .splash-screen .orbit-icon:after {
+                position: absolute;
+                content: "";
+                height: 32px;
+                width: 32px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                border-radius: 50%;
+                font-family: "Icomoon";
+                font-style: normal;
+                color: white;
+                font-size: 18px;
+                -webkit-animation: scale 1100ms cubic-bezier(0.39, 0.58, 0.57, 1);
+            }
+            .splash-screen .orbit-icon:before {
+                top: calc(32px / -2);
+            }
+            .splash-screen .orbit-icon:after {
+                bottom: calc(32px / -2);
+            }
+            @keyframes spin {
+                from {
+                    transform: rotate(0);
+                }
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+            @keyframes pulse {
+                0% {
+                    transform: scale(0.95);
+                }
+                33% {
+                    transform: scale(1.05);
+                }
+                100% {
+                    transform: scale(0.95);
+                }
+            }
+            @keyframes opacity-orbit-2 {
+                0% {
+                    background-color: rgba(131, 97, 212, 0.25);
+                }
+                50% {
+                    background-color: rgba(131, 97, 212, 0.2);
+                }
+                100% {
+                    background-color: rgba(131, 97, 212, 0.25);
+                }
+            }
+            @keyframes opacity-orbit-3 {
+                0% {
+                    background-color: rgba(131, 97, 212, 0.1);
+                }
+                50% {
+                    background-color: rgba(131, 97, 212, 0.05);
+                }
+                100% {
+                    background-color: rgba(131, 97, 212, 0.1);
+                }
+            }
+            @keyframes scale {
+                0% {
+                    transform: scale(0);
+                }
+                50% {
+                    transform: scale(1.2);
+                }
+                75% {
+                    transform: scale(1);
+                }
+            }
+        </style>
+
         <script type="text/javascript">
             var themeToCss = {
                 "dark": "styles.css",
@@ -57,22 +198,63 @@
         </script>
     </head>
     <body class="loading-active processing">
-    <div class="loading-overlay">
-        <div class="text-center">
-            <img src="Content/img/ravendb_logo_white.svg" class="loading-logo" />
+    
+        <div class="splash-screen">
+            <div class="spinner-box">
+                <div class="orbit orbit-1">
+                    <i class="icon-raven"></i>
+                </div>
+                <div class="orbit orbit-2">
+                    <i class="orbit-icon orbit-icon-2"></i>
+                </div>
+                <div class="orbit orbit-3">
+                    <i class="orbit-icon"></i>
+                </div>
+            </div>
+            <p class="lead">Building a nest</p>
         </div>
-    </div>
-    <div id="applicationHost">
-    </div>
-    <div class="processing-spinner"></div>
-    <iframe id="downloadFrame" style="display: none" name="hidden-form"></iframe>
+        
+        <div id="applicationHost"></div>
 
-    <!-- webpackIgnore: true -->
-    <script type="text/javascript" src="/studio/ace/ace.js"></script>
-    <!-- webpackIgnore: true -->
-    <script type="text/javascript" src="/studio/ace/ext-language_tools.js"></script>
-    <!-- webpackIgnore: true -->
-    <script type="text/javascript" src="/studio/ace/worker-json.js"></script>
+        <div class="processing-spinner"></div>
+        <iframe id="downloadFrame" style="display: none" name="hidden-form"></iframe>
 
-</body>
+        <script type="text/javascript">
+            const getRandomAndRemove = (array) => array.splice(Math.floor(Math.random() * array.length), 1)[0]
+            
+            const orbitIconColors = ["#f06582","#f3766e","#f38a66","#eea361","#f0b362","#f0c254","#edcd51","#c4d451","#7bd85d","#51d27a","#37c4ac","#2fb7d2","#2f9ef3","#5186ee","#7069ee","#8361d4","#945ab5","#bf569f","#d85b9a","#ed558c"];
+            const orbitIcons = ["server","additional-sources","backup","certificate","cluster","cluster-dashboard","dashboard","index","json","document","patch","query","revisions","rocket","sharding","stats","system-storage","tasks","timeseries"];
+
+            const iconElements = document.querySelectorAll('.orbit-icon');
+            
+            iconElements.forEach((x, idx) => {
+                x.setAttribute(`orbit-icon-content-before-${idx + 2}`, getRandomAndRemove(orbitIcons));
+                x.setAttribute(`orbit-icon-content-after-${idx + 2}`, getRandomAndRemove(orbitIcons));
+            })
+
+            const orbitIconColorStyle = document.createElement('style');
+            orbitIconColorStyle.innerHTML = `
+                .orbit-2 .orbit-icon:before {
+                    background-color: ${getRandomAndRemove(orbitIconColors)};
+                }
+                .orbit-2 .orbit-icon:after {
+                    background-color: ${getRandomAndRemove(orbitIconColors)};
+                }
+                .orbit-3 .orbit-icon:before {
+                    background-color: ${getRandomAndRemove(orbitIconColors)};
+                }
+                .orbit-3 .orbit-icon:after {
+                    background-color: ${getRandomAndRemove(orbitIconColors)};
+                }
+            `;
+            document.head.appendChild(orbitIconColorStyle);
+        </script>
+        
+        <!-- webpackIgnore: true -->
+        <script type="text/javascript" src="/studio/ace/ace.js"></script>
+        <!-- webpackIgnore: true -->
+        <script type="text/javascript" src="/studio/ace/ext-language_tools.js"></script>
+        <!-- webpackIgnore: true -->
+        <script type="text/javascript" src="/studio/ace/worker-json.js"></script>
+    </body>
 </html>
