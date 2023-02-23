@@ -273,7 +273,8 @@ namespace Raven.Server.Documents.Patch
                         .AddObjectConverter(new JintEnumConverter())
                         .AddObjectConverter(new JintDateTimeConverter())
                         .AddObjectConverter(new JintTimeSpanConverter())
-                        .LocalTimeZone(TimeZoneInfo.Utc);
+                        .LocalTimeZone(TimeZoneInfo.Utc)
+                        .StringCompilationAllowed = false;
                 });
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
