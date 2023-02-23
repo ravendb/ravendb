@@ -62,6 +62,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
                 var queryResult = await index.Query(query, queryContext, token);
+                queryResult.AutoIndexCreationRaftIndex = result.Index;
 
                 return queryResult;
             }
@@ -86,7 +87,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
-                return await index.IndexEntries(query, queryContext, ignoreLimit, token);
+                var queryResult = await index.IndexEntries(query, queryContext, ignoreLimit, token);
+                queryResult.AutoIndexCreationRaftIndex = result.Index;
+
+                return queryResult;
             }
         }
 
@@ -132,6 +136,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
                 var queryResult = await ExecuteSuggestion(query, index, queryContext, existingResultEtag, token);
+                queryResult.AutoIndexCreationRaftIndex = result.Index;
 
                 return queryResult;
             }

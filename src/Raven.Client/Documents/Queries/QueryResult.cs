@@ -57,6 +57,9 @@ namespace Raven.Client.Documents.Queries
 
         [ForceJsonSerialization]
         internal long? IndexDefinitionRaftIndex;
+
+        [ForceJsonSerialization]
+        internal long? AutoIndexCreationRaftIndex;
     }
 
     public class QueryResult : QueryResult<BlittableJsonReaderArray, BlittableJsonReaderObject>
