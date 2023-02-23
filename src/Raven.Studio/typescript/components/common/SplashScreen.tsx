@@ -1,3 +1,5 @@
+// This component is only displayed in the storybook. To modify the actual splash screen, make changes in wwwroot/index.html
+
 import React from "react";
 import "./SplashScreen.scss";
 

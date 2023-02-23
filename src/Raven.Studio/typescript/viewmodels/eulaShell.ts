@@ -96,7 +96,7 @@ class eulaShell extends viewModelBase {
         $("body")
             .removeClass('loading-active')
             .addClass("setup-shell bs3");
-        $(".loading-overlay").remove();
+        $(".splash-screen").remove();
 
         this.studioLoadingFakeRequest.markCompleted();
         this.studioLoadingFakeRequest = null;
