@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests.Blittable;
 using FastTests.Client;
 using RachisTests;
+using SlowTests.Client.Attachments;
 using SlowTests.Client.TimeSeries.Replication;
 using SlowTests.Issues;
 using SlowTests.MailingList;
@@ -29,9 +30,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new SubscriptionsFailover(testOutputHelper))
+                    using (var test = new AttachmentsReplication(testOutputHelper))
                     {
-                        await test.ContinueFromThePointIStoppedConcurrentSubscription(1, 20);
+                        await test.ConflictOfAttachmentAndDocument3Stores();
                     }
                 }
                 catch (Exception e)
