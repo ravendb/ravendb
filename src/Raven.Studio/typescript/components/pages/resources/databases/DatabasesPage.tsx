@@ -8,7 +8,8 @@ import { DatabaseFilterCriteria, DatabaseSharedInfo } from "../../../models/data
 import { useChanges } from "hooks/useChanges";
 import { Col, Row } from "reactstrap";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { selectActiveDatabase, selectAllDatabases } from "components/common/shell/databasesSlice";
+import { loadDatabaseDetails, selectActiveDatabase, selectAllDatabases } from "components/common/shell/databasesSlice";
+import { useClusterTopologyManager } from "hooks/useClusterTopologyManager";
 
 interface DatabasesPageProps {
     activeDatabase?: string;
@@ -34,6 +35,7 @@ export function DatabasesPage() {
     }));
 
     const { serverNotifications } = useChanges();
+    const { nodeTags } = useClusterTopologyManager();
 
     const [selectedDatabaseNames, setSelectedDatabaseNames] = useState<string[]>([]);
 
@@ -42,6 +44,10 @@ export function DatabasesPage() {
         //TODO: update selection if needed
         return filterDatabases(databases, filter);
     }, [filter, databases]);
+
+    useEffect(() => {
+        dispatch(loadDatabaseDetails(nodeTags));
+    }, [dispatch, nodeTags]);
 
     useEffect(() => {
         const visibleNames = filteredDatabases.map((x) => x.name);

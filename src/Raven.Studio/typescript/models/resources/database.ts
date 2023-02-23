@@ -33,6 +33,8 @@ abstract class database {
     databaseAccessText = ko.observable<string>();
     databaseAccessColor = ko.observable<string>();
     
+    indexesCount = ko.observable<number>();
+    
     clusterNodeTag: KnockoutObservable<string>;
     
     abstract get root(): database;
@@ -82,6 +84,8 @@ abstract class database {
         this.disabled(incomingCopy.IsDisabled);
         this.lockMode(incomingCopy.LockMode);
         
+        this.indexesCount(incomingCopy.IndexesCount);
+        
         this.deletionInProgress(Object.entries(incomingCopy.DeletionInProgress).map((kv: [string, DeletionInProgressStatus]) => {
             return {
                 tag: kv[0],
@@ -128,6 +132,7 @@ abstract class database {
                 relevant: this.relevant(),
                 isBeingDeleted: this.isBeingDeleted()
             },
+            indexesCount: this.indexesCount(),
             lockMode: this.lockMode(),
             deletionInProgress: this.deletionInProgress().map(x => x.tag)
         }

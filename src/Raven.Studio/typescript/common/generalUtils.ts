@@ -723,6 +723,20 @@ class genUtils {
         
         return "Node " + location.nodeTag;
     }
+    
+    static maxByShard<T>(list: T[], shardProvider: (item: T) => number, valueProvider: (item: T) => number): number[] {
+        const result = new Map<number, number>();
+        list.forEach(item => {
+            const shard = shardProvider(item) ?? -1;
+            const value = valueProvider(item);
+            
+            if (!result.has(shard) || result.get(shard) < value) {
+                result.set(shard, value);
+            }
+        });
+        
+        return Array.from(result.values());
+    }
 } 
 
 export = genUtils;

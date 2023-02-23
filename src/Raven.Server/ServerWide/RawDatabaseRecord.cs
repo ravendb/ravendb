@@ -250,15 +250,22 @@ namespace Raven.Server.ServerWide
             return new RawDatabaseRecord(_context, _context.ReadObject(_record, shardName));
         }
 
-        public IEnumerable<RawDatabaseRecord> AsShardsOrNormal()
+        public IEnumerable<RawDatabaseRecord> AsShardsOrNormal(string nodeTag = null)
         {
             if (IsSharded == false)
-                return new[] { this };
+            {
+                if (nodeTag == null || Topology.RelevantFor(nodeTag))
+                {
+                    return new[] {this};
+                }
 
-            return GetShardedDatabaseRecords();
+                return Array.Empty<RawDatabaseRecord>();
+            }
+
+            return GetShardedDatabaseRecords(nodeTag);
         }
 
-        public IEnumerable<RawDatabaseRecord> GetShardedDatabaseRecords()
+        public IEnumerable<RawDatabaseRecord> GetShardedDatabaseRecords(string nodeTag = null)
         {
             if (IsSharded == false)
                 yield break;
@@ -275,7 +282,9 @@ namespace Raven.Server.ServerWide
 
                 var shardNumber = RawShardingConfiguration.GetShardNumberFromPropertyDetails(propertyDetails);
 
-                yield return GetShardedDatabaseRecord(shardNumber);
+                var shardedDatabaseRecord = GetShardedDatabaseRecord(shardNumber);
+                if (nodeTag == null || shardedDatabaseRecord.Topology.RelevantFor(nodeTag))
+                    yield return GetShardedDatabaseRecord(shardNumber);
             }
         }
 
