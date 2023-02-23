@@ -125,7 +125,7 @@ public class ShardedFacetedQueryProcessor : AbstractShardedQueryProcessor<Sharde
 
             var result = shardedReadResult.Result;
 
-            await WaitForRaftIndexIfNeededAsync(result.IndexDefinitionRaftIndex, scope);
+            await WaitForRaftIndexIfNeededAsync(result.AutoIndexCreationRaftIndex, scope);
 
             using (Query.Metadata.HasIncludeOrLoad ? queryScope?.For(nameof(QueryTimingsScope.Names.Includes)) : null)
             {
