@@ -156,7 +156,6 @@ namespace SlowTests.Sharding.Cluster
                 if (await mre.WaitAsync(TimeSpan.FromSeconds(3)) == false)
                 {
                     await subscription.DisposeAsync(true);
-                    WaitForUserToContinueTheTest(store, debug:false);
                 }
 
                 for (int i = 0; i < numberOfDocs; i++)
