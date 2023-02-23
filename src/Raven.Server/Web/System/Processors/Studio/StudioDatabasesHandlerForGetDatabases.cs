@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors.Databases;
@@ -47,7 +48,7 @@ internal class StudioDatabasesHandlerForGetDatabases : AbstractDatabasesHandlerP
             {
                 writer.WriteStartObject();
 
-                writer.WriteArray(context, nameof(StudioDatabasesHandlerForGetDatabasesState.StudioDatabasesState.Databases), items.SelectMany(x => x.AsShardsOrNormal()), (w, _, record) =>
+                writer.WriteArray(context, nameof(StudioDatabasesInfo.Databases), items, (w, _, record) =>
                 {
                     var databaseName = record.DatabaseName;
 
