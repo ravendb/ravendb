@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
@@ -8,7 +9,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 
-public class OrchestratedSubscriptionProcessor : SubscriptionProcessor
+public class OrchestratedSubscriptionProcessor : AbstractSubscriptionProcessor<IncludeDocumentsOrchestratedSubscriptionCommand>
 {
     private readonly ShardedDatabaseContext _databaseContext;
     private SubscriptionConnectionsStateOrchestrator _state;
@@ -25,24 +26,26 @@ public class OrchestratedSubscriptionProcessor : SubscriptionProcessor
         base.InitializeProcessor();
         _state = _databaseContext.Subscriptions.SubscriptionsConnectionsState[Connection.SubscriptionId];
     }
-        
+
     // should never hit this
     public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch) => throw new NotImplementedException();
 
     // should never hit this
     public override Task AcknowledgeBatch(long batchId) => throw new NotImplementedException();
-    private SubscriptionIncludeCommands _includeCommands;
 
-    protected override SubscriptionIncludeCommands CreateIncludeCommands()
+    private IncludeDocumentsOrchestratedSubscriptionCommand _includeDocuments;
+
+    private ShardedCounterIncludes _includeCounters;
+
+    private ShardedTimeSeriesIncludes _includeTimeSeries;
+
+    protected override (IncludeDocumentsOrchestratedSubscriptionCommand IncludesCommand, ITimeSeriesIncludes TimeSeriesIncludes, ICounterIncludes CounterIncludes) CreateIncludeCommands()
     {
-        _includeCommands = new SubscriptionIncludeCommands
-        {
-            IncludeDocumentsCommand = new IncludeDocumentsOrchestratedSubscriptionCommand(ClusterContext, _state.CancellationTokenSource.Token),
-            IncludeCountersCommand = new ShardedCounterIncludes(_state.CancellationTokenSource.Token),
-            IncludeTimeSeriesCommand = new ShardedTimeSeriesIncludes(supportsMissingIncludes: false, _state.CancellationTokenSource.Token)
-        };
+        _includeDocuments = new IncludeDocumentsOrchestratedSubscriptionCommand(ClusterContext, _state.CancellationTokenSource.Token);
+        _includeCounters = new ShardedCounterIncludes(_state.CancellationTokenSource.Token);
+        _includeTimeSeries = new ShardedTimeSeriesIncludes(supportsMissingIncludes: false, _state.CancellationTokenSource.Token);
 
-        return _includeCommands;
+        return (_includeDocuments, _includeTimeSeries, _includeCounters);
     }
 
     public override IEnumerable<(Document Doc, Exception Exception)> GetBatch()
@@ -71,11 +74,11 @@ public class OrchestratedSubscriptionProcessor : SubscriptionProcessor
 
             // clone includes to the orchestrator context
             if (CurrentBatch._includes != null)
-                _includeCommands.IncludeDocumentsCommand.Gather(CurrentBatch._includes);
+                _includeDocuments.Gather(CurrentBatch._includes);
             if (CurrentBatch._counterIncludes != null)
-                _includeCommands.IncludeCountersCommand.Gather(CurrentBatch._counterIncludes, ClusterContext);
+                _includeCounters.Gather(CurrentBatch._counterIncludes, ClusterContext);
             if (CurrentBatch._timeSeriesIncludes != null)
-                _includeCommands.IncludeTimeSeriesCommand.Gather(CurrentBatch._timeSeriesIncludes, ClusterContext);
+                _includeTimeSeries.Gather(CurrentBatch._timeSeriesIncludes, ClusterContext);
         }
     }
 }

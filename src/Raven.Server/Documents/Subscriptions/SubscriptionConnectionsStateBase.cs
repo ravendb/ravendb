@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Util;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -196,8 +198,9 @@ public abstract class SubscriptionConnectionsStateBase
     }
 }
 
-public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> : SubscriptionConnectionsStateBase, IDisposable
-    where TSubscriptionConnection : SubscriptionConnectionBase
+public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection, TIncludesCommand> : SubscriptionConnectionsStateBase, IDisposable
+    where TSubscriptionConnection : SubscriptionConnectionBase<TIncludesCommand>
+    where TIncludesCommand : AbstractIncludeDocumentsCommand
 {
     protected readonly ServerStore _server;
     protected readonly string _databaseName;
@@ -235,7 +238,6 @@ public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection> 
         _connections = new ConcurrentSet<TSubscriptionConnection>();
         _subscriptionActivelyWorkingLock = new SemaphoreSlim(1);
     }
-
 
     public abstract Task UpdateClientConnectionTime();
 

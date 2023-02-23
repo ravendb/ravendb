@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
@@ -23,7 +23,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions
 {
-    public class OrchestratedSubscriptionConnection : SubscriptionConnectionBase
+    public class OrchestratedSubscriptionConnection : SubscriptionConnectionBase<IncludeDocumentsOrchestratedSubscriptionCommand>
     {
         private SubscriptionConnectionsStateOrchestrator _state;
         private readonly ShardedDatabaseContext _databaseContext;
@@ -70,11 +70,15 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             await SendConfirmAsync(_databaseContext.Time.GetUtcNow());
         }
 
+        protected override void GatherDocumentIncludes(IncludeDocumentsOrchestratedSubscriptionCommand includeDocuments, Document document)
+        {
+        }
+
         protected override async Task<bool> WaitForChangedDocsAsync(SubscriptionConnectionsStateBase state, Task pendingReply)
         {
             // nothing was sent to the client, but we need to let the shard know he can continue
             await NotifyShardAboutBatchCompletion();
-            
+
             return await base.WaitForChangedDocsAsync(state, pendingReply);
         }
 
@@ -92,7 +96,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 // wait for sharded subscription worker to send ack to the shard subscription connection
                 // and receive the confirm from the shard subscription connection
                 await batch.ConfirmFromShardSubscriptionConnectionTcs.Task;
-            
+
                 _processor.CurrentBatch = null;
             }
         }
@@ -148,9 +152,17 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             }
         }
 
+        public override AbstractSubscriptionProcessor<IncludeDocumentsOrchestratedSubscriptionCommand> CreateProcessor(SubscriptionConnectionBase<IncludeDocumentsOrchestratedSubscriptionCommand> connection)
+        {
+            if (connection is OrchestratedSubscriptionConnection orchestratedSubscription)
+                return new OrchestratedSubscriptionProcessor(connection.TcpConnection.DatabaseContext.ServerStore, connection.TcpConnection.DatabaseContext, orchestratedSubscription);
+
+            throw new InvalidOperationException("TODO [egor]");
+        }
+
         protected override void OnError(Exception e) => _processor?.CurrentBatch?.SetException(e);
 
-        protected override ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope, IncludeDocumentsCommand includeDocumentsCommand)
+        protected override ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope, IncludeDocumentsOrchestratedSubscriptionCommand includeDocumentsCommand)
         {
             var includes = new List<BlittableJsonReaderObject>();
             includeDocumentsCommand.Fill(includes);

@@ -204,16 +204,16 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                             if (IsBucketUnderActiveMigration(record, bucket))
                             {
-                                batchId = SubscriptionConnectionBase.NonExistentBatch;
+                                batchId = ISubscriptionConnection.NonExistentBatch;
                                 skipped.Add(documentRecord.DocumentId);
                             } 
                             else if (owner == false)
                             {
-                                batchId = SubscriptionConnectionBase.NonExistentBatch;
+                                batchId = ISubscriptionConnection.NonExistentBatch;
                                 skipped.Add(documentRecord.DocumentId);
                             }
 
-                            if (batchId > SubscriptionConnectionBase.NonExistentBatch)
+                            if (batchId > ISubscriptionConnection.NonExistentBatch)
                             {
                                 if (subscriptionState.ShardingState.ProcessedChangeVectorPerBucket.TryGetValue(bucket, out var current))
                                 {

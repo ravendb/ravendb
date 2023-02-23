@@ -7,6 +7,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -62,6 +63,24 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
             vector.Order);
 
         return result;
+    }
+
+    public override AbstractSubscriptionProcessor<IncludeDocumentsCommand> CreateProcessor(SubscriptionConnectionBase<IncludeDocumentsCommand> connection)
+    {
+        if (connection is SubscriptionConnectionForShard shardConnection)
+        {
+            var database = connection.TcpConnection.DocumentDatabase as ShardedDocumentDatabase;
+            var server = database.ServerStore;
+
+            if (connection.Subscription.Revisions)
+            {
+                return new ShardedRevisionsDatabaseSubscriptionProcessor(server, database, shardConnection);
+            }
+
+            return new ShardedDocumentsDatabaseSubscriptionProcessor(server, database, shardConnection);
+        }
+
+        throw new InvalidOperationException("TODO [egor]");
     }
 
     protected override async Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
