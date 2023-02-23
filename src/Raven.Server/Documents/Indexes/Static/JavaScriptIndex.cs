@@ -228,7 +228,8 @@ function map(name, lambda) {
                     .AddObjectConverter(new JintEnumConverter())
                     .AddObjectConverter(new JintDateTimeConverter())
                     .AddObjectConverter(new JintTimeSpanConverter())
-                    .LocalTimeZone(TimeZoneInfo.Utc);
+                    .LocalTimeZone(TimeZoneInfo.Utc)
+                    .StringCompilationAllowed = false;
             });
 
             using (_engine.DisableMaxStatements())
