@@ -450,55 +450,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         private async Task SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string,
-            BlittableJsonReaderObject> databaseValues, RestoreResult restoreResult, Action<IOperationProgress> onProgress)
+            BlittableJsonReaderObject> databaseValues, SmugglerResult restoreResult, Action<IOperationProgress> onProgress)
         {
             // at this point we restored a large portion of the database or all of it	
             // we'll retry saving the database record since a failure here will cause us to abort the entire restore operation	
 
-            var index = await RunWithRetries(async () =>
+            var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
                 {
                     var result = await _serverStore.WriteDatabaseRecordAsync(
                         databaseName, databaseRecord, null, RaftIdGenerator.NewId(), databaseValues, isRestore: true);
                     return result.Index;
                 },
-                "Saving the database record",
-                "Failed to save the database record, the restore is aborted");
+                infoMessage: "Saving the database record",
+                errorMessage: "Failed to save the database record, the restore is aborted",
+                restoreResult, onProgress, _operationCancelToken);
 
-            await RunWithRetries(async () =>
+            await BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
                 {
                     await _serverStore.Cluster.WaitForIndexNotification(index, TimeSpan.FromSeconds(30));
                     return index;
                 },
-                $"Verifying that the change to the database record propagated to node {_serverStore.NodeTag}",
-                $"Failed to verify that the change to the database record was propagated to node {_serverStore.NodeTag}, the restore is aborted");
-
-            async Task<long> RunWithRetries(Func<Task<long>> action, string infoMessage, string errorMessage)
-            {
-                const int maxRetries = 10;
-                var retries = 0;
-
-                while (true)
-                {
-                    try
-                    {
-                        _operationCancelToken.Token.ThrowIfCancellationRequested();
-
-                        restoreResult.AddInfo(infoMessage);
-                        onProgress.Invoke(restoreResult.Progress);
-
-                        return await action();
-                    }
-                    catch (TimeoutException)
-                    {
-                        if (++retries < maxRetries)
-                            continue;
-
-                        restoreResult.AddError(errorMessage);
-                        onProgress.Invoke(restoreResult.Progress);
-                        throw;
-                    }
-                }
-            }
+                infoMessage: $"Verifying that the change to the database record propagated to node {_serverStore.NodeTag}",
+                errorMessage: $"Failed to verify that the change to the database record was propagated to node {_serverStore.NodeTag}, the restore is aborted",
+                restoreResult, onProgress, _operationCancelToken);
         }
 
         private async Task<List<string>> GetOrderedFilesToRestore()

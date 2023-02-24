@@ -1,8 +1,13 @@
 using System;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Smuggler;
+using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Server.Utils;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -28,6 +33,40 @@ namespace Raven.Server.Documents.PeriodicBackup
         public static bool BackupTypeChanged(PeriodicBackupConfiguration previous, PeriodicBackupConfiguration current)
         {
             return previous.BackupType != current.BackupType;
+        }
+
+        public static async Task<long> RunWithRetriesAsync(
+            int maxRetries,
+            Func<Task<long>> action,
+            string infoMessage,
+            string errorMessage,
+            SmugglerResult smugglerResult,
+            Action<IOperationProgress> onProgress = default,
+            OperationCancelToken operationCancelToken = default)
+        {
+            var retries = 0;
+
+            while (true)
+            {
+                try
+                {
+                    operationCancelToken?.Token.ThrowIfCancellationRequested();
+
+                    smugglerResult?.AddInfo(infoMessage);
+                    onProgress?.Invoke(smugglerResult?.Progress);
+
+                    return await action();
+                }
+                catch (TimeoutException)
+                {
+                    if (++retries < maxRetries)
+                        continue;
+
+                    smugglerResult?.AddError(errorMessage);
+                    onProgress?.Invoke(smugglerResult?.Progress);
+                    throw;
+                }
+            }
         }
     }
 }

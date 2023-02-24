@@ -517,7 +517,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     else
                         periodicBackup.BackupStatus.LastIncrementalBackupInternal = startTimeInUtc;
 
-                    BackupTask.SaveBackupStatus(periodicBackup.BackupStatus, _database, _logger, backupResult: null);
+                    BackupTask.SaveBackupStatus(periodicBackup.BackupStatus, _database, _logger);
 
                     var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
                     if (_logger.IsOperationsEnabled)

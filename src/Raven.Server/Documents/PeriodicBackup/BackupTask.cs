@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -857,7 +858,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _database.NotificationCenter.Dismiss(id);
         }
 
-        public static void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, BackupResult backupResult, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+        public static async void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, BackupResult backupResult = default)
         {
             try
             {
@@ -866,8 +867,23 @@ namespace Raven.Server.Documents.PeriodicBackup
                     PeriodicBackupStatus = status
                 };
 
-                var result = AsyncHelpers.RunSync(() => documentDatabase.ServerStore.SendToLeaderAsync(command));
-                AsyncHelpers.RunSync(() => documentDatabase.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index));
+                var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, () =>
+                    {
+                        var result = AsyncHelpers.RunSync(() => documentDatabase.ServerStore.SendToLeaderAsync(command));
+                        return Task.FromResult(result.Index);
+                    },
+                    infoMessage: "Saving the backup status in cluster",
+                    errorMessage: "Failed to save the backup status in cluster",
+                    backupResult);
+
+                await BackupHelper.RunWithRetriesAsync(maxRetries: 10, () =>
+                    {
+                        AsyncHelpers.RunSync(() => documentDatabase.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index));
+                        return Task.FromResult(index);
+                    },
+                    infoMessage: "Verifying that the backup status was successfully saved in the cluster",
+                    errorMessage: "Failed to verify that the backup status was successfully saved in the cluster",
+                    backupResult);
 
                 if (logger.IsInfoEnabled)
                     logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
