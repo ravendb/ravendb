@@ -187,7 +187,7 @@ namespace Raven.Server.NotificationCenter
         
         private AlertRaised GetMismatchedReferencesAlert()
         {
-            return AlertRaised.Create(_database, "Loading documents with mismatched collection name",
+            return AlertRaised.Create(_database, $"Loading documents with mismatched collection name in '{_mismatchedReferencesLoadWarning.IndexName}' index",
                 "We have detected usage of LoadDocument(doc, collectionName) where loaded document collection is different than given parameter.",
                 AlertType.MismatchedReferenceLoad, NotificationSeverity.Warning, Source, _mismatchedReferencesLoadWarning);
         }
