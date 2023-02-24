@@ -65,7 +65,7 @@ public class RavenDB_17068: RavenTestBase
             } while (alertRaised.Item2["Type"].ToString() != NotificationType.AlertRaised.ToString());
             
             var details = alertRaised.Item2[nameof(AlertRaised.Details)] as DynamicJsonValue;
-            
+
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var json = ctx.ReadObject(details, "foo");
