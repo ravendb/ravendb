@@ -69,5 +69,6 @@ docker run --rm -it `
     -e "DISTRO_VERSION=$env:DISTRO_VERSION" `
     -e "RAVEN_PLATFORM=$env:RAVEN_PLATFORM" `
     -e "QEMU_ARCH=$env:QEMU_ARCH" `
+    -e "OUTPUT_DIR=/dist" `
     $DEB_BUILD_ENV_IMAGE 
 

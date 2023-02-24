@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # 5.x -> 6.0 migration assistance
-/usr/lib/ravendb/link-legacy-datadir.sh 
+/usr/lib/ravendb/scripts/link-legacy-datadir.sh 
 
-COMMAND="./Raven.Server"
+COMMAND="/usr/lib/ravendb/server/Raven.Server"
 [ -z "$RAVEN_ServerUrl" ] && export RAVEN_ServerUrl="http://$(hostname):8080"
 
 if [ ! -z "$RAVEN_SETTINGS" ]; then
