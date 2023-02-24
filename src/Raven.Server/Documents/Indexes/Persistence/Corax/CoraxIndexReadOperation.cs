@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     // If the query start before the current read ids, then we have to divide the ids in those
                     // that need to be processed for discarding and those that don't. 
                     long nextLimit = currentIdx + ids.Length;
-                    if (_query.Start < currentIdx + ids.Length)
+                    if (_query.Start < nextLimit)
                         limit = _query.Start - currentIdx;
                     else
                         limit = ids.Length;
@@ -536,7 +536,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var ids = QueryPool.Rent(coraxPageSize);
             long docsToLoad = pageSize;
             long queryStart = query.Start;
-
+            if (queryStart > int.MaxValue && query.Metadata.Query.OrderBy is not null)
+                AssertCannotEvaluateOrderByQueryOnSetBiggerThanInt32();
+                
+            
             using var queryFilter = GetQueryFilter();
 
             bool willAlwaysIncludeInResults = WillAlwaysIncludeInResults(_index.Type, fieldsToFetch, query);
@@ -646,6 +649,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             QueryPool.Return(ids);
+        }
+
+        private void AssertCannotEvaluateOrderByQueryOnSetBiggerThanInt32()
+        {
+            throw new NotSupportedException($"Cannot order by on set bigger than ~2.1B ({int.MaxValue}).");
         }
 
         protected virtual QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
@@ -1342,11 +1350,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             throw new NotSupportedInCoraxException($"Corax doesn't support 'Distinct' operation on collection bigger than int32 ({int.MaxValue}).");
         }
 
-        private static void ThrowCollectionTooBigToFetchWithoutStream()
-        {
-            throw new NotSupportedInCoraxException($"Fetching over int32 ({int.MaxValue}) entries in one query is available only via stream.");
-        }
-
+        
         public override void Dispose()
         {
             base.Dispose();
