@@ -400,13 +400,13 @@ namespace Raven.Server.Documents.Queries.Results
                         // https://issues.hibernatingrhinos.com/issue/RavenDB-19127
                         // We need to have a different instance of Id / LowerId, otherwise 
                         // they will be disposed (but then try to be used)
-                        Id = doc.IgnoreDispose ? doc.Id.CloneOnSameContext() : doc.Id,
+                        Id = doc.IgnoreDispose ? doc.Id?.CloneOnSameContext() : doc.Id,
                         ChangeVector = doc.ChangeVector,
                         Data = nested,
                         Etag = doc.Etag,
                         Flags = doc.Flags,
                         LastModified = doc.LastModified,
-                        LowerId = doc.IgnoreDispose ? doc.LowerId.CloneOnSameContext() : doc.LowerId,
+                        LowerId = doc.IgnoreDispose ? doc.LowerId?.CloneOnSameContext() : doc.LowerId,
                         NonPersistentFlags = doc.NonPersistentFlags,
                         StorageId = doc.StorageId,
                         TransactionMarker = doc.TransactionMarker
@@ -418,13 +418,13 @@ namespace Raven.Server.Documents.Queries.Results
                 case TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult ts:
                     return (new Document
                     {
-                        Id = doc.IgnoreDispose ? doc.Id.CloneOnSameContext() : doc.Id,
+                        Id = doc.IgnoreDispose ? doc.Id?.CloneOnSameContext() : doc.Id,
                         ChangeVector = doc.ChangeVector,
                         Data = _context.ReadObject(ts.Metadata, "time-series-metadata"),
                         Etag = doc.Etag,
                         Flags = doc.Flags,
                         LastModified = doc.LastModified,
-                        LowerId = doc.IgnoreDispose ? doc.LowerId.CloneOnSameContext() : doc.LowerId,
+                        LowerId = doc.IgnoreDispose ? doc.LowerId?.CloneOnSameContext() : doc.LowerId,
                         NonPersistentFlags = doc.NonPersistentFlags,
                         StorageId = doc.StorageId,
                         TransactionMarker = doc.TransactionMarker,
