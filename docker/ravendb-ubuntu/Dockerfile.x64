@@ -21,7 +21,7 @@ ENV RAVEN_ARGS='' \
 
 EXPOSE 8080 38888 161
 
-COPY ${path_to_deb} /opt/ravendb.deb
+COPY "${path_to_deb}" /opt/ravendb.deb
 
 RUN apt install /opt/ravendb.deb -y \
     && apt-get autoremove -y \
@@ -30,7 +30,7 @@ RUN apt install /opt/ravendb.deb -y \
 USER ravendb:ravendb
 
 COPY server-utils.sh cert-utils.sh run-raven.sh healthcheck.sh link-legacy-datadir.sh /usr/lib/ravendb/scripts/
-COPY settings.json /etc/ravendb/
+COPY settings.json /usr/lib/ravendb/server/
 
 HEALTHCHECK --start-period=60s CMD /usr/lib/ravendb/scripts/healthcheck.sh
 VOLUME /var/lib/ravendb/data /etc/ravendb

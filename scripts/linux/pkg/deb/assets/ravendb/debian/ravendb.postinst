@@ -4,7 +4,6 @@ set -e
 
 case "$1" in
     configure)
-<<<<<<< HEAD
         RAVEN_GID=$(getent group ravendb | cut -d ':' -f 3)
         if [[ -z "$RAVEN_GID" ]]; then
 
@@ -15,17 +14,6 @@ case "$1" in
         fi
 
         [[ -n "$RAVEN_USER_ID" ]] && UID_ARG="--uid $RAVEN_USER_ID"
-=======
-        useradd_uid=""
-        useradd_gid=""
-        if [ -n "$RAVEN_USER_ID" ]; then
-            useradd_uid="--uid $RAVEN_USER_ID"
-        fi
-
-        if [ -n "$RAVEN_GROUP_ID" ]; then
-            useradd_gid="--gid $RAVEN_GROUP_ID"
-        fi
->>>>>>> 8c127f2ade (RavenDB-18888 Fixes after review)
 
         getent passwd ravendb || adduser --disabled-login --disabled-password --system --home /var/lib/ravendb --no-create-home --quiet $UID_ARG --gid "$RAVEN_GID" ravendb
         
