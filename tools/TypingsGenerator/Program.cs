@@ -239,6 +239,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PagingPerformanceDetails));
             scripter.AddType(typeof(HugeDocumentsDetails));
             scripter.AddType(typeof(HugeDocumentInfo));
+            scripter.AddType(typeof(MismatchedReferencesLoadWarning));
             scripter.AddType(typeof(RequestLatencyDetail));
             scripter.AddType(typeof(WarnIndexOutputsPerDocument));
             scripter.AddType(typeof(IndexingReferenceLoadWarning));
