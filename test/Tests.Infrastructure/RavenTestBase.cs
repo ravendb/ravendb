@@ -514,6 +514,8 @@ namespace FastTests
             if (debug && Debugger.IsAttached == false)
                 return;
 
+            RavenTestHelper.AssertNotRunningOnCi();
+
             if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser))
@@ -549,6 +551,11 @@ namespace FastTests
 
         public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, string database = null, X509Certificate2 clientCert = null)
         {
+            if (debug && Debugger.IsAttached == false)
+                return;
+
+            RavenTestHelper.AssertNotRunningOnCi();
+
             if (clientCert != null && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser))
@@ -560,9 +567,6 @@ namespace FastTests
 
             try
             {
-                if (debug && Debugger.IsAttached == false)
-                    return;
-
                 var urls = documentStore.Urls;
                 if (clientCert != null)
                     Console.WriteLine($"Using certificate with serial: {clientCert.SerialNumber}");
