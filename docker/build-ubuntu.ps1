@@ -140,8 +140,9 @@ function BuildUbuntuDockerImage ($version, $arch) {
         }
 
         if(!$matchingFile) {
-            $env:RAVENDB_VERSION = "5.4.100"
+            $env:RAVENDB_VERSION = $version
             $env:OUTPUT_DIR = $(Convert-Path $DockerfileDir)
+            $env:PACKAGE_FILE_DIR = Resolve-Path $ArtifactsDir
         
             $currentScriptWorkingDirectory = $(Get-Location)
             Set-Location $(Split-Path $buildScriptPath)
@@ -152,7 +153,7 @@ function BuildUbuntuDockerImage ($version, $arch) {
             Set-Location $currentScriptWorkingDirectory
             CheckLastExitCode
 
-            $matchingFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$archNameToMatch*.deb" }
+            $matchingFile = Get-ChildItem $DockerfileDir | Where-Object { $_.Name -like "ravendb*$version*$archNameToMatch*.deb" }
             if ($matchingFile) {
                 $pathToDeb = $matchingFile.FullName
             } else {
