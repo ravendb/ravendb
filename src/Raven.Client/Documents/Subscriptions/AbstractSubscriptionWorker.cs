@@ -565,9 +565,27 @@ namespace Raven.Client.Documents.Subscriptions
 
                 BatchFromServer incomingBatch = await readFromServer.ConfigureAwait(false); // wait for batch reading to end
 
-                _processingCts.Token.ThrowIfCancellationRequested();
+                try
+                {
+                    _processingCts.Token.ThrowIfCancellationRequested();
 
-                batch.Initialize(incomingBatch);
+                    batch.Initialize(incomingBatch);
+                }
+                catch (Exception)
+                {
+                    try
+                    {
+                        using (incomingBatch.ReturnContext)
+                        {
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // nothing to be done here
+                    }
+
+                    throw;
+                }
 
                 notifiedSubscriber = Task.Run(async () => // the 2'nd thread
                 {
