@@ -74,6 +74,12 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
             if (combinedResult.IndexDefinitionRaftIndex == null || singleShardResult.IndexDefinitionRaftIndex > combinedResult.IndexDefinitionRaftIndex)
                 combinedResult.IndexDefinitionRaftIndex = singleShardResult.IndexDefinitionRaftIndex;
         }
+
+        if (singleShardResult.AutoIndexCreationRaftIndex.HasValue)
+        {
+            if (combinedResult.AutoIndexCreationRaftIndex == null || singleShardResult.AutoIndexCreationRaftIndex > combinedResult.AutoIndexCreationRaftIndex)
+                combinedResult.AutoIndexCreationRaftIndex = singleShardResult.AutoIndexCreationRaftIndex;
+        }
     }
 
     protected void HandleDocumentIncludes(QueryResult cmdResult, QueryResult<List<TResult>, List<TIncludes>> result)

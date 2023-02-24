@@ -257,6 +257,13 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
 
+            if (result.AutoIndexCreationRaftIndex.HasValue)
+            {
+                writer.WritePropertyName(nameof(result.AutoIndexCreationRaftIndex));
+                writer.WriteInteger(result.AutoIndexCreationRaftIndex.Value);
+                writer.WriteComma();
+            }
+
             var numberOfResults = await writer.WriteQueryResultAsync(context, result, metadataOnly: false, partial: true, token);
 
             writer.WriteEndObject();
@@ -694,6 +701,13 @@ namespace Raven.Server.Json
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.IndexDefinitionRaftIndex));
                 writer.WriteInteger(result.IndexDefinitionRaftIndex.Value);
+            }
+
+            if (result.AutoIndexCreationRaftIndex.HasValue)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(result.AutoIndexCreationRaftIndex));
+                writer.WriteInteger(result.AutoIndexCreationRaftIndex.Value);
             }
 
             writeAdditionalData?.Invoke(writer);
