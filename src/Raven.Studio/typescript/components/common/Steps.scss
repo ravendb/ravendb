@@ -3,7 +3,7 @@
 
 $step-bullet-size: 30px;
 $step-icon-size: 22px;
-
+$active-color: colors.$success;
 .steps {
     display: flex;
     align-items: center;
@@ -56,12 +56,13 @@ $step-icon-size: 22px;
         &.active {
             .step-bullet {
                 transform: scale(1);
-                border-color: colors.$text-emphasis-color;
+                border-color: $active-color;
                 background-color: transparent;
 
                 .bullet-icon-active {
                     opacity: 1;
                     transform: scale(0.6);
+                    color: $active-color;
                 }
             }
             .steps-label {
@@ -103,7 +104,7 @@ $step-icon-size: 22px;
 
     .steps-spacer {
         flex-grow: 1;
-        border-bottom: sizes.$border-width solid colors.$border-color;
+        border-bottom: sizes.$border-width solid colors.$border-color-light;
         margin: 0 sizes.$gutter-xs;
     }
 }

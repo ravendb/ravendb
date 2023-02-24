@@ -11,9 +11,22 @@ export default {
     title: "Bits/CreateDatabase",
     component: CreateDatabase,
     decorators: [withStorybookContexts, withBootstrap5],
+    argTypes: {
+        serverAuthentication: {
+            control: {
+                type: "boolean",
+            },
+        },
+        createDatabaseModal: {
+            control: "none",
+        },
+    },
 } as ComponentMeta<typeof CreateDatabase>;
 
-const TemplatePanel = (args: { serverAuthentication: boolean }) => {
+const TemplatePanel = (args: {
+    serverAuthentication: boolean;
+    licenseProps: { replication: boolean; sharding: boolean; dynamicDatabaseDistribution: boolean };
+}) => {
     const [createDatabaseModal, setCreateDatabaseModal] = useState(true);
     const toggleCreateDatabase = () => setCreateDatabaseModal(!createDatabaseModal);
 
@@ -31,14 +44,21 @@ const TemplatePanel = (args: { serverAuthentication: boolean }) => {
                 createDatabaseModal={createDatabaseModal}
                 toggleCreateDatabase={toggleCreateDatabase}
                 serverAuthentication={args.serverAuthentication}
+                licenseProps={args.licenseProps}
             ></CreateDatabase>
 
             <div id="OverlayContainer"></div>
             <div id="PopoverContainer" className="popover-container-fix"></div>
+            <div id="TooltipContainer"></div>
         </>
     );
 };
 
 export const Panel = boundCopy(TemplatePanel, {
     serverAuthentication: true,
+    licenseProps: {
+        replication: true,
+        sharding: false,
+        dynamicDatabaseDistribution: true,
+    },
 });
