@@ -35,8 +35,11 @@ public class MismatchedReferencesWarningHandler
     public void HandleMismatchedReference(Document referencedDocument, string referencedCollectionName, LazyStringValue sourceId, string actualCollection)
     {
         // another mismatch for source document
-        if(_mismatchedReferences.TryGetValue(sourceId, out Dictionary<string, LoadFailure> mismatchesForDocument) && mismatchesForDocument.Count < MaxMismatchedReferencesPerSource)
+        if(_mismatchedReferences.TryGetValue(sourceId, out Dictionary<string, LoadFailure> mismatchesForDocument))
         {
+            if (mismatchesForDocument.Count >= MaxMismatchedReferencesPerSource)
+                return;
+            
             // another mismatch referencing the same document
             if (mismatchesForDocument.TryGetValue(referencedDocument.Id, out LoadFailure loadFailure))
                 loadFailure.MismatchedCollections.Add(referencedCollectionName);
