@@ -1,6 +1,14 @@
 ﻿import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
 
 export default class DatabaseUtils {
+    static formatName(name: string) {
+        if (!DatabaseUtils.isSharded(name)) {
+            return name;
+        }
+
+        return DatabaseUtils.shardGroupKey(name) + " (shard #" + DatabaseUtils.shardNumber(name) + ")";
+    }
+
     static isSharded(name: string) {
         return name.includes("$");
     }

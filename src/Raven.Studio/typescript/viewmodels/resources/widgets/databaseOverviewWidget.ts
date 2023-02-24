@@ -7,6 +7,7 @@ import iconsPlusTextColumn = require("widgets/virtualGrid/columns/iconsPlusTextC
 import appUrl = require("common/appUrl");
 import perNodeStatItems = require("models/resources/widgets/perNodeStatItems");
 import databaseOverviewItem = require("models/resources/widgets/databaseOverviewItem");
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 class databaseOverviewWidget extends abstractDatabaseAndNodeAwareTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseOverviewPayload,
     perNodeStatItems<databaseOverviewItem>, databaseOverviewItem> {
@@ -72,7 +73,7 @@ class databaseOverviewWidget extends abstractDatabaseAndNodeAwareTableWidget<Rav
     protected prepareColumns(): virtualColumn[] {
         const grid = this.gridController();
         return [
-            new textColumn<databaseOverviewItem>(grid, x => x.hideDatabaseName ? "" : x.database, "Database", "20%"),
+            new textColumn<databaseOverviewItem>(grid, x => x.hideDatabaseName ? "" : DatabaseUtils.formatName(x.database), "Database", "20%"),
 
             new nodeTagColumn<databaseOverviewItem>(grid, item => this.prepareUrl(item, "Documents View")),
 

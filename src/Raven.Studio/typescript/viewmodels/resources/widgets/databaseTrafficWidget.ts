@@ -8,6 +8,7 @@ import trafficWatchItem = require("models/resources/widgets/trafficWatchItem");
 import generalUtils = require("common/generalUtils");
 import perNodeStatItems = require("models/resources/widgets/perNodeStatItems");
 import widget = require("viewmodels/resources/widgets/widget");
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 class databaseTrafficWidget extends abstractDatabaseAndNodeAwareTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseTrafficWatchPayload, 
     perNodeStatItems<trafficWatchItem>, trafficWatchItem> {
@@ -38,7 +39,7 @@ class databaseTrafficWidget extends abstractDatabaseAndNodeAwareTableWidget<Rave
     protected prepareColumns(): virtualColumn[] {
         const grid = this.gridController();
         return [
-            new textColumn<trafficWatchItem>(grid, x => x.hideDatabaseName ? "" : x.database, "Database", "30%"),
+            new textColumn<trafficWatchItem>(grid, x => x.hideDatabaseName ? "" : DatabaseUtils.formatName(x.database), "Database", "30%"),
             new nodeTagColumn<trafficWatchItem>(grid, item => this.prepareUrl(item, "Traffic Watch View")),
             new textColumn<trafficWatchItem>(grid, x => widget.formatNumber(x.requestsPerSecond), "Requests/s", "12%", {
                 headerTitle: "Requests made to node per second"
