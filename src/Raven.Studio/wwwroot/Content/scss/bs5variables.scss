@@ -646,11 +646,11 @@ $input-transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out 
 // scss-docs-start form-check-variables
 $form-check-input-width: 1em !default;
 $form-check-min-height: $font-size-base * $line-height-base !default;
-$form-check-padding-start: $form-check-input-width + 0.5em !default;
+$form-check-padding-start: 0 !default;
 $form-check-margin-bottom: 0.125rem !default;
 $form-check-label-color: null !default;
-$form-check-label-cursor: null !default;
-$form-check-transition: null !default;
+$form-check-label-cursor: pointer !default;
+$form-check-transition: background 0.2s $global-easing !default;
 
 $form-check-input-active-filter: brightness(90%) !default;
 
@@ -681,11 +681,11 @@ $form-check-inline-margin-end: 1rem !default;
 
 // scss-docs-start form-switch-variables
 $form-switch-color: rgba($text-muted-color, 0.6);
-$form-switch-width: $spacer !default;
-$form-switch-padding-start: $form-switch-width + $spacer-sm !default;
+$form-switch-width: 2em !default;
+$form-switch-padding-start: 0 !default;
 $form-switch-bg-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$form-switch-color}'/></svg>") !default;
 $form-switch-border-radius: $form-switch-width !default;
-$form-switch-transition: background-position 0.15s ease-in-out !default;
+$form-switch-transition: background-position 0.15s ease-in-out, background-color 0.2 $global-easing !default;
 
 $form-switch-focus-color: $text-emphasis-color !default;
 $form-switch-focus-bg-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='3' fill='#{$form-switch-focus-color}'/></svg>") !default;

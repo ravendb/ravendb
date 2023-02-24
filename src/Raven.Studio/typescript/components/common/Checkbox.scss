@@ -24,6 +24,33 @@ input {
     }
 }
 
+.form-check,
+.form-check-reverse {
+    display: flex !important;
+    align-items: center;
+    line-height: 1.15em;
+    .form-check-input {
+        margin-top: 0;
+    }
+}
+
+.form-check {
+    .form-check-input {
+        margin-top: 0;
+    }
+
+    .form-check-label {
+        margin-left: 0.75em;
+    }
+}
+
+.form-check-reverse {
+    flex-direction: row-reverse;
+    .form-check-label {
+        margin-right: 0.75em;
+    }
+}
+
 .form-switch {
     .form-check-input {
         &[disabled],
