@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Esprima.Ast;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Executors
@@ -23,7 +26,7 @@ namespace Raven.Server.Documents.Sharding.Executors
             _fullRange = record.Sharding.Shards.Keys.ToArray();
             _requestExecutors = new Dictionary<int, RequestExecutor>(record.Sharding.Shards.Count);
             var allNodes = store.GetClusterTopology().AllNodes;
-
+            
             foreach ((int shardNumber, var topology) in record.Sharding.Shards)
             {
                 var urls = topology.AllNodes.Select(tag => allNodes[tag]).ToArray();
@@ -31,7 +34,14 @@ namespace Raven.Server.Documents.Sharding.Executors
                     urls,
                     ShardHelper.ToShardName(databaseName, shardNumber),
                     store.Server.Certificate.Certificate,
-                    DocumentConventions.DefaultForServer);
+                    new DocumentConventions()
+                    {
+                        SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
+                        MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
+                        HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
+                        UseCompression = store.Configuration.Sharding.ShardExecutorUseCompression,
+                        GlobalHttpClientTimeout = store.Configuration.Sharding.OrchestratorTimeoutInMinutes.AsTimeSpan
+                    });
             }
         }
 

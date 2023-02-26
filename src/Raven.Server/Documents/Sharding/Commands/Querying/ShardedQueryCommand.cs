@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Queries;
+﻿using System;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Queries;
@@ -18,8 +19,9 @@ public class ShardedQueryCommand : AbstractShardedQueryCommand<QueryResult, Blit
         bool ignoreLimit,
         string indexName,
         bool canReadFromCache,
-        string raftUniqueRequestId)
-        : base(query, indexQuery, scope, metadataOnly, indexEntriesOnly, ignoreLimit, indexName, canReadFromCache, raftUniqueRequestId)
+        string raftUniqueRequestId,
+        TimeSpan globalHttpClientTimeout)
+        : base(query, indexQuery, scope, metadataOnly, indexEntriesOnly, ignoreLimit, indexName, canReadFromCache, raftUniqueRequestId, globalHttpClientTimeout)
     {
     }
 

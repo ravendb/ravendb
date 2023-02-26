@@ -63,7 +63,8 @@ namespace Raven.Server.Documents.Sharding.Operations
 
     public interface IShardedStreamableOperation : IShardedReadOperation<StreamResult, CombinedStreamResult>
     {
-        ShardedReadResult<CombinedStreamResult> IShardedOperation<StreamResult, ShardedReadResult<CombinedStreamResult>>.Combine(Dictionary<int, ShardExecutionResult<StreamResult>> results) =>
+        ShardedReadResult<CombinedStreamResult> IShardedOperation<StreamResult, ShardedReadResult<CombinedStreamResult>>.Combine(
+            Dictionary<int, ShardExecutionResult<StreamResult>> results) =>
             new() {Result = new CombinedStreamResult {Results = results}};
     }
 }

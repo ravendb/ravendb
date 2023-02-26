@@ -4,7 +4,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -13,13 +12,13 @@ namespace Raven.Server.Documents.Commands.Streaming
 {
     public class PostQueryStreamCommand : RavenCommand<StreamResult>
     {
-        private readonly BlittableJsonReaderObject _indexQueryServerSide;
+        private readonly string _query;
         private readonly string _debug;
         private readonly bool _ignoreLimit;
 
-        public PostQueryStreamCommand(BlittableJsonReaderObject indexQueryServerSide, string debug, bool ignoreLimit)
+        public PostQueryStreamCommand(string query, string debug, bool ignoreLimit)
         {
-            _indexQueryServerSide = indexQueryServerSide;
+            _query = query;
             _debug = debug;
             _ignoreLimit = ignoreLimit;
             ResponseType = RavenCommandResponseType.Empty;
@@ -31,8 +30,8 @@ namespace Raven.Server.Documents.Commands.Streaming
         {
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(async (stream) => await _indexQueryServerSide.WriteJsonToAsync(stream))
+                Method = HttpMethod.Post, 
+                Content = new StringContent(_query, Encoding.UTF8, "application/json")
             };
 
             var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/streams/queries?");

@@ -140,43 +140,53 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                         return;
                     }
 
-                    QueryResultServerSide<TQueryResult> result;
+                    QueryResultServerSide<TQueryResult> result = null;
                     try
                     {
                         result = await GetQueryResultsAsync(indexQuery, queryContext, existingResultEtag, metadataOnly, token);
                     }
                     catch (IndexDoesNotExistException)
                     {
+                        result?.Dispose();
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         return;
                     }
-
-                    if (result.NotModified)
+                    catch (Exception)
                     {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                        return;
+                        result?.Dispose();
+                        throw;
                     }
 
-                    HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
-
-                    long numberOfResults;
-                    long totalDocumentsSizeInBytes;
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), HttpContext.RequestAborted))
+                    using (result)
                     {
-                        result.Timings = indexQuery.Timings?.ToTimings();
+                        if (result.NotModified)
+                        {
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                            return;
+                        }
 
-                        (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery), token.Token);
-                        await writer.OuterFlushAsync();
-                    }
+                        HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
+
+                        long numberOfResults;
+                        long totalDocumentsSizeInBytes;
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), HttpContext.RequestAborted))
+                        {
+                            result.Timings = indexQuery.Timings?.ToTimings();
+
+                            (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly,
+                                WriteAdditionalData(indexQuery, shouldReturnServerSideQuery), token.Token);
+                            await writer.MaybeOuterFlushAsync();
+                        }
 
 
-                    QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
+                        QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
 
-                    if (RequestHandler.ShouldAddPagingPerformanceHint(numberOfResults))
-                    {
-                        RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"Query ({result.IndexName})",
-                            $"{indexQuery.Metadata.QueryText}\n{indexQuery.QueryParameters}", numberOfResults, indexQuery.PageSize, result.DurationInMs,
-                            totalDocumentsSizeInBytes);
+                        if (RequestHandler.ShouldAddPagingPerformanceHint(numberOfResults))
+                        {
+                            RequestHandler.AddPagingPerformanceHint(PagingOperationType.Queries, $"Query ({result.IndexName})",
+                                $"{indexQuery.Metadata.QueryText}\n{indexQuery.QueryParameters}", numberOfResults, indexQuery.PageSize, result.DurationInMs,
+                                totalDocumentsSizeInBytes);
+                        }
                     }
                 }
             }
@@ -199,6 +209,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                     if (TrafficWatchManager.HasRegisteredClients)
                         RequestHandler.AddStringToHttpContext(errorMessage, TrafficWatchChangeType.Queries);
                 }
+
                 throw;
             }
         }

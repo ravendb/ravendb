@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
@@ -136,7 +137,9 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
         {
             foreach (var (shardNumber, cmdResult) in results)
             {
-                mergedEnumerator.AddEnumerator(GetEnumerator(cmdResult.Result.Results.Clone(Context), shardNumber));
+                mergedEnumerator.AddEnumerator(GetEnumerator(cmdResult.Result.Results, shardNumber));
+                result.AddToDispose(cmdResult.ContextReleaser);
+                cmdResult.ContextReleaser = null;
             }
 
             while (mergedEnumerator.MoveNext())
