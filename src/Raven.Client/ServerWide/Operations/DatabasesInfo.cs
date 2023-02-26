@@ -202,6 +202,7 @@ namespace Raven.Client.ServerWide.Operations
         public List<NodeId> Rehabs { get; set; }
         public Dictionary<string, DatabaseGroupNodeStatus> Status { get; set; }
         public List<string> PriorityOrder { get; set; }
+        public bool DynamicNodesDistribution { get; set; }
 
         public NodesTopology()
         {
@@ -220,7 +221,8 @@ namespace Raven.Client.ServerWide.Operations
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables.Select(x => x.ToJson())),
                 [nameof(Rehabs)] = new DynamicJsonArray(Rehabs.Select(x => x.ToJson())),
                 [nameof(Status)] = DynamicJsonValue.Convert(Status),
-                [nameof(PriorityOrder)] = PriorityOrder != null ? new DynamicJsonArray(PriorityOrder) : null
+                [nameof(PriorityOrder)] = PriorityOrder != null ? new DynamicJsonArray(PriorityOrder) : null,
+                [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution
             };
         }
     }
