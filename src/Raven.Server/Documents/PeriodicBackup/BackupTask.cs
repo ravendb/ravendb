@@ -267,8 +267,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         runningBackupStatus.Version = ++_previousBackupStatus.Version;
                         // save the backup status
-                        AddInfo("Saving backup status");
-                        SaveBackupStatus(runningBackupStatus, _database, _logger, _backupResult);
+                        // create a local copy of ref `runningBackupStatus` so that it can be used in the anonymous method.
+                        var status = runningBackupStatus;
+                        AsyncHelpers.RunSync(() => 
+                            SaveBackupStatusAsync(status, _database, _logger, _backupResult, _onProgress, TaskCancelToken));
                     }
                 }
             }
@@ -858,32 +860,40 @@ namespace Raven.Server.Documents.PeriodicBackup
             _database.NotificationCenter.Dismiss(id);
         }
 
-        public static async void SaveBackupStatus(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, BackupResult backupResult = default)
+        public static async Task SaveBackupStatusAsync(PeriodicBackupStatus status, DocumentDatabase documentDatabase, Logger logger, 
+            BackupResult backupResult = default, Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
         {
+            long index = default;
+            UpdatePeriodicBackupStatusCommand command;
             try
             {
-                var command = new UpdatePeriodicBackupStatusCommand(documentDatabase.Name, RaftIdGenerator.NewId())
+                command = new UpdatePeriodicBackupStatusCommand(documentDatabase.Name, RaftIdGenerator.NewId())
                 {
                     PeriodicBackupStatus = status
                 };
 
-                var index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, () =>
-                    {
-                        var result = AsyncHelpers.RunSync(() => documentDatabase.ServerStore.SendToLeaderAsync(command));
-                        return Task.FromResult(result.Index);
-                    },
-                    infoMessage: "Saving the backup status in cluster",
-                    errorMessage: "Failed to save the backup status in cluster",
-                    backupResult);
+                try
+                {
+                    index = await BackupHelper.RunWithRetriesAsync(maxRetries: 10, SendCommandToLeaderAsync,
+                        infoMessage: "Saving the backup status in the cluster",
+                        errorMessage: "Failed to save the backup status in the cluster",
+                        backupResult, onProgress, operationCancelToken);
 
-                await BackupHelper.RunWithRetriesAsync(maxRetries: 10, () =>
-                    {
-                        AsyncHelpers.RunSync(() => documentDatabase.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index));
-                        return Task.FromResult(index);
-                    },
-                    infoMessage: "Verifying that the backup status was successfully saved in the cluster",
-                    errorMessage: "Failed to verify that the backup status was successfully saved in the cluster",
-                    backupResult);
+                    await BackupHelper.RunWithRetriesAsync(maxRetries: 10, WaitForCommitIndexChangeAsync,
+                        infoMessage: "Verifying that the backup status was successfully saved in the cluster",
+                        errorMessage: "Failed to verify that the backup status was successfully saved in the cluster",
+                        backupResult, onProgress, operationCancelToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    backupResult?.AddInfo("The backup task has been canceled, saving the backup status in the cluster");
+                    onProgress?.Invoke(backupResult?.Progress);
+
+                    if (index == default)
+                        index = await SendCommandToLeaderAsync();
+
+                    await WaitForCommitIndexChangeAsync();
+                }
 
                 if (logger.IsInfoEnabled)
                     logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
@@ -896,6 +906,18 @@ namespace Raven.Server.Documents.PeriodicBackup
                     logger.Operations(message, e);
 
                 backupResult?.AddError($"{message}{Environment.NewLine}{e}");
+            }
+
+            async Task<long> SendCommandToLeaderAsync()
+            {
+                var result = await documentDatabase.ServerStore.SendToLeaderAsync(command);
+                return result.Index;
+            }
+
+            async Task<long> WaitForCommitIndexChangeAsync()
+            {
+                await documentDatabase.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+                return default;
             }
         }
 
