@@ -10,7 +10,15 @@ namespace Sparrow.Server.Collections
         private readonly ConcurrentQueue<T> _inner = new ConcurrentQueue<T>();
         private readonly AsyncManualResetEvent _event = new AsyncManualResetEvent();
         public int Count => _inner.Count;
+        public bool IsEmpty => _inner.IsEmpty;
 
+        public void AddIfEmpty(T item)
+        {
+            if (_event.IsSet)
+                return;
+            Enqueue(item);
+        }
+        
         public void Enqueue(T item)
         {
             _inner.Enqueue(item);

@@ -6,7 +6,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class DatabaseConnectionState : IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>, IChangesConnectionState<TimeSeriesChange>
+    internal class DatabaseConnectionState : IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>, IChangesConnectionState<TimeSeriesChange>, IChangesConnectionState<AggressiveCacheUpdate>
     {
         public event Action<Exception> OnError;
 
@@ -91,6 +91,12 @@ namespace Raven.Client.Documents.Changes
             add => OnDocumentChangeNotification += value;
             remove => OnDocumentChangeNotification -= value;
         }
+        
+        event Action<AggressiveCacheUpdate> IChangesConnectionState<AggressiveCacheUpdate>.OnChangeNotification
+        {
+            add => OnAggressiveCacheUpdateNotification += value;
+            remove => OnAggressiveCacheUpdateNotification -= value;
+        }
 
         public void Dispose()
         {
@@ -99,6 +105,7 @@ namespace Raven.Client.Documents.Changes
             OnCounterChangeNotification = null;
             OnTimeSeriesChangeNotification = null;
             OnIndexChangeNotification = null;
+            OnAggressiveCacheUpdateNotification = null;
             OnOperationStatusChangeNotification = null;
             OnError = null;
         }
@@ -117,6 +124,7 @@ namespace Raven.Client.Documents.Changes
         private event Action<IndexChange> OnIndexChangeNotification;
 
         private event Action<OperationStatusChange> OnOperationStatusChangeNotification;
+        private event Action<AggressiveCacheUpdate> OnAggressiveCacheUpdateNotification;
 
         private event Action<TimeSeriesChange> OnTimeSeriesChangeNotification;
 
@@ -143,6 +151,11 @@ namespace Raven.Client.Documents.Changes
         public void Send(OperationStatusChange operationStatusChange)
         {
             OnOperationStatusChangeNotification?.Invoke(operationStatusChange);
+        }
+        
+        public void Send(AggressiveCacheUpdate aggressiveCacheUpdate)
+        {
+            OnAggressiveCacheUpdateNotification?.Invoke(aggressiveCacheUpdate);
         }
     }
 }

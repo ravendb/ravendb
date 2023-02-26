@@ -12,6 +12,7 @@ using Raven.Client.Exceptions.Changes;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -41,6 +42,9 @@ namespace Raven.Client.Documents.Changes
 
         private readonly ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState> _counters = new ConcurrentDictionary<DatabaseChangesOptions, DatabaseConnectionState>();
         private int _immediateConnection;
+        
+        private readonly TaskCompletionSource<ChangesSupportedFeatures> _supportedFeaturesTcs = new();
+        public Task<ChangesSupportedFeatures> SupportedFeatures => _supportedFeaturesTcs.Task;
 
         private ServerNode _serverNode;
         private int _nodeIndex;
@@ -55,6 +59,18 @@ namespace Raven.Client.Documents.Changes
             _tcs = new TaskCompletionSource<IDatabaseChanges>(TaskCreationOptions.RunContinuationsAsynchronously);
             _cts = new CancellationTokenSource();
             _client = CreateClientWebSocket(_requestExecutor);
+
+            SupportedFeatures.ContinueWith(async t =>
+            {
+                if (t.Result.TopologyChange == false)
+                    return;
+                
+                GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
+                await _requestExecutor
+                    .UpdateTopologyAsync(
+                        new RequestExecutor.UpdateTopologyParameters(_serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "watch-topology-change" })
+                    .ConfigureAwait(false);
+            });
 
             _onDispose = onDispose;
             ConnectionStatusChanged += OnConnectionStatusChanged;
@@ -166,6 +182,17 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
+        
+        public IChangesObservable<AggressiveCacheUpdate> ForAggressiveCaching()
+        {
+            var counter = GetOrAddConnectionState("aggressive-caching", "watch-aggressive-caching", "unwatch-aggressive-caching", null);
+
+            var taskedObservable = new ChangesObservable<AggressiveCacheUpdate, DatabaseConnectionState>(
+                counter,
+                notification => true);
+
+            return taskedObservable;
+        }
         public IChangesObservable<OperationStatusChange> ForOperationId(long operationId)
         {
             var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", operationId.ToString());
@@ -651,10 +678,10 @@ namespace Raven.Client.Documents.Changes
                             {
                                 try
                                 {
-                                    if (json.TryGet(nameof(TopologyChange), out bool supports) && supports)
+                                    if (json.TryGet(nameof(TopologyChange), out bool _))
                                     {
-                                        GetOrAddConnectionState("Topology", "watch-topology-change", "", "");
-                                        await _requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(_serverNode) { TimeoutInMs = 0, ForceUpdate = true, DebugTag = "watch-topology-change" }).ConfigureAwait(false);
+                                        var supportedFeatures = JsonDeserializationClient.ChangesSupportedFeatures(json);
+                                        _supportedFeaturesTcs.TrySetResult(supportedFeatures);
                                         continue;
                                     }
 
@@ -679,7 +706,7 @@ namespace Raven.Client.Documents.Changes
 
                                         default:
                                             json.TryGet("Value", out BlittableJsonReaderObject value);
-                                            NotifySubscribers(type, value, _counters.ForceEnumerateInThreadSafeManner().Select(x => x.Value).ToList());
+                                            NotifySubscribers(type, value);
                                             break;
                                     }
                                 }
@@ -695,47 +722,53 @@ namespace Raven.Client.Documents.Changes
             }
         }
 
-        private void NotifySubscribers(string type, BlittableJsonReaderObject value, List<DatabaseConnectionState> states)
+        private void NotifySubscribers(string type, BlittableJsonReaderObject value)
         {
             switch (type)
             {
+                case nameof(AggressiveCacheUpdate):
+                    foreach (var state in _counters)
+                    {
+                        state.Value.Send(AggressiveCacheUpdate.Instance);
+                    }
+                    break;
                 case nameof(DocumentChange):
                     var documentChange = DocumentChange.FromJson(value);
-                    foreach (var state in states)
+                    foreach (var state in _counters)
                     {
-                        state.Send(documentChange);
+                        state.Value.Send(documentChange);
                     }
                     break;
 
                 case nameof(CounterChange):
                     var counterChange = CounterChange.FromJson(value);
-                    foreach (var state in states)
+                    foreach (var state in _counters)
                     {
-                        state.Send(counterChange);
+                        state.Value.Send(counterChange);
                     }
                     break;
 
                 case nameof(TimeSeriesChange):
                     var timeSeriesChange = TimeSeriesChange.FromJson(value);
-                    foreach (var state in states)
+                    foreach (var state in _counters)
                     {
-                        state.Send(timeSeriesChange);
+                        state.Value.Send(timeSeriesChange);
                     }
                     break;
 
                 case nameof(IndexChange):
                     var indexChange = IndexChange.FromJson(value);
-                    foreach (var state in states)
+                    foreach (var state in _counters)
                     {
-                        state.Send(indexChange);
+                        state.Value.Send(indexChange);
                     }
                     break;
 
                 case nameof(OperationStatusChange):
                     var operationStatusChange = OperationStatusChange.FromJson(value);
-                    foreach (var state in states)
+                    foreach (var state in _counters)
                     {
-                        state.Send(operationStatusChange);
+                        state.Value.Send(operationStatusChange);
                     }
                     break;
 

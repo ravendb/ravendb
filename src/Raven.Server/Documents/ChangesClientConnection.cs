@@ -12,6 +12,7 @@ using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Sparrow.LowMemory;
 using Sparrow.Server.Collections;
 using Sparrow.Threading;
@@ -65,6 +66,7 @@ namespace Raven.Server.Documents
         private int _watchAllIndexes;
         private int _watchAllCounters;
         private int _watchAllTimeSeries;
+        private bool _aggressiveChanges;
 
         public class ChangeValue
         {
@@ -349,6 +351,12 @@ namespace Raven.Server.Documents
             if (IsDisposed)
                 return;
 
+            if (_aggressiveChanges)
+            {
+                PulseAggressiveCaching();
+                return;
+            }
+            
             if (_watchAllDocuments > 0)
             {
                 Send(change);
@@ -383,6 +391,12 @@ namespace Raven.Server.Documents
 
         public void SendIndexChanges(IndexChange change)
         {
+            if (_aggressiveChanges)
+            {
+                PulseAggressiveCaching();
+                return;
+            }
+
             if (_watchAllIndexes > 0)
             {
                 Send(change);
@@ -393,6 +407,20 @@ namespace Raven.Server.Documents
             {
                 Send(change);
             }
+        }
+
+        private static readonly ChangeValue AggressiveCachingPulseValue = new()
+        {
+            AllowSkip = true,
+            ValueToSend = new DynamicJsonValue
+            {
+                ["Type"] = nameof(AggressiveCacheUpdate),
+            }
+        };
+
+        private void PulseAggressiveCaching()
+        {
+            _sendQueue.AddIfEmpty(AggressiveCachingPulseValue);
         }
 
         public void SendTopologyChanges(TopologyChange change)
@@ -552,7 +580,7 @@ namespace Raven.Server.Documents
                         context.Renew();
 
                         var messagesCount = 0;
-                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
+                        using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
                             sp.Restart();
 
@@ -572,11 +600,11 @@ namespace Raven.Server.Documents
                                 context.Write(writer, value);
                                 messagesCount++;
 
-                                await writer.FlushAsync();
+                                writer.Flush();
 
                                 if (ms.Length > 16 * 1024)
                                     break;
-                            } while (_sendQueue.Count > 0 && sp.Elapsed < TimeSpan.FromSeconds(5));
+                            } while (_sendQueue.IsEmpty == false && sp.Elapsed < TimeSpan.FromSeconds(5));
 
                             writer.WriteEndArray();
                         }
@@ -726,7 +754,8 @@ namespace Raven.Server.Documents
             {
                 ValueToSend = new DynamicJsonValue
                 {
-                    ["TopologyChange"] = true
+                    [nameof(ChangesSupportedFeatures.TopologyChange)] = true,
+                    [nameof(ChangesSupportedFeatures.AggressiveCaching)] = true,
                 },
                 AllowSkip = false
             });
@@ -875,6 +904,14 @@ namespace Raven.Server.Documents
             else if (Match(command, "watch-topology-change"))
             {
                 WatchTopology();
+            }
+            else if (Match(command, "watch-aggressive-caching"))
+            {
+                _aggressiveChanges = true;
+            }
+            else if (Match(command, "unwatch-aggressive-caching"))
+            {
+                _aggressiveChanges = false;
             }
             else
             {
