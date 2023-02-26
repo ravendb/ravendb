@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public readonly TcpConnectionOptions TcpConnection;
         public readonly string ClientUri;
         private readonly MemoryStream _buffer = new MemoryStream();
-        private readonly Logger _logger;
+        private  Logger _logger;
         public readonly SubscriptionConnectionStats Stats;
 
         private SubscriptionConnectionStatsScope _connectionScope;
@@ -155,7 +155,6 @@ namespace Raven.Server.Documents.TcpHandlers
             TcpConnection = connectionOptions;
             _subscriptionConnectionInProgress = subscriptionConnectionInProgress;
             ClientUri = connectionOptions.TcpClient.Client.RemoteEndPoint.ToString();
-            _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
             _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, connectionOptions.ProtocolVersion);
             Stats = new SubscriptionConnectionStats();
@@ -181,7 +180,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 if (string.IsNullOrEmpty(_options.SubscriptionName))
                     return;
-
+                
+                _logger = LoggingSource.Instance.GetLogger(TcpConnection.DocumentDatabase.Name, $"{nameof(SubscriptionConnection)}<{_options.SubscriptionName}>");
                 context.OpenReadTransaction();
 
                 var subscriptionItemKey = SubscriptionState.GenerateSubscriptionItemKeyName(TcpConnection.DocumentDatabase.Name, _options.SubscriptionName);
