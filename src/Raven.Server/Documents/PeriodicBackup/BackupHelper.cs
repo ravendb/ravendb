@@ -50,7 +50,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 try
                 {
-                    operationCancelToken?.Token.ThrowIfCancellationRequested();
+                    if (retries > 0)
+                        operationCancelToken?.Token.ThrowIfCancellationRequested();
 
                     smugglerResult?.AddInfo(infoMessage);
                     onProgress?.Invoke(smugglerResult?.Progress);
