@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using NuGet.Protocol;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Util;
 using Raven.Server.Dashboard;
@@ -35,9 +36,10 @@ namespace Raven.Server.NotificationCenter.Handlers
                                     isValidFor(db, false) == false)
                                     continue; // not valid for this, skipping
                             }
+
+                            if (TrafficWatchManager.HasRegisteredClients) 
+                                AddStringToHttpContext(action.Json.ToString(), TrafficWatchChangeType.Notifications);
                             
-                            if (TrafficWatchManager.HasRegisteredClients)
-                                AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Notifications);
                             await writer.WriteToWebSocket(action.Json);
                         }
                     }
@@ -45,9 +47,10 @@ namespace Raven.Server.NotificationCenter.Handlers
                     foreach (var operation in ServerStore.Operations.GetActive().OrderBy(x => x.Description.StartTime))
                     {
                         var action = OperationChanged.Create(null, operation.Id, operation.Description, operation.State, operation.Killable);
-
+                        
                         if (TrafficWatchManager.HasRegisteredClients)
-                            AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Notifications);
+                            AddStringToHttpContext(action.ToJson().ToString(), TrafficWatchChangeType.Notifications);
+                       
                         await writer.WriteToWebSocket(action.ToJson());
                     }
 

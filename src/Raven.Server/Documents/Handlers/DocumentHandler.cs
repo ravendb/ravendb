@@ -60,9 +60,6 @@ namespace Raven.Server.Documents.Handlers
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
             var changeVector = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
 
-            if (TrafficWatchManager.HasRegisteredClients)
-                AddStringToHttpContext(id, TrafficWatchChangeType.Documents);
-
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
