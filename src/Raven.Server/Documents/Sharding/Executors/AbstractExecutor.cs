@@ -109,8 +109,6 @@ public abstract class AbstractExecutor : IDisposable
         foreach (var holder in commands.Values)
         {
             holder.Result = holder.Command.Result;
-
-
         }
 
         var result = operation.CombineCommands(commands);
@@ -120,7 +118,7 @@ public abstract class AbstractExecutor : IDisposable
             if (result == null)
                 return default;
 
-            var blittable = result as BlittableJsonReaderObject;
+            var blittable = result as BlittableJsonReaderObject; //TODO stav: dispose?
             return (TCombinedResult)(object)blittable.Clone(operation.CreateOperationContext());
         }
 
@@ -153,7 +151,7 @@ public abstract class AbstractExecutor : IDisposable
             {
                 ShardNumber = shardNumber,
                 Command = cmd,
-                Task = t,
+                CommandTask = t,
                 ContextReleaser = release
             });
 
@@ -175,7 +173,7 @@ public abstract class AbstractExecutor : IDisposable
         {
             try
             {
-                await command.Task;
+                await command.CommandTask;
             }
             catch (Exception e)
             {

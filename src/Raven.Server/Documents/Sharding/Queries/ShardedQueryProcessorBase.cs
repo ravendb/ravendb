@@ -31,7 +31,7 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
 
     }
 
-    protected override ShardedQueryCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
+    protected override ShardedQueryCommand CreateCommand(int shardNumber, string query, QueryTimingsScope scope) => CreateShardedQueryCommand(shardNumber, query, scope);
 
     protected void ApplyPaging(ref TCombinedResult result, QueryTimingsScope scope)
     {

@@ -12,13 +12,13 @@ namespace Raven.Server.Documents.Sharding.Commands.Querying;
 
 public abstract class AbstractShardedQueryCommand<TResult, TParameters> : AbstractQueryCommand<TResult, TParameters>, IRaftCommand
 {
-    private readonly BlittableJsonReaderObject _query;
+    private readonly string _query;
 
     public readonly QueryTimingsScope Scope;
 
     protected readonly string IndexName;
     protected AbstractShardedQueryCommand(
-        BlittableJsonReaderObject query,
+        string query,
         IndexQueryBase<TParameters> indexQuery,
         QueryTimingsScope scope,
         bool metadataOnly,

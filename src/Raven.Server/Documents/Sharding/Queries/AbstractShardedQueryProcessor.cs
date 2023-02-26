@@ -174,12 +174,12 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         return _commands ??= CreateQueryCommands(_queryTemplates, scope);
     }
 
-    protected abstract TCommand CreateCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope);
+    protected abstract TCommand CreateCommand(int shardNumber, string query, QueryTimingsScope scope);
 
-    protected ShardedQueryCommand CreateShardedQueryCommand(int shardNumber, BlittableJsonReaderObject query, QueryTimingsScope scope)
+    protected ShardedQueryCommand CreateShardedQueryCommand(int shardNumber, string query, QueryTimingsScope scope)
     {
         return new ShardedQueryCommand(
-            Context.ReadObject(query, "query"),
+            query,
             Query,
             scope?.For($"Shard_{shardNumber}"),
             _metadataOnly,
