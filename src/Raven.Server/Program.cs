@@ -259,10 +259,22 @@ namespace Raven.Server
                             }
                             else if (e is SocketException && PlatformDetails.RunningOnPosix)
                             {
+                                string urls;
+                                try
+                                {
+                                    var web = server.Configuration.Core?.ServerUrls ?? Array.Empty<string>();
+                                    var tcp = server.Configuration.Core.TcpServerUrls ?? Array.Empty<string>();
+                                    urls = string.Join(", ", web.Concat(tcp));
+                                }
+                                catch (Exception eUrl)
+                                {
+                                    urls = "Unable to figure our which URL is used because: " + eUrl; // should never happen
+                                }
                                 message =
                                     $"{Environment.NewLine}In Linux low-level port (below 1024) will need a special permission, " +
                                     $"if this is your case please run{Environment.NewLine}" +
-                                    $"sudo setcap CAP_NET_BIND_SERVICE=+eip {Path.Combine(AppContext.BaseDirectory, "Raven.Server")}";
+                                    $"sudo setcap CAP_NET_BIND_SERVICE=+eip {Path.Combine(AppContext.BaseDirectory, "Raven.Server")}{Environment.NewLine}" + 
+                                    $"Urls: [{urls}]";
                             }
                             else if (e.InnerException is LicenseExpiredException)
                             {
