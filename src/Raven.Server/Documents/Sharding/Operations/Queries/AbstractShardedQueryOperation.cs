@@ -69,6 +69,12 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
         if (combinedResult.LastQueryTime < singleShardResult.LastQueryTime)
             combinedResult.LastQueryTime = singleShardResult.LastQueryTime;
 
+        if (singleShardResult.ScannedResults != null)
+        {
+            combinedResult.ScannedResults ??= 0;
+            combinedResult.ScannedResults += singleShardResult.ScannedResults;
+        }
+
         if (singleShardResult.IndexDefinitionRaftIndex.HasValue)
         {
             if (combinedResult.IndexDefinitionRaftIndex != null && combinedResult.IndexDefinitionRaftIndex != singleShardResult.IndexDefinitionRaftIndex)
