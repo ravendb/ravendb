@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Background;
 using Raven.Server.ServerWide.Commands.Sharding;
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.Sharding.Background
 
                         var bucketStatistics = ShardedDocumentsStorage.GetBucketStatistics(context, start, end);
 
-                        if (bucketStatistics == null)
+                        if (bucketStatistics.Any() == false)
                             continue;
 
                         foreach (var bucketStats in bucketStatistics)
@@ -65,12 +66,12 @@ namespace Raven.Server.Documents.Sharding.Background
                         }
 
                         if (found)
-                        {
-                            await MoveDocumentsToShard(bucket, moveToShard);
-                            return;
-                        }
+                            break;
                     }
                 }
+
+                if (found)
+                    await MoveDocumentsToShard(bucket, moveToShard);
             }
             catch (OperationCanceledException)
             {
