@@ -160,7 +160,7 @@ public class ActualTests : RachisConsensusTestBase
             tasks.Add(t);
         }
 
-        await Task.WhenAll(tasks).WaitWithoutExceptionAsync(TimeSpan.MaxValue);
+        await Task.WhenAll(tasks);
     }
 
     public override void Dispose()
