@@ -1,8 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Sparrow.Json;
-using System.Collections.Generic;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Includes;
 
@@ -14,13 +13,7 @@ public interface ICounterIncludes
 
     int Count { get; }
 
-    public void Fill(Document document);
-
-    public void Gather(List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> list, ClusterOperationContext clusterOperationContext);
-
     long GetCountersSize();
 
     long GetCountersCount();
-
-    bool HasCountersIncludes();
 }

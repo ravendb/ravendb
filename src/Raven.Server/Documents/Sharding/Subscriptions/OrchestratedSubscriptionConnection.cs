@@ -5,7 +5,6 @@
 // ----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Sharding;
@@ -15,7 +14,6 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -23,7 +21,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Subscriptions
 {
-    public class OrchestratedSubscriptionConnection : SubscriptionConnectionBase<IncludeDocumentsOrchestratedSubscriptionCommand>
+    public class OrchestratedSubscriptionConnection : SubscriptionConnectionBase<OrchestratorIncludesCommandImpl>
     {
         private SubscriptionConnectionsStateOrchestrator _state;
         private readonly ShardedDatabaseContext _databaseContext;
@@ -70,8 +68,9 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             await SendConfirmAsync(_databaseContext.Time.GetUtcNow());
         }
 
-        protected override void GatherDocumentIncludes(IncludeDocumentsOrchestratedSubscriptionCommand includeDocuments, Document document)
+        protected override void GatherIncludesForDocument(OrchestratorIncludesCommandImpl includeDocuments, Document document)
         {
+            // no op
         }
 
         protected override async Task<bool> WaitForChangedDocsAsync(SubscriptionConnectionsStateBase state, Task pendingReply)
@@ -152,22 +151,15 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
             }
         }
 
-        public override AbstractSubscriptionProcessor<IncludeDocumentsOrchestratedSubscriptionCommand> CreateProcessor(SubscriptionConnectionBase<IncludeDocumentsOrchestratedSubscriptionCommand> connection)
+        public override AbstractSubscriptionProcessor<OrchestratorIncludesCommandImpl> CreateProcessor(SubscriptionConnectionBase<OrchestratorIncludesCommandImpl> connection)
         {
             if (connection is OrchestratedSubscriptionConnection orchestratedSubscription)
                 return new OrchestratedSubscriptionProcessor(connection.TcpConnection.DatabaseContext.ServerStore, connection.TcpConnection.DatabaseContext, orchestratedSubscription);
 
-            throw new InvalidOperationException("TODO [egor]");
+            throw new InvalidOperationException($"Expected to create a processor for '{nameof(OrchestratedSubscriptionConnection)}', but got: '{connection.GetType().Name}'.");
         }
 
         protected override void OnError(Exception e) => _processor?.CurrentBatch?.SetException(e);
-
-        protected override ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope, IncludeDocumentsOrchestratedSubscriptionCommand includeDocumentsCommand)
-        {
-            var includes = new List<BlittableJsonReaderObject>();
-            includeDocumentsCommand.Fill(includes);
-            return writer.WriteIncludesAsync(includes);
-        }
 
         public override void Dispose()
         {

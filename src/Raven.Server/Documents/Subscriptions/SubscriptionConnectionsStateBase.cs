@@ -200,7 +200,7 @@ public abstract class SubscriptionConnectionsStateBase
 
 public abstract class SubscriptionConnectionsStateBase<TSubscriptionConnection, TIncludesCommand> : SubscriptionConnectionsStateBase, IDisposable
     where TSubscriptionConnection : SubscriptionConnectionBase<TIncludesCommand>
-    where TIncludesCommand : AbstractIncludeDocumentsCommand
+    where TIncludesCommand : AbstractIncludesCommand
 {
     protected readonly ServerStore _server;
     protected readonly string _databaseName;

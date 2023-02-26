@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public const string BatchWaitForAcknowledge = "BatchWaitForAcknowledge";
     }
 
-    public class  SubscriptionConnection : SubscriptionConnectionBase<IncludeDocumentsCommand>
+    public class SubscriptionConnection : SubscriptionConnectionBase<DatabaseIncludesCommandImpl>
     {
         private static readonly TimeSpan InitialConnectionTimeout = TimeSpan.FromMilliseconds(16);
 
@@ -431,12 +431,9 @@ namespace Raven.Server.Documents.TcpHandlers
                 ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.PreviouslyRecordedChangeVector, lastChangeVectorSentInThisBatch);
         }
 
-        protected override ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
-            IncludeDocumentsCommand includeDocumentsCommand)
+        protected virtual void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)
         {
-            var includes = new List<Document>();
-            FillIncludedDocuments(includeDocumentsCommand, includes);
-            return writer.WriteIncludesAsync(context, includes);
+            includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: false);
         }
 
         protected virtual StatusMessageDetails GetDefault()
@@ -449,7 +446,7 @@ namespace Raven.Server.Documents.TcpHandlers
             };
         }
 
-        public override AbstractSubscriptionProcessor<IncludeDocumentsCommand> CreateProcessor(SubscriptionConnectionBase<IncludeDocumentsCommand> connection)
+        public override AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl> CreateProcessor(SubscriptionConnectionBase<DatabaseIncludesCommandImpl> connection)
         {
             if (connection is SubscriptionConnection subscriptionConnection)
             {
@@ -463,12 +460,12 @@ namespace Raven.Server.Documents.TcpHandlers
                 return new DocumentsDatabaseSubscriptionProcessor(server, database, subscriptionConnection);
             }
 
-            throw new InvalidOperationException("TODO [egor]");
+            throw new InvalidOperationException($"Expected to create a processor for '{nameof(SubscriptionConnection)}', but got: '{connection.GetType().Name}'.");
         }
 
-        protected override void GatherDocumentIncludes(IncludeDocumentsCommand includeDocuments, Document document)
+        protected override void GatherIncludesForDocument(DatabaseIncludesCommandImpl includeDocuments, Document document)
         {
-            includeDocuments?.Gather(document);
+            includeDocuments?.GatherIncludesForDocument(document);
         }
 
         protected override string WhosTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState) => _serverStore.WhoseTaskIsIt(topology, subscriptionState, subscriptionState);

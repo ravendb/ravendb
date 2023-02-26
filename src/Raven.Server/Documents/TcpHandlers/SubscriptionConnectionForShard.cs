@@ -65,7 +65,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
         return result;
     }
 
-    public override AbstractSubscriptionProcessor<IncludeDocumentsCommand> CreateProcessor(SubscriptionConnectionBase<IncludeDocumentsCommand> connection)
+    public override AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl> CreateProcessor(SubscriptionConnectionBase<DatabaseIncludesCommandImpl> connection)
     {
         if (connection is SubscriptionConnectionForShard shardConnection)
         {
@@ -80,7 +80,7 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
             return new ShardedDocumentsDatabaseSubscriptionProcessor(server, database, shardConnection);
         }
 
-        throw new InvalidOperationException("TODO [egor]");
+        throw new InvalidOperationException($"Expected to create a processor for '{nameof(SubscriptionConnectionForShard)}', but got: '{connection.GetType().Name}'.");
     }
 
     protected override async Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch)
@@ -132,8 +132,8 @@ public class SubscriptionConnectionForShard : SubscriptionConnection
             return tag;
         });
 
-    protected override void FillIncludedDocuments(IncludeDocumentsCommand includeDocumentsCommand, List<Document> includes)
+    protected override void FillIncludedDocuments(DatabaseIncludesCommandImpl includeDocumentsCommand, List<Document> includes)
     {
-        includeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
+        includeDocumentsCommand.IncludeDocumentsCommand.Fill(includes, includeMissingAsNull: true);
     }
 }

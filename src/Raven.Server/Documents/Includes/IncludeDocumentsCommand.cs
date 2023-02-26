@@ -25,6 +25,7 @@ namespace Raven.Server.Documents.Includes
         private HashSet<string> _idsToIgnore;
 
         public DocumentsOperationContext Context => _context;
+        public override int Count => _includedIds?.Count ?? 0;
 
         public IncludeDocumentsCommand(DocumentsStorage storage, DocumentsOperationContext context, string[] includes, bool isProjection)
         {
@@ -47,7 +48,7 @@ namespace Raven.Server.Documents.Includes
             _includedIds.UnionWith(ids);
         }
 
-        public virtual void Gather(Document document)
+        public void Gather(Document document)
         {
             if (document == null)
                 return;
@@ -124,8 +125,7 @@ namespace Raven.Server.Documents.Includes
             }
         }
 
-
-        public virtual void Fill(List<Document> result, bool includeMissingAsNull)
+        public void Fill(List<Document> result, bool includeMissingAsNull)
         {
             if (_includedIds == null || _includedIds.Count == 0)
                 return;
@@ -193,12 +193,5 @@ namespace Raven.Server.Documents.Includes
                 Id = docId;
             }
         }
-
-        internal override bool HasIncludesIds() => _includedIds?.Count > 0;
-    }
-
-    public abstract class AbstractIncludeDocumentsCommand
-    {
-        internal abstract bool HasIncludesIds();
     }
 }

@@ -15,7 +15,7 @@ using Sparrow.Logging;
 namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 
 public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : IDisposable
-    where TIncludesCommand : AbstractIncludeDocumentsCommand
+    where TIncludesCommand : AbstractIncludesCommand
 {
     protected readonly ServerStore Server;
     protected readonly ISubscriptionConnection Connection;
@@ -53,22 +53,19 @@ public abstract class AbstractSubscriptionProcessor<TIncludesCommand> : IDisposa
     protected ClusterOperationContext ClusterContext;
     protected TIncludesCommand IncludesCmd;
 
-    public virtual IDisposable InitializeForNewBatch(ClusterOperationContext clusterContext, out TIncludesCommand includesCommands, out ITimeSeriesIncludes timeSeriesIncludes, out ICounterIncludes counterIncludes)
+    public virtual IDisposable InitializeForNewBatch(ClusterOperationContext clusterContext, out TIncludesCommand includesCommands)
     {
         InitializeProcessor();
 
         ClusterContext = clusterContext;
         var commands = CreateIncludeCommands();
-        IncludesCmd = commands.IncludesCommand;
-
-        includesCommands = commands.IncludesCommand;
-        timeSeriesIncludes = commands.TimeSeriesIncludes;
-        counterIncludes = commands.CounterIncludes;
+        IncludesCmd = commands;
+        includesCommands = commands;
 
         return null;
     }
 
-    protected abstract (TIncludesCommand IncludesCommand, ITimeSeriesIncludes TimeSeriesIncludes, ICounterIncludes CounterIncludes) CreateIncludeCommands();
+    protected abstract TIncludesCommand CreateIncludeCommands();
 
     public virtual void Dispose()
     {
