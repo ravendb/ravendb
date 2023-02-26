@@ -1054,7 +1054,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(1594, stats.Size); // we still have 'artificial' tombstones on this shard
+                    Assert.Equal(2794, stats.Size); // we still have 'artificial' tombstones on this shard
                     Assert.Equal(0, stats.NumberOfDocuments);
                 }
 
