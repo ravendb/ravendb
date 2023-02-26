@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Sharding.Commands.Querying;
 public class ShardedQueryCommand : AbstractShardedQueryCommand<QueryResult, BlittableJsonReaderObject>
 {
     public ShardedQueryCommand(
-        BlittableJsonReaderObject query,
+        string query,
         IndexQueryServerSide indexQuery,
         QueryTimingsScope scope,
         bool metadataOnly,

@@ -2285,6 +2285,7 @@ namespace Raven.Client.Http
             private readonly bool _useCompression;
             private readonly TimeSpan? _pooledConnectionLifetime;
             private readonly TimeSpan? _pooledConnectionIdleTimeout;
+            private readonly TimeSpan _globalHttpClientTimeout;
             private readonly Type _httpClientType;
 
             public HttpClientCacheKey(string certificateThumbprint, bool useCompression, TimeSpan? pooledConnectionLifetime, TimeSpan? pooledConnectionIdleTimeout, TimeSpan globalHttpClientTimeout, Type httpClientType)
@@ -2293,6 +2294,7 @@ namespace Raven.Client.Http
                 _useCompression = useCompression;
                 _pooledConnectionLifetime = pooledConnectionLifetime;
                 _pooledConnectionIdleTimeout = pooledConnectionIdleTimeout;
+                _globalHttpClientTimeout = globalHttpClientTimeout;
                 _globalHttpClientTimeout = globalHttpClientTimeout;
                 _httpClientType = httpClientType;
             }
@@ -2303,7 +2305,7 @@ namespace Raven.Client.Http
                        && _useCompression == other._useCompression 
                        && Nullable.Equals(_pooledConnectionLifetime, other._pooledConnectionLifetime) 
                        && Nullable.Equals(_pooledConnectionIdleTimeout, other._pooledConnectionIdleTimeout)
-                       && Nullable.Equals(_globalHttpClientTimeout, other._globalHttpClientTimeout
+                       && Nullable.Equals(_globalHttpClientTimeout, other._globalHttpClientTimeout)
                        && _httpClientType == other._httpClientType;
             }
 
