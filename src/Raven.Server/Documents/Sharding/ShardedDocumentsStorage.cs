@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -149,11 +148,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
     [StorageIndexEntryKeyGenerator]
     internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(Transaction tx, ref TableValueReader tvr, out Slice slice)
     {
-        var tombstoneType = *(Tombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int _);
-        if (tombstoneType == Tombstone.TombstoneType.Revision)
-            return ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
-
-        return GenerateBucketAndEtagIndexKey(tx, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
+        return ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
     }
 
     internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(Transaction tx, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
