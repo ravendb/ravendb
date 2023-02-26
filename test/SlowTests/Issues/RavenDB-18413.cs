@@ -47,10 +47,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void ToQueryableTimingsOutTimings()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ToQueryableTimingsOutTimings(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {

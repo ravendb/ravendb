@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Timings;
@@ -23,7 +24,7 @@ public class FilterTests : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void CanUseFilterAsContextualKeywordForBackwardCompatability(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -51,8 +52,9 @@ select filter(a)").Count();
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public void CanUseFilterWithCollectionQuery(Options options)
+    [RavenData(1, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenData(3, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+    public void CanUseFilterWithCollectionQuery(Options options, long scannedResults)
     {
         using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
@@ -105,7 +107,7 @@ select filter(a)").Count();
                 .Statistics(out stats)
                 .SingleOrDefault();
             Assert.Equal("Jane", result.Name);
-            Assert.Equal(1, stats.ScannedResults);
+            Assert.Equal(scannedResults, stats.ScannedResults);
 
             result = s.Advanced.DocumentQuery<Employee>()
                 .Filter(
@@ -114,14 +116,14 @@ select filter(a)").Count();
                 .Statistics(out stats)
                 .SingleOrDefault();
             Assert.Equal("Jane", result.Name);
-            Assert.Equal(1, stats.ScannedResults);
+            Assert.Equal(scannedResults, stats.ScannedResults);
 
             result = s.Query<Employee>()
                 .Filter(f => f.Active == true, 1)
                 .Statistics(out stats)
                 .SingleOrDefault();
             Assert.Equal("Jane", result.Name);
-            Assert.Equal(1, stats.ScannedResults);
+            Assert.Equal(scannedResults, stats.ScannedResults);
         }
 
         // parameters
@@ -171,8 +173,9 @@ select filter(a)").Count();
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-    public async Task AsyncCanUseFilterWithCollectionQuery(Options options)
+    [RavenData(1, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenData(3, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+    public async Task AsyncCanUseFilterWithCollectionQuery(Options options, long scannedResults)
     {
         using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
@@ -222,14 +225,14 @@ select filter(a)").Count();
                 .Statistics(out stats)
                 .SingleOrDefaultAsync();
             Assert.Equal("Jane", result.Name);
-            Assert.Equal(1, stats.ScannedResults);
+            Assert.Equal(scannedResults, stats.ScannedResults);
 
             result = await s.Query<Employee>()
                 .Filter(f => f.Active == true, 1)
                 .Statistics(out stats)
                 .SingleOrDefaultAsync();
             Assert.Equal("Jane", result.Name);
-            Assert.Equal(1, stats.ScannedResults);
+            Assert.Equal(scannedResults, stats.ScannedResults);
         }
     }
 
@@ -471,7 +474,6 @@ select filter(a)").Count();
         // spatial
         using (var s = store.OpenSession())
         {
-            WaitForUserToContinueTheTest(store);
             var shape =
                 "POLYGON((-122.32246398925781 47.643055992166275,-122.32795715332031 47.62917538239487,-122.33207702636719 47.60904194838943,-122.32109069824219 47.595846873927044,-122.31422424316406 47.594920778814824,-122.30701446533203 47.58959541384278,-122.28538513183594 47.59029005739745,-122.27989196777344 47.620382422330565,-122.28401184082031 47.62454769305083,-122.27645874023438 47.632414521155376,-122.27577209472656 47.6421307328982,-122.29328155517578 47.64536906863988,-122.32246398925781 47.643055992166275))";
             var emp = s.Advanced.RawQuery<Employee>(@"
@@ -493,11 +495,11 @@ filter Name = 'Frank'")
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [InlineData("from Employees filter spatial.within(spatial.point(Location.Latitude, Location.Longitude), spatial.wkt($wkt))", typeof(RavenException))]
-    [InlineData("from Employees filter MoreLikeThis('emps/jane')", typeof(RavenException))]
-    [InlineData("from Employees filter MoreLikeThis('emps/jane') select suggest(Name, 'jake')", typeof(RavenException))]
-    [InlineData("from Employees filter Age < 10 select facet(Name)", typeof(InvalidQueryException))]
-    public void InvalidFilterQueries(string q, Type exception)
+    [RavenData("from Employees filter spatial.within(spatial.point(Location.Latitude, Location.Longitude), spatial.wkt($wkt))", typeof(RavenException), DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData("from Employees filter MoreLikeThis('emps/jane')", typeof(RavenException), DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData("from Employees filter MoreLikeThis('emps/jane') select suggest(Name, 'jake')", typeof(RavenException), DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData("from Employees filter Age < 10 select facet(Name)", typeof(InvalidQueryException), DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+    public void InvalidFilterQueries(Options options, string q, Type exception)
     {
         using var store = GetDocumentStore();
         Insert(store, GetDatabaseItems(additional: new() { (new Employee("Frank", "emps/jane", true, 51, new Location(47.623473f, -122.306009f)), "emps/frank") }));
@@ -510,7 +512,7 @@ filter Name = 'Frank'")
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void InvalidFilterQueriesInLinq(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -525,7 +527,7 @@ filter Name = 'Frank'")
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void CanUseFilterQueryOnMapReduce(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -576,7 +578,7 @@ filter Name = 'Frank'")
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public async Task AsyncCanUseFilterQueryOnMapReduce(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -609,7 +611,7 @@ filter Name = 'Frank'")
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void ExtendedLinqTest(Options options)
     {
         using var store = GetDocumentStore(options);
@@ -653,7 +655,7 @@ filter Name = 'Frank'")
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void CannotUseFacetWithFilter(Options options)
     {
         using (var store = GetDocumentStore(options))
@@ -693,13 +695,41 @@ filter Name = 'Frank'")
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
     public void Timings(Options options)
+    {
+        var timings = GetTimings(options);
+
+        Assert.True(timings.Timings[nameof(QueryTimingsScope.Names.Query)].Timings[nameof(QueryTimingsScope.Names.Filter)]
+            .DurationInMs >= 0);
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+    public void TimingsSharded(Options options)
+    {
+        var timings = GetTimings(options);
+
+        var shards = timings.Timings[nameof(QueryTimingsScope.Names.Query)].Timings[nameof(QueryTimingsScope.Names.Execute)];
+        var count = 0;
+        foreach (var shard in shards.Timings)
+        {
+            var queryTimings = shard.Value.Timings[nameof(QueryTimingsScope.Names.Query)];
+            if (queryTimings.Timings.TryGetValue(nameof(QueryTimingsScope.Names.Filter), out var filterTimings) == false)
+                continue;
+
+            count++;
+            Assert.True(filterTimings.DurationInMs >= 0);
+        }
+
+        Assert.Equal(2, count);
+    }
+
+    private QueryTimings GetTimings(Options options)
     {
         using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
-
 
         using (var session = store.OpenSession())
         {
@@ -713,8 +743,7 @@ filter Name = 'Frank'")
             var queryResult = query.ToList();
             Assert.Equal("Jane", queryResult[0].Name);
 
-            Assert.True(timings.Timings[nameof(QueryTimingsScope.Names.Query)].Timings[nameof(QueryTimingsScope.Names.Filter)]
-                .DurationInMs >= 0);
+            return timings;
         }
     }
 

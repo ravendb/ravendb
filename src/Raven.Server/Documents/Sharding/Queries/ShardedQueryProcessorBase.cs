@@ -47,12 +47,13 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
             }
         }
 
-        if (Query.Limit is > 0 && result.Results.Count > Query.Limit)
+        var limit = Math.Min(Query.Limit ?? long.MaxValue, Query.FilterLimit ?? long.MaxValue);
+        if (result.Results.Count > limit)
         {
             using (GetPagingScope())
             {
-                var index = Math.Min(Query.Limit.Value, int.MaxValue);
-                var count = result.Results.Count - Query.Limit.Value;
+                long index = Math.Min(limit, int.MaxValue);
+                long count = result.Results.Count - limit;
                 if (count > int.MaxValue)
                     count = int.MaxValue; //todo: Grisha: take a look
                 result.Results.RemoveRange((int)index, (int)count);
