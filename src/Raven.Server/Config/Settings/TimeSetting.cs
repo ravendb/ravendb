@@ -45,6 +45,11 @@ namespace Raven.Server.Config.Settings
             }
         }
 
+        public TimeSetting(TimeSpan timeSpan)
+        {
+            AsTimeSpan = timeSpan;
+        }
+
         internal long GetValue(TimeUnit requestedUnit)
         {
             switch (requestedUnit)

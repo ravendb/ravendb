@@ -267,6 +267,8 @@ namespace Raven.Client.Documents.Conventions
             _firstBroadcastAttemptTimeout = TimeSpan.FromSeconds(5);
             _secondBroadcastAttemptTimeout = TimeSpan.FromSeconds(30);
 
+            _globalHttpClientTimeout = TimeSpan.FromHours(12);
+
             _waitForIndexesAfterSaveChangesTimeout = TimeSpan.FromSeconds(15);
             _waitForReplicationAfterSaveChangesTimeout = TimeSpan.FromSeconds(15);
             _waitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15);
@@ -318,6 +320,7 @@ namespace Raven.Client.Documents.Conventions
         private TimeSpan _waitForIndexesAfterSaveChangesTimeout;
         private TimeSpan _waitForReplicationAfterSaveChangesTimeout;
         private TimeSpan _waitForNonStaleResultsTimeout;
+        private TimeSpan _globalHttpClientTimeout;
 
         private int _loadBalancerContextSeed;
         private LoadBalanceBehavior _loadBalanceBehavior;
@@ -478,6 +481,16 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _requestTimeout = value;
+            }
+        }
+
+        public TimeSpan GlobalHttpClientTimeout
+        {
+            get => _globalHttpClientTimeout;
+            set
+            {
+                AssertNotFrozen();
+                _globalHttpClientTimeout = value;
             }
         }
 

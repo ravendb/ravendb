@@ -48,7 +48,7 @@ namespace Raven.Client.Http
 
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
 
-        internal static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
+        internal readonly TimeSpan GlobalHttpClientTimeout;
 
         private static readonly ConcurrentDictionary<HttpClientCacheKey, Lazy<HttpClientCacheItem>> GlobalHttpClientCache = new ConcurrentDictionary<HttpClientCacheKey, Lazy<HttpClientCacheItem>>();
 
@@ -139,8 +139,8 @@ namespace Raven.Client.Http
             get => _defaultTimeout;
             set
             {
-                if (value.HasValue && value.Value > GlobalHttpClientTimeout)
-                    throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{value}'.");
+                if (GlobalHttpClientTimeout.Milliseconds >= 0 && value.HasValue && value.Value > GlobalHttpClientTimeout)
+                    ThrowTimeoutTooLarge(value);
 
                 _defaultTimeout = value;
             }
@@ -153,8 +153,8 @@ namespace Raven.Client.Http
             get => _secondBroadcastAttemptTimeout;
             set
             {
-                if (value > GlobalHttpClientTimeout)
-                    throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{value}'.");
+                if (GlobalHttpClientTimeout.Milliseconds >= 0 && value > GlobalHttpClientTimeout)
+                    ThrowTimeoutTooLarge(value);
 
                 _secondBroadcastAttemptTimeout = value;
             }
@@ -167,8 +167,8 @@ namespace Raven.Client.Http
             get => _firstBroadcastAttemptTimeout;
             set
             {
-                if (value > GlobalHttpClientTimeout)
-                    throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{value}'.");
+                if (GlobalHttpClientTimeout.Milliseconds >= 0 && value > GlobalHttpClientTimeout)
+                    ThrowTimeoutTooLarge(value);
 
                 _firstBroadcastAttemptTimeout = value;
             }
@@ -265,7 +265,7 @@ namespace Raven.Client.Http
             TimeSpan? httpPooledConnectionIdleTimeout = null;
 #endif
 
-            return new HttpClientCacheKey(Certificate?.Thumbprint ?? string.Empty, Conventions.UseCompression, httpPooledConnectionLifetime, httpPooledConnectionIdleTimeout, Conventions.HttpClientType);
+            return new HttpClientCacheKey(Certificate?.Thumbprint ?? string.Empty, Conventions.UseCompression, httpPooledConnectionLifetime, httpPooledConnectionIdleTimeout, GlobalHttpClientTimeout, Conventions.HttpClientType);
         }
 
         internal static void ClearHttpClientsPool()
@@ -334,6 +334,7 @@ namespace Raven.Client.Http
 
             ContextPool = new JsonContextPool(Conventions.MaxContextSizeToKeep, maxNumberOfContextsToKeepInGlobalStack, 1024);
 
+            GlobalHttpClientTimeout = conventions.GlobalHttpClientTimeout;
             DefaultTimeout = Conventions.RequestTimeout;
             SecondBroadcastAttemptTimeout = conventions.SecondBroadcastAttemptTimeout;
             FirstBroadcastAttemptTimeout = conventions.FirstBroadcastAttemptTimeout;
@@ -975,7 +976,7 @@ namespace Raven.Client.Http
                 var timeout = command.Timeout ?? _defaultTimeout;
                 if (timeout.HasValue)
                 {
-                    if (timeout > GlobalHttpClientTimeout)
+                    if (GlobalHttpClientTimeout.Milliseconds >= 0 && timeout > GlobalHttpClientTimeout)
                         ThrowTimeoutTooLarge(timeout);
 
                     using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
@@ -1314,7 +1315,7 @@ namespace Raven.Client.Http
             // of the nodes, in which case we have nothing to do
         }
 
-        private static void ThrowTimeoutTooLarge(TimeSpan? timeout)
+        private void ThrowTimeoutTooLarge(TimeSpan? timeout)
         {
             throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
         }
@@ -2286,12 +2287,13 @@ namespace Raven.Client.Http
             private readonly TimeSpan? _pooledConnectionIdleTimeout;
             private readonly Type _httpClientType;
 
-            public HttpClientCacheKey(string certificateThumbprint, bool useCompression, TimeSpan? pooledConnectionLifetime, TimeSpan? pooledConnectionIdleTimeout, Type httpClientType)
+            public HttpClientCacheKey(string certificateThumbprint, bool useCompression, TimeSpan? pooledConnectionLifetime, TimeSpan? pooledConnectionIdleTimeout, TimeSpan globalHttpClientTimeout, Type httpClientType)
             {
                 _certificateThumbprint = certificateThumbprint;
                 _useCompression = useCompression;
                 _pooledConnectionLifetime = pooledConnectionLifetime;
                 _pooledConnectionIdleTimeout = pooledConnectionIdleTimeout;
+                _globalHttpClientTimeout = globalHttpClientTimeout;
                 _httpClientType = httpClientType;
             }
 
@@ -2301,6 +2303,7 @@ namespace Raven.Client.Http
                        && _useCompression == other._useCompression 
                        && Nullable.Equals(_pooledConnectionLifetime, other._pooledConnectionLifetime) 
                        && Nullable.Equals(_pooledConnectionIdleTimeout, other._pooledConnectionIdleTimeout)
+                       && Nullable.Equals(_globalHttpClientTimeout, other._globalHttpClientTimeout
                        && _httpClientType == other._httpClientType;
             }
 
@@ -2311,7 +2314,7 @@ namespace Raven.Client.Http
 
             public override int GetHashCode()
             {
-                return HashCode.Combine(_certificateThumbprint, _useCompression, _pooledConnectionLifetime, _pooledConnectionIdleTimeout, _httpClientType);
+                return HashCode.Combine(_certificateThumbprint, _useCompression, _pooledConnectionLifetime, _pooledConnectionIdleTimeout, _pooledConnectionIdleTimeout, _httpClientType);
             }
         }
     }

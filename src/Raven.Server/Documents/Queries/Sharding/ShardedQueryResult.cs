@@ -15,6 +15,7 @@ public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObjec
     private ICounterIncludes _counterIncludes;
     private ITimeSeriesIncludes _includeTimeSeries;
     private ICompareExchangeValueIncludes _includeCompareExchangeValues;
+    private List<IDisposable> _shardContextsToDispose;
 
     public ShardedQueryResult() : base(indexDefinitionRaftIndex: null)
     {
@@ -82,5 +83,22 @@ public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObjec
     public override IRevisionIncludes GetRevisionIncludes()
     {
         return _includeRevisions;
+    }
+
+    public void AddToDispose(IDisposable disposable)
+    {
+        _shardContextsToDispose ??= new List<IDisposable>();
+        _shardContextsToDispose.Add(disposable);
+    }
+
+    public override void Dispose()
+    {
+        if (_shardContextsToDispose == null)
+            return;
+
+        foreach (var disposable in _shardContextsToDispose)
+        {
+            disposable.Dispose();
+        }
     }
 }

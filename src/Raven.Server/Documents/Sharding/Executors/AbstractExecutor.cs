@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,9 +13,10 @@ namespace Raven.Server.Documents.Sharding.Executors
     public class ShardExecutionResult<T>
     {
         public int ShardNumber;
-        public T Result;
         public RavenCommand<T> Command;
+        public T Result;
         public Task CommandTask;
+        public IDisposable ContextReleaser;
     }
 };
 
@@ -75,22 +75,20 @@ public abstract class AbstractExecutor : IDisposable
         where TExecutionMode : struct, IExecutionMode
         where TFailureMode : struct, IFailureMode
     {
-        int position = 0;
-        var commands = ArrayPool<CommandHolder<TResult>>.Shared.Rent(shards.Length);
+        var commands = new Dictionary<int, ShardExecutionResult<TResult>>();
         try
         {
-            position = await ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(shards, operation, commands, token);
+            await ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(shards, operation, commands, token);
 
             if (operation is IShardedOperation)
                 return default;
 
-            return BuildResults(operation, position, commands);
+            return BuildResults(operation, commands);
         }
         finally
         {
-            for (var index = 0; index < position; index++)
+            foreach (var (shardNumber, command) in commands)
             {
-                var command = commands[index];
                 try
                 {
                     command.ContextReleaser?.Dispose();
@@ -101,30 +99,21 @@ public abstract class AbstractExecutor : IDisposable
                     // ignore
                 }
             }
-
-            ArrayPool<CommandHolder<TResult>>.Shared.Return(commands);
         }
     }
 
     private static TCombinedResult BuildResults<TResult, TCombinedResult>(
         IShardedOperation<TResult, TCombinedResult> operation,
-        int position,
-        CommandHolder<TResult>[] commands)
+        Dictionary<int, ShardExecutionResult<TResult>> commands)
     {
-        var results = new Dictionary<int, ShardExecutionResult<TResult>>();
-        
-        for (int i = 0; i < position; i++)
+        foreach (var holder in commands.Values)
         {
-            results[commands[i].ShardNumber] = new ShardExecutionResult<TResult>()
-            {
-                ShardNumber = commands[i].ShardNumber,
-                Command = commands[i].Command,
-                Result = commands[i].Command.Result,
-                CommandTask = commands[i].Task
-            };
+            holder.Result = holder.Command.Result;
+
+
         }
-        
-        var result = operation.CombineCommands(results);
+
+        var result = operation.CombineCommands(commands);
 
         if (typeof(TCombinedResult) == typeof(BlittableJsonReaderObject))
         {
@@ -138,33 +127,35 @@ public abstract class AbstractExecutor : IDisposable
         return result;
     }
 
-    private async Task<int> ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(
+    private async Task ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(
         Memory<int> shards,
         IShardedOperation<TResult, TCombinedResult> operation,
-        CommandHolder<TResult>[] commands,
+        Dictionary<int, ShardExecutionResult<TResult>> commands,
         CancellationToken token)
 
         where TExecutionMode : struct, IExecutionMode
         where TFailureMode : struct, IFailureMode
     {
-        int position;
-        for (position = 0; position < shards.Span.Length; position++)
+        for (int position = 0; position < shards.Span.Length; position++)
         {
             int shardNumber = shards.Span[position];
 
             var cmd = operation.CreateCommandForShard(shardNumber);
             cmd.ModifyRequest = operation.ModifyHeaders;
             cmd.ModifyUrl = operation.ModifyUrl;
-
-            commands[position].ShardNumber = shardNumber;
-            commands[position].Command = cmd;
-
+            
             var executor = GetRequestExecutorAt(shardNumber);
             var release = executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
-            commands[position].ContextReleaser = release;
-
+            
             var t = executor.ExecuteAsync(cmd, ctx, token: token);
-            commands[position].Task = t;
+            
+            commands.Add(shardNumber, new ShardExecutionResult<TResult>()
+            {
+                ShardNumber = shardNumber,
+                Command = cmd,
+                Task = t,
+                ContextReleaser = release
+            });
 
             if (typeof(TExecutionMode) == typeof(OneByOneExecution))
             {
@@ -180,12 +171,11 @@ public abstract class AbstractExecutor : IDisposable
             }
         }
         
-        for (var i = 0; i < position; i++)
+        foreach (var (shardNumber, command) in commands)
         {
-            var holder = commands[i];
             try
             {
-                await holder.Task;
+                await command.Task;
             }
             catch (Exception e)
             {
@@ -193,19 +183,9 @@ public abstract class AbstractExecutor : IDisposable
                     throw;
 
                 _exceptions ??= new Dictionary<int, Exception>();
-                _exceptions[holder.ShardNumber] = e;
+                _exceptions[shardNumber] = e;
             }
         }
-
-        return position;
-    }
-
-    public struct CommandHolder<T>
-    {
-        public int ShardNumber;
-        public RavenCommand<T> Command;
-        public Task Task;
-        public IDisposable ContextReleaser;
     }
 
     public abstract void Dispose();
