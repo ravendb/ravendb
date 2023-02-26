@@ -229,7 +229,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         var query = Query.Metadata.Query;
         var isProjectionQuery = query.Select?.Count > 0 ||
-                 query.SelectFunctionBody.FunctionText != null;
+                                query.SelectFunctionBody.FunctionText != null;
+
+        var rewriteForFilterForMapReduceOrAutoMapReduceIndex = query.Filter != null && (IsMapReduceIndex || IsAutoMapReduceQuery);
 
         if (isProjectionQuery == false)
         {
@@ -264,12 +266,21 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             }
         }
 
-        if (rewriteForPaging == false && rewriteForProjectionFromMapReduceIndex == false && rewriteForProjectionFromAutoMapReduceIndex == false)
+        if (rewriteForPaging == false 
+            && rewriteForProjectionFromMapReduceIndex == false 
+            && rewriteForProjectionFromAutoMapReduceIndex == false
+            && rewriteForFilterForMapReduceOrAutoMapReduceIndex == false)
             return queryTemplate;
 
         var clone = Query.Metadata.Query.ShallowCopy();
 
         DynamicJsonValue modifications = new(queryTemplate);
+
+        if (rewriteForFilterForMapReduceOrAutoMapReduceIndex)
+        {
+            clone.Filter = null;
+            clone.FilterLimit = null;
+        }
 
         if (rewriteForPaging)
         {

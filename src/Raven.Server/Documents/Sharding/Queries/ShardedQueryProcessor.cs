@@ -88,6 +88,9 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
             // For map/reduce - we need to re-run the reduce portion of the index again on the results
             ReduceResults(ref result, queryScope);
 
+            // For map-reduce indexes we need to filter the result after the reduce
+            FilterAfterMapReduce(ref result, queryScope);
+
             // For map-reduce indexes we project the results after the reduce part 
             ProjectAfterMapReduce(ref result, queryScope);
 
@@ -198,6 +201,44 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
         }
 
     }
+
+    private void FilterAfterMapReduce(ref ShardedQueryResult result, QueryTimingsScope scope)
+    {
+        if (Query.Metadata.Query.Filter == null)
+            return;
+
+        if (IsMapReduceIndex == false && IsAutoMapReduceQuery == false)
+            return;
+
+        using (scope?.For(nameof(QueryTimingsScope.Names.Filter)))
+        {
+            var key = new CollectionQueryEnumerable.FilterKey(Query.Metadata);
+            using (RequestHandler.DatabaseContext.Indexes.ScriptRunnerCache.GetScriptRunner(key, readOnly: true, patchRun: out var filterScriptRun))
+            {
+                var currentResults = result.Results;
+                result.Results = new List<BlittableJsonReaderObject>();
+
+                result.ScannedResults++;
+
+                foreach (var doc in currentResults)
+                {
+                    object self = filterScriptRun.Translate(Context, doc);
+                    using (var filterResult = filterScriptRun.Run(Context, null, "execute", new[] { self, Query.QueryParameters }, scope))
+                    {
+                        if (filterResult.BooleanValue == true)
+                        {
+                            result.Results.Add(doc);
+                        }
+                        else
+                        {
+                            result.SkippedResults++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
     private void ProjectAfterMapReduce(ref ShardedQueryResult result, QueryTimingsScope scope)
     {
