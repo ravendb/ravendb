@@ -517,11 +517,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     else
                         periodicBackup.BackupStatus.LastIncrementalBackupInternal = startTimeInUtc;
                     
-                    AsyncHelpers.RunSync(() => BackupTask.SaveBackupStatusAsync(
-                        periodicBackup.BackupStatus, 
-                        _database, 
-                        _logger, 
-                        operationCancelToken: periodicBackup.CancelToken));
+                    BackupTask.SaveBackupStatus(periodicBackup.BackupStatus, _database, _logger, operationCancelToken: periodicBackup.CancelToken);
 
                     var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
                     if (_logger.IsOperationsEnabled)
