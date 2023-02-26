@@ -96,6 +96,7 @@ internal class DatabasesHandlerProcessorForGet : AbstractDatabasesHandlerProcess
         var statuses = serverStore.GetNodesStatuses();
 
         nodesTopology.PriorityOrder = topology.PriorityOrder;
+        nodesTopology.DynamicNodesDistribution = topology.DynamicNodesDistribution;
 
         var clusterTopology = serverStore.GetClusterTopology(context);
         clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(serverStore, httpContext);
