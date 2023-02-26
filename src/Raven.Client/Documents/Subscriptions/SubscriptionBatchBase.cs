@@ -56,9 +56,9 @@ public abstract class SubscriptionBatchBase<T>
     protected readonly Logger _logger;
 
     public List<Item> Items { get; } = new List<Item>();
-    internal List<BlittableJsonReaderObject> _includes;
-    internal List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> _counterIncludes;
-    internal List<BlittableJsonReaderObject> _timeSeriesIncludes;
+    protected List<BlittableJsonReaderObject> _includes;
+    protected List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> _counterIncludes;
+    protected List<BlittableJsonReaderObject> _timeSeriesIncludes;
 
     protected SubscriptionBatchBase(RequestExecutor requestExecutor, string dbName, Logger logger)
     {

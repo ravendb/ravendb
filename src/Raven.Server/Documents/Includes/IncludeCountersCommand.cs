@@ -11,13 +11,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Includes
 {
-    public class IncludeCountersCommand : ICounterIncludes
+    public class IncludeCountersCommand : AbstractIncludeCountersCommand
     {
         private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
         private readonly Dictionary<string, string[]> _countersBySourcePath;
 
-        public Dictionary<string, string[]> IncludedCounterNames { get; }
+        public override Dictionary<string, string[]> IncludedCounterNames { get; }
         public Dictionary<string, List<CounterDetail>> Results { get; }
 
         private IncludeCountersCommand(DocumentDatabase database, DocumentsOperationContext context)
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Includes
             }
         }
 
-        public async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
+        public override async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
         {
             writer.WriteStartObject();
 
@@ -91,14 +91,9 @@ namespace Raven.Server.Documents.Includes
             writer.WriteEndObject();
         }
 
-        public int Count => Results?.Count ?? 0;
+        public override int Count => Results?.Count ?? 0;
 
-        public void Gather(List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> includes, ClusterOperationContext clusterOperationContext)
-        {
-            throw new NotImplementedException(@"Should be called only from Orchestrator.");
-        }
-
-        public long GetCountersSize()
+        public override long GetCountersSize()
         {
             return IncludedCounterNames.Sum(kvp =>
                        kvp.Key.Length + kvp.Value.Sum(name => name.Length)) //IncludedCounterNames
@@ -112,14 +107,9 @@ namespace Raven.Server.Documents.Includes
                        ));
         }
 
-        public long GetCountersCount()
+        public override long GetCountersCount()
         {
             return Results.Sum(x => x.Value.Count);
-        }
-
-        public bool HasCountersIncludes()
-        {
-            return Results is { Count: > 0 };
         }
     }
 }

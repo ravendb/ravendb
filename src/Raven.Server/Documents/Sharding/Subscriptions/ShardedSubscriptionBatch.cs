@@ -4,10 +4,11 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
+using Raven.Server.Documents.Includes.Sharding;
 using Raven.Server.Documents.Queries.Sharding;
-using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Sharding.Operations.Queries;
 using Raven.Server.Documents.Sharding.Queries;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -71,7 +72,7 @@ public class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJsonReade
         if (list == null || list.Count == 0)
             return ValueTask.CompletedTask;
 
-        _result ??= new ShardedQueryResult
+        _result = new ShardedQueryResult
         {
             Results = new List<BlittableJsonReaderObject>(),
         };
@@ -88,5 +89,15 @@ public class ShardedSubscriptionBatch : SubscriptionBatchBase<BlittableJsonReade
             return ValueTask.CompletedTask;
 
         return ShardedQueryProcessor.HandleMissingDocumentIncludesAsync(Context, request: null, _databaseContext, missingDocumentIncludes, _result, metadataOnly: false, token: _databaseContext.DatabaseShutdown);
+    }
+
+    public void CloneIncludes(ClusterOperationContext context, OrchestratorIncludesCommandImpl includes)
+    {
+        if (_includes != null)
+            includes.IncludeDocumentsCommand.Gather(_includes);
+        if (_counterIncludes != null)
+            includes.IncludeCountersCommand.Gather(_counterIncludes, context);
+        if (_timeSeriesIncludes != null)
+            includes.IncludeTimeSeriesCommand.Gather(_timeSeriesIncludes, context);
     }
 }

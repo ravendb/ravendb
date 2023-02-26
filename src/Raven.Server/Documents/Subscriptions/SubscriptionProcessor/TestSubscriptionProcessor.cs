@@ -22,23 +22,10 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             RemoteEndpoint = endpoint;
         }
 
-        protected override (IncludeDocumentsCommand IncludesCommand, ITimeSeriesIncludes TimeSeriesIncludes, ICounterIncludes CounterIncludes) CreateIncludeCommands()
+        protected override DatabaseIncludesCommandImpl CreateIncludeCommands()
         {
-            IncludeDocumentsCommand includeDocuments = null;
-            ITimeSeriesIncludes includeTimeSeries = null;
-            ICounterIncludes includeCounters = null;
-
-            if (_subscription.Includes != null)
-                includeDocuments = new IncludeDocumentsCommand(Database.DocumentsStorage, DocsContext, _subscription.Includes,
-                    isProjection: string.IsNullOrWhiteSpace(_subscription.Script) == false);
-
-            if (_subscription.CounterIncludes != null)
-                includeCounters = new IncludeCountersCommand(Database, DocsContext, _subscription.CounterIncludes);
-
-            if (_subscription.TimeSeriesIncludes?.TimeSeries != null)
-                includeTimeSeries = new IncludeTimeSeriesCommand(DocsContext, _subscription.TimeSeriesIncludes.TimeSeries);
-
-            return (includeDocuments, includeTimeSeries, includeCounters);
+            var includes = CreateIncludeCommandsInternal(Database, DocsContext, Connection, _subscription);
+            return includes;
         }
 
         public override void InitializeProcessor()
@@ -81,23 +68,10 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             SubscriptionConnectionsState = SubscriptionConnectionsState.CreateDummyState(Database.DocumentsStorage, SubscriptionState);
         }
 
-        protected override (IncludeDocumentsCommand IncludesCommand, ITimeSeriesIncludes TimeSeriesIncludes, ICounterIncludes CounterIncludes) CreateIncludeCommands()
+        protected override DatabaseIncludesCommandImpl CreateIncludeCommands()
         {
-            IncludeDocumentsCommand includeDocuments = null;
-            ITimeSeriesIncludes includeTimeSeries = null;
-            ICounterIncludes includeCounters = null;
-
-            if (_subscription.Includes != null)
-                includeDocuments = new IncludeDocumentsCommand(Database.DocumentsStorage, DocsContext, _subscription.Includes,
-                    isProjection: string.IsNullOrWhiteSpace(_subscription.Script) == false);
-
-            if (_subscription.CounterIncludes != null)
-                includeCounters = new IncludeCountersCommand(Database, DocsContext, _subscription.CounterIncludes);
-
-            if (_subscription.TimeSeriesIncludes?.TimeSeries != null)
-                includeTimeSeries = new IncludeTimeSeriesCommand(DocsContext, _subscription.TimeSeriesIncludes.TimeSeries);
-
-            return (includeDocuments, includeTimeSeries, includeCounters);
+            var includes = CreateIncludeCommandsInternal(Database, DocsContext, Connection, _subscription);
+            return includes;
         }
 
         public void SetStartEtag(long etag)

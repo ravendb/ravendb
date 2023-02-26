@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
@@ -35,39 +34,12 @@ using Voron.Global;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public interface ISubscriptionConnection : IDisposable
-    {
-        public const long NonExistentBatch = -1;
-
-        SubscriptionWorkerOptions Options { get; }
-
-        TcpConnectionOptions TcpConnection { get; }
-
-        SubscriptionState SubscriptionState { get; }
-
-        SubscriptionConnection.ParsedSubscription Subscription { get; }
-
-        CancellationTokenSource CancellationTokenSource { get; }
-
-        Task SubscriptionConnectionTask { get; set; }
-
-        long SubscriptionId { get; }
-
-        TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; }
-
-        public const int WaitForChangedDocumentsTimeoutInMs = 3000;
-    }
-
-    public abstract class SubscriptionConnectionBase<TIncludesCommand> : ISubscriptionConnection where TIncludesCommand : AbstractIncludeDocumentsCommand
+    public abstract class SubscriptionConnectionBase<TIncludesCommand> : ISubscriptionConnection 
+        where TIncludesCommand : AbstractIncludesCommand
     {
         private static readonly byte[] Heartbeat = Encoding.UTF8.GetBytes("\r\n");
         private static readonly StringSegment DataSegment = new StringSegment("Data");
-        private static readonly StringSegment IncludesSegment = new StringSegment(nameof(QueryResult.Includes));
-        private static readonly StringSegment CounterIncludesSegment = new StringSegment(nameof(QueryResult.CounterIncludes));
-        private static readonly StringSegment TimeSeriesIncludesSegment = new StringSegment(nameof(QueryResult.TimeSeriesIncludes));
-        private static readonly StringSegment IncludedCounterNamesSegment = new StringSegment(nameof(QueryResult.IncludedCounterNames));
         private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
-        private static readonly StringSegment TypeSegment = new StringSegment("Type");
 
         public readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(1);
 
@@ -100,7 +72,7 @@ namespace Raven.Server.Documents.Subscriptions
         public Task SubscriptionConnectionTask { get; set; }
         private MemoryStream _buffer = new MemoryStream();
 
-        protected SubscriptionProcessor.AbstractSubscriptionProcessor<TIncludesCommand> Processor;
+        protected AbstractSubscriptionProcessor<TIncludesCommand> Processor;
 
         internal TestingStuff ForTestingPurposes;
 
@@ -270,7 +242,7 @@ namespace Raven.Server.Documents.Subscriptions
                     {
                         CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                        using (Processor.InitializeForNewBatch(clusterOperationContext, out var includeCommand, out var includeTimeSeries, out var includeCounters))
+                        using (Processor.InitializeForNewBatch(clusterOperationContext, out var includeCommand))
                         {
                             foreach (var result in Processor.GetBatch())
                             {
@@ -310,20 +282,20 @@ namespace Raven.Server.Documents.Subscriptions
                                 {
                                     using (item.Document)
                                     {
-                                        WriteDocument(writer, context, item, includeCommand, includeTimeSeries, includeCounters);
+                                        WriteDocument(writer, context, item, includeCommand);
                                     }
                                 }
 
-                                await WriteIncludedDocumentsAsync(writer, context, batchScope, includeCommand);
-                                await WriteIncludedCountersAsync(writer, context, batchScope, includeCounters);
-                                await WriteIncludedTimeSeriesAsync(writer, context, batchScope, includeTimeSeries);
+                                if (includeCommand != null)
+                                {
+                                    await includeCommand.WriteIncludesAsync(writer, context, batchScope, CancellationTokenSource.Token);
+                                }
 
                                 WriteEndOfBatch(writer);
 
                                 AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Flushing sent docs to client"));
 
-                                await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger, docsToFlush, endOfBatch: true,
-                                    CancellationTokenSource.Token);
+                                await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats.Metrics, _logger, docsToFlush, endOfBatch: true, CancellationTokenSource.Token);
                             }
                         }
                     }
@@ -338,11 +310,12 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        private void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, (Document Doc, Exception Exception) result, TIncludesCommand includeCommand, ITimeSeriesIncludes includeTimeSeries, ICounterIncludes includeCounters)
+        private void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, (Document Doc, Exception Exception) result,
+            TIncludesCommand includeCommand)
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
+            writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(ISubscriptionConnection.TypeSegment));
             writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
             writer.WriteComma();
             writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
@@ -365,17 +338,14 @@ namespace Raven.Server.Documents.Subscriptions
             }
             else
             {
-                GatherDocumentIncludes(includeCommand, result.Doc);
-                includeTimeSeries?.Fill(result.Doc);
-                includeCounters?.Fill(result.Doc);
-
+                GatherIncludesForDocument(includeCommand, result.Doc);
                 writer.WriteDocument(context, result.Doc, metadataOnly: false);
             }
 
             writer.WriteEndObject();
         }
 
-        protected abstract void GatherDocumentIncludes(TIncludesCommand includeDocuments, Document document);
+        protected abstract void GatherIncludesForDocument(TIncludesCommand includeDocuments, Document document);
 
         public async Task ReportExceptionAsync(SubscriptionError error, Exception e)
         {
@@ -558,8 +528,7 @@ namespace Raven.Server.Documents.Subscriptions
                     throw new SubscriptionDoesNotBelongToNodeException(
                         $"Subscription with id '{id}' and name '{name}' can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
                         whoseTaskIsIt,
-                        databaseTopologyAvailabilityExplanation, id)
-                    { RegisterConnectionDurationInTicks = registerConnectionDurationInTicks };
+                        databaseTopologyAvailabilityExplanation, id) { RegisterConnectionDurationInTicks = registerConnectionDurationInTicks };
                 }
 
                 if (subscription.Disabled)
@@ -700,72 +669,72 @@ namespace Raven.Server.Documents.Subscriptions
                         });
                         break;
                     case SubscriptionDoesNotBelongToNodeException subscriptionDoesNotBelongException:
+                    {
+                        if (string.IsNullOrEmpty(subscriptionDoesNotBelongException.AppropriateNode) == false)
                         {
-                            if (string.IsNullOrEmpty(subscriptionDoesNotBelongException.AppropriateNode) == false)
+                            try
                             {
-                                try
+                                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                                using (ctx.OpenReadTransaction())
                                 {
-                                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                                    using (ctx.OpenReadTransaction())
+                                    // check that the subscription exists on AppropriateNode
+                                    var clusterTopology = _serverStore.GetClusterTopology(ctx);
+                                    using (var requester = ClusterRequestExecutor.CreateForSingleNode(
+                                               clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode),
+                                               _serverStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                                     {
-                                        // check that the subscription exists on AppropriateNode
-                                        var clusterTopology = _serverStore.GetClusterTopology(ctx);
-                                        using (var requester = ClusterRequestExecutor.CreateForSingleNode(
-                                                   clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode),
-                                                   _serverStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
-                                        {
-                                            await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
-                                        }
+                                        await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
                                     }
                                 }
-                                catch
-                                {
-                                    // we let the client try to connect to AppropriateNode
-                                }
                             }
-
-                            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Redirecting subscription client to different server"));
-                            if (_logger.IsInfoEnabled)
+                            catch
                             {
-                                _logger.Info("Subscription does not belong to current node", ex);
+                                // we let the client try to connect to AppropriateNode
                             }
-
-                            await WriteJsonAsync(new DynamicJsonValue
-                            {
-                                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                                [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
-                                [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                                [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
-                                [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
-                                {
-                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
-                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = _serverStore.NodeTag,
-                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RegisterConnectionDurationInTicks)] =
-                                        subscriptionDoesNotBelongException.RegisterConnectionDurationInTicks,
-                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
-                                        new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue { [item.Key] = item.Value }))
-                                }
-                            });
-                            break;
                         }
-                    case SubscriptionChangeVectorUpdateConcurrencyException:
+
+                        AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Redirecting subscription client to different server"));
+                        if (_logger.IsInfoEnabled)
                         {
-                            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
-                                $"Subscription change vector update concurrency error, reporting to '{ClientUri}'"));
-                            if (_logger.IsInfoEnabled)
-                            {
-                                _logger.Info("Subscription change vector update concurrency error", ex);
-                            }
-
-                            await WriteJsonAsync(new DynamicJsonValue
-                            {
-                                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                                [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect),
-                                [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                                [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                            });
-                            break;
+                            _logger.Info("Subscription does not belong to current node", ex);
                         }
+
+                        await WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
+                            [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
+                            {
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = _serverStore.NodeTag,
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RegisterConnectionDurationInTicks)] =
+                                    subscriptionDoesNotBelongException.RegisterConnectionDurationInTicks,
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
+                                    new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue { [item.Key] = item.Value }))
+                            }
+                        });
+                        break;
+                    }
+                    case SubscriptionChangeVectorUpdateConcurrencyException:
+                    {
+                        AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
+                            $"Subscription change vector update concurrency error, reporting to '{ClientUri}'"));
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info("Subscription change vector update concurrency error", ex);
+                        }
+
+                        await WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                        });
+                        break;
+                    }
                     case LicenseLimitException:
                         await WriteJsonAsync(new DynamicJsonValue
                         {
@@ -972,10 +941,10 @@ namespace Raven.Server.Documents.Subscriptions
             switch (clientReply.Type)
             {
                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
-                    {
-                        await OnClientAckAsync(clientReply.ChangeVector);
-                        break;
-                    }
+                {
+                    await OnClientAckAsync(clientReply.ChangeVector);
+                    break;
+                }
                 //precaution, should not reach this case...
                 case SubscriptionConnectionClientMessage.MessageType.DisposedNotification:
                     CancellationTokenSource.Cancel();
@@ -1010,75 +979,6 @@ namespace Raven.Server.Documents.Subscriptions
         protected abstract void RaiseNotificationForBatchEnd(string name, SubscriptionBatchStatsAggregator last);
         protected abstract string SetLastChangeVectorInThisBatch(IChangeVectorOperationContext context, string currentLast, Document sentDocument);
         protected abstract Task UpdateStateAfterBatchSentAsync(IChangeVectorOperationContext context, string lastChangeVectorSentInThisBatch);
-
-        private async Task WriteIncludedTimeSeriesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
-            ITimeSeriesIncludes includeTimeSeriesCommand)
-        {
-            if (includeTimeSeriesCommand != null && includeTimeSeriesCommand.HasEntries())
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
-                writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
-                var size = await includeTimeSeriesCommand.WriteIncludesAsync(writer, context, CancellationTokenSource.Token);
-
-                batchScope.RecordIncludedTimeSeriesInfo(includeTimeSeriesCommand.GetEntriesCountForStats(), size);
-
-                writer.WriteEndObject();
-            }
-        }
-
-        protected virtual async Task WriteIncludedCountersAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
-            ICounterIncludes includeCountersCommand)
-        {
-            if (includeCountersCommand != null && includeCountersCommand.HasCountersIncludes())
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
-                writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(CounterIncludesSegment));
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(CounterIncludesSegment));
-                await includeCountersCommand.WriteIncludesAsync(writer, context, CancellationTokenSource.Token);
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(IncludedCounterNamesSegment));
-                writer.WriteIncludedCounterNames(includeCountersCommand.IncludedCounterNames);
-                writer.WriteEndObject();
-
-                batchScope.RecordIncludedCountersInfo(includeCountersCommand.GetCountersCount(), includeCountersCommand.GetCountersSize());
-            }
-        }
-
-        protected virtual async Task WriteIncludedDocumentsAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope,
-            TIncludesCommand includeDocumentsCommand)
-        {
-            if (includeDocumentsCommand != null && includeDocumentsCommand.HasIncludesIds())
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
-                writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(IncludesSegment));
-                writer.WriteComma();
-
-                writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(IncludesSegment));
-                (long count, long sizeInBytes) = await WriteIncludedDocumentsInternalAsync(writer, context, batchScope, includeDocumentsCommand);
-                batchScope.RecordIncludedDocumentsInfo(count, sizeInBytes);
-
-                writer.WriteEndObject();
-            }
-        }
-
-        protected abstract ValueTask<(long count, long sizeInBytes)> WriteIncludedDocumentsInternalAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SubscriptionBatchStatsScope batchScope, TIncludesCommand includeDocumentsCommand);
-
-        protected virtual void FillIncludedDocuments(IncludeDocumentsCommand includeDocumentsCommand, List<Document> includes)
-        {
-            includeDocumentsCommand.Fill(includes, includeMissingAsNull: false);
-        }
 
         internal static void WriteEndOfBatch(AsyncBlittableJsonTextWriter writer)
         {

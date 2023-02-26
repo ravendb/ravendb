@@ -77,20 +77,20 @@ public class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQueryResul
             {
                 if (operation.MissingDocumentIncludes is { Count: > 0 })
                 {
-                    await HandleMissingDocumentIncludesAsync(_context, _requestHandler.HttpContext.Request, _requestHandler.DatabaseContext,
-                        operation.MissingDocumentIncludes, result, _metadataOnly, _token);
+                    await HandleMissingDocumentIncludesAsync(Context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext,
+                        operation.MissingDocumentIncludes, result, MetadataOnly, Token);
                 }
 
                 if (operation.MissingCounterIncludes is { Count: > 0 })
                 {
-                    await HandleMissingCounterIncludeAsync(_context, _requestHandler.HttpContext.Request, _requestHandler.DatabaseContext,
-                        operation.MissingCounterIncludes, result, _token);
+                    await HandleMissingCounterIncludeAsync(Context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext,
+                        operation.MissingCounterIncludes, result, Token);
                 }
 
                 if (operation.MissingTimeSeriesIncludes is { Count: > 0 })
                 {
-                    await HandleMissingTimeSeriesIncludesAsync(_context, _requestHandler.HttpContext.Request, _requestHandler.DatabaseContext,
-                        operation.MissingTimeSeriesIncludes, result, _token);
+                    await HandleMissingTimeSeriesIncludesAsync(Context, RequestHandler.HttpContext.Request, RequestHandler.DatabaseContext,
+                        operation.MissingTimeSeriesIncludes, result, Token);
                 }
             }
 

@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions;
  * Orchestrator sends the CONFIRM to client
  */
 
-public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsStateBase<OrchestratedSubscriptionConnection, IncludeDocumentsOrchestratedSubscriptionCommand>
+public class SubscriptionConnectionsStateOrchestrator : SubscriptionConnectionsStateBase<OrchestratedSubscriptionConnection, OrchestratorIncludesCommandImpl>
 {
     internal readonly ShardedDatabaseContext _databaseContext;
     private Dictionary<string, ShardedSubscriptionWorker> _shardWorkers;

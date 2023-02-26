@@ -30,7 +30,7 @@ public static class SubscriptionBinder
         {
             var orch = new OrchestratedSubscriptionConnection(server, tcpConnectionOptions, onDispose, buffer);
             connection = orch;
-            return new SubscriptionBinder<SubscriptionConnectionsStateOrchestrator, OrchestratedSubscriptionConnection, IncludeDocumentsOrchestratedSubscriptionCommand>(
+            return new SubscriptionBinder<SubscriptionConnectionsStateOrchestrator, OrchestratedSubscriptionConnection, OrchestratorIncludesCommandImpl>(
                 tcpConnectionOptions.DatabaseContext.Subscriptions,
                 new Lazy<SubscriptionConnectionsStateOrchestrator>(orch.GetOrchestratedSubscriptionConnectionState), orch);
         }
@@ -40,7 +40,7 @@ public static class SubscriptionBinder
             var connectionForShard = new SubscriptionConnectionForShard(server, tcpConnectionOptions, onDispose, buffer,
                 shardedDocumentDatabase.ShardedDatabaseName);
             connection = connectionForShard;
-            return new SubscriptionBinder<SubscriptionConnectionsState, SubscriptionConnection, IncludeDocumentsCommand>(tcpConnectionOptions.DocumentDatabase.SubscriptionStorage,
+            return new SubscriptionBinder<SubscriptionConnectionsState, SubscriptionConnection, DatabaseIncludesCommandImpl>(tcpConnectionOptions.DocumentDatabase.SubscriptionStorage,
                 new Lazy<SubscriptionConnectionsState>(connectionForShard.GetSubscriptionConnectionStateForShard), connectionForShard);
         }
 
@@ -48,7 +48,7 @@ public static class SubscriptionBinder
             tcpConnectionOptions.DocumentDatabase.Name);
         connection = nonShardedConnection;
 
-        return new SubscriptionBinder<SubscriptionConnectionsState, SubscriptionConnection, IncludeDocumentsCommand>(tcpConnectionOptions.DocumentDatabase.SubscriptionStorage,
+        return new SubscriptionBinder<SubscriptionConnectionsState, SubscriptionConnection, DatabaseIncludesCommandImpl>(tcpConnectionOptions.DocumentDatabase.SubscriptionStorage,
             new Lazy<SubscriptionConnectionsState>(nonShardedConnection.GetSubscriptionConnectionState), nonShardedConnection);
     }
 }
@@ -56,7 +56,7 @@ public static class SubscriptionBinder
 public class SubscriptionBinder<TState, TConnection, TIncludeCommand> : ISubscriptionBinder
     where TState : SubscriptionConnectionsStateBase<TConnection, TIncludeCommand>
     where TConnection : SubscriptionConnectionBase<TIncludeCommand>
-    where TIncludeCommand : AbstractIncludeDocumentsCommand
+    where TIncludeCommand : AbstractIncludesCommand
 {
     private readonly ISubscriptionSemaphore _semaphore;
     private readonly Lazy<TState> _state;

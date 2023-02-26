@@ -9,7 +9,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Includes.Sharding;
 
-public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
+public class ShardedTimeSeriesIncludes : AbstractIncludeTimeSeriesCommand
 {
     private readonly bool _supportsMissingIncludes;
     private readonly CancellationToken _token;
@@ -21,7 +21,7 @@ public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
 
     private Dictionary<string, BlittableJsonReaderObject> _resultsByDocumentId;
 
-    public int Count => _resultsByDocumentId.Count;
+    public override int Count => _resultsByDocumentId?.Count ?? 0;
 
     public Dictionary<string, List<TimeSeriesRange>> MissingTimeSeriesIncludes { get; set; }
 
@@ -108,7 +108,7 @@ public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
         _resultsByDocumentId.TryAdd(docId, timeSeries);
     }
 
-    public async ValueTask<int> WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
+    public override async ValueTask<int> WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
     {
         int size = 0;
         writer.WriteStartObject();
@@ -135,7 +135,7 @@ public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
         return size;
     }
 
-    public long GetEntriesCountForStats()
+    public override long GetEntriesCountForStats()
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Minor, "RavenDB-16279: for task stats in studio should we calculate the stats from each shard or orchestrator");
         return 0L;
@@ -151,15 +151,5 @@ public class ShardedTimeSeriesIncludes : ITimeSeriesIncludes
                 AddResults(item, clusterOperationContext);
             }
         }
-    }
-
-    public void Fill(Document resultDoc)
-    {
-        // no-op
-    }
-
-    public bool HasEntries()
-    {
-        return _resultsByDocumentId is { Count: > 0 };
     }
 }
