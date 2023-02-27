@@ -167,9 +167,8 @@ namespace Corax.Queries
             var bufferHandler = _context.Allocate(2 * size * sizeof(long), out var buffer);
 
             // Ensure we copy the content and then switch the buffers. 
-
             new Span<long>(_documentBuffer, _bufferIdx).CopyTo(new Span<long>(buffer.Ptr, size));
-            new Span<long>(_countBuffer, _bufferIdx).CopyTo(new Span<long>(buffer.Ptr + currentLength, size));
+            new Span<long>(_countBuffer, _bufferIdx).CopyTo(new Span<long>(buffer.Ptr + size, size));
             _bufferHandler.Dispose();
 
             _bufferSize = size;
