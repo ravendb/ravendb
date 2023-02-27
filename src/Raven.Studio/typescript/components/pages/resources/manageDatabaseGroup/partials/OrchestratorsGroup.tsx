@@ -11,9 +11,8 @@ import { DeletionInProgress } from "components/pages/resources/manageDatabaseGro
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { useServices } from "hooks/useServices";
 import app from "durandal/app";
-import { NodeInfo } from "components/models/databases";
+import { DatabaseSharedInfo } from "components/models/databases";
 import addNewOrchestratorToDatabase from "viewmodels/resources/addNewOrchestatorToDatabaseGroup";
-import shardedDatabase from "models/resources/shardedDatabase";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import classNames from "classnames";
 import {
@@ -33,13 +32,11 @@ import {
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
 
 export interface OrchestratorsGroupProps {
-    nodes: NodeInfo[];
-    db: shardedDatabase;
-    deletionInProgress: string[];
+    db: DatabaseSharedInfo;
 }
 
 export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
-    const { nodes, deletionInProgress, db } = props;
+    const { db } = props;
 
     const {
         fixOrder,
@@ -51,15 +48,15 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
         sortableMode,
         enableReorder,
         exitReorder,
-    } = useGroup(nodes);
+    } = useGroup(db.nodes, db.fixOrder);
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
 
     const addNode = useCallback(() => {
-        const addKeyView = new addNewOrchestratorToDatabase(db.name, nodes);
+        const addKeyView = new addNewOrchestratorToDatabase(db.name, db.nodes);
         app.showBootstrapDialog(addKeyView);
-    }, [db, nodes]);
+    }, [db]);
 
     const saveNewOrder = useCallback(
         async (tagsOrder: string[], fixOrder: boolean) => {
@@ -146,16 +143,16 @@ export function OrchestratorsGroup(props: OrchestratorsGroupProps) {
                                     </Button>
                                 </DatabaseGroupActions>
                             </DatabaseGroupItem>
-                            {nodes.map((node) => (
+                            {db.nodes.map((node) => (
                                 <OrchestratorInfoComponent
                                     key={node.tag}
                                     node={node}
-                                    canDelete={nodes.length > 1}
+                                    canDelete={db.nodes.length > 1}
                                     deleteFromGroup={deleteOrchestratorFromGroup}
                                 />
                             ))}
 
-                            {deletionInProgress.map((deleting) => (
+                            {db.deletionInProgress.map((deleting) => (
                                 <DeletionInProgress key={deleting} nodeTag={deleting} />
                             ))}
                         </DatabaseGroupList>

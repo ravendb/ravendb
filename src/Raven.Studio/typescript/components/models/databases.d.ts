@@ -36,6 +36,7 @@ export interface DatabaseSharedInfo {
     disabled: boolean;
     indexesCount: number;
     nodes: NodeInfo[];
+    fixOrder: boolean;
     currentNode: {
         relevant: boolean;
         isBeingDeleted: boolean;

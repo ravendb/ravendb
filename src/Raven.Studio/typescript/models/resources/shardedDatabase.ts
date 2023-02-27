@@ -49,8 +49,8 @@ class shardedDatabase extends database {
 
         const nodes = [
             ...topology.Members.map(x => this.mapNode(topology, x, "Member")),
-            ...topology.Promotables.map(x => this.mapNode(topology, x, "Member")),
-            ...topology.Rehabs.map(x => this.mapNode(topology, x, "Member")),
+            ...topology.Promotables.map(x => this.mapNode(topology, x, "Promotable")),
+            ...topology.Rehabs.map(x => this.mapNode(topology, x, "Rehab")),
         ];
 
         this.nodes(nodes);
@@ -64,6 +64,7 @@ class shardedDatabase extends database {
         })
         this.shards(shards);
         this.relevant(nodes.some(x => x.tag === this.clusterNodeTag()));
+        this.fixOrder(incomingCopy.Sharding.Orchestrator.NodesTopology.PriorityOrder.length > 0);
     }
 }
 

@@ -11,7 +11,6 @@ import getDatabaseDetailedStatsCommand from "commands/resources/getDatabaseDetai
 import deleteDatabaseFromNodeCommand from "commands/resources/deleteDatabaseFromNodeCommand";
 import toggleDynamicNodeAssignmentCommand from "commands/database/dbGroup/toggleDynamicNodeAssignmentCommand";
 import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/reorderNodesInDatabaseGroupCommand");
-import shard from "models/resources/shard";
 import deleteOrchestratorFromNodeCommand from "commands/resources/deleteOrchestratorFromNodeCommand";
 import deleteDatabaseCommand from "commands/resources/deleteDatabaseCommand";
 import toggleDatabaseCommand from "commands/resources/toggleDatabaseCommand";
@@ -46,11 +45,11 @@ export default class DatabasesService {
         return new getDatabaseDetailedStatsCommand(db, location).execute();
     }
 
-    async deleteDatabaseFromNode(db: database, nodes: string[], hardDelete: boolean) {
+    async deleteDatabaseFromNode(db: DatabaseSharedInfo, nodes: string[], hardDelete: boolean) {
         return new deleteDatabaseFromNodeCommand(db, nodes, hardDelete).execute();
     }
 
-    async deleteOrchestratorFromNode(db: database, node: string) {
+    async deleteOrchestratorFromNode(db: DatabaseSharedInfo, node: string) {
         return new deleteOrchestratorFromNodeCommand(db, node).execute();
     }
 
@@ -58,11 +57,7 @@ export default class DatabasesService {
         return new toggleDynamicNodeAssignmentCommand(db.name, enabled).execute();
     }
 
-    async reorderNodesInGroup(db: database, tagsOrder: string[], fixOrder: boolean) {
+    async reorderNodesInGroup(db: DatabaseSharedInfo, tagsOrder: string[], fixOrder: boolean) {
         return new reorderNodesInDatabaseGroupCommand(db.name, tagsOrder, fixOrder).execute();
-    }
-
-    async reorderShardsInGroup(db: shard, tagsOrder: string[]) {
-        return new reorderNodesInDatabaseGroupCommand(db.name, tagsOrder, false).execute();
     }
 }
