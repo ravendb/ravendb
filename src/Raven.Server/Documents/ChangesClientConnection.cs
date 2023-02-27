@@ -28,7 +28,7 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
         private readonly AsyncQueue<ChangeValue> _sendQueue = new AsyncQueue<ChangeValue>();
         private readonly MultipleUseFlag _lowMemoryFlag = new();
-        
+
         public CancellationTokenSource CancellationToken { get; }
 
         private readonly CancellationToken _disposeToken;
@@ -354,10 +354,12 @@ namespace Raven.Server.Documents
             if (_aggressiveChanges)
             {
                 Debug.Assert(_watchAllDocuments == 0 && (_matchingDocuments == null || _matchingDocuments.Count == 0));
-                PulseAggressiveCaching();
+
+                if (AggressiveCacheChange.ShouldUpdateAggressiveCache(change))
+                    PulseAggressiveCaching();
                 return;
             }
-            
+
             if (_watchAllDocuments > 0)
             {
                 Send(change);
@@ -395,7 +397,9 @@ namespace Raven.Server.Documents
             if (_aggressiveChanges)
             {
                 Debug.Assert(_watchAllIndexes == 0 && (_matchingIndexes == null || _matchingIndexes.Count == 0));
-                PulseAggressiveCaching();
+
+                if (AggressiveCacheChange.ShouldUpdateAggressiveCache(change))
+                    PulseAggressiveCaching();
                 return;
             }
 
@@ -416,7 +420,7 @@ namespace Raven.Server.Documents
             AllowSkip = true,
             ValueToSend = new DynamicJsonValue
             {
-                ["Type"] = nameof(AggressiveCacheUpdate),
+                ["Type"] = nameof(AggressiveCacheChange),
             }
         };
 

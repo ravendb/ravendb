@@ -6,7 +6,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class DatabaseConnectionState : IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>, IChangesConnectionState<TimeSeriesChange>, IChangesConnectionState<AggressiveCacheUpdate>
+    internal class DatabaseConnectionState : IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>, IChangesConnectionState<TimeSeriesChange>, IChangesConnectionState<AggressiveCacheChange>
     {
         public event Action<Exception> OnError;
 
@@ -92,7 +92,7 @@ namespace Raven.Client.Documents.Changes
             remove => OnDocumentChangeNotification -= value;
         }
         
-        event Action<AggressiveCacheUpdate> IChangesConnectionState<AggressiveCacheUpdate>.OnChangeNotification
+        event Action<AggressiveCacheChange> IChangesConnectionState<AggressiveCacheChange>.OnChangeNotification
         {
             add => OnAggressiveCacheUpdateNotification += value;
             remove => OnAggressiveCacheUpdateNotification -= value;
@@ -124,7 +124,7 @@ namespace Raven.Client.Documents.Changes
         private event Action<IndexChange> OnIndexChangeNotification;
 
         private event Action<OperationStatusChange> OnOperationStatusChangeNotification;
-        private event Action<AggressiveCacheUpdate> OnAggressiveCacheUpdateNotification;
+        private event Action<AggressiveCacheChange> OnAggressiveCacheUpdateNotification;
 
         private event Action<TimeSeriesChange> OnTimeSeriesChangeNotification;
 
@@ -153,9 +153,9 @@ namespace Raven.Client.Documents.Changes
             OnOperationStatusChangeNotification?.Invoke(operationStatusChange);
         }
         
-        public void Send(AggressiveCacheUpdate aggressiveCacheUpdate)
+        public void Send(AggressiveCacheChange aggressiveCacheChange)
         {
-            OnAggressiveCacheUpdateNotification?.Invoke(aggressiveCacheUpdate);
+            OnAggressiveCacheUpdateNotification?.Invoke(aggressiveCacheChange);
         }
     }
 }

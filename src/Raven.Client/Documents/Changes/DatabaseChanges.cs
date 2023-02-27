@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Changes
         private int _immediateConnection;
         
         private readonly TaskCompletionSource<ChangesSupportedFeatures> _supportedFeaturesTcs = new();
-        internal Task<ChangesSupportedFeatures> GetSupportedFeatures() => _supportedFeaturesTcs.Task;
+        internal Task<ChangesSupportedFeatures> GetSupportedFeaturesAsync() => _supportedFeaturesTcs.Task;
 
         private ServerNode _serverNode;
         private int _nodeIndex;
@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Changes
             _cts = new CancellationTokenSource();
             _client = CreateClientWebSocket(_requestExecutor);
 
-            GetSupportedFeatures().ContinueWith(async t =>
+            GetSupportedFeaturesAsync().ContinueWith(async t =>
             {
                 if (t.Result.TopologyChange == false)
                     return;
@@ -182,11 +182,11 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        internal IChangesObservable<AggressiveCacheUpdate> ForAggressiveCaching()
+        internal IChangesObservable<AggressiveCacheChange> ForAggressiveCaching()
         {
             var counter = GetOrAddConnectionState("aggressive-caching", "watch-aggressive-caching", "unwatch-aggressive-caching", null);
 
-            var taskedObservable = new ChangesObservable<AggressiveCacheUpdate, DatabaseConnectionState>(
+            var taskedObservable = new ChangesObservable<AggressiveCacheChange, DatabaseConnectionState>(
                 counter,
                 notification => true);
 
@@ -726,10 +726,10 @@ namespace Raven.Client.Documents.Changes
         {
             switch (type)
             {
-                case nameof(AggressiveCacheUpdate):
+                case nameof(AggressiveCacheChange):
                     foreach (var state in _counters)
                     {
-                        state.Value.Send(AggressiveCacheUpdate.Instance);
+                        state.Value.Send(AggressiveCacheChange.Instance);
                     }
                     break;
                 case nameof(DocumentChange):

@@ -12,7 +12,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IObserver<AggressiveCacheUpdate>, IDisposable
+    internal class EvictItemsFromCacheBasedOnChanges : IObserver<DocumentChange>, IObserver<IndexChange>, IObserver<AggressiveCacheChange>, IDisposable
     {
         private readonly string _databaseName;
         private readonly DatabaseChanges _changes;
@@ -26,14 +26,14 @@ namespace Raven.Client.Documents.Changes
         {
             _databaseName = databaseName;
             _requestExecutor = store.GetRequestExecutor(databaseName);
-            _changes = new DatabaseChanges(_requestExecutor, databaseName, onDispose: null,nodeTag: null);
+            _changes = new DatabaseChanges(_requestExecutor, databaseName, onDispose: null, nodeTag: null);
             _taskConnected = EnsureConnectedInternalAsync();
         }
 
         private async Task EnsureConnectedInternalAsync()
         {
             await _changes.EnsureConnectedNow().ConfigureAwait(false);
-            var changesSupportedFeatures = await _changes.GetSupportedFeatures().ConfigureAwait(false);
+            var changesSupportedFeatures = await _changes.GetSupportedFeaturesAsync().ConfigureAwait(false);
             if (changesSupportedFeatures.AggressiveCachingChange)
             {
                 var forAggressiveCachingChanges = _changes.ForAggressiveCaching();
@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Changes
 
         public void OnNext(DocumentChange change)
         {
-            if (change.Type == DocumentChangeTypes.Put || change.Type == DocumentChangeTypes.Delete)
+            if (AggressiveCacheChange.ShouldUpdateAggressiveCache(change))
             {
                 Interlocked.Increment(ref _requestExecutor.Cache.Generation);
             }
@@ -68,19 +68,19 @@ namespace Raven.Client.Documents.Changes
 
         public void OnNext(IndexChange change)
         {
-            if (change.Type == IndexChangeTypes.BatchCompleted || change.Type == IndexChangeTypes.IndexRemoved)
+            if (AggressiveCacheChange.ShouldUpdateAggressiveCache(change))
             {
                 Interlocked.Increment(ref _requestExecutor.Cache.Generation);
             }
         }
 
-        public void OnError(Exception error)
-        {
-        }
-
-        public void OnNext(AggressiveCacheUpdate value)
+        public void OnNext(AggressiveCacheChange value)
         {
             Interlocked.Increment(ref _requestExecutor.Cache.Generation);
+        }
+
+        public void OnError(Exception error)
+        {
         }
 
         public void OnCompleted()
