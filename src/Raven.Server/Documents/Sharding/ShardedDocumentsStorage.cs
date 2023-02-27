@@ -241,23 +241,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         inMemoryBucketStats.UpdateBucket(bucket, nowTicks, sizeChange, numOfDocsChanged, changeVectorIndex, ref value);
     }
 
-    public ChangeVector GetLastChangeVectorInBucket(DocumentsOperationContext context, int bucket)
-    {
-        var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-        using (GetBucketAndEtagByteString(context.Allocator, bucket, long.MaxValue, out var buffer))
-        using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
-        using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
-        {
-            var result = table.SeekOneBackwardFrom(DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], prefix, keySlice);
-            if (result == null)
-                return null;
-
-            var document = TableValueToDocument(context, ref result.Reader, DocumentFields.ChangeVector);
-            return context.GetChangeVector(document.ChangeVector);
-        }
-    }
-
-    public ChangeVector GetMergedChangeVectorInBucket_new(DocumentsOperationContext context, int bucket)
+    public ChangeVector GetMergedChangeVectorInBucket(DocumentsOperationContext context, int bucket)
     {
         var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsSlice);
 
@@ -271,61 +255,6 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
             var cvStr = Encodings.Utf8.GetString(readResult.Reader.Base + sizeof(Documents.BucketStats), readResult.Reader.Length - sizeof(Documents.BucketStats));
             return context.GetChangeVector(cvStr);
         }
-    }
-
-    public ChangeVector GetMergedChangeVectorInBucket(DocumentsOperationContext context, int bucket)
-    {
-        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,
-            "Optimize this to calculate the merged change vector during insertion to the bucket");
-
-        var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-        var merged = context.GetChangeVector(string.Empty);
-        foreach (var result in GetItemsByBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], bucket, 0))
-        {
-            var documentCv = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(documentCv, context);
-        }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, 0))
-        {
-            var tombstoneCv = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref result.Result.Reader);
-            var flags = TableValueToFlags((int)TombstoneTable.Flags, ref result.Result.Reader);
-            if (flags.HasFlag(DocumentFlags.Artificial | DocumentFlags.FromResharding))
-                continue;
-
-            merged = merged.MergeWith(tombstoneCv, context);
-        }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.CountersStorage.CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, 0))
-        {
-            var counterCv = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(counterCv, context);
-        }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.ConflictsStorage.ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, 0))
-        {
-            var conflictCv = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(conflictCv, context);
-        }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.RevisionsStorage.RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], bucket, 0))
-        {
-            var revisionCv = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(revisionCv, context);
-        }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.AttachmentsStorage.AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndEtagSlice], bucket, 0))
-        {
-            var attachmentCv = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(attachmentCv, context);
-        }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.TimeSeriesStorage.TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, 0))
-        {
-            var tsCv = TableValueToChangeVector(context, (int)TimeSeriesTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(tsCv, context);
-        }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.TimeSeriesStorage.DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, 0))
-        {
-            var deletedRangeCv = TableValueToChangeVector(context, (int)DeletedRangeTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(deletedRangeCv, context);
-        }
-
-        return merged;
     }
 
     public bool HaveMoreDocumentsInBucketAfter(int bucket, long after, out string merged)
