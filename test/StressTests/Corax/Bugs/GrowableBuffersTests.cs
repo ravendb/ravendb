@@ -28,18 +28,24 @@ public class GrowableBuffersTests : RavenTestBase
                 }
             }
 
+            int expectedCount;
             {
                 using var session = store.OpenSession();
                 var list = session.Advanced.RawQuery<Item>("from Items where boost(Number > -1, 1.0) and startsWith(Name, 'n')").NoTracking().NoCaching();
                 Indexes.WaitForIndexing(store);
+
+                // We are using a count to force the query to call the boosting code.
+                expectedCount = session.Advanced.RawQuery<Item>("from Items where boost(Number > -1, 1.0) and startsWith(Name, 'n')").NoTracking().NoCaching().Count();
             }
             
             Parallel.ForEach(Enumerable.Range(0, 128), RavenTestHelper.DefaultParallelOptions, i =>
             {
                 using var _ = store.SetRequestTimeout(TimeSpan.FromMinutes(2));
                 using var session = store.OpenSession();
-                var list = session.Advanced.RawQuery<Item>("from Items where boost(Number > -1, 1.0) and startsWith(Name, 'n')").NoCaching().NoTracking().ToList();
-                Assert.NotEmpty(list);
+                var actualCount = session.Advanced.RawQuery<Item>("from Items where boost(Number > -1, 1.0) and startsWith(Name, 'n')").NoCaching().NoTracking().Count();
+
+                // Now we know how many we should be getting, we will compare with it. 
+                Assert.Equal(expectedCount, actualCount);
             });
         }
     }
