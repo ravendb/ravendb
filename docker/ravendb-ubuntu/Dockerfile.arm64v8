@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/runtime-deps:7.0-jammy-arm64v8
 
-ARG path_to_deb
+ARG PATH_TO_DEB RAVEN_USER_ID RAVEN_GROUP_ID
 
 RUN apt-get update \
     && apt-get install \
@@ -21,7 +21,7 @@ ENV RAVEN_ARGS='' \
 
 EXPOSE 8080 38888 161
 
-COPY ${path_to_deb} /opt/ravendb.deb
+COPY "${PATH_TO_DEB}" /opt/ravendb.deb
 
 RUN apt install /opt/ravendb.deb -y \
     && apt-get autoremove -y \
@@ -30,9 +30,10 @@ RUN apt install /opt/ravendb.deb -y \
 USER ravendb:ravendb
 
 COPY server-utils.sh cert-utils.sh run-raven.sh healthcheck.sh link-legacy-datadir.sh /usr/lib/ravendb/scripts/
-COPY settings.json /etc/ravendb/
+COPY settings.json /usr/lib/ravendb/server/
 
 HEALTHCHECK --start-period=60s CMD /usr/lib/ravendb/scripts/healthcheck.sh
 VOLUME /var/lib/ravendb/data /etc/ravendb
 WORKDIR /usr/lib/ravendb
 CMD [ "/bin/bash", "/usr/lib/ravendb/scripts/run-raven.sh" ]
+
