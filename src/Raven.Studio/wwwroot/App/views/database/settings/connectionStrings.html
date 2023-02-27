@@ -208,7 +208,7 @@
                 <form class="flex-form padding" autocomplete="off">
                     <div data-bind="with: editedRavenEtlConnectionString">
                         <div data-bind="compose: $root.connectionStringRavenView"></div>
-                        <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
+                        <div class="form-group margin-bottom-xs" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
                             <label class="control-label">Used in Tasks</label>
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
                                 <div class="task">
@@ -220,7 +220,7 @@
                     </div>
                     <div data-bind="with: editedElasticSearchEtlConnectionString">
                         <div data-bind="compose: $root.connectionStringElasticView"></div>
-                        <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
+                        <div class="form-group margin-bottom-xs" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
                             <label class="control-label">Used in Tasks</label>
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
                                 <div class="task">
@@ -232,7 +232,7 @@
                     </div>
                     <div data-bind="with: editedSqlEtlConnectionString">
                         <div data-bind="compose: $root.connectionStringSqlView"></div>
-                        <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
+                        <div class="form-group margin-bottom-xs" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
                             <label class="control-label">Used in Tasks</label>
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
                                 <div class="task">
@@ -244,7 +244,7 @@
                     </div>
                     <div data-bind="with: editedKafkaEtlConnectionString">
                         <div data-bind="compose: $root.connectionStringKafkaView"></div>
-                        <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
+                        <div class="form-group margin-bottom-xs" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
                             <label class="control-label">Used in Tasks</label>
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
                                 <div class="task">
@@ -256,7 +256,7 @@
                     </div>
                     <div data-bind="with: editedRabbitMqEtlConnectionString">
                         <div data-bind="compose: $root.connectionStringRabbitMqView"></div>
-                        <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
+                        <div class="form-group margin-bottom-xs" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
                             <label class="control-label">Used in Tasks</label>
                             <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
                                 <div class="task">

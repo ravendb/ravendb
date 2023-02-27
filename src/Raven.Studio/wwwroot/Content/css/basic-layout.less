@@ -339,10 +339,7 @@
         display: inline-block;
         transition: color .1s ease;
         height: 100%;
-
-        &:not(.text-danger):not(.text-warning) {
-            color: inherit;
-        }
+        color: @footer-color;
 
         .label {
             opacity: .7;
@@ -511,8 +508,7 @@
                 width: 18px;
                 height: 18px;
                 font-size: 11px;
-                line-height: 17px;
-                font-weight: 900;
+                line-height: 18px;
                 color: #FFF;
                 text-align: center;
                 bottom: 2px;
@@ -559,18 +555,11 @@
 
         [class*=" icon-"],
         [class^="icon-"] {
-            font-size: 16px;
+            font-size: 21px;
         }
 
         @media (min-width:@screen-md) {
             float: right;
-        }
-
-        @media (min-width:@screen-xs) {
-            [class*=" icon-"],
-            [class^="icon-"] {
-                font-size: 26px;
-            }
         }
     }
 
@@ -805,7 +794,6 @@
                     margin-right: 10px;
                     font-size: 20px;
                     position: relative;
-                    top: 3px;
                 }
             }
 
