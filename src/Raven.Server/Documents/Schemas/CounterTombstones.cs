@@ -1,4 +1,6 @@
-﻿using Sparrow.Server;
+﻿using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.TimeSeries;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -6,13 +8,13 @@ namespace Raven.Server.Documents.Schemas
 {
     public static class CounterTombstones
     {
-        public static TableSchema Current => CounterTombstonesSchemaBase;
-
         internal static readonly TableSchema CounterTombstonesSchemaBase = new TableSchema();
+        internal static readonly TableSchema ShardingCounterTombstonesSchemaBase = new TableSchema();
 
         internal static readonly Slice CounterTombstoneKey;
         internal static readonly Slice AllCounterTombstonesEtagSlice;
         internal static readonly Slice CollectionCounterTombstonesEtagsSlice;
+        internal static readonly Slice CounterTombstonesBucketAndEtagSlice;
 
         internal enum CounterTombstonesTable
         {
@@ -30,28 +32,48 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, "CounterTombstoneKey", ByteStringType.Immutable, out CounterTombstoneKey);
                 Slice.From(ctx, "AllCounterTombstonesEtagSlice", ByteStringType.Immutable, out AllCounterTombstonesEtagSlice);
                 Slice.From(ctx, "CollectionCounterTombstonesEtagsSlice", ByteStringType.Immutable, out CollectionCounterTombstonesEtagsSlice);
+                Slice.From(ctx, "CounterTombstonesBucketAndEtagSlice", ByteStringType.Immutable, out CounterTombstonesBucketAndEtagSlice);
             }
 
-            CounterTombstonesSchemaBase.DefineKey(new TableSchema.IndexDef
-            {
-                StartIndex = (int)CounterTombstonesTable.CounterTombstoneKey,
-                Count = 1,
-                Name = CounterTombstoneKey,
-                IsGlobal = true
-            });
+            DefineIndexesForCounterTombstonesSchema(CounterTombstonesSchemaBase);
+            DefineIndexesForShardingCounterTombstonesSchemaBase();
 
-            CounterTombstonesSchemaBase.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
+            void DefineIndexesForCounterTombstonesSchema(TableSchema schema)
             {
-                StartIndex = (int)CounterTombstonesTable.Etag,
-                Name = AllCounterTombstonesEtagSlice,
-                IsGlobal = true
-            });
+                schema.DefineKey(new TableSchema.IndexDef
+                {
+                    StartIndex = (int)CounterTombstonesTable.CounterTombstoneKey,
+                    Count = 1,
+                    Name = CounterTombstoneKey,
+                    IsGlobal = true
+                });
 
-            CounterTombstonesSchemaBase.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
+                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
+                {
+                    StartIndex = (int)CounterTombstonesTable.Etag,
+                    Name = AllCounterTombstonesEtagSlice,
+                    IsGlobal = true
+                });
+
+                schema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
+                {
+                    StartIndex = (int)CounterTombstonesTable.Etag,
+                    Name = CollectionCounterTombstonesEtagsSlice
+                });
+            }
+
+            void DefineIndexesForShardingCounterTombstonesSchemaBase()
             {
-                StartIndex = (int)CounterTombstonesTable.Etag,
-                Name = CollectionCounterTombstonesEtagsSlice
-            });
+                DefineIndexesForCounterTombstonesSchema(ShardingCounterTombstonesSchemaBase);
+
+                ShardingCounterTombstonesSchemaBase.DefineIndex(new TableSchema.DynamicKeyIndexDef
+                {
+                    GenerateKey = CountersStorage.GenerateBucketAndEtagIndexKeyForCounterTombstones,
+                    OnEntryChanged = ShardedDocumentsStorage.UpdateBucketStats,
+                    IsGlobal = true,
+                    Name = CounterTombstonesBucketAndEtagSlice
+                });
+            }
         }
     }
 }

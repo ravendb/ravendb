@@ -7,6 +7,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Counters;
+using static Raven.Server.Documents.Schemas.CounterTombstones;
 
 namespace Raven.Server.Documents
 {
@@ -26,6 +27,12 @@ namespace Raven.Server.Documents
         internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounters(Transaction tx, ref TableValueReader tvr, out Slice slice)
         {
             return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)CountersTable.CounterKey, (int)CountersTable.Etag, ref tvr, out slice);
+        }
+
+        [StorageIndexEntryKeyGenerator]
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounterTombstones(Transaction tx, ref TableValueReader tvr, out Slice slice)
+        {
+            return ShardedDocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(tx, (int)CounterTombstonesTable.CounterTombstoneKey, (int)CounterTombstonesTable.Etag, ref tvr, out slice);
         }
     }
 }

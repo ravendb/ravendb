@@ -42,14 +42,13 @@ namespace Raven.Server.Documents
             new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
         internal readonly TableSchema CountersSchema;
+        internal readonly TableSchema CounterTombstonesSchema;
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
 
         private readonly ObjectPool<Dictionary<LazyStringValue, PutCountersData>> _dictionariesPool
             = new ObjectPool<Dictionary<LazyStringValue, PutCountersData>>(() => new Dictionary<LazyStringValue, PutCountersData>(LazyStringValueComparer.Instance));
-
-        private static readonly TableSchema CounterTombstonesSchema = Schemas.CounterTombstones.Current;
 
         [StructLayout(LayoutKind.Explicit)]
         internal struct CounterValues
@@ -93,7 +92,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public CountersStorage([NotNull] DocumentDatabase documentDatabase, [NotNull] Transaction tx, [NotNull] TableSchema schema)
+        public CountersStorage([NotNull] DocumentDatabase documentDatabase, [NotNull] Transaction tx, [NotNull] TableSchema schema, [NotNull] TableSchema tombstoneSchema)
         {
             if (tx == null)
                 throw new ArgumentNullException(nameof(tx));
@@ -102,6 +101,7 @@ namespace Raven.Server.Documents
             _documentsStorage = documentDatabase.DocumentsStorage;
 
             CountersSchema = schema ?? throw new ArgumentNullException(nameof(schema));
+            CounterTombstonesSchema = tombstoneSchema ?? throw new ArgumentNullException(nameof(tombstoneSchema));
 
             tx.CreateTree(CounterKeysSlice);
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Schemas;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
@@ -60,6 +61,7 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         AttachmentsSchema = Schemas.Attachments.ShardingAttachmentsSchemaBase;
         ConflictsSchema = Schemas.Conflicts.ShardingConflictsSchemaBase;
         CountersSchema = Schemas.Counters.ShardingCountersSchemaBase;
+        CounterTombstonesSchema = Schemas.CounterTombstones.ShardingCounterTombstonesSchemaBase;
 
         TimeSeriesSchema = Schemas.TimeSeries.ShardingTimeSeriesSchemaBase;
         TimeSeriesDeleteRangesSchema = Schemas.DeletedRanges.ShardingDeleteRangesSchemaBase;
@@ -308,6 +310,11 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
         {
             var counterCv = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref result.Result.Reader);
             merged = merged.MergeWith(counterCv, context);
+        }
+        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.CountersStorage.CounterTombstonesSchema.DynamicKeyIndexes[Schemas.CounterTombstones.CounterTombstonesBucketAndEtagSlice], bucket, 0))
+        {
+            var counterTombstoneCv = TableValueToChangeVector(context, (int)CounterTombstones.CounterTombstonesTable.ChangeVector, ref result.Result.Reader);
+            merged = merged.MergeWith(counterTombstoneCv, context);
         }
         foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.ConflictsStorage.ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, 0))
         {
