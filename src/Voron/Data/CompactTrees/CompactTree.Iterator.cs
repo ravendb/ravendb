@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Voron.Data.CompactTrees
 {
@@ -32,6 +33,15 @@ namespace Voron.Data.CompactTrees
                     state.LastSearchPosition = ~state.LastSearchPosition;
             }
 
+            public void Seek(CompactKey key)
+            {
+                _tree.FindPageFor(key, ref _cursor);
+
+                ref var state = ref _cursor._stk[_cursor._pos];
+                if (state.LastSearchPosition < 0)
+                    state.LastSearchPosition = ~state.LastSearchPosition;
+            }
+
             public void Reset()
             {
                 _tree.PushPage(_tree._state.RootPage, ref _cursor);
@@ -48,22 +58,7 @@ namespace Voron.Data.CompactTrees
                 }
             }
 
-            public bool MoveNext(out Slice key, out long value)
-            {
-                var next = MoveNext(out Span<byte> keySpan, out value);
-                if (next)
-                {    
-                    Slice.From(_tree._llt.Allocator, keySpan, out key);
-                }
-                else
-                {
-                    key = default(Slice);
-                }
-
-                return next;
-            }
-            
-            public bool MoveNext(out Span<byte> key, out long value)
+            public bool MoveNext(out CompactKeyCacheScope scope, out long value)
             {
                 ref var state = ref _cursor._stk[_cursor._pos];
                 while (true)
@@ -71,15 +66,15 @@ namespace Voron.Data.CompactTrees
                     Debug.Assert(state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf));
                     if (state.LastSearchPosition < state.Header->NumberOfEntries) // same page
                     {
-                        if (GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[state.LastSearchPosition], out key, out value) == false)
+                        if (GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[state.LastSearchPosition], out scope, out value) == false)
                             return false;
-                            
+
                         state.LastSearchPosition++;
                         return true;
                     }
                     if (_tree.GoToNextPage(ref _cursor) == false)
                     {
-                        key = default;
+                        scope = default;
                         value = default;
                         return false;
                     }

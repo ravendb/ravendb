@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Text.Unicode;
 using Corax.Mappings;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -8,11 +10,12 @@ namespace Corax.Queries;
 
 public struct RegexTermProvider : ITermProvider
 {
-    private readonly IndexSearcher _searcher;
-    private readonly Regex _regex;
-    private CompactTree.Iterator _iterator;
     private readonly CompactTree _tree;
+    private readonly IndexSearcher _searcher;
     private readonly FieldMetadata _field;
+    private readonly Regex _regex;
+
+    private CompactTree.Iterator _iterator;
 
     public RegexTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Regex regex)
     {
@@ -33,12 +36,13 @@ public struct RegexTermProvider : ITermProvider
 
     public bool Next(out TermMatch term)
     {
-        while (_iterator.MoveNext(out Slice termSlice, out var _))
+        while (_iterator.MoveNext(out var termScope, out var _))
         {
-            if (_regex.IsMatch(termSlice.ToString()) == false)
+            var key = termScope.Key.Decoded();
+            if (_regex.IsMatch(Encoding.UTF8.GetString(key)) == false)
                 continue;
 
-            term = _searcher.TermQuery(_field, _tree, termSlice);
+            term = _searcher.TermQuery(_field, _tree, key);
             return true;
         }
 

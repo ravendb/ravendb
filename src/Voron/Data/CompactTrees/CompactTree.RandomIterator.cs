@@ -29,7 +29,7 @@ namespace Voron.Data.CompactTrees
                 _currentSample = 0;
             }
 
-            public bool MoveNext(out Span<byte> key, out long value)
+            public bool MoveNext(out ReadOnlySpan<byte> key, out long value)
             {
                 if (_currentSample >= _samples)
                     goto Failure;
@@ -55,14 +55,15 @@ namespace Voron.Data.CompactTrees
                 }
 
                 randomEntry = _generator.Next(state.Header->NumberOfEntries);
-                if (GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[randomEntry], out key, out value) == false)
+                if (GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[randomEntry], out var keyScope, out value) == false)
                     goto Failure;
 
                 _currentSample++;
+                key = keyScope.Key.Decoded();
                 return true;
 
 
-            Failure:
+                Failure:
                 key = Span<byte>.Empty;
                 Unsafe.SkipInit(out value);
                 return false;

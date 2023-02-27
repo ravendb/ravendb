@@ -45,9 +45,10 @@ unsafe partial class CompactTree
     {
         var it = Iterate();
         it.Reset();
-        Span<byte> prevKey = Span<byte>.Empty;
-        while (it.MoveNext(out Span<byte> key, out var v))
+        ReadOnlySpan<byte> prevKey = ReadOnlySpan<byte>.Empty;
+        while (it.MoveNext(out var scope, out var v))
         {
+            var key = scope.Key.Decoded();
             if (prevKey.SequenceCompareTo(key) > 0)
             {
                 throw new InvalidDataException("The items in the compact tree are not sorted!");
@@ -107,7 +108,7 @@ unsafe partial class CompactTree
 
     private void VerifyNode(ref CursorState current)
     {
-        var dictionary = GetEncodingDictionary(current.Header->DictionaryId);
+        var dictionary = GetEncodingDictionary(this._llt, current.Header->DictionaryId);
         if (current.Header->NumberOfEntries == 0)
             return;
 

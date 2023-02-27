@@ -24,7 +24,7 @@ unsafe partial class CompactTree
         private int _currentSample;
         private int _currentIdx;
         private IteratorCursorState _cursor;
-        private HashSet<long> _pagesSeen;
+        private readonly HashSet<long> _pagesSeen;
 
         public RandomBranchKeyScanner(CompactTree tree, long samples, int? seed)
         {
@@ -41,6 +41,8 @@ unsafe partial class CompactTree
 
         public bool MoveNext(out ReadOnlySpan<byte> key)
         {
+            CompactKeyCacheScope scope = default;
+
             if (_currentSample >= _samples)
                 goto Failure;
 
@@ -50,8 +52,6 @@ unsafe partial class CompactTree
 
             ref var cState = ref _cursor;
             ref var state = ref cState._stk[cState._pos];
-
-            Span<byte> keySpan = Span<byte>.Empty;
 
             // While we haven't seen this page, we can process it. 
             while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))
@@ -66,7 +66,7 @@ unsafe partial class CompactTree
                 }
                 else
                 {
-                    // We havent seen it, so we are going to be processing it. 
+                    // We haven't seen it, so we are going to be processing it. 
 
                     // If the current index is already out of bounds, we are going to be marking this page as seen and move
                     // to the next random page down the path.
@@ -82,7 +82,9 @@ unsafe partial class CompactTree
                     }
                     else
                     {
-                        GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[_currentIdx], out keySpan, out _);
+                        if (GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[_currentIdx], out scope, out _) == false)
+                            goto Failure;
+                        
                         _currentIdx++;
                         goto Success;
                     }
@@ -94,7 +96,8 @@ unsafe partial class CompactTree
             if (state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
             {
                 int randomEntry = _generator.Next(state.Header->NumberOfEntries);
-                GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[randomEntry], out keySpan, out _);
+                if (GetEntry(_tree, state.Page, state.EntriesOffsetsPtr[randomEntry], out scope, out _) == false)
+                    goto Failure;
 
                 // Move the cursor to the root.                 
                 _cursor._pos = -1;
@@ -103,15 +106,18 @@ unsafe partial class CompactTree
                 _currentIdx = 0;
             }
 
-            Debug.Assert(keySpan.Length != 0, "If no key has been retrieved, there is an error in the algorithm.");
+            Debug.Assert(scope.Key.IsValid, "If no key has been retrieved, there is an error in the algorithm.");
+
+            // It is important to note that given we are returning a read only reference, and we cannot know what
+            // the caller is gonna do, the keys must survive until struct is collected. 
 
             Success:
-            key = keySpan;
             _currentSample++;
+            key = scope.Key.Decoded();
             return true;
 
             Failure:
-            key = Span<byte>.Empty;
+            key = ReadOnlySpan<byte>.Empty;
             return false;
         }
 

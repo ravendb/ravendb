@@ -8,6 +8,8 @@ namespace Voron.Data.CompactTrees;
 unsafe partial class CompactTree
 {
     // The sequential key scanner would scan every single key available in the tree in sequential order.
+    // It is important to note that given we are returning a read only reference, and we cannot know what
+    // the caller is gonna do, the keys must survive until struct is collected. 
     public struct SequentialKeyScanner : IReadOnlySpanEnumerator
     {
         private readonly CompactTree _tree;
@@ -20,10 +22,13 @@ unsafe partial class CompactTree
             _iterator.Reset();
         }
 
-        public bool MoveNext(out ReadOnlySpan<byte> result)
+        public bool MoveNext(out ReadOnlySpan<byte> key)
         {
-            bool operationResult = _iterator.MoveNext(out Span<byte> resultSlice, out long _);
-            result = resultSlice;
+            // Obtain the new key and return the corresponding span. 
+            bool operationResult = _iterator.MoveNext(out var scope, out long _);
+            key = scope.Key.Decoded();
+
+            // We won't dispose the scope. 
             return operationResult;
         }
 
