@@ -1990,5 +1990,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (filterLimit is not long.MaxValue)
                 FilterLimit = filterLimit;
         }
+        
+        protected static void ThrowProjectionIsAlreadyDone()
+        {
+            throw new InvalidOperationException("Projection is already done. You should not project your result twice.");
+        }
     }
 }

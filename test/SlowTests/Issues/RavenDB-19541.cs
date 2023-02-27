@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -19,6 +20,12 @@ public class RavenDB_19541 : RavenTestBase
     {
     }
 
+    private void AssertResult(Action queryToString)
+    {
+        var exception = Assert.ThrowsAny<InvalidOperationException>(queryToString);
+        Assert.True(exception.Message.Contains("Projection is already done. You should not project your result twice."));
+    }
+    
     [Fact]
     public void CanProjectOnlyOneFieldAfterProjectInto() // Hits: ExpressionType.MemberAccess
     {
@@ -27,8 +34,7 @@ public class RavenDB_19541 : RavenTestBase
 
         var selectSingle = projectIntoQuery.Select(i => i.FirstName);
 
-        Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName", selectSingle.ToString());
-        Assert.Equal("MACIEJ", selectSingle.Single());
+        AssertResult(() => selectSingle.ToString());
     }
 
     [Fact]
@@ -37,9 +43,7 @@ public class RavenDB_19541 : RavenTestBase
         using var store = GetDocumentStoreWithDocuments();
         using var session = OpenSessionAndGetProjectIntoQuery(store, out var projectIntoQuery);
         var selectAnonymous = projectIntoQuery.Select(i => new {i.FirstName, i.FavoriteFood});
-        Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", selectAnonymous.ToString());
-        Assert.Equal("MACIEJ", selectAnonymous.Single().FirstName);
-        Assert.Equal("Zylc", selectAnonymous.Single().FavoriteFood);
+        AssertResult(() => selectAnonymous.ToString());
     }
 
     private class MemberInitProjection
@@ -56,9 +60,7 @@ public class RavenDB_19541 : RavenTestBase
         using var session = OpenSessionAndGetProjectIntoQuery(store, out var projectIntoQuery);
         var memberInitQuery = projectIntoQuery.Select(i => new MemberInitProjection() {FirstName = i.FirstName, FavoriteFood = i.FavoriteFood});
 
-        Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", memberInitQuery.ToString());
-        Assert.Equal("MACIEJ", memberInitQuery.Single().FirstName);
-        Assert.Equal("Zylc", memberInitQuery.Single().FavoriteFood);
+        AssertResult(() => memberInitQuery.ToString());
     }
 
     [Fact]
@@ -67,9 +69,8 @@ public class RavenDB_19541 : RavenTestBase
         using var store = GetDocumentStoreWithDocuments();
         using var session = OpenSessionAndGetProjectIntoQuery(store, out var projectIntoQuery);
         var selectAnonymous = projectIntoQuery.Select(into => into.Props["nested"]);
-
-        Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select Props_nested", selectAnonymous.ToString());
-        Assert.Equal(1, selectAnonymous.Single());
+        
+        AssertResult(() => selectAnonymous.ToString());
     }
 
     [Fact]
@@ -81,10 +82,7 @@ public class RavenDB_19541 : RavenTestBase
         {
             var projectIntoQuery = session.Advanced.DocumentQuery<FullData, CapsLockIndex>().WhereEquals(i => i.FirstName, "maciej").SelectFields<ProjectionInto>();
             Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, LastNameName, Age, FavoriteFood, Props", projectIntoQuery.ToString());
-            var dqProjectionIntoAnother = projectIntoQuery.SelectFields<MemberInitProjection>();
-            Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", dqProjectionIntoAnother.ToString());
-            Assert.Equal("MACIEJ", dqProjectionIntoAnother.Single().FirstName);
-            Assert.Equal("Zylc", dqProjectionIntoAnother.Single().FavoriteFood);
+            AssertResult(() => projectIntoQuery.SelectFields<MemberInitProjection>());
         }
     }
     
@@ -97,10 +95,8 @@ public class RavenDB_19541 : RavenTestBase
         {
             var projectIntoQuery = session.Advanced.AsyncDocumentQuery<FullData, CapsLockIndex>().WhereEquals(i => i.FirstName, "maciej").SelectFields<ProjectionInto>();
             Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, LastNameName, Age, FavoriteFood, Props", projectIntoQuery.ToString());
-            var dqProjectionIntoAnother = projectIntoQuery.SelectFields<MemberInitProjection>();
-            Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", dqProjectionIntoAnother.ToString());
-            Assert.Equal("MACIEJ", (await dqProjectionIntoAnother.SingleAsync()).FirstName);
-            Assert.Equal("Zylc", (await dqProjectionIntoAnother.SingleAsync()).FavoriteFood);
+            
+            AssertResult(() => projectIntoQuery.SelectFields<MemberInitProjection>());
         }
     }
     
@@ -114,8 +110,6 @@ public class RavenDB_19541 : RavenTestBase
 
     private IDocumentStore GetDocumentStoreWithDocuments()
     {
-        Assert.True(IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion < 60_000); //This tests will be removed (or changed to Assert on exceptions). This is the guardian to check them during merge.  
-
         var store = GetDocumentStore();
         using (var session = store.OpenSession())
         {

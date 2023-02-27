@@ -1005,6 +1005,9 @@ namespace Raven.Client.Documents.Session
 
         internal AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(QueryData queryData = null)
         {
+            if (FieldsToFetchToken != null && (FieldsToFetchToken.FieldsToFetch is {Length: > 0} || FieldsToFetchToken.Projections is {Length: > 0}))
+                ThrowProjectionIsAlreadyDone();
+
             FieldsToFetchToken newFieldsToFetch;
             if (queryData != null && queryData.Fields.Length > 0)
             {
@@ -1092,7 +1095,7 @@ namespace Raven.Client.Documents.Session
 
             return query;
         }
-
+        
         public IRavenQueryable<T> ToQueryable()
         {
             var type = typeof(T);

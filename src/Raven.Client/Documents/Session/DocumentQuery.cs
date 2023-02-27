@@ -991,6 +991,9 @@ namespace Raven.Client.Documents.Session
 
         internal DocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(QueryData queryData = null)
         {
+            if (FieldsToFetchToken != null && (FieldsToFetchToken.FieldsToFetch is {Length: > 0} || FieldsToFetchToken.Projections is {Length: > 0}))
+                ThrowProjectionIsAlreadyDone();
+
             FieldsToFetchToken newFieldsToFetch;
             if (queryData != null && queryData.Fields.Length > 0)
             {

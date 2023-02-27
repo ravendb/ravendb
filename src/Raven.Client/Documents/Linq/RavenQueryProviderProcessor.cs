@@ -2535,6 +2535,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void VisitSelect(Expression operand)
         {
+            if (FieldsToFetch is {Count: > 0})
+                ThrowProjectionIsAlreadyDone();
+
             var lambdaExpression = operand as LambdaExpression;
             var body = lambdaExpression != null ? lambdaExpression.Body : operand;
             switch (body.NodeType)
@@ -2572,6 +2575,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
+        }
+        
+        private static void ThrowProjectionIsAlreadyDone()
+        {
+            throw new InvalidOperationException("Projection is already done. You should not project your result twice.");
         }
 
         private void SelectCall(Expression body, LambdaExpression lambdaExpression)

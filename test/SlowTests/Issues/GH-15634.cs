@@ -20,22 +20,22 @@ public class GH_15634 : RavenTestBase
     
     
     [Fact]
-    public async Task CanProjectFromProjectInto()
+    public void CanProjectFromProjectInto()
     {
         using var store = GetDocumentStore();
         store.ExecuteIndex(new EntityBaseIndex());
 
-        using (var session = store.OpenAsyncSession())
+        using (var session = store.OpenSession())
         {
-            await session.StoreAsync(new Asset { Id = "Asset/d07bba18-685f-4eb8-b974-ed2ab5aa1ff5", Tags = new() { "tag1", "tag2" } });
-            await session.StoreAsync(new Asset { Id = "Asset/bca893c9-c8c6-4913-b373-df2547aa128a", Tags = new() { "tag2" } });
-            await session.StoreAsync(new Asset { Id = "Asset/d322936f-66e0-463f-8cda-cf5031b97d8d", Tags = new() { "tag1" } });
-            await session.StoreAsync(new Asset { Id = "Asset/d2646c1f-edee-44fc-b173-093589493726", Tags = new() { "tag1", "tag2" } });
-            await session.SaveChangesAsync();
+            session.Store(new Asset { Id = "Asset/d07bba18-685f-4eb8-b974-ed2ab5aa1ff5", Tags = new() { "tag1", "tag2" } });
+            session.Store(new Asset { Id = "Asset/bca893c9-c8c6-4913-b373-df2547aa128a", Tags = new() { "tag2" } });
+            session.Store(new Asset { Id = "Asset/d322936f-66e0-463f-8cda-cf5031b97d8d", Tags = new() { "tag1" } });
+            session.Store(new Asset { Id = "Asset/d2646c1f-edee-44fc-b173-093589493726", Tags = new() { "tag1", "tag2" } });
+            session.SaveChanges();
         }
         Indexes.WaitForIndexing(store);
 
-        using (var session = store.OpenAsyncSession())
+        using (var session = store.OpenSession())
         {
             var assignableTypeNames = new[] { "Asset" };
             var tags = new[] { "tag1", "tag2" };
@@ -47,9 +47,11 @@ public class GH_15634 : RavenTestBase
                 .Where(d => d.ModelType.In(assignableTypeNames))
                 .Where(a => a.Tags.ContainsAll(tags))
                 .Select(a => a.Tags_Count );
-            var results = await ravenQueryable.ToListAsync();
-            Assert.NotEmpty(results);
-            Assert.Equal(2, results[0]);
+
+             void QueryToString() => ravenQueryable.ToList();
+
+            AssertResult(QueryToString);
+
         }
     }
     class EntityBaseIndex : AbstractIndexCreationTask<Asset>
@@ -82,5 +84,11 @@ public class GH_15634 : RavenTestBase
         public string ModelType { get; set; } = "";
         public IEnumerable<string> Tags { get; set; } = default!;
         public int Tags_Count { get; set; }
+    }
+    
+    private void AssertResult(Action queryToString)
+    {
+        var exception = Assert.ThrowsAny<InvalidOperationException>(queryToString);
+        Assert.True(exception.Message.Contains("Projection is already done. You should not project your result twice."));
     }
 }
