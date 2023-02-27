@@ -1,5 +1,4 @@
-﻿using System;
-using Raven.Client.Documents.Subscriptions;
+﻿using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
@@ -15,10 +14,9 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 {
     public class StartBucketMigrationCommand : UpdateDatabaseCommand
     {
-        public int SourceShard;
+        public int? SourceShard;
         public int DestinationShard;
         public int Bucket;
-        public bool BackgroundMigration;
 
         private ShardBucketMigration _migration;
 
@@ -32,15 +30,14 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             DestinationShard = destShard;
         }
 
-        public StartBucketMigrationCommand(int bucket, int sourceShard, int destShard, string database, string raftId, bool backgroundMigration) : this(bucket, destShard, database, raftId)
+        public StartBucketMigrationCommand(int bucket, int sourceShard, int destShard, string database, string raftId) : this(bucket, destShard, database, raftId)
         {
             SourceShard = sourceShard;
-            BackgroundMigration = backgroundMigration;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            var sourceShard = BackgroundMigration ? SourceShard : ShardHelper.GetShardNumberFor(record.Sharding, Bucket);
+            var sourceShard = SourceShard ?? ShardHelper.GetShardNumberFor(record.Sharding, Bucket);
             if (sourceShard == DestinationShard)
                 return; // nothing to do
 
@@ -66,8 +63,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 DestinationShard = DestinationShard,
                 SourceShard = sourceShard,
                 MigrationIndex = etag,
-                Status = MigrationStatus.Moving,
-                BackgroundMigration = BackgroundMigration
+                Status = MigrationStatus.Moving
             };
 
             record.Sharding.BucketMigrations.Add(Bucket, _migration);
@@ -112,7 +108,6 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             json[nameof(SourceShard)] = SourceShard;
             json[nameof(DestinationShard)] = DestinationShard;
             json[nameof(Bucket)] = Bucket;
-            json[nameof(BackgroundMigration)] = BackgroundMigration;
         }
     }
 }

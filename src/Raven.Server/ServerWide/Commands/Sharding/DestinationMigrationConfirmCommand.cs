@@ -44,8 +44,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
                 migration.Status = MigrationStatus.OwnershipTransferred;
                 migration.ConfirmationIndex = etag;
 
-                if (migration.BackgroundMigration == false)
-                    record.MoveBucket(migration.Bucket, migration.DestinationShard);
+                record.MoveBucket(migration.Bucket, migration.DestinationShard);
             }
         }
 
