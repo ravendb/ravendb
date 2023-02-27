@@ -21,8 +21,8 @@ namespace Raven.Server.Documents.Sharding.Background
         {
             await WaitOrThrowOperationCanceled(_database.Configuration.Sharding.PeriodicDocumentsMigrationInterval.AsTimeSpan);
 
-            while (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
-                await WaitOrThrowOperationCanceled(TimeSpan.FromMilliseconds(300));
+            if (_database.ServerStore.Sharding.HasActiveMigrations(_database.ShardedDatabaseName))
+                return;
 
             await ExecuteMoveDocuments();
         }
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Sharding.Background
                         var start = range.BucketRangeStart;
                         var end = index == configuration.BucketRanges.Count - 1
                             ? int.MaxValue
-                            : configuration.BucketRanges[index + 1].BucketRangeStart;
+                            : configuration.BucketRanges[index + 1].BucketRangeStart - 1;
 
                         var bucketStatistics = ShardedDocumentsStorage.GetBucketStatistics(context, start, end);
 
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Sharding.Background
         private async Task MoveDocumentsToShard(int bucket, int moveToShard)
         {
             var cmd = new StartBucketMigrationCommand(bucket, _database.ShardNumber, moveToShard, _database.ShardedDatabaseName,
-                $"{Guid.NewGuid()}/{bucket}", backgroundMigration: true);
+                $"{Guid.NewGuid()}/{bucket}");
 
             var result = await _database.ServerStore.SendToLeaderAsync(cmd);
             await _database.ServerStore.Cluster.WaitForIndexNotification(result.Index);

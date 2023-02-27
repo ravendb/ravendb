@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel;
 using System.IO.Compression;
 using System.Threading;

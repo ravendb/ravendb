@@ -315,10 +315,13 @@ namespace Raven.Server.Utils
                     }
                 }
 
-                // split last
-                record.Sharding.BucketRanges.Insert(record.Sharding.BucketRanges.Count, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
-                record.Sharding.BucketRanges.Insert(record.Sharding.BucketRanges.Count,
-                    new ShardBucketRange { BucketRangeStart = bucket + 1, ShardNumber = lastRange.ShardNumber });
+                if (lastRange.ShardNumber != toShard)
+                {
+                    // split last
+                    record.Sharding.BucketRanges.Insert(record.Sharding.BucketRanges.Count, new ShardBucketRange { BucketRangeStart = bucket, ShardNumber = toShard });
+                    record.Sharding.BucketRanges.Insert(record.Sharding.BucketRanges.Count,
+                        new ShardBucketRange { BucketRangeStart = bucket + 1, ShardNumber = lastRange.ShardNumber });
+                }
             }
             finally
             {
