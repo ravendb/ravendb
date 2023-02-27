@@ -61,7 +61,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 catch (TimeoutException)
                 {
                     if (++retries < maxRetries)
+                    {
+                        await Task.Delay(1_000);
                         continue;
+                    }
 
                     smugglerResult?.AddError(errorMessage);
                     onProgress?.Invoke(smugglerResult?.Progress);
