@@ -63,6 +63,11 @@ public partial class IndexSearcher
         return TermQuery(field, tree, term.AsReadOnlySpan());
     }
     
+    public TermMatch TermQuery(FieldMetadata field, CompactKey term, CompactTree termsTree = null)
+    {
+        return TermQuery(field, termsTree, term.Decoded());
+    }
+
     internal TermMatch TermQuery(in FieldMetadata field, CompactTree tree, ReadOnlySpan<byte> term)
     {
         if (tree.TryGetValue(term, out var value) == false)

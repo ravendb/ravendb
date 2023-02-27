@@ -4,8 +4,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
@@ -39,21 +38,20 @@ namespace Voron.Data.CompactTrees
         internal CompactTreeState State => _state;
         internal LowLevelTransaction Llt => _llt;
 
-        
 
         // The reason why we use 2 is that the worst case scenario is caused by splitting pages where a single
         // page split will need 2 simultaneous key encoders. In this way we can get away with not instantiating
         // so many. 
-        private EncodedKey _internalKeyCache1;
-        private EncodedKey _internalKeyCache2;
+        private CompactKey _internalKeyCache1;
+        private CompactKey _internalKeyCache2;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private EncodedKey AcquireKey()
+        internal CompactKey AcquireKey()
         {
             if (_internalKeyCache1 == null && _internalKeyCache2 == null)
-                return new EncodedKey(this);
+                return new CompactKey(this);
 
-            EncodedKey current;
+            CompactKey current;
             if (_internalKeyCache1 != null)
             {
                 current = _internalKeyCache1;
@@ -69,7 +67,7 @@ namespace Voron.Data.CompactTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ReleaseKey(EncodedKey key)
+        internal void ReleaseKey(CompactKey key)
         {
             if (_internalKeyCache1 != null && _internalKeyCache2 != null)
             {
@@ -86,454 +84,6 @@ namespace Voron.Data.CompactTrees
                 // We know we may be forcing the death of a key, but we are doing so because we are 
                 // going to be reclaiming one of them anyways. 
                 _internalKeyCache2 = key;
-            }
-        }
-
-        public readonly struct EncodedKeyScope : IDisposable
-        {
-            public readonly EncodedKey Key;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public EncodedKeyScope(CompactTree tree)
-            {
-                Key = tree.AcquireKey();
-            }
-
-            public EncodedKeyScope(CompactTree tree, ReadOnlySpan<byte> key)
-            {
-                Key = tree.AcquireKey();
-                Key.Set(key);
-            }
-
-            public EncodedKeyScope(CompactTree tree, EncodedKey key)
-            {
-                Key = tree.AcquireKey();
-                Key.Set(key);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Dispose()
-            {
-                Key.Owner.ReleaseKey(Key);
-            }
-        }
-
-        public class EncodedKey : IDisposable
-        {
-            public readonly CompactTree Owner;
-
-            private ByteString _storage;
-            private ByteStringContext<ByteStringMemoryCache>.InternalScope _storageScope;
-            
-            // The storage data will be used in an arena fashion. If there is no enough, we just create a bigger one and
-            // copy the content back. 
-            private byte* _currentPtr;
-            private byte* _currentEndPtr;
-
-            // The decoded key pointer points toward the actual decoded key (if available). If not we will take the current
-            // dictionary and just decode it into the storage. 
-            private int _decodedKeyIdx;
-            private int _currentKeyIdx;
-
-            private const int MappingTableSize = 64;
-            private const int MappingTableMask = MappingTableSize - 1;
-
-            private readonly long* _keyMappingCache;
-            private readonly long* _keyMappingCacheIndex;
-            private int _lastKeyMappingItem;
-            
-            public int MaxLength { get; private set; }
-
-            public long Dictionary { get; private set; }
-
-            private const int Invalid = -1;
-
-            public EncodedKey(CompactTree tree)
-            {
-                Owner = tree;
-                Dictionary = Invalid;
-                _currentKeyIdx = Invalid;
-                _decodedKeyIdx = Invalid;
-                _lastKeyMappingItem = Invalid;
-
-                int allocationSize = 2 * Constants.CompactTree.MaximumKeySize + 2 * MappingTableSize * sizeof(long);
-
-                _storageScope = Owner.Llt.Allocator.Allocate(allocationSize, out _storage);
-                _currentPtr = _storage.Ptr;
-                _currentEndPtr = _currentPtr + Constants.CompactTree.MaximumKeySize * 2;
-
-                _keyMappingCache = (long*)_currentEndPtr;
-                _keyMappingCacheIndex = (long*)(_currentEndPtr + MappingTableSize * sizeof(long));
-
-                MaxLength = 0;
-            }
-
-            public bool IsValid => Dictionary > 0;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ReadOnlySpan<byte> EncodedWithCurrent(out int lengthInBits)
-            {
-                Debug.Assert(IsValid, "Cannot get an encoded key without a current dictionary");
-
-                var keyPtr = EncodedWithPtr(Dictionary, out lengthInBits);
-                int keyLength = Bits.ToBytes(lengthInBits);
-                return new ReadOnlySpan<byte>(keyPtr, keyLength);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public byte* EncodedWithPtr(long dictionaryId, out int lengthInBits)
-            {
-                [SkipLocalsInit]
-                [MethodImpl(MethodImplOptions.NoInlining)]
-                byte* EncodeFromDecodedForm()
-                {
-                    Debug.Assert(IsValid, "At this stage we either created the key using an unencoded version. Current dictionary cannot be invalid.");
-
-                    // We acquire the decoded form. This will lazily evaluate if needed. 
-                    ReadOnlySpan<byte> decodedKey = Decoded();
-
-                    // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes.
-
-                    // We look for an appropriate place to put this key
-                    int buckedIdx = SelectBucketForWrite();
-                    _keyMappingCache[buckedIdx] = dictionaryId;
-                    _keyMappingCacheIndex[buckedIdx] = (int)(_currentPtr - _storage.Ptr);
-
-                    // We will grow the 
-                    var dictionary = Owner.GetEncodingDictionary(dictionaryId);
-                    int maxSize = dictionary.GetMaxEncodingBytes(decodedKey.Length) + 4;
-                    
-                    int currentSize = (int)(_currentEndPtr - _currentPtr);
-                    if (maxSize > currentSize)
-                        UnlikelyGrowStorage(currentSize + maxSize);
-
-                    var encodedStartPtr = _currentPtr;
-
-                    var encodedKey = new Span<byte>(encodedStartPtr + sizeof(int), maxSize);
-                    dictionary.Encode(decodedKey, ref encodedKey, out var encodedKeyLengthInBits);
-
-                    *(int*)encodedStartPtr = encodedKeyLengthInBits;
-                    _currentPtr += encodedKey.Length + sizeof(int);
-                    MaxLength = Math.Max(encodedKey.Length, MaxLength);
-
-                    return encodedStartPtr;
-                }
-
-                byte* start;
-                if (Dictionary == dictionaryId && _currentKeyIdx != Invalid)
-                {
-                    // This is the fast-path, we are requiring the usage of a dictionary that happens to be the current one. 
-                    start = _storage.Ptr + _currentKeyIdx;
-                }
-                else
-                {
-                    int bucketIdx = SelectBucketForRead(dictionaryId);
-                    if (bucketIdx == Invalid)
-                    {
-                        start = EncodeFromDecodedForm();
-                        bucketIdx = _lastKeyMappingItem;
-
-                        // IMPORTANT: Pointers are potentially invalidated by the grow storage call at EncodeFromDecodedForm, be careful here. 
-                    }
-                    else
-                    {
-                        start = _storage.Ptr + _keyMappingCacheIndex[bucketIdx];
-                    }
-
-                    // Because we are decoding for the current dictionary, we will update the lazy index to avoid searching again next time. 
-                    if (Dictionary == dictionaryId)
-                        _currentKeyIdx = (int)_keyMappingCacheIndex[bucketIdx];
-                }
-
-                lengthInBits = *(int*)start;
-                return start + sizeof(int); 
-            }
-
-            [SkipLocalsInit]
-            private void DecodeFromEncodedForm()
-            {
-                Debug.Assert(IsValid, "At this stage we either created the key using an unencoded version OR we have already pushed 1 encoded key. Current dictionary cannot be invalid.");
-
-                long currentDictionary = Dictionary;
-                int currentKeyIdx = _currentKeyIdx;
-                if (currentKeyIdx == Invalid && _keyMappingCache[0] != 0)
-                {
-                    // We don't have any decoded version, so we pick the first one and do it. 
-                    currentDictionary = _keyMappingCache[0];
-                    currentKeyIdx = (int)_keyMappingCacheIndex[0];
-                }
-
-                Debug.Assert(currentKeyIdx != Invalid);
-
-                var dictionary = Owner.GetEncodingDictionary(currentDictionary);
-
-                byte* encodedStartPtr = _storage.Ptr + currentKeyIdx;
-                int encodedKeyLengthInBits = *(int*)encodedStartPtr;
-                int encodedKeyLength = Bits.ToBytes(encodedKeyLengthInBits);
-
-                int maxSize = dictionary.GetMaxDecodingBytes(encodedKeyLength) + sizeof(int);
-                int currentSize = (int)(_currentEndPtr - _currentPtr);
-                if (maxSize > currentSize)
-                {
-                    // IMPORTANT: Pointers are potentially invalidated by the grow storage call but not the indexes. 
-                    UnlikelyGrowStorage(maxSize + currentSize);
-                    encodedStartPtr = _storage.Ptr + currentKeyIdx;
-                }
-
-                _decodedKeyIdx = (int)(_currentPtr - _storage.Ptr);
-
-                var decodedKey = new Span<byte>(_currentPtr + sizeof(int), maxSize);
-                dictionary.Decode(encodedKeyLengthInBits, new ReadOnlySpan<byte>(encodedStartPtr + sizeof(int), encodedKeyLength), ref decodedKey);
-
-                *(int*)_currentPtr = decodedKey.Length;
-                _currentPtr += decodedKey.Length + sizeof(int);
-                MaxLength = Math.Max(decodedKey.Length, MaxLength);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public ReadOnlySpan<byte> Decoded()
-            {
-                if (_decodedKeyIdx == Invalid)
-                {
-                    DecodeFromEncodedForm();
-                }
-
-                // IMPORTANT: Pointers are potentially invalidated by the grow storage call at DecodeFromEncodedForm, be careful here. 
-                byte* start = _storage.Ptr + _decodedKeyIdx;
-                int length = *((int*)start);
-
-                return new ReadOnlySpan<byte>(start + sizeof(int), length);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public byte* DecodedPtr(out int lengthInBytes)
-            {
-                if (_decodedKeyIdx == Invalid)
-                {
-                    DecodeFromEncodedForm();
-                }
-
-                // IMPORTANT: Pointers are potentially invalidated by the grow storage call at DecodeFromEncodedForm, be careful here. 
-                byte* start = _storage.Ptr + _decodedKeyIdx;
-                // This is decoded therefore is bytes.
-                lengthInBytes = *((int*)start); 
-                
-                return start + sizeof(int);
-            }
-
-            private void UnlikelyGrowStorage(int maxSize)
-            {
-                int memoryUsed = (int)(_currentPtr - _storage.Ptr);
-
-                // Request more memory, copy the content and return it.
-                maxSize = Math.Max(maxSize, _storage.Length) * 2;
-                var storageScope = Owner.Llt.Allocator.Allocate(maxSize, out var storage);
-                Memory.Copy(storage.Ptr, _storage.Ptr, memoryUsed);
-
-                _storageScope.Dispose();
-
-                // Update the new references.
-                _storage = storage;
-                _storageScope = storageScope;
-
-                // This procedure will invalidate any pointer beyond this point. 
-                _currentPtr = _storage.Ptr + memoryUsed;
-                _currentEndPtr = _currentPtr + _storage.Length;
-            }
-
-            public void Set(EncodedKey key)
-            {
-                Dictionary = key.Dictionary;
-                _currentKeyIdx = key._currentKeyIdx;
-                _decodedKeyIdx = key._decodedKeyIdx;
-                _lastKeyMappingItem = key._lastKeyMappingItem;
-
-                var originalSize = (int)(key._currentPtr - key._storage.Ptr);
-                if (originalSize > _storage.Length)
-                    UnlikelyGrowStorage(originalSize);
-
-                // Copy the key mapping and content.
-                int lastElementIdx = Math.Min(_lastKeyMappingItem, MappingTableSize - 1);
-                if (lastElementIdx >= 0)
-                {
-                    var srcDictionary = key._keyMappingCache;
-                    var destDictionary = _keyMappingCache;
-                    var srcIndex = key._keyMappingCacheIndex;
-                    var destIndex = _keyMappingCacheIndex;
-
-                    // PERF: Since we are avoiding the cost of general purpose copying, if we have the vector instruction set we should use it. 
-                    if (Avx.IsSupported)
-                    {
-                        int currentElementIdx = 0;
-                        while (currentElementIdx <= lastElementIdx)
-                        {
-                            Avx.Store(_keyMappingCache + currentElementIdx, Avx.LoadDquVector256(key._keyMappingCache + currentElementIdx));
-                            Avx.Store(_keyMappingCacheIndex + currentElementIdx, Avx.LoadDquVector256(key._keyMappingCacheIndex + currentElementIdx));
-                            currentElementIdx += Vector256<long>.Count;
-                        }
-                    }
-                    else
-                    {
-                        while (lastElementIdx >= 0)
-                        {
-                            destDictionary[lastElementIdx] = srcDictionary[lastElementIdx];
-                            destIndex[lastElementIdx] = srcIndex[lastElementIdx];
-                            lastElementIdx--;
-                        }
-                    }
-                }
-
-                // This is the operation to set an unencoded key, therefore we need to restart everything.
-                _currentPtr = _storage.Ptr;
-                Memory.Copy(_currentPtr, key._storage.Ptr, originalSize);
-                _currentPtr += originalSize;
-
-                MaxLength = originalSize;
-            }
-
-            public void Set(ReadOnlySpan<byte> key)
-            {
-                // This is the operation to set an unencoded key, therefore we need to restart everything.
-                var currentPtr = _storage.Ptr;
-
-                _lastKeyMappingItem = Invalid;
-
-                // Since the size is big enough to store the unencoded key, we don't check the remaining size here.
-                _decodedKeyIdx = (int)(currentPtr - (long)_storage.Ptr);
-                _currentKeyIdx = Invalid;
-                Dictionary = Invalid;
-
-                int keyLength = key.Length;
-
-                // We write the size and the key. 
-                *((int*)currentPtr) = keyLength;
-                currentPtr += sizeof(int);
-                
-                // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
-                Unsafe.CopyBlock(ref Unsafe.AsRef<byte>(currentPtr), ref Unsafe.AsRef<byte>(key[0]), (uint)keyLength );
-
-                currentPtr += keyLength; // We update the new pointer. 
-                _currentPtr = currentPtr;
-
-                MaxLength = keyLength;
-            }
-
-            public void Set(int keyLengthInBits, ReadOnlySpan<byte> key, long dictionaryId)
-            {
-                _lastKeyMappingItem = Invalid;
-
-                // This is the operation to set an unencoded key, therefore we need to restart everything.
-                _currentPtr = _storage.Ptr;
-
-                // Since the size is big enough to store twice the unencoded key, we don't check the remaining size here.
-                fixed (byte* keyPtr = key)
-                {
-                    // This is the current state after the setup with the encoded value.
-                    _decodedKeyIdx = Invalid;
-                    _currentKeyIdx = (int)(_currentPtr - (long)_storage.Ptr);
-                    Dictionary = dictionaryId;
-
-                    int bucketIdx = SelectBucketForWrite();
-                    _keyMappingCache[bucketIdx] = dictionaryId;
-                    _keyMappingCacheIndex[bucketIdx] = _currentKeyIdx;
-
-                    // We write the size and the key. 
-                    *(int*)_currentPtr = keyLengthInBits;
-                    _currentPtr += sizeof(int);
-                    
-                    int keyLength = Bits.ToBytes(keyLengthInBits);
-                    Memory.Copy(_currentPtr, keyPtr, keyLength);
-                    _currentPtr += keyLength; // We update the new pointer. 
-
-                    MaxLength = keyLength;
-                }
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private int SelectBucketForRead(long dictionaryId)
-            {
-                // TODO: This can exploit AVX2 instructions.
-                int elementIdx = Math.Min(_lastKeyMappingItem, MappingTableSize - 1);
-                while (elementIdx >= 0)
-                {
-                    long currentDictionary = _keyMappingCache[elementIdx];
-                    if (currentDictionary == dictionaryId)
-                        return elementIdx;
-
-                    elementIdx--;
-                }
-
-                return Invalid;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private int SelectBucketForWrite()
-            {
-                _lastKeyMappingItem++;
-                return _lastKeyMappingItem & MappingTableMask;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void ChangeDictionary(long dictionaryId)
-            {
-                Debug.Assert( dictionaryId > 0, "The dictionary id must be valid to perform a change.");
-
-                // With this operation we can change the current dictionary which would force a search
-                // in the hash structure and if the key is not found setup everything so that it gets
-                // lazily reencoded on the next access.
-
-                if (dictionaryId == Dictionary) 
-                    return;
-
-                Dictionary = dictionaryId;
-                _currentKeyIdx = Invalid;
-            }
-
-            public int CompareEncodedWithCurrent(byte* nextEntryPtr, int nextEntryLength)
-            {
-                if (Dictionary == Invalid)
-                    throw new VoronErrorException("The dictionary is not set.");
-
-                if (_currentKeyIdx == Invalid)
-                    return CompareEncodedWith(nextEntryPtr, nextEntryLength, Dictionary);
-
-                // This method allows us to compare the key in it's encoded form directly using the current dictionary. 
-                byte* encodedStartPtr = _storage.Ptr + _currentKeyIdx;
-                int length = *((int*)encodedStartPtr);
-
-                var result = AdvMemory.CompareInline(encodedStartPtr + sizeof(int), nextEntryPtr, Math.Min(length, nextEntryLength));
-                return result == 0 ? length - nextEntryLength : result;
-            }
-
-            public int CompareEncodedWith(byte* nextEntryPtr, int nextEntryLengthInBits, long dictionaryId)
-            {
-                // This method allow us to compare the key in it's encoded form using an arbitrary dictionary without changing
-                // the current dictionary/cached state. 
-                byte* encodedStartPtr;
-                int encodedLengthInBits;
-                if (Dictionary == dictionaryId && _currentKeyIdx != Invalid)
-                {
-                    Debug.Assert(_currentKeyIdx != Invalid, "The current key index is not set and it should be.");
-                    
-                    encodedStartPtr = _storage.Ptr + _currentKeyIdx;
-                    encodedLengthInBits = *((int*)encodedStartPtr);
-                    encodedStartPtr += sizeof(int);
-                }
-                else
-                {
-                    encodedStartPtr = EncodedWithPtr(dictionaryId, out encodedLengthInBits);
-                    MaxLength = Bits.ToBytes(encodedLengthInBits);
-                }
-
-                int nextEntryLength = Bits.ToBytes(nextEntryLengthInBits);
-                int encodedLength = Bits.ToBytes(encodedLengthInBits);
-                var result = AdvMemory.CompareInline(encodedStartPtr, nextEntryPtr, Math.Min(encodedLength, nextEntryLength));
-                return result == 0 ? encodedLength - nextEntryLength : result;
-            }
-
-            public void Dispose()
-            {
-                _storageScope.Dispose();
             }
         }
 
@@ -565,7 +115,7 @@ namespace Voron.Data.CompactTrees
             }
             public string DumpPageDebug(CompactTree tree)
             {
-                var dictionary = tree.GetEncodingDictionary(Header->DictionaryId);
+                var dictionary = CompactTree.GetEncodingDictionary(tree._llt, Header->DictionaryId);
 
                 Span<byte> tempBuffer = stackalloc byte[2048];
 
@@ -752,7 +302,7 @@ namespace Voron.Data.CompactTrees
             return ReturnValue(ref _internalCursor._stk[_internalCursor._pos], out value);
         }
 
-        private bool TryGetValue(EncodedKey key, out long value)
+        public bool TryGetValue(CompactKey key, out long value)
         {
             FindPageFor(key, ref _internalCursor);
             return ReturnValue(ref _internalCursor._stk[_internalCursor._pos], out value);
@@ -779,11 +329,8 @@ namespace Voron.Data.CompactTrees
             state.LastSearchPosition = 0;
         }
 
-        public bool TryGetNextValue(EncodedKey key, out long value)
+        public bool TryGetNextValue(CompactKey key, out long value)
         {
-            // TODO: Check if this is true, probably it is not. 
-            Debug.Assert(key.Owner == this, "We cannot mix key scopes with different trees.");
-
             ref var state = ref _internalCursor._stk[_internalCursor._pos];
             if (state.Header->PageFlags == CompactPageFlags.Branch)
             {
@@ -827,7 +374,7 @@ namespace Voron.Data.CompactTrees
                 shouldBeInCurrentPage = true;
 
                 // TODO: Figure out if we can get rid of this copy and just change the current and restore after the loop. 
-                using var currentKeyScope = new EncodedKeyScope(this, key);
+                using var currentKeyScope = new CompactKeyCacheScope(this, key);
 
                 var currentKeyInPageDictionary = currentKeyScope.Key;
                 
@@ -888,10 +435,10 @@ namespace Voron.Data.CompactTrees
 
         }
 
-        public bool TryGetNextValue(ReadOnlySpan<byte> key, out long value, out EncodedKeyScope scope)
+        public bool TryGetNextValue(ReadOnlySpan<byte> key, out long value, out CompactKeyCacheScope cacheScope)
         {
-            scope = new EncodedKeyScope(this, key);
-            var encodedKey = scope.Key;
+            cacheScope = new CompactKeyCacheScope(this, key);
+            var encodedKey = cacheScope.Key;
 
             ref var state = ref _internalCursor._stk[_internalCursor._pos];
             if (state.Header->PageFlags == CompactPageFlags.Branch)
@@ -937,7 +484,7 @@ namespace Voron.Data.CompactTrees
                 shouldBeInCurrentPage = true;
 
                 // TODO: Figure out if we can get rid of this copy and just change the current and restore after the loop. 
-                using var currentKeyScope = new EncodedKeyScope(this, encodedKey);
+                using var currentKeyScope = new CompactKeyCacheScope(this, encodedKey);
 
                 var currentKeyInPageDictionary = currentKeyScope.Key;
                 for (int i = _internalCursor._pos - 1; i >= 0; i--)
@@ -1011,7 +558,7 @@ namespace Voron.Data.CompactTrees
 
         public bool TryRemove(ReadOnlySpan<byte> key, out long oldValue)
         {
-            using var scope = new EncodedKeyScope(this);
+            using var scope = new CompactKeyCacheScope(this);
             var encodedKey = scope.Key;
             encodedKey.Set(key);
             FindPageFor(encodedKey, ref _internalCursor);
@@ -1019,7 +566,7 @@ namespace Voron.Data.CompactTrees
             return RemoveFromPage(allowRecurse: true, out oldValue);
         }
 
-        public bool TryRemove(EncodedKey key, out long oldValue)
+        public bool TryRemove(CompactKey key, out long oldValue)
         {
             CompactTreeDumper.WriteRemoval(this, key.Decoded());
 
@@ -1133,8 +680,8 @@ namespace Voron.Data.CompactTrees
             var entries = new Span<ushort>(destinationPage.Pointer + PageHeader.SizeOf, destinationHeader->NumberOfEntries + sourceHeader->NumberOfEntries)
                                 .Slice(destinationHeader->NumberOfEntries);
 
-            var srcDictionary = GetEncodingDictionary(sourceHeader->DictionaryId);
-            var destDictionary = GetEncodingDictionary(destinationHeader->DictionaryId);
+            var srcDictionary = GetEncodingDictionary(this._llt, sourceHeader->DictionaryId);
+            var destDictionary = GetEncodingDictionary(this._llt, destinationHeader->DictionaryId);
             bool reEncode = sourceHeader->DictionaryId != destinationHeader->DictionaryId;
 
             int sourceMovedLength = 0;
@@ -1171,7 +718,7 @@ namespace Voron.Data.CompactTrees
             Memory.Set(sourcePage.Pointer + sourceHeader->Lower, 0, (oldLower - sourceHeader->Lower));
 
             // now re-wire the new splitted page key
-            using var scope = new EncodedKeyScope(this);
+            using var scope = new CompactKeyCacheScope(this);
             var newKey = scope.Key;
 
             var encodedKey = GetEncodedKey(sourcePage, sourceState.EntriesOffsets[0], out int encodedKeyLengthInBits);
@@ -1305,7 +852,7 @@ namespace Voron.Data.CompactTrees
             }
         }
 
-        private void AssertValueAndKeySize(EncodedKey key, long value)
+        private void AssertValueAndKeySize(CompactKey key, long value)
         {
             if (value < 0)
                 throw new ArgumentOutOfRangeException(nameof(value), value, "Only positive values are allowed");
@@ -1326,17 +873,17 @@ namespace Voron.Data.CompactTrees
         public void Add(string key, long value)
         {
             using var _ = Slice.From(_llt.Allocator, key, out var slice);
-            using var scope = new EncodedKeyScope(this, slice.AsReadOnlySpan());
+            using var scope = new CompactKeyCacheScope(this, slice.AsReadOnlySpan());
             Add(scope.Key, value);
         }
 
         public void Add(ReadOnlySpan<byte> key, long value)
         {
-            using var scope = new EncodedKeyScope(this, key);
+            using var scope = new CompactKeyCacheScope(this, key);
             Add(scope.Key, value);
         }
 
-        public void Add(EncodedKey key, long value)
+        public void Add(CompactKey key, long value)
         {
             CompactTreeDumper.WriteAddition(this, key.Decoded(), value);
 
@@ -1353,7 +900,7 @@ namespace Voron.Data.CompactTrees
         }
 
         [SkipLocalsInit]
-        private void AddToPage(EncodedKey key, long value)
+        private void AddToPage(CompactKey key, long value)
         {
             ref var state = ref _internalCursor._stk[_internalCursor._pos];
 
@@ -1460,7 +1007,7 @@ namespace Voron.Data.CompactTrees
             VerifySizeOf(ref state);
         }
 
-        private void AddEntryToPage(EncodedKey key, CursorState state, int requiredSize, byte* valueBufferPtr, int valueBufferLength)
+        private void AddEntryToPage(CompactKey key, CursorState state, int requiredSize, byte* valueBufferPtr, int valueBufferLength)
         {
             //VerifySizeOf(ref state);
 
@@ -1499,7 +1046,7 @@ namespace Voron.Data.CompactTrees
             //VerifySizeOf(ref state);
         }
 
-        private EncodedKey SplitPage(EncodedKey currentCauseForSplit, long value)
+        private CompactKey SplitPage(CompactKey currentCauseForSplit, long value)
         {
             if (_internalCursor._pos == 0) // need to create a root page
             {
@@ -1555,7 +1102,7 @@ namespace Voron.Data.CompactTrees
             return currentCauseForSplit;
         }
 
-        private EncodedKey SplitPageEncodedEntries(EncodedKey causeForSplit, Page page, CompactPageHeader* header, long value, ref CursorState state)
+        private CompactKey SplitPageEncodedEntries(CompactKey causeForSplit, Page page, CompactPageHeader* header, long value, ref CursorState state)
         {
             var valueBufferPtr = stackalloc byte[10];
             int valueBufferLength = ZigZagEncoding.Encode(valueBufferPtr, value);
@@ -1670,8 +1217,8 @@ namespace Voron.Data.CompactTrees
 #endif
         private bool TryRecompressPage(in CursorState state)
         {
-            var oldDictionary = GetEncodingDictionary(state.Header->DictionaryId);
-            var newDictionary = GetEncodingDictionary(_state.TreeDictionaryId);                
+            var oldDictionary = CompactTree.GetEncodingDictionary(this._llt, state.Header->DictionaryId);
+            var newDictionary = CompactTree.GetEncodingDictionary(this._llt, _state.TreeDictionaryId);                
 
             using var _ = _llt.Environment.GetTemporaryPage(_llt, out var tmp);
             Memory.Copy(tmp.TempPagePointer, state.Page.Pointer, Constants.Storage.PageSize);
@@ -1844,7 +1391,7 @@ namespace Voron.Data.CompactTrees
 
             var results = new List<(string, long)>();
 
-            using var scope = new EncodedKeyScope(this);
+            using var scope = new CompactKeyCacheScope(this);
             for (ushort i = 0; i < state.Header->NumberOfEntries; i++)
             {
                 GetEncodedEntry(page, state.EntriesOffsets[i], out var encodedKey, out var encodedKeyLengthInBits, out var val);
@@ -1881,13 +1428,13 @@ namespace Voron.Data.CompactTrees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void FindPageFor(ReadOnlySpan<byte> key, ref IteratorCursorState cstate)
         {
-            using var scope = new EncodedKeyScope(this);
+            using var scope = new CompactKeyCacheScope(this);
             var encodedKey = scope.Key;
             encodedKey.Set(key);
             FindPageFor(encodedKey, ref cstate);
         }
 
-        private void FindPageFor(EncodedKey key, ref IteratorCursorState cstate)
+        private void FindPageFor(CompactKey key, ref IteratorCursorState cstate)
         {
             cstate._pos = -1;
             cstate._len = 0;
@@ -1900,49 +1447,30 @@ namespace Voron.Data.CompactTrees
             FindPageFor(ref cstate, ref state, key);
         }
 
-        private void FindPageFor(ReadOnlySpan<byte> key, ref IteratorCursorState cstate, EncodedKey encodedKey)
-        {
-            cstate._pos = -1;
-            cstate._len = 0;
-            PushPage(_state.RootPage, ref cstate);
-
-            ref var state = ref cstate._stk[cstate._pos];
-
-            encodedKey.Set(key);
-            encodedKey.ChangeDictionary(state.Header->DictionaryId);
-
-            FindPageFor(ref cstate, ref state, encodedKey);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void FindPageFor(ref IteratorCursorState cstate, ref CursorState state, EncodedKey encodedKey)
+        private void FindPageFor(ref IteratorCursorState cstate, ref CursorState state, CompactKey compactKey)
         {
             while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))
             {
-                SearchPageAndPushNext(encodedKey, ref cstate);
+                SearchInCurrentPage(compactKey, ref cstate._stk[cstate._pos]);
+
+                ref var nState = ref cstate._stk[cstate._pos];
+                if (nState.LastSearchPosition < 0)
+                    nState.LastSearchPosition = ~nState.LastSearchPosition;
+                if (nState.LastMatch != 0 && nState.LastSearchPosition > 0)
+                    nState.LastSearchPosition--; // went too far
+
+                int actualPos = Math.Min(nState.Header->NumberOfEntries - 1, nState.LastSearchPosition);
+                var nextPage = GetValue(ref nState, actualPos);
+
+                PushPage(nextPage, ref cstate);
+
+                compactKey.ChangeDictionary(cstate._stk[cstate._pos].Header->DictionaryId);
+
                 state = ref cstate._stk[cstate._pos];
             }
-            SearchInCurrentPage(encodedKey, ref state);
+            SearchInCurrentPage(compactKey, ref state);
         }
-
-        private void SearchPageAndPushNext(EncodedKey key, ref IteratorCursorState cstate)
-        {
-            SearchInCurrentPage(key, ref cstate._stk[cstate._pos]);
-
-            ref var state = ref cstate._stk[cstate._pos];
-            if (state.LastSearchPosition < 0)
-                state.LastSearchPosition = ~state.LastSearchPosition;
-            if (state.LastMatch != 0 && state.LastSearchPosition > 0)
-                state.LastSearchPosition--; // went too far
-
-            int actualPos = Math.Min(state.Header->NumberOfEntries - 1, state.LastSearchPosition);
-            var nextPage = GetValue(ref state, actualPos);
-
-            PushPage(nextPage, ref cstate);
-
-            key.ChangeDictionary(cstate._stk[cstate._pos].Header->DictionaryId);
-        }
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void PopPage(ref IteratorCursorState cstate)
@@ -1963,33 +1491,15 @@ namespace Voron.Data.CompactTrees
             cstate._len++;
         }
 
-        private PersistentDictionary _lastDictionary;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private PersistentDictionary GetEncodingDictionary(long dictionaryId)
+        internal static PersistentDictionary GetEncodingDictionary(LowLevelTransaction llt, long dictionaryId)
         {
-            // PERF: Since this call is very unlikely we are explicitly preventing the JIT to inline this method in order
-            // to shrink the size of the generated code, which helps to generate even more efficient at the call site. 
-            [MethodImpl(MethodImplOptions.NoInlining)]
-            PersistentDictionary GetEncodingDictionaryUnlikely()
-            {
-                _llt._persistentDictionariesForCompactTrees ??= new WeakSmallSet<long, PersistentDictionary>(16);
-                if (_llt._persistentDictionariesForCompactTrees.TryGetValue(dictionaryId, out var dictionary))
-                {
-                    _lastDictionary = dictionary;
-                    return dictionary;
-                }
-
-                dictionary = new PersistentDictionary(_llt.GetPage(dictionaryId));
-                _llt._persistentDictionariesForCompactTrees.Add(dictionaryId, dictionary);
-                _lastDictionary = dictionary;
+            llt._persistentDictionariesForCompactTrees ??= new WeakSmallSet<long, PersistentDictionary>(16);
+            if (llt._persistentDictionariesForCompactTrees.TryGetValue(dictionaryId, out var dictionary))
                 return dictionary;
-            }
 
-            if (_lastDictionary is not null && _lastDictionary.PageNumber == dictionaryId)
-                return _lastDictionary;
-
-            return GetEncodingDictionaryUnlikely();
+            dictionary = new PersistentDictionary(llt.GetPage(dictionaryId));
+            llt._persistentDictionariesForCompactTrees.Add(dictionaryId, dictionary);
+            return dictionary;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2067,20 +1577,18 @@ namespace Voron.Data.CompactTrees
             return new Span<byte>(entry, (int)(pos - entry));
         }
 
-        internal static bool GetEntry(CompactTree tree, Page page, ushort entriesOffset, out Span<byte> encodedKey, out long value)
+        internal static bool GetEntry(CompactTree tree, Page page, ushort entriesOffset, out CompactKeyCacheScope key, out long value)
         {
-            tree.GetEncodedEntry(page, entriesOffset, out encodedKey, out var encodedKeyLengthInBits, out value);
-            if (encodedKey.Length == 0)
+            tree.GetEncodedEntry(page, entriesOffset, out var encodedKeyStream, out var encodedKeyLengthInBits, out value);
+            if (encodedKeyStream.Length == 0)
+            {
+                key = default;
                 return false;
+            }
 
-            using var scope = new EncodedKeyScope(tree);
-            scope.Key.Set(encodedKeyLengthInBits, encodedKey, ((CompactPageHeader*)page.Pointer)->DictionaryId);
+            key = new CompactKeyCacheScope(tree);
+            key.Key.Set(encodedKeyLengthInBits, encodedKeyStream, ((CompactPageHeader*)page.Pointer)->DictionaryId);
 
-            var actualKeyPtr = scope.Key.DecodedPtr(out int length);
-            tree.Llt.Allocator.AllocateDirect(length, out var output);
-            Unsafe.CopyBlockUnaligned(output.Ptr, actualKeyPtr, (uint)length);
-
-            encodedKey = output.ToSpan();
             return true;
         }
 
@@ -2104,7 +1612,7 @@ namespace Voron.Data.CompactTrees
             return entryPtr;
         }
 
-        private void SearchInCurrentPage(EncodedKey key, ref CursorState state)
+        private void SearchInCurrentPage(CompactKey key, ref CursorState state)
         {
             // Ensure that the key has already been 'updated' this is internal and shouldn't check explicitly that.
             // It is the responsibility of the caller to ensure that is the case. 
@@ -2199,7 +1707,7 @@ namespace Voron.Data.CompactTrees
             return 1;
         }
 
-        private void FuzzySearchInCurrentPage(in EncodedKey key, ref CursorState state)
+        private void FuzzySearchInCurrentPage(in CompactKey key, ref CursorState state)
         {
             // Ensure that the key has already been 'updated' this is internal and shouldn't check explicitly that.
             // It is the responsibility of the caller to ensure that is the case. 
@@ -2242,7 +1750,7 @@ namespace Voron.Data.CompactTrees
             state.LastSearchPosition = ~mid;
         }
 
-        private void FuzzySearchPageAndPushNext(EncodedKey key, ref IteratorCursorState cstate)
+        private void FuzzySearchPageAndPushNext(CompactKey key, ref IteratorCursorState cstate)
         {
             FuzzySearchInCurrentPage(key, ref cstate._stk[cstate._pos]);
 
@@ -2271,7 +1779,7 @@ namespace Voron.Data.CompactTrees
 
             ref var state = ref cstate._stk[cstate._pos];
 
-            using var scope = new EncodedKeyScope(this);
+            using var scope = new CompactKeyCacheScope(this);
             
             var encodedKey = scope.Key;
             encodedKey.Set(key);
@@ -2288,6 +1796,5 @@ namespace Voron.Data.CompactTrees
             state.LastMatch = 1;
             state.LastSearchPosition = 0;
         }
-
     }
 }

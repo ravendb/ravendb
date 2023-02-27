@@ -28,13 +28,15 @@ namespace Corax.Queries
         where TLow : struct, Range.Marker
         where THigh  : struct, Range.Marker
     {
+        private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly Slice _low, _high;
-        private readonly CompactTree _tree;
+
         private CompactTree.Iterator _iterator;
-        private bool _skipLowCheck;
+
         private readonly bool _skipHighCheck;
+        private bool _skipLowCheck;
 
         public TermRangeProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice low, Slice high)
         {
@@ -65,29 +67,31 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Next(out TermMatch term) => Next(out term, out _);
 
-        public bool Next(out TermMatch term, out Slice termSlice)
+        public bool Next(out TermMatch term, out CompactKeyCacheScope termScope)
         {
-            if (_iterator.MoveNext(out termSlice, out var _) == false)
+            if (_iterator.MoveNext(out termScope, out var _) == false)
             {
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
             }
+
+            var termSlice = termScope.Key.Decoded();
 
             if (typeof(TLow) == typeof(Range.Exclusive))
             {
                 if (_skipLowCheck)
                 {
                     _skipLowCheck = false;
-                    if (_low.AsSpan().SequenceEqual(termSlice.AsSpan()))
+                    if (_low.AsSpan().SequenceEqual(termSlice))
                     {
-                        return Next(out term, out termSlice);
+                        return Next(out term, out termScope);
                     }
                 }
             }
 
             if (_skipHighCheck == false)
             {
-                int cmp = _high.AsSpan().SequenceCompareTo(termSlice.AsSpan());
+                int cmp = _high.AsSpan().SequenceCompareTo(termSlice);
                 if (typeof(THigh) == typeof(Range.Exclusive) && cmp <= 0 || 
                     typeof(THigh) == typeof(Range.Inclusive) && cmp < 0)
                 {

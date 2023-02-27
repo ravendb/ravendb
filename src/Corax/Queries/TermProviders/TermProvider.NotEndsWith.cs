@@ -14,11 +14,12 @@ namespace Corax.Queries
     [DebuggerDisplay("{DebugView,nq}")]
     public struct NotEndsWithTermProvider : ITermProvider
     {
+        private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
-        private readonly CompactTree.Iterator _iterator;
         private readonly FieldMetadata _field;
         private readonly Slice _endsWith;
-        private readonly CompactTree _tree;
+
+        private CompactTree.Iterator _iterator;
 
         public NotEndsWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice endsWith)
         {
@@ -32,15 +33,15 @@ namespace Corax.Queries
 
         public void Reset()
         {
-
             _iterator.Reset();
         }
 
         public bool Next(out TermMatch term)
         {
 
-            while (_iterator.MoveNext(out Slice termSlice, out var _))
+            while (_iterator.MoveNext(out var termScope, out var _))
             {
+                var termSlice = termScope.Key.Decoded();
                 if (termSlice.EndsWith(_endsWith))
                     continue;
 

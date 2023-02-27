@@ -13,6 +13,7 @@ using Sparrow.Server;
 using Sparrow.Server.Strings;
 
 using Voron;
+using Voron.Data.CompactTrees;
 using static Corax.Constants;
 
 namespace Corax.Queries
@@ -189,23 +190,29 @@ namespace Corax.Queries
                     iter.Seek(ngram);
 
                     byte lastByte = ngram[^1];
-                    while (iter.MoveNext(out Slice gramKey, out var _))
+
+                    while (iter.MoveNext(out var gramKeyScope, out var _))
                     {
+                        var gramKey = gramKeyScope.Key.Decoded();
                         if (gramKey[ngram.Length - 1] > lastByte)
                             break;
 
-                        var key = gramKey.AsReadOnlySpan().Slice(Suggestions.DefaultNGramSize);
+                        var key = gramKey.Slice(Suggestions.DefaultNGramSize);
                         uint keyHash = Hashing.XXHash32.CalculateInline(key);
 
                         if (dictionary.TryGetValue(keyHash, out int location) == false)
                         {
                             location = values.Count;
-                            values.Add((gramKey, 0));
+
+                            Slice.From(allocator, gramKey, out var gramSlice);
+                            values.Add((gramSlice, 0));
                             dictionary.Add(keyHash, location);
                         }
 
                         ref var item = ref values.GetAsRef(location);
                         item.Popularity++;
+
+                        gramKeyScope.Dispose();
                     }
                 }
 
@@ -279,7 +286,6 @@ namespace Corax.Queries
             static void Next(ref SuggestionTermProvider<TDistanceProvider> provider, ref Span<byte> terms, ref Span<Token> tokens, ref Span<float> scores)
             {
                 int fieldId = provider._fieldId;
-                var allocator = provider._searcher.Allocator;
                 var term = provider._term;
                 var maxDistance = provider._distance;
 
@@ -297,9 +303,12 @@ namespace Corax.Queries
 
                 var values = new FastList<(Slice Term, float)>();
 
-                TDistanceProvider distance = provider._distanceProvider;                
-                while (iter.MoveNext(out Slice key, out var _, out float score))
+                var allocator = provider._searcher.Allocator;
+                TDistanceProvider distance = provider._distanceProvider;
+                while (iter.MoveNext(out var keyScope, out var _, out float score))
                 {
+                    var key = keyScope.Key.Decoded();
+
                     // The original distance is Levenshtein, therefore we dont need to recompute it. 
                     if (typeof(TDistanceProvider) != typeof(LevenshteinDistance))
                     {
@@ -308,7 +317,9 @@ namespace Corax.Queries
                             continue;
                     }
 
-                    values.Add((key, score));
+                    Slice.From(allocator, key, out var keySlice);
+                    values.Add((keySlice, score));
+                    keyScope.Dispose();
                 }
 
                 if (values.Count == 0)

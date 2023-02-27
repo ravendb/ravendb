@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Corax.Mappings;
 using Sparrow.Server;
@@ -10,11 +11,12 @@ namespace Corax.Queries
     [DebuggerDisplay("{DebugView,nq}")]
     public struct NotStartWithTermProvider : ITermProvider
     {
+        private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
-        private readonly CompactTree.Iterator _iterator;
         private readonly FieldMetadata _field;
         private readonly Slice _startWith;
-        private readonly CompactTree _tree;
+
+        private CompactTree.Iterator _iterator;
 
         public NotStartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, FieldMetadata field, Slice startWith)
         {
@@ -33,10 +35,10 @@ namespace Corax.Queries
 
         public bool Next(out TermMatch term)
         {
-
-            while (_iterator.MoveNext(out Slice termSlice, out var _))
+            while (_iterator.MoveNext(out var termScope, out var _))
             {
-                if (termSlice.StartWith(_startWith))
+                var termSlice = termScope.Key.Decoded();
+                if (termSlice.StartsWith(_startWith))
                     continue;
 
                 term = _searcher.TermQuery(_field, _tree, termSlice);

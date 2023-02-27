@@ -33,8 +33,9 @@ namespace Corax.Queries
         public bool Next(out TermMatch term)
         {
             var contains = _term;
-            while (_iterator.MoveNext(out Slice termSlice, out var _))
+            while (_iterator.MoveNext(out var termScope, out var _))
             {
+                var termSlice = termScope.Key.Decoded();
                 if (!termSlice.Contains(contains))
                     continue;
 

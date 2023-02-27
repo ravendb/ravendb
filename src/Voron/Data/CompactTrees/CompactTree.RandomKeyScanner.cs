@@ -26,9 +26,7 @@ unsafe partial class CompactTree
 
         public bool MoveNext(out ReadOnlySpan<byte> result)
         {
-            bool operationResult = _iterator.MoveNext(out Span<byte> resultSlice, out long _);
-            result = resultSlice;
-            return operationResult;
+            return _iterator.MoveNext(out result, out long _);
         }
 
         public void Reset()

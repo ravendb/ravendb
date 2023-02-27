@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,11 +14,13 @@ namespace Corax.Queries
     [DebuggerDisplay("{DebugView,nq}")]
     public struct StartWithTermProvider : ITermProvider
     {
+        private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
-        private CompactTree.Iterator _iterator;
         private readonly FieldMetadata _field;
         private readonly Slice _startWith;
-        private readonly CompactTree _tree;
+
+        private CompactTree.Iterator _iterator;
+
         public StartWithTermProvider(IndexSearcher searcher, CompactTree tree, FieldMetadata field, Slice startWith)
         {
             _searcher = searcher;
@@ -26,24 +28,36 @@ namespace Corax.Queries
             _iterator = tree.Iterate();
             _startWith = startWith;
             _tree = tree;
-            
+
             _iterator.Seek(_startWith);
         }
 
         public void Reset() => _iterator.Seek(_startWith);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Next(out TermMatch term) => Next(out term, out _);
-
-        public bool Next(out TermMatch term, out Slice termSlice)
+        public bool Next(out TermMatch term)
         {
-            if (_iterator.MoveNext(out termSlice, out var _) == false || termSlice.StartWith(_startWith) == false)
+            var result = Next(out term, out var scope);
+            scope.Dispose();
+            return result;
+        } 
+
+        public bool Next(out TermMatch term, out CompactKeyCacheScope termScope)
+        {
+            if (_iterator.MoveNext(out termScope, out var _) == false)
             {
                 term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
                 return false;
             }
 
-            term = _searcher.TermQuery(_field, _tree, termSlice);
+            var key = termScope.Key.Decoded();
+            if (key.StartsWith(_startWith) == false)
+            {
+                term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
+                return false;
+            }
+
+            term = _searcher.TermQuery(_field, _tree, key);
             return true;
         }
 
