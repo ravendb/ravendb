@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Changes
         private int _immediateConnection;
         
         private readonly TaskCompletionSource<ChangesSupportedFeatures> _supportedFeaturesTcs = new();
-        public Task<ChangesSupportedFeatures> SupportedFeatures => _supportedFeaturesTcs.Task;
+        internal Task<ChangesSupportedFeatures> GetSupportedFeatures() => _supportedFeaturesTcs.Task;
 
         private ServerNode _serverNode;
         private int _nodeIndex;
@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Changes
             _cts = new CancellationTokenSource();
             _client = CreateClientWebSocket(_requestExecutor);
 
-            SupportedFeatures.ContinueWith(async t =>
+            GetSupportedFeatures().ContinueWith(async t =>
             {
                 if (t.Result.TopologyChange == false)
                     return;
@@ -182,8 +182,7 @@ namespace Raven.Client.Documents.Changes
             return taskedObservable;
         }
 
-        
-        public IChangesObservable<AggressiveCacheUpdate> ForAggressiveCaching()
+        internal IChangesObservable<AggressiveCacheUpdate> ForAggressiveCaching()
         {
             var counter = GetOrAddConnectionState("aggressive-caching", "watch-aggressive-caching", "unwatch-aggressive-caching", null);
 
@@ -193,6 +192,7 @@ namespace Raven.Client.Documents.Changes
 
             return taskedObservable;
         }
+        
         public IChangesObservable<OperationStatusChange> ForOperationId(long operationId)
         {
             var counter = GetOrAddConnectionState("operations/" + operationId, "watch-operation", "unwatch-operation", operationId.ToString());
