@@ -39,6 +39,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public IDocumentQuery<TProjection> SelectFields<TProjection>(ProjectionBehavior projectionBehavior)
         {
+            AssertProjectionIsNotDoneTwice();
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(ReflectionUtil.BindingFlagsConstants.QueryingFields).ToList();
             var projections = propertyInfos.Select(x => Conventions.GetConvertedPropertyNameFor(x)).ToArray();
             var fields = propertyInfos.Select(p => Conventions.GetConvertedPropertyNameFor(p)).ToArray();
@@ -117,6 +118,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public IDocumentQuery<TProjection> SelectFields<TProjection>(QueryData queryData)
         {
+            AssertProjectionIsNotDoneTwice();
             queryData.IsProjectInto = true;
             return CreateDocumentQueryInternal<TProjection>(queryData);
         }
@@ -991,9 +993,6 @@ namespace Raven.Client.Documents.Session
 
         internal DocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(QueryData queryData = null)
         {
-            if (FieldsToFetchToken != null && (FieldsToFetchToken.FieldsToFetch is {Length: > 0} || FieldsToFetchToken.Projections is {Length: > 0}))
-                ThrowProjectionIsAlreadyDone();
-
             FieldsToFetchToken newFieldsToFetch;
             if (queryData != null && queryData.Fields.Length > 0)
             {
