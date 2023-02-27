@@ -27,6 +27,7 @@ export class DatabasesStubs {
                     A: DatabasesStubs.statusOk(),
                 },
                 PriorityOrder: null,
+                DynamicNodesDistribution: false,
             },
             IsDisabled: false,
             HasRefreshConfiguration: false,
@@ -74,6 +75,7 @@ export class DatabasesStubs {
         const dbInfo = DatabasesStubs.genericDatabaseInfo("sharded");
         dbInfo.NodesTopology = null;
         dbInfo.IsSharded = true;
+        dbInfo.IndexesCount = 5;
         dbInfo.Sharding = {
             Shards: {
                 [0]: {
@@ -99,41 +101,41 @@ export class DatabasesStubs {
                 [1]: {
                     Members: [
                         {
-                            NodeTag: "C",
-                            NodeUrl: "http://c.ravendb",
+                            NodeTag: "B",
+                            NodeUrl: "http://b.ravendb",
                             ResponsibleNode: null,
                         },
                         {
-                            NodeTag: "D",
-                            NodeUrl: "http://d.ravendb",
+                            NodeTag: "C",
+                            NodeUrl: "http://c.ravendb",
                             ResponsibleNode: null,
                         },
                     ],
                     Rehabs: [],
                     Promotables: [],
                     Status: {
+                        B: DatabasesStubs.statusOk(),
                         C: DatabasesStubs.statusOk(),
-                        D: DatabasesStubs.statusOk(),
                     },
                 },
                 [2]: {
                     Members: [
                         {
-                            NodeTag: "E",
-                            NodeUrl: "http://e.ravendb",
+                            NodeTag: "A",
+                            NodeUrl: "http://a.ravendb",
                             ResponsibleNode: null,
                         },
                         {
-                            NodeTag: "F",
-                            NodeUrl: "http://f.ravendb",
+                            NodeTag: "C",
+                            NodeUrl: "http://c.ravendb",
                             ResponsibleNode: null,
                         },
                     ],
                     Rehabs: [],
                     Promotables: [],
                     Status: {
-                        E: DatabasesStubs.statusOk(),
-                        F: DatabasesStubs.statusOk(),
+                        A: DatabasesStubs.statusOk(),
+                        C: DatabasesStubs.statusOk(),
                     },
                 },
             },
@@ -155,21 +157,6 @@ export class DatabasesStubs {
                             NodeUrl: "http://c.ravendb",
                             ResponsibleNode: null,
                         },
-                        {
-                            NodeTag: "D",
-                            NodeUrl: "http://d.ravendb",
-                            ResponsibleNode: null,
-                        },
-                        {
-                            NodeTag: "E",
-                            NodeUrl: "http://e.ravendb",
-                            ResponsibleNode: null,
-                        },
-                        {
-                            NodeTag: "F",
-                            NodeUrl: "http://f.ravendb",
-                            ResponsibleNode: null,
-                        },
                     ],
                     Promotables: [],
                     Rehabs: [],
@@ -177,9 +164,6 @@ export class DatabasesStubs {
                         A: DatabasesStubs.statusOk(),
                         B: DatabasesStubs.statusOk(),
                         C: DatabasesStubs.statusOk(),
-                        D: DatabasesStubs.statusOk(),
-                        E: DatabasesStubs.statusOk(),
-                        F: DatabasesStubs.statusOk(),
                     },
                 },
             },

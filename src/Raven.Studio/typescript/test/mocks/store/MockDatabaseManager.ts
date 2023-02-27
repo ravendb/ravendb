@@ -10,16 +10,19 @@ export class MockDatabaseManager {
         const value = this.createValue(dto, DatabasesStubs.nonShardedClusterDatabase().toDto());
 
         globalDispatch(databasesLoaded([value]));
+        return value;
     }
 
     with_Sharded(dto?: MockedValue<DatabaseSharedInfo>) {
         const value = this.createValue(dto, DatabasesStubs.shardedDatabase().toDto());
         globalDispatch(databasesLoaded([value]));
+        return value;
     }
 
     with_Single(dto?: MockedValue<DatabaseSharedInfo>) {
         const value = this.createValue(dto, DatabasesStubs.nonShardedSingleNodeDatabase().toDto());
         globalDispatch(databasesLoaded([value]));
+        return value;
     }
 
     withDatabases(dbs: DatabaseSharedInfo[]) {
