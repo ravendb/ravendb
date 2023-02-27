@@ -8,12 +8,10 @@ import {
 } from "components/pages/resources/manageDatabaseGroup/partials/ReorderNodes";
 import { ShardInfoComponent } from "components/pages/resources/manageDatabaseGroup/partials/NodeInfoComponent";
 import { DeletionInProgress } from "components/pages/resources/manageDatabaseGroup/partials/DeletionInProgress";
-import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import shard = require("models/resources/shard");
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { useServices } from "hooks/useServices";
 import app from "durandal/app";
-import { NodeInfo } from "components/models/databases";
+import { DatabaseSharedInfo } from "components/models/databases";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
 import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabaseGroup";
@@ -33,16 +31,14 @@ import {
     DatabaseGroupNode,
 } from "components/common/DatabaseGroup";
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 export interface ShardsGroupProps {
-    nodes: NodeInfo[];
-    db: shard;
-    lockMode: DatabaseLockMode;
-    deletionInProgress: string[];
+    db: DatabaseSharedInfo;
 }
 
 export function ShardsGroup(props: ShardsGroupProps) {
-    const { nodes, deletionInProgress, db, lockMode } = props;
+    const { db } = props;
 
     const {
         fixOrder,
@@ -54,15 +50,15 @@ export function ShardsGroup(props: ShardsGroupProps) {
         sortableMode,
         enableReorder,
         exitReorder,
-    } = useGroup(nodes);
+    } = useGroup(db.nodes, db.fixOrder);
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
 
     const addNode = useCallback(() => {
-        const addKeyView = new addNewNodeToDatabaseGroup(db.name, nodes, db.isEncrypted());
+        const addKeyView = new addNewNodeToDatabaseGroup(db.name, db.nodes, db.encrypted);
         app.showBootstrapDialog(addKeyView);
-    }, [db, nodes]);
+    }, [db]);
 
     const saveNewOrder = useCallback(
         async (tagsOrder: string[], fixOrder: boolean) => {
@@ -79,7 +75,7 @@ export function ShardsGroup(props: ShardsGroupProps) {
                 .confirmationMessage(
                     "Are you sure",
                     "Do you want to delete shard '" +
-                        genUtils.escapeHtml(db.shardName) +
+                        DatabaseUtils.shardNumber(db.name) +
                         "' from node: " +
                         nodeTag +
                         "?",
@@ -105,12 +101,14 @@ export function ShardsGroup(props: ShardsGroupProps) {
         );
     };
 
+    const shardName = DatabaseUtils.shardNumber(db.name);
+
     return (
         <RichPanel className="mt-3">
             <RichPanelHeader>
                 <RichPanelInfo>
                     <RichPanelName>
-                        <i className="icon-shard text-shard me-2" /> {db.shardName}
+                        <i className="icon-shard text-shard me-2" /> Shard #{shardName}
                     </RichPanelName>
                 </RichPanelInfo>
                 <RichPanelActions>
@@ -158,17 +156,17 @@ export function ShardsGroup(props: ShardsGroupProps) {
                                 </DatabaseGroupActions>
                             </DatabaseGroupItem>
 
-                            {nodes.map((node) => (
+                            {db.nodes.map((node) => (
                                 <ShardInfoComponent
                                     key={node.tag}
                                     node={node}
                                     databaseName={db.name}
-                                    databaseLockMode={lockMode}
+                                    databaseLockMode={db.lockMode}
                                     deleteFromGroup={deleteNodeFromGroup}
                                 />
                             ))}
 
-                            {deletionInProgress.map((deleting) => (
+                            {db.deletionInProgress.map((deleting) => (
                                 <DeletionInProgress key={deleting} nodeTag={deleting} />
                             ))}
                         </DatabaseGroupList>

@@ -1,15 +1,14 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
 import endpoints = require("endpoints");
-import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
+import { DatabaseSharedInfo } from "components/models/databases";
 
 class deleteOrchestratorFromNodeCommand extends commandBase {
 
-    private db: database;
+    private db: DatabaseSharedInfo;
 
     private node: string;
 
-    constructor(db: database, node: string) {
+    constructor(db: DatabaseSharedInfo, node: string) {
         super();
         this.node = node;
         this.db = db;

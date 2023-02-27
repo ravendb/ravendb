@@ -1,17 +1,17 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
 import endpoints = require("endpoints");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
+import { DatabaseSharedInfo } from "components/models/databases";
 
 class deleteDatabaseFromNodeCommand extends commandBase {
 
-    private db: database;
+    private db: DatabaseSharedInfo;
 
     private nodes: Array<string>;
 
     private isHardDelete: boolean;
 
-    constructor(db: database, nodes: Array<string>, isHardDelete: boolean) {
+    constructor(db: DatabaseSharedInfo, nodes: Array<string>, isHardDelete: boolean) {
         super();
         this.isHardDelete = isHardDelete;
         this.nodes = nodes;

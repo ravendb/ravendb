@@ -8,12 +8,10 @@ import {
 } from "components/pages/resources/manageDatabaseGroup/partials/ReorderNodes";
 import { NodeInfoComponent } from "components/pages/resources/manageDatabaseGroup/partials/NodeInfoComponent";
 import { DeletionInProgress } from "components/pages/resources/manageDatabaseGroup/partials/DeletionInProgress";
-import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
-import database from "models/resources/database";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { useServices } from "hooks/useServices";
 import app from "durandal/app";
-import { NodeInfo } from "components/models/databases";
+import { DatabaseSharedInfo } from "components/models/databases";
 import viewHelpers from "common/helpers/view/viewHelpers";
 import genUtils from "common/generalUtils";
 import addNewNodeToDatabaseGroup from "viewmodels/resources/addNewNodeToDatabaseGroup";
@@ -35,14 +33,11 @@ import {
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
 
 export interface NodeGroupProps {
-    nodes: NodeInfo[];
-    db: database;
-    lockMode: DatabaseLockMode;
-    deletionInProgress: string[];
+    db: DatabaseSharedInfo;
 }
 
 export function NodeGroup(props: NodeGroupProps) {
-    const { nodes, deletionInProgress, db, lockMode } = props;
+    const { db } = props;
 
     const {
         fixOrder,
@@ -54,15 +49,15 @@ export function NodeGroup(props: NodeGroupProps) {
         sortableMode,
         enableReorder,
         exitReorder,
-    } = useGroup(nodes);
+    } = useGroup(db.nodes, db.fixOrder);
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
 
     const addNode = useCallback(() => {
-        const addKeyView = new addNewNodeToDatabaseGroup(db.name, nodes, db.isEncrypted());
+        const addKeyView = new addNewNodeToDatabaseGroup(db.name, db.nodes, db.encrypted);
         app.showBootstrapDialog(addKeyView);
-    }, [db, nodes]);
+    }, [db]);
 
     const saveNewOrder = useCallback(
         async (tagsOrder: string[], fixOrder: boolean) => {
@@ -154,16 +149,16 @@ export function NodeGroup(props: NodeGroupProps) {
                                 </DatabaseGroupActions>
                             </DatabaseGroupItem>
 
-                            {nodes.map((node) => (
+                            {db.nodes.map((node) => (
                                 <NodeInfoComponent
                                     key={node.tag}
                                     node={node}
-                                    databaseLockMode={lockMode}
+                                    databaseLockMode={db.lockMode}
                                     deleteFromGroup={deleteNodeFromGroup}
                                 />
                             ))}
 
-                            {deletionInProgress.map((deleting) => (
+                            {db.deletionInProgress.map((deleting) => (
                                 <DeletionInProgress key={deleting} nodeTag={deleting} />
                             ))}
                         </DatabaseGroupList>

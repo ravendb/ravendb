@@ -33,6 +33,8 @@ abstract class database {
     databaseAccessText = ko.observable<string>();
     databaseAccessColor = ko.observable<string>();
     
+    fixOrder = ko.observable<boolean>(false);
+    
     indexesCount = ko.observable<number>();
     
     clusterNodeTag: KnockoutObservable<string>;
@@ -97,11 +99,6 @@ abstract class database {
         this.hasExpirationConfiguration(incomingCopy.HasExpirationConfiguration);
         this.hasRefreshConfiguration(incomingCopy.HasRefreshConfiguration);
         
-        /* TODO
-        if (incomingCopy.LoadError) {
-            this.errored(true);
-        }*/
-
         this.environment(incomingCopy.StudioEnvironment !== "None" ? incomingCopy.StudioEnvironment : null);
         
         //TODO: delete
@@ -132,6 +129,7 @@ abstract class database {
                 relevant: this.relevant(),
                 isBeingDeleted: this.isBeingDeleted()
             },
+            fixOrder: this.fixOrder(),
             indexesCount: this.indexesCount(),
             lockMode: this.lockMode(),
             deletionInProgress: this.deletionInProgress().map(x => x.tag)

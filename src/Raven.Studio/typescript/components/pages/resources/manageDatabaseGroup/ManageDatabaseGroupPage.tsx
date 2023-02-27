@@ -20,6 +20,7 @@ import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import { selectDatabaseByName } from "components/common/shell/databasesSlice";
 import { useAppSelector } from "components/store";
+import { ShardedDatabaseSharedInfo } from "components/models/databases";
 
 interface ManageDatabaseGroupPageProps {
     db: database;
@@ -134,32 +135,13 @@ export function ManageDatabaseGroupPage(props: ManageDatabaseGroupPageProps) {
             <div className="content-margin">
                 {db.isSharded() ? (
                     <React.Fragment key="sharded-db">
-                        <OrchestratorsGroup
-                            nodes={dbSharedInfo.nodes}
-                            db={db}
-                            deletionInProgress={dbSharedInfo.deletionInProgress}
-                        />
-                        {db.shards().map((shard) => {
-                            //TODO: deletionInProgress - waiting for RavenDB-19876
-                            return (
-                                <ShardsGroup
-                                    key={shard.name}
-                                    nodes={shard.nodes()}
-                                    db={shard}
-                                    deletionInProgress={[]}
-                                    lockMode={dbSharedInfo.lockMode}
-                                />
-                            );
+                        <OrchestratorsGroup db={dbSharedInfo} />
+                        {(dbSharedInfo as ShardedDatabaseSharedInfo).shards.map((shard) => {
+                            return <ShardsGroup key={shard.name} db={shard} />;
                         })}
                     </React.Fragment>
                 ) : (
-                    <NodeGroup
-                        key="non-sharded-db"
-                        nodes={dbSharedInfo.nodes}
-                        db={db}
-                        deletionInProgress={dbSharedInfo.deletionInProgress}
-                        lockMode={dbSharedInfo.lockMode}
-                    />
+                    <NodeGroup key="non-sharded-db" db={dbSharedInfo} />
                 )}
             </div>
         </>

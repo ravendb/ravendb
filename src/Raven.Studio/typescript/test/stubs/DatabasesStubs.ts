@@ -14,6 +14,7 @@ export class DatabasesStubs {
             DeletionInProgress: {},
             Sharding: null,
             NodesTopology: {
+                PriorityOrder: [],
                 Members: [
                     {
                         NodeTag: "A",
@@ -26,7 +27,6 @@ export class DatabasesStubs {
                 Status: {
                     A: DatabasesStubs.statusOk(),
                 },
-                PriorityOrder: null,
                 DynamicNodesDistribution: false,
             },
             IsDisabled: false,
@@ -55,6 +55,7 @@ export class DatabasesStubs {
             NodeUrl: "http://b.ravendb",
             ResponsibleNode: null,
         });
+        dbInfo.NodesTopology.PriorityOrder = [];
         dbInfo.NodesTopology.Members.push({
             NodeTag: "C",
             NodeUrl: "http://c.ravendb",
@@ -93,6 +94,7 @@ export class DatabasesStubs {
                     ],
                     Rehabs: [],
                     Promotables: [],
+                    PriorityOrder: [],
                     Status: {
                         A: DatabasesStubs.statusOk(),
                         B: DatabasesStubs.statusOk(),
@@ -113,6 +115,7 @@ export class DatabasesStubs {
                     ],
                     Rehabs: [],
                     Promotables: [],
+                    PriorityOrder: [],
                     Status: {
                         B: DatabasesStubs.statusOk(),
                         C: DatabasesStubs.statusOk(),
@@ -133,6 +136,7 @@ export class DatabasesStubs {
                     ],
                     Rehabs: [],
                     Promotables: [],
+                    PriorityOrder: [],
                     Status: {
                         A: DatabasesStubs.statusOk(),
                         C: DatabasesStubs.statusOk(),
@@ -160,6 +164,7 @@ export class DatabasesStubs {
                     ],
                     Promotables: [],
                     Rehabs: [],
+                    PriorityOrder: [],
                     Status: {
                         A: DatabasesStubs.statusOk(),
                         B: DatabasesStubs.statusOk(),
