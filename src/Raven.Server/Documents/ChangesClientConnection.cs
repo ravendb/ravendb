@@ -353,6 +353,7 @@ namespace Raven.Server.Documents
 
             if (_aggressiveChanges)
             {
+                Debug.Assert(_watchAllDocuments == 0 && (_matchingDocuments == null || _matchingDocuments.Count == 0));
                 PulseAggressiveCaching();
                 return;
             }
@@ -393,6 +394,7 @@ namespace Raven.Server.Documents
         {
             if (_aggressiveChanges)
             {
+                Debug.Assert(_watchAllIndexes == 0 && (_matchingIndexes == null || _matchingIndexes.Count == 0));
                 PulseAggressiveCaching();
                 return;
             }
@@ -755,7 +757,7 @@ namespace Raven.Server.Documents
                 ValueToSend = new DynamicJsonValue
                 {
                     [nameof(ChangesSupportedFeatures.TopologyChange)] = true,
-                    [nameof(ChangesSupportedFeatures.AggressiveCaching)] = true,
+                    [nameof(ChangesSupportedFeatures.AggressiveCachingChange)] = true,
                 },
                 AllowSkip = false
             });

@@ -38,9 +38,9 @@ namespace Raven.Client.Documents.Changes
         }
     }
 
-    public class AggressiveCacheUpdate : DatabaseChange
+    internal class AggressiveCacheUpdate : DatabaseChange
     {
-        public static readonly AggressiveCacheUpdate Instance = new();
+        internal static readonly AggressiveCacheUpdate Instance = new();
     }
 
     public class DocumentChange : DatabaseChange

@@ -26,15 +26,15 @@ namespace Raven.Client.Documents.Changes
         {
             _databaseName = databaseName;
             _requestExecutor = store.GetRequestExecutor(databaseName);
-            _changes = new DatabaseChanges(_requestExecutor, databaseName, null, null);
+            _changes = new DatabaseChanges(_requestExecutor, databaseName, onDispose: null,nodeTag: null);
             _taskConnected = EnsureConnectedInternalAsync();
         }
 
         private async Task EnsureConnectedInternalAsync()
         {
             await _changes.EnsureConnectedNow().ConfigureAwait(false);
-            var changesSupportedFeatures = await _changes.SupportedFeatures.ConfigureAwait(false);
-            if (changesSupportedFeatures.AggressiveCaching)
+            var changesSupportedFeatures = await _changes.GetSupportedFeatures().ConfigureAwait(false);
+            if (changesSupportedFeatures.AggressiveCachingChange)
             {
                 var forAggressiveCachingChanges = _changes.ForAggressiveCaching();
                 _aggressiveCachingSubscription = forAggressiveCachingChanges.Subscribe(this);
