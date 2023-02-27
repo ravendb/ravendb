@@ -11,17 +11,22 @@ describe("DatabasesPage", function () {
         const { screen } = rtlRender(<Single />);
 
         await screen.findByText(/Manage group/i);
+        await screen.findByText("3 Indexing errors");
     });
 
     it("can render cluster view", async () => {
         const { screen } = rtlRender(<Cluster />);
 
         await screen.findByText(/Manage group/i);
+
+        await screen.findByText("9 Indexing errors");
     });
 
     it("can render sharded view", async () => {
         const { screen } = rtlRender(<Sharded />);
 
         await screen.findByText(/Manage group/i);
+
+        await screen.findByText("18 Indexing errors");
     });
 });
