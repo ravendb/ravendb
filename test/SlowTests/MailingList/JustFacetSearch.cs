@@ -12,6 +12,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -158,10 +159,11 @@ namespace SlowTests.MailingList
             foreach (var article in articles) session.Store(article);
         }
 
-        [Fact]
-        public void JustReturnFacets()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void JustReturnFacets(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Advice_Search().Execute(store);
 

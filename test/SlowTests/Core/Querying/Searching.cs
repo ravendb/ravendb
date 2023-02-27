@@ -245,6 +245,8 @@ namespace SlowTests.Core.Querying
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Field boosting is not supported in Corax")]
+
         public void CanDoSearchBoosting(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -284,6 +286,7 @@ namespace SlowTests.Core.Querying
 
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Field boosting is not supported in Corax")]
         public void CanProvideSuggestionsAndLazySuggestions(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -336,7 +339,7 @@ namespace SlowTests.Core.Querying
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformFacetedSearchAndLazyFacatedSearch(Options options)
         {
             using (var store = GetDocumentStore(options))

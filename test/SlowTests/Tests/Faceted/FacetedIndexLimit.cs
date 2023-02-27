@@ -28,7 +28,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformSearchWithTwoDefaultFacets(Options options)
         {
             var facets = new List<Facet> { new Facet { FieldName = "Manufacturer" }, new Facet { FieldName = "Model" } };
@@ -84,7 +84,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformFacetedLimitSearch_TermAsc(Options options)
         {
             var facets = new List<Facet>
@@ -140,7 +140,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformFacetedLimitSearch_TermDesc(Options options)
         {
             var facets = new List<Facet>
@@ -198,7 +198,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformFacetedLimitSearch_HitsAsc(Options options)
         {
             var facets = new List<Facet>
@@ -266,7 +266,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformFacetedLimitSearch_HitsDesc(Options options)
         {
             //also specify more results than we have
@@ -327,7 +327,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformSearchWithTwoDefaultFacets_LuceneQuery(Options options)
         {
             var facets = new List<Facet> { new Facet { FieldName = "Manufacturer" }, new Facet { FieldName = "Model" } };
@@ -383,7 +383,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformFacetedLimitSearch_TermAsc_LuceneQuery(Options options)
         {
             var facets = new List<Facet>
@@ -440,7 +440,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformFacetedLimitSearch_TermDesc_LuceneQuery(Options options)
         {
             var facets = new List<Facet>
@@ -498,7 +498,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformFacetedLimitSearch_HitsAsc_LuceneQuery(Options options)
         {
             var facets = new List<Facet>
@@ -561,7 +561,7 @@ namespace SlowTests.Tests.Faceted
         }
 
         [RavenTheory(RavenTestCategory.Facets)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanPerformFacetedLimitSearch_HitsDesc_LuceneQuery(Options options)
         {
             //also specify more results than we have
