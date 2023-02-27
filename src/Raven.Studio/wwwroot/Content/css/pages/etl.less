@@ -64,12 +64,17 @@
 
 .destinationModal {
     .external-replication, .sql-etl, .olap-etl, .elastic-etl, .ravendb-etl, .periodic-backup, .subscription, .pull-replication-hub, .pull-replication-sink, .kafka-etl, .rabbitmq-etl {
-        display: block;
-        padding: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        padding: @gutter-sm;
         transition: background-color .2s ease, color .1s;
+        border-radius: @gutter-xxs;
 
         i {
-            font-size: 60px;
+            font-size: 48px;
         }
     }
 
@@ -733,15 +738,6 @@
     .backdrop {
         .backdrop.show;
     }
-
-    .edit-raven-sql-task, .edit-raven-etl-task, .edit-elastic-search-task, .edit-kafka-etl-task, .edit-rabbitmq-etl-task {
-        & > .flex-row {
-            z-index: @zindex-modal;
-        }
-        .test-container {
-            z-index: @zindex-modal;
-        }
-    }
     
     .test-output pre, #debugOutput pre {
         white-space: pre-wrap;
@@ -779,4 +775,8 @@
     .connection-string-title {
         margin-right: 7.5px;
     }
+}
+
+.edit-raven-sql-task, .edit-raven-etl-task, .edit-elastic-search-task, .edit-kafka-etl-task, .edit-rabbitmq-etl-task {
+    z-index: @zindex-modal;
 }
