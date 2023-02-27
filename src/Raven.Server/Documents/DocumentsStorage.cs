@@ -51,6 +51,7 @@ namespace Raven.Server.Documents
         protected TableSchema AttachmentsSchema;
         protected TableSchema ConflictsSchema;
         public TableSchema CountersSchema;
+        public TableSchema CounterTombstonesSchema;
         protected TableSchema TimeSeriesSchema;
         protected TableSchema TimeSeriesDeleteRangesSchema;
         public TableSchema RevisionsSchema;
@@ -122,6 +123,7 @@ namespace Raven.Server.Documents
             AttachmentsSchema = Schemas.Attachments.AttachmentsSchemaBase;
             ConflictsSchema = Schemas.Conflicts.ConflictsSchemaBase;
             CountersSchema = Schemas.Counters.CountersSchemaBase;
+            CounterTombstonesSchema = Schemas.CounterTombstones.CounterTombstonesSchemaBase;
 
             TimeSeriesSchema = Schemas.TimeSeries.TimeSeriesSchemaBase;
             TimeSeriesDeleteRangesSchema = Schemas.DeletedRanges.DeleteRangesSchemaBase;
@@ -257,7 +259,7 @@ namespace Raven.Server.Documents
                     ExpirationStorage = new ExpirationStorage(DocumentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx, ConflictsSchema);
                     AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx, AttachmentsSchema);
-                    CountersStorage = new CountersStorage(DocumentDatabase, tx, CountersSchema);
+                    CountersStorage = new CountersStorage(DocumentDatabase, tx, CountersSchema, CounterTombstonesSchema);
                     TimeSeriesStorage = new TimeSeriesStorage(DocumentDatabase, tx, TimeSeriesSchema, TimeSeriesDeleteRangesSchema);
 
                     DocumentPut = CreateDocumentPutAction();

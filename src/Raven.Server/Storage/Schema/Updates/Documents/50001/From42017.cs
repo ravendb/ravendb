@@ -65,7 +65,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             if (countersTree == null)
                 return true;
 
-            step.DocumentsStorage.CountersStorage = new CountersStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx, step.DocumentsStorage.CountersSchema);
+            step.DocumentsStorage.CountersStorage = new CountersStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx, step.DocumentsStorage.CountersSchema, step.DocumentsStorage.CounterTombstonesSchema);
 
             // this schema update uses DocumentsStorage.GenerateNextEtag() so we need to read and set LastEtag in storage
             _dbId = From41016.ReadDbId(step);
