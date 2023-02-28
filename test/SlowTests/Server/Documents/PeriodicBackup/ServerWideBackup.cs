@@ -1179,11 +1179,5 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(configuration));
             });
         }
-        
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task ServerWideBackup_WhenSaveAndADatabaseIsIdle_ShouldNotFails()
-        {
-            using var store = GetDocumentStore();
-        }
     }
 }
