@@ -82,8 +82,10 @@ public class RavenDB_19541 : RavenTestBase
         {
             var projectIntoQuery = session.Advanced.DocumentQuery<FullData, CapsLockIndex>().WhereEquals(i => i.FirstName, "maciej").SelectFields<ProjectionInto>();
             Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, LastNameName, Age, FavoriteFood, Props", projectIntoQuery.ToString());
-            AssertResult(() => projectIntoQuery.SelectFields<MemberInitProjection>());
-        }
+            var dqProjectionIntoAnother = projectIntoQuery.SelectFields<MemberInitProjection>();
+            Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", dqProjectionIntoAnother.ToString());
+            Assert.Equal("MACIEJ", dqProjectionIntoAnother.Single().FirstName);
+            Assert.Equal("Zylc", dqProjectionIntoAnother.Single().FavoriteFood);        }
     }
     
     [Fact]
@@ -95,8 +97,10 @@ public class RavenDB_19541 : RavenTestBase
         {
             var projectIntoQuery = session.Advanced.AsyncDocumentQuery<FullData, CapsLockIndex>().WhereEquals(i => i.FirstName, "maciej").SelectFields<ProjectionInto>();
             Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, LastNameName, Age, FavoriteFood, Props", projectIntoQuery.ToString());
-            
-            AssertResult(() => projectIntoQuery.SelectFields<MemberInitProjection>());
+            var dqProjectionIntoAnother = projectIntoQuery.SelectFields<MemberInitProjection>();
+            Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", dqProjectionIntoAnother.ToString());
+            Assert.Equal("MACIEJ", (await dqProjectionIntoAnother.SingleAsync()).FirstName);
+            Assert.Equal("Zylc", (await dqProjectionIntoAnother.SingleAsync()).FavoriteFood);
         }
     }
     
