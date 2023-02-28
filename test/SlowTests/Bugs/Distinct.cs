@@ -82,7 +82,6 @@ namespace SlowTests.Bugs
                     var objects = s.Query<User>("test")
                         .Customize(x => x.WaitForNonStaleResults())
                         .Select(o => new { o.Name }).OrderBy(o => o.Name)
-                        .Select(o => new { o.Name })
                         .Distinct()
                         .ToList();
 

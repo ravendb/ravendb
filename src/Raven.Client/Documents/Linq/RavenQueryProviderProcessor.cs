@@ -3928,7 +3928,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public object Execute(Expression expression)
         {
             _chainedWhere = false;
-
+            if (_isProjectInto == false)
+                FieldsToFetch?.Clear();
             DocumentQuery = (IAbstractDocumentQuery<T>)GetDocumentQueryFor(expression);
             if (_newExpressionType == typeof(T))
                 return ExecuteQuery<T>();

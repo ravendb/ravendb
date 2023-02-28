@@ -85,7 +85,8 @@ public class RavenDB_19541 : RavenTestBase
             var dqProjectionIntoAnother = projectIntoQuery.SelectFields<MemberInitProjection>();
             Assert.Equal("from index 'CapsLockIndex' where FirstName = $p0 select FirstName, FavoriteFood", dqProjectionIntoAnother.ToString());
             Assert.Equal("MACIEJ", dqProjectionIntoAnother.Single().FirstName);
-            Assert.Equal("Zylc", dqProjectionIntoAnother.Single().FavoriteFood);        }
+            Assert.Equal("Zylc", dqProjectionIntoAnother.Single().FavoriteFood);
+        }
     }
     
     [Fact]
@@ -102,6 +103,25 @@ public class RavenDB_19541 : RavenTestBase
             Assert.Equal("MACIEJ", (await dqProjectionIntoAnother.SingleAsync()).FirstName);
             Assert.Equal("Zylc", (await dqProjectionIntoAnother.SingleAsync()).FavoriteFood);
         }
+    }
+
+    [Fact]
+    public void CanMaterializeTwiceTheSameQueryButCannotChangeSelectAfterFirstMaterialization()
+    {
+        using var store = GetDocumentStoreWithDocuments();
+        using var session = store.OpenSession();
+
+        var query = session.Query<FullData, CapsLockIndex>().Where(i => i.Age < 5).Select(i => new {i.FirstName, i.LastName});
+        var single = query.ToList();
+        Assert.Equal(1, single.Count);
+        var singleCopy = query.ToList();
+        Assert.Equal(1, singleCopy.Count);
+        var singleCopyAsArray = query.ToArray();
+        Assert.Equal(1, singleCopyAsArray.Length);
+
+
+        var secondQuery = query.Select(i => i.FirstName);
+        AssertResult(() => secondQuery.ToString()); // should throw
     }
     
     private IDocumentSession OpenSessionAndGetProjectIntoQuery(IDocumentStore store, out IRavenQueryable<ProjectionInto> projectIntoQuery)

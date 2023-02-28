@@ -276,7 +276,6 @@ namespace SlowTests.MailingList
                        .Select(x => x.Name);
 
             var results = query.ToList();
-
             var category = query.ToArray();
             return category.Distinct().Take(count).ToArray();
         }
