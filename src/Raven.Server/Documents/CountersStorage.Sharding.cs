@@ -23,6 +23,16 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<CounterTombstoneDetail> GetCounterTombstonesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        {
+            var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
+
+            foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, CounterTombstonesSchema.DynamicKeyIndexes[CounterTombstonesBucketAndEtagSlice], bucket, etag))
+            {
+                yield return TableValueToCounterTombstoneDetail(context, ref result.Result.Reader);
+            }
+        }
+
         [StorageIndexEntryKeyGenerator]
         internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounters(Transaction tx, ref TableValueReader tvr, out Slice slice)
         {

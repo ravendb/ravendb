@@ -168,6 +168,20 @@ namespace SlowTests.Sharding.Issues
                     Assert.NotNull(counter);
                 }
 
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var shard = await Sharding.GetShardNumberFor(store, id);
+                var bucket = Sharding.GetBucket(record.Sharding, id);
+
+                var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard)) as ShardedDocumentDatabase;
+                Assert.NotNull(db);
+
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var tombstones = db.DocumentsStorage.CountersStorage.GetCounterTombstonesByBucketFrom(ctx, bucket, 0).ToList();
+                    Assert.Equal(0, tombstones.Count);
+                }
+
                 using (var session = store.OpenAsyncSession())
                 {
                     session.CountersFor(id).Delete(counterName);
@@ -182,17 +196,10 @@ namespace SlowTests.Sharding.Issues
                     Assert.Null(counter);
                 }
 
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shard = await Sharding.GetShardNumberFor(store, id);
-                var bucket = Sharding.GetBucket(record.Sharding, id);
-
-                var db = await GetDocumentDatabaseInstanceFor(store, ShardHelper.ToShardName(store.Database, shard)) as ShardedDocumentDatabase;
-                Assert.NotNull(db);
-
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    var tombstones = db.DocumentsStorage.CountersStorage.GetCounterTombstonesFrom(ctx, 0).ToList();
+                    var tombstones = db.DocumentsStorage.CountersStorage.GetCounterTombstonesByBucketFrom(ctx, bucket, 0).ToList();
                     Assert.Equal(1, tombstones.Count);
                 }
             }

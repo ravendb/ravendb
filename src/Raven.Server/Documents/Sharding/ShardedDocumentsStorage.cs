@@ -311,11 +311,6 @@ public unsafe class ShardedDocumentsStorage : DocumentsStorage
             var counterCv = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref result.Result.Reader);
             merged = merged.MergeWith(counterCv, context);
         }
-        foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.CountersStorage.CounterTombstonesSchema.DynamicKeyIndexes[Schemas.CounterTombstones.CounterTombstonesBucketAndEtagSlice], bucket, 0))
-        {
-            var counterTombstoneCv = TableValueToChangeVector(context, (int)CounterTombstones.CounterTombstonesTable.ChangeVector, ref result.Result.Reader);
-            merged = merged.MergeWith(counterTombstoneCv, context);
-        }
         foreach (var result in GetItemsByBucket(context.Allocator, table, _documentDatabase.DocumentsStorage.ConflictsStorage.ConflictsSchema.DynamicKeyIndexes[ConflictsBucketAndEtagSlice], bucket, 0))
         {
             var conflictCv = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref result.Result.Reader);
