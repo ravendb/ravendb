@@ -1,5 +1,7 @@
 using System;
+using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -98,6 +100,45 @@ public static class EntryIdEncodings
             frequencies[i] = (short)((matches[i] >> ContainerTypeOffset) & Mask);
             matches[i] >>= EntryIdOffset;
         }
+    }
+
+    private static readonly long[] Steps = Enumerable.Range(0, 16).Select(i => (long)Math.Pow(2, 4 + 2 * i)).ToArray(); 
+
+    
+    internal static long FrequencyQuantizationMatinsa(short freq)
+    {
+        int level;
+        for (level = 0; level < 16; ++level)
+            if (freq < Steps[level])
+                break;
+
+        if (level == 0)
+        {
+            Debug.Assert(freq <= 0b1111);
+            return freq;
+        }
+
+
+        var levelSize = Steps[level] - Steps[level - 1];
+        var sizePerStepInLevel = levelSize / 16;
+        var mod = (long)freq - levelSize;
+        
+        
+        
+        
+        var ex = freq / 16;
+        var leftPart  = (long)Math.Log2(freq);
+        Debug.Assert(leftPart > 0b1111, "Should not be bigger than 0b1111");
+        var modPart = (byte)(freq % 16);
+        Debug.Assert((leftPart << 4 | modPart) < byte.MaxValue);
+        return leftPart << 4 | modPart;
+    }
+
+    internal static short FrequencyDecodeFromQuantization(long encoded)
+    {
+        var mantissa = (short)(encoded & 0b1111);
+        var exp = (double)((encoded >> 4) & 0b1111);
+        return (short)((short)Math.Pow(2D, exp) + mantissa);
     }
 
     private static long FrequencyQuantization(short freq)
