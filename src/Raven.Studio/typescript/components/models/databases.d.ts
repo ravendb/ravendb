@@ -36,6 +36,7 @@ export interface DatabaseSharedInfo {
     disabled: boolean;
     indexesCount: number;
     nodes: NodeInfo[];
+    dynamicNodesDistribution: boolean;
     fixOrder: boolean;
     currentNode: {
         relevant: boolean;

@@ -2,6 +2,7 @@ import database from "models/resources/database";
 import shard from "models/resources/shard";
 import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
 import { DatabaseSharedInfo, ShardedDatabaseSharedInfo } from "components/models/databases";
+import DeletionInProgressStatus = Raven.Client.ServerWide.DeletionInProgressStatus;
 
 class shardedDatabase extends database {
     
@@ -60,11 +61,27 @@ class shardedDatabase extends database {
         const shards = Object.entries(incomingCopy.Sharding.Shards).map((kv) => {
             const [shardNumber, shardTopology] = kv;
 
-            return new shard(incomingCopy, parseInt(shardNumber, 10), shardTopology, this);
+            const shardNumberAsNumber = parseInt(shardNumber, 10);
+            const s = new shard(incomingCopy, shardNumberAsNumber, shardTopology, this);
+            s.deletionInProgress(shardedDatabase.extractDeletionInProgress(incomingCopy.DeletionInProgress, shardNumberAsNumber));
+            
+            return s;
         })
         this.shards(shards);
         this.relevant(nodes.some(x => x.tag === this.clusterNodeTag()));
         this.fixOrder(incomingCopy.Sharding.Orchestrator.NodesTopology.PriorityOrder.length > 0);
+        
+        // wipe out global deletion in progress - we store this info per shard
+        this.deletionInProgress([]);
+    }
+    
+    private static extractDeletionInProgress(rawDto: Record<string, DeletionInProgressStatus>, shardNumber: number): Array<{ tag: string, status: DeletionInProgressStatus}> {
+        const shardStatus = Object.entries(rawDto).filter(x => x[0].endsWith("$" + shardNumber));
+        
+        return shardStatus.map(x => ({
+            tag: x[0].split("$")[0],
+            status: x[1]
+        }));
     }
 }
 

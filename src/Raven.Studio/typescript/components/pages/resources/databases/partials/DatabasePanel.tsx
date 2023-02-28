@@ -149,6 +149,19 @@ function DatabaseTopology(props: DatabaseTopologyProps) {
                                         </NodeSetItem>
                                     );
                                 })}
+                                {shard.deletionInProgress.map((node) => {
+                                    return (
+                                        <NodeSetItem
+                                            key={"deletion-" + node}
+                                            icon="trash"
+                                            color="warning"
+                                            title="Deletion in progress"
+                                            extraIconClassName="pulse"
+                                        >
+                                            {node}
+                                        </NodeSetItem>
+                                    );
+                                })}
                             </NodeSet>
                         </React.Fragment>
                     );

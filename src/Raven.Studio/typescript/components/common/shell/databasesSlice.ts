@@ -11,10 +11,9 @@ import viewHelpers from "common/helpers/view/viewHelpers";
 import changesContext from "common/changesContext";
 import compactDatabaseDialog from "viewmodels/resources/compactDatabaseDialog";
 import databasesManager from "common/shell/databasesManager";
-import { loadableData, locationAwareLoadableData, perNodeTagLoadStatus } from "components/models/common";
+import { locationAwareLoadableData, perNodeTagLoadStatus } from "components/models/common";
 import { services } from "hooks/useServices";
 import DatabaseUtils from "components/utils/DatabaseUtils";
-import { createFailureState, createLoadingState, createSuccessState } from "components/utils/common";
 
 interface DatabasesState {
     /**
