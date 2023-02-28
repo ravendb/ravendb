@@ -305,7 +305,7 @@ $component-active-bg: $primary !default;
 // scss-docs-start caret-variables
 $caret-width: 0.3em !default;
 $caret-vertical-align: $caret-width * 0.85 !default;
-$caret-spacing: $caret-width * 2.85 !default;
+$caret-spacing: $caret-width !default;
 // scss-docs-end caret-variables
 
 $transition-base: all 0.2s ease-in-out !default;
@@ -613,7 +613,7 @@ $input-disabled-bg: transparent !default;
 $input-disabled-border-color: $border-color-disabled !default;
 
 $input-color: $text-color !default;
-$input-border-color: transparent !default;
+$input-border-color: $panel-bg-1 !default;
 $input-border-width: $input-btn-border-width !default;
 $input-box-shadow: $box-shadow-inset !default;
 

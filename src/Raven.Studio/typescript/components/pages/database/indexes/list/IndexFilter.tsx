@@ -8,6 +8,7 @@ import { Badge, Button, DropdownItem, FormGroup, Input, InputGroup, Label } from
 import useId from "hooks/useId";
 import useBoolean from "hooks/useBoolean";
 import { DropdownPanel } from "components/common/DropdownPanel";
+import { Switch } from "components/common/Checkbox";
 
 interface IndexFilterStatusItemProps {
     label: string;
@@ -19,26 +20,20 @@ interface IndexFilterStatusItemProps {
 }
 
 function IndexFilterStatusItem(props: IndexFilterStatusItemProps) {
-    const switchColor = `form-check-${props.color ?? "secondary"}`;
-
-    const uniqueId = useId("index-filter-status");
-
     return (
         <React.Fragment>
-            <Label className="dropdown-item-text m-0" htmlFor={uniqueId}>
-                <div className={classNames("form-switch form-check-reverse", switchColor, props.toggleClass)}>
-                    <Input
-                        id={uniqueId}
-                        type="switch"
-                        role="switch"
-                        checked={props.checked}
-                        onChange={props.toggleStatus}
-                    />
-
+            <div className="dropdown-item-text">
+                <Switch
+                    color={props.color}
+                    className={props.toggleClass}
+                    selected={props.checked}
+                    toggleSelection={props.toggleStatus}
+                    reverse
+                >
                     {props.label}
-                </div>
+                </Switch>
                 {props.children}
-            </Label>
+            </div>
         </React.Fragment>
     );
 }

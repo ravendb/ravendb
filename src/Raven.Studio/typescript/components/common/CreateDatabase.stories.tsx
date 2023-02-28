@@ -49,7 +49,6 @@ const TemplatePanel = (args: {
 
             <div id="OverlayContainer"></div>
             <div id="PopoverContainer" className="popover-container-fix"></div>
-            <div id="TooltipContainer"></div>
         </>
     );
 };
@@ -58,7 +57,7 @@ export const Panel = boundCopy(TemplatePanel, {
     serverAuthentication: true,
     licenseProps: {
         replication: true,
-        sharding: false,
+        sharding: true,
         dynamicDatabaseDistribution: true,
     },
 });
