@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.AspNetCore.Http;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
@@ -25,6 +25,7 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
     private readonly bool _isDistinctQuery;
     private readonly IComparer<BlittableJsonReaderObject> _sortingComparer;
     private readonly HashSet<int> _alreadySeenProjections;
+    private HashSet<string> _timeSeriesFieldNames;
 
     public ShardedQueryOperation(IndexQueryServerSide query,
         bool isProjectionFromMapReduceIndex,
@@ -112,6 +113,20 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
 
                 compareExchangeValueIncludes.AddResults(queryResult.CompareExchangeValueIncludes, Context);
             }
+
+            if (_query.Metadata.HasTimeSeriesSelect)
+            {
+                if (QueryCommands[cmdResult.ShardNumber].RawResult != null && QueryCommands[cmdResult.ShardNumber].RawResult
+                        .TryGet<BlittableJsonReaderArray>(nameof(ShardedQueryResult.TimeSeriesFields), out var timeSeriesFieldNames) && timeSeriesFieldNames.Length > 0)
+                {
+                    _timeSeriesFieldNames ??= new HashSet<string>(StringComparer.Ordinal);
+
+                    foreach (object name in timeSeriesFieldNames)
+                    {
+                        _timeSeriesFieldNames.Add(name.ToString());
+                    }
+                }
+            }
         }
 
         if (revisionIncludes != null)
@@ -131,6 +146,9 @@ public class ShardedQueryOperation : AbstractShardedQueryOperation<ShardedQueryR
 
         if (compareExchangeValueIncludes != null)
             result.AddCompareExchangeValueIncludes(compareExchangeValueIncludes);
+
+        if (_timeSeriesFieldNames != null)
+            result.TimeSeriesFields = _timeSeriesFieldNames.ToList();
 
         // all the results from each command are already ordered
         using (var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(_sortingComparer))
