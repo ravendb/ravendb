@@ -59,7 +59,7 @@ namespace SlowTests.Authentication
                 "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "io-metrics.json", "perf-metrics.json",
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
-                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", "storage.all-environments.report.json",
+                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
                 "admin.txinfo.json", "admin.cluster.txinfo.json", "admin.configuration.settings.json", "etl.stats.json", "etl.progress.json",
                 "admin.tombstones.state.json", "indexes.performance.json"
             };
@@ -77,7 +77,7 @@ namespace SlowTests.Authentication
                 "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "io-metrics.json", "perf-metrics.json",
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
-                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", "storage.all-environments.report.json",
+                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", 
                 "admin.txinfo.json", "admin.cluster.txinfo.json", "admin.configuration.settings.json", "etl.stats.json", "etl.progress.json",
                 "admin.tombstones.state.json", "indexes.performance.json"
             };
@@ -95,7 +95,7 @@ namespace SlowTests.Authentication
                 "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "io-metrics.json", "perf-metrics.json",
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
-                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", "storage.all-environments.report.json",
+                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", 
                 "admin.txinfo.json", "admin.cluster.txinfo.json", "admin.configuration.settings.json", "etl.stats.json", "etl.progress.json",
                 "admin.tombstones.state.json", "indexes.performance.json"
             };
@@ -114,7 +114,7 @@ namespace SlowTests.Authentication
                 "tasks.json", "indexes.json", "indexes.stats.json", "indexes.errors.json", "io-metrics.json", "perf-metrics.json",
                 "replication.outgoing-failures.json", "replication.incoming-last-activity-time.json", "replication.incoming-rejection-info.json",
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
-                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", "storage.all-environments.report.json",
+                "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json", 
                 "etl.stats.json", "etl.progress.json", "indexes.performance.json"
             };
 

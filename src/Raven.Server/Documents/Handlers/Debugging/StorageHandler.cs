@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        [RavenAction("/databases/*/debug/storage/all-environments/report", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/debug/storage/all-environments/report", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = false)]
         public async Task AllEnvironmentsReport()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
