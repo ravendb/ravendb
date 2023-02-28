@@ -77,7 +77,11 @@ namespace Raven.TestDriver
             var name = database + "_" + Interlocked.Increment(ref _index);
             var documentStore = TestServerStore.Value;
 
-            var createDatabaseOperation = new CreateDatabaseOperation(new DatabaseRecord(name));
+            var databaseRecord = new DatabaseRecord(name);
+
+            PreConfigureDatabase(databaseRecord);
+
+            var createDatabaseOperation = new CreateDatabaseOperation(databaseRecord);
             documentStore.Maintenance.Server.Send(createDatabaseOperation);
 
             var store = new DocumentStore
@@ -101,7 +105,7 @@ namespace Raven.TestDriver
 
                 try
                 {
-                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, hardDelete: true));
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseRecord.DatabaseName, hardDelete: true));
                 }
                 catch (DatabaseDoesNotExistException)
                 {
@@ -124,6 +128,10 @@ namespace Raven.TestDriver
         }
 
         protected virtual void PreInitialize(IDocumentStore documentStore)
+        {
+        }
+
+        protected virtual void PreConfigureDatabase(DatabaseRecord databaseRecord)
         {
         }
 
