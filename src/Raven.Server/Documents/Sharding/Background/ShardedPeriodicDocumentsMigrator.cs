@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Background;
 using Raven.Server.ServerWide.Commands.Sharding;
@@ -50,9 +49,6 @@ namespace Raven.Server.Documents.Sharding.Background
                             : configuration.BucketRanges[index + 1].BucketRangeStart - 1;
 
                         var bucketStatistics = ShardedDocumentsStorage.GetBucketStatistics(context, start, end);
-
-                        if (bucketStatistics.Any() == false)
-                            continue;
 
                         foreach (var bucketStats in bucketStatistics)
                         {
