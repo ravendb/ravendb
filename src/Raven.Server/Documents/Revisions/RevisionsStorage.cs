@@ -767,6 +767,7 @@ namespace Raven.Server.Documents.Revisions
             Table writeTable = null;
             string currentCollection = null;
             var deletedRevisionsCount = 0;
+            var originalMinimumTimeToKeep = minimumTimeToKeep;
 
             while (true)
             {
@@ -780,8 +781,17 @@ namespace Raven.Server.Documents.Revisions
                     var tvr = read.Result.Reader;
                     using (var revision = TableValueToRevision(context, ref tvr))
                     {
-                        if (minimumTimeToKeep.HasValue &&
-                            _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
+                        if (revision.Flags.Contain(DocumentFlags.Conflicted) || revision.Flags.Contain(DocumentFlags.Resolved))
+                        {
+                            var config = GetRevisionsConfiguration(collectionName.Name, revision.Flags);
+                            minimumTimeToKeep = config.MinimumRevisionAgeToKeep;
+                        }
+                        else
+                        {
+                            minimumTimeToKeep = originalMinimumTimeToKeep;
+                        }
+
+                        if (minimumTimeToKeep.HasValue && _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value) 
                             return deletedRevisionsCount;
 
                         hasValue = true;
